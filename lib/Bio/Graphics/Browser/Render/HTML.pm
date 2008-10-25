@@ -169,7 +169,8 @@ sub render_html_head {
 
   # pick stylesheets;
   my @stylesheets;
-  my $titlebar   = $self->is_safari() ? 'css/titlebar-safari.css' : 'css/titlebar-default.css';
+#  my $titlebar   = $self->is_safari() ? 'css/titlebar-safari.css' : 'css/titlebar-default.css';
+  my $titlebar   = 'css/titlebar-default.css';
   my $stylesheet = $self->setting('stylesheet')||'/gbrowse/gbrowse';
   push @stylesheets,{src => $self->globals->resolve_path($stylesheet,'url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/tracks.css','url')};

@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.6 2008-10-08 23:54:37 lstein Exp $
+ $Id: balloon.js,v 1.7 2008-10-25 13:49:35 lstein Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -48,10 +48,10 @@ var tooltipIsSuppressed;
 //////////////////////////////////////////////////////////////////////////
 var Balloon = function () {
 
-  //get default configuration from balloon.config.js
+  // Get default configuration from balloon.config.js
   BalloonConfig(this);
 
-  // track the cursor every time the mouse moves
+  // Track the cursor every time the mouse moves
   document.onmousemove = this.setActiveCoordinates;
 
   // scrolling aborts unsticky balloons
@@ -169,14 +169,18 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
 
   // make sure balloon image path is complete
   if (this.images) {
-    this.balloonImage  = this.images +'/'+ this.balloonImage;
-    if (this.ieImage)     
-      this.ieImage   = this.images +'/'+ this.ieImage;
-    this.upLeftStem    = this.images +'/'+ this.upLeftStem;
-    this.upRightStem   = this.images +'/'+ this.upRightStem;
-    this.downLeftStem  = this.images +'/'+ this.downLeftStem;
-    this.downRightStem = this.images +'/'+ this.downRightStem;
-    this.closeButton   = this.images +'/'+ this.closeButton;
+    // main background image
+    this.balloonImage  = this.balloonImage  ? this.images +'/'+ this.balloonImage  : false;
+    this.ieImage       = this.ieImage       ? this.images +'/'+ this.ieImage       : false;
+
+    // optional stems
+    this.upLeftStem    = this.upLeftStem    ? this.images +'/'+ this.upLeftStem    : false;
+    this.upRightStem   = this.upRightStem   ? this.images +'/'+ this.upRightStem   : false;
+    this.downLeftStem  = this.downLeftStem  ? this.images +'/'+ this.downLeftStem  : false;
+    this.downRightStem = this.downRightStem ? this.images +'/'+ this.downRightStem : false;
+
+    this.closeButton   = this.closeButton   ? this.images +'/'+ this.closeButton   : false;
+
     this.images        = false;
   }
 
@@ -188,8 +192,12 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
   // preload balloon images 
   if (!this.preloadedImages) {
     var images = new Array(this.balloonImage, this.closeButton);
-    if (this.ieImage) images.push(this.ieImage);
-    if (this.stem)    images.push(this.upLeftStem,this.upRightStem,this.downLeftStem,this.downRightStem);
+    if (this.ieImage) {
+      images.push(this.ieImage);
+    }
+    if (this.stem) {
+      images.push(this.upLeftStem,this.upRightStem,this.downLeftStem,this.downRightStem);
+    }
     var len = images.length;
     for (var i=0;i<len;i++) {
       if ( images[i] ) {
@@ -204,10 +212,13 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
   // Capture coordinates for mousedown or click
   if (!mouseOver) this.setActiveCoordinates(evt);
 
+  // Remember which event started this
+  this.currentEvent = evt;
+  Event.stop(evt);
 
-  // make delay time short for onmousedown
+  // Make delay time short for onmousedown
   var delay = mouseOver ? this.delayTime : 1;
-  this.timeoutTooltip = window.setTimeout(this.doShowTooltip(evt),delay);
+  this.timeoutTooltip = window.setTimeout(this.doShowTooltip,delay);
 }
 
 
@@ -228,10 +239,8 @@ Balloon.prototype.preload = function(src) {
 /////////////////////////////////////////////////////////////////////
 // Tooltip rendering function
 /////////////////////////////////////////////////////////////////////
-Balloon.prototype.doShowTooltip = function(evt) {
+Balloon.prototype.doShowTooltip = function() {
   var self = currentBalloonClass;
-
-  Event.stop(evt);
 
   // Stop firing if a balloon is already being displayed
   if (balloonIsVisible) return false;  
@@ -259,12 +268,19 @@ Balloon.prototype.doShowTooltip = function(evt) {
   var balloon = self.makeBalloon();
 
   // window dimensions
-  var pageWidth  = YAHOO.util.Dom.getViewportWidth();
-  var pageCen    = Math.round(pageWidth/2);
-  var pageHeight = YAHOO.util.Dom.getViewportHeight();
-  var pageLeft   = YAHOO.util.Dom.getDocumentScrollLeft();
-  var pageTop    = YAHOO.util.Dom.getDocumentScrollTop();
-  var pageMid    = pageTop + Math.round(pageHeight/2);
+  var pageWidth   = YAHOO.util.Dom.getViewportWidth();
+  var pageCen     = Math.round(pageWidth/2);
+  var pageHeight  = YAHOO.util.Dom.getViewportHeight();
+  var pageLeft    = YAHOO.util.Dom.getDocumentScrollLeft();
+  var pageTop     = YAHOO.util.Dom.getDocumentScrollTop();
+  var pageMid     = pageTop + Math.round(pageHeight/2);
+  self.pageBottom = pageTop + pageHeight;
+  self.pageTop    = pageTop;
+
+  // do we have a cursor position?
+  if (!(self.activeTop && self.activeRight)) {
+    self.setActiveCoordinates();
+  }
 
   // balloon orientation
   var vOrient = self.activeTop > pageMid ? 'up' : 'down';
@@ -278,19 +294,9 @@ Balloon.prototype.doShowTooltip = function(evt) {
   // how and where to draw the balloon
   self.setBalloonStyle(vOrient,hOrient,pageWidth,pageLeft);
 
-  // sticky balloons need a close control
+  // close control for balloon or box
   if (balloonIsSticky) {
-    var topRight = document.getElementById('topRight');
-    var margin   = Math.round(self.padding/2);
-    var top      = margin + self.shadow;
-    var closeWidth = self.closeButtonWidth || 16;
-    var marginLeft = closeWidth - margin;
- 
-    topRight.innerHTML = '\
-      <img src="'+self.closeButton+'" title="Close" \
-	  onclick="Balloon.prototype.hideTooltip(1)" \
-          style="position:absolute;top:'+top+'px;left:0px;\
-          margin-left:-'+marginLeft+'px;cursor:pointer;z-index:3">';
+    self.addCloseButton();
   }
 
   balloonIsVisible = true;
@@ -299,6 +305,32 @@ Balloon.prototype.doShowTooltip = function(evt) {
   self.showHide();
 
   self.fade(0,95,self.fadeIn);
+}
+
+Balloon.prototype.addCloseButton = function () {
+  var self         = currentBalloonClass;
+  var margin       = Math.round(self.padding/2);
+  var closeWidth   = self.closeButtonWidth || 16;
+  var balloonTop   = self.getLoc('balloon','y1') + margin + self.shadow;
+  var BalloonLeft  = self.getLoc('topRight','x2') - self.closeButtonWidth - self.shadow - margin;
+  var closeButton  = document.getElementById('closeButton');
+
+  if (!closeButton) {
+    closeButton = new Image;
+    closeButton.setAttribute('id','closeButton');
+    closeButton.setAttribute('src',self.closeButton);
+    closeButton.onclick = function() {
+      Balloon.prototype.hideTooltip(1);
+    };
+    self.setStyle(closeButton,'position','absolute');
+    document.body.appendChild(closeButton);
+  }
+
+  self.setStyle(closeButton,'top',balloonTop);
+  self.setStyle(closeButton,'left',BalloonLeft);
+  self.setStyle(closeButton,'display','inline');
+  self.setStyle(closeButton,'cursor','pointer');
+  self.setStyle(closeButton,'z-index',999999999);
 }
 
 // use a fresh object every time to make sure style 
@@ -543,6 +575,11 @@ Balloon.prototype.hideTooltip = function(override) {
   balloonIsVisible = false;
   balloonIsSticky  = false;
 
+  var closeButton = document.getElementById('closeButton');
+  if (closeButton) {
+    YAHOO.util.Dom.setStyle(closeButton,'display','none');
+  }
+
   if (!self) {
     var hideBalloon  = document.getElementById('balloon');
     if (hideBalloon) Balloon.prototype.setStyle(hideBalloon,'display','none');
@@ -569,13 +606,16 @@ hideAllTooltips = function() {
 
 // Track the active mouseover coordinates
 Balloon.prototype.setActiveCoordinates = function(event) {
-  var evt = event || window.event; 
  
   var self = currentBalloonClass;
   if (!self) return false;
   var b = self.activeBalloon;
 
-  var evt = event || window.event;
+  var evt = event || window.event || self.currentEvent;
+  if (!evt) {
+    return false;
+  }
+
   var XY = self.eventXY(evt);
   self.activeTop    = XY[1] - 10;
   self.activeLeft   = XY[0] - 10;
@@ -591,8 +631,16 @@ Balloon.prototype.setActiveCoordinates = function(event) {
 Balloon.prototype.eventXY = function(event) {
   var XY = new Array(2);
   var e = event || window.event;
-  XY[0] = e.pageX || e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-  XY[1] = e.pageY || e.clientY + document.body.scrollTop  + document.documentElement.scrollTop;
+
+  if (e.pageX || e.pageY) {
+    XY[0] = e.pageX;
+    XY[1] = e.pageY;
+  }
+  else if ( e.clientX || e.clientY ) {
+    XY[0] = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+    XY[1] = e.clientY + document.body.scrollTop  + document.documentElement.scrollTop;
+  }
+
   return XY;
 }
 
@@ -734,9 +782,9 @@ Please contact the site administrator for assistance.';
   var notSupported = 'AJAX is not supported for popup balloons in this web site.  \
 Please contact the site administrator for assistance.';
   
-  // no Help URL without AJAX
-  if (this.helpURL && !this.allowAJAX) {
-    alert('Sorry, you have specified help URL '+this.helpURL+' but '+notSupported);
+  // no Help Url without AJAX
+  if (this.helpUrl && !this.allowAJAX) {
+    alert('Sorry, you have specified help URL '+this.helpUrl+' but '+notSupported);
     return null;
   }
 
@@ -784,10 +832,10 @@ Please contact the site administrator for assistance.';
   }
 
   // request the contents
-  caption = this.getContents(caption);
+  this.currentHelpText = this.getContents(caption);
   this.loadedFromElement = false;
   
-  return caption;
+  return this.currentHelpText;;
 }
 
 
@@ -820,7 +868,7 @@ Balloon.prototype.getContents = function(section) {
   if (ajax) {
     ajax.open("GET", url, false);
     ajax.onreadystatechange=function() {
-      //alert(request.readyState);
+      //alert(ajax.readyState);
     };
     try {
       ajax.send(null);
@@ -828,8 +876,8 @@ Balloon.prototype.getContents = function(section) {
     catch (e) {
     // alert(e);
     }
-    this.currentHelpText =  ajax.responseText || section;
-    return this.currentHelpText;
+    var txt = this.escapeHTML ? escape(ajax.responseText) : ajax.responseText;
+    return  txt || section;
   }
   else {
     return section;

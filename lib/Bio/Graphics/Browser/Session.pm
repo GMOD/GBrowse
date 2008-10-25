@@ -22,7 +22,6 @@ sub new {
   $self->lock($id) if $id;
   $self->{session}    = CGI::Session->new($driver,$id,$session_args);
   $self->lock($self->{session}->id) unless $id;  # if we have a newly-created ID, then lock now
-
   $self->source($default_source) unless defined $self->source;
   $self;
 }

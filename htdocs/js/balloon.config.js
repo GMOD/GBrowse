@@ -16,7 +16,7 @@ BalloonConfig = function(balloon) {
 
   // ID of element to which balloon should be added
   // default = none (document.body is used)
-  // Balloon option may be required for mediawiki or other
+  // This option may be required for mediawiki or other
   // implementations with complex stylesheets
   balloon.parentID = null;
 
@@ -86,12 +86,122 @@ BalloonConfig = function(balloon) {
   balloon.closeButtonWidth = 16;
 
 
-  // support for AJAX, iframes and JavaScript in balloons
-  // If you have concerns about XSS vulnerabilities, set some or all of these
-  // values to false;
+  
+  /* 
+    This section allows support for AJAX, iframes and JavaScript in balloons
+    If you have concerns about XSS vulnerabilities, set some or all of these
+    values to false;
+  */
+
+  /// URL for default AJAX request handler
   balloon.helpUrl            = false;
+
+  // Should AJAX be allowed at all?
   balloon.allowAJAX          = true;
+
+  // Allow iframe elements in balloons?
   balloon.allowIframes       = true;
+
+  // Allow javascript event handlers in balloons?
   balloon.allowEventHandlers = false;
+
+  // Allow <script> elements in balloons?
   balloon.allowScripts       = false;
+
+  // Escape all HTML characters -- this will be very
+  // unnattractive unless your AJAX request returns plain
+  // text.  short of disallowing AJAX entirely, This is the safe 
+  // way to go if you must have AJAX in an environment where 
+  // outside users can send text to the browser/balloon
+  balloon.escapeHTML         = false;
 }
+
+// simple Box alternative
+BoxConfig = function(box) {
+  box.isBox = true;
+
+  // ID of element to which box should be added
+  // default = none (document.body is used)
+  // This option may be required for mediawiki or other
+  // implementations with complex stylesheets
+  box.parentID = null;
+
+  // properties of fonts contained in basic boxes (default black)
+  box.fontColor   = 'black';
+  box.fontFamily  = 'Arial, sans-serif';
+  box.fontSize    = '12pt';
+
+  // border and bgcolor for plain box
+  box.bgColor     = 'whitesmoke';
+  box.borderStyle = '1px solid black'; 
+
+  // minimum allowed box width (px)
+  box.minWidth = 150;
+
+  // maximum allowed box width (px)
+  box.maxWidth = 600;
+
+  // Delay before box is displayed (msec)
+  box.delayTime = 500;
+
+  // If fade-in/out is allowed
+  box.allowFade = false;
+
+  // time interval for fade-in (msec)
+  box.fadeIn    = 300;
+
+  // time interval for fade-out (msec)
+  box.fadeOut   = 300;  
+
+  // Vertical Distance from cursor location (px)
+  box.vOffset  = 5;
+
+  // text-padding within the box (px)
+  box.padding  = 10;
+
+  // How long to display mousover boxes (msec)
+  // false = 'always on'
+  box.displayTime = 10000;
+
+  // no shadows for plain box
+  box.shadow   = 0;
+
+  // no stem for boxes
+  box.stem        = false;
+
+  // A close button for sticky boxes
+  // specify the width of your button image
+  // if you do not use the default image provided
+  box.images        =  '/images/balloons';
+  box.closeButton   = 'close.png';
+  box.closeButtonWidth = 16;
+
+  /* 
+    This section allows support for AJAX, iframes and JavaScript in boxes
+    If you have concerns about XSS vulnerabilities, set some or all of these
+    values to false;
+  */
+
+  /// URL for default AJAX request handler
+  box.helpUrl            = false;
+
+  // Should AJAX be allowed at all?
+  box.allowAJAX          = true;
+
+  // Allow iframe elements in boxes?
+  box.allowIframes       = true;
+
+  // Allow javascript event handlers in boxes?
+  box.allowEventHandlers = false;
+
+  // Allow <script> elements in boxes?
+  box.allowScripts       = false;
+
+  // Escape all HTML characters -- this will be very
+  // unnattractive unless your AJAX request returns plain
+  // text.  short of disallowing AJAX entirely, This is the safe 
+  // way to go if you must have AJAX in an environment where 
+  // outside users can send text to the browser/box
+  box.escapeHTML         = false;
+}
+

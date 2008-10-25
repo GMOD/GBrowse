@@ -843,7 +843,7 @@ sub render_panels {
         my $scale_bar_html = $self->scale_bar( $seg, 'detail' );
         my $panels_html   .= $self->get_blank_panels( [$self->detail_tracks,] );
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
-        my $details_msg    = center(div({ -id => 'details_msg', },''));
+        my $details_msg    = div({ -id => 'details_msg', },'');
         $html .= div(
             $self->toggle(
                 'Details',

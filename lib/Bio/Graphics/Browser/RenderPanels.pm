@@ -320,7 +320,7 @@ sub wrap_rendered_track {
 
     my $collapsed = $settings->{track_collapsed}{$label};
     my $img_style = $collapsed ? "display:none" : "display:inline";
-    $img_style .= ";filter:alpha(opacity=100);moz-opacity:1";
+#    $img_style .= ";filter:alpha(opacity=100);moz-opacity:1";
 
     my $img = img(
         {   -src    => $url,
@@ -335,7 +335,6 @@ sub wrap_rendered_track {
         }
     );
 
-    my $class = $label =~ /scale/i ? 'scale' : 'track';
     my $icon = $collapsed ? $plus : $minus;
     my $show_or_hide = $self->language->tr('SHOW_OR_HIDE_TRACK')
         || "Show or Hide";
@@ -404,7 +403,7 @@ sub wrap_rendered_track {
 		    
             }
         ),
-        span( { -class => 'draghandle' }, $title )
+	$title
     );
 
     my $show_titlebar
@@ -428,9 +427,10 @@ sub wrap_rendered_track {
         }
     );
 
-    return div({-class=>'track',-style=>"width:${width}px"},
+    return div({-class=>'centered_block',-style=>"width:${width}px"},
         ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
         . ( $map_html || '' );
+
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 

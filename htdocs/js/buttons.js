@@ -77,6 +77,7 @@ function create_drag (div_name) {
 		      tag: 'div',
 		      only: 'track',
 		      handle: 'titlebar',
+		      scroll: window,
 		      onUpdate: function() {
 		      var postData = Sortable.serialize(div_name,{name:'label'});
 		      new Ajax.Request(document.URL,{method:'post',postBody:postData});
@@ -85,17 +86,3 @@ function create_drag (div_name) {
 		 );
 }
 
-function kill_drag() { 
-    if (GlobalDrag) {
-	var s = Sortable.options(GlobalDrag);
-	if(s) {
-	    s.draggables.each(
-			      function (d) {
-				  alert(d.dragging);
-				  d.dragging = false;
-				 }
-			      );
-	}
-	GlobalDrag = null;
-    }
-}

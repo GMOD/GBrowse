@@ -1161,7 +1161,6 @@ sub wrap_track_in_track_div {
     return div(
         {   -id    => "track_" . $track_name,
             -class => $class,
-#            -align => 'center',
         },
         $track_html
         )

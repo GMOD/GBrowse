@@ -1,8 +1,13 @@
-.track            { 
+.track            {
+		  z-index: 0;
 		  text-align: center;
 		  margin-left: auto;
 		  margin-right: auto;
 		  }
+.centered_block {
+		  margin-left: auto;
+		  margin-right: auto;
+}
 .scale            { 
 		  text-align: center;
 		  margin-left: auto;
@@ -26,3 +31,6 @@ IMG.trackimg      {
                      font-size: 9pt;
                      font-weight: bold;
                   }
+.titlebar:hover {
+	     background:lightsteelblue; 
+	      }

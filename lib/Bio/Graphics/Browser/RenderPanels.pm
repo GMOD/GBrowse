@@ -356,7 +356,7 @@ sub wrap_rendered_track {
     if ( $label =~ /^plugin:/ ) {
         my $help_url = "url:?plugin=$escaped_label;plugin_do=Configure";
         $config_click
-            = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
+            = "balloon.showTooltip(event,'$help_url',1)";
     }
 
     elsif ( $label =~ /^file:/ ) {
@@ -367,7 +367,7 @@ sub wrap_rendered_track {
     else {
         my $help_url = "url:?configure_track=$escaped_label";
         $config_click
-            = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
+            = "balloon.showTooltip(event,'$help_url',1)";
     }
 
     my $title
@@ -817,9 +817,9 @@ sub make_map {
 	my $stick = defined $sticky ? $sticky : 1;
         $style = "cursor:pointer";
 	$mousedown = $balloonclick =~ /^(http|ftp):/
-	    ? "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
+	    ? "$balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
 	      "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
-	    : "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)";
+	    : "$balloon_ct.showTooltip(event,'$balloonclick',$stick)";
 	undef $href;
       }
     }

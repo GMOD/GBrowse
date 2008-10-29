@@ -5,7 +5,7 @@ use warnings;
 use base 'Bio::Graphics::Browser::Render';
 use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Karyotype;
-use Bio::Graphics::Browser::Util qw[citation get_section_from_label];
+use Bio::Graphics::Browser::Util qw[citation get_section_from_label url_label];
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
@@ -813,7 +813,7 @@ sub das_table {
   my $settings      = $self->state;
   my $feature_files = $self->external_data;
 
-  my (@rows,$count);
+  my (@rows);
 
   my ($preset_labels,$preset_urls) = $self->get_external_presets($settings);  # (arrayref,arrayref)
   my $presets = '&nbsp;';
@@ -841,7 +841,9 @@ sub das_table {
 
 	  next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
 	  my $escaped_url = CGI::escape($url);
-	  push @rows,th({-align=>'right',-width=>'20%'},"URL",++$count).
+          my $ulabel = url_label($url);
+          $ulabel = '' unless $ulabel ne $url;
+          push @rows,th({-align=>'right',-valign=>'top',-width=>'20%'},"$ulabel&nbsp;&nbsp;").
 	      td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
          button(
             -name    => 'delete_button',

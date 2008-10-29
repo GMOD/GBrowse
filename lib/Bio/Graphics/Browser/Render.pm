@@ -19,7 +19,7 @@ use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::RenderPanels;
 use Bio::Graphics::Browser::GFFPrinter;
-use Bio::Graphics::Browser::Util qw[get_section_from_label];
+use Bio::Graphics::Browser::Util qw[get_section_from_label url_label];
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -2411,6 +2411,12 @@ sub label2key {
   my $label = shift;
   my $source = $self->data_source;
   my $key;
+
+  # make URL labels a bit nicer
+  if ($label =~ /^ftp|^http/) {
+    $key = url_label($label);
+  }
+
   my $presets = $self->get_external_presets || {};
   for my $l ($self->language->language) {
     $key     ||= $source->setting($label=>"key:$l");

@@ -7,7 +7,7 @@ use Bio::Graphics;
 use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
 use Bio::Graphics::Browser::CachedTrack;
-use Bio::Graphics::Browser::Util qw[modperl_request citation shellwords get_section_from_label];
+use Bio::Graphics::Browser::Util qw[modperl_request citation shellwords get_section_from_label url_label];
 use IO::File;
 use POSIX 'WNOHANG','setsid';
 
@@ -370,10 +370,13 @@ sub wrap_rendered_track {
             = "balloon.showTooltip(event,'$help_url',1)";
     }
 
-    my $title
-        = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/    # a plugin
-        ? $1
-        : $source->setting( $label => 'key' ) || $label;    # configured
+    my $title;
+    if ($label =~ /\w+:(.+)/ && $label !~ /:overview|:region/) {
+      $title = $label =~ /^http|^ftp/ ? url_label($label) : $1;
+    }
+    else {
+      $title = $source->setting($label=>'key') || $label;
+    }
 
     my $titlebar = span(
         {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',

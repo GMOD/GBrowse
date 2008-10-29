@@ -27,8 +27,8 @@ use base 'Exporter';
 use Text::ParseWords qw();
 use Carp 'carp','cluck';
 
-our @EXPORT    = qw(modperl_request error citation shellwords get_section_from_label);
-our @EXPORT_OK = qw(modperl_request error citation shellwords get_section_from_label);
+our @EXPORT    = qw(modperl_request error citation shellwords get_section_from_label url_label);
+our @EXPORT_OK = qw(modperl_request error citation shellwords get_section_from_label url_label);
 
 use constant DEBUG => 1;
 
@@ -59,6 +59,31 @@ sub error {
   cluck "@_" if DEBUG;
   print CGI::h2({-class=>'error'},@msg);
 }
+
+
+=item url_label($yucky_url)
+
+Creates a label.alias for URL strings starting with 'http' or 'ftp'.
+The last word (following a '/') in the url is used for the label.
+Returns a string "url:label".
+
+=cut
+
+sub url_label {
+  my $label = shift;
+  my $key;
+  if ($label =~ /^http|^ftp/) {
+    my $l = $label;
+    $l =~ s!^\W+//!!;
+    my (undef,$type) = $l =~ /\S+t(ype)?=([^;\&]+)/;
+    $l =~ s/\?.+//;
+    ($key) = grep /$_/, reverse split('/',$l);
+    $key = "url:$key" if $key;
+    $key .= ":$type"  if $type;
+  }
+  return $key || $label;
+}
+
 
 =item citation(DataSource, 'label, [Language])
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.114 2008-10-29 18:56:46 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.115 2008-10-29 19:34:28 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -135,8 +135,11 @@ sub url_label {
   if ($label =~ /^http|^ftp/) {
     my $l = $label;
     $l =~ s!^\W+//!!;
+    my (undef,$type) = $l =~ /\S+gbgff\S+t(ype)?=([^;\&]+)/;
+    $l =~ s/\?.+//;
     ($key) = grep /$_/, reverse split('/',$l);
     $key = "url:$key" if $key;
+    $key .= ":$type"  if $type; 
   }
   return $key;
 }

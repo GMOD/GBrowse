@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.113 2008-09-25 18:33:07 scottcain Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.114 2008-10-29 18:56:46 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -118,6 +118,30 @@ sub new {
   my $self = bless { },ref($class) || $class;
   $self;
 }
+
+
+=head2 url_label()
+
+    my $url_label = $browser->url_label($yucky_url);
+
+Creates a label.alias for URL strings starting with 'http' or 'ftp'.
+The last word (following a '/') in the url is used for the label.
+Returns a string "url:label".
+
+=cut
+
+sub url_label {
+  my ($self,$label,$key) = @_;
+  if ($label =~ /^http|^ftp/) {
+    my $l = $label;
+    $l =~ s!^\W+//!!;
+    ($key) = grep /$_/, reverse split('/',$l);
+    $key = "url:$key" if $key;
+  }
+  return $key;
+}
+
+
 
 =head2 read_configuration()
 
@@ -998,11 +1022,14 @@ sub render_draggable_tracks {
 	$config_click = "balloon.showTooltip(event,'$help_url',1)";
     }
 
+    my $title;
+    if ($label =~ /\w+:(.+)/ && $label !~ /:overview|:region/) {
+      $title = $label =~ /^http|^ftp/ ? $self->url_label($label) : $1;
+    }
+    else {
+      $title = $self->config->setting($label=>'key') || $label;
+    }
 
-    my $title       = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/  # a plugin
-	? $1
-	: $self->config->setting($label=>'key') || $label; # configured
-    
     if ($self->setting(general=>'show track categories')) {
 	my $cat = $self->config->setting($label=>'category');
 	$title .= " ($cat)" if $cat;

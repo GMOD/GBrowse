@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.112 2008-10-08 21:33:00 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.113 2008-10-29 18:56:46 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -3424,6 +3424,14 @@ sub make_citation_link {
 sub label2key {
   my $label = shift;
   my $key;
+
+  # if this is a url, pretty up the key if possible
+  if ($label =~ /^http|^ftp/i) {
+    my $url_label = $CONFIG->url_label($label);
+    $key = $url_label unless $url_label eq $label;
+  }
+
+
   $PRESETS ||= get_external_presets || {};
   for my $l ($CONFIG->language->language) {
     $key     ||= $CONFIG->setting($label=>"key:$l");

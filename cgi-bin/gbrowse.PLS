@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.113 2008-10-29 18:56:46 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.114 2008-10-29 20:33:58 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2010,7 +2010,7 @@ sub upload_table {
 sub das_table {
   my $settings      = shift;
   my $feature_files = shift;
-  my (@rows,$count);
+  my @rows;
 
   my ($preset_labels,$preset_urls) = get_external_presets($settings);  # (arrayref,arrayref)
   my $presets = '&nbsp;';
@@ -2041,7 +2041,9 @@ sub das_table {
 	  warn "external_table(): url = $url" if DEBUG;
 
 	  my $escaped_url = CGI::escape($url);
-	  push @rows,th({-align=>'right',-width=>'20%'},"URL",++$count).
+          my $ulabel = $CONFIG->url_label($url);
+          $ulabel = '' unless $ulabel ne $url;
+          push @rows,th({-align=>'right',-valign=>'top',-width=>'20%'},"$ulabel&nbsp;&nbsp;").
 	      td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
 		 submit(-name=>"modify.$escaped_url",-value=>$CONFIG->tr('Delete')),
 		 br,

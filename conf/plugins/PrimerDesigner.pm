@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.14 2008-10-01 08:12:13 stajich Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.15 2008-10-30 19:02:01 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -66,18 +66,11 @@ use Bio::PrimerDesigner;
 use Bio::PrimerDesigner::Tables;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::Util;
-use Bio::Graphics::Browser;
 use Bio::Graphics::Feature;
-use Bio::DB::GFF::Featname;
-use Bio::DB::GFF::Feature;
-use Bio::DB::GFF::RelSegment;
 use Bio::Graphics::FeatureFile;
 use CGI qw/:standard escape html3/;
-#use CGI::Pretty 'html3';
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
-use Math::Round 'nearest';
-use Data::Dumper;
 
 use constant BINARY            => 'primer3';
 use constant BINPATH           => '/usr/local/bin';
@@ -1014,3 +1007,17 @@ sub segment_info {
   _hide(details_pixel_ratio  => $segment->length/$settings->{width});
   _hide(detail_width         => $settings->{width} + 2*$pad);
 }
+
+
+# nearest function appropriated from Math::Round
+sub nearest {
+  my $targ = abs(shift);
+  my $half = 0.50000000000008;
+  my @res  = map {
+    if ($_ >= 0) { $targ * int(($_ + $half * $targ) / $targ); }
+    else { $targ * POSIX::ceil(($_ - $half * $targ) / $targ); }
+  } @_;
+
+  return (wantarray) ? @res : $res[0];
+}
+

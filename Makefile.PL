@@ -295,7 +295,6 @@ WriteMakefile(
 				 File::Temp        => 0,
 				 Class::Base       => 0,
 				 Digest::MD5       => 0,
-				 Math::Round       => 0,
                                  Statistics::Descriptive => 0,
 				},
 	      PL_FILES       => {

@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.15 2008-10-30 19:02:01 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.16 2008-10-30 19:56:50 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -80,7 +80,8 @@ use constant MAXRANGE          => 300;
 use constant IMAGEWIDTH        => 800;
 use constant DEFAULT_SEG_SIZE  => 10000;
 use constant DEFAULT_FINE_ZOOM => 1000;
-use constant STYLE             => '/gbrowse/gbrowse.css';
+use constant STYLE             => '/gbrowse';
+use constant IMAGES            => '/gbrowse/images';
 use constant MAX_SEGMENT       => 1_000_000;
 use constant OVERVIEW_RATIO    => 0.9;
 use constant JS                => '/gbrowse/js';
@@ -315,10 +316,12 @@ sub dump {
   $self->reconfigure;
 
   my $js            = $self->browser_config->relative_path_setting('js') || JS;
+  my $img           = $self->browser_config->relative_path_setting('images') || IMAGES;
+  my $css           = $self->browser_config->relative_path_setting('stylesheet') || STYLE;
+  $css .= "/gbrowse.css" unless $css =~ /gbrowse.css/;
 
   # dumpers provide their own headers, so make sure boiler plate
   # stuff is included
-  my $style_sheet = $self->browser_config->setting('stylesheet') || STYLE;
   my $head = <<END;
 <script src="$js/yahoo-dom-event.js" type="text/javascript"></script>
 <script src="$js/rubber.js" type="text/javascript"></script>
@@ -327,12 +330,12 @@ sub dump {
 <script src="$js/balloon.js" type="text/javascript"></script>
 <script>
 var balloon = new Balloon;
-  balloon.images              = '/gbrowse/images/balloons';
+  balloon.images              = '$img/balloons';
   balloon.delayTime = 200;
 </script>
 END
 
-  print start_html( -style => $style_sheet, -title => 'PCR Primers', -onload => "Primers.prototype.initialize()", -head => $head );
+  print start_html( -style => $css, -title => 'PCR Primers', -onload => "Primers.prototype.initialize()", -head => $head );
   print $self->browser_config->header;
 
   my $target = $self->focus($segment);

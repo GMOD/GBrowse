@@ -1743,7 +1743,7 @@ sub balloon_tip_setting {
 
   return unless $value;
   my $val;
-  my $balloon_type = 'balloon';
+  my $balloon_type = $source->global_setting('balloon style') || 'GBubble';
 
   if (ref($value) eq 'CODE') {
     $val = eval {$value->($feature,$panel,$track)};

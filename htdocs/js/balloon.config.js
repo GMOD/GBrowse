@@ -85,6 +85,7 @@ BalloonConfig = function(balloon, set) {
       balloon.vOffset     = 1; 
       balloon.hOffset     = 1; 
       balloon.opacity     = 85;
+      balloon.trackCursor = false;
       break;
 
     // The cartoon bubble with a fade-in effect

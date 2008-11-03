@@ -164,6 +164,7 @@ sub render_html_head {
                track.js
                balloon.js
                balloon.config.js
+	       GBox.js
                controller.js
 );
 
@@ -194,34 +195,66 @@ sub render_balloon_settings {
     my $self   = shift;
     my $source = $self->data_source;
 
-    #return '' unless ( $source->setting('balloon tips') );
-
+    my $default_style   = $source->setting('balloon style') || 'GBubble';;
     my $custom_balloons = $source->setting('custom balloons') || "";
-    my $balloon_images  = $self->globals->balloon_url();
-    my %config_values   = $custom_balloons =~ /\[([^]]+)\]([^[]+)/g;
-    $config_values{'balloon'} ||= <<END;
-images    =  $balloon_images
-delayTime =  500
+    my $balloon_images  = $self->globals->balloon_url() || '/gbrowse/images/balloons';
+    my %config_values   = $custom_balloons =~ /\[([^\]]+)\]([^\[]+)/g;
+
+    # default image path is for the default balloon set
+    my $default_images = "$balloon_images/$default_style";
+
+    # These are the four configured popup tooltip styles
+    # GBubble is the global default
+    # each type can be called using the [name] syntax
+    my $balloon_settings .= <<END;
+// Original GBrowse popup balloon style
+var GBubble = new Balloon;
+BalloonConfig(GBubble,'GBubble');
+GBubble.images = "$balloon_images/GBubble";
+
+// A simpler popup balloon style
+var GPlain = new Balloon;
+BalloonConfig(GPlain,'GPlain');
+GPlain.images = "$balloon_images/GPlain";
+
+// Like GBubble but fades in
+var GFade = new Balloon;
+BalloonConfig(GFade,'GFade');
+GFade.images = "$balloon_images/GBubble";
+
+// A formatted box
+// Note: Box is a subclass of Balloon
+var GBox = new Box;
+BalloonConfig(GBox,'GBox');
+GBox.images = "$balloon_images/GBox";
 END
-
-    my $balloon_settings;
-
+;
+    							   
+    # handle any custom balloons/config sets
+    # two args that are interpreted here and not passed
+    # to the JavaScript:
+    #
+    # class = Balloon (could also be Box)
+    # config set = GPlain (GBubble is the default)
     for my $balloon ( keys %config_values ) {
         my %config = $config_values{$balloon} =~ /(\w+)\s*=\s*(\S+)/g;
-        my $img = $config{images} || $balloon_images;
-        $balloon_settings .= <<END;
-var $balloon = new Balloon;
-$balloon.images              = '$img';
-$balloon.balloonImage        = 'balloon.png';
-$balloon.ieImage             = 'balloon_ie.png';
-$balloon.upLeftStem          = 'up_left.png';
-$balloon.downLeftStem        = 'down_left.png';
-$balloon.upRightStem         = 'up_right.png';
-$balloon.downRightStem       = 'down_right.png';
-$balloon.closeButton         = 'close.png';
-END
+        
+        # which balloon configuration set to use?
+	my $bstyle = $config{'config set'} || $default_style;
+	delete $config{'config set'};
+
+        # which class to use (may be Box or Balloon)
+        my $bclass = $config{'class'}      || 'Balloon';
+	delete $config{'class'};
+   
+        # This creates a Ballon (or Box) object and loads the
+        # specified configuration set.
+        $balloon_settings .= "\nvar $balloon = new $bclass;\nBalloonConfig($balloon,'$bstyle')\n";
+
+	# Image path must be specified
+	$config{images} ||= $default_images;
+
         for my $option ( keys %config ) {
-            next if $option eq 'images';
             my $value
                 = $config{$option} =~ /^[\d.-]+$/
                 ? $config{$option}
@@ -229,7 +262,9 @@ END
             $balloon_settings .= "$balloon.$option = $value;\n";
         }
     }
-    return "<script>\n$balloon_settings\n</script>\n";
+
+    $balloon_settings =~ s/^/  /gm;
+    return "\n<script type=\"text/javascript\">\n$balloon_settings\n</script>\n";
 }
 
 sub render_select_menus {  # for popup balloons
@@ -312,7 +347,7 @@ sub render_instructions {
 			    '['.$self->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
 			  a({-href=>'?bookmark=1'},'['.$self->tr('BOOKMARK').']'),
               a({-href        => '#',
-                 -onMouseDown => "balloon.showTooltip(event,'url:?share_track=all')"},
+                 -onMouseDown => "GPlain.showTooltip(event,'url:?share_track=all')"},
                 '[' . ($self->tr('SHARE_ALL') || "Share These Tracks" ) .']'),
 			  a({-href=>'?make_image=GD',-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']'),
 			  $plugin_link,
@@ -1465,7 +1500,7 @@ END
     $form .= end_form();
 
     $return_html
-        .= table( TR( td( { -valign => 'top' }, [ $citation, $form ] ) ) );
+        .= table( TR( td( { -valign => 'top', -width => '50%' }, [ $citation, $form ] ) ) );
     $return_html .= end_html();
     return $return_html;
 }
@@ -1524,18 +1559,17 @@ sub share_track {
             : 'SHARE_INSTRUCTIONS_ONE_TRACK'
         )
         )
-        . p(
-              b('GBrowse URL: ') 
-            . br()
-            . textfield(
+        . br()
+	. b('GBrowse URL: ') 
+	. br()
+	. p( textfield(
             -style    => 'background-color: wheat',
             -readonly => 1,
             -value    => $gbgff,
             -size     => 56,
             -onFocus  => 'this.select()',
-            -onSelect => 'this.select()',
-            )
-        );
+            -onSelect => 'this.select()' )
+	);
 
     if ($das_types) {
         $return_html .= p(
@@ -1545,25 +1579,24 @@ sub share_track {
                 : 'SHARE_DAS_INSTRUCTIONS_ONE_TRACK'
             )
             )
-            . p(
-                  b('DAS URL: ') 
-                . br()
-                . textfield(
+            . br()
+            .b('DAS URL: ') 
+	    . br()
+	    . p( textfield(
                 -style    => 'background-color: wheat',
                 -readonly => 1,
                 -value    => $das,
                 -size     => 56,
                 -onFocus  => 'this.select()',
-                -onSelect => 'this.select()',
-                )
-            );
+                -onSelect => 'this.select()')
+             );
     }
-    $return_html .= p(
-        button(
-            -name    => $self->tr('OK'),
-            -onClick => 'Balloon.prototype.hideTooltip(1)'
-        )
-    );
+    $return_html .= 
+	button(
+		 -name    => $self->tr('OK'),
+		 -onClick => 'Balloon.prototype.hideTooltip(1)'
+		 );
+
     $return_html .= end_html();
     return $return_html;
 }

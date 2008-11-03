@@ -322,6 +322,7 @@ sub wrap_rendered_track {
     my $img_style = $collapsed ? "display:none" : "display:inline";
 #    $img_style .= ";filter:alpha(opacity=100);moz-opacity:1";
 
+    # commented out alt because it interferes with balloon tooltips is IE
     my $img = img(
         {   -src    => $url,
             -usemap => "#${label}_map",
@@ -330,7 +331,7 @@ sub wrap_rendered_track {
             -height => $height,
             -border => 0,
             -name   => $label,
-            -alt    => $label,
+            #-alt    => $label,
             -style  => $img_style
         }
     );
@@ -352,11 +353,14 @@ sub wrap_rendered_track {
 
     my $escaped_label = CGI::escape($label);
 
+    # The inline config will go into a box 500px wide by 500px tall
+    # scrollbars will appear if there is overflow. The box should shrink
+    # to fit if the contents are smaller than 500 x 500
     my $config_click;
     if ( $label =~ /^plugin:/ ) {
         my $help_url = "url:?plugin=$escaped_label;plugin_do=Configure";
         $config_click
-            = "balloon.showTooltip(event,'$help_url',1)";
+            = "GBox.showTooltip(event,'$help_url',1,500,500)";
     }
 
     elsif ( $label =~ /^file:/ ) {
@@ -367,7 +371,7 @@ sub wrap_rendered_track {
     else {
         my $help_url = "url:?configure_track=$escaped_label";
         $config_click
-            = "balloon.showTooltip(event,'$help_url',1)";
+            = "GBox.showTooltip(event,'$help_url',1,500,500)";
     }
 
     my $title;
@@ -378,6 +382,7 @@ sub wrap_rendered_track {
       $title = $source->setting($label=>'key') || $label;
     }
 
+    my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
     my $titlebar = span(
         {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
             -id => "${label}_title"
@@ -386,15 +391,15 @@ sub wrap_rendered_track {
                 -id          => "${label}_icon",
                 -onClick     => "collapse('$label')",
                 -style       => 'cursor:pointer',
-                -onMouseOver => "balloon.showTooltip(event,'$show_or_hide')",
+                -onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')",
             }
         ),
         img({   -src   => $share,
                 -style => 'cursor:pointer',
                 -onMouseOver =>
-                    "balloon.showTooltip(event,'$share_this_track')",
+                    "$balloon_style.showTooltip(event,'$share_this_track')",
                 -onMousedown =>
-                    "balloon.showTooltip(event,'url:?share_track=$escaped_label')",
+                    "GBox.showTooltip(event,'url:?share_track=$escaped_label',1,500,500)",
             }
         ),
 
@@ -402,7 +407,7 @@ sub wrap_rendered_track {
                 -style       => 'cursor:pointer',
                 -onmousedown => "$config_click",
                 -onMouseOver =>
-                    "balloon.showTooltip(event,'$configure_this_track')",
+                    "$balloon_style.showTooltip(event,'$configure_this_track')",
 		    
             }
         ),
@@ -805,8 +810,8 @@ sub make_map {
 	$balloonhover ||= $title;
       }
 
-      $balloon_ht ||= 'balloon';
-      $balloon_ct ||= 'balloon';
+      $balloon_ht ||= $source->global_setting('balloon style') || 'GBubble';
+      $balloon_ct ||= $balloon_ht;
 
       if ($balloonhover) {
         my $stick = defined $sticky ? $sticky : 0;

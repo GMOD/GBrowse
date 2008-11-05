@@ -58,7 +58,14 @@ sub ACTION_demo {
     $mime->print($conf_data);
     $mime->close;
 
-    system "apache2 -k start -f $dir/conf/httpd.conf";
+    my $apache =  -x '/usr/sbin/httpd'   ? '/usr/sbin/httpd'
+	        : -x '/usr/sbin/apache2' ? '/usr/sbin/apache2'
+                : -x '/usr/sbin/apache'  ? '/usr/sbin/apache'
+                : 'not found';
+    if ($apache eq 'not found') {
+	die "Could not find apache executable on this system. Can't run demo";
+    }
+    system "$apache -k start -f $dir/conf/httpd.conf";
     if (-e "$dir/logs/apache2.pid") {
 	print STDERR "Demo is now running on http://localhost:$port\n";
 	print STDERR "Run \"./Build demostop\" to stop it.\n";

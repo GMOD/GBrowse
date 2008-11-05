@@ -347,7 +347,8 @@ DefaultType text/plain
 HostnameLookups Off
 
 <IfModule so_module>
- LoadModule cgi_module        $modules/mod_cgi.so
+ LoadModule log_config_module $modules/mod_log_config.so
+ LoadModule cgi_module         $modules/mod_cgi.so
  LoadModule authz_host_module $modules/mod_authz_host.so
  LoadModule env_module        $modules/mod_env.so
  LoadModule alias_module      $modules/mod_alias.so

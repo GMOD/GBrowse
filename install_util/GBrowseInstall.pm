@@ -22,7 +22,7 @@ my %OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support fi
 
 sub ACTION_demo {
     my $self = shift;
-    $self->depends_on('config');
+    $self->depends_on('config_data');
 
     my $home = File::Spec->catfile($self->base_dir(),'blib');
     my $dir  = tempdir(
@@ -111,12 +111,12 @@ sub ACTION_reconfig {
 	    $self->config_data($_=>undef);
 	}
     }
-    $self->depends_on('config');
+    $self->depends_on('config_data');
 }
 
 sub ACTION_test {
     my $self = shift;
-    $self->depends_on('config');
+    $self->depends_on('config_data');
     $self->SUPER::ACTION_test;
 }
 
@@ -203,7 +203,7 @@ END
 
 sub ACTION_install {
     my $self = shift;
-    $self->depends_on('config');
+    $self->depends_on('config_data');
     $self->install_path->{conf} 
         ||= $self->config_data('conf')
 	    || GuessDirectories->conf;

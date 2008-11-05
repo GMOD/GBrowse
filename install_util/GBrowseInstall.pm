@@ -159,6 +159,12 @@ sub ACTION_config {
     print STDERR "\n**Interactive configuration done. Run './Build reconfig' to reconfigure**\n";
 }
 
+sub ACTION_config_data {
+    my $self = shift;
+    $self->depends_on('config');
+    $self->SUPER::ACTION_config_data;
+}
+
 sub ACTION_apache_conf {
     my $self = shift;
     $self->depends_on('config');

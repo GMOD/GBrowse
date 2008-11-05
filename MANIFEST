@@ -79,7 +79,6 @@ conf/templates/default/set_track_options_controls.tt2
 conf/templates/default/slider.tt2
 conf/templates/default/sourcemenu.tt2
 conf/templates/default/start_section.tt2
-conf/templates/default/trackstable.bak.tt2
 conf/templates/default/trackstable.tt2
 conf/templates/default/uploadedfiles.tt2
 conf/templates/default/uploadtable.tt2
@@ -142,8 +141,6 @@ contrib/SynView/README
 contrib/TextDumper/README
 contrib/TextDumper/TextDumper.pm
 DISCLAIMER
-docs/developer_notes/gbrowse_2_0_howto.wiki.txt
-docs/developer_notes/old_makefile.pl
 docs/developer_notes/README.rearchitecture
 docs/Gbrowse_Color_Palette.pdf
 docs/pod/BIOSQL_ADAPTER_HOWTO.pod

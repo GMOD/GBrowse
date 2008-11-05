@@ -210,6 +210,7 @@ sub ACTION_install {
     my ($uid,$gid) = (getpwnam($user))[2,3];
     chown $uid,$gid,File::Spec->catfile($self->install_path->{htdocs},     'tmp');
     chown $uid,$gid,glob(File::Spec->catfile($self->install_path->{htdocs},'databases','').'*');
+    $self->fix_selinux;
 
     print STDERR "\n***INSTALLATION COMPLETE***\n";
     print STDERR "Now run ./Build apache_conf to generate the needed configuration lines for Apache.\n";
@@ -218,6 +219,21 @@ sub ACTION_install {
 sub ACTION_install_slave {
     my $self = shift;
     $self->SUPER::ACTION_install();
+}
+
+sub fix_selinux {
+    my $self = shift;
+    return unless -e '/proc/filesystems';
+    my $f    = IO::File->new('/proc/filesystems') or return;
+    next unless grep /selinux/i,<$f>;
+
+    print STDERR "\n*** SELinux detected -- fixing permissions ***\n";
+
+    my $htdocs = $self->config_data('htdocs');
+    my $conf   = $self->config_data('conf');
+    system "/usr/bin/chcon -R -t httpd_sys_content_t $conf";
+    system "/usr/bin/chcon -R -t httpd_sys_content_t $htdocs";
+    system "/usr/bin/chcon -R -t httpd_sys_content_rw_t $htdocs/tmp";
 }
 
 sub process_conf_files {

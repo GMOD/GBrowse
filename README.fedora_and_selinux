@@ -1,11 +1,13 @@
 If you have SELinux installed, typically as part of Fedora Core 3 or
-4, then you may experinece difficulties getting GBrowse to work.  The
-default security parameters for SELinux prevent GBrowse from
+higher, then you may experience difficulties getting GBrowse to work.
+
+The default security parameters for SELinux prevent GBrowse from
 performing some fundamental tasks, including reading its configuration
-file in $CONF/gbrowse.conf (where $CONF is typically /etc/httpd/conf
-or /usr/local/apache/conf).  While we are working the developers of
-SELinux to fix this, here are the directions for the current work
-around:
+file in $CONF/GBrowse.conf (where $CONF is typically /etc/httpd/conf
+or /usr/local/apache/conf). The symptom of the problem is that you
+will see "Permission denied" errors in your server error log.
+
+To fix the problem:
 
 1. Make sure your security policy is up to date:
 

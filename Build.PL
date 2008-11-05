@@ -41,6 +41,18 @@ my $build = GBrowseInstall->new(
 
     );
 
+if(-e '/proc/filesystems' 
+   && `grep selinux /proc/filesystems`) {
+    print STDERR <<'END';
+**** WARNING *********************************************************
+You appear to have SELinux installed on this computer. This can
+interfere with GBrowse operation. Please read the file
+README.fedora_and_selinux in order to perform additional configuration
+operations that may be necessary to run on this computer.
+**********************************************************************
+END
+}
+
 if ($build->have_c_compiler()) {
     foreach ('CAlign.xs','CAlign.pm') {
 	copy("./libalign/$_" => "./lib/Bio/Graphics/Browser/$_");

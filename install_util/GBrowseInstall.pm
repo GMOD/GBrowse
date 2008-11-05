@@ -347,15 +347,35 @@ DefaultType text/plain
 HostnameLookups Off
 
 <IfModule so_module>
+
  <IfModule !log_config_module>
    LoadModule log_config_module $modules/mod_log_config.so
  </IfModule>
- LoadModule cgi_module         $modules/mod_cgi.so
- LoadModule authz_host_module $modules/mod_authz_host.so
- LoadModule env_module        $modules/mod_env.so
- LoadModule alias_module      $modules/mod_alias.so
- LoadModule dir_module        $modules/mod_dir.so
- LoadModule mime_module       $modules/mod_mime.so
+
+ <IfModule !cgi_module>
+  LoadModule cgi_module         $modules/mod_cgi.so
+ </IfModule>
+
+ <IfModule !authz_host_module>
+   LoadModule authz_host_module $modules/mod_authz_host.so
+ </IfModule>
+
+ <IfModule !env_module>
+   LoadModule env_module        $modules/mod_env.so
+ </IfModule>
+
+ <IfModule !alias_module>
+  LoadModule alias_module      $modules/mod_alias.so
+ </IfModule>
+
+ <IfModule !dir_module>
+   LoadModule dir_module        $modules/mod_dir.so
+ </IfModule>
+
+ <IfModule !mime_module>
+   LoadModule mime_module       $modules/mod_mime.so
+ </IfModule>
+
 </IfModule>
 
 TypesConfig "$dir/conf/mime.types"

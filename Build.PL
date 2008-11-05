@@ -74,8 +74,8 @@ $build->add_build_element('cgibin');
 $build->create_build_script;
 print STDERR <<END;
 Now run:
-  ./Build test
   ./Build config
+  ./Build test
   ./Build demo          (optional)
   ./Build install       (as superuser/administrator)
   ./Build apache_conf   (to get appropriate config file)

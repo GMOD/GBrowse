@@ -113,6 +113,8 @@ sub apachemodules {
 	    if -d File::Spec->catfile($root,$_);
     }
 
+    return '/etc/httpd/modules' if -d '/etc/httpd/modules';
+
 
     for my $first ('/usr/lib','/usr/share',
 		   '/usr/local/lib','/usr/local/share') {

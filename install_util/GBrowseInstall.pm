@@ -114,6 +114,12 @@ sub ACTION_reconfig {
     $self->depends_on('config');
 }
 
+sub ACTION_test {
+    my $self = shift;
+    $self->depends_on('config');
+    $self->SUPER::ACTION_test;
+}
+
 sub ACTION_config {
     my $self  = shift;
     local $^W = 0;

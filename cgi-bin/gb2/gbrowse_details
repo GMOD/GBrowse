@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Realign 'align';
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.4 2008-10-19 02:55:13 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.1 2008-11-05 17:23:47 lstein Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 

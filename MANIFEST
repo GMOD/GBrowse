@@ -1,10 +1,8 @@
 bin/gbrowse_slave
 Build.PL
-cgi-bin/gbrowse
-cgi-bin/gbrowse_details
-cgi-bin/gbrowse_img
-cgi-bin/gbrowse_karyotype
-cgi-bin/gbrowse_syn
+cgi-bin/gb2/gbrowse
+cgi-bin/gb2/gbrowse_details
+cgi-bin/gb2/gbrowse_img
 cgi-bin/README
 Changes
 conf/enzymes.txt

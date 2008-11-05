@@ -24,7 +24,7 @@ sub ACTION_demo {
     my $self = shift;
     $self->depends_on('config');
 
-    my $home = $self->base_dir();
+    my $home = File::Spec->catfile($self->base_dir(),'blib');
     my $dir  = tempdir(
 	'GBrowse_demo_XXXX',
 	TMPDIR=>1,
@@ -168,7 +168,9 @@ sub ACTION_apache_conf {
 
 INSTRUCTIONS: Cut this where indicated and paste it into your Apache
 configuration file. You may wish to save it separately and include it
-using the Apache "Include /path/to/file" directive.
+using the Apache "Include /path/to/file" directive. Then restart
+Apache and point your browser to http://your.site/$docs/ to start
+browsing the sample genomes.
 
 ===>>> cut here <<<===
 Alias "/$docs/" "$dir/"
@@ -177,7 +179,7 @@ Alias "/$docs/" "$dir/"
   Options -Indexes -MultiViews -FollowSymLinks +SymLinksIfOwnerMatch
 </Location>
 
-<Directory "$cgibin">
+<Directory "$cgibin/gb2">
   ${inc}SetEnv GBROWSE_MASTER GBrowse.conf
   SetEnv GBROWSE_CONF   "$conf"
   SetEnv GBROWSE_DOCS   "$dir"
@@ -208,6 +210,9 @@ sub ACTION_install {
     my ($uid,$gid) = (getpwnam($user))[2,3];
     chown $uid,$gid,File::Spec->catfile($self->install_path->{htdocs},     'tmp');
     chown $uid,$gid,glob(File::Spec->catfile($self->install_path->{htdocs},'databases','').'*');
+
+    print STDERR "\n***INSTALLATION COMPLETE***\n";
+    print STDERR "Now run ./Build apache_conf to generate the needed configuration lines for Apache.\n";
 }
 
 sub ACTION_install_slave {

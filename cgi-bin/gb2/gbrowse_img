@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbrowse_img,v 1.3 2008-10-25 13:49:35 lstein Exp $
+# $Id: gbrowse_img,v 1.1 2008-11-05 17:23:47 lstein Exp $
 
 use strict;
 

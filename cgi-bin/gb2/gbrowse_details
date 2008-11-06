@@ -7,12 +7,14 @@ use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Realign 'align';
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.1 2008-11-05 17:23:47 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.2 2008-11-06 03:24:37 lstein Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
+
+umask 022;
 
 my $conf_dir  = $ENV{GBROWSE_CONF}   || DEFAULT_CONF;
 my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;

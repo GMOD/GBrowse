@@ -8,6 +8,8 @@ use File::Spec;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render::HTML;
 
+umask 022;
+
 my $conf_dir  = $ENV{GBROWSE_CONF}   || DEFAULT_CONF;
 my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
 

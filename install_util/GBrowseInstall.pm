@@ -440,6 +440,7 @@ sub config_done {
     my $self = shift;
     my $done = $self->config_data('config_done');
     $self->config_data(config_done=>shift) if @_;
+    warn "Run ./Build reconfig to change existing configuration.\n" if $done;
     return $done;
 }
 

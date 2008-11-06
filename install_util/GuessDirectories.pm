@@ -98,7 +98,7 @@ sub portdemo {
 
 sub wwwuser {
     my $self = shift;
-    for (qw(www-data nobody www apache apache2 System)) {
+    for (qw(www-data www httpd apache apache2 System nobody )) {
 	return $_ if getpwnam($_);
     }
     # fallback -- user current real user

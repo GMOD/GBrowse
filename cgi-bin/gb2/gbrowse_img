@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbrowse_img,v 1.1 2008-11-05 17:23:47 lstein Exp $
+# $Id: gbrowse_img,v 1.2 2008-11-06 03:24:37 lstein Exp $
 
 use strict;
 
@@ -22,6 +22,7 @@ use Digest::MD5 'md5_hex';
 # h_region  region(s) to hilight
 # h_feat    feature(s) to hilight
 
+umask 022;
 my $gi = GBrowse_img->new();
 $gi->run();
 exit 0;

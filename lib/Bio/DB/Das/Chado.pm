@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.10 2008-07-17 05:49:50 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.11 2008-11-06 17:41:18 scottcain Exp $
 
 =head1 NAME
 
@@ -371,7 +371,8 @@ sub sofa_id {
 
   $query = "select cv_id from cv where name in (
                     'Sequence Ontology',
-                    'sequence')";
+                    'sequence',
+                    'SO',)";
 
   $sth = $self->dbh->prepare($query);
   $sth->execute() or $self->throw("trying to find SO");

@@ -212,8 +212,9 @@ CPAN::Shell->install('Statistics::Descriptive');
 CPAN::Shell->install('JSON');
 CPAN::Shell->install('JSON::Any');
 
-$get_bioperl_svn = 1;
-print STDERR "\n\nForce getting a BioPerl nightly build; the most recent release is too old\n";
+# recent versions of Module::Build fail to install without force!
+CPAN::Shell->force(install=>'Module::Build') unless eval "require Module::Build; 1";
+
 my $version = BIOPERL_REQUIRES;
 if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_svn or $bioperl_path) {
   print STDERR "\n*** Installing BioPerl ***\n";
@@ -221,7 +222,6 @@ if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_svn or $bioperl_path) {
     my $bioperl_index = find_bioperl_ppm();
     system("ppm install --force $bioperl_index");
   } else {
-      CPAN::Shell->install('Module::Build');
       do_install(BIOPERL,
 		 'bioperl.tgz',
 		 BIOPERL_VERSION,
@@ -242,7 +242,7 @@ my $gbrowse        = SOURCEFORGE_MIRROR1.$latest_version.'.tar.gz';
 eval {do_install($gbrowse,
 		 'gbrowse.tgz',
 		 $latest_version,
-		 'build',
+		 'Build',
 		 $get_gbrowse_cvs ? 'cvs' : '',
 		 $build_param_string,
 		 $gbrowse_path,

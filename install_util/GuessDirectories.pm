@@ -20,6 +20,10 @@ sub conf {
   return File::Spec->catfile('/usr/local/etc','GBrowse2');   # fallback
 }
 
+sub etc {
+    shift;
+    return '/etc';  # no exceptions
+}
 
 sub apache_root {
   if ($^O =~ /mswin/i) {  # windows system

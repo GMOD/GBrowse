@@ -71,6 +71,7 @@ $build->config_done(1) if $argc > 0;
 $build->add_build_element('conf');
 $build->add_build_element('htdocs');
 $build->add_build_element('cgibin');
+$build->add_build_element('etc');
 $build->create_build_script;
 print STDERR <<END;
 Now run:

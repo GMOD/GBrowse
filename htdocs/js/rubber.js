@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.9 2008-09-30 11:34:54 mwz444 Exp $
+ $Id: rubber.js,v 1.10 2008-11-07 16:18:08 lstein Exp $
 
 */
 
@@ -516,10 +516,10 @@ SelectArea.prototype.setOpacity = function(el,opc,bgColor) {
   if (!(el && opc)) return false;
 
   // Just an outline for Konqueror
-  if (navigator.userAgent.indexOf( 'Konqueror' ) != -1) {
-    YAHOO.util.Dom.setStyle(el,'border','1px solid black');
-    return false;
-  }
+  //  if (navigator.userAgent.indexOf( 'Konqueror' ) != -1) {
+  //     YAHOO.util.Dom.setStyle(el,'border','1px solid black');
+  //    return false;
+  //  }
 
   opc = parseFloat(opc);
   YAHOO.util.Dom.setStyle(el,'background',bgColor||'#BABABA');

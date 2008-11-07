@@ -16,10 +16,10 @@ DESC="GBrowse slave track rendering server"
 test -x $DAEMON || exit 0
 set -e
 
-USER=www-data
+USER=nobody
 RUNDIR=/var/run/gbrowse
 LOGDIR=/var/log/gbrowse
-PORT=8101
+PORT='8101'
 VERBOSITY=1
 NICE=0
 
@@ -34,43 +34,39 @@ chown -R $USER $LOGDIR
 
 case "$1" in
   start)
-	if test -e $RUNDIR/$NAME.pid ; then
+	echo -n "Starting $DESC: $NAME "
+	for port in $PORT; do
+	    if test -e $RUNDIR/$NAME.$port.pid ; then
 		echo "$NAME already running, use restart instead."
-	else
-		echo -n "Starting $DESC: $NAME "
-		for port in $PORT; do
-		    ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.$port.pid"
-		    start-stop-daemon --start --pidfile $RUNDIR/$NAME.$port.pid \
-			              --chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
-                    echo -n "$port "
-                done 
-		echo "."
-	fi
+	    else
+		ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.$port.pid"
+		su $USER -c "nice -n $NICE $DAEMON $ARGS"
+		echo -n "$port "
+	    fi
+	done
+	echo "."
 	;;
   stop)
 	echo -n "Stopping $DESC: $NAME "
+	killed=0
 	for port in $PORT; do
-	    start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.$port.pid > /dev/null 2>&1
+	    if test -e $RUNDIR/$NAME.$port.pid ; then
+		kill -TERM `cat $RUNDIR/$NAME.$port.pid`
+		killed=1
+	    fi
             echo -n "$port "
         done
+	if [ "$killed" -ne 1 ]; then
+	    base=`basename $DAEMON`
+	    killall -q -r $base || true
+        fi
 	echo "."
 	;;
   restart|force-reload)
 	echo -n "Restarting $DESC: $NAME "
-	echo -n "stopping "
-	for port in $PORT; do
-	    start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.$port.pid > /dev/null 2>&1
-            echo -n "$port "
-        done
+	$0 stop
 	sleep 3
-	echo -n "starting "
-	for port in $PORT; do
-	    ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.$port.pid"
-	    start-stop-daemon --start --pidfile $RUNDIR/$NAME.$port.pid \
-		--chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
-	    echo -n "$port "
-	done 
-	echo "."
+	$0 start
 	;;
   *)
 	N=/etc/init.d/$NAME

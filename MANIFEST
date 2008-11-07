@@ -159,6 +159,8 @@ docs/pod/README-berkeley-gadfly.pod
 docs/pod/README-chado.pod
 docs/pod/README-gff-files.pod
 docs/pod/README-lucegene.pod
+etc/init.d/gbrowse-slave
+etc/default/gbrowse-slave
 htdocs/annotation_help.html
 htdocs/css/gbrowse.css
 htdocs/css/karyotype.css

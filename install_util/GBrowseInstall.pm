@@ -105,6 +105,7 @@ sub ACTION_realclean {
 
 sub ACTION_build {
     my $self = shift;
+    $self->depends_on('config');
     $self->SUPER::ACTION_build;
     mkdir './htdocs/tmp';
     chmod 0777,'./htdocs/tmp';
@@ -220,6 +221,8 @@ sub ACTION_install {
     $self->install_path->{'cgi-bin'} 
         ||= $self->config_data('cgibin')
 	    || GuessDirectories->cgibin;
+    $self->install_path->{'etc'} 
+        ||= GuessDirectories->etc;
     $self->SUPER::ACTION_install();
 
     my $user = $self->config_data('wwwuser') || GuessDirectories->wwwuser;
@@ -229,6 +232,9 @@ sub ACTION_install {
     my ($uid,$gid) = (getpwnam($user))[2,3];
     chown $uid,$gid,File::Spec->catfile($self->install_path->{htdocs},     'tmp');
     chown $uid,$gid,glob(File::Spec->catfile($self->install_path->{htdocs},'databases','').'*');
+
+    chmod 0755,File::Spec->catfile($self->install_path->{'etc'},'init.d','gbrowse-slave');
+
     $self->fix_selinux;
 
     print STDERR "\n***INSTALLATION COMPLETE***\n";
@@ -244,7 +250,7 @@ sub fix_selinux {
     my $self = shift;
     return unless -e '/proc/filesystems';
     my $f    = IO::File->new('/proc/filesystems') or return;
-    next unless grep /selinux/i,<$f>;
+    return unless grep /selinux/i,<$f>;
 
     print STDERR "\n*** SELinux detected -- fixing permissions ***\n";
 
@@ -288,23 +294,40 @@ sub process_cgibin_files {
     }
 }
 
+sub process_etc_files {
+    my $self = shift;
+    my $f    = IO::File->new('MANIFEST');
+    while (<$f>) {
+	next unless m!^etc/!;
+	chomp;
+	my $copied = $self->copy_if_modified($_=>'blib');
+	$self->substitute_in_place("blib/$_")
+	    if $copied
+	    or !$self->up_to_date('_build/config_data',"blib/$_");
+    }
+}
+
 sub substitute_in_place {
     my $self = shift;
     my $path = shift;
-    return unless $path =~ /\.(html|txt)$/;
+    return if $path =~ /\.\w+$/ && $path !~ /\.(html|txt)$/;
     my $in   = IO::File->new($path) or return;
     my $out  = IO::File->new("$path.$$",'>') or return;
 
     print STDERR "Performing variable substitutions in $path\n";
 
-    my $htdocs = $self->config_data('htdocs');
-    my $conf   = $self->config_data('conf');
-    my $cgibin = $self->config_data('cgibin');
+    my $htdocs   = $self->config_data('htdocs');
+    my $conf     = $self->config_data('conf');
+    my $cgibin   = $self->config_data('cgibin');
+    my $wwwuser  = $self->config_data('wwwuser');
+    my $perl5lib = $self->perl5lib || '';
 
     while (<$in>) {
+	s/\$PERL5LIB/$perl5lib/g;
 	s/\$HTDOCS/$htdocs/g;
 	s/\$CONF/$conf/g;
 	s/\$CGIBIN/$cgibin/g;
+	s/\$WWWUSER/$wwwuser/g;
 	$out->print($_);
     }
     $in->close;
@@ -450,6 +473,13 @@ sub added_to_INC {
     return @inc ? 'SetEnv PERL5LIB '.
 	          join(':',@inc)
 		: '';
+}
+
+sub perl5lib {
+    my $self = shift;
+    my @inc    = grep {!/install_util/} eval {$self->_added_to_INC};  # not in published API
+    return unless @inc;
+    return join(':',@inc);
 }
 
 1;

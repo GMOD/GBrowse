@@ -9,14 +9,14 @@
 ### END INIT INFO
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/usr/bin/gbrowse_slave
+DAEMON=$INSTALLSCRIPT/gbrowse_slave
 NAME="gbrowse-slave"
 DESC="GBrowse slave track rendering server"
 
 test -x $DAEMON || exit 0
 set -e
 
-USER=nobody
+USER=$WWWUSER
 RUNDIR=/var/run/gbrowse
 LOGDIR=/var/log/gbrowse
 PORT='8101'

@@ -132,7 +132,7 @@ sub ACTION_config {
     my $self  = shift;
     local $^W = 0;
 
-    $self->depends_on('build');
+    # $self->depends_on('build');
     return if $self->config_done;
 
     print STDERR "\n**Beginning interactive configuration**\n";
@@ -207,6 +207,12 @@ Alias "/$docs/" "$dir/"
 </Directory>
 ===>>> cut here <<<===
 END
+}
+
+sub ACTION_foo {
+    my $self = shift;
+    warn $self->installdirs;
+    warn $Config::Config{installsitescript};
 }
 
 sub ACTION_install {
@@ -321,8 +327,10 @@ sub substitute_in_place {
     my $cgibin   = $self->config_data('cgibin');
     my $wwwuser  = $self->config_data('wwwuser');
     my $perl5lib = $self->perl5lib || '';
+    my $installscript = $self->scriptdir;
 
     while (<$in>) {
+	s/\$INSTALLSCRIPT/$installscript/g;
 	s/\$PERL5LIB/$perl5lib/g;
 	s/\$HTDOCS/$htdocs/g;
 	s/\$CONF/$conf/g;
@@ -480,6 +488,15 @@ sub perl5lib {
     my @inc    = grep {!/install_util/} eval {$self->_added_to_INC};  # not in published API
     return unless @inc;
     return join(':',@inc);
+}
+
+sub scriptdir {
+    my $self = shift;
+    my $id   = $self->installdirs;
+    my $scriptdir = $id eq 'site'   ? 'installsitescript'
+                   :$id eq 'vendor' ? 'installvendorscript'
+                   : 'installscript';
+    return $Config::Config{$scriptdir};
 }
 
 1;

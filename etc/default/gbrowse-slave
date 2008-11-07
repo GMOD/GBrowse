@@ -2,6 +2,7 @@
 
 export PERL5LIB=$PERL5LIB
 
+DAEMON=$INSTALLSCRIPT/gbrowse_slave
 USER=$WWWUSER
 RUNDIR=/var/run/gbrowse
 LOGDIR=/var/log/gbrowse

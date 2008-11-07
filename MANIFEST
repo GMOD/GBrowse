@@ -119,9 +119,6 @@ contrib/GeneFinder/nematode_gftables/zk637.intron3
 contrib/GeneFinder/nematode_gftables/zk637.intron5
 contrib/GeneFinder/nematode_gftables/zk637.trinuc
 contrib/import_ncbi_mv_hs.pl
-contrib/init_scripts/etc/default/gbrowse-slave
-contrib/init_scripts/gbrowse-slave
-contrib/init_scripts/README
 contrib/install_macosx/BuildConfig.pm
 contrib/install_macosx/README.html
 contrib/install_macosx/README.pod
@@ -250,6 +247,7 @@ htdocs/js/animation.js
 htdocs/js/autocomplete.js
 htdocs/js/balloon.config.js
 htdocs/js/balloon.js
+htdocs/js/box.js
 htdocs/js/builder.js
 htdocs/js/buttons.js
 htdocs/js/connection.js

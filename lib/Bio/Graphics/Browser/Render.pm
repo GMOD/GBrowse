@@ -987,9 +987,6 @@ sub region {
 	$plugin_action eq 'Find') {
 	$region->features($self->plugin_find($current_plugin,$self->state->{name}));
     }
-#    elsif ($self->state->{name}=~ /^[^:]+:[\d-]+(\.\.|-)[\d-]+$/) { # a named region
-#	$region->search_features();
-#    }
     elsif ($self->state->{ref}) { # a known region
 	$region->set_features_by_region(@{$self->state}{'ref','start','stop'});
     }
@@ -1022,52 +1019,24 @@ sub segment {
 sub whole_segment {
   my $self    = shift;
 
-  return $self->{whole_segment} if exists $self->{whole_segment};
+  return $self->{whole_segment} 
+  if exists $self->{whole_segment};
 
-  my $segment = $self->segment;
-  my $factory = $segment->factory;
-
-  # the segment class has been deprecated, but we still must support it
-  my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
-
-  $factory->debug(0);
-  my ($whole_segment) = $factory->segment(-class=>$class,
-					  -name=>$segment->seq_id);
-  $factory->debug(0);
-
-  $whole_segment   ||= $segment;  # just paranoia
-  $self->{whole_segment} = $whole_segment;
+  my $segment  = $self->segment;
+  my $settings = $self->state;
+  return $self->{whole_segment} = 
+      $self->region->whole_segment($segment,$settings);
 }
 
 sub region_segment {
     my $self          = shift;
-    my $segment       = $self->segment;
     return $self->{region_segment} 
        if exists $self->{region_segment};
 
-
-    my $whole_segment = $self->whole_segment;
+    my $segment       = $self->segment;
     my $settings      = $self->state;
-    my $factory       = $segment->factory;
-
-    my ( $region_seg_start, $region_seg_end )
-        = $self->get_regionview_start_stop( $settings, $segment->start,
-        $segment->end, $whole_segment->start, $whole_segment->end );
-
-    # the segment class has been deprecated, but we still must support it
-    my $class
-        = eval { $segment->seq_id->class } || eval { $factory->refclass };
-
-    my ($region_segment) = $factory->segment(
-        -class => $class,
-        -name  => $segment->seq_id,
-        -start => $region_seg_start,
-        -end   => $region_seg_end,
-    );
-    $region_segment ||= $segment;    # just paranoia
-    return $region_segment;
-
-    return $self->{region_segment} = $region_segment;
+    return $self->{region_segment} = 
+	$self->region->region_segment($segment,$settings,$self->whole_segment);
 }
 
 # ========================= plugins =======================

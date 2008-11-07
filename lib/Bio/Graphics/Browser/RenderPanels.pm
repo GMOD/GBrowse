@@ -107,8 +107,6 @@ sub request_panels {
   my $do_local  = @$local_labels;
   my $do_remote = @$remote_labels;
 
-  warn "remote = @$remote_labels";
-
   # In the case of a deferred request we fork.
   # Parent returns the list of requests.
   # Child processes the requests in the background.
@@ -569,15 +567,13 @@ sub sort_local_remote {
     my $source         = $self->source;
     my $use_renderfarm = $self->use_renderfarm;
 
-    warn "render farm = $use_renderfarm";
-
     unless ($use_renderfarm) {
 	return (\@uncached,[]);
     }
 
-    warn $source->fallback_setting($_=>'remote renderer');
-
-    my %is_remote = map { $_ => ( $source->fallback_setting($_=>'remote renderer') || 0 )
+    my %is_remote = map { $_ => ( 
+			      !/plugin:/ &&
+			      ($source->fallback_setting($_=>'remote renderer') || 0) )
                         } @uncached;
 
     my @remote    = grep {$is_remote{$_} } @uncached;

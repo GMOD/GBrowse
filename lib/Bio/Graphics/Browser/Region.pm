@@ -359,6 +359,73 @@ sub parse_feature_name {
   return ($ref,$start,$stop,$class);
 }
 
+=head2 $whole = $db->whole_segment ($segment,$settings);
+
+Given a detail segment, return the whole seq_id that contains it
+
+=cut
+
+sub whole_segment {
+    my $self    = shift;
+    my $segment = shift || $self->seg;
+    my $db      = $segment->factory;
+    my $class   = eval {$segment->seq_id->class} || eval{$db->refclass};
+    my ($whole) = $db->segment(-class=>$class,
+			       -name=>$segment->seq_id);
+    return $whole;
+}
+
+=head2 $region = $db->region_segment ($segment,$settings [,$whole]);
+
+Given a detail segment and the current settings, return the region
+centered on the segment. The whole segment can be passed if desired --
+this will avoid a redundant lookup.
+
+=cut
+
+sub region_segment {
+    my $self     = shift;
+    my $segment  = shift || $self->seg;
+    my $settings = shift;
+    my $whole    = shift;
+    $whole     ||= $self->whole_segment($segment) or return;
+
+    my $db       = $whole->factory;
+    my $class    = eval {$segment->seq_id->class} || eval{$db->refclass};
+
+    my $regionview_length = $settings->{region_size};
+    my $detail_start      = $segment->start;
+    my $detail_end        = $segment->end;
+    my $whole_start       = $whole->start;
+    my $whole_end         = $whole->end;
+
+   # region can't be smaller than detail
+    if ($detail_end - $detail_start + 1 > $regionview_length) { 
+	$regionview_length = $detail_end - $detail_start + 1;
+    }
+
+    my $midpoint = ($detail_end + $detail_start) / 2;
+    my $regionview_start = int($midpoint - $regionview_length/2 + 1);
+    my $regionview_end = int($midpoint + $regionview_length/2);
+
+    if ($regionview_start < $whole_start) {
+	$regionview_start = 1;
+	$regionview_end   = $regionview_length;
+    }
+
+    if ($regionview_end > $whole_end) {
+	$regionview_start = $whole_end - $regionview_length + 1;
+	$regionview_end   = $whole_end;
+    }
+
+    my ($region_segment) = $db->segment(-class => $class,
+					-name  => $segment->seq_id,
+					-start => $regionview_start,
+					-end   => $regionview_end);
+    return $region_segment;
+}
+
+
 
 
 1;

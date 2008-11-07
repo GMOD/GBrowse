@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Realign 'align';
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.2 2008-11-06 03:24:37 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.3 2008-11-07 23:35:47 lstein Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 
@@ -16,7 +16,7 @@ use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 umask 022;
 
-my $conf_dir  = $ENV{GBROWSE_CONF}   || DEFAULT_CONF;
+my $conf_dir  = Bio::Graphics::Browser->config_base;
 my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
 my $conf      = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
     or die "Couldn't read globals";

@@ -10,7 +10,7 @@ use Bio::Graphics::Browser::Render::HTML;
 
 umask 022;
 
-my $conf_dir  = $ENV{GBROWSE_CONF}   || DEFAULT_CONF;
+my $conf_dir  = Bio::Graphics::Browser->config_base;
 my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
 
 my $globals = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))

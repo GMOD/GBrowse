@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.216 2008-11-05 17:23:47 lstein Exp $
+# $Id: Browser.pm,v 1.217 2008-11-07 23:35:47 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -95,16 +95,16 @@ sub url_path {
 }
 
 sub config_base { $ENV{GBROWSE_CONF} 
-		  || shift->setting(general=>'config_base')
-		      || GBrowse::ConfigData->config('conf')
-		        || '/etc/GBrowse2' }
+		      || eval {shift->setting(general=>'config_base')}
+			  || GBrowse::ConfigData->config('conf')
+		              || '/etc/GBrowse2' }
 sub htdocs_base { $ENV{GBROWSE_DOCS} 
-		  || shift->setting(general=>'htdocs_base')
-                     || GBrowse::Config->data('htdocs')
-		       || '/var/www/gbrowse2'     }
+		  || eval{shift->setting(general=>'htdocs_base')}
+                     || GBrowse::ConfigData->config('htdocs')
+		            || '/var/www/gbrowse2'     }
 sub url_base    { $ENV{GBROWSE_ROOT} 
-		  || shift->setting(general=>'url_base')   
-                     || basename(GBrowse::Config->data('htdocs'))
+		  || eval{shift->setting(general=>'url_base')}   
+                     || basename(GBrowse::ConfigData->config('htdocs'))
 		       || '/gbrowse2'             }
 
 # these are url-relative options

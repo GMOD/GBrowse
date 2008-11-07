@@ -308,11 +308,11 @@ sub do_get_distro {
             print STDERR "\n\nPlease press return when prompted for a password.\n";
             unless (
               (system(
-    "$distribution_method -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod login")==0
+    "$distribution_method -d:pserver:anonymous\@gmod.cvs.sourceforge.net:/cvsroot/gmod login")==0
                 or $is_cygwin)
               &&
               (system(
-    "$distribution_method -z3 -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod co -kb -P Generic-Genome-Browser") == 0
+    "$distribution_method -z3 -d:pserver:anonymous\@gmod.cvs.sourceforge.net:/cvsroot/gmod co -kb -P Generic-Genome-Browser") == 0
                 or $is_cygwin)
             )
             {

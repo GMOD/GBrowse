@@ -243,8 +243,10 @@ sub ACTION_install {
 
     $self->fix_selinux;
 
+    my $base = basename($self->install_path->{htdocs});
+
     print STDERR "\n***INSTALLATION COMPLETE***\n";
-    print STDERR "Now run ./Build apache_conf to generate the needed configuration lines for Apache.\n";
+    print STDERR "Load http://localhost/$base for demo and documentation\n";
 }
 
 sub ACTION_install_slave {

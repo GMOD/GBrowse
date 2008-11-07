@@ -251,38 +251,6 @@ sub gd_cache_write {
   close $file;
 }
 
-# sub tmpdir {
-#   my $self = shift;
-#   my @path = @_;
-
-#   my ($tmpuri,$tmpdir) = shellwords($self->global_setting('tmpimages'))
-#     or die "no tmpimages option defined, can't generate a picture";
-
-#   $tmpuri = $self->globals->resolve_path($tmpuri,'url');
-
-#   $tmpuri = File::Spec->catfile($tmpuri,@path) if @path;
-
-#   if ($ENV{MOD_PERL} ) {
-#     my $r          = modperl_request();
-#     my $subr       = $r->lookup_uri($tmpuri);
-#     $tmpdir        = $subr->filename;
-#     my $path_info  = $subr->path_info;
-#     $tmpdir       .= $path_info if $path_info;
-#   } elsif ($tmpdir) {
-#       $tmpdir      = File::Spec->catfile($tmpdir,@path) if @path;
-#   }
-#   else {
-#     $tmpdir = File::Spec->catfile($ENV{DOCUMENT_ROOT},$tmpuri);
-#   }
-
-#   # we need to untaint tmpdir before calling mkpath()
-#   return unless $tmpdir =~ /^(.+)$/;
-#   my $path = $1;
-
-#   mkpath($path,0,0777) unless -d $path;
-#   return ($tmpuri,$path);
-# }
-
 sub overview_bgcolor { shift->global_setting('overview bgcolor')         }
 sub detailed_bgcolor { shift->global_setting('detailed bgcolor')         }
 sub key_bgcolor      { shift->global_setting('key bgcolor')              }
@@ -781,7 +749,9 @@ sub db_settings {
 
   # Do environment substitutions in the args. Assume that the environment is safe.
   foreach (@argv) {
-      s/\$ENV{(\w+)}/$ENV{$1}||''/ge;
+      s/\$HTDOCS/Bio::Graphics::Browser->htdocs_base/ge;
+      s/\$CONF/Bio::Graphics::Browser->config_base/ge;
+      s/\$ROOT/Bio::Graphics::Browser->url_base/ge;
   }
 
   if (defined (my $a = $self->fallback_setting($section => 'aggregators'))) {
@@ -798,7 +768,7 @@ sub db_settings {
 
   # cache settings
   $DB_SETTINGS{$self,$track} = \@result;
-  
+
   return @result;
 }
 

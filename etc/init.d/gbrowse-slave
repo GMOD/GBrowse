@@ -40,7 +40,7 @@ case "$1" in
 		echo "$NAME already running, use restart instead."
 	    else
 		ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.$port.pid"
-		su $USER -c "nice -n $NICE $DAEMON $ARGS"
+		su $USER -s /bin/sh -c "nice -n $NICE $DAEMON $ARGS"
 		echo -n "$port "
 	    fi
 	done

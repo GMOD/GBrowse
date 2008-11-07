@@ -552,7 +552,7 @@ lib/Bio/Graphics/Browser/RegionSearch.pm
 lib/Bio/Graphics/Browser/RemoteSet.pm
 lib/Bio/Graphics/Browser/Render.pm
 lib/Bio/Graphics/Browser/Render/HTML.pm
-lib/Bio/Graphics/Browser/Render/Server.pm
+lib/Bio/Graphics/Browser/Render/Slave.pm
 lib/Bio/Graphics/Browser/RenderPanels.pm
 lib/Bio/Graphics/Browser/Session.pm
 lib/Bio/Graphics/Browser/Shellwords.pm

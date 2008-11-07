@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::Render::Server;
+package Bio::Graphics::Browser::Render::Slave;
 
 use strict;
 use HTTP::Daemon;

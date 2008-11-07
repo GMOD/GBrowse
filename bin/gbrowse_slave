@@ -5,7 +5,7 @@ use Getopt::Long;
 use FindBin '$Bin';
 use lib "$Bin/../lib";
 
-use Bio::Graphics::Browser::Render::Server;
+use Bio::Graphics::Browser::Render::Slave;
 use constant DEFAULT_PORT => 8101;
 
 my ($port,$debug,$logfile,$pidfile,$user,$kill);

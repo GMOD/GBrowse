@@ -6,6 +6,7 @@ use Storable qw(nfreeze thaw);
 use CGI qw(header param escape unescape);
 use IO::File;
 use IO::String;
+use File::Spec;
 use File::Basename 'basename';
 use Bio::Graphics::GBrowseFeature;
 use Bio::Graphics::Browser;
@@ -196,9 +197,21 @@ sub render_tracks {
 				 -stop	=> $settings->{'stop'});
     $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop}")
 	unless $segment;
+
+    # BUG: duplicated code from Render.pm -- move into a common place
+    if ($panel_args->{section} eq 'overview') {
+	$segment = $self->whole_segment($segment,$settings);
+    } elsif ($panel_args->{section} eq 'region') {
+	$segment  = $self->region_segment($segment,$settings);
+    }
+
+    $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop}")
+	unless $segment;
 	    
     # generate the panels
     $self->Debug("Calling RenderPanels->new()");
+    my $tmpdir = $datasource->global_setting('slave_tmp') || $self->tmpdir;
+    $datasource->globals->setting('general',tmpimages=>$tmpdir);
     my $renderer = Bio::Graphics::Browser::RenderPanels->new(-segment  => $segment,
 							     -source   => $datasource,
 							     -settings => $settings,
@@ -220,7 +233,7 @@ sub render_tracks {
 
     $self->Debug("Calling run_local_requests()");
 
-    $renderer->run_local_requests($requests);
+    $renderer->run_local_requests($requests,$panel_args);
 
     $self->Debug("Finished run_local_requests()");
 
@@ -275,7 +288,7 @@ sub clone_feature {
     my $clone = Bio::Graphics::GBrowseFeature->new(
 					    -name   => $f->name,
 					    -primary_tag => $f->primary_tag,
-					    -source_tag  => $f->source_tag,
+					    -source_tag  => eval {$f->source_tag} || 'region',
 					    -seq_id => $f->seq_id,
 					    -start  => $f->start,
 					    -end    => $f->end,
@@ -293,6 +306,11 @@ sub clone_feature {
     return $clone;
 }
 
+sub tmpdir {
+    my $self   = shift;
+    my $tmpdir = File::Spec->tmpdir();
+    return File::Spec->catfile($tmpdir,'gbrowse_slave');
+}
 
 sub setup_environment {
     my $self    = shift;
@@ -303,6 +321,59 @@ sub setup_environment {
 	next unless $key =~ /^GBROWSE/;
 	$ENV{$key}       = $env->{$key};
     }
+}
+
+# BUG: shouldn't be here - this should be refactored with whole_segment method in Render.pm
+# Move into RegionSearch.pm!
+sub whole_segment {
+    my $self    = shift;
+    my $segment = shift;
+    my $db      = $segment->factory;
+    my $class   = eval {$segment->seq_id->class} || eval{$db->refclass};
+    my ($whole) = $db->segment(-class=>$class,
+			       -name=>$segment->seq_id);
+    return $whole;
+}
+
+# BUG: shouldn't be here - this should be refactored with region_segment method in Render.pm
+# Move into RegionSearch.pm!
+sub region_segment {
+    my $self     = shift;
+    my $segment  = shift;
+    my $settings = shift;
+    my $whole    = $self->whole_segment($segment) or return;
+    my $db       = $whole->factory;
+    my $class    = eval {$segment->seq_id->class} || eval{$db->refclass};
+
+    my $regionview_length = $settings->{region_size};
+    my $detail_start      = $segment->start;
+    my $detail_end        = $segment->end;
+    my $whole_start       = $whole->start;
+    my $whole_end         = $whole->end;
+
+    if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
+	$regionview_length = $detail_end - $detail_start + 1;
+    }
+
+    my $midpoint = ($detail_end + $detail_start) / 2;
+    my $regionview_start = int($midpoint - $regionview_length/2 + 1);
+    my $regionview_end = int($midpoint + $regionview_length/2);
+
+    if ($regionview_start < $whole_start) {
+	$regionview_start = 1;
+	$regionview_end   = $regionview_length;
+    }
+
+    if ($regionview_end > $whole_end) {
+	$regionview_start = $whole_end - $regionview_length + 1;
+	$regionview_end   = $whole_end;
+    }
+
+    my ($region_segment) = $db->segment(-class => $class,
+					-name  => $segment->seq_id,
+					-start => $regionview_start,
+					-end   => $regionview_end);
+    return $region_segment;
 }
 
 sub become_daemon {

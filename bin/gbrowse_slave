@@ -48,10 +48,10 @@ if ($kill) {
 
 $port  ||= DEFAULT_PORT;
 
-my $server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>$port,
-							 User     => $user,
-							 LogFile  => $logfile,
-							 PidFile  => $pidfile,
+my $server = Bio::Graphics::Browser::Render::Slave->new(LocalPort=>$port,
+							User     => $user,
+							LogFile  => $logfile,
+							PidFile  => $pidfile,
     )
     or die "Could not create server.\n";
 

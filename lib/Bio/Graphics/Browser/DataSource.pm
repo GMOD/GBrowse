@@ -403,11 +403,13 @@ sub setting {
   $self->SUPER::setting($label,$option,@rest);
 }
 
-# like setting, but defaults to 'general'
+# like setting, but falls back to 'track defaults' and then to 'general'
 sub fallback_setting {
   my $self = shift;
   my ($label,$option,@rest) = @_;
   my $setting = $self->SUPER::setting($label,$option,@rest);
+  return $setting if defined $setting;
+  $setting = $self->SUPER::setting('TRACK DEFAULTS',$option,@rest);
   return $setting if defined $setting;
   $setting = $self->SUPER::setting('general',$option,@rest);
   return $setting;

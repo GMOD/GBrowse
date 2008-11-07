@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Bio::Graphics::GBrowseFeature;
 use Bio::Graphics::Browser::Region;
+use Bio::Graphics::Browser::Util 'shellwords';
 use LWP::UserAgent;
 use HTTP::Request::Common 'POST';
 use Storable 'nfreeze','thaw';
@@ -90,10 +91,18 @@ sub init_databases {
     my $source = $self->source;
     my $labels = $track_labels || [$source->labels];
 
+    my $renderfarm = $self->source->global_setting('renderfarm');
+
     for my $l (@$labels) {
 	next if $l =~ /^(_scale|builtin)/;
 
-	my $remote         = $local_only ? undef : $source->setting($l => 'remote renderer');
+	my $remote         = $local_only || !$renderfarm 
+                               ? undef 
+                               : $source->fallback_setting($l => 'remote renderer');
+	if ($remote) {
+	    my @remotes  = shellwords($remote);
+	    $remote = $remotes[rand @remotes] if @remotes > 1;
+	}
 	my ($dbid)         = $source->db_settings($l);
 	my $search_options = $source->setting($dbid => 'search options') || '';
 
@@ -102,8 +111,7 @@ sub init_databases {
 	$dbs{$dbid}{remotes}{$remote}++ if $remote;
     }
 
-    # try to spread the work out as much as possible among the remote
-    # renderers
+    # try to spread the work out as much as possible among the remote renderers
     my %remotes;
     for my $dbid (keys %dbs) {
 	if (my @remote = keys %{$dbs{$dbid}{remotes}}) {

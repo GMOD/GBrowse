@@ -107,6 +107,8 @@ sub request_panels {
   my $do_local  = @$local_labels;
   my $do_remote = @$remote_labels;
 
+  warn "remote = @$remote_labels";
+
   # In the case of a deferred request we fork.
   # Parent returns the list of requests.
   # Child processes the requests in the background.
@@ -472,11 +474,13 @@ sub run_remote_requests {
 
   eval { use HTTP::Request::Common; } unless HTTP::Request::Common->can('POST');
 
-  my $source   = $self->source;
-  my $settings = $self->settings;
-  my $lang     = $self->language;
-  my %env      = map {$_=>$ENV{$_}}    grep /^GBROWSE/,keys %ENV;
-  my %args     = map {$_=>$args->{$_}} grep /^-/,keys %$args;
+  my $source     = $self->source;
+  my $settings   = $self->settings;
+  my $lang       = $self->language;
+  my %env        = map {$_=>$ENV{$_}}    grep /^GBROWSE/,keys %ENV;
+  my %args       = map {$_=>$args->{$_}} grep /^-/,keys %$args;
+
+  $args{section} = $args->{section};
 
   # serialize the data source and settings
   my $s_dsn	= Storable::nfreeze($source);
@@ -488,7 +492,11 @@ sub run_remote_requests {
   # sort requests by their renderers
   my %renderers;
   for my $label (@labels_to_generate) {
-      my $url     = $source->setting($label => 'remote renderer') or next;
+      my $url     = $source->fallback_setting($label => 'remote renderer') or next;
+      my @urls    = shellwords($url);
+      if (@urls > 1) {  # whoo hoo! choices!
+	  $url = $urls[rand @urls];
+      }
       $renderers{$url}{$label}++;
   }
 
@@ -561,11 +569,15 @@ sub sort_local_remote {
     my $source         = $self->source;
     my $use_renderfarm = $self->use_renderfarm;
 
+    warn "render farm = $use_renderfarm";
+
     unless ($use_renderfarm) {
 	return (\@uncached,[]);
     }
 
-    my %is_remote = map { $_ => ( $source->setting($_=>'remote renderer') || 0 )
+    warn $source->fallback_setting($_=>'remote renderer');
+
+    my %is_remote = map { $_ => ( $source->fallback_setting($_=>'remote renderer') || 0 )
                         } @uncached;
 
     my @remote    = grep {$is_remote{$_} } @uncached;

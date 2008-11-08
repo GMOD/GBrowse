@@ -7,6 +7,7 @@
 use strict;
 use ExtUtils::MakeMaker;
 use Bio::Root::IO;
+use FindBin '$Bin';
 use constant TEST_COUNT => 7;
 
 BEGIN {
@@ -20,28 +21,24 @@ BEGIN {
   use Test;
   plan test => TEST_COUNT;
 }
-use Bio::DB::GFF;
+use Bio::DB::SeqFeature::Store;
 
-my $db = eval { Bio::DB::GFF->new(-adaptor=>'memory',-gff=>'sample_data/yeast_data.gff') } ;
+my $db = eval { Bio::DB::SeqFeature::Store->new(-adaptor=>'memory',
+						-dsn    =>"$Bin/../htdocs/databases/yeast_chr1+2") } ;
 
 ok($db);
 
-unless ($db) {
-  warn "This test script will only work after you have created and loaded the test \"yeast\" database;\n";
-  warn "Please see the INSTALL file for details.\n";
-  die '';
-}
-
-my @h = $db->features('Transposon:sgd');
+my @h = $db->features('LTR_retrotransposon:SGD');
 ok(@h > 0);
 
-my $s = $db->segment(Transposon=>'YARCTy1-1');
+my ($s) = $db->get_features_by_name('YARCTy1-1');
 ok(defined $s);
-ok($s->start,1);
-$s->absolute(1);
-ok($s->low,160234);
-ok($s->high,166158);
+ok($s->start,160239);
+ok($s->end,166163);
 
-my @i = $s->features;
+my $seg = $db->segment('YARCTy1-1');
+ok($seg);
+
+my @i = $seg->features;
 ok(@i>0);
 

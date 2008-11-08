@@ -228,7 +228,7 @@ sub ACTION_install {
         ||= $self->config_data('cgibin')
 	    || GuessDirectories->cgibin;
     $self->install_path->{'etc'} 
-        ||= GuessDirectories->etc;
+        ||= File::Spec->catfile($self->prefix,GuessDirectories->etc);
     $self->SUPER::ACTION_install();
 
     my $user = $self->config_data('wwwuser') || GuessDirectories->wwwuser;

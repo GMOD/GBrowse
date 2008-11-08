@@ -30,8 +30,8 @@ BEGIN {
 
   $PID = $$;
 
-  rmtree '/tmp/gbrowse_testing';
-  rmtree '/tmp/gbrowse';
+  rmtree "/tmp/gbrowse_testing";
+  rmtree "/tmp/gbrowse";
 }
 
 $SIG{INT} = sub {exit 0};
@@ -138,6 +138,7 @@ my @images = $view =~ m!src=\"(/tmpimages/volvox/img/[a-z0-9]+\.png)\"!g;
 foreach (@images) {
     s!/tmpimages!/tmp/gbrowse_testing/tmpimages!;
 }
+
 for my $img (@images) {
     ok (-e $img && -s _);
 }
@@ -156,7 +157,7 @@ END {
 	}
 	unlink 'testdata/conf/volvox_final.conf',
      	       'testdata/conf/yeast_chr1.conf';
-	rmtree '/tmp/gbrowse'         if $$ == $PID;
-	rmtree '/tmp/gbrowse_testing' if $$ == $PID;
+	rmtree "/tmp/gbrowse"         if $$ == $PID;
+	rmtree "/tmp/gbrowse_testing" if $$ == $PID;
     }
 }

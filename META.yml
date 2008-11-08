@@ -52,8 +52,8 @@ provides:
     file: lib/Bio/Graphics/Browser/Render.pm
   Bio::Graphics::Browser::Render::HTML:
     file: lib/Bio/Graphics/Browser/Render/HTML.pm
-  Bio::Graphics::Browser::Render::Server:
-    file: lib/Bio/Graphics/Browser/Render/Server.pm
+  Bio::Graphics::Browser::Render::Slave:
+    file: lib/Bio/Graphics/Browser/Render/Slave.pm
   Bio::Graphics::Browser::RenderPanels:
     file: lib/Bio/Graphics/Browser/RenderPanels.pm
   Bio::Graphics::Browser::Session:

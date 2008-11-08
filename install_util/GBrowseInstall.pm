@@ -209,12 +209,6 @@ Alias "/$docs/" "$dir/"
 END
 }
 
-sub ACTION_foo {
-    my $self = shift;
-    warn $self->installdirs;
-    warn $Config::Config{installsitescript};
-}
-
 sub ACTION_install {
     my $self = shift;
     $self->depends_on('config_data');

@@ -1,4 +1,5 @@
 bin/gbrowse_slave
+bin/make_das_conf.pl
 Build.PL
 cgi-bin/gb2/gbrowse
 cgi-bin/gb2/gbrowse_details
@@ -83,7 +84,6 @@ conf/templates/default/trackstable.tt2
 conf/templates/default/uploadedfiles.tt2
 conf/templates/default/uploadtable.tt2
 conf/yeast_chr1+2.conf
-conf/yeast_chr1.conf
 contrib/ace2gff.pl
 contrib/AxtPairwise_convert/axt2phy.pl
 contrib/blast2gff.pl
@@ -175,8 +175,6 @@ htdocs/databases/volvox4/volvox4.gff3
 htdocs/databases/yeast_chr1+2/chr1.fa
 htdocs/databases/yeast_chr1+2/chr2.fa
 htdocs/databases/yeast_chr1+2/yeast_chr1+2.gff3
-htdocs/databases/yeast_chr1/chromosome1.fa
-htdocs/databases/yeast_chr1/chromosome1.gff
 htdocs/gbrowse_karyotype_help.html
 htdocs/general_help.html
 htdocs/general_help.html.zh
@@ -464,9 +462,6 @@ README.fedora_and_selinux
 README.GBrowse-2.00
 README.gff3
 README.IF.GBROWSE.ISNT.WORKING
-sample_data/yeast_data.gff
-sample_data/yeastaa.gff
-sample_data/yeastab.gff
 t/01yeast.t
 t/02.rearchitecture.t
 t/03.render.t

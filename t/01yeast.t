@@ -42,3 +42,6 @@ ok($seg);
 my @i = $seg->features;
 ok(@i>0);
 
+END {
+    unlink "$Bin/../htdocs/databases/yeast_chr1+2/directory.index";
+}

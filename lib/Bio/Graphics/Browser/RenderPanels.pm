@@ -226,7 +226,7 @@ sub make_requests {
         } if $feature_files && $feature_files->{$label};
 
         my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
-            -base       => $base,
+            -cache_base => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
             -extra_args => [ @cache_extra, @extra_args ],
@@ -734,7 +734,7 @@ sub render_image_pad {
     my @track_args  = ();
     my @extra_args  = ();
     my $cache = Bio::Graphics::Browser::CachedTrack->new(
-	-base       => scalar $self->get_cache_base,
+	-cache_base => $self->get_cache_base,
 	-panel_args => \@panel_args,
 	-track_args => \@track_args,
 	-extra_args => \@extra_args,
@@ -1480,9 +1480,8 @@ sub create_cache_key {
 
 sub get_cache_base {
     my $self = shift;
-    my $rel_path    = File::Spec->catfile($self->source->name,'panel_cache');
-    my ($uri,$path) = $self->source->globals->tmpdir($rel_path);
-    return wantarray ? ($path,$uri) : $path;
+    my $path = $self->source->globals->cache_dir($self->source->name);
+    return $path;
 }
 
 # Convert the cached image map data

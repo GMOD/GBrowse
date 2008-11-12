@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.3 2008-10-02 03:49:21 lstein Exp $
+# $Id: CachedTrack.pm,v 1.4 2008-11-12 23:14:37 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -26,13 +26,13 @@ use constant DEFAULT_CACHE_TIME   => 60*60; # 1 hour
 sub new {
     my $self = shift;
     my %args = @_;
-    my $base       = $args{-base};
+    my $cache_base = $args{-cache_base};
     my $panel_args = $args{-panel_args};
     my $track_args = $args{-track_args};
     my $extra_args = $args{-extra_args};
     my $key        = $args{-key};
 
-    -d $base && -w _ or croak "$base is not writable";
+    -d $cache_base && -w _ or croak "$cache_base is not writable";
 
     # If next argument is a scalar, then it is our key to use.
     # Otherwise, it is the data to use to generate a key.
@@ -41,7 +41,7 @@ sub new {
     }
 
     my $obj = bless { 
-	base       => $base ,
+	cache_base => $cache_base ,
 	key        => $key,
 	panel_args => $panel_args,
 	track_args => $track_args,
@@ -50,8 +50,9 @@ sub new {
     return $obj;
 }
 
-sub base { shift->{base} }
-sub key  { shift->{key}  }
+sub cache_base { shift->{cache_base} }
+sub lock_base  { shift->{lock_base} }
+sub key        { shift->{key}  }
 sub panel_args { shift->{panel_args} }
 sub track_args { shift->{track_args} }
 sub extra_args { shift->{extra_args} }
@@ -69,7 +70,7 @@ sub cachedir {
     my $self = shift;
     my $key  = $self->key;
     my @comp = $key =~ /(..)/g;
-    my $path = File::Spec->catfile($self->base,@comp[0..2],$key);
+    my $path = File::Spec->catfile($self->cache_base,@comp[0..2],$key);
     mkpath ($path) unless -e $path;
     die "Can't mkpath($path): $!" unless -d $path;
     return $path;

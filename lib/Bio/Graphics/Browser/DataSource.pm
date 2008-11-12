@@ -751,6 +751,7 @@ sub db_settings {
   foreach (@argv) {
       s/\$ENV{(\w+)}/$ENV{$1}||''/ge;
       s/\$HTDOCS/Bio::Graphics::Browser->htdocs_base/ge;
+      s/\$DB/Bio::Graphics::Browser->db_base/ge;
       s/\$CONF/Bio::Graphics::Browser->config_base/ge;
       s/\$ROOT/Bio::Graphics::Browser->url_base/ge;
   }
@@ -886,8 +887,9 @@ sub generate_image {
   $signature =~ /^([0-9A-Fa-f]+)$/g or return;
   $signature = $1;
 
-  my ($uri,$path) = $self->globals->tmpdir($self->name.'/img');
-  my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
+  my $path        = $self->globals->tmpimage_dir($self->name);
+  my $image_url   = $self->globals->image_url;
+  my $url         = sprintf("%s/%s/%s.%s",$image_url,$self->name,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
   open (my $f,'>',$imagefile) 
       || die("Can't open image file $imagefile for writing: $!\n");

@@ -86,6 +86,7 @@ $CGI::Q    = new CGI('name=ctgA:1..20000;label=Clones-Motifs-Transcripts');
 
 # this is the standard initialization, ok?
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
+
 my $session = $globals->session;
 my $source  = $globals->create_data_source('volvox');
 my $render  = Bio::Graphics::Browser::Render::HTML->new($source,$session);
@@ -127,18 +128,16 @@ for (1..3) {
 	    skip($skipit,length($content->{$_}{imagedata}->png) > 0);
 	}
 }
-
 # now we test whether parallel rendering is working
 @labels = qw(CleavageSites Alignments Motifs BindingSites);
 
 $render->set_tracks(@labels);
 
 my $view = $render->render_detailview($render->segment);
-my @images = $view =~ m!src=\"(/tmpimages/volvox/img/[a-z0-9]+\.png)\"!g;
+my @images = $view =~ m!src=\"(/gbrowse/i/volvox/[a-z0-9]+\.png)\"!g;
 foreach (@images) {
-    s!/tmpimages!/tmp/gbrowse_testing/tmpimages!;
+    s!/gbrowse/i!/tmp/gbrowse_testing/images!;
 }
-
 for my $img (@images) {
     ok (-e $img && -s _);
 }
@@ -146,7 +145,8 @@ for my $img (@images) {
 ok (scalar @images,4);
 
 # uncomment to see the images
-# system "xv @images";
+# warn join ' ',@images;
+# sleep 20;
 
 exit 0;
 
@@ -155,9 +155,10 @@ END {
 	foreach ($server,$alignment_server,$cleavage_server) { 
 	    kill TERM=>$_->pid if $_
 	}
+	sleep 1;
 	unlink 'testdata/conf/volvox_final.conf',
      	       'testdata/conf/yeast_chr1.conf';
-	rmtree "/tmp/gbrowse"         if $$ == $PID;
 	rmtree "/tmp/gbrowse_testing" if $$ == $PID;
+	rmtree "/tmp/gbrowse"         if $$ == $PID;
     }
 }

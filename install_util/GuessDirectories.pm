@@ -7,22 +7,35 @@ use File::Spec;
 sub conf {
   shift;
   if ($^O =~ /mswin/i) {  # windows system
-      return File::Spec->catfile('C:','Program Files','GBrowse2');
+      return File::Spec->catfile('C:','Program Files','GBrowse2','conf');
   } else {
       for (
 	  '/etc',
 	  '/usr/etc',
 	  '/usr/local/etc',
 	  ) {
-	  return File::Spec->catfile($_,'GBrowse2') if -d $_;
+	  return File::Spec->catfile($_,'gbrowse2') if -d $_;
       }
   }
-  return File::Spec->catfile('/usr/local/etc','GBrowse2');   # fallback
+  return File::Spec->catfile('/usr/local/etc','gbrowse2');   # fallback
 }
 
 sub etc {
     shift;
     return '/etc';  # no exceptions
+}
+
+sub tmp {
+    my $self = shift;
+    return '/srv/gbrowse2/tmp'   if $ENV{DEB_BUILD_ARCH}; # FHS system
+    return '/var/tmp/gbrowse2'   if -d '/var/tmp';
+    return File::Spec->catfile(File::Spec->tmpdir,'gbrowse2');
+}
+
+sub databases {
+    my $self = shift;
+    return '/srv/gbrowse2/databases'             if $ENV{DEB_BUILD_ARCH}; # FHS system
+    return File::Spec->catfile($self->htdocs,'databases');
 }
 
 sub apache_root {
@@ -54,6 +67,9 @@ sub apache_root {
 
 sub htdocs {
     my $self = shift;
+    local $^W = 0;
+    return '/srv/gbrowse2/htdocs' if $ENV{DEB_BUILD_ARCH};
+
     my $root = $self->apache_root;
     foreach ('htdocs','html') {
 	return File::Spec->catfile($root,$_) 
@@ -65,7 +81,7 @@ sub htdocs {
 	'/var/www/htdocs',                # Slackware linux
 	'/var/www',                       # Ubuntu/debian
 	'/var/www',                       # Ubuntu
-	'/Library/Webserver/Documents',  # MacOSX
+	'/Library/Webserver/Documents',   # MacOSX
 	) {
 	return File::Spec->catfile($_,'gbrowse2') if -d $_;
     }

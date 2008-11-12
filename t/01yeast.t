@@ -24,7 +24,7 @@ BEGIN {
 use Bio::DB::SeqFeature::Store;
 
 my $db = eval { Bio::DB::SeqFeature::Store->new(-adaptor=>'memory',
-						-dsn    =>"$Bin/../htdocs/databases/yeast_chr1+2") } ;
+						-dsn    =>"$Bin/../sample_data/yeast_chr1+2") } ;
 
 ok($db);
 

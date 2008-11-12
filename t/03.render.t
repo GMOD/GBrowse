@@ -452,9 +452,10 @@ if ($$ != $PID) {
     die "FATAL: A forked child was allowed to return!!!!";
 }
 ok(join ' ',(sort keys %$panels),'Clones Motifs Transcripts','panels keys incorrect');
-my ($png)    = grep /tmpimages/,$panels->{Motifs} =~ /src="([^"]+\.png)"/g;
+my ($png)    = grep m!/gbrowse/i/!,$panels->{Motifs} =~ /src="([^"]+\.png)"/g;
 ok($png);
-ok (-e '/tmp/gbrowse_testing/'.$png);
+$png =~ s!/gbrowse/i!/tmp/gbrowse_testing/images!;
+ok (-e $png);
 
 $CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones-Transcripts-Motifs-BindingSites-TransChip');
 $render->update_state;
@@ -462,13 +463,15 @@ $s              = $render->region->segments;
 $panel_renderer = $render->get_panel_renderer($s->[0]);
 $panels         = $panel_renderer->render_panels({labels => [$render->detail_tracks]});
 ok(join ' ',(sort keys %$panels),'BindingSites TransChip Clones Motifs Transcripts','panels keys incorrect');
-($png)          = grep /tmpimages/,$panels->{BindingSites} =~ /src="([^"]+\.png)"/g;
+($png)          = grep m!/gbrowse/i/!,$panels->{BindingSites} =~ /src="([^"]+\.png)"/g;
 ok ($png);
-ok (-e '/tmp/gbrowse_testing/'.$png);
+$png =~ s!/gbrowse/i!/tmp/gbrowse_testing/images!;
+ok (-e $png);
 
-($png)          = grep /tmpimages/,$panels->{TransChip} =~ /src="([^"]+\.png)"/g;
+($png)          = grep m!/gbrowse/i/!,$panels->{TransChip} =~ /src="([^"]+\.png)"/g;
 ok ($png);
-ok (-e '/tmp/gbrowse_testing/'.$png);
+$png =~ s!/gbrowse/i!/tmp/gbrowse_testing/images!;
+ok (-e $png);
 
 exit 0;
 

@@ -213,7 +213,7 @@ sub render_tracks {
 	    
     # generate the panels
     $self->Debug("Calling RenderPanels->new()");
-    my $tmpdir = $datasource->global_setting('slave_tmp') || $self->tmpdir;
+    my $tmpdir = $datasource->global_setting('tmp_slave') || $self->tmpdir;
     $datasource->globals->setting('general',tmpimages=>$tmpdir);
     my $renderer = Bio::Graphics::Browser::RenderPanels->new(-segment  => $segment,
 							     -source   => $datasource,

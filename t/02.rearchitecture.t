@@ -15,7 +15,7 @@ use FindBin '$Bin';
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
-use constant TEST_COUNT => 83;
+use constant TEST_COUNT => 78;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {
@@ -59,34 +59,29 @@ ok($globals->moby_path,'testdata/conf/MobyServices');
 
 ok($globals->js_url,'/gbrowse/js');
 ok($globals->button_url,'/gbrowse/images/buttons');
-ok($globals->tmpdir_url,'/tmpimages');
-ok($globals->tmpdir_path,'/tmp/gbrowse_testing/tmpimages');
-ok($globals->image_url,'/gbrowse/images');
+ok($globals->tmpimage_dir,'/tmp/gbrowse_testing/images');
+ok($globals->image_url,'/gbrowse/i');
 ok($globals->help_url,'/gbrowse/.');
 
 # does setting the environment variable change things?
-@ENV{qw(GBROWSE_CONF GBROWSE_DOCS GBROWSE_ROOT)} = ('/etc/gbrowse','/usr/local/gbrowse','/');
+$ENV{GBROWSE_CONF} = '/etc/gbrowse';
 ok($globals->config_base,'/etc/gbrowse');
-ok($globals->htdocs_base,'/usr/local/gbrowse');
-ok($globals->url_base,'/');
 
 ok($globals->plugin_path,'/etc/gbrowse/../../../conf/plugins');
 ok($globals->language_path,'/etc/gbrowse/languages');
 ok($globals->templates_path,'/etc/gbrowse/templates');
 ok($globals->moby_path,'/etc/gbrowse/MobyServices');
 
-ok($globals->js_url,'/js');
-ok($globals->button_url,'/images/buttons');
-ok($globals->image_url,'/images');
-ok($globals->help_url,'/.');
+ok($globals->js_url,'/gbrowse/js');
+ok($globals->button_url,'/gbrowse/images/buttons');
+ok($globals->help_url,'/gbrowse/.');
 
 delete $ENV{$_} foreach qw(GBROWSE_CONF GBROWSE_DOCS GBROWSE_ROOT);
 
 # exercise tmpdir a bit
 rmtree('/tmp/gbrowse_testing/images',0,0);  # in case it was left over
-my ($url,$path) = $globals->tmpdir('test1/test2');
-ok($url,'/tmpimages/test1/test2');
-ok($path,'/tmp/gbrowse_testing/tmpimages/test1/test2');
+my $path = $globals->tmpdir('test1/test2');
+ok($path,'/tmp/gbrowse_testing/test1/test2');
 
 # test the data sources
 my @sources = $globals->data_sources;

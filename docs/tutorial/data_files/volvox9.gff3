@@ -1,4 +1,0 @@
-##gff-version 3
-
-ctgA	example	trace	44401	45925	.	+	.	Name=trace;trace=volvox_trace.scf
-

@@ -2577,6 +2577,7 @@ sub render_detailview {
   my $seg  = shift or return;
   my @panels = $self->render_detailview_panels($seg);
   my $drag_script = $self->drag_script('detail_panels','track');
+  local $^W = 0; # quash uninit variable warning
   return div($self->toggle('Details',
 			   div({-id=>'detail_panels',-class=>'track'},
 			       @panels
@@ -2743,8 +2744,8 @@ sub render_deferred_track {
 
     my $base  = $renderer->get_cache_base();
     my $cache = Bio::Graphics::Browser::CachedTrack->new(
-        -base => $base,
-        -key  => $cache_key,
+        -cache_base => $base,
+        -key        => $cache_key,
     );
     $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";

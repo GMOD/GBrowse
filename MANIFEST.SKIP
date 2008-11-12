@@ -23,7 +23,7 @@ tmp
 \.cvsignore
 ^test
 foo
-^bin/.+\.pl$
+# ^bin/.+\.pl$
 \.bs$
 \.o$
 pm_to_blib
@@ -47,3 +47,12 @@ cgi-bin/gbrowse_gff_autocomplete
 cgi-bin/gbrowse_not
 cgi-bin/gbrowse_seqfeature_autocomplete
 cgi-bin/gbrowset
+debian
+^conf/templates
+\.tt2$
+NFS_benchmark_results\.old
+build-stamp
+install-stamp
+htdocs/js/balloon_modified.js
+htdocs/js/balloon_new.js
+^docs/tutorial

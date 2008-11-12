@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.217 2008-11-07 23:35:47 lstein Exp $
+# $Id: Browser.pm,v 1.218 2008-11-12 23:14:37 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -10,6 +10,7 @@ use File::Spec;
 use File::Path 'mkpath';
 use File::Basename 'dirname','basename';
 use Text::ParseWords 'shellwords';
+use File::Path 'mkpath';
 use Bio::Graphics::Browser::DataSource;
 use Bio::Graphics::Browser::Session;
 use GBrowse::ConfigData;
@@ -85,7 +86,7 @@ sub htdocs_path {
   my $self    = shift;
   my $option  = shift;
   $self->resolve_path($self->setting(general => $option),'htdocs') 
-      || "$ENV{DOCUMENT_ROOT}/gbrowse";
+      || "$ENV{DOCUMENT_ROOT}/gbrowse2";
 }
 
 sub url_path {
@@ -94,58 +95,83 @@ sub url_path {
   $self->resolve_path($self->setting(general => $option),'url');
 }
 
-sub config_base { $ENV{GBROWSE_CONF} 
-		      || eval {shift->setting(general=>'config_base')}
-			  || GBrowse::ConfigData->config('conf')
+sub config_base {$ENV{GBROWSE_CONF} 
+		    || eval {shift->setting(general=>'config_base')}
+			|| GBrowse::ConfigData->config('conf')
 		              || '/etc/GBrowse2' }
-sub htdocs_base { $ENV{GBROWSE_DOCS} 
-		  || eval{shift->setting(general=>'htdocs_base')}
-                     || GBrowse::ConfigData->config('htdocs')
-		            || '/var/www/gbrowse2'     }
-sub url_base    { $ENV{GBROWSE_ROOT} 
-		  || eval{shift->setting(general=>'url_base')}   
+sub htdocs_base {eval{shift->setting(general=>'htdocs_base')}
+                    || GBrowse::ConfigData->config('htdocs')
+		        || '/var/www/gbrowse2'     }
+sub url_base    {eval{shift->setting(general=>'url_base')}   
                      || basename(GBrowse::ConfigData->config('htdocs'))
-		       || '/gbrowse2'             }
+		        || '/gbrowse2'             }
+
+sub tmp_base    {eval{shift->setting(general=>'tmp_base')}
+                     || GBrowse::ConfigData->config('tmp')
+			|| '/tmp' }
+sub db_base     {eval{shift->setting(general=>'db_base')}
+                    || GBrowse::ConfigData->config('databases')
+			|| '//var/www/gbrowse2/databases' }
 
 # these are url-relative options
 sub button_url  { shift->url_path('buttons')            }
 sub balloon_url { shift->url_path('balloons')           }
-sub image_url   { shift->url_path('images')             }
 sub js_url      { shift->url_path('js')                 }
 sub help_url    { shift->url_path('gbrowse_help')       }
 sub stylesheet_url   { shift->url_path('stylesheet')    }
 
-## deal with temporary directory
-sub tmpdir_info {
-  my $self = shift;
-  my ($url,$path) = shellwords($self->setting('tmpimages'));
-  $url  ||= 'tmp';
-  $path   = $self->resolve_path($path||$url,'htdocs');
-  $url    = $self->resolve_path($url,'url');
-  ($url,$path);
+sub make_path {
+    my $self = shift;
+    my $path = shift;
+    return unless $path =~ /^(.+)$/;
+    $path = $1;
+    mkpath($path,0,0777) unless -d $path;    
 }
 
-sub tmpdir_path    { (shift->tmpdir_info)[1]}
-sub tmpdir_url     { (shift->tmpdir_info)[0]}
-sub tmpdir    {
-  my $self    = shift;
-  my $subpath = shift;
-  my $path_b = $self->tmpdir_path;
-  my $url_b  = $self->tmpdir_url;
+sub tmpdir {
+    my $self       = shift;
+    my @components = @_;
+    my $path = File::Spec->catfile($self->tmp_base,@components);
+    $self->make_path($path) unless -d $path;
+    return $path;
+}
+sub tmpimage_dir {
+    my $self  = shift;
+    return $self->tmpdir('images',@_);
+}
 
-  my $tmpdir = File::Spec->catfile($path_b,$subpath);
-  my $url    = File::Spec->catfile($url_b,$subpath);
+sub image_url {
+    my $self = shift;
+    my $path = File::Spec->catfile($self->url_base,'i');
+    return $path;
+}
 
-  # we need to untaint tmpdir before calling mkpath()
-  return unless $tmpdir =~ /^(.+)$/;
-  my $path = $1;
+sub cache_dir {
+    my $self  = shift;
+    my $path  = File::Spec->catfile($self->tmp_base,'cache',@_);
+    $self->make_path($path) unless -d $path;
+    return $path;
+}
 
-  unless (-d $path) {
-    require File::Path unless File::Path->can('mkpath');
-    mkpath($path,0,0777);
-  }
+sub session_locks {
+    my $self = shift;
+    my $path  = File::Spec->catfile($self->tmp_base,'locks',@_);
+    $self->make_path($path) unless -d $path;
+    return $path;
+}
 
-  return ($url,$path);
+sub session_dir {
+    my $self = shift;
+    my $path  = File::Spec->catfile($self->tmp_base,'sessions',@_);
+    $self->make_path($path) unless -d $path;
+    return $path;
+}
+
+sub slave_dir {
+    my $self = shift;
+    my $path = $self->setting(general=>'tmp_slave') || '/tmp/gbrowse_slave';
+    $self->make_path($path) unless -d $path;
+    return $path;
 }
 
 # these are relative to the config base
@@ -166,13 +192,8 @@ sub session_args    {
   my $self = shift;
   my %args = shellwords($self->setting(general=>'session args'));
   return \%args if %args;
-  my ($url,$path) = $self->tmpdir('sessions');
-  return {Directory=>$path};
+  return {Directory=>$self->session_dir};
 }
-sub session_locks { 
-    my $self = shift;
-    return scalar $self->tmpdir('locks');
-}    
 
 ## methods for dealing with data sources
 sub data_sources {

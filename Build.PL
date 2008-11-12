@@ -73,6 +73,8 @@ $build->add_build_element('conf');
 $build->add_build_element('htdocs');
 $build->add_build_element('cgibin');
 $build->add_build_element('etc');
+$build->add_build_element('database');
+
 $build->create_build_script;
 print STDERR <<END;
 Now run:

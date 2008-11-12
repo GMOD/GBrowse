@@ -13,12 +13,15 @@ use File::Spec;
 use IO::File;
 use GuessDirectories;
 
-my %OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
+my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
 		htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
+		tmp           => 'Directory for GBrowse\'s temporary data',
+		databases     => 'Directory for GBrowse\'s example databases',
 		cgibin        => 'Apache CGI scripts directory?',
 		portdemo      => 'Internet port to run demo web site on (for demo)?',
 		apachemodules => 'Apache loadable module directory (for demo)?',
 		wwwuser       => 'User account under which Apache daemon runs?');
+my %OK_PROPS = @OK_PROPS;
 
 sub ACTION_demo {
     my $self = shift;
@@ -128,6 +131,12 @@ sub ACTION_test {
     $self->SUPER::ACTION_test;
 }
 
+sub ACTION_distclean {
+    my $self = shift;
+    $self->SUPER::ACTION_distclean;
+    rmtree(['debian/libgbrowse-perl']);
+}
+
 sub ACTION_config {
     my $self  = shift;
     local $^W = 0;
@@ -142,17 +151,20 @@ sub ACTION_config {
 	$_=>$self->config_data($_)
       } keys %$props;
 
-    for my $key (sort keys %opts) {
+    my @keys = @OK_PROPS;
+    while (@keys) {
+	my $key = shift @keys;
+	my $val = shift @keys; # not used
+
 	# next if $self->config_data($key);
 	$opts{$key} = prompt($props->{$key},
 			     $opts{$key} ||
 			     GuessDirectories->$key($opts{apache}));
 	if ($props->{$key} =~ /directory/i) {
-	    my $dir_to_check = $key eq 'conf' || $key eq 'htdocs'
-		? dirname($opts{$key}) 
-		: $opts{$key};
-	    unless (-d $dir_to_check) {
-		next if Module::Build->y_n("The directory $dir_to_check does not exist. Use anyway?",'n');
+	    my ($volume,$dir) = File::Spec->splitdir($opts{$key});
+	    my $top_level     = File::Spec->catfile($volume,$dir);
+	    unless (-d $top_level) {
+		next if Module::Build->y_n("The directory $top_level does not exist. Use anyway?",'n');
 		redo;
 	    }
 	}
@@ -216,25 +228,46 @@ sub ACTION_install {
         ||= $self->config_data('conf')
 	    || GuessDirectories->conf;
     $self->install_path->{htdocs}
-        ||= File::Spec->catfile($self->config_data('htdocs'))
+        ||= $self->config_data('htdocs')
 	    || GuessDirectories->htdocs;
     $self->install_path->{'cgi-bin'} 
         ||= $self->config_data('cgibin')
 	    || GuessDirectories->cgibin;
     $self->install_path->{'etc'} 
-        ||= File::Spec->catfile($self->prefix,GuessDirectories->etc);
+        ||= File::Spec->catfile($self->prefix||'',GuessDirectories->etc);
+    $self->install_path->{'database'} 
+        ||= $self->config_data('database')
+	    || GuessDirectories->databases;
     $self->SUPER::ACTION_install();
 
     my $user = $self->config_data('wwwuser') || GuessDirectories->wwwuser;
 
     # fix some directories so that www user can write into them
-    mkdir File::Spec->catfile($self->install_path->{htdocs},'tmp');
+    my $tmp = $self->config_data('tmp') || GuessDirectories->tmp;
+    mkdir $tmp;
     my ($uid,$gid) = (getpwnam($user))[2,3];
-    chown $uid,$gid,File::Spec->catfile($self->install_path->{htdocs},     'tmp');
-    chown $uid,$gid,glob(File::Spec->catfile($self->install_path->{htdocs},'databases','').'*');
+
+    # taint check issues
+    $uid =~ /^(\d+)$/;
+    $uid = $1;
+    $gid =~ /^(\d+)$/;
+    $gid = $1;
+    
+    chown $uid,$gid,$tmp;
+
+    my $htdocs_i = File::Spec->catfile($self->install_path->{htdocs},'i');
+    my $images   = File::Spec->catfile($tmp,'images');
+    chown $uid,-1,$self->install_path->{htdocs};
+    {
+	local $> = $uid;
+	symlink($images,$htdocs_i);  # so symlinkifowner match works!
+    }
+    chown $>,-1,$self->install_path->{htdocs};
+
+    my $databases = $self->install_path->{'database'};
+    chown $uid,$gid,glob(File::Spec->catfile($databases,'').'*');
 
     chmod 0755,File::Spec->catfile($self->install_path->{'etc'},'init.d','gbrowse-slave');
-
     $self->fix_selinux;
 
     my $base = basename($self->install_path->{htdocs});
@@ -248,6 +281,11 @@ sub ACTION_install_slave {
     $self->SUPER::ACTION_install();
 }
 
+sub ACTION_debian {
+    my $self = shift;
+    system "debuild";
+}
+
 sub fix_selinux {
     my $self = shift;
     return unless -e '/proc/filesystems';
@@ -258,9 +296,12 @@ sub fix_selinux {
 
     my $htdocs = $self->config_data('htdocs');
     my $conf   = $self->config_data('conf');
+    my $tmp    = $self->config_data('tmp');
+    my $db     = $self->config_data('database');
     system "/usr/bin/chcon -R -t httpd_sys_content_t $conf";
     system "/usr/bin/chcon -R -t httpd_sys_content_t $htdocs";
-    system "/usr/bin/chcon -R -t httpd_sys_content_rw_t $htdocs/tmp";
+    system "/usr/bin/chcon -R -t httpd_sys_content_rw_t $tmp";
+    system "/usr/bin/chcon -R -t httpd_sys_content_rw_t $db";
 }
 
 sub process_conf_files {
@@ -269,7 +310,10 @@ sub process_conf_files {
     while (<$f>) {
 	next unless m!^conf/!;
 	chomp;
-	$self->copy_if_modified($_=>'blib');
+	my $copied = $self->copy_if_modified($_=>'blib');
+	$self->substitute_in_place("blib/$_")
+	    if $copied
+	    or !$self->up_to_date('_build/config_data',"blib/$_");
     }
 }
 
@@ -309,18 +353,34 @@ sub process_etc_files {
     }
 }
 
+sub process_database_files {
+    my $self = shift;
+    my $f    = IO::File->new('MANIFEST');
+    while (<$f>) {
+	next unless m!^sample_data/!;
+	chomp;
+	my ($subdir) = m!^sample_data/([^/]+)/!;
+	$self->copy_if_modified(from    => $_,
+				to_dir  => "blib/database/$subdir",
+				flatten => 1,
+	    );
+    }
+}
+
 sub substitute_in_place {
     my $self = shift;
     my $path = shift;
-    return if $path =~ /\.\w+$/ && $path !~ /\.(html|txt)$/;
+    return if $path =~ /\.\w+$/ && $path !~ /\.(html|txt|conf)$/;
     my $in   = IO::File->new($path) or return;
     my $out  = IO::File->new("$path.$$",'>') or return;
 
     print STDERR "Performing variable substitutions in $path\n";
 
-    my $htdocs   = $self->config_data('htdocs');
-    my $conf     = $self->config_data('conf');
-    my $cgibin   = $self->config_data('cgibin');
+    my $htdocs     = $self->config_data('htdocs');
+    my $conf       = $self->config_data('conf');
+    my $cgibin     = $self->config_data('cgibin');
+    my $databases  = $self->config_data('databases');
+    my $tmp        = $self->config_data('tmp');
     my $wwwuser  = $self->config_data('wwwuser');
     my $perl5lib = $self->perl5lib || '';
     my $installscript = $self->scriptdir;
@@ -332,6 +392,8 @@ sub substitute_in_place {
 	s/\$CONF/$conf/g;
 	s/\$CGIBIN/$cgibin/g;
 	s/\$WWWUSER/$wwwuser/g;
+	s/\$DATABASES/$databases/g;
+	s/\$TMP/$tmp/g;
 	$out->print($_);
     }
     $in->close;
@@ -495,6 +557,51 @@ sub scriptdir {
     return $Config::Config{$scriptdir};
 }
 
+# sub biographics_needs_patch  {
+#     my $self = shift;
+#     eval "require Bio::Graphics::Panel; 1"   or return 1;
+#     my $version = eval {Bio::Graphics::Panel->api_version} || 0;
+#     return $version < 1.8;
+# }
+
+# sub biodbseqfeature_needs_patch  {
+#     my $self = shift;
+#     eval "require Bio::DB::SeqFeature::Store; 1"   or return 1;
+#     my $version = eval {Bio::DB::SeqFeature::Store->api_version} || 0;
+#     return $version < 1.2;
+# }
+
+
+# sub patch_biographics {
+#     my $self   = shift;
+#     $self->config(patch_biographics=>1);
+# }
+
+# sub patch_biodbseqfeature {
+#     my $self = shift;
+#     $self->config(patch_biodbseqfeature=>1);
+# }
+
+# sub find_pm_files {
+#     my $self = shift;
+#     my %results  = %{$self->_find_file_by_type('pm','lib')};
+
+#     my @extra_libs;
+#     push @extra_libs,'extras/biographics'     
+# 	if $self->biographics_needs_patch || $ENV{GBROWSE_DEBIAN_BUILD};
+#     push @extra_libs,'extras/biodbseqfeature' 
+# 	if $self->biodbseqfeature_needs_patch || $ENV{GBROWSE_DEBIAN_BUILD};
+
+#     for my $l (@extra_libs) {
+# 	my $r = $self->_find_file_by_type('pm',$l);
+# 	for my $k (keys %$r) {
+# 	    $r->{$k} =~ s!$l/!lib/!;
+# 	}
+# 	%results = (%results,%$r);
+#     }
+#     return \%results;
+# }
+
 1;
 
 __END__
@@ -511,7 +618,7 @@ configuration files, and static image/support files will be installed.
 One or more of the config options can be set on the command 
 line when first running perl Build.PL:
 
-  perl Build.PL --conf=/etc/GBrowse2 \         # config files
+  perl Build.PL --conf=/etc/growse2 \         # config files
                 --htdocs=/var/www/gbrowse2 \   # static files
                 --cgibin=/usr/lib/cgi-bin \    # CGI directory
                 --wwwuser=www-data \           # apache user
@@ -536,5 +643,9 @@ Stop the demo instance.
 
 Generate a fragment of the Apache configuration file needed to run
 GBrowse.
+
+=item debian
+
+Build Debian source & binary packages.
 
 =back

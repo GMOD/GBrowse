@@ -131,11 +131,11 @@ my $view = $render->render_deferred_track(
     cache_key  => $key1,
     track_name => $track_name1,
 );
-my @images = $view =~ m!src=\"(/tmpimages/volvox/img/[a-z0-9]+\.png)\"!g;
+my @images = $view =~ m!src=\"(/gbrowse/i/volvox/[a-z0-9]+\.png)\"!g;
 ok(scalar @images,2);  # one for the main image, and one for the pad
 
 foreach (@images) {
-    s!/tmpimages!/tmp/gbrowse_testing/tmpimages!;
+    s!/gbrowse/i!/tmp/gbrowse_testing/images!;
 }
 ok(-e $images[0] && -s _);
 

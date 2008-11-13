@@ -148,4 +148,14 @@ sub apachemodules {
     return '/usr/lib/apache/modules'; #fallback
 }
 
+# most (all?) distributions have a way to add config file snippets
+# to httpd.conf without modifying the main file
+sub apache_includes {
+    my $self = shift;
+    return '/etc/apache2/conf.d' if -d '/etc/apache2/conf.d';
+    return '/etc/apache/conf.d'  if -d '/etc/apache/conf.d';
+    return '/etc/httpd/conf.d'   if -d '/etc/httpd/conf.id';
+    return;
+}
+
 1;

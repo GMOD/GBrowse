@@ -7,7 +7,7 @@ use ExtUtils::CBuilder;
 use ExtUtils::MakeMaker 'prompt';
 use Cwd;
 use File::Basename 'dirname','basename';
-use File::Path 'rmtree';
+use File::Path 'rmtree','mkpath';
 use File::Temp 'tempdir';
 use File::Spec;
 use IO::File;
@@ -188,36 +188,45 @@ sub ACTION_config_data {
 sub ACTION_apache_conf {
     my $self = shift;
     $self->depends_on('config');
+
+    my $docs   = basename($self->config_data('htdocs'));
+    print STDERR <<END;
+
+INSTRUCTIONS: Paste the following into your Apache configuration
+file. You may wish to save it separately and include it using the
+Apache "Include /path/to/file" directive. Then restart Apache and
+point your browser to http://your.site/$docs/ to start browsing the
+sample genomes.
+
+>>>>>> cut here <<<<<
+END
+;
+    print $self->apache_conf;
+}
+
+sub apache_conf {
+    my $self = shift;
     my $dir    = $self->config_data('htdocs');
     my $conf   = $self->config_data('conf');
     my $cgibin = $self->config_data('cgibin');
+    my $tmp    = $self->config_data('tmp');
     my $cgiroot= basename($cgibin);
     my $docs   = basename($dir);
     my $inc    = $self->added_to_INC;
     $inc      .= "\n  " if $inc;
 
-    print <<END;
+    return <<END;
+Alias        "/$docs/i/" "$tmp/images/"
+Alias        "/$docs"    "$dir"
+ScriptAlias  "/gb2"      "$cgibin/gb2"
 
-INSTRUCTIONS: Cut this where indicated and paste it into your Apache
-configuration file. You may wish to save it separately and include it
-using the Apache "Include /path/to/file" directive. Then restart
-Apache and point your browser to http://your.site/$docs/ to start
-browsing the sample genomes.
-
-===>>> cut here <<<===
-Alias "/$docs/" "$dir/"
-
-<Location "/$docs/">
-  Options -Indexes -MultiViews -FollowSymLinks +SymLinksIfOwnerMatch
-</Location>
+<Directory "$dir">
+  Options -Indexes -MultiViews +FollowSymLinks
+</Directory>
 
 <Directory "$cgibin/gb2">
-  ${inc}SetEnv GBROWSE_MASTER GBrowse.conf
-  SetEnv GBROWSE_CONF   "$conf"
-  SetEnv GBROWSE_DOCS   "$dir"
-  SetEnv GBROWSE_ROOT   "/$docs"
+  ${inc}SetEnv GBROWSE_CONF   "$conf"
 </Directory>
-===>>> cut here <<<===
 END
 }
 
@@ -238,7 +247,23 @@ sub ACTION_install {
     $self->install_path->{'database'} 
         ||= $self->config_data('database')
 	    || GuessDirectories->databases;
+    
+    # there's got to be a better way to avoid overwriting the config file
+    my $old_conf = File::Spec->catfile($self->install_path->{conf},'GBrowse.conf');
+    my $rename_conf;
+    if (-e $old_conf) {
+	warn "Detected existing GBrowse config file in ",
+	      $self->install_path->{conf},'. ',
+	      "New version will be installed as GBrowse.conf.new.\n";
+	$rename_conf = rename $old_conf,"$old_conf.orig";
+    }
+
     $self->SUPER::ACTION_install();
+
+    if ($rename_conf) {
+	rename $old_conf,"$old_conf.new";
+	rename "$old_conf.orig",$old_conf;
+    }
 
     my $user = $self->config_data('wwwuser') || GuessDirectories->wwwuser;
 
@@ -350,6 +375,19 @@ sub process_etc_files {
 	$self->substitute_in_place("blib/$_")
 	    if $copied
 	    or !$self->up_to_date('_build/config_data',"blib/$_");
+    }
+    # generate the apache config data
+    my $includes = GuessDirectories->apache_includes || '';
+    my $target   = "blib${includes}/gbrowse2.conf";
+    if ($includes && !$self->up_to_date('_build/config_data',$target)) {
+	warn "Creating include file for Apache config: $target\n";
+	my $dir = dirname($target);
+	mkpath([$dir]);
+	if (my $f = IO::File->new("blib${includes}/gbrowse2.conf",'>')) {
+	    $f->print($self->apache_conf);
+	    $f->close;
+	}
+
     }
 }
 

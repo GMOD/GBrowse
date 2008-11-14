@@ -86,8 +86,9 @@ sub debug {
 
 sub preload_databases {
     my $self         = shift;
-    my $conf_file    = shift;
-    $self->{preload} = $conf_file;
+    my $d            = $self->{preload};
+    $self->{preload} = shift if @_;
+    $d;
 }
 
 sub do_preload {

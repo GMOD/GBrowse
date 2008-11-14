@@ -40,7 +40,7 @@ GetOptions('port|p=i'       => \$port,
 	   'pidfile|pid=s'  => \$pidfile,
 	   'user|u=s'       => \$user,
 	   'kill|k'         => \$kill,
-	   'preload'        => \$preload,
+	   'preload=s'      => \$preload,
     ) or die $usage;
 
 if ($kill) {

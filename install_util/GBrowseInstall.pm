@@ -303,6 +303,8 @@ sub ACTION_install {
 
 sub ACTION_install_slave {
     my $self = shift;
+    $self->install_path->{'etc'} 
+        ||= File::Spec->catfile($self->prefix||'',GuessDirectories->etc);
     $self->SUPER::ACTION_install();
 }
 

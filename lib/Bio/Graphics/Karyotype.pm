@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.7 2008-10-11 00:02:43 lstein Exp $
+# $Id: Karyotype.pm,v 1.8 2008-11-14 18:55:00 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -159,16 +159,34 @@ sub image_map {
 	
 	my $name = $boxes->[$i][0]->display_name || "feature id #".$boxes->[$i][0]->primary_id;
 	my $id   = $self->feature2id($boxes->[$i][0]);
+	my $link = $self->feature2link($boxes->[$i][0]);
 	$divs .= div({-class => 'nohilite',
 		      -id    => "box_${id}",
 		      -style => "top:${top}px; left:${left}px; width:${width}px; height:${height}px",
 		      -title => $name,
 		      -onMouseOver=>"k_hilite_feature('$id',true)",
-		      -onMouseOut =>"k_unhilite_feature('$id')"
+		      -onMouseOut =>"k_unhilite_feature('$id')",
+		      -onMouseDown=>"location.href='$link'",
 		     },''
 	    )."\n";
     }
     return $divs;
+}
+
+sub feature2link {
+    my $self    = shift;
+    my $feature = shift;
+    my $url      = url(-path_info=>1)."?name=";
+    my $match_id = eval {$feature->primary_id};
+    my $class    = eval {$feature->class};
+    my $name     = $feature->display_name || '';
+    my $fid      =  $match_id 
+ 	                && $match_id !~ /\w+:\w+\(/   # work around a bioperl bug
+                               ? "id:$match_id"
+ 	           : $class    ? "$class:$name" 
+ 		   : $name;
+    my $dbid  = $_->gbrowse_dbid if $_ && $_->can('gbrowse_dbid');
+    return "$url$fid;dbid=$dbid";
 }
 
 sub by_chromosome_length ($$) {
@@ -282,31 +300,19 @@ sub hits_table {
 
     my @hits = $self->hits;
 
-    my $url  = url(-path_info=>1)."?name=";
-
     my $regexp = join '|',($term2hilite =~ /(\w+)/g) 
 	if defined $term2hilite;
 
     my $na   = $self->trans('NOT_APPLICABLE') || '-';
 
     my $sort_order = $self->seqid_order;
+    my $url  = url(-path_info=>1)."?name=";
 
     # a big long map call here
     my @rows      = map {
 	my $name  = $_->display_name || '';
-	my $class = eval {$_->class};
-
-	# for inserting into the gbrowse search field
-	# this isn't working because the same primary id may be found in multiple
-	# databases :-(
- 	my $match_id = eval {$_->primary_id};
- 	my $fid      =  $match_id 
- 	                && $match_id !~ /\w+:\w+\(/   # work around a bioperl bug
-                               ? "id:$match_id"
- 	           : $class    ? "$class:$name" 
- 		   : $name;
+	my $link  = $self->feature2link($_);
 	my $id    = $self->feature2id($_);             # as an internal <div> id for hilighting
-	my $dbid  = $_->gbrowse_dbid if $_ && $_->can('gbrowse_dbid');
 	my $pos   = $_->seq_id.':'.$_->start.'..'.$_->end;
 	my $desc  = escapeHTML(Bio::Graphics::Glyph::generic->get_description($_));
 	$desc =~ s/($regexp)/<b class="keyword">$1<\/b>/ig if $regexp;
@@ -317,7 +323,7 @@ sub hits_table {
 	    -onMouseOver=>"k_hilite_feature('$id')",
 	    -onMouseOut =>"k_unhilite_feature('$id')",
 	   },
-	   th({-align=>'left'},a({-href=>"$url$fid;dbid=$dbid"},$name)),
+	   th({-align=>'left'},a({-href=>$link},$name)),
 	   td($_->method),
 	   td($desc),
 	   td(a({-href=>"$url$pos"},$pos)),

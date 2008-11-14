@@ -288,21 +288,30 @@ sub search_features_remotely {
 
 	unless (@ready) { warn "timeout\n"; next; }
 
+      HANDLE:
 	for my $r (@ready) {
 	    my $data;
 	    my $bytes = $r->sysread($data,4);
 	    unless ($bytes) {  # eof
 		$select->remove($r);
 		$r->close;
-		next;
+		next HANDLE;
 	    }
 
+	    # This is not maximally efficient because we keep reading from the handle
+	    # until we have gotten all the data. It would be more efficient to do a
+	    # nonblocking read so that reads are interleaved, but it is MUCH harder
+	    # to do.
 	    my $data_len = unpack('N',$data);
-	    $bytes       = $r->sysread($data,$data_len);
-	    unless ($bytes == $data_len) {
-		$select->remove($r);
-		$r->close;
-		next;
+	    $data = '';
+	    while (length $data < $data_len) {
+		$bytes     = $r->sysread($data,4096,length $data);
+		if ($bytes == 0) {
+		    warn "premature EOF while reading search results: $!";
+		    $select->remove($r);
+		    $r->close;
+		    next HANDLE;
+		}
 	    }
 
 	    my $objects = thaw($data);
@@ -344,12 +353,13 @@ sub fetch_remote_features {
     if ($response->is_success) {
 	my $content = $response->content;
 	$outfh->print(pack('N',length $content));
-	$outfh->print($content);
+	my $bytes = $outfh->print($content) or warn "write failed: $!";
     } else {
 	my $uri = $request->uri;
 	warn "$uri; search failed: ",$response->status_line;
 	$outfh->close;
     }
+    $outfh->close;
 }
 
 =head2 $db->add_dbid_to_features($db,$features)

@@ -731,7 +731,7 @@ sub upload_table {
     . TR(
 	 th({-class=>'uploadtitle', -colspan=>4, -align=>'left'},
 	    $self->tr('Upload_title').':',
-	    a({-href=>$self->annotation_help(),-target=>'help'},'['.$self->tr('HELP').']'))
+	    a({-href=>$self->annotation_help(),-target=>'_new'},'['.$self->tr('HELP').']'))
 	);
 
   $cTable .= TR({-class=>'uploadbody', -name=>'something', -id=>'something'},

@@ -113,11 +113,10 @@ sub init_databases {
     }
 
     # try to spread the work out as much as possible among the remote renderers
-    local $^W = 0; # getting uninit value in sort below - not sure why
     my %remotes;
     for my $dbid (keys %dbs) {
 	if (my @remote = keys %{$dbs{$dbid}{remotes}}) {
-	    my ($least_used) = sort {$remotes{$a}||0<=>$remotes{$b}||0} @remote;
+	    my ($least_used) = sort {($remotes{$a}||0) <=> ($remotes{$b}||0)} @remote;
 	    $self->{remote_dbs}{$least_used}{$dbid}++;
 	    $remotes{$least_used}++;
 	}
@@ -279,7 +278,7 @@ sub search_features_remotely {
 	else {
 	    $pipe->writer();
 	    $self->fetch_remote_features($search_term,$url,$pipe);
-	    exit 0;
+	    CORE::exit 0;  # CORE::exit prevents modperl from running cleanup, etc
 	}
     }
 

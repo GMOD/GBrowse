@@ -659,7 +659,7 @@ sub render {
 sub render_header {
   my $self    = shift;
   my $cookie = $self->create_cookie();
-  print header(
+  print CGI::header(
     -cookie  => $cookie,
     -charset => $self->tr('CHARSET')
   );
@@ -2971,11 +2971,11 @@ sub commas {
 
 ###################### link generation ##############
 sub annotation_help {
-  return "?help=annotation";
+  return shift->globals->url_base."/annotation_help.html";
 }
 
 sub general_help {
-  return "?help=general";
+  return shift->globals->url_base."/general_help.html";
 }
 
 sub bookmark_link {

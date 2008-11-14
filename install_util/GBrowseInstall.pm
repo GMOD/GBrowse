@@ -589,9 +589,10 @@ sub perl5lib {
 sub scriptdir {
     my $self = shift;
     my $id   = $self->installdirs;
-    my $scriptdir = $id eq 'site'   ? 'installsitescript'
-                   :$id eq 'vendor' ? 'installvendorscript'
-                   : 'installscript';
+    my $scriptdir = $id eq 'core'   ? 'installscript'
+                   :$id eq 'site'   ? 'installsitebin'
+                   :$id eq 'vendor' ? 'installvendorbin'
+		   :'installsitebin';
     return $Config::Config{$scriptdir};
 }
 

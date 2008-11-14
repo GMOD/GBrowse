@@ -571,9 +571,14 @@ sub sort_local_remote {
 	return (\@uncached,[]);
     }
 
+    my $url;
     my %is_remote = map { $_ => ( 
 			      !/plugin:/ &&
-			      ($source->fallback_setting($_=>'remote renderer') || 0) )
+			      !/file:/   &&
+			      !/^(ftp|http|das):/ &&
+			      (($url = $source->fallback_setting($_=>'remote renderer') ||0)
+			       && ($url ne 'none')
+			       && ($url ne 'local')))
                         } @uncached;
 
     my @remote    = grep {$is_remote{$_} } @uncached;

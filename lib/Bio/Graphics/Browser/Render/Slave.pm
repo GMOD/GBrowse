@@ -7,6 +7,7 @@ use CGI qw(header param escape unescape);
 use IO::File;
 use IO::String;
 use File::Spec;
+use Text::ParseWords 'shellwords';
 use File::Basename 'basename';
 use Bio::Graphics::GBrowseFeature;
 use Bio::Graphics::Browser;
@@ -15,6 +16,7 @@ use Bio::Graphics::Browser::DataSource;
 use Bio::Graphics::Browser::RenderPanels;
 use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RegionSearch; 
+use Bio::Graphics::Browser::DataBase;
 use POSIX 'WNOHANG','setsid','setuid';
 
 use Carp 'croak';
@@ -42,11 +44,13 @@ sub new {
 
     $args{LocalPort} ||= $d->sockport;
 
-    return bless {
+    my $self = bless {
 	daemon => $d,
 	args   => \%args,
 	debug  => DEBUG,
     },ref $class || $class;
+
+    return $self;
 }
 
 sub d           { shift->{daemon}          }
@@ -80,6 +84,42 @@ sub debug {
     return $d;
 }
 
+sub preload_databases {
+    my $self         = shift;
+    my $conf_file    = shift;
+    $self->{preload} = $conf_file;
+}
+
+sub do_preload {
+    my $self = shift;
+    my $conf_file = $self->{preload} or return;
+
+    $self->Info("Preloading databases from $conf_file");
+
+    my $conf      = Bio::Graphics::FeatureFile->new(-file=>$conf_file)
+	or return;
+
+    my @labels      = $conf->configured_types;
+
+    for my $l (@labels) {
+	my $adaptor = $conf->setting($l=>'db_adaptor');
+	my $args    = $conf->setting($l=>'db_args');
+	my @argv    = ref $args eq 'CODE'
+	    ? $args->()
+	    : shellwords($args||'');
+	if (defined (my $a = $conf->setting($l => 'aggregators'))) {
+	    my @aggregators = shellwords($a||'');
+	    push @argv,(-aggregator => \@aggregators);
+	}
+	my $db = Bio::Graphics::Browser::DataBase->open_database($adaptor,@argv);
+	if ($db) {
+	    $self->Info("Preloaded $adaptor database $l");
+	} else {
+	    $self->Warn("Failed to preload database $l");
+	}
+    }
+}
+
 sub run {
     my $self     = shift;
     $self->{pid} = $self->become_daemon;
@@ -93,6 +133,7 @@ sub run {
 
     my $d     = $self->d;
     $self->Info('GBrowse render slave starting on port ',$self->listen_port);
+    $self->do_preload;
 
     # accept loop in child process
     while (!$quit) {
@@ -191,8 +232,9 @@ sub render_tracks {
     my $panel_args      = thaw param('panel_args');
 
     $self->Debug("render_tracks(): Opening database...");
-    my $db = $datasource->open_database();
+    my $db = $datasource->open_database($tracks->[0] || 'general');
     $self->Debug("render_tracks(): Got database handle $db");
+    $self->Debug("rendering tracks @$tracks");
 
     # extract segments
     my ($segment) = $db->segment(-name	=> $settings->{'ref'},

@@ -66,7 +66,9 @@ conf/plugins/Spectrogram.pm
 conf/plugins/Submitter.pm
 conf/plugins/test.pm
 conf/plugins/TestFinder.pm
+conf/slave_preload.conf
 conf/yeast_chr1+2.conf
+conf/yeast_renderfarm.conf
 contrib/ace2gff.pl
 contrib/AxtPairwise_convert/axt2phy.pl
 contrib/blast2gff.pl
@@ -417,6 +419,7 @@ install_util/pod2docs.pl
 install_util/sync-bioperl.sh
 lib/Bio/Graphics/Browser.pm
 lib/Bio/Graphics/Browser/CachedTrack.pm
+lib/Bio/Graphics/Browser/DataBase.pm
 lib/Bio/Graphics/Browser/DataSource.pm
 lib/Bio/Graphics/Browser/GFFPrinter.pm
 lib/Bio/Graphics/Browser/I18n.pm
@@ -457,6 +460,7 @@ README.IF.GBROWSE.ISNT.WORKING
 sample_data/yeast_chr1+2/chr1.fa
 sample_data/yeast_chr1+2/chr2.fa
 sample_data/yeast_chr1+2/yeast_chr1+2.gff3
+sample_data/yeast_scaffolds/chromosomes.gff3
 t/01yeast.t
 t/02.rearchitecture.t
 t/03.render.t

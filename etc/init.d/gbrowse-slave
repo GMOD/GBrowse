@@ -17,6 +17,7 @@ test -x $DAEMON || exit 0
 set -e
 
 USER=$WWWUSER
+PRELOAD=""
 RUNDIR=/var/run/gbrowse
 LOGDIR=/var/log/gbrowse
 PORT='8101'
@@ -39,6 +40,10 @@ case "$1" in
 	    if test -e $RUNDIR/$NAME.$port.pid ; then
 		echo "$NAME already running, use restart instead."
 	    else
+                PRELOAD_DB=""
+		if [ "$PRELOAD" != "" ]; then
+                    PRELOAD_DB="--preload $PRELOAD"
+	        fi
 		ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.$port.pid"
 		su $USER -s /bin/sh -c "nice -n $NICE $DAEMON $ARGS"
 		echo -n "$port "

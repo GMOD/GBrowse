@@ -6,6 +6,7 @@ use base 'Bio::Graphics::FeatureFile';
 
 use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Browser::Util 'modperl_request';
+use Bio::Graphics::Browser::DataBase;
 use File::Basename 'dirname';
 use File::Path 'mkpath';
 use File::Spec;
@@ -17,7 +18,6 @@ use CGI 'pre';
 
 my %CONFIG_CACHE; # cache parsed config files
 my %DB_SETTINGS;  # cache database settings
-my %DB;           # cache opened database connections
 
 BEGIN {
     if( $ENV{MOD_PERL} &&
@@ -331,7 +331,8 @@ sub default_style {
 sub style {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);
-  return $l eq $label ? $self->SUPER::style($l) : ($self->SUPER::style($label),$self->SUPER::style($l));
+  return $l eq $label ? $self->SUPER::style($l) 
+                      : ($self->SUPER::style($label),$self->SUPER::style($l));
 }
 
 # return language-specific options
@@ -359,7 +360,8 @@ sub i18n_style {
   my %options  = $self->style($label,$length);
   my %lang_options = map { $_->[1] => $options{$_->[0]} }
     sort { $b->[2]<=>$a->[2] }
-      map { my ($option,undef,$lang) = /^(-[^:]+)(:(\w+))?$/; [$_ => $option, $priority{$lang||''}||99] }
+      map { my ($option,undef,$lang) = 
+		/^(-[^:]+)(:(\w+))?$/; [$_ => $option, $priority{$lang||''}||99] }
 	keys %options;
   %lang_options;
 }
@@ -789,27 +791,20 @@ sub open_database {
   $track  ||= 'general';
 
   my ($dbid,$adaptor,@argv) = $self->db_settings($track);
-  my $key                   = Dumper($adaptor,@argv);
+  my $db                    = Bio::Graphics::Browser::DataBase->open_database($adaptor,@argv);
 
-  if (exists $DB{$key}) {
-      # remember mapping of database to track
-      $self->{db2track}{$DB{$key}}{$dbid}++;
-      return $DB{$key};
+  # do a little extra stuff the first time we see a new database
+  unless ($self->{databases_seen}{$db}++) {
+      my $refclass = $self->setting('reference class');
+      eval {$db->default_class($refclass)} if $refclass;
+      $db->strict_bounds_checking(1) if $db->can('strict_bounds_checking');
+      $db->absolute(1)               if $db->can('absolute');
   }
 
-  
-  $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;
-  die "Could not open database: $@" unless $DB{$key};
 
-  if (my $refclass = $self->setting('reference class')) {
-    eval {$DB{$key}->default_class($refclass)};
-  }
-
-  $DB{$key}->strict_bounds_checking(1) if $DB{$key}->can('strict_bounds_checking');
-  $DB{$key}->absolute(1)               if $DB{$key}->can('absolute');
-
-  $self->{db2track}{$DB{$key}}{$dbid}++;
-  $DB{$key};
+  # remember mapping of this database to this track
+  $self->{db2track}{$db}{$dbid}++;
+  return $db;
 }
 
 =item @ids   = $dsn->db2id($db)

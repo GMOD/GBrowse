@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Bio::Graphics::GBrowseFeature;
 use Bio::Graphics::Browser::Region;
+use Bio::Graphics::Browser::RenderPanels;
 use Bio::Graphics::Browser::Util 'shellwords';
 use LWP::UserAgent;
 use HTTP::Request::Common 'POST';
@@ -112,6 +113,7 @@ sub init_databases {
     }
 
     # try to spread the work out as much as possible among the remote renderers
+    local $^W = 0; # getting uninit value in sort below - not sure why
     my %remotes;
     for my $dbid (keys %dbs) {
 	if (my @remote = keys %{$dbs{$dbid}{remotes}}) {

@@ -959,10 +959,12 @@ sub render_bottom {
 
 sub init_database {
   my $self = shift;
+
   my $dsn = $self->data_source;
   my $db  = $dsn->open_database();
 
-  # I don't know what this is for, but it was there in gbrowse and looks like an important hack.
+  # I don't know what this is for, 
+  # but it was there in gbrowse and looks like an important hack.
   eval {$db->biosql->version($self->state->{version})};
 
   $self->db($db);

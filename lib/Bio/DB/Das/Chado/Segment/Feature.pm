@@ -140,15 +140,9 @@ class.
   Returns : value of feature_id (a scalar)
   Args    : on set, new value (a scalar or undef, optional)
 
+Implemented in Bio::DB::Das::Chado::Segment
 
 =cut
-
-sub feature_id {
-  my $self = shift;
-
-  return $self->{'feature_id'} = shift if @_;
-  return $self->{'feature_id'};
-}
 
 =head2 organism
 

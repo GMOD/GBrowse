@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.8 2008-10-15 12:10:44 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.9 2008-11-14 15:34:17 scottcain Exp $
 
 =head1 NAME
 
@@ -119,6 +119,8 @@ sub new {
     bless $self, ref $class_type || $class_type;
     $self->{'factory'} = $factory;
     $self->{'name'} = $name;
+
+    $self->feature_id($feature_id) if $feature_id;
 
     $target ||=0;
     my $strand;
@@ -357,6 +359,25 @@ sub name {
   my $self = shift;
   return $self->{'name'}
 }
+
+=head2 feature_id()
+
+  Title   : feature_id
+  Usage   : $obj->feature_id($newval)
+  Function: holds feature.feature_id
+  Returns : value of feature_id (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub feature_id {
+  my $self = shift;
+
+  return $self->{'feature_id'} = shift if @_;
+  return $self->{'feature_id'};
+}
+
 
 =head2 strand()
 

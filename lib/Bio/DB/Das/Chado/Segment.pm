@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.9 2008-11-14 15:34:17 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.10 2008-11-14 19:14:00 scottcain Exp $
 
 =head1 NAME
 
@@ -401,6 +401,28 @@ sub strand {
 }
 
 *abs_strand = \&strand;
+
+=head2 attributes
+
+ Title   : attributes 
+ Usage   : @attributes = $obj->attributes;
+ Function: get the "attributes" of this segment
+ Returns : An array of strings
+ Args    : None
+
+This is a object-specific wrapper on the more generic attributes
+method in Bio::DB::Das::Chado.
+
+=cut
+
+
+sub attributes {
+  my $self = shift;
+  my $factory = $self->factory;
+  defined(my $id = $self->id) or return;
+  $factory->attributes($id,@_);
+}
+
 
 =head2 _search_by_name
 
@@ -1528,13 +1550,28 @@ sub srcfeature_id {
   return $self->{'srcfeature_id'};
 }
 
+=head2 source_tag
+
+  Title   : source_tag
+  Usage   : $obj->source_tag($newval)
+  Function: Returns the source_tag (not to be confused with source?)
+  Returns : Always returns Bio::DB::Das::Chado::Segment
+  Args    : none
+
+It is not clear to me what this is really used for, but this is exactly
+what Bio::DB::SeqFeature::Store::Segment does.
+
+=cut
+
+sub source_tag   { __PACKAGE__ }
+
 =head2 alphabet
 
   Title   : alphabet
   Usage   : $obj->alphabet($newval)
-  Function: undocumented method by Scott Cain
+  Function: Returns the sequence "type", ie, dna
   Returns : scalar 'dna'
-  Args    : on set, new value (a scalar or undef, optional)
+  Args    : None
 
 
 =cut

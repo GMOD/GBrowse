@@ -1632,13 +1632,6 @@ sub asString {
 #  return join '/',$id,$type,$self->SUPER::asString;
 }
 
-sub attributes {
-  my $self = shift;
-  my $factory = $self->factory;
-  defined(my $id = $self->id) or return;
-  $factory->attributes($id,@_);
-}
-
 =head2 synonyms()
 
  Title   : synonyms

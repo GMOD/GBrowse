@@ -471,9 +471,6 @@ lib/Bio/Graphics/Glyph/insertion_chromosome.pm
 lib/Bio/Graphics/Glyph/ld_plot.pm
 lib/Bio/Graphics/Glyph/pairwise_plot.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm
-lib/Bio/Graphics/Glyph/wiggle_box.pm
-lib/Bio/Graphics/Glyph/wiggle_density.pm
-lib/Bio/Graphics/Glyph/wiggle_xyplot.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm
 lib/Bio/Graphics/WiggleBlockFile.pm
 lib/CGI/Session/ID/salted_md5.pm

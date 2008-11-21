@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.116 2008-10-29 20:38:33 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.117 2008-11-21 21:31:06 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2126,6 +2126,10 @@ sub whole_segment {
 sub name2segments {
   my $self = shift;
   my ($literal_name,$db,$toomany,$segments_have_priority,$dont_merge) = @_;
+
+  $dont_merge = !$self->setting('merge searches') 
+      if defined $self->setting('merge searches');
+
   $toomany ||= TOO_MANY_SEGMENTS;
 
   my $max_segment   = $self->get_max_segment;
@@ -2254,6 +2258,7 @@ sub _feature_get {
 		  || $fclass eq $refclass
 		    || $fclass eq $class;
       } @segments;
+
 
   return @filtered if $dont_merge;
 

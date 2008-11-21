@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.114 2008-10-29 20:33:58 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.115 2008-11-21 21:31:05 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2262,7 +2262,7 @@ sub features2segments {
   my %seenit;
   my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
   $version ||= 0;
-  @segments = grep {!$seenit{$_->seq_id,$_->start,$_->end,$version}++} @segments;
+  @segments = grep {!$seenit{$_->display_name,$_->seq_id,$_->start,$_->end,$version}++} @segments;
 
   \@segments;
 }

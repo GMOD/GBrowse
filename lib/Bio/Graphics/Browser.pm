@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.117 2008-11-21 21:31:06 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.118 2008-11-25 17:17:00 scottcain Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1679,7 +1679,7 @@ sub tmpdir {
   #  my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages'))
   #   or die "no tmpimages option defined, can't generate a picture";
 
-  my ($tmpuri,$tmpdir) = shellwords($self->callback_setting('tmpimages'))
+  my ($tmpuri,$tmpdir) = Bio::Graphics::Browser::Util::shellwords($self->callback_setting('tmpimages'))
     or die "no tmpimages option defined, can't generate a picture";
 
   $tmpuri  = $self->relative_path($tmpuri);
@@ -2988,7 +2988,7 @@ sub region_sizes {
   my $self     = shift;
   my $settings = shift;
 
-  my @region_sizes   = sort {$b<=>$a} shellwords($self->setting('region segments'));
+  my @region_sizes   = sort {$b<=>$a} Bio::Graphics::Browser::Util::shellwords($self->setting('region segments'));
   unless (@region_sizes) {
     my $default      = $self->setting('region segment') || $self->setting('default segment') || 50000;
     @region_sizes    = ($default * 2, $default, int $default/2) unless $default eq 'AUTO';;
@@ -3235,7 +3235,7 @@ sub match_host {
 sub label2type {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);
-  return shellwords($self->setting($l,'feature')||$self->setting($label,'feature')||'');
+  return Bio::Graphics::Browser::Util::shellwords($self->setting($l,'feature')||$self->setting($label,'feature')||'');
 }
 
 sub style {
@@ -3340,7 +3340,7 @@ sub invert_types {
 sub default_labels {
   my $self = shift;
   my $defaults = $self->setting('general'=>'default features');
-  return shellwords($defaults||'');
+  return Bio::Graphics::Browser::Util::shellwords($defaults||'');
 }
 
 # return a hashref in which keys are the thresholds, and values are the list of
@@ -3350,7 +3350,7 @@ sub summary_mode {
   my $summary = $self->settings(general=>'summary mode') or return {};
   my %pairs = $summary =~ /(\d+)\s+{([^\}]+?)}/g;
   foreach (keys %pairs) {
-    my @l = shellwords($pairs{$_}||'');
+    my @l = Bio::Graphics::Browser::Util::shellwords($pairs{$_}||'');
     $pairs{$_} = \@l
   }
   \%pairs;

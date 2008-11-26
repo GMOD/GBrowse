@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.218 2008-11-12 23:14:37 lstein Exp $
+# $Id: Browser.pm,v 1.219 2008-11-26 18:33:02 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -258,8 +258,11 @@ sub update_data_source {
     $source = $new_source;
   } else {
     carp "Invalid source $new_source";
-    $session->source($old_source);
-    $source = $old_source;
+    my $fallback_source = $self->valid_source($old_source) 
+	? $old_source
+	: $self->default_source;
+    $session->source($fallback_source);
+    $source = $fallback_source;
   }
 
   return $source;

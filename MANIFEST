@@ -123,9 +123,7 @@ contrib/SynView/README
 contrib/TextDumper/README
 contrib/TextDumper/TextDumper.pm
 DISCLAIMER
-docs/developer_notes/old_makefile.pl
 docs/developer_notes/README.rearchitecture
-docs/developer_notes/ubuntu_notes.txt
 docs/example_remote_configs/volvox_local.conf
 docs/example_remote_configs/volvox_remote.conf
 docs/example_remote_configs/volvox_slave.conf
@@ -451,7 +449,6 @@ libalign/realign.h
 Makefile.PL
 MANIFEST			This list of files
 META.yml
-NFS_bechmark_results.ods
 README
 README.fedora_and_selinux
 README.GBrowse-2.00

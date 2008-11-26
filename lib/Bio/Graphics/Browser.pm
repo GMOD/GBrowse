@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.219 2008-11-26 18:33:02 lstein Exp $
+# $Id: Browser.pm,v 1.220 2008-11-26 21:16:12 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -184,13 +184,13 @@ sub global_timeout         { shift->setting(general=>'global_timeout')         }
 sub remember_source_time   { shift->setting(general=>'remember_source_time')   }
 sub remember_settings_time { shift->setting(general=>'remember_settings_time') }
 sub cache_time             { shift->setting(general=>'cache time')             }
-sub url_fetc_htimeout      { shift->setting(general=>'url_fetch_timeout')      }
+sub url_fetch_timeout      { shift->setting(general=>'url_fetch_timeout')      }
 sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')     }
 
 sub session_driver         { shift->setting(general=>'session driver') || 'driver:file;serializer:default' }
 sub session_args    {
   my $self = shift;
-  my %args = shellwords($self->setting(general=>'session args'));
+  my %args = shellwords($self->setting(general=>'session args')||'');
   return \%args if %args;
   return {Directory=>$self->session_dir};
 }

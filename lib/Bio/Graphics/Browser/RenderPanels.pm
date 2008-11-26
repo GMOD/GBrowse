@@ -1450,13 +1450,21 @@ sub create_track_args {
 
   my @args;
   if ($source->semantic_setting($label=>'global feature',$length)) {
-    @args = ($segment,
-	     @default_args,
-	     $source->default_style,
-	     $source->i18n_style($label,
-			       $lang),
-	     @override,
-	    );
+      eval { # honor the database indicated in the track config
+	  my $db    = $self->source->open_database($label);
+	  my $class = eval {$segment->seq_id->class} || eval{$db->refclass};
+	  $segment  = $db->segment(-name  => $segment->seq_id,
+				   -start => $segment->start,
+				   -end   => $segment->end,
+				   -class => $class);
+      };
+      @args = ($segment,
+	       @default_args,
+	       $source->default_style,
+	       $source->i18n_style($label,
+				   $lang),
+	       @override,
+	  );
   } else {
     @args = (@default_args,
 	     $source->default_style,

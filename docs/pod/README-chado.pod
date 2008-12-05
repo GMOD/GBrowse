@@ -98,15 +98,19 @@ with an URL like http://localhost/cgi-bin/gbrowse/chado/.
 
 =back
 
-=head2 More Information
+=head1 More Information
 
 See L<http://www.gmod.org> for more information on Chado and loading
 Chado for use with GBrowse.
 
-=head2 Bugs
+=head1 Bugs
 
 If you encounter any bugs or problems with this Chado adaptor, please
 contact the GBrowse mailing list, gmod-gbrowse@lists.sourceforge.net.
+
+=head1 SUPPORT
+
+Please address support requests to gmod-gbrowse@lists.sourceforge.net.
 
 Scott Cain
 cain@cshl.edu

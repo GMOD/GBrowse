@@ -564,6 +564,10 @@ function.
 
 The Bio::Graphics::Browser manpage.
 
+=head1 SUPPORT
+
+Please address support requests to gmod-gbrowse@lists.sourceforge.net.
+
 =head1 AUTHOR
 
 Lincoln Stein <lstein@cshl.org>.

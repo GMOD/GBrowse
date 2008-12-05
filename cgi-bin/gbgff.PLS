@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.12 2008-09-17 01:24:00 lstein Exp $
+# $Id: gbgff.PLS,v 1.1.2.13 2008-12-05 15:14:01 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -73,11 +73,26 @@ use CGI 'header';
 use vars qw($CONF_DIR $VERSION);
 
 my $dumper = GFFDumper->new;
+exit_with_format_error() unless $dumper->valid_args;
+
 $dumper->get_segment();
 
 print header($dumper->get_mime_type);
 $dumper->print_gff3();
 exit 0;
+
+sub exit_with_format_error {
+    print header('text/plain');
+    print <<END;
+# I don't understand this request. Maybe you pasted the URL directly into the
+# location box of your browser rather than into the GBrowse remote annotations box?
+#
+# This URL is supposed to be used indirectly by pasting it into the 
+# "Add remote annotations" field at the bottom of a GBrowse page.
+# GBrowse will then load the data from this source into a new track.
+END
+    exit 0;
+}
 
 package GFFDumper;
 
@@ -92,6 +107,18 @@ sub new {
     my $class  = shift;
     my $config = $class->initialize();
     return bless {config => $config},ref $class || $class;
+}
+
+sub valid_args {
+    my $self = shift;
+    return unless param();
+    my $q = param('q') || param('segment');
+    my ($seqid,$start,$end) = 
+	$q =~ /^([^:]+)(?::([\d-]+)(?:\.\.|,)([\d-]+))?/;
+    $seqid ||= param('ref') || param('seqid');
+    return unless $seqid;
+    return if     $seqid =~ /^\$segment/;
+    1;
 }
 
 sub print_gff3 {
@@ -158,7 +185,7 @@ sub get_segment {
 
     my $q = param('q') || param('segment');
     my ($seqid,$start,$end) = 
-	param('q') =~ /^([^:]+)(?::([\d-]+)(?:\.\.|,)([\d-]+))?/;
+	$q =~ /^([^:]+)(?::([\d-]+)(?:\.\.|,)([\d-]+))?/;
 
     $seqid ||= param('ref')   || param('seqid');
     $start ||= param('start') || 1;

@@ -288,6 +288,10 @@ annotator, will not display correctly when the image URL is generated
 on one machine and then viewed on another. Uploaded files will
 transfer correctly, however.
 
+=head1 SUPPORT
+
+Please address support requests to gmod-gbrowse@lists.sourceforge.net.
+
 =head1 AUTHOR
 
 Lincoln Stein lstein@cshl.org

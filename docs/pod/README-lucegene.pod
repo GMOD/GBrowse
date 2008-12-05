@@ -116,6 +116,10 @@ server computer.
 Information on Lucene is at
 http://www.gmod.org/lucegene/, http://lucene.apache.org/
 
+=head1 SUPPORT
+
+Please address support requests to gmod-gbrowse@lists.sourceforge.net.
+
 =head1 AUTHORS
 
 Don Gilbert <gilbertd@indiana.edu>

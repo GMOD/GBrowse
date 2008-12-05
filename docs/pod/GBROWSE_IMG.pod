@@ -261,6 +261,10 @@ browsers that don't know about iframes to display the static image
 instead. You may need to adjust the width and height attributes in
 order to avoid browsers placing scrollbars around the frame.
 
+=head1 SUPPORT
+
+Please address support requests to gmod-gbrowse@lists.sourceforge.net.
+
 =head1 AUTHOR
 
 Lincoln Stein lstein@cshl.org

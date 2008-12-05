@@ -157,6 +157,10 @@ Run the GFF loader
 
 =back
 
+=head1 SUPPORT
+
+Please address support requests to gmod-gbrowse@lists.sourceforge.net.
+
 =head1 IMPORTANT NOTE:
 
 File formats and paths change all the time.  These recipes worked as

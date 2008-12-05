@@ -1,5 +1,4 @@
-#
-#/usr/bin/perl
+#!/usr/bin/perl
 
 =head1 NAME
 
@@ -14,7 +13,7 @@ options:
  -h|--help                Show this message 
  -d|--dev                 Use the developement version of both GBrowse 
                             and bioperl from CVS
- --bioperl_dev            Use the development version of BioPerl from CVS
+ --bioperl_dev            Use the development version of BioPerl from SVN
  --gbrowse_dev            Use the development version of GBrowse from CVS
  --build_param_str=<args> Use this string to set Makefile.PL parameters
                             such as CONF or PREFIX for GBrowse 
@@ -31,8 +30,6 @@ options:
                             BioPerl); Assumes a resulting'bioperl-live' 
                             directory
  --skip_start             Don't wait for 'Enter' at program start
- --skip_bioperl           Don't fetch and install BioPerl; assumes a 
-                            working bioperl is already installed
 
 =head1 DESCRIPTION
 
@@ -64,9 +61,9 @@ use Cwd;
 use constant NMAKE => 'http://download.microsoft.com/download/vc15/patch/1.52/w95/en-us/nmake15.exe';
 
 my ( $show_help, $get_from_cvs, $build_param_string, $working_dir,
-     $get_gbrowse_cvs, $get_bioperl_cvs, $is_cygwin, $windows,
+     $get_gbrowse_cvs, $get_bioperl_svn, $is_cygwin, $windows,
      $binaries, $make, $tmpdir, $wincvs, $gbrowse_path,$bioperl_path,
-     $skip_start, $install_param_string, $skip_bioperl);
+     $skip_start, $install_param_string, );
 
 BEGIN {
 
@@ -74,14 +71,13 @@ BEGIN {
         'h|help'              => \$show_help,             # Show help and exit
         'd|dev'               => \$get_from_cvs,          # Use the dev cvs
         'build_param_str=s'   => \$build_param_string,    # Build parameters
-        'bioperl_dev'         => \$get_bioperl_cvs,
+        'bioperl_dev'         => \$get_bioperl_svn,
         'gbrowse_dev'         => \$get_gbrowse_cvs,
         'wincvs'              => \$wincvs,
         'gbrowse_path=s'      => \$gbrowse_path,
         'bioperl_path=s'      => \$bioperl_path,
         'install_param_str=s' => \$install_param_string,
         'skip_start'          => \$skip_start,
-        'skip_bioperl'        => \$skip_bioperl,
         )
         or pod2usage(2);
   pod2usage(2) if $show_help;
@@ -106,13 +102,6 @@ BEGIN {
     or die "Could not create temporary directory: $!";
 
   $windows = $Config{osname} =~ /mswin/i;
-
-  if ($windows and $] == 5.010) {
-     print STDERR "\n\nActiveState Perl 5.10 is not compatible with GBrowse due to problems\n";
-     print STDERR "with the AS implementation.  Please remove it and install Perl 5.8 instead.\n\n\n";
-     exit(0);
-  }
-
 
   $binaries = $Config{'binexp'};
   $make     = $Config{'make'};
@@ -161,7 +150,7 @@ use CPAN '!get';
 $is_cygwin = 1 if ( $^O eq 'cygwin' );
 
 if ($get_from_cvs) {
-    $get_bioperl_cvs = $get_gbrowse_cvs = 1;
+    $get_bioperl_svn = $get_gbrowse_cvs = 1;
 }
 
 if ($windows and !$wincvs and $get_gbrowse_cvs ) {
@@ -172,10 +161,10 @@ if ($windows and !$wincvs and $get_gbrowse_cvs ) {
 $build_param_string ||="";
 $install_param_string ||="";
 
-use constant BIOPERL_VERSION      => 'bioperl-1.5.2_102';
-use constant BIOPERL_REQUIRES     => '1.005002';  # sorry for the redundancy
+use constant BIOPERL_VERSION      => 'bioperl-1.5.2_103';
+use constant BIOPERL_REQUIRES     => '1.005003';  # sorry for the redundancy
 use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
-use constant GBROWSE_DEFAULT      => '1.69';
+use constant GBROWSE_DEFAULT      => '2.00';
 use constant SOURCEFORGE_MIRROR1  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_MIRROR2  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_GBROWSE  => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';
@@ -184,9 +173,7 @@ use constant BIOPERL              => 'http://bioperl.org/DIST/'.BIOPERL_VERSION.
 my %REPOSITORIES = ('BioPerl-Release-Candidates' => 'http://bioperl.org/DIST/RC',
 		    'BioPerl-Regular-Releases'   => 'http://bioperl.org/DIST',
 	            'Kobes'                      => 'http://theoryx5.uwinnipeg.ca/ppms',
-                    'Bribes'                     => 'http://www.Bribes.org/perl/ppm',
-                     'tcool'                     => 'http://ppm.tcool.org/archives/',
-                    );
+                    'Bribes'                     => 'http://www.Bribes.org/perl/ppm');
 
 
 # this is so that ppm can be called in a pipe
@@ -222,31 +209,44 @@ CPAN::Shell->install('File::Temp');
 CPAN::Shell->install('Class::Base');
 CPAN::Shell->install('Digest::MD5');
 CPAN::Shell->install('Statistics::Descriptive');
+CPAN::Shell->install('JSON');
+CPAN::Shell->install('JSON::Any');
 
-unless ($skip_bioperl) {
-  $get_bioperl_cvs = 1;
-  print STDERR "\n\nForce getting a BioPerl nightly build; the most recent release is too old\n";
-  my $version = BIOPERL_REQUIRES;
-  if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs or $bioperl_path) {
-    print STDERR "\n*** Installing BioPerl ***\n";
-    if ($windows and !$get_bioperl_cvs and !$bioperl_path) {
-      my $bioperl_index = find_bioperl_ppm();
-      system("ppm install --force $bioperl_index");
-    } else {
-        CPAN::Shell->install('Module::Build');
-        do_install(BIOPERL,'bioperl.tgz',BIOPERL_VERSION,'Build',$get_bioperl_cvs,'',$bioperl_path);
-    }
+# recent versions of Module::Build fail to install without force!
+CPAN::Shell->force(install=>'Module::Build') unless eval "require Module::Build; 1";
+
+my $version = BIOPERL_REQUIRES;
+if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_svn or $bioperl_path) {
+  print STDERR "\n*** Installing BioPerl ***\n";
+  if ($windows and !$get_bioperl_svn and !$bioperl_path) {
+    my $bioperl_index = find_bioperl_ppm();
+    system("ppm install --force $bioperl_index");
+  } else {
+      do_install(BIOPERL,
+		 'bioperl.tgz',
+		 BIOPERL_VERSION,
+		 'Build',
+		 $get_bioperl_svn ? 'svn' : '',
+		 '',
+		 $bioperl_path);
   }
-  else {
-    print STDERR "BioPerl is up to date.\n";
-  }
+}
+else {
+  print STDERR "BioPerl is up to date.\n";
 }
 
 print STDERR "\n *** Installing Generic-Genome-Browser ***\n";
 
 my $latest_version = find_gbrowse_latest();
 my $gbrowse        = SOURCEFORGE_MIRROR1.$latest_version.'.tar.gz';
-eval {do_install($gbrowse,'gbrowse.tgz',$latest_version,'make',$get_gbrowse_cvs,$build_param_string,$gbrowse_path,$install_param_string)};
+eval {do_install($gbrowse,
+		 'gbrowse.tgz',
+		 $latest_version,
+		 'Build',
+		 $get_gbrowse_cvs ? 'cvs' : '',
+		 $build_param_string,
+		 $gbrowse_path,
+		 $install_param_string)};
 if ($@ =~ /Could not download/) {
   print STDERR "Could not download: server down? Trying a different server...\n";
   $gbrowse        = SOURCEFORGE_MIRROR2.$latest_version.'.tar.gz';
@@ -282,7 +282,7 @@ sub do_install {
 }
 
 sub do_get_distro {
-    my ($download,$local_name,$distribution,$from_cvs,$file_path) = @_;
+    my ($download,$local_name,$distribution,$distribution_method,$file_path) = @_;
 
     if ($file_path) {
         chdir $working_dir;
@@ -301,18 +301,18 @@ sub do_get_distro {
         chdir $tmpdir;
         extract_tarball($local_name,$distribution);
     }
-    elsif ($from_cvs) {
+    elsif ($distribution_method) {
         my $distribution_dir;
         if ($local_name =~ /gbrowse/) {
             $distribution_dir = 'Generic-Genome-Browser';
             print STDERR "\n\nPlease press return when prompted for a password.\n";
             unless (
               (system(
-    'cvs -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod login')==0
+    "$distribution_method -d:pserver:anonymous\@gmod.cvs.sourceforge.net:/cvsroot/gmod login")==0
                 or $is_cygwin)
               &&
               (system(
-    'cvs -z3 -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod co -kb -P -r stable Generic-Genome-Browser') == 0
+    "$distribution_method -z3 -d:pserver:anonymous\@gmod.cvs.sourceforge.net:/cvsroot/gmod co -kb -P Generic-Genome-Browser") == 0
                 or $is_cygwin)
             )
             {

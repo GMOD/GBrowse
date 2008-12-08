@@ -455,10 +455,10 @@ README.fedora_and_selinux
 README.GBrowse-2.00
 README.gff3
 README.IF.GBROWSE.ISNT.WORKING
-sample_data/yeast_chr1+2/chr1.fa
-sample_data/yeast_chr1+2/chr2.fa
 sample_data/yeast_chr1+2/yeast_chr1+2.gff3
 sample_data/yeast_scaffolds/chromosomes.gff3
+sample_data/yeast_scaffolds/chr1.fa
+sample_data/yeast_scaffolds/chr2.fa
 t/01yeast.t
 t/02.rearchitecture.t
 t/03.render.t

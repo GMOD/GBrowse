@@ -6,9 +6,11 @@ use warnings;
 use Bio::Graphics;
 use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
+use Bio::Graphics::Browser::Render;
 use Bio::Graphics::Browser::CachedTrack;
-use Bio::Graphics::Browser::Util qw[modperl_request citation shellwords get_section_from_label url_label];
+use Bio::Graphics::Browser::Util qw[citation shellwords get_section_from_label url_label];
 use IO::File;
+use Time::HiRes 'sleep';
 use POSIX 'WNOHANG','setsid';
 
 use CGI qw(:standard param escape unescape);
@@ -114,15 +116,22 @@ sub request_panels {
   # fork a second time and process them in parallel.
   if ($args->{deferred}) {
       $SIG{CHLD} = 'IGNORE';
-      my $child = fork();
-
+      
       $self->clone_databases($local_labels) if $do_local;
 
-      die "Couldn't fork: $!" unless defined $child;
-      return $data_destinations if $child;
-
       # need to prepare modperl for the fork
-      $self->prepare_modperl_for_fork();
+      Bio::Graphics::Browser::Render->prepare_modperl_for_fork();
+      Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('starting');
+
+      my $child = fork();
+      die "Couldn't fork: $!" unless defined $child;
+
+      if ($child) {
+	  Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('parent');
+	  return $data_destinations;
+      }
+
+      Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
 
       open STDIN, "</dev/null" or die "Couldn't reopen stdin";
       open STDOUT,">/dev/null" or die "Couldn't reopen stdout";
@@ -157,17 +166,6 @@ sub request_panels {
   return $data_destinations;
 }
 
-sub prepare_modperl_for_fork {
-    my $self = shift;
-    my $r    = modperl_request() or return;
-    if ($ENV{MOD_PERL_API_VERSION} < 2) {
-	eval {
-	    require Apache::SubProcess;
-	    $r->cleanup_for_exec() 
-	}
-    };
-}
-
 sub render_panels {
     my $self = shift;
     my $args = shift;
@@ -184,6 +182,8 @@ sub render_track_images {
 
     my %results;
     my %still_pending = map {$_=>1} keys %$requests;
+    my $k     = 1.25;
+    my $delay = 0.1;
     while (%still_pending) {
 	for my $label (keys %$requests) {
 	    my $data = $requests->{$label};
@@ -194,8 +194,8 @@ sub render_track_images {
 	    }
 	    delete $still_pending{$label};
 	}
-	warn "waiting...";
-	sleep 1 if %still_pending;
+	sleep $delay if %still_pending;
+	$delay *= $k; # sleep a little longer each time using an exponential backoff
     }
     return \%results;
 }
@@ -506,44 +506,51 @@ sub run_remote_requests {
 
   for my $url (keys %renderers) {
 
-    $self->prepare_modperl_for_fork();
+      Bio::Graphics::Browser::Render->prepare_modperl_for_fork();
+      Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('starting');
 
-    my $child   = fork();
-    die "Couldn't fork: $!" unless defined $child;
-    next if $child;
+      my $child   = fork();
+      die "Couldn't fork: $!" unless defined $child;
+      if ($child) {
+	  Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('parent');
+	  next;
+      }
 
-    # THIS PART IS IN THE CHILD
-    my @tracks  = keys %{$renderers{$url}};
-    my $s_track  = Storable::nfreeze(\@tracks);
+      # THIS PART IS IN THE CHILD
+      Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
+      my @tracks  = keys %{$renderers{$url}};
+      my $s_track  = Storable::nfreeze(\@tracks);
 
-    my $request = POST ($url,
-			Content_Type => 'multipart/form-data',
-			Content => [
-				    operation  => 'render_tracks',
-				    panel_args => $s_args,
-				    tracks     => $s_track,
-				    settings   => $s_set,
-				    datasource => $s_dsn,
-				    language   => $s_lang,
-				    env        => $s_env,
-				    ]);
+      my $request = POST ($url,
+			  Content_Type => 'multipart/form-data',
+			  Content => [
+			      operation  => 'render_tracks',
+			      panel_args => $s_args,
+			      tracks     => $s_track,
+			      settings   => $s_set,
+			      datasource => $s_dsn,
+			      language   => $s_lang,
+			      env        => $s_env,
+			  ]);
 
-    my $response = $ua->request($request);
+      my $response = $ua->request($request);
 
-    if ($response->is_success) {
-	my $contents = Storable::thaw($response->content);
-	for my $label (keys %$contents) {
-	    my $map = $contents->{$label}{map}        or die "Expected a map from remote server, but got nothing!";
-	    my $gd  = $contents->{$label}{imagedata}  or die "Expected imagedata from remote server, but got nothing!";
-	    $requests->{$label}->put_data($gd,$map);
-	}
-    }
-    else {
-	my $uri = $request->uri;
-	warn "$uri; fetch failed: ",$response->status_line;
-	$requests->{$_}->flag_error($response->status_line) foreach keys %{$renderers{$uri}};
-    }
-    CORE::exit(0);  # from CHILD
+      if ($response->is_success) {
+	  my $contents = Storable::thaw($response->content);
+	  for my $label (keys %$contents) {
+	      my $map = $contents->{$label}{map}        
+	                or die "Expected a map from remote server, but got nothing!";
+	      my $gd  = $contents->{$label}{imagedata}  
+	                or die "Expected imagedata from remote server, but got nothing!";
+	      $requests->{$label}->put_data($gd,$map);
+	  }
+      }
+      else {
+	  my $uri = $request->uri;
+	  warn "$uri; fetch failed: ",$response->status_line;
+	  $requests->{$_}->flag_error($response->status_line) foreach keys %{$renderers{$uri}};
+      }
+      CORE::exit(0);  # from CHILD
   }
 }
 

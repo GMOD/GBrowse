@@ -19,7 +19,7 @@ use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::RenderPanels;
 use Bio::Graphics::Browser::GFFPrinter;
-use Bio::Graphics::Browser::Util qw[get_section_from_label url_label];
+use Bio::Graphics::Browser::Util qw[modperl_request get_section_from_label url_label];
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -32,7 +32,8 @@ use constant TOO_MANY_SEGMENTS    => 5_000;
 use constant OVERVIEW_RATIO       => 1.0;
 
 
-my %PLUGINS; # cache initialized plugins
+my %PLUGINS;       # cache initialized plugins
+my $FCGI_REQUEST;  # stash fastCGI request handle
 
 # new() can be called with two arguments: ($data_source,$session)
 # or with one argument: ($globals)
@@ -659,10 +660,11 @@ sub render {
 sub render_header {
   my $self    = shift;
   my $cookie = $self->create_cookie();
-  print CGI::header(
-    -cookie  => $cookie,
-    -charset => $self->tr('CHARSET')
-  );
+  my $header = CGI::header(
+      -cookie  => $cookie,
+      -charset => $self->tr('CHARSET'),
+      );
+  print $header;
 }
 
 sub create_cookie {
@@ -1535,9 +1537,7 @@ sub set_default_state {
 sub update_state {
   my $self = shift;
   $self->update_state_from_cgi;
-
   my $state         = $self->state;
-
   if ($self->segment) {
 
       # A reset won't have a segment, so we need to test for that before we use
@@ -1741,20 +1741,6 @@ sub update_options {
 	  push @{$state->{h_region}},$_;
       }
   }
-
-# this chunk of code is dead?
-# just looking to see if the settings form was submitted
-#   if (param('width')) { 
-#     $state->{grid}  = param('grid');
-#     $state->{show_tooltips} = param('show_tooltips');
-#     unless (
-# 	defined $data_source->cache_time()
-#         && $data_source->cache_time() == 0 )
-#     {
-#         $state->{cache} = param('cache');
-#         $state->{cache} = !param('nocache') if defined param('nocache');
-#     }
-#   }
 
   # Process the magic "q" parameter, which overrides everything else.
   if (my @q = param('q')) {
@@ -3082,6 +3068,40 @@ sub svg_link {
     my $settings = shift;
     return "?help=svg_image;flip=".($settings->{flip}||0);
 }
+
+sub fcgi_request {
+    my $self = shift;
+    return $FCGI_REQUEST if defined $FCGI_REQUEST;
+    my $request   = eval "require FCGI; FCGI::Request()";
+    $FCGI_REQUEST = $request && $request->IsFastCGI ? $request : 0;
+}
+
+sub prepare_modperl_for_fork {
+    my $self = shift;
+    my $r    = modperl_request() or return;
+    if ($ENV{MOD_PERL_API_VERSION} < 2) {
+	eval {
+	    require Apache::SubProcess;
+	    $r->cleanup_for_exec() 
+	}
+    };
+}
+
+sub prepare_fcgi_for_fork {
+    my $self  = shift;
+    my $state = shift;
+    my $req   = $self->fcgi_request() or return;
+    if ($state eq 'starting') {
+	$req->Detach();
+    } elsif ($state eq 'parent') {
+	$req->Attach();
+    } elsif ($state eq 'child') {
+	$req->LastCall();
+	undef *FCGI::DESTROY;
+    }
+}
+
+
 
 ########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end
 sub tr {

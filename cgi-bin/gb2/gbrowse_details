@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Realign 'align';
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.4 2008-11-26 21:16:12 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.5 2008-12-08 16:18:19 lstein Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 
@@ -21,8 +21,22 @@ my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
 my $conf      = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
     or die "Couldn't read globals";
 
-my $detail_renderer = DetailRenderer->new($conf);
-$detail_renderer->run();
+my $fcgi = Bio::Graphics::Browser::Render->fcgi_request;
+
+if ($fcgi) {
+
+    while ($fcgi->Accept >= 0) {
+	CGI->initialize_globals();
+	DetailRenderer->new($conf)->run();
+	$fcgi->Finish();
+    }
+
+}
+
+else {
+    DetailRenderer->new($conf)->run();
+}
+
 
 exit 0;
 
@@ -116,7 +130,7 @@ sub run {
     # provide customized content for popup balloons
     if (defined $rmt) {
 	print header,start_html;
-	print $self->remote_content($rmt,$features->[0]);
+	print remote_content($rmt,$features->[0]);
 	print end_html;
     }
 

@@ -125,6 +125,11 @@ sub wwwuser {
     return (getpwuid($<))[0];
 }
 
+sub installconf {
+    my $self = shift;
+    return   'y';
+}
+
 sub apachemodules {
     my $self = shift;
     my $root = $self->apache_root;

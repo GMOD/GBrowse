@@ -268,14 +268,18 @@ sub search_features_remotely {
     for my $url (keys %$remote_dbs) {
 
 	my $pipe  = IO::Pipe->new();
-	Bio::Graphics::Browser::RenderPanels->prepare_modperl_for_fork();
-	my $child = fork();
+	Bio::Graphics::Browser::Render->prepare_modperl_for_fork();
+	Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('starting');
+	my $child = CORE::fork();
+	print STDERR "forked $child" if DEBUG;
 	die "Couldn't fork: $!" unless defined $child;
 	if ($child) { # parent
+	    Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('parent');
 	    $pipe->reader();
 	    $select->add($pipe);
 	}
-	else {
+	else { # child
+	    Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
 	    $pipe->writer();
 	    $self->fetch_remote_features($search_term,$url,$pipe);
 	    CORE::exit 0;  # CORE::exit prevents modperl from running cleanup, etc
@@ -318,6 +322,8 @@ sub search_features_remotely {
 	    push @found,@$objects;
 	}
     }
+
+    eval {Bio::Graphics::Browser->fcgi_request()->Flush};
 
     return \@found;
 }

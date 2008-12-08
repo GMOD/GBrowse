@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbrowse_img,v 1.3 2008-11-07 23:35:47 lstein Exp $
+# $Id: gbrowse_img,v 1.4 2008-12-08 16:18:19 lstein Exp $
 
 use strict;
 
@@ -8,6 +8,10 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render;
 use Bio::Graphics::Browser::Util;
 use Digest::MD5 'md5_hex';
+
+use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
+use constant DEFAULT_MASTER => 'GBrowse.conf';
+
 
 # call with following arguments:
 # source    database source
@@ -23,8 +27,28 @@ use Digest::MD5 'md5_hex';
 # h_feat    feature(s) to hilight
 
 umask 022;
-my $gi = GBrowse_img->new();
-$gi->run();
+
+my $conf_dir  = Bio::Graphics::Browser->config_base;
+my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
+my $globals = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
+    or die "Couldn't read globals";
+
+my $fcgi = Bio::Graphics::Browser::Render->fcgi_request;
+if ($fcgi) {
+
+    while ($fcgi->Accept >= 0) {
+	CGI->initialize_globals();
+	GBrowse_img->new($globals)->run();
+	$fcgi->Finish();
+    }
+
+}
+
+else {
+    GBrowse_img->new($globals)->run();    
+}
+
+
 exit 0;
 
 package GBrowse_img;
@@ -34,35 +58,28 @@ use CGI qw(param start_html end_html
 use File::Spec;
 use File::Temp 'tmpnam','tempfile','tempdir';
 
-use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
-use constant DEFAULT_MASTER => 'GBrowse.conf';
+use constant DEBUG => 0;
+
 use constant MAX_SEGMENT       => 1_000_000;
 use constant TOO_MANY_SEGMENTS => 500;
 use constant PANEL_GAP         => 3;
 
 sub new {
-    my $class = shift;
-    umask 022;
-    my $conf_dir  = Bio::Graphics::Browser->config_base;
-    my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
-    my $globals = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
-	or die "Couldn't read globals";
+    my $class   = shift;
+    my $globals = shift;
     my $render  = Bio::Graphics::Browser::Render->new($globals);
     return bless {render => $render},ref $class || $class;
-}
-
-
-unless (param()) {
-    print $gi->header();
-    print $gi->usage();
-  exit 0;
 }
 
 sub run {
     my $self   = shift;
     my $render = $self->render;
 
-    warn "GBROWSE_IMG: $ENV{REQUEST_URI}";
+    unless (param()) {
+	print $self->header();
+	print $self->usage();
+	return;
+    }
 
     $render->set_source() && exit;  # may cause a redirect and exit 
     $render->init();
@@ -72,17 +89,16 @@ sub run {
     if (param('list')) {
 	$self->dump_sources($render) if param('list') eq 'sources';
 	$self->dump_types($render)   if param('list') eq 'types';
-	exit 0;
+	return;
     }
 
     if (param('debug')) {
 	$self->dump_state($render);
-	exit 0;
+	return;
     }
 
-    # render the image
     $self->render_image();
-    exit 0;
+    return;
 }
 
 
@@ -144,7 +160,7 @@ sub render_image {
 
     my $format   = param('format') || 'GD';
 
-    warn "labels = ",join ',',@labels;
+    warn "labels = ",join ',',@labels if DEBUG;
     unshift @labels,'_scale';
 
     my $convert_to_pdf;
@@ -163,7 +179,7 @@ sub render_image {
 						      }
 						  );
     
-    warn "returned labels = ",join ',',%$result;
+    warn "returned labels = ",join ',',%$result if DEBUG;
     my $data = $self->consolidate_images(@{$result}{(@labels)});
     if ($format eq 'GD') {
 	print $self->header('image/png');	
@@ -198,18 +214,18 @@ sub consolidate_images {
     my $self = shift;
     my @gds  = @_;
 
-    warn "consolidating ",scalar @gds," GD objects";
+    warn "consolidating ",scalar @gds," GD objects" if DEBUG;
 
     my $height = 0;
     my $width  = 0;
     for my $g (@gds) {
-	warn "g=$g";
+	warn "g=$g" if DEBUG;
 	$height +=   ($g->getBounds)[1];  # because GD::SVG is missing the width() and height() methods
 	$width   ||= ($g->getBounds)[0];
     }
 
     my $format = ref($gds[0]);
-#    warn "format = $format";
+    warn "format = $format" if DEBUG;
 
     return $format =~ /^GD::SVG/ ? $self->_consolidate_svg($width,$height,@gds)
                                  : $self->_consolidate_gd ($width,$height,@gds);
@@ -691,7 +707,7 @@ if (@segments > 1 or $show_overview or
   # generate one big image to return
   my ($gd,$width,$height,$map) = consolidate_images($image_class,\%list_of_panels);
   my ($image_uri,$image_file)  = $CONFIG->generate_image($gd);
-#  warn "map = $map";
+  warn "map = $map" if DEBUG;
   $panel = {file=>$image_file,image=>$image_uri,width=>$width,height=>$height,map=>$map};
 }
 

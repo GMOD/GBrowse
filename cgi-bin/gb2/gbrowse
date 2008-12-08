@@ -4,6 +4,7 @@ use strict;
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 
+use CGI;
 use File::Spec;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render::HTML;
@@ -15,7 +16,19 @@ my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
 
 my $globals = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
     or die "Couldn't read globals";
-my $render  = Bio::Graphics::Browser::Render::HTML->new($globals);
-$render->run;
 
-1;
+my $fcgi = Bio::Graphics::Browser::Render->fcgi_request;
+
+if ($fcgi) {
+
+    while ($fcgi->Accept >= 0) {
+	CGI->initialize_globals();
+	Bio::Graphics::Browser::Render::HTML->new($globals)->run();
+    }
+
+} else {
+    Bio::Graphics::Browser::Render::HTML->new($globals)->run();
+}
+
+exit 0;
+

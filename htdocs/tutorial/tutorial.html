@@ -1,26 +1,35 @@
 
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html> <head>
-<title>GBrowse Tutorial</title>
+<title>GBrowse Administration Tutorial</title>
 <link rel="stylesheet" href="tutorial.css">
 </head>
 
 <body>
-<h1>Generic Genome Browser: A Tutorial</h1>
+<h1>Generic Genome Browser: A Tutorial for Administrators</h1>
 
-<h2>Author: Lincoln Stein, 11 March 2008</h2>
+<h2>Author: Lincoln Stein, 12 December 2008</h2>
 
 <p>
 
 This is an extensive tutorial to take you through the main features
-and gotchas of GBrowse.  This tutorial assumes that you have
-successfully setup Perl, GD, BioPerl and the other GBrowse
-dependencies.  During most of the tutorial, we will be using the
-"in-memory" GBrowse database (no relational database required!)  Later
-we will show how to set up a genome size database using the berkeleydb
-and MySQL adaptors. For a tutorial that uses the older Bio::DB::GFF
-adaptor, see <a href="http://FIXME">Using GBrowse with
-Bio::DB::GFF.</a></p>
+and gotchas of configuring GBrowse as a server.  This tutorial assumes
+that you have successfully setup Perl, GD, BioPerl and the other
+GBrowse dependencies.  During most of the tutorial, we will be using
+the "in-memory" GBrowse database (no relational database required!)
+Later we will show how to set up a genome size database using the
+berkeleydb and MySQL adaptors.
+
+<p>
+
+<b>Important:</b>This tutorial is designed for GBrowse 1.69, which is
+expected to be released in late May. This version is currently
+available from <a
+href="http://gmod.org/wiki/index.php/CVS_Access">CVS</a>. It uses GFF3
+format files (.gff3), not the GFF version 2 (.gff) files used by
+version 1.68 and earlier. For a tutorial that uses the older
+Bio::DB::GFF adaptor, see <a href="dbgff/tutorial.html">Using GBrowse
+with Bio::DB::GFF.</a></p>
 
 <h2>Table of Contents</h2>
 
@@ -52,14 +61,13 @@ Bio::DB::GFF.</a></p>
 	<li><a href="#multiple_alignments">ESTs and Other Alignments</a>
 	    <ol>
 	      <li><a href="#adding_dna_to_alignments">Adding DNA to Alignments</a>
-	      <li><a href="#phylogenetic_alignments">Phylogenetic Alignments</a>
 	    </ol>
 	<li><a href="#trace">Trace Data</a>
       </ol>
 
   <li><a href="#enhancements">GBrowse Enhancements</a>
       <ol>
-	<li><a href="#regionview">Adding a "Region" Panel</a>
+	<li><a href="#region">Adding a "Region" Panel</a>
 	<li><a href="#overview">Putting Features into the Overview &amp; Regionview</a>
 	<li><a href="#semantic_zooming">Semantic Zooming</a>
 	<li><a href="#grouping_tracks">Grouping Tracks</a>
@@ -129,7 +137,7 @@ installation.  It should be located at
 
 Similarly, check that you can find the gbrowse.conf configuration
 directory.  It should be located at <b>$CONF/gbrowse.conf</b> and
-contain the configuration file "yeast_chr1.conf."
+contain the configuration file "yeast.conf."
 
 <p>
 
@@ -154,8 +162,8 @@ Password: <b>*********</b>
 <p>
 
 Now look around inside the databases directory.  There should be a
-single subdirectory named "yeast_chr1." The yeast subdirectory is
-where the example yeast chromosome 1 data set is stored.
+single subdirectory named "yeast_chr1+2". The yeast subdirectory is
+where the example yeast chromosomes 1 and 2 data set is stored.
 
 <p>
 
@@ -190,7 +198,7 @@ click on the new folder and grant write privileges to all.
 You'll now put the first of several data files into the volvox
 database directory.  In the <a href="data_files/">data_files</a>
 subdirectory of this tutorial you will find the file <a
-href="data_files/volvox1.gff">volvox1.gff3</a>.  Copy this into the
+href="data_files/volvox1.gff3">volvox1.gff3</a>.  Copy this into the
 volvox database directory.  On Unix systems:
 
 <blockquote class="example">
@@ -252,10 +260,10 @@ single quotes around the path as shown in the example above.
 
 <p>
 
-Next check that the volvox1.gff file does exist inside the volvox
+Next check that the volvox1.gff3 file does exist inside the volvox
 database directory and that it is readable by all users on your
 system.  Similarly, check that the volvox.conf configuration file is
-in the same directory as yeast_chr1.conf, and that it is readable by
+in the same directory as yeast.conf, and that it is readable by
 all users on your system.
 
 <p>
@@ -291,7 +299,7 @@ Someone will be happy to assist you.  </blockquote>
 
 
 Let's look at the data file we loaded in detail now.  If you open the
-<a href="data_files/volvox1.gff">volvox1.gff3</a> file in a text
+<a href="data_files/volvox1.gff3">volvox1.gff3</a> file in a text
 editor, you will see that it contains a series of 15 genome "features"
 that look like this:
 
@@ -457,7 +465,9 @@ key          = Example Features
 This is a "stanza" that describes one of the tracks displayed by
 GBrowse.  The track has an internal name of "ExampleFeatures" which
 you can use in the URL to turn the track on.  The internal name is
-enclosed by square brackets.
+enclosed by square brackets. Names can be any combination of printable
+characters and whitespace, but can <b>not</b> contain the hyphen ("-")
+character (you can use the underscore "_" character instead).
 
 <p>
 
@@ -643,7 +653,7 @@ To illustrate how this works, have a look at <a
 href="data_files/volvox2b.gff3">volvox2b.gff3:</a>
 
 <blockquote class="example"><pre>
-ctgA example remark                             1000 2000 . . . Name=Remark
+ctgA example remark                             1000 2000 . . . Name=hga
 ctgA example protein_coding_primary_transcript  1100 2000 . + . Name=Gene:hga
 ctgA example polypeptide                        1200 1900 . + . Name=Protein:HGA
 ctgA example protein_coding_primary_transcript  1600 3000 . - . Name=Gene:hgb
@@ -788,11 +798,6 @@ In this case, we've been using a special link URL of "AUTO."  This
 generates an automatic link to a helper script named
 "gbrowse_details."  If you click on some of the features in the
 current volvox page you'll get an idea of what this script displays.
-Try clicking on a motif, a spliced transcript, the EDEN gene, and an
-EST.  When you click on the spliced transcript, notice that the
-content of the "Gene" attribute is displayed.  By adding attributes
-like this one, you can build up a very modest web-browsable database
-of facts about your features.
 
 <p>
 
@@ -939,7 +944,6 @@ feature      = polypeptide_domain
 glyph        = span
 height       = 5
 description  = 1
-category     = Proteins
 balloon hover = &lt;h2&gt;Gene $name&lt;/h2&gt;
 balloon click = &lt;h2&gt;Gene $name&lt;/h2&gt;
        &lt;a href='<a href="http://www.google.com/search?q=">http://www.google.com/search?q=</a>$name'&gt;Search Google&lt;/a&gt;&lt;br&gt;
@@ -1166,7 +1170,7 @@ strand.
 
 <p>
 
-Copy <a href="data_files/volvox3.gff">volvox3.gff</a> into the volvox
+Copy <a href="data_files/volvox3.gff3">volvox3.gff</a> into the volvox
 database directory.  Then edit volvox.conf to add the following track
 definition:
 
@@ -1296,11 +1300,10 @@ key                = Protein-coding genes
 
 <p>
 
-The updated aggregators option loads the processed_transcript The new
-Genes track associates "gene" features with the "gene" glyph, sets its
-background color to peachpuff (yes, there really is a color by this
-name!), turns on the description lines, and sets the human readable
-track name to "Protein-coding genes."  <p>
+The new Genes track associates "gene" features with the "gene" glyph,
+sets its background color to peachpuff (yes, there really is a color
+by this name!), turns on the description lines, and sets the human
+readable track name to "Protein-coding genes."  <p>
 
 <p>
 
@@ -1348,9 +1351,9 @@ Using these options, we can make the track look like the UCSC Genome
 Browser (Figure 8).
 
 <blockquote class="example"><pre>
-[Transcripts]
-feature      = processed_transcript gene
-glyph        = processed_transcript
+[Genes]
+feature      = gene
+glyph        = gene
 height       = 8
 bgcolor      = black
 utr_color    = black
@@ -1691,7 +1694,7 @@ change graph_type to "boxes."</i> </blockquote>
 
 <h3><a name="wiggle">2.6 Quantitative Data (advanced)</a></h3>
 
-The recipe in <a ref="#graph">11</a> works well for several thousand
+The recipe in <a href="#graph">2.5</a> works well for several thousand
 data points, but if you have very dense data, such as that produced by
 genomic tiling arrays, then you will want to use a specialized binary
 representation known as "wiggle" format. A wiggle track consists of a
@@ -1821,11 +1824,19 @@ files.
 <p>
 
 We'll now create the binary file for the data using the wiggle2gff3.pl
-script. We want it to live in the volvox database directory, so we
+script.  First, copy the <a
+href="data_files/volvox_microarray.wig">volvox_microarray.wig</a> into
+the volvox database directory and then change directories (cd) into that
+directory.  <b>Also, delete the volvox6.gff3 file so we don't see the 
+same set of data twice.</b>
+
+<p>
+
+We want it to live in the volvox database directory, so we
 have to specify this path when creating it:
 
 <blockquote class="example"><pre>
-% wiggle2gff3.pl --path=$HTDOCS/databases/volvox volvox_microarray.wig \
+% wiggle2gff3.pl --path=$HTDOCS/gbrowse/databases/volvox volvox_microarray.wig \
                  > volvox_microarray.gff3
 </pre></blockquote>
 
@@ -1851,12 +1862,6 @@ this file to change the source or type, You can also set the source
 and type in wiggle2gff3.pl by passing it --source and --type options
 on the command line. If you move the binary wiggle file, please change
 the value of the "wigfile" attribute to indicate its new location.
-
-<p>
-
-You can now move this GFF3 file into
-$HTDOCS/gbrowse/databases/volvox. At this time, please also delete the
-volvox6.gff3 file to avoid seeing the same data twice.
 
 <p>
 
@@ -2052,7 +2057,7 @@ show you how grouping of 5' and 3' EST reads works.
 
 We'll start with a simple data set containing information on three
 pairs of EST reads.  You'll find this data set in <a
-href="data_files/volvox7.gff">volvox7.gff</a>.  Here is the first pair
+href="data_files/volvox7.gff3">volvox7.gff</a>.  Here is the first pair
 described in the data file:
 
 <blockquote class="example"><pre>
@@ -2071,7 +2076,7 @@ ctgA est EST_match 7000 7300 . + . ID=Match3;Name=agt221.5
 <p>
 
 What's going on here is the same as the alignments shown in <a
-href="data_files/volvox3.gff">volvox3.gff</a>.  There are two EST
+href="data_files/volvox3.gff3">volvox3.gff</a>.  There are two EST
 reads named agt830.5 (the 5' read) and agt830.3 (the 3' read).  Each
 of them matches the ctgA genome in two discontinuous regions because,
 presumably, they cross a splice site. As in the earlier example, we
@@ -2293,7 +2298,7 @@ EST DNA.
 
 The fasta file <a href="data_files/ests.fa">ests.fa</a> provides the DNA
 sequences for the six EST reads.  The GFF load file
-<a href="data_files/volvox8.gff">volvox8.gff</a> contains the revised
+<a href="data_files/volvox8.gff3">volvox8.gff</a> contains the revised
 coordinates.  If you look at this file you'll see that it is
 dissimilar to previous load files:
 
@@ -2332,8 +2337,8 @@ The strand field is used to determine the direction of the alignment.
 <p>
 
 Since this data file contains a revised version of volvox7.gff,
-<b>remove volvox7.gff from the database directory and replace it with
-<a href="data_files/volvox8.gff">volvox8.gff</a> </b>.  Also copy <a
+<b>remove volvox7.gff3 from the database directory and replace it with
+<a href="data_files/volvox8.gff3">volvox8.gff</a> </b>.  Also copy <a
 href="data_files/ests.fa">ests.fa</a> into the database directory.  If
 you perform a directory listing, it should look like this:
 
@@ -2423,133 +2428,6 @@ reindexed.  In Unix:
 <p>If you are still having problems, remove the directory.index file
 completely in order to force reindexing.
 
-
-
-<h4><a name="phylogenetic_alignments">2.8.2. Phylogenetic Alignments</a></h4>
-
-This section will guide you through the Phylogenetic Tree Viewer.  It
-is a track that will draw a cladogram of species that have alignments
-with the species within the set view window.  The alignment scores
-will be drawn at far magnification, and the DNA alignments for close
-magnification.
-
-<blockquote class="example"> <i> NOTE: This glyph is a work in progress.</i>
-</blockquote>
-
-There are three main types of data required for this view: the GFF
-alignment data, alignment sequence data, and the species tree file.<p>
-
-The tree file is read with the use Bio::TreeIO module and all formats
-compatible with this can be used with this track.  Note that all
-species do not have to be included in this file.  All organisims not
-included in this file but included in the GFF alignment data will
-appear as disconnected branches in the cladogram (Figure 19 and 20).
-Here is an example using the NEWICK format for the file
-<a href="data_files/species.tre">species.tre</a>:<br>
-<blockquote class="example"><pre>
-((((kangaroo,rabbit),(cat)),(rat,mouse)),volvox);
-</pre></blockquote>
-Different formats can be specified by changing the 'tree_format' entry
-in this track's conf file entry.
-<p>
-
-The alignment and gap data makes use of the GFF3 CIGAR format as
-specified by the sequence ontology website:
-<a href="http://www.sequenceontology.org/gff3.shtml">http://www.sequenceontology.org/gff3.shtml</a>.
-Alignments are specified with the standard start, stop and score
-columns and can contain special tag=value pairs.  Specifically
-'species' indicate the name of the species, 'Target' indicate which
-FASTA sequence to use and the 'Gap' indicates matches and mismatches.
-Matches are specified by 'M', deletions by 'D' and insertions by 'I'
-followed by the number of bases.  An example can be found in the
-<a href="data_files/volvox_phyloalign.gff3">volvox_phyloalign.gff3</a>
-file.  Copy this file into your data_files folder.<br>
-<blockquote class="example"><pre>
-ctgA    pa      submatch        1050    1500    8.5e-28 +       .       ID=Match3;species=mouse;Target=pagt2215 1 451;Gap=M70 D2 M2 I2 M2 D17 M33 I20 M5 D3 M317
-ctgA    pa      submatch        7000    7300    9.5e-36 +       .       ID=Match3;species=mouse;Target=pagt2215 953 1253;Gap=M301
-ctgA    pa      match           1150    7200    .       +       .       ID=Match5;species=rabbit;Target=pagt7675 1 1153
-ctgA    pa      submatch        1150    1500    4.1e-43 +       .       ID=Match5;species=rabbit;Target=pagt7675 1 351;Gap=M7 D2 M2 I2 M342
-</pre></blockquote>
-<p>
-
-The FASTA sequence files used in the zoomed in view are added just as
-the EST track.  Be sure that your 'Target' column specify the correct
-FASTA species to use.<p>
-
-The conf file is a bit bloated for now.  Make sure you specify the
-exact path of your tree file and what format it is in.  
-
-conf file example<br>
-<blockquote class="example"><pre>
-[PhyloAlignment]
-glyph         = phylo_align
-global feature = 1
-height       = 40
-draw_clado_left = 0
-species_spacing = 1.2
-species_spacing_score = 5
-hide_label = 0
-fgcolor      = darkblue
-errcolor     = red
-axis_color   = darkorange
-mid_axis_color = yellow
-clado_bg     = peachpuff
-bg_color     = white
-targ_color   = yellowgreen
-ref_color    = palegoldenrod
-key          = Phylogenetic Alignment
-reference    = volvox
-#tree_step_width = 5
-tree_file    = /Users/mokada/development/gsoc/head/htdocs/gbrowse/databases/volvox/species.tre
-tree_format  = newick
-</pre></blockquote>
-<p>
-
-
-If everything is running correctly, you should see the images shown in
-Figures 19 and 20, depending on the zoom level.<p>
-<blockquote>
-<img src="figures/phylo_align1.gif"><br>
-<i>Figure 19: Phylogenetic alignments scoring level.  Note that as
-'dog' is not included in the original tree file, it will be placed as
-a disconnected member of the cladogram.</i>
-</blockquote>
-<p>
-
-<blockquote>
-<img src="figures/phylo_align2.gif"><br>
-<i>Figure 20: Phylogenetic alignments at the DNA level.  Note that as
-'dog' is not included in the original tree file, it will be placed as a disconnected member of the cladogram.</i>
-</blockquote>
-<p>
-
-
-Alignment scores can also read from binary Wiggle files.  The exact
-path of each wiggle file are entered as GFF entries.  An example gff
-<a href="data_files/volvox_phyloalign_wigentries.gff3">volvox_phyloalign_wigentries.gff3</a>
-must be moved to the data_files directory.  Ensure that the wigfile
-value has the exact file location of your wigfile.  An example wigfile
-<a href="data_files/dog1_1700.wig">dog1_1700.wig</a> is included in the
-data_files folder.
-<br>
-<blockquote class="example"><pre>
-##gff-version 3
-ctgA    pa      wfile   1       1700    .       .       +       ID=Match_Wig_dog;species=dog;wigfile=/Users/mokada/development/gsoc/files/random_code/wigtest/two_wigfiles/dog1_1700.wig
-</pre></blockquote>
-<p>
-
-
-<blockquote>
-<img src="figures/phylo_align3.gif"><br>
-<i>Figure 21: Phylogenetic alignments using data from binary wig files for the species dog.
-This is coordinated by gff entries that point to the specific file location which contains
-the binary wiggle entries used to determine the height of the graph.  This shows that the
-graph data can come from heterogeneous sources as "kangaroo" and "cat" use data included
-in the gff file while 'dog' uses entries in the wig file.
-</i>
-</blockquote>
-<p>
-
 <h3><a name="trace">2.9. Trace Data</a></h3>
 
 <p>
@@ -2578,14 +2456,14 @@ contains an example trace entry.
 <p>
 
 <blockquote class="example"><pre>
-ctgA    example read   44401   45925   .       +       .       name trace; trace volvox_trace.scf
+ctgA	example	trace	44401	45925	.	+	.	Name=trace;trace=volvox_trace.scf
 </pre></blockquote>
 
 <p>
 
 This aligns the full trace sequence to the reference sequence.  The
 trace file in this case is named "volvox_trace.scf", and it is located
-in <a href="data_files/volvox_trace.scf">$HTDOCS/gbrowse/databases/volvox_trace.scf</a>
+in <a href="data_files/volvox_trace.scf">$HTDOCS/gbrowse/tutorial/data_files/volvox_trace.scf</a>.
 
 <p>
 
@@ -2636,8 +2514,6 @@ shows the location and directionality of the trace.
 
 <p>
 
-<p>
-
 The trace_prefix option is important because it gives the path to the
 trace files.  This is prepended to the trace file name defined in the
 gff file.  It can be a direct path to the directory (eg
@@ -2663,7 +2539,7 @@ traces.  Zoomed out you will see:
 
 <blockquote>
 <img src="figures/trace1.png"><br>
-<i>Figure 22: The trace glyph zoomed out.</i>
+<i>Figure 19: The trace glyph zoomed out.</i>
 </blockquote>
 
 <p>
@@ -2674,7 +2550,7 @@ Zooming in will show you the trace diagram:
 
 <blockquote>
 <img src="figures/trace2.png"><br>
-<i>Figure 23: The trace glyph zoomed in.</i>
+<i>Figure 19: The trace glyph zoomed in.</i>
 </blockquote>
 
 <p>
@@ -2684,11 +2560,11 @@ Zooming in will show you the trace diagram:
 <h2><a name="enhancements">3. GBrowse Enhancements</a></h2>
 
 <p>In this section of the tutorial we'll discuss customizing the look
-and feel of GBrowse by adding a regionview section, adding feature
-tracks to the regionview and/or overview sections, configuring
+and feel of GBrowse by adding a region view section, adding feature
+tracks to the region view and/or overview sections, configuring
 semantic zooming, and adding functionality with plugins.
 
-<h3><a name="regionview">3.1. Adding a "Region" Panel</a></h3>
+<h3><a name="region">3.1. Adding a "Region" Panel</a></h3>
 
 <p>
 
@@ -2715,11 +2591,11 @@ region segment = 20000
 </pre></blockquote>
 
 <p>Now when you reload the volvox page, you will see an intermediate
-panel labeled "region", as shown in Figure 24:</p>
+panel labeled "region", as shown in Figure 20:</p>
 
 <blockquote>
 <img src="figures/enhancements1.gif"><br>
-<i>Figure 24:</i> The "region" panel shows a region intermediate in
+<i>Figure 20:</i> The "region" panel shows a region intermediate in
 size between the overview and the detail panel.
 </blockquote>
 
@@ -2739,12 +2615,12 @@ scale          = right
 key            = Profile
 </pre></blockquote>
 
-<p>Figure 25 shows what the region looks like with its "Profile" track
+<p>Figure 21 shows what the region looks like with its "Profile" track
 turned on.</p>
 
 <blockquote>
 <img src="figures/enhancements2.gif"><br>
-<i>Figure 25:</i> You can add any number of tracks to the region
+<i>Figure 21:</i> You can add any number of tracks to the region
 panel, just as you would for the overview panel.
 </blockquote>
 
@@ -2753,7 +2629,7 @@ panel, just as you would for the overview panel.
 <p>
 
 In many cases it is handy to add tracks directly to the overview
-and/or regionview. These tracks can be turned on and off just like
+and/or region panel. These tracks can be turned on and off just like
 normal tracks, and can serve as reference points for well-known genes,
 cytogenetic bands, or genetic markers.
 
@@ -2793,11 +2669,11 @@ default features = ExampleFeatures  Motifs:overview
 
 <p>
 
-Reload the page.  Viol&aacute;!  See Figure 26.
+Reload the page.  Viol&aacute;!  See Figure 22.
 
 <blockquote>
 <img src="figures/overview1.gif"><br>
-<i>Figure 26:</i> Any number of tracks can be placed in the overview
+<i>Figure 22:</i> Any number of tracks can be placed in the overview
 </blockquote>
 
 <p>
@@ -2811,10 +2687,10 @@ displayed.</p>
 <p>
 
 To add a track to the region panel, simply replace ":overview" with
-":regionview" in the track stanza:
+":region" in the track stanza:
 
 <blockquote class="example"><pre>
-[Motifs:regionview]
+[Motifs:region]
 feature      = polypeptide_domain
 glyph        = span
 height       = 5
@@ -2925,12 +2801,12 @@ to "segments."
 Make these changes to volvox.conf, turn on the "Example Alignments"
 track, and view the contig at 20K, 40K and 50K.  At 40K, you'll see
 the alignments lose their internal structure and be replaced by solid
-boxes (Figure 27).  At 50K they'll begin to overlap and the feature
+boxes (Figure 23).  At 50K they'll begin to overlap and the feature
 labels will be suppressed.
 
 <blockquote>
 <img src="figures/semantic_zooming1.gif"><br>
-<i>Figure 27: Semantically zoomed alignments at 40K</i>
+<i>Figure 23: Semantically zoomed alignments at 40K</i>
 </blockquote>
 
 <h3><a name="grouping_tracks">3.4. Grouping Tracks</a></h3>
@@ -2975,12 +2851,12 @@ key          = 6-frame translation
 
 <p>In this way we can create sections named "Alignments," "Examples,"
 "Genes" and "Proteins" and assign the appropriate tracks to them. The
-Tracks control section will look something like Figure 28:</p>
+Tracks control section will look something like Figure 24:</p>
 
 
 <blockquote>
 <img src="figures/enhancements3.gif"><br>
-<i>Figure 28:</i> You can add any number of tracks to the region
+<i>Figure 24:</i> You can add any number of tracks to the region
 panel, just as you would for the overview panel.
 </blockquote>
 
@@ -2989,7 +2865,7 @@ panel, just as you would for the overview panel.
 <i>The file <a href="conf_files/volvox_final.conf">volvox_final.conf</a>
 contains the final configuration file with all the modifications we've
 made during the course of this tutorial.  The data files <a
-href="data_files/volvox_all.gff">volvox_all.gff</a> and <a
+href="data_files/volvox_all.gff3">volvox_all.gff</a> and <a
 href="data_files/volvox_all.fa">volvox_all.fa</a> likewise contain the
 entirety of the feature and DNA data.</i>
 </blockquote>
@@ -2998,13 +2874,13 @@ entirety of the feature and DNA data.</i>
 
 <p>A further refinement to display track information within the
  category is a table display with headings for the rows and columns
- (see Figure 29 for an example).  This layout is useful for displaying
+ (see Figure 25 for an example).  This layout is useful for displaying
  data that highlights the experimental design as in microarray or
  ChIP-on-Chip experiments.</p>
 
 <blockquote>
 <img src="figures/categorytable.png"><br>
-<i>Figure 29:</i> An example of a category table containing a 9 track table,  
+<i>Figure 25:</i> An example of a category table containing a 9 track table,  
 organized as 3 rows x 3 columns each with a heading. 
 </blockquote>
 
@@ -3021,13 +2897,13 @@ category tables = 'ArrayExpts' 'strain-A strain-B strain-C' 'temperature anaerob
 
 It is then important that your stanzas within the category are in
 column followed by row order (see example below and compare with
-Figure 29). So stanza 1 is column 1/row 1, stanza 2 is column 1/row 2,
+Figure 25). So stanza 1 is column 1/row 1, stanza 2 is column 1/row 2,
 stanza 3 is column 1/row 3, stanza 4 is column 2/row 1, stanza 5 is
 column 2/row 2 etc. This means each cell in the table must have a
 stanza. Any surplus tracks within that category will be ignored. For
 example if there was a stanza 10, this would not be shown.  If there
 are empty tracks they can be disabled using the 'disabled = 1' option
-in the stanza. So to display the category table in figure 31 you would
+in the stanza. So to display the category table in figure 27 you would
 use the following configuration.
 
 <blockquote class="example"><pre>
@@ -3205,13 +3081,13 @@ When you reload the page, you will see a new popup menu appear under
 the image labeled "Dumps, searches and other operations."  You will
 also see an automatic track labeled "plugin:Restriction Sites" appear
 in the track list.  When you turn on this track, you will be presented
-with a restriction map (Figure 30).  You can then adjust which
+with a restriction map (Figure 26).  You can then adjust which
 restriction sites are shown by selecting "Annotate Restriction Sites"
 from the popup menu and pressing the "Configure" button.
 
 <blockquote>
 <img src="figures/plugins1.gif"><br>
-<i>Figure 30: The RestrictionAnnotator Plugin</i>
+<i>Figure 26: The RestrictionAnnotator Plugin</i>
 </blockquote>
 
 <p>
@@ -3302,11 +3178,11 @@ Aligner plugin, the configuration options are:
 
 With the changes in place, select the aligner from the popup menu and
 press Configure.  Turn on uppercasing of the coding region track and
-see how it affects the display (Figure 31).
+see how it affects the display (Figure 27).
 
 <blockquote>
 <img src="figures/plugins2.gif"><br>
-<i>Figure 31: The Aligner plugin produces multiple alignments.</i>
+<i>Figure 27: The Aligner plugin produces multiple alignments.</i>
 </blockquote>
 
 <p>
@@ -3435,7 +3311,7 @@ Here's the list of plugins that come with the standard distribution:
 
 <hr>
 
-<h2><a name="external>4. Adding Features from External Sources</a></h2>
+<h2><a name="external">4. Adding Features from External Sources</a></h2>
 
 <p>
 
@@ -3475,7 +3351,7 @@ keep in mind that in the real world, GBrowse will be running on one
 computer, and the third-party annotation data will be loaded from
 another network-accessible computer.
 
-<h3><a href="#upload">4.1. Uploading an Annotation File</a></h3>
+<h3><a name="upload">4.1. Uploading an Annotation File</a></h3>
 
 <p>
 First, we'll look at how to upload private tracks to the browser. This
@@ -3503,12 +3379,12 @@ in <a href="file:///$CONF/gbrowse.conf">$CONF/gbrowse.conf/</a>.
 
 <p>
 
-Confirm that you can browse the database.  Figure 32 is a picture of
+Confirm that you can browse the database.  Figure 28 is a picture of
 the entire data set with all core tracks turned on.
 
 <blockquote>
 <img src="figures/third_party1.gif"><br>
-<i>Figure 32:</i> The core <i>C. elegans</i> dataset.
+<i>Figure 28:</i> The core <i>C. elegans</i> dataset.
 </blockquote>
 
 
@@ -3581,13 +3457,13 @@ button.  Select one of the annotation files, and then press the
 "Upload" button to upload the file to the server.  The annotations
 contained in the file should now appear on the display.  If you now do
 this for all five of the annotation files, you will eventually get a
-display like that shown in Figure 33.
+display like that shown in Figure 29.
 
 <p>
 
 <blockquote>
 <img src="figures/third_party2.gif"><br>
-<i>Figure 33:</i> After uploading four annotation files.
+<i>Figure 29:</i> After uploading four annotation files.
 </blockquote>
 
 <p>
@@ -3618,7 +3494,7 @@ named "elegans_sts.gff3", and choose "Edit File...".
 
 <blockquote>
 <img src="figures/third_party3.gif"><br>
-<i>Figure 34:</i> The uploaded files can be edited in place by
+<i>Figure 30:</i> The uploaded files can be edited in place by
 clicking the "Edit File..." button.
 </blockquote>
 
@@ -3678,11 +3554,11 @@ key     = Microarray expression probe
 <p>
 
 With this combination of configurations, the display will now look
-as shown in Figure 35:
+as shown in Figure 31:
 
 <blockquote>
 <img src="figures/third_party4.gif"><br>
-<i>Figure 35:</i> After customizing the annotation files.
+<i>Figure 31:</i> After customizing the annotation files.
 </blockquote>
 
 <p>
@@ -3805,14 +3681,14 @@ remote sources = "ORFeome STSs"      http://localhost/elegans_sts.gff3
 <p>
 
 When you reload the web page, you will see a popup menu appear next to
-the remote annotation URL textfield (Figure 36).  The menu will
+the remote annotation URL textfield (Figure 32).  The menu will
 contain options to load "ORFeome STSs" and "Expression probes", and
 selecting a menu item will have exactly the same effect as typing in
 the URL manually.
 
 <blockquote>
 <img src="figures/third_party5.gif"><br>
-<i>Figure 36:</i> The preset remote annotation URL popup menu.
+<i>Figure 32:</i> The preset remote annotation URL popup menu.
 </blockquote>
 
 The neat thing about all this is that it works across the
@@ -4096,10 +3972,10 @@ What if we want to see two of the four tracks?  We just add additional
 type= sections, separated by semicolons.  To see both the "repeat" and
 "Expression" tracks, we could request
 http://localhost/cgi-bin/das/elegans_extra?type=repeat;type=Expression
-(Figure 37).
+(Figure 33).
 
 <blockquote>
-<img src="figures/DAS1.gif"><br> <i>Figure 37:</i>
+<img src="figures/DAS1.gif"><br> <i>Figure 33:</i>
 The <i>C. elegans</i> core annotations database with the "repeat" and
 "Expression" tracks  superimposed on it using DAS.
 </blockquote>
@@ -4319,6 +4195,64 @@ instructions, which feature types should be made the defaults for
 searching, and how to aggregate multi-part features together.  You
 will almost certainly need to customize these options to meet your
 needs.
+
+<h4><a name="das_aggregators">4.3.4. Fixing DAS Displays with Aggregators</a></h4>
+
+<p>
+
+Going back to the elegans_core.conf file used at the beginning of this
+section, you may have noticed an option called "aggregators" in the
+elegans_core.conf file. This option overcomes a limitation of DAS,
+which is that it is best for sharing simple one-part features that do
+not have subparts. When DAS exports a multipart feature, it breaks the
+feature up into its component bits and sends them
+individually. Aggregators tell GBrowse how to reassemble the pieces
+correctly. Without aggregators declared in GBrowse, you wouldn't see a
+whole gene, but instead a bunch of pieces labeled "mRNA", "CDS", etc.
+
+<p>
+
+The elegans_core.conf aggregators line looks like this:
+
+<blockquote class="example"><pre>
+aggregators = EST_match{EST_match} gene{CDS,five_prime_UTR,three_prime_UTR/mRNA}
+</pre></blockquote>
+
+<p>
+
+This is defining two aggregators, one named "EST_match" and the other
+named "gene". The first one is easier. The syntax is:
+"<i>type_of_reassembled_feature</i>{<i>type_of_subparts</i>"}. In
+other words, this aggregator is telling GBrowse to look for a bunch of
+features of type "EST_match" and replace them with a single feature
+also named "EST_match".
+
+<p>
+
+Genes are more complex because they have several internal parts and
+two levels of nesting with mRNAs at the top and CDS and UTR features
+underneath them (refer back to the GFF3 file for details). In this
+case, the aggregator uses the full syntax:
+"<i>type_of_reassembled_feature</i>{<i>subpart1,subpart2,subpart3...</i>/<i>type_of_main_part</i>"}. In
+other words, look for features of type "mRNA" and aggregate them
+together with features of type "CDS," "five_prime_UTR," and
+"three_prime_UTR." The reassembled feature will be of type "gene."
+
+<p>
+
+An unfortunate limitation on GBrowse DAS support is that the
+aggregators must be defined in the instance of GBrowse that is
+<b>displaying</b> the DAS annotations rather than the instance that is
+producing them. This means that you have to customize GBrowse
+in advance according to the DAS sources you wish to display. If you
+find this limiting, you may wish to check out the experimental <a
+href="http://gmod.org/wiki/index.php/Gbgff">Gbgff annotation-sharing system.</a>
+
+<p>
+
+More information about using aggregators can be found in the GFF2
+tutorial located at <a href="dbgff/tutorial.html">Using GBrowse
+with Bio::DB::GFF.</a>
 
 <hr>
 
@@ -4613,7 +4547,7 @@ to skip this step entirely.
 
 <p>
 
-You'll now load the .gff and .fa files into this newly created
+You'll now load the .gff3 and .fa files into this newly created
 database.  There are actually two steps needed.  The first is to
 "initialize" the database with all the data definitions needed to hold
 genomic feature data, and the second is to actually load the data.
@@ -4629,7 +4563,7 @@ convenient place.  Then run the following command from the command
 line:
 
 <blockquote class="example"><pre>
-% <b>bp_seqfeature_load.pl -c -d volvox volvox_all.fa -f volvox_all.gff3</b>
+% <b>bp_seqfeature_load.pl -c -f -d volvox volvox_all.fa volvox_all.gff3</b>
 loading volvox_all.fa...
                                                                                 
 Building object tree... 0.00s
@@ -4794,12 +4728,18 @@ and <a href="http://search.cpan.org/~sendu/bioperl-1.5.2_102/Bio/Graphics/Panel.
 
 <p>
 
+For questions, bug reports and support requests, please use the <a
+href="mailto:gmod-gbrowse@lists.sourceforge.net">GMOD GBrowse Mailing
+List</a>.
+
+<p>
+
 Have fun!
 
 <hr>
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Mon Nov 10 14:04:40 EST 2008
+Last modified: Tue Dec  9 15:19:50 EST 2008
 <!-- hhmts end -->
 </body> </html>

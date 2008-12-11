@@ -227,12 +227,22 @@ sub print_top {
   my $alert     = shift;
   local $^W = 0;  # to avoid a warning from CGI.pm
 
-  my $titlebar = is_safari() ? 'titlebar-safari.css' : 'titlebar-default.css';
+  my $titlebar    = is_safari() ? 'titlebar-safari.css' : 'titlebar-default.css';
+
+  my @stylesheet_headers;
+  my @stylesheets = shellwords($CONFIG->setting('stylesheet') || '/gbrowse/gbrowse.css');
+  for my $ss (@stylesheets) {
+      my ($url,$media) = $ss =~ /^([^(]+)(?:\((.+)\))?/;
+      $media ||= 'all';
+      push @stylesheet_headers,CGI::Link({-rel=>'stylesheet',
+					  -type=>'text/css',
+					  -href=>$CONFIG->relative_path($url),
+					  -media=>$media});
+  }
 
   print_header(-expires=>'now');
   my @args = (-title => $title,
-	      -style  => [{src=>$CONFIG->relative_path_setting('stylesheet') || '/gbrowse/gbrowse.css'},
-			  {src=>$CONFIG->relative_path('tracks.css')},
+	      -style  => [{src=>$CONFIG->relative_path('tracks.css')},
 			  {src=>$CONFIG->relative_path($titlebar)}],
 	      -encoding=>$CONFIG->tr('CHARSET'),
 	     );
@@ -267,6 +277,7 @@ sub print_top {
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args, (-script => \@scripts);
   push @args, (-onLoad => join('; ',@onload));
+  push @args, (-head   => \@stylesheet_headers);
 
   print start_html(@args) unless $HTML++;
   print_balloon_settings()  if $b_tips;

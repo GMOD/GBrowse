@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.118 2008-11-25 17:17:00 scottcain Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.119 2008-12-11 17:39:29 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -465,7 +465,8 @@ relative. Otherwise pass through unchanged.
 sub relative_path {
   my $self = shift;
   my $path = shift;
-  return $path if $path =~ /^\//; # already absolute
+  return $path if $path =~ /^\//;             # already absolute
+  return $path if $path =~ /^(?:http|ftp)+:/; # a URL
   my $root = $self->gbrowse_root;
   return "$root/$path";
 }

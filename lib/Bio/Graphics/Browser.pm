@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.220 2008-11-26 21:16:12 lstein Exp $
+# $Id: Browser.pm,v 1.221 2008-12-11 17:48:48 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -68,8 +68,9 @@ sub resolve_path {
   my $path = shift;
   my $path_type = shift; # one of "config" "htdocs" or "url"
   return unless $path;
-  return $path if $path =~ m!^/!;     # absolute path
-  return $path if $path =~ m!\|\s*$!; # a pipe
+  return $path if $path =~ m!^/!;           # absolute path
+  return $path if $path =~ m!\|\s*$!;       # a pipe
+  return $path if $path =~ m!^(http|ftp):!; # an URL
   my $method = ${path_type}."_base";
   $self->can($method) or croak "path_type must be one of 'config','htdocs', or 'url'";
   my $base   = $self->$method or return $path;

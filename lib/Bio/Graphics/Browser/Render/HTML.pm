@@ -166,14 +166,25 @@ sub render_html_head {
                balloon.config.js
 	       GBox.js
                controller.js
-);
+    );
 
   # pick stylesheets;
+
+  my @css_links;
+  my @style = shellwords($self->setting('stylesheet') || '/gbrowse/gbrowse.css');
+  for my $s (@style) {
+      my ($url,$media) = $s =~ /^([^(]+)(?:\((.+)\))?/;
+      $media ||= 'all';
+      push @css_links,CGI::Link({-rel=>'stylesheet',
+				 -type=>'text/css',
+				 -href=>$self->globals->resolve_path($url,'url'),
+				 -media=>$media});
+  }
+
+
   my @stylesheets;
-#  my $titlebar   = $self->is_safari() ? 'css/titlebar-safari.css' : 'css/titlebar-default.css';
   my $titlebar   = 'css/titlebar-default.css';
-  my $stylesheet = $self->setting('stylesheet')||'/gbrowse/gbrowse';
-  push @stylesheets,{src => $self->globals->resolve_path($stylesheet,'url')};
+  my $stylesheet = $self->setting('stylesheet')||'/gbrowse/gbrowse.css';
   push @stylesheets,{src => $self->globals->resolve_path('css/tracks.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/karyotype.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path($titlebar,'url')};
@@ -183,6 +194,7 @@ sub render_html_head {
               -style    => \@stylesheets,
               -encoding => $self->tr('CHARSET'),
 	      -script   => \@scripts,
+	      -head     => \@css_links,
 	     );
   push @args,(-head=>$self->setting('head'))    if $self->setting('head');
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;

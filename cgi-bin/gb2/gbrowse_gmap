@@ -1,0 +1,242 @@
+#!/usr/bin/perl -w
+
+=pod
+
+=head1 GBrowse/GMap Mashup
+
+The purpose of this code is to create a mash up of GBrowse data and Google Maps
+that displays diversity data of a feature in the locations that they were sampled.
+
+=head1 Code
+
+This code was started as a modification of the gbrowse_details script.
+
+Template Toolkit is used to generate the html for the page.  The template is
+encased after the __DATA__ token.
+
+=head1 Usage
+
+=head2 GMap API Key
+
+To use this, a GMap API key must be supplied in the GBrowse configuration file.
+As of writing, keys are freely available from Google at
+http://code.google.com/apis/maps/.
+
+The configuration option name is "gmap_api_key" and is specified like the
+following:
+
+  gmap_api_key = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+=head2 Balloon Configuration
+
+To place the mashup in a balloon, simply add something like the following to
+the track configuration.
+
+  balloon click = http://localhost/cgi-bin/gbrowse_gmap/yeast_chr1?ref=$ref;start=$start;end=$end;name=$name;class=$class;db_id=general
+
+The "yeast_chr1" portion should be replaced with the coorect data source.
+
+Also, "localhost" should be changed to your url.  A relative url may not work
+because Google ties the api key to a URL.
+
+=head2 TODO
+
+This is currently a work in progress.
+
+=over 4
+
+=item * Import longitude and latitude data 
+
+=item * Use longitude and latitude to place pins
+
+=item * Modify the pins to be graphical representations of the population at that point.
+
+=item * Determine appropriate size, zoom level and center of the map on load.
+
+=back
+
+=cut
+
+
+use strict;
+use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::RegionSearch;
+use Template;
+
+our $VERSION = '$Id: gbrowse_gmap,v 1.1 2008-12-13 22:10:02 mwz444 Exp $';
+
+use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
+use constant DEFAULT_MASTER => 'GBrowse.conf';
+
+my $conf_dir  = $ENV{GBROWSE_CONF}   || DEFAULT_CONF;
+my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
+my $conf
+    = Bio::Graphics::Browser->new(
+    File::Spec->catfile( $conf_dir, $conf_file ) )
+    or die "Couldn't read globals";
+
+my $gmap_renderer = GMapRenderer->new($conf);
+$gmap_renderer->run();
+
+exit 0;
+
+package GMapRenderer;
+
+use strict;
+use Data::Dumper;
+use constant DEBUG => 0;
+
+use CGI qw(:standard *table *TR escape);
+
+sub new {
+    my $package = shift;
+    my $conf    = shift;
+    return bless {
+        index   => 0,
+        globals => $conf,
+        },
+        ref $package || $package;
+}
+
+sub globals {
+    my $self = shift;
+    my $d    = $self->{globals};
+    $self->{globals} = shift if @_;
+    $d;
+}
+
+sub state {
+    my $self = shift;
+    my $d    = $self->{state};
+    $self->{state} = shift if @_;
+    $d;
+}
+
+sub source {
+    my $self = shift;
+    my $d    = $self->{source};
+    $self->{source} = shift if @_;
+    $d;
+}
+
+sub run {
+    my $self = shift;
+
+    my $conf    = $self->globals;
+    my $session = $conf->session;
+    $conf->update_data_source($session);
+    $self->source( $conf->create_data_source( $session->source ) );
+    $self->state( $session->page_settings );
+
+    my $name  = param('name');
+    my $class = param('class');
+    my $ref   = param('ref');
+    my $start = param('start');
+    my $end   = param('end');
+    my $f_id  = param('feature_id');
+    my $db_id = param('db_id');
+    my $rmt   = param('remote');
+
+#    print STDERR "name : $name\n"   if ( defined $name );
+#    print STDERR "class : $class\n" if ( defined $class );
+#    print STDERR "ref : $ref\n"     if ( defined $ref );
+#    print STDERR "start : $start\n" if ( defined $start );
+#    print STDERR "end : $end\n"     if ( defined $end );
+#    print STDERR "f_id : $f_id\n"   if ( defined $f_id );
+#    print STDERR "db_id : $db_id\n" if ( defined $db_id );
+#    print STDERR "rmt : $rmt\n"     if ( defined $rmt );
+
+    $self->state->{dbid} = $db_id if $db_id;    # to search correct database
+
+    my $search = Bio::Graphics::Browser::RegionSearch->new(
+        {   source => $self->source,
+            state  => $self->state,
+        }
+    );
+    $search->init_databases();
+
+    # this is the weird part; we create a search name based on the arguments
+    # provided to us
+    my $search_term;
+    if ($f_id) {
+        $search_term = "id:$f_id";
+    }
+    elsif ( $class && $name ) {
+        $search_term = "$class:$name";
+    }
+    elsif ( defined $ref && defined $start && defined $end ) {
+        $search_term = "$ref:$start..$end";
+    }
+    else {
+        $search_term = $name;
+    }
+    my $features = $search->search_features($search_term);
+
+    # provide customized content for popup balloons
+    if ( defined $rmt ) {
+        print header, start_html;
+        print end_html;
+    }
+
+    elsif ( not @{ $features || [] } ) {
+        print header, start_html;
+        print "No Features Found\n";
+        print end_html;
+    }
+    else {
+        warn scalar( @{ $features || [] } ) . "\n";
+        my $html;
+        my $template = Template->new(
+            FILTERS => {
+                dump => sub { Dumper( shift() ) },
+                nbsp => sub { my $s = shift; $s =~ s{\s+}{\&nbsp;}g; $s },
+            },
+            )
+            or $self->error(
+            "Couldn't create Template object: " . Template->error() );
+
+        print header();
+        my $css         = $self->source->global_setting('stylesheet');
+        my $style_sheet = $self->globals->resolve_path( $css, 'url' );
+        my %options     = (
+            style_sheet  => $style_sheet,
+            gmap_api_key => $self->source->global_setting('gmap_api_key'),
+        );
+        $template->process( \*DATA, \%options, \$html )
+            or die $template->error();
+        print $html;
+
+    }
+}
+
+__DATA__
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="[% style_sheet %]" />
+  <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <title>Google Maps and GBrowse</title>
+    <script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=[% gmap_api_key %]"
+      type="text/javascript"></script>
+    <script type="text/javascript">
+
+    //<![CDATA[
+
+    function load() {
+      if (GBrowserIsCompatible()) {
+        var map = new GMap2(document.getElementById("map"));
+        map.setCenter(new GLatLng(37.0625, -95.677068), 1);
+        var point = new GLatLng(37.0625, -95.677068);
+        markerOptions = { title:"Iowa City", clickable:true };
+        var marker = new GMarker(point, markerOptions);
+        map.addOverlay(marker);
+      }
+    }
+
+    //]]>
+    </script>
+
+</head>
+<body onload="load()" onunload="GUnload()">
+    <div id="map" style="width: 300px; height: 300px"></div>
+</body>
+</html>

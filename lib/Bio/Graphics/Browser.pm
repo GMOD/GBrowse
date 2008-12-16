@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.119 2008-12-11 17:39:29 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.120 2008-12-16 18:02:53 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -3411,8 +3411,8 @@ sub make_link {
                :$feature->can('primary_key') ? CGI::escape($feature->primary_key)
                :undef;
 
-    if ($f_id) {
-      return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end;feature_id=$f_id";
+    if (defined $f_id) {
+      return "../../gbrowse_details/$data_source?feature_id=$f_id;ref=$ref;start=$start;end=$end";
     }
     else {
       return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end";

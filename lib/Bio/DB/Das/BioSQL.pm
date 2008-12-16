@@ -218,6 +218,8 @@ sub get_feature_by_primary_key {
     map {Bio::DB::Das::BioSQL::Segment->wrap_feature($_)} $adaptor->find_by_primary_key($key);
 }
 
+sub get_feature_by_primary_id {shift->get_feature_by_primary_key(@_)}
+
 sub segment {
   my $self = shift;
   my ($name,$start,$end,$class,$version, $absolute) =

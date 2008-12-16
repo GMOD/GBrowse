@@ -117,7 +117,7 @@ sub new {
 
 =cut
 
-sub seq_id {  shift->{bioseq}->accession_number; }
+sub seq_id { shift->{bioseq}->accession_number; }
 
 =head2 start
 
@@ -402,13 +402,15 @@ sub get_seq_stream {
  Args    : none
  Status  : Public
 
-Returns the sequence for this segment as a simple string.
+Returns the sequence for this segment as a Bio::PrimarySeq object.
 
 =cut
 
 sub seq {
   my $self = shift;
-  $self->bioseq->subseq($self->start,$self->end);
+  my $seq = Bio::PrimarySeq->new(-seq=>$self->bioseq->subseq($self->start,$self->end),
+				 -id => $self->seq_id);
+  return $seq;
 }
 
 =head2 factory

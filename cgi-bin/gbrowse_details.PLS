@@ -49,7 +49,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.9 2008-09-12 14:32:34 scottcain Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.10 2008-12-16 18:02:53 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -103,9 +103,13 @@ if ($f_id) {
   # HACK! This is for the BioSQL adaptor, whose sequences aren't automatically
   # attached to feature objects when they are retrieved from the database
   if ($db->isa('Bio::DB::Das::BioSQL')) {
-      my @sequences = $CONFIG->_feature_get($db,$ref,$class,$start,$end,1);
-      for (my $i=0;$i<@features;$i++) {
-	  $features[$i]->attach_seq($sequences[0]);
+      for my $f (@features) {
+	  my $ref   = $f->seq_id || param('ref');
+	  # Need to fetch out the ENTIRE bioentry (chromosome) in order to attach it to feature.
+	  # This is horribly inefficient for performance and storage.
+	  my @args = (-name=>$ref);  
+	  my ($segment) = $db->segment(@args);
+	  $f->attach_seq($segment->seq);
       }
   }
 
@@ -121,6 +125,8 @@ else {
 warn "features = @features" if DEBUG;
 
 warn "segments = ",join ' ',$features[0]->segments if (DEBUG && @features);
+
+$head_name ||= join ' ',map {$_->display_name} @features;
 
 # provide customized content for popup balloons
 if (defined $rmt) {

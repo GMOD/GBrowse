@@ -216,7 +216,7 @@ sub apache_conf {
     my $docs    = basename($dir);
     my $perl5lib= $self->added_to_INC;
     my $inc     = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
-    my $fcgi_inc= $perl5lib ? "PERL5LIB=\"$perl5lib\""        : '';
+    my $fcgi_inc= $perl5lib ? "-initial-env PERL5LIB=\"$perl5lib\""        : '';
 
     return <<END;
 Alias        "/$docs/i/" "$tmp/images/"
@@ -233,7 +233,7 @@ ScriptAlias  "/gb2"      "$cgibin/gb2"
 </Directory>
 
 <IfModule mod_fastcgi.c>
-  FastCgiConfig -initial-env $fcgi_inc GBROWSE_CONF="$conf"
+  FastCgiConfig $fcgi_inc -initial-env GBROWSE_CONF="$conf"
 </IfModule>
 END
 }

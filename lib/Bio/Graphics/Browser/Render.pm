@@ -730,11 +730,11 @@ sub generate_title {
 
     return $description unless $features;
     return @$features == 1 
-             ? "$description: ".$features->[0]->seq_id
-                               .":"
-                               .$features->[0]->start
-                               .'..'
-                               .$features->[0]->end
+             ? "$description: ".$self->tr('SHOWING_FROM_TO',
+					  scalar $dsn->unit_label($features->[0]->length),
+					  $features->[0]->seq_id,
+					  $dsn->commas($features->[0]->start),
+					  $dsn->commas($features->[0]->end))
              : "$description: ".$self->tr('HIT_COUNT',scalar @$features);
 }
 

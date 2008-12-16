@@ -46,18 +46,18 @@ use Bio::Graphics::Browser::Render::HTML;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use Storable 'nfreeze','thaw';
-use Bio::Graphics::Browser::Render::Server;
+use Bio::Graphics::Browser::Render::Slave;
 
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
 # alignments requires the server at 8100
-my $alignment_server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic');
+my $alignment_server = Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic');
 $alignment_server->debug(0);
 $alignment_server->run();
 
 # cleavage sites track requires the server at 8101
-my $cleavage_server  = Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic');
+my $cleavage_server  = Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic');
 $cleavage_server->debug(0);
 $cleavage_server->run();
 
@@ -71,7 +71,7 @@ for ('volvox_final.conf','yeast_chr1.conf') {
 
 
 # Test remote rendering
-my $server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic');
+my $server = Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic');
 ok($server);
 $server->debug(0);
 my $server_pid = $server->run;

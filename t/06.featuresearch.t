@@ -39,7 +39,7 @@ END {
 chdir $Bin;
 use lib "$Bin/../lib";
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render::Server;
+use Bio::Graphics::Browser::Render::Slave;
 use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RegionSearch;
 
@@ -47,9 +47,9 @@ use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
 # Test remote rendering
-my @servers = (Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic'), # main
-	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic'), # volvox4 "heterodox sites"
-	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic'), # volvox3 "cleavage sites"
+my @servers = (Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # main
+	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # volvox4 "heterodox sites"
+	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # volvox3 "cleavage sites"
     );
 
 for ('volvox_final.conf','yeast_chr1.conf') {

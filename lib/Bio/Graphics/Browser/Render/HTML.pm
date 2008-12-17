@@ -319,7 +319,8 @@ sub _render_select_menu {
 sub render_title {
     my $self  = shift;
     my $title = shift;
-    return h1({-id=>'page_title'},$title),
+    my $error = shift;
+    return h1({-id=>'page_title',-class=>$error ? 'error' : 'normal'},$title),
 }
 
 sub render_instructions {

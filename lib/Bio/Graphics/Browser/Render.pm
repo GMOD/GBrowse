@@ -698,7 +698,7 @@ sub render_body {
   my $title    = $self->generate_title($features);
 
   print $self->render_top($title);
-  print $self->render_title($title);
+  print $self->render_title($title,$self->state->{name} && @$features == 0);
   print $self->render_instructions;
 
   if ($region->feature_count > 1) {
@@ -726,16 +726,19 @@ sub generate_title {
     my $features = shift;
 
     my $dsn         = $self->data_source;
+    my $state       = $self->state;
     my $description = $dsn->description;
 
     return $description unless $features;
-    return @$features == 1 
-             ? "$description: ".$self->tr('SHOWING_FROM_TO',
-					  scalar $dsn->unit_label($features->[0]->length),
-					  $features->[0]->seq_id,
-					  $dsn->commas($features->[0]->start),
-					  $dsn->commas($features->[0]->end))
-             : "$description: ".$self->tr('HIT_COUNT',scalar @$features);
+    return !$features || !$state->{name}     ? $description
+         : @$features == 0                   ? $self->tr('NOT_FOUND',$state->{name})
+	 : @$features == 1 ? "$description: ".
+	                      $self->tr('SHOWING_FROM_TO',
+					scalar $dsn->unit_label($features->[0]->length),
+					$features->[0]->seq_id,
+					$dsn->commas($features->[0]->start),
+					$dsn->commas($features->[0]->end))
+	 : "$description: ".$self->tr('HIT_COUNT',scalar @$features);
 }
 
 # never called, method in HTML.pm with same name is run instead

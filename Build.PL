@@ -27,6 +27,7 @@ my $build = GBrowseInstall->new(
 	'JSON'                => 0,
 	'LWP'                 => 0,
     },
+    recommends  => { 'BerkeleyDB' => 0.32 },
     script_files => [
 	'bin/gbrowse_slave',
 	'bin/make_das_conf.pl',

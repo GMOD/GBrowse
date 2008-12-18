@@ -25,6 +25,8 @@ my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support fi
     );
 my %OK_PROPS = @OK_PROPS;
 
+# TO FIX: this contains much of the same code as in the non-demo build
+# and should be refactored.
 sub ACTION_demo {
     my $self = shift;
     $self->depends_on('config_data');
@@ -47,26 +49,40 @@ sub ACTION_demo {
     mkdir "$dir/tmp";
 
     # make copies of htdocs and conf
+    open my $saveout,">&STDOUT";
+    open STDOUT,">/dev/null";
+
     my $f    = IO::File->new('MANIFEST');
     while (<$f>) {
-	next unless m!^(conf|htdocs|sample_data)!;
 	chomp;
-	$self->copy_if_modified($_ => $dir);
+	if (m!^(conf|htdocs|cgi-bin)!) {
+	    $self->copy_if_modified($_ => $dir);
+	} elsif (m!^sample_data!) {
+	    my ($subdir) = m!^sample_data/([^/]+)/!;
+	    $self->copy_if_modified(from    => $_,
+				    to_dir  => "$dir/htdocs/databases/$subdir",
+				    flatten => 1,
+		);
+	}
     }
     close $f;
+    open STDOUT,"<&",$saveout;
 
     # fix GBrowse.conf to point to correct directories
-    my $in  = IO::File->new("$dir/conf/GBrowse.conf")         or die $!;
-    my $out = IO::File->new("$dir/conf/GBrowse.conf.new",'>') or die $!;
-    while (<$in>) {
-	s!\$CONF!$dir/conf!;
-	s!\$HTDOCS!$dir/htdocs!;
-	s!\$DATABASES!$dir/htdocs/sample_data!;
-	s!\$TMP!$dir/tmp!;
-	$out->print($_);
+    for my $f ('GBrowse.conf','yeast_chr1+2.conf','yeast_renderfarm.conf') {
+	my $in  = IO::File->new("$dir/conf/$f")         or die $!;
+	my $out = IO::File->new("$dir/conf/$f.new",'>') or die $!;
+	while (<$in>) {
+	    s!\$CONF!$dir/conf!;
+	    s!\$HTDOCS!$dir/htdocs!;
+	    s!\$DATABASES!$dir/htdocs/databases!;
+	    s!\$TMP!$dir/tmp!;
+	    s!^url_base\s*=.+!url_base               = /!;
+	    $out->print($_);
+	}
+	close $out;
+	rename "$dir/conf/$f.new","$dir/conf/$f";
     }
-    close $out;
-    rename "$dir/conf/GBrowse.conf.new","$dir/conf/GBrowse.conf";
     
     my $conf_data = $self->httpd_conf($dir,$port);
     my $conf = IO::File->new("$dir/conf/httpd.conf",'>')
@@ -74,7 +90,7 @@ sub ACTION_demo {
     $conf->print($conf_data);
     $conf->close;
 
-    $conf_data = $self->gbrowse_conf($port,$dir);
+    $conf_data = $self->gbrowse_demo_conf($port,$dir);
     $conf = IO::File->new("$dir/conf/apache_gbrowse.conf",'>') 
 	or die "$dir/conf/apache_gbrowse.conf: $!";
     $conf->print($conf_data);
@@ -554,7 +570,7 @@ Include "$dir/conf/apache_gbrowse.conf"
 END
 }
 
-sub gbrowse_conf {
+sub gbrowse_demo_conf {
     my $self = shift;
     my ($port,$dir) = @_;
     my $inc  = "$dir/blib/lib:$dir/blib/arch:$dir/lib";
@@ -565,6 +581,8 @@ sub gbrowse_conf {
 NameVirtualHost *:$port
 <VirtualHost *:$port>
 	ServerAdmin webmaster\@localhost
+	Alias        "/i/"       "$dir/tmp/images/"
+	ScriptAlias  "/cgi-bin/" "$dir/cgi-bin/"
 	
 	DocumentRoot $dir/htdocs/
 	<Directory />
@@ -578,7 +596,6 @@ NameVirtualHost *:$port
 		allow from all
 	</Directory>
 
-	ScriptAlias /cgi-bin/ $dir/cgi-bin/
 	<Directory "$dir/cgi-bin/">
 		SetEnv PERL5LIB $inc
 		SetEnv GBROWSE_MASTER GBrowse.conf

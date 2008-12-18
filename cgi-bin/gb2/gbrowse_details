@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Realign 'align';
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.5 2008-12-08 16:18:19 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.6 2008-12-18 21:06:01 lstein Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 
@@ -130,7 +130,7 @@ sub run {
     # provide customized content for popup balloons
     if (defined $rmt) {
 	print header,start_html;
-	print remote_content($rmt,$features->[0]);
+	print $self->remote_content($rmt,$features->[0]);
 	print end_html;
     }
 
@@ -290,7 +290,9 @@ sub get_seq {
     my $start = $f->start;
     my $end   = $f->end;
     my $strand = $f->strand;
-    my $db    = $self->source->open_database('GENERAL') or return;
+
+    # the sequence must live in the database flagged in the [GENERAL] section
+    my $db    = $self->source->open_database() or return; 
     my $seg   = $db->segment($ref,$start,$end) or return;
     return $strand >= 0 ? $seg->seq : $seg->seq->revcom;
 }
@@ -614,8 +616,8 @@ sub remote_content {
     # the key for the text or code-ref in the gbrowse config file
     my ($key,$feat) = @_;
 
-  my $contents = $self->source->setting('TOOLTIPS',$key) 
-      or die "$key is empty";
+    my $contents = $self->source->setting('TOOLTIPS',$key) 
+	or die "$key is empty";
     my $coderef = (ref $contents||'') eq 'CODE';
     return $contents unless $coderef;
 

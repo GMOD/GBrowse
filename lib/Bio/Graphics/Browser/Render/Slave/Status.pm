@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Render::Slave::Status;
-# $Id: Status.pm,v 1.1 2008-12-17 19:56:56 lstein Exp $
+# $Id: Status.pm,v 1.2 2008-12-18 18:42:00 lstein Exp $
 
 # This module keeps track of when slaves were last contacted and their
 # current status. If a slave is down and there are alternatives defined,
@@ -8,33 +8,57 @@ package Bio::Graphics::Browser::Render::Slave::Status;
 
 use strict;
 use warnings;
+use DB_File::Lock;
+use Fcntl qw(:flock O_RDWR O_CREAT);
 
-use constant INITIAL_DELAY => 5;  # initially recheck server after 5s
-use constant DECAY         => 1.5;
+use constant INITIAL_DELAY => 30;   # initially recheck a down server after 30 sec
+use constant MAX_DELAY     => 600;  # periodically recheck at 10 min intervals max
+use constant DECAY         => 1.5;  # at each subsequent failure, increase recheck interval by this amount
+use constant DEBUG         => 0;
 
 sub new {
     my $class      = shift;
-    my %args       = @_;
-    my $path       = $args{dir};
+    my $path       = shift;
+    return bless { path=>$path },ref $class || $class;
+}
+
+sub db {
+    my $self  = shift;
+    my $write = shift;
+
+    my $locking    = $write ? 'write' : 'read';
+    my $mode       = $write ? O_CREAT|O_RDWR : O_RDONLY;
+    my $perms      = 0666;
+    my $path       = $self->{path};
+
+    my %h;
+    tie (%h,'DB_File::Lock',$path,$mode,$perms,$DB_HASH,$locking);
+    return \%h;
 }
 
 sub status {
     my $self   = shift;
     my $slave  = shift;
-    my $db     = $self->db;
+    my $db     = shift || $self->db(0);
+    defined $db or return 'up';
+
     my $packed = $db->{$slave};
-    return 'ok' unless defined $packed;
+    return 'up' unless defined $packed;
 
     my ($status,$last_checked,$check_time) = unpack('CLL',$packed);
     return 'up'   if $status;
-    return 'down' if time() - $last_checked < $check_time;
+    return 'up'   if (time() - $last_checked) >= $check_time;
+
+    warn "$slave is down" if DEBUG;
     return 'down';
 }
 
 sub mark_up {
     my $self   = shift;
     my $slave  = shift;
-    my $db     = $self->db;
+    warn "marking $slave up" if DEBUG;
+    my $db     = $self->db(1) or return;
+
     my $packed = pack('CLL',1,time(),INITIAL_DELAY);
     $db->{$slave} = $packed;
 }
@@ -42,15 +66,36 @@ sub mark_up {
 sub mark_down {
     my $self   = shift;
     my $slave  = shift;
-    my $db     = shift;
+
+    warn "marking $slave down" if DEBUG;
+
+    my $db     = $self->db(1) or return;
 
     unless (my $pack = $db->{$slave}) {
 	$db->{$slave} = pack('CLL',0,time(),INITIAL_DELAY);
     } else {
 	my ($status,$last_checked,$checktime) = unpack('CLL',$pack);
+	my $new_checktime = $checktime * DECAY;
+	$new_checktime    = MAX_DELAY if $new_checktime > MAX_DELAY;
 	$db->{$slave} = $status ? pack('CLL',0,time(),INITIAL_DELAY)
                                 : pack('CLL',0,time(),$checktime*DECAY);
     }
+
+}
+
+# randomly select the first slave that is marked "up"
+sub select {
+    my $self   = shift;
+    my @slaves = @_;
+
+    # open db handle once in order to prevent multiple reopenings
+    # of the database
+    my $db     = $self->db(0);
+    my @up     = grep {$self->status($_,$db) eq 'up'} @slaves;
+
+    warn "up slaves = @up" if DEBUG;
+
+    return $up[rand @up];
 }
 
 

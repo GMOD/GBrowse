@@ -9,14 +9,14 @@ use Carp 'croak','cluck';
 use Bio::Graphics::Browser::Render;
 use Bio::Graphics::Browser::CachedTrack;
 use Bio::Graphics::Browser::Util qw[citation shellwords get_section_from_label url_label];
+use Bio::Graphics::Browser::Render::Slave::Status;
 use IO::File;
 use Time::HiRes 'sleep';
 use POSIX 'WNOHANG','setsid';
 
 use CGI qw(:standard param escape unescape);
 
-use constant GBROWSE_RENDER => 'gbrowse_render';  # name of the CGI-based image renderer
-use constant TRUE => 1;
+use constant TRUE  => 1;
 use constant DEBUG => 0;
 
 use constant DEFAULT_EMPTYTRACKS => 0;
@@ -488,14 +488,24 @@ sub run_remote_requests {
   my $s_args    = Storable::nfreeze(\%args);
 
   # sort requests by their renderers
+  my $slave_status = Bio::Graphics::Browser::Render::Slave::Status->new(
+      $source->globals->slave_status_path
+      );
+
   my %renderers;
   for my $label (@labels_to_generate) {
       my $url     = $source->fallback_setting($label => 'remote renderer') or next;
       my @urls    = shellwords($url);
-      if (@urls > 1) {  # whoo hoo! choices!
-	  $url = $urls[rand @urls];
+      $url        = $slave_status->select(@urls);
+      warn "label => $url (selected)" if DEBUG;
+      unless ($url) {
+	  # the status monitor indicates that there are no "up" servers for this
+	  # track, so flag an error immediately and don't attempt to retrieve.
+	  # after a suitable time interval has passed, we will try this server again
+	  $requests->{$label}->flag_error('no slave servers are marked up');
+      } else {
+	  $renderers{$url}{$label}++;
       }
-      $renderers{$url}{$label}++;
   }
 
   my $ua = LWP::UserAgent->new;
@@ -518,39 +528,59 @@ sub run_remote_requests {
 
       # THIS PART IS IN THE CHILD
       Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
-      my @tracks  = keys %{$renderers{$url}};
-      my $s_track  = Storable::nfreeze(\@tracks);
+      my @labels   = keys %{$renderers{$url}};
+      my $s_track  = Storable::nfreeze(\@labels);
 
-      my $request = POST ($url,
-			  Content_Type => 'multipart/form-data',
-			  Content => [
-			      operation  => 'render_tracks',
-			      panel_args => $s_args,
-			      tracks     => $s_track,
-			      settings   => $s_set,
-			      datasource => $s_dsn,
-			      language   => $s_lang,
-			      env        => $s_env,
-			  ]);
+    FETCH: {
+	my $request = POST ($url,
+			    Content_Type => 'multipart/form-data',
+			    Content => [
+				operation  => 'render_tracks',
+				panel_args => $s_args,
+				tracks     => $s_track,
+				settings   => $s_set,
+				datasource => $s_dsn,
+				language   => $s_lang,
+				env        => $s_env,
+			    ]);
 
-      my $response = $ua->request($request);
+	my $response = $ua->request($request);
 
-      if ($response->is_success) {
-	  my $contents = Storable::thaw($response->content);
-	  for my $label (keys %$contents) {
-	      my $map = $contents->{$label}{map}        
-	                or die "Expected a map from remote server, but got nothing!";
-	      my $gd  = $contents->{$label}{imagedata}  
-	                or die "Expected imagedata from remote server, but got nothing!";
-	      $requests->{$label}->put_data($gd,$map);
-	  }
+	if ($response->is_success) {
+	    my $contents = Storable::thaw($response->content);
+	    for my $label (keys %$contents) {
+		my $map = $contents->{$label}{map}        
+		or die "Expected a map from remote server, but got nothing!";
+		my $gd  = $contents->{$label}{imagedata}  
+		or die "Expected imagedata from remote server, but got nothing!";
+		$requests->{$label}->put_data($gd,$map);
+	    }
+	    $slave_status->mark_up($url);
+	}
+	else {
+	    my $uri = $request->uri;
+	    my $response_line = $response->status_line;
+	    warn "$uri; fetch failed: $response_line";
+	    $slave_status->mark_down($url);
+	  
+	    # try to recover from a transient slave failure; this only works
+	    # right if all of the tracks there are multiple equivalent slaves for the tracks
+	    my %urls    = map {$_=>1} 
+  	                    map {
+				shellwords($source->fallback_setting($_ => 'remote renderer'))
+			    } @labels;
+	    my $alternate_url = $slave_status->select(keys %urls);
+	    if ($alternate_url) {
+		warn "retrying fetch of @labels with $alternate_url";
+		$url = $alternate_url;
+		redo FETCH;
+	    }
+
+	    $response_line =~ s/^\d+//;  # get rid of status code
+	    $requests->{$_}->flag_error($response_line) foreach keys %{$renderers{$uri}};
+	}
+	CORE::exit(0);  # from CHILD
       }
-      else {
-	  my $uri = $request->uri;
-	  warn "$uri; fetch failed: ",$response->status_line;
-	  $requests->{$_}->flag_error($response->status_line) foreach keys %{$renderers{$uri}};
-      }
-      CORE::exit(0);  # from CHILD
   }
 }
 
@@ -774,15 +804,6 @@ sub label_density {
   return $conf->global_setting('label density')
       || $conf->setting('TRACK DEFAULTS' =>'label density')
       || 10;
-}
-
-sub local_renderer_url {
-  my $self     = shift;
-  #my $self_uri = CGI::url(-absolute=>1);
-  my $self_uri  = CGI::url(-full=>1);
-  my $render    = GBROWSE_RENDER;
-  $self_uri     =~ s/[^\/]+$/$render/;
-  return $self_uri;
 }
 
 sub make_map {

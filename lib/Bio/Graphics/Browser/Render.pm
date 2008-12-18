@@ -31,7 +31,6 @@ use constant MAX_SEGMENT          => 1_000_000;
 use constant TOO_MANY_SEGMENTS    => 5_000;
 use constant OVERVIEW_RATIO       => 1.0;
 
-
 my %PLUGINS;       # cache initialized plugins
 my $FCGI_REQUEST;  # stash fastCGI request handle
 
@@ -149,7 +148,7 @@ sub set_source {
     if (CGI::unescape(CGI::path_info()) ne CGI::unescape("/$source/")) {
 	my $args = CGI::query_string();
 	my $url  = CGI::url(-absolute=>1,-path_info=>0);
-	$url     =~ s!(gbrowse[^/]*)/.+$!$1!;  # fix CGI/Apache bug
+	$url     =~ s!(gbrowse[^/]*)(?\!.*gbrowse)/.+$!$1!;  # fix CGI/Apache bug
 	$url    .= "/$source/";
 	# clear out some of the session variables that shouldn't transfer
 	# delete $self->state->{name};
@@ -2755,7 +2754,7 @@ sub render_deferred_track {
 						  image_width      => $image_width,
 						  image_height     => EMPTY_IMAGE_HEIGHT,
 						  image_element_id => $track_name . "_image",
-						  error_message    => 'An error occurred while processing this track')
+						  error_message    => 'Track rendering error: '.$cache->errstr)
     } else {
         my $image_width = $self->get_image_width;
         $result_html .= $self->render_grey_track(

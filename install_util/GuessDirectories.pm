@@ -38,6 +38,14 @@ sub databases {
     return File::Spec->catfile($self->htdocs,'databases');
 }
 
+sub apache {
+    my $self = shift;
+    return -x '/usr/sbin/httpd'   ? '/usr/sbin/httpd'
+	 : -x '/usr/sbin/apache2' ? '/usr/sbin/apache2'
+	 : -x '/usr/sbin/apache'  ? '/usr/sbin/apache'
+	 : undef;
+}
+
 sub apache_root {
   if ($^O =~ /mswin/i) {  # windows system
     for (

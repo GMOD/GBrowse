@@ -41,17 +41,40 @@ sub ACTION_demo {
 	|| GuessDirectories->apachemodules;
 
     mkdir "$dir/conf";
+    mkdir "$dir/htdocs";
     mkdir "$dir/logs";
     mkdir "$dir/locks";
-    rmtree(["$home/htdocs/tmp"]);
+    mkdir "$dir/tmp";
 
+    # make copies of htdocs and conf
+    my $f    = IO::File->new('MANIFEST');
+    while (<$f>) {
+	next unless m!^(conf|htdocs|sample_data)!;
+	chomp;
+	$self->copy_if_modified($_ => $dir);
+    }
+    close $f;
+
+    # fix GBrowse.conf to point to correct directories
+    my $in  = IO::File->new("$dir/conf/GBrowse.conf")         or die $!;
+    my $out = IO::File->new("$dir/conf/GBrowse.conf.new",'>') or die $!;
+    while (<$in>) {
+	s!\$CONF!$dir/conf!;
+	s!\$HTDOCS!$dir/htdocs!;
+	s!\$DATABASES!$dir/htdocs/sample_data!;
+	s!\$TMP!$dir/tmp!;
+	$out->print($_);
+    }
+    close $out;
+    rename "$dir/conf/GBrowse.conf.new","$dir/conf/GBrowse.conf";
+    
     my $conf_data = $self->httpd_conf($dir,$port);
     my $conf = IO::File->new("$dir/conf/httpd.conf",'>')
 	or die "$dir/conf/httpd.conf: $!";
     $conf->print($conf_data);
     $conf->close;
 
-    $conf_data = $self->gbrowse_conf($port,$home);
+    $conf_data = $self->gbrowse_conf($port,$dir);
     $conf = IO::File->new("$dir/conf/apache_gbrowse.conf",'>') 
 	or die "$dir/conf/apache_gbrowse.conf: $!";
     $conf->print($conf_data);
@@ -63,15 +86,12 @@ sub ACTION_demo {
     $mime->print($conf_data);
     $mime->close;
 
-    my $apache =  -x '/usr/sbin/httpd'   ? '/usr/sbin/httpd'
-	        : -x '/usr/sbin/apache2' ? '/usr/sbin/apache2'
-                : -x '/usr/sbin/apache'  ? '/usr/sbin/apache'
-                : 'not found';
-    if ($apache eq 'not found') {
-	die "Could not find apache executable on this system. Can't run demo";
-    }
+    my $apache =  GuessDirectories->apache
+	or die "Could not find apache executable on this system. Can't run demo";
+
     system "$apache -k start -f $dir/conf/httpd.conf";
     if (-e "$dir/logs/apache2.pid") {
+	print STDERR "Demo config and log files have been written to $dir\n";
 	print STDERR "Demo is now running on http://localhost:$port\n";
 	print STDERR "Run \"./Build demostop\" to stop it.\n";
 	$self->config_data(demodir=>$dir);
@@ -94,7 +114,10 @@ sub ACTION_demostop {
 	print STDERR "Demo doesn't seem to be running.\n";
 	return;
     }
-    system "apache2 -k stop -f $dir/conf/httpd.conf";
+    my $apache =  GuessDirectories->apache
+	or die "Could not find apache executable on this system. Can't stop demo";
+
+    system "$apache -k stop -f $dir/conf/httpd.conf";
     rmtree([$dir,"$home/htdocs/tmp"]);
     $self->config_data('demodir'=>undef);
     print STDERR "Demo stopped.\n";
@@ -470,6 +493,9 @@ sub httpd_conf {
     my $modules = $self->config_data('apachemodules')
 	|| GuessDirectories->apachemodules;
 
+    my $user    = $>;
+    my ($group) = $) =~ /^(\d+)/;
+
     return <<END;
 ServerName           "localhost"
 ServerRoot           "$dir/conf"
@@ -479,6 +505,8 @@ ErrorLog             "$dir/logs/error.log"
 LogFormat            "%h %l %u %t \\"%r\\" %>s %b" common
 CustomLog            "$dir/logs/access.log"      common
 LogLevel             warn
+User                 #$user
+Group                #$group
 
 Timeout              300
 KeepAlive            On

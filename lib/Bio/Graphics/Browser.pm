@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.221 2008-12-11 17:48:48 lstein Exp $
+# $Id: Browser.pm,v 1.222 2008-12-18 18:41:59 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -172,6 +172,12 @@ sub slave_dir {
     my $self = shift;
     my $path = $self->setting(general=>'tmp_slave') || '/tmp/gbrowse_slave';
     $self->make_path($path) unless -d $path;
+    return $path;
+}
+
+sub slave_status_path {
+    my $self = shift;
+    my $path = File::Spec->catfile($self->tmp_base,'slave_status');
     return $path;
 }
 

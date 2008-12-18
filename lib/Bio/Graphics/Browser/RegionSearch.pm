@@ -6,6 +6,7 @@ use Bio::Graphics::GBrowseFeature;
 use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RenderPanels;
 use Bio::Graphics::Browser::Util 'shellwords';
+use Bio::Graphics::Browser::Render::Slave::Status;
 use LWP::UserAgent;
 use HTTP::Request::Common 'POST';
 use Storable 'nfreeze','thaw';
@@ -94,6 +95,10 @@ sub init_databases {
 
     my $renderfarm = $self->source->global_setting('renderfarm');
 
+    my $slave_status = Bio::Graphics::Browser::Render::Slave::Status->new(
+	$source->globals->slave_status_path
+	);
+
     for my $l (@$labels) {
 	next if $l =~ /^(_scale|builtin)/;
 
@@ -102,7 +107,7 @@ sub init_databases {
                                : $source->fallback_setting($l => 'remote renderer');
 	if ($remote) {
 	    my @remotes  = shellwords($remote);
-	    $remote = $remotes[rand @remotes] if @remotes > 1;
+	    $remote = $slave_status->select(@remotes);
 	}
 	my ($dbid)         = $source->db_settings($l);
 	my $search_options = $source->setting($dbid => 'search options') || '';

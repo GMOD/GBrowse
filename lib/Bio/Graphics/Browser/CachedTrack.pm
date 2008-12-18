@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.4 2008-11-12 23:14:37 lstein Exp $
+# $Id: CachedTrack.pm,v 1.5 2008-12-18 18:41:59 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -106,11 +106,11 @@ sub lock {
     my $self    = shift;
     my $dotfile = $self->dotfile;
     my $tsfile  = $self->tsfile;
-    my $error   = $self->errorfile;
+    # my $error   = $self->errorfile;
     if (-e $dotfile) {  # if it exists, then either we are in process or something died
 	return if $self->status eq 'PENDING';
     }
-    unlink $error if -e $error;
+    # unlink $error if -e $error;
     my $f = IO::File->new(">$dotfile") or die "Can't open $dotfile for writing: $!";
     flock $f,LOCK_EX;
     $f->print(time());
@@ -129,9 +129,17 @@ sub flag_error {
     my $msg  = shift;
     my $errorfile = $self->errorfile;
     open my $fh,'>',$errorfile or die;
-    print $fh,$msg;
+    print $fh $msg;
     close $fh;
     $self->unlock;
+}
+
+sub errstr {
+    my $self = shift;
+    my $errorfile = $self->errorfile;
+    open my $fh,'<',$errorfile or return;
+    chomp (my $msg = <$fh>);
+    return $msg;
 }
 
 sub put_data {
@@ -142,6 +150,7 @@ sub put_data {
     my $datafile        = $self->datafile;
     store $self->{data},$datafile;
     $self->unlock;
+    unlink $self->errorfile if -e $self->errorfile;
     return;
 }
 
@@ -193,8 +202,6 @@ sub status {
     my $tsfile   = $self->tsfile;
     my $datafile = $self->datafile;
     my $errorfile = $self->errorfile;
-
-
 
     # if a dotfile exists then either we are in the midst of updating the
     # contents of the directory, or something has gone wrong and we are

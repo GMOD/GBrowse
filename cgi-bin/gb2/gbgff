@@ -1,0 +1,353 @@
+#!/usr/bin/perl -w
+
+# $Id: gbgff,v 1.1 2008-12-19 21:49:18 lstein Exp $
+
+# Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
+# Call this way:
+#    http://my.host/cgi-bin/gbgff/volvox?q=ctgA:1..2000;t=Genes+ExampleFeatures
+#
+# From within the "Add Remote Annotations" section, you can say:
+#     http://my.host/cgi-bin/gbgff/volvox?q=$segment;t=Genes+ExampleFeatures
+#
+# See http://www.gmod.org/wiki/index.php/Gbgff for more information
+#
+# To share uploads, do this:
+#     http://my.host/cgi-bin/gbgff/volvox?q=ctgA:1..2000;\
+#           t=Genes+ExampleFeatures+file:my_upload.txt;id=session_id
+
+use strict;
+use warnings;
+use Bio::Graphics::Browser;
+use File::Spec;
+use CGI 'header';
+
+use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
+use constant DEFAULT_MASTER => 'GBrowse.conf';
+
+umask 022;
+
+my $conf_dir  = Bio::Graphics::Browser->config_base;
+my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
+my $conf      = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
+    or die "Couldn't read globals";
+
+my $dumper = GFFDumper->new($conf);
+$dumper->get_segment();
+
+print header($dumper->get_mime_type);
+$dumper->print_gff3();
+exit 0;
+
+package GFFDumper;
+
+use CGI 'param','path_info','header';
+use Text::ParseWords 'shellwords';
+use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::RegionSearch;
+
+sub new {
+    my $class  = shift;
+    my $conf   = shift;
+    my $self   = bless {},ref $class || $class;
+    $self->initialize($conf);
+    return $self;
+}
+
+sub print_gff3 {
+    my $self = shift;
+    my $source = $self->source;
+
+    my $labels = $self->get_labels;
+    my $types  = $labels ? $self->labels_to_types($labels) : undef;
+    my $files  = $labels ? $self->labels_to_files($labels) : undef;
+
+    $self->print_configuration($_,$labels)      for $self->source;
+    $self->print_configuration($_,[$_->labels]) for @$files;
+
+    my %filters = map {$_ => $source->setting($_=>'filter')||undef} @$labels;
+
+    my $date = localtime;
+    print "##gff-version 3\n";
+    print "##date $date\n";
+    print "##source gbrowse gbgff gff3 dumper\n";
+
+    $self->print_gff3_data($_,$types,\%filters)  for $self->db;
+    $self->print_gff3_data($_)                   for @$files;
+}
+
+sub db     { 
+    my $self = shift;
+    return @{$self->{db}} if $self->{db};
+
+    my $source = $self->source;
+    my $tracks = $self->get_labels;
+    $tracks    = $self->all_databases unless $tracks;
+
+    my %seenit;
+    my @dbs  = grep {defined($_) && !$seenit{$_}++} 
+                     map {$source->open_database($_)} ('general',@$tracks);
+    $self->{db} = \@dbs;
+    warn "opened dbs = @dbs";
+    return @dbs;
+}
+
+sub segment {
+    my $self = shift;
+    my $d    = $self->{segment};
+    $self->{segment} = shift if @_;
+    $d;
+}
+
+sub initialize {
+    my $self     = shift;
+    my $conf     = shift;
+    
+    my $session = $conf->session;
+    $conf->update_data_source($session);
+    $self->globals($conf);
+    $self->source($conf->create_data_source($session->source));
+    $self->state($session->page_settings);
+}
+
+sub globals {
+    my $self = shift;
+    my $d    = $self->{globals};
+    $self->{globals} = shift if @_;
+    $d;
+}
+
+sub state {
+    my $self = shift;
+    my $d    = $self->{state};
+    $self->{state} = shift if @_;
+    $d;
+}
+
+sub source {
+    my $self = shift;
+    my $d    = $self->{source};
+    $self->{source} = shift if @_;
+    $d;
+}
+
+sub get_segment {
+    my $self   = shift;
+
+    my $q = param('q') || param('segment') || '';
+    my ($seqid,$start,$end) = 
+	$q =~ /^([^:]+)(?::([\d-]+)(?:\.\.|,)([\d-]+))?/;
+
+    $seqid ||= param('ref')   || param('seqid');
+    $start ||= param('start') || 1;
+    $end   ||= param('end')   || param('stop');
+    unless (defined $seqid) {
+	print header('text/plain'),"# Please provide ref, start and end arguments.\n";
+	exit 0;
+    }
+
+    my $datasource = $self->source;
+    my $tracks     = $self->get_labels;
+    $tracks        = $self->all_databases unless $tracks;
+
+    # Find the segment - it may be hiding in any of the databases.
+    my (%seenit,$segment,$db);
+    for my $track ('general',@$tracks) {
+	$db = $datasource->open_database($track) or next;
+	next if $seenit{$db}++;
+	($segment) = $db->segment(-name	=> $seqid,
+				  -start=> $start,
+				  -stop	=> $end);
+	last if $segment;
+    }
+    $self->segment($segment);
+    return $segment;
+}
+
+sub all_databases {
+    my $self   = shift;
+    my $source = $self->source;
+    return [map {"$_:database"} $source->databases];
+}
+
+sub get_labels {
+    my $self   = shift;
+    my @labels = (param('type'),param('t'));
+    return unless @labels;
+    @labels    = shellwords(@labels);
+    for (@labels) { tr/$;/-/ }
+    return \@labels;
+}
+
+sub get_id {
+    my $self = shift;
+    return param('id');
+}
+
+sub get_featurefiles {
+    my $self   = shift;
+    my @ff     = grep {/^file:/} (param('type'),param('t'));
+    return unless @ff;
+    return shellwords(@ff);
+}
+
+sub get_do_stylesheet {
+    my $self   = shift;
+    my $doit = param('stylesheet') || param('s');
+    return 0 if defined $doit && $doit =~ /^(no|off|0)$/i;
+    return 1;
+}
+
+sub get_mime_type {
+    my $self   = shift;
+    my $dump   = param('d') || '';
+    return 'application/x-gff3'       if $dump eq 'edit';
+    return 'application/octet-stream' if $dump eq 'save';
+    return 'text/plain';
+}
+
+sub labels_to_types {
+    my $self     = shift;
+    my $labels   = shift;
+    my $source   = $self->source;
+
+    # remove dynamic labels, such as uploads
+    my @labels = grep {!/^\w+:/} @$labels;
+
+    my @types;
+    for my $l (@labels) {
+	my @f = shellwords($source->setting($l=>'feature')||'');
+	unless (@f) {
+	    print "# Unknown track type $l\n";
+	    exit 0;
+	}
+	push @types,@f;
+    }
+    return \@types;
+}
+
+sub labels_to_files {
+    my $self   = shift;
+    my $labels = shift;
+
+    my @labels = grep {/^file:/} @$labels;
+    @labels      or return [];
+
+    # get the feature files, if appropriate
+    my $id = $self->get_id or return [];
+
+    # first get the main source
+    my $source  = $self->source;
+    my $globals = $self->globals;
+    my $segment = $self->segment;
+    my $render  = Bio::Graphics::Browser::Render->new($source,$globals->session);
+
+    my @files;
+    my $dir    = $globals->tmpdir($source->name,'userdata',$id);
+    my $mapper = $render->coordinate_mapper($segment,1);
+    for my $filename (@labels) {
+	my ($base) = $filename =~ /([^:\\\/]+)$/;
+	$base      =~ tr/-/_/;
+	my $path   = File::Spec->catfile($dir,$base);
+	my $featurefile = eval {
+	    Bio::Graphics::FeatureFile->new(-file           => $path,
+					    -smart_features => 1,
+					    -map_coords     => $mapper,
+		);
+	};
+	push @files,$featurefile if $featurefile;
+    }
+	
+    return \@files;
+}
+
+
+sub print_feature {
+    my $self = shift;
+    my $f    = shift;
+    eval {$f->version(3)};
+    my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
+    chomp $s;
+    $s =~ s/\t\t/\t\.\t/g if $s; # no empty columns
+    $self->do_wigfile_substitution(\$s);
+    print $s,"\n";
+}
+
+sub print_configuration {
+    my $self   = shift;
+    my $config = shift;
+    my $labels = shift;
+
+    my @labels = $labels ? @$labels : $config->labels;
+
+    for my $l (@labels) {
+	# remove internal config settings
+	next if $l =~ m/^\w+:/;
+	next if $l =~ m/^_scale/;
+	print "[$l]\n";
+	my @s = $config->_setting($l);
+	for my $s (@s) {
+	    my $value = $config->setting($l=>$s);
+	    if (ref $value eq 'CODE') {
+		$value = $config->config->can('get_callback_source')
+		    ? $config->config->get_callback_source($l => $s)
+		    : $config->setting('TRACK DEFAULTS'=>$s);
+		defined $value or next;
+		chomp($value);
+	    }
+	    next if $s =~ /^balloon/; # doesn't work right
+	    print "$s = $value\n";
+	}
+	print "\n";
+    }
+}
+
+sub print_gff3_data {
+    my $self    = shift;
+    my $db      = shift;
+    my $types   = shift;
+    my $filters = shift;
+
+    my $s       = $self->segment;
+    my $c       = $self->source;
+    my $len     = $s->length;
+
+    my @args    = (-seq_id => $s->seq_id,
+		   -start  => $s->start,
+		   -end    => $s->end);
+    push @args,(-type=>$types) if $types;
+    my $iterator = $db->get_seq_stream(@args);
+
+  FEATURE:
+    while ( my $f = $iterator->next_seq ) {
+	for my $l ($c->feature2label($f,$len)) {
+	    next FEATURE  if $filters->{$l} && !$filters->{$l}->($f);
+	}
+	$self->print_feature($f);
+    }
+}
+
+# Because we can't sling whole wigfiles around, we serialize a section
+# of the wigfile and send just the data and header information in "wif" format.
+sub do_wigfile_substitution {
+    my $self = shift;
+
+    my $gff_line_ref = shift;
+    $$gff_line_ref =~ /wigfile=/ or return;
+
+    my $segment      = $self->segment;
+    my ($start,$end) = ($segment->start,$segment->end);
+
+    eval { # trap all errors, which can be plentiful!
+	eval "use Bio::Graphics::Wiggle" unless Bio::Graphics::Wiggle->can('new');
+	eval "use MIME::Base64"          unless MIME::Base64->can('encode');
+
+	$$gff_line_ref   =~ s{wigfile=([^;&\n]+)}
+	{
+          my $wig = Bio::Graphics::Wiggle->new(CGI::unescape($1));
+          my $wif = $wig->export_to_wif($start,$end);
+          'wigdata='.MIME::Base64::encode_base64($wif,'');
+        }exg;
+    };
+    warn $@ if $@;
+}
+

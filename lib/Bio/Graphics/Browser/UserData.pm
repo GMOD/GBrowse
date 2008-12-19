@@ -126,7 +126,7 @@ sub name_file {
   my ($name) = $strip ? $filename =~ /([^:\\\/]+)$/ : $filename;
   $name                  =~ tr!-/!__!; # get rid of hyphens and slashes
 
-  my $id             = $state->{userid} or return;
+  my $id        = $state->{userid} or return;
   my $tmpdir    = $config->globals->tmpdir($config->name,'userdata',$id);
   my $path      = File::Spec->catfile($tmpdir,$name);
   my $url       = "file:$name";

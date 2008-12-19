@@ -13,6 +13,7 @@ bin/report_missing_language_tags.pl
 bin/ucsc_genes2gff.pl
 bin/windows_install.pl
 Build.PL
+cgi-bin/gb2/gbgff
 cgi-bin/gb2/gbrowse
 cgi-bin/gb2/gbrowse_details
 cgi-bin/gb2/gbrowse_img

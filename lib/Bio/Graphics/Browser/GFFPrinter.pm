@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.2 2008-09-18 20:52:41 mwz444 Exp $
+# $Id: GFFPrinter.pm,v 1.3 2008-12-19 22:43:42 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -36,7 +36,6 @@ sub new {
         segment_end => $options{-end},
         stylesheet  => $options{-stylesheet},
         id          => $options{-id},
-        db          => $options{-db},
         'dump'      => $options{'-dump'},
         labels      => $options{-labels},
         },
@@ -71,9 +70,19 @@ sub print_gff3 {
 
 sub data_source { shift->{data_source} }
 
-sub db {
+sub db     { 
     my $self = shift;
-    return $self->{db};
+    return @{$self->{db}} if $self->{db};
+
+    my $source = $self->data_source;
+    my $tracks = $self->get_labels;
+    $tracks    = $self->all_databases unless $tracks;
+
+    my %seenit;
+    my @dbs  = grep {defined($_) && !$seenit{$_}++} 
+                     map {$source->open_database($_)} ('general',@$tracks);
+    $self->{db} = \@dbs;
+    return @dbs;
 }
 
 sub segment {
@@ -117,16 +126,28 @@ sub get_segment {
         exit 0;
     }
 
-    my $db = $self->db;
-    my ($s) = $db->segment( $seqid, $start => $end );
-    unless ( defined $s ) {
-        print header('text/plain'),
-            "# Unknown segment $seqid:$start..$end.\n";
-        exit 0;
-    }
+    my $datasource = $self->data_source;
+    my $tracks     = $self->get_labels;
+    $tracks        = $self->all_databases unless $tracks;
 
+    # Find the segment - it may be hiding in any of the databases.
+    my (%seenit,$s,$db);
+    for my $track ('general',@$tracks) {
+	$db = $datasource->open_database($track) or next;
+	next if $seenit{$db}++;
+	($s) = $db->segment(-name  => $seqid,
+			    -start => $start,
+			    -stop  => $end);
+	last if $s;
+    }
     $self->segment($s);
     return $s;
+}
+
+sub all_databases {
+    my $self   = shift;
+    my $source = $self->data_source;
+    return [map {"$_:database"} $source->databases];
 }
 
 sub get_labels {
@@ -134,6 +155,7 @@ sub get_labels {
     my @labels = @{ $self->{labels} || [] };
     return unless @labels;
     @labels = shellwords(@labels);
+    for (@labels) { tr/$;/-/ }
     return \@labels;
 }
 
@@ -239,9 +261,11 @@ sub print_configuration {
     my @labels = $labels ? @$labels : $config->labels;
 
     for my $l (@labels) {
-        next
-            if $l =~ m/^\w+:/
-        ;    # a special config setting - don't want it to leak through
+	# a special config setting - don't want it to leak through
+
+        next if $l =~ m/^\w+:/;  
+	next if $l =~ m/^_scale/;
+
         print "[$l]\n";
         my @s = $config->_setting($l);
         for my $s (@s) {
@@ -252,6 +276,7 @@ sub print_configuration {
                     ? $config->config->get_callback_source( $l => $s )
                     : $config->setting( 'TRACK DEFAULTS' => $s );
                 defined $value or next;
+		chomp ($value);
             }
             next if $s =~ /^balloon/;    # doesn't work right
             print "$s = $value\n";

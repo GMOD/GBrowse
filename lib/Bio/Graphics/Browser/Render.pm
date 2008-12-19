@@ -1122,7 +1122,6 @@ sub handle_gff_dump {
         -stylesheet => param('stylesheet') || param('s'),
         -id         => param('id'),
         '-dump'     => param('d')          || '',
-        -db         => $self->db(),
         -labels => [ param('type'), param('t') ],
     );
     $dumper->get_segment();
@@ -1805,7 +1804,7 @@ sub update_coordinates {
   }
 
   elsif (param('q')) {
-      warn "param(q) = ",param('q');
+      warn "param(q) = ",param('q') if DEBUG;
       @{$state}{'ref','start','stop'} 
           = Bio::Graphics::Browser::Region->parse_feature_name(param('q'));
       $position_updated++;

@@ -233,7 +233,7 @@ sub render_tracks {
     my $panel_args      = thaw param('panel_args');
 
     $self->Debug("render_tracks(): Opening database...");
-    my $db = $datasource->open_database($tracks->[0] || 'general');
+    my $db = $datasource->open_database();
     $self->Debug("render_tracks(): Got database handle $db");
     $self->Debug("rendering tracks @$tracks");
 
@@ -241,17 +241,18 @@ sub render_tracks {
     my ($segment) = $db->segment(-name	=> $settings->{'ref'},
 				 -start	=> $settings->{'start'},
 				 -stop	=> $settings->{'stop'});
-    $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop}")
+    $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop} (1)")
 	unless $segment;
 
     # BUG: duplicated code from Render.pm -- move into a common place
+    $panel_args->{section} ||= '';  # prevent uninit variable warnings
     if ($panel_args->{section} eq 'overview') {
 	$segment = Bio::Graphics::Browser::Region->whole_segment($segment,$settings);
     } elsif ($panel_args->{section} eq 'region') {
 	$segment  = Bio::Graphics::Browser::Region->region_segment($segment,$settings);
     }
 
-    $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop}")
+    $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop} (2)")
 	unless $segment;
 	    
     # generate the panels

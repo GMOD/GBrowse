@@ -579,8 +579,8 @@ sub run_remote_requests {
 	    $response_line =~ s/^\d+//;  # get rid of status code
 	    $requests->{$_}->flag_error($response_line) foreach keys %{$renderers{$uri}};
 	}
-	CORE::exit(0);  # from CHILD
       }
+      CORE::exit(0);  # from CHILD
   }
 }
 

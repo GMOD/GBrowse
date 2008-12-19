@@ -18,6 +18,7 @@ my $build = GBrowseInstall->new(
     requires     => {
 	'perl'                => '5.008',
 	'Bio::Root::Version'  => '1.005002',
+	'Bio::Graphics'       => 0,
 	'GD'                  => '2.07',
 	'IO::String'          => 0,
 	'CGI::Session'        => '4.02',
@@ -27,11 +28,15 @@ my $build = GBrowseInstall->new(
 	'JSON'                => 0,
 	'LWP'                 => 0,
     },
-    recommends  => { 'BerkeleyDB' => 0.32 },
+    recommends  => { 
+	'DB_File::Lock'       => 0,
+	'DBI'                 => 0,
+	'DBD::mysql'          => 0,
+	'DBD::Pg'             => 0,
+    },
     script_files => [
 	'bin/gbrowse_slave',
 	'bin/make_das_conf.pl',
-	'bin/gbrowse_slave',
 # not sure if these still work
 #	'bin/register_moby_services.pl',
 #	'bin/process_wormbase.pl',

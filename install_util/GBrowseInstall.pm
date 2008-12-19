@@ -69,7 +69,10 @@ sub ACTION_demo {
     open STDOUT,"<&",$saveout;
 
     # fix GBrowse.conf to point to correct directories
-    for my $f ('GBrowse.conf','yeast_chr1+2.conf','yeast_renderfarm.conf') {
+    for my $f ('GBrowse.conf',
+	       'yeast_simple.conf',
+	       'yeast_chr1+2.conf',
+	       'yeast_renderfarm.conf') {
 	my $in  = IO::File->new("$dir/conf/$f")         or die $!;
 	my $out = IO::File->new("$dir/conf/$f.new",'>') or die $!;
 	while (<$in>) {

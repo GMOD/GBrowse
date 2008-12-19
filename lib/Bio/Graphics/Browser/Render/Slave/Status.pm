@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Render::Slave::Status;
-# $Id: Status.pm,v 1.2 2008-12-18 18:42:00 lstein Exp $
+# $Id: Status.pm,v 1.3 2008-12-19 03:11:01 lstein Exp $
 
 # This module keeps track of when slaves were last contacted and their
 # current status. If a slave is down and there are alternatives defined,
@@ -8,9 +8,8 @@ package Bio::Graphics::Browser::Render::Slave::Status;
 
 use strict;
 use warnings;
-use DB_File::Lock;
 use Fcntl qw(:flock O_RDWR O_CREAT);
-
+use DB_File;
 use constant INITIAL_DELAY => 30;   # initially recheck a down server after 30 sec
 use constant MAX_DELAY     => 600;  # periodically recheck at 10 min intervals max
 use constant DECAY         => 1.5;  # at each subsequent failure, increase recheck interval by this amount
@@ -19,12 +18,22 @@ use constant DEBUG         => 0;
 sub new {
     my $class      = shift;
     my $path       = shift;
-    return bless { path=>$path },ref $class || $class;
+    my $has_dbfilelock = eval "require DB_File::Lock; 1";
+
+    return bless { 
+	path       => $path,
+	canlock    => $has_dbfilelock,
+    },ref $class || $class;
 }
+
+sub can_lock { shift->{dbfilelock} }
 
 sub db {
     my $self  = shift;
     my $write = shift;
+
+    return $self->{hash} ||= {} 
+           unless $self->can_lock;
 
     my $locking    = $write ? 'write' : 'read';
     my $mode       = $write ? O_CREAT|O_RDWR : O_RDONLY;

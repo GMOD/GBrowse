@@ -68,6 +68,7 @@ conf/plugins/Submitter.pm
 conf/plugins/test.pm
 conf/plugins/TestFinder.pm
 conf/slave_preload.conf
+conf/yeast_simple.conf
 conf/yeast_chr1+2.conf
 conf/yeast_renderfarm.conf
 contrib/ace2gff.pl

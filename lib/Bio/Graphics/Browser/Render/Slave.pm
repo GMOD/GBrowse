@@ -233,16 +233,25 @@ sub render_tracks {
     my $panel_args      = thaw param('panel_args');
 
     $self->Debug("render_tracks(): Opening database...");
-    my $db = $datasource->open_database();
+
+    # find the segment
+    my (%seenit,$segment,$db);
+    for my $track (@$tracks,'general') {
+	$db = $datasource->open_database($track) or next;
+	next if $seenit{$db}++;
+	($segment) = $db->segment(-name	=> $settings->{'ref'},
+				  -start=> $settings->{'start'},
+				  -stop	=> $settings->{'stop'});
+	last if $segment;
+    }
+
+    $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop} (1)")
+	unless $segment;
+
     $self->Debug("render_tracks(): Got database handle $db");
     $self->Debug("rendering tracks @$tracks");
 
-    # extract segments
-    my ($segment) = $db->segment(-name	=> $settings->{'ref'},
-				 -start	=> $settings->{'start'},
-				 -stop	=> $settings->{'stop'});
-    $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop} (1)")
-	unless $segment;
+
 
     # BUG: duplicated code from Render.pm -- move into a common place
     $panel_args->{section} ||= '';  # prevent uninit variable warnings

@@ -1404,6 +1404,8 @@ sub create_panel_args {
 	      -background   => $args->{background} || '',
 	      -truecolor    => $source->global_setting('truecolor') || 0,
 	      -extend_grid  => 1,
+              -gridcolor    => $source->global_setting('grid color') || 'lightcyan',
+              -gridmajorcolor    => $source->global_setting('grid major color') || 'cyan',
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
 

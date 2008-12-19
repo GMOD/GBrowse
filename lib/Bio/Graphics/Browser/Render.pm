@@ -3033,12 +3033,17 @@ sub image_link {
     my $tracks   = $settings->{tracks};
     my $width    = $settings->{width};
     my $name     = "$settings->{ref}:$settings->{start}..$settings->{stop}";
-    my $type     = join '+',map{CGI::escape($_)} map {/\s/?qq("$_"):$_} $self->visible_tracks;
+    my @selected = $self->visible_tracks;
+    foreach (@selected) { # escape hyphens
+	tr/-/$;/;
+    }
+    my $type     = join '+',map{CGI::escape($_)} map {/\s/?qq("$_"):$_} @selected;
     my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}
                              } map {/\s/?"$_":$_}
     grep {
 	$settings->{features}{$_}{options}
     } @$tracks;
+    $id        ||= ''; # to prevent uninit variable warnings
     my $img_url  = "$url/?name=$name;label=$type;width=$width;id=$id";
     $img_url    .= ";flip=$flip"         if $flip;
     $img_url    .= ";options=$options"   if $options;
@@ -3046,7 +3051,6 @@ sub image_link {
     $img_url    .= ";keystyle=$keystyle" if $keystyle;
     $img_url    .= ";grid=$grid";
     $self->add_hilites($settings,\$img_url);
-    warn "img url = $img_url";
     return $img_url
 }
 

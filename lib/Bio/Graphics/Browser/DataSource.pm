@@ -450,8 +450,8 @@ sub section_setting {
 
 sub get_ranges {
   my $self      = shift;
-  my $divisor   = $self->setting('unit_divider') || 1;
-  my $rangestr  = $self->setting('zoom levels')  || '100 1000 10000 100000 1000000 10000000';
+  my $divisor   = $self->global_setting('unit_divider') || 1;
+  my $rangestr  = $self->global_setting('zoom levels')  || '100 1000 10000 100000 1000000 10000000';
   if ($divisor == 1 ) {
     return split /\s+/,$rangestr;
   } else {

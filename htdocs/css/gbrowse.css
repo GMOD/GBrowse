@@ -22,7 +22,7 @@ A.bred            { color: #FFFFFF;
                     font-size : small;
                     text-align: center;
                   }
-BODY              { background-color: white; 
+BODY              { background-color: #F7FBFF;
                     font-family: sans-serif;
 	            font-size: small;
                   }
@@ -65,22 +65,22 @@ TH.linkmenu       {
 .multiplechoicetitle  { background-color: lightblue;
 		        font-size: small;
 }
-.searchtitle      { background-color: khaki;
+.searchtitle      { background-color: #E6EBF0;
 	            font-size: small;
 }
-.searchbody       { background-color: lightgoldenrodyellow;
+.searchbody       { background-color: #F2F6FA;
 	            font-size: small;
 }
-.settingstitle    { background-color: DarkKhaki;
+.settingstitle    { background-color: #E6EBF0;
 	            font-size: small;
 }
-.settingsbody     { background-color: khaki;
+.settingsbody     { background-color: #F2F6FA;
 	            font-size: small;
 }
-.uploadtitle      { background-color: DarkKhaki;
+.uploadtitle      { background-color: #E6EBF0;
 	            font-size: small;
 }
-.uploadbody       { background-color: khaki;
+.uploadbody       { background-color: #F2F6FA;
 	            font-size: small;
 }
 .technicalinfo    { background-color: #FFFFFF; }

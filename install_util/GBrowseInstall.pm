@@ -76,11 +76,12 @@ sub ACTION_demo {
 	my $in  = IO::File->new("$dir/conf/$f")         or die $!;
 	my $out = IO::File->new("$dir/conf/$f.new",'>') or die $!;
 	while (<$in>) {
-	    s!\$CONF!$dir/conf!;
-	    s!\$HTDOCS!$dir/htdocs!;
-	    s!\$DATABASES!$dir/htdocs/databases!;
-	    s!\$TMP!$dir/tmp!;
-	    s!^url_base\s*=.+!url_base               = /!;
+	    s!\$CONF!$dir/conf!g;
+	    s!\$HTDOCS!$dir/htdocs!g;
+	    s!\$DATABASES!$dir/htdocs/databases!g;
+	    s!\$TMP!$dir/tmp!g;
+	    s!\$VERSION!$self->dist_version!eg;
+	    s!^url_base\s*=.+!url_base               = /!g;
 	    $out->print($_);
 	}
 	close $out;
@@ -115,7 +116,7 @@ sub ACTION_demo {
 	print STDERR "Run \"./Build demostop\" to stop it.\n";
 	$self->config_data(demodir=>$dir);
     } else {
-	print STDERR "Apache failed to start.\n";
+	print STDERR "Apache failed to start. Perhaps the demo is already running?\n";
 	if (-e "$dir/logs/error.log") {
 	    print STDERR "==Apache Error Log==\n";
 	    my $f = IO::File->new("$dir/logs/error.log");
@@ -487,6 +488,7 @@ sub substitute_in_place {
 	s/\$CGIBIN/$cgibin/g;
 	s/\$WWWUSER/$wwwuser/g;
 	s/\$DATABASES/$databases/g;
+	s/\$VERSION/$self->dist_version/eg;
 	s/\$TMP/$tmp/g;
 	$out->print($_);
     }
@@ -656,51 +658,6 @@ sub scriptdir {
 		   :'installsitebin';
     return $Config::Config{$scriptdir};
 }
-
-# sub biographics_needs_patch  {
-#     my $self = shift;
-#     eval "require Bio::Graphics::Panel; 1"   or return 1;
-#     my $version = eval {Bio::Graphics::Panel->api_version} || 0;
-#     return $version < 1.8;
-# }
-
-# sub biodbseqfeature_needs_patch  {
-#     my $self = shift;
-#     eval "require Bio::DB::SeqFeature::Store; 1"   or return 1;
-#     my $version = eval {Bio::DB::SeqFeature::Store->api_version} || 0;
-#     return $version < 1.2;
-# }
-
-
-# sub patch_biographics {
-#     my $self   = shift;
-#     $self->config(patch_biographics=>1);
-# }
-
-# sub patch_biodbseqfeature {
-#     my $self = shift;
-#     $self->config(patch_biodbseqfeature=>1);
-# }
-
-# sub find_pm_files {
-#     my $self = shift;
-#     my %results  = %{$self->_find_file_by_type('pm','lib')};
-
-#     my @extra_libs;
-#     push @extra_libs,'extras/biographics'     
-# 	if $self->biographics_needs_patch || $ENV{GBROWSE_DEBIAN_BUILD};
-#     push @extra_libs,'extras/biodbseqfeature' 
-# 	if $self->biodbseqfeature_needs_patch || $ENV{GBROWSE_DEBIAN_BUILD};
-
-#     for my $l (@extra_libs) {
-# 	my $r = $self->_find_file_by_type('pm',$l);
-# 	for my $k (keys %$r) {
-# 	    $r->{$k} =~ s!$l/!lib/!;
-# 	}
-# 	%results = (%results,%$r);
-#     }
-#     return \%results;
-# }
 
 1;
 

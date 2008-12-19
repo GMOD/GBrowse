@@ -153,7 +153,7 @@ sub set_source {
 	# clear out some of the session variables that shouldn't transfer
 	# delete $self->state->{name};
 	# delete $self->state->{q};
-	$url .= "?$args" if $args;
+	# $url .= "?$args" if $args;
 	print CGI::redirect($url);
 	return 1;
     }
@@ -178,7 +178,6 @@ sub run_asynchronous_event {
 	print CGI::header( -status => '204 No Content' );
     }
     elsif ($status == 302) { # redirect
-	warn CGI::redirect($data);
 	print CGI::redirect($data);
     }
     elsif ($mime_type eq 'application/json') {
@@ -2485,7 +2484,11 @@ sub regionview_bounds {
 
 sub split_labels {
   my $self = shift;
-  map {/^(http|ftp|das)/ ? $_ : split /[ +-]/} @_;
+  my @results = map {/^(http|ftp|das)/ ? $_ : split /[ +-]/} @_;
+  foreach (@results) {
+      tr/$;/-/;  # unescape hyphens
+  }
+  @results;
 }
 
 sub set_tracks {
@@ -2978,6 +2981,9 @@ sub bookmark_link {
 
   # handle selected features slightly differently
   my @selected = grep {$settings->{features}{$_}{visible} && !/^(file|ftp|http):/} @{$settings->{tracks}};
+  foreach (@selected) { # escape hyphens
+      tr/-/$;/;
+  }
   $q->param(-name=>'label',-value=>join('-',@selected));
 
   # handle external urls

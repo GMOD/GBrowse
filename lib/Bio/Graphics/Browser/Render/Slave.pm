@@ -234,9 +234,9 @@ sub render_tracks {
 
     $self->Debug("render_tracks(): Opening database...");
 
-    # find the segment
+    # Find the segment - it may be hiding in any of the databases.
     my (%seenit,$segment,$db);
-    for my $track (@$tracks,'general') {
+    for my $track ('general',@$tracks) {
 	$db = $datasource->open_database($track) or next;
 	next if $seenit{$db}++;
 	($segment) = $db->segment(-name	=> $settings->{'ref'},

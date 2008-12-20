@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.116 2008-12-12 20:57:22 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.117 2008-12-20 00:38:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -94,7 +94,6 @@ use constant TOO_MANY_FEATURES => 100;
 use constant TOO_MANY_REFS     => TOO_MANY_FEATURES;
 use constant DEFAULT_SEGMENT => 100_000;
 use constant DEFAULT_REGION_SIZE => 100_000_000;
-
 use constant OVERVIEW_RATIO  => 0.9;
 use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
@@ -296,7 +295,7 @@ elsif ($plugin_action eq $CONFIG->tr('Go') &&
 if (my $to_download = (param($CONFIG->tr('Download_file')) ||
 		       ($file_action && param($file_action) eq $CONFIG->tr('Download_file')) && $file)) {
   warn "FILE DOWNLOAD, download = $to_download" if DEBUG;
-  do_annotation_file_download($to_download);
+  do_annotation_file_download($to_download,$page_settings);
   exit 0;
 }
 
@@ -968,6 +967,7 @@ sub adjust_region_size {
 # This is called to change the values of the settings
 sub adjust_settings {
   my $settings = shift;
+  my $segment = shift;
 
   # this is called to bring the settings hash up to the correct gbrowse version
   return if upgrade_settings($settings);
@@ -1049,7 +1049,7 @@ sub adjust_settings {
   }
 
   if ($CONFIG->setting('region segment')) {
-    adjust_region_size($segment,$settings);
+    adjust_region_size(undef,$settings);
   } else {
     delete $settings->{region_size};
   }
@@ -2834,6 +2834,7 @@ sub load_plugin_annotators {
 
 sub do_annotation_file_download {
     my $to_download = shift;
+    my $page_settings = shift;
     $to_download    = CGI::unescape($to_download);
     (my $fname = $to_download) =~ s/^file://;
     print_header(-attachment   => $fname,
@@ -3171,6 +3172,8 @@ sub galaxy_form {
   $html .= hidden(-name=>'s',-value=>'off');
   $html .= hidden(-name=>'d',-value=>'edit');
   $html .= endform();
+
+  my $plugin_action = param('plugin_action');
 
   if ($plugin_action eq $CONFIG->tr('Go') && param('plugin') eq 'invoke_galaxy') {
     $html .= script('document.galaxyform.submit()');

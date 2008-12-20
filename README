@@ -23,7 +23,7 @@ SYNOPSIS:
   ./Build config
   ./Build demo    (optional)
   ./Build install (will need to become superuser)
-  ./Build apache_config
+  ./Build apache_conf
 
 TO INSTALL:
 

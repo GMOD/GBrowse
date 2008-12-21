@@ -1377,8 +1377,12 @@ sub create_panel_args {
   my $detail_stop  = $settings->{stop};
   my $h_region_str     = '';
   if ($section eq 'overview' or $section eq 'region'){
-    $postgrid  = hilite_regions_closure([$detail_start,$detail_stop,
-                    hilite_fill(),hilite_outline()]);
+    $postgrid  = hilite_regions_closure(
+	            [$detail_start,
+		     $detail_stop,
+		     $self->hilite_fill(),
+		     $self->hilite_outline()
+		    ]);
   }
   elsif ($section eq 'detail'){
     $postgrid = make_postgrid_callback($settings);
@@ -1863,7 +1867,6 @@ sub hilite_regions_closure {
                 $start--;
             }    # so that we always see something
                  # assuming top is 0 so as to ignore top padding
-
             $gd->filledRectangle(
                 $left + $start,
                 0, $left + $end,
@@ -1883,15 +1886,13 @@ sub hilite_regions_closure {
 }
 
 sub hilite_fill {
-return 'yellow';
-    #return defined $CONFIG->setting('hilite fill')
-    #? $CONFIG->setting('hilite fill')
-    #: 'yellow';
+    my $self = shift;
+    return $self->source->global_setting('hilite fill') || 'yellow';
 }
 
 sub hilite_outline {
-return 'yellow';
-    #return $CONFIG->setting('hilite outline');
+    my $self = shift;
+    return $self->source->global_setting('hilite outline') || 'yellow';
 }
 
 1;

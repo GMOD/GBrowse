@@ -114,52 +114,39 @@ is an example:
 
 <blockquote>
 <pre>
-reference = B0511
-EST	yk260e10.5	15569-15724
-EST	yk672a12.5	537-618,3187-3294
-EST	yk595e6.5	552-618
-EST	yk595e6.5	3187-3294
-EST	yk846e07.3	11015-11208
-SwissP	PECANEX		5513-16656	                         "From SwissProt"
-FGENESH	"Gene 1"	-1200..-500,518..616,661..735,3187..3365 "Pfam domain"
-FGENESH	"Gene 2"	16626-17396,17451-17597
+[mRNA]
+glyph = gene
+key   = My Genes
 
-reference = T22A3
-FGENESH	"Gene 4"	18459-18722,18882-19176,19572-30000	"Transmembrane protein"
+mRNA hox1 Chr1:1..100 Type=UTR
+mRNA hox1 Chr1:101..200,300..400,500..800 Type=CDS
+mRNA hox1 Chr1:801..1000 Type=UTR
+
+[EST]
+glyph   = segments
+bgcolor = green
+key     = Mapped Expressed Tags
+
+EST	yk260e10.5	Chr3:15569..15724
+EST	yk672a12.5	Chr3:537..618,3187..3294
+EST	yk595e6.5	Chr3:552..618
+
+[PRED]
+glyph       = heat_map
+start_color = yellow
+end_color   = blue
+min_score   = 0
+max_score   = 100
+citation    = Bluer exons have higher prediction values
+key         = Predicted genes
+
+PRED	"Gene 1"	Chr1:518..616 score=50
+PRED    "Gene 1"        Chr1:661..735 score=80
+PRED    "Gene 1"        Chr1:3187..3365 score=50
+PRED	"Gene 2"	Chr1:16626..17396 score=85
+PRED    "Gene 2"        Chr1:17451..17597 score=90
 </pre>
 </blockquote>
-
-<h3>The Reference Line</h3>
-
-<p>
-
-The annotation file must have at least one <b>reference = <i>landmark
-name</i></b> line.  This line tells the browser what coordinate system
-you are using.  You may use any of the landmarks accepted by this
-browser, such as chromosomes, contigs, GenBank/EMBL accessions, PCR
-primer pairs, genetic markers, or predicted genes (the acceptable
-landmark types depend on how the browser is configured; please see the
-synopsis on the main page for the list).
-
-<p>
-
-The word "reference" must be all lower-case.  There may or may not be
-whitespace before and after the "=" sign.  Examples:
-
-<blockquote>
-<pre>
-reference = Locus:let-3
-reference=Chr19
-reference= AB29191.4
-reference = PCR_Product:sjj_T22A3.2
-</pre>
-</blockquote>
-
-<p>
-
-You may have several reference lines in the file.  Each reference
-landmark will apply to all data lines located beneath it until the
-next reference line occurs.
 
 <h3>The Data Lines</h3>
 
@@ -182,12 +169,13 @@ columns, delimited by tabs or spaces:
       surround it by white space.  Use empty quotes ("") if there is no name to display.
   <dt><b>Column 3, the feature position</b>
   <dd>The third column contains one or more ranges occupied by the
-      feature.  A range has a start
-      and a stop, and is expressed either as "start..stop" or "start-stop".  Use whichever form
+      feature.  A range has a sequence ID indicating the chromosome, contig or other reference sequence
+      on which the feature resides, plus a start and end position, and is expressed either as
+      "seqID:start..stop" or "seqID:start-stop".  Use whichever form
       you prefer. You can express a feature that occupies a discontinuous set of ranges, such as an mRNA
       aligned to the genome, by providing a list of ranges separated by commas.  Example:
       <blockquote><pre>
-      1..10,49..80,110..200
+      chr3:1..10,49..80,110..200
       </pre></blockquote>
       There should be no spaces before or after the commas.  If there are, enclose the entire range
       in quotes.
@@ -195,27 +183,48 @@ columns, delimited by tabs or spaces:
       To describe an oriented feature that is on the minus strand, such as a transcribed gene,
       simply reverse the order of the start and stop ranges.  For example:
       <blockquote><pre>
-      200..110,80..49,10..1
+      chr1:200..110,80..49,10..1
       </pre></blockquote>
       The strandedness is only displayed when using an arrowhead glyph, such the "transcript" glyph
       or the generic glyph  with the <b>strand_arrow=1</b> option.  See <a href="#formatting">Customizing the display</a>
       for details.
       <p>
       All ranges uses the coordinate system of the most recently declared reference landmark.
-  <dt><b>Column 4, Description</b> [optional]
+  <dt><b>Column 4, Tags</b> [optional]
   <dd>The fourth column, if present, is treated as a description.  The description will be printed at the
       bottom of the feature.  If there is no description, either leave blank, or use empty quotes.  If there
       is whitespace in the description, surround it with quotes.  You can also enter <i>attribute=value</i>
-      information here for processing by certain glyphs.  The only combination you are likely to use currently
-      is <i>score=XXXXX</i> where <i>XXXX</i> is some numeric value.  This is used by the <i>xyplot</i>
-      glyph to chart numeric data on the genome, such as microarray intensity values.
+      information here for processing by certain glyphs.  The combinations you are likely to use currently
+      are <i>URL=http://some.place</i> to indicate a URL to link to, <i>Note="some note"</i> to provide a descriptive
+      caption to print under the feature, <i>Score=XXXXX</i> (where <i>XXXX</i> is some numeric value)
+      to give the feature a score for those glyphs that chart numeric values, and <i>Type="some type"</i>
+      to create genes and other complex multipart features.
       <p>
-  <dt><b>Column 5, URL</b> [optional]
-  <dd>The last column contains a URL to link to when the user clicks on the feature.
-      Rather than create a URL for each individual feature, you can create linking
-      rules that are specific for particular feature types, or for all features.  See
+      See
       <a href="#customize">Customizing the display</a> for details.
 </dl>
+
+<p>
+
+If most of your features are on the same chromosome, then you can
+insert a <i>reference=&lt;seqid&gt;</i> line to indicate the default
+sequence ID:
+
+<blockquote>
+<pre>
+reference=Chr1
+PRED	"Gene 1"	518..616 score=50
+PRED    "Gene 1"        661..735 score=80
+PRED    "Gene 1"        3187..3365 score=50
+PRED	"Gene 2"	16626..17396 score=85
+PRED    "Gene 2"        17451..17597 score=90
+</pre>
+</blockquote>
+
+<p>
+
+Chr1 will now be the default chromosome until the next
+<i>reference=</i> line is encountered.
 
 <p>
 
@@ -223,6 +232,37 @@ In addition to this format, you may use the standard GFF format for
 your data.  Details can be found <a
 href="http://www.sanger.ac.uk/Users/rd/gff.html">at the Sanger
 Centre</a>.
+
+<h3>Features and Subparts</h3>
+
+<p>
+
+To create a feature that has multiple subparts, you can indicate the
+type of each subpart using the <i>Type="some type"</i> tag. Usually
+you will use this for coding gene transcripts when you want to
+distinguish the coding and non-coding portions of the gene.
+
+<p>
+
+Here is a simple example:
+
+<blockquote>
+<pre>
+mRNA B0511.1   Chr1:1..100                     Type=UTR;Note="Putative primase"
+mRNA B0511.1   Chr1:101..200,300..400,500..800 Type=CDS
+mRNA B0511.1   Chr1:801..1000                  Type=UTR
+</pre>
+
+The top level feature's primary tag will be "mRNA", as indicated in the first column.
+It will contain five subparts, a 5' UTR spanning positions 1..100, a series of three
+CDS (coding) regions, and a 3' UTR extending from positions 801..1000.
+
+<p>
+
+Additional tags that are placed in the first line of the feature, such
+as the Note, will be applied to the top level. In this example, the
+note "Putative primase" will be applied to the mRNA at the top level
+of the feature:
 
 <h3>Grouping</h3>
 
@@ -306,7 +346,7 @@ xthe file, at the bottom, or interspersed among data sections:
  height = 5
 
  [FGENES]
- glyph = transcript2
+ glyph = gene
  bgcolor = green
  description = 1
 </PRE>
@@ -579,6 +619,19 @@ following glyphs are implemented:</P>
     gapped alignments and exon groups.
     </td>
 </tr>
+
+<tr class="searchbody">
+<th>gene</th>
+<td>The "gene" glyph is suitable for drawing coding genes. The coding regions
+    will be drawn using the specified bgcolor, and the UTRs will be drawn in grey.
+    You can change the color of the UTRs by specifying a "utr_color" option.
+    For the gene glyph to work properly, the top level feature must be of type
+    "mRNA" and the subparts of type "UTR", "five_prime_UTR", "three_prime_UTR",
+    or "CDS". See the top of this document for an example.
+</td>
+</tr>
+
+
 <tr class="searchbody">
 <th>transcript</th>
 <td>Similar to segments, but the connecting line is
@@ -622,9 +675,30 @@ the value you wish to chart, add a score=XXXX note to the description section:
     See <a href="#numeric">Displaying Intensity Plots &amp; Other
     Numeric Data</a> for full details.  <td> </tr>
 
+<tr class="searchbody"> <th>graded_segments</th> <td>A set of connected segments
+    whose colors change intensity according to a score indicated by a "score=XXX" tag.
+    The low and high scores are indicated by "min_score" and "max_score" options
+    in the configuration stanza, and the basic color is indicated by "bgcolor."</td></tr>
+
+<tr class="searchbody"> <th>heat_map</th> <td>A set of connected segments
+    whose colors change hue according to a score indicated by a "score=XXX" tag.
+    The low and high scores are indicated by "min_score" and "max_score" options
+    in the configuration stanza, and the start and ending hues are indicated
+    by "start_color" and "end_color." A feature with score equal to min_score will
+    be displayed using start_color, while a feature with score equal to max_score
+    will be displayed using end_color. Intermediate scores are displayed by blending
+    the two hues.
+    <td></tr>
+
 <tr class="searchbody">
 <th>trace</th>
-<td>Reads a SCF sequence file and displays the trace graph.</td>
+<td>Reads a SCF sequence file and displays the trace graph. For this glyph to
+work, the trace file must be placed on a web-accessible FTP or HTTP server and the
+location indicated by a "trace" tag:
+    <blockquote><pre>
+    Read    ef18222    15569..15724    trace=http://my.host/traces/ef1822.scf
+    </pre></blockquote>
+</td>
 </tr>
 
 </table>
@@ -696,6 +770,25 @@ the value you wish to chart, add a score=XXXX note to the description section:
 </tr>
 
 <tr class="searchbody">
+<th class="searchtitle">gene</th>
+<td>utr_color</td>
+<td>Color of the UTRs</td>
+</tr>
+
+<tr class="searchbody">
+<td>&nbsp;</td>
+<td>thin_utr</td>
+<td>If set to a non-zero value, then UTRs will be drawn as thin boxes</td>
+</tr>
+
+<tr class="searchbody">
+<td>&nbsp;</td>
+<td>decorate_introns</td>
+<td>If set to a non-zero value, then introns will be decorated with little
+    arrows indicating the direction of the transcript</td>
+</tr>
+
+<tr class="searchbody">
 <th class="searchtitle">primers</th>
     <td>connect</td>
     <td>Whether to connect the inward-pointing arrowheads by a line
@@ -723,7 +816,7 @@ the value you wish to chart, add a score=XXXX note to the description section:
     </td>
 </tr>
 
-  <tr class="searchbody">
+<tr class="searchbody">
   <th class="searchtitle">xyplot</th>
   <td>graph_type</td>
   <td>Type of graph
@@ -760,6 +853,42 @@ the value you wish to chart, add a score=XXXX note to the description section:
     <td>&nbsp;</td>
   <td>point_radius</td>
   <td>The radius of the symbols, if applicable, in pixels</td>
+</tr>
+
+<tr class="searchbody">
+<th class="searchtitle">graded_segments</th>
+<td>min_score</td>
+<td>Minimum score for the feature (will be drawn as a white segment)</td>
+</tr>
+    
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>max_score</td>
+  <td>Maximum score for the feature (will be drawn as a segment with full intensity bgcolor)</td>
+</tr>
+
+<tr class="searchbody">
+<th class="searchtitle">heat_map</th>
+<td>min_score</td>
+<td>Minimum score for the feature (the segment will be drawn with the starting hue)</td>
+</tr>
+    
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>max_score</td>
+  <td>Maximum score for the feature (the segment will be drawn with the ending hue)</td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>start_color</td>
+  <td>Color for segments with the minimum score</td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>end_color</td>
+  <td>Color for segments with the maximum score</td>
 </tr>
 
 <tr class="searchbody">

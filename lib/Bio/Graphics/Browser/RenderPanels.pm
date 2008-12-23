@@ -1406,7 +1406,7 @@ sub create_panel_args {
 	      -key_style    => $keystyle,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $image_class->gdMediumBoldFont->height+2,
-              -pad_bottom   => 0,
+              -pad_bottom   => 3,
 	      -image_class  => $image_class,
 	      -postgrid     => $postgrid,
 	      -background   => $args->{background} || '',
@@ -1862,7 +1862,7 @@ sub hilite_regions_closure {
         my $panel  = shift;
         my $left   = $panel->pad_left;
         my $top    = $panel->top;
-        my $bottom = $panel->bottom;
+        my $bottom = $panel->bottom+$panel->pad_bottom;
         for my $r (@h_regions) {
             my ( $h_start, $h_end, $bgcolor, $fgcolor ) = @$r;
             my ( $start, $end ) = $panel->location2pixel( $h_start, $h_end );

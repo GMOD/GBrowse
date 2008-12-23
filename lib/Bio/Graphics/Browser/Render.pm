@@ -1392,6 +1392,7 @@ sub handle_edit {
 
     $uploaded_sources->new_file($file);    # register it
     $self->add_track_to_state($file);
+
     my $fh = $uploaded_sources->open_file( $file, '>' ) or return;
     print $fh $data;
     close $fh;
@@ -2509,20 +2510,26 @@ sub detail_tracks {
   my $self   = shift;
   my $state  = $self->state;
   my @tracks = grep {$state->{features}{$_}{visible} && !/:(overview|region)$/ && !/^_/}
-               @{$state->{tracks}};
+               $self->all_tracks;
 }
 sub overview_tracks {
   my $self = shift;
   my $state = $self->state;
   return grep {$state->{features}{$_}{visible} && /:overview$/ && !/^_/ }
-    @{$state->{tracks}};
+               $self->all_tracks;
 }
 
 sub regionview_tracks {
   my $self = shift;
   my $state = $self->state;
   return grep {$state->{features}{$_}{visible} && /:region$/ && !/^_/ }
-    @{$state->{tracks}};
+               $self->all_tracks;
+}
+
+sub all_tracks {
+    my $self  = shift;
+    my $state = $self->state;
+    return @{$state->{tracks}};
 }
 
 sub visible_tracks {
@@ -2633,7 +2640,7 @@ sub render_deferred {
     my $cache_extra = $args{cache_extra}     || $self->create_cache_extra();
     my $external    = $args{external_tracks} || $self->external_data;
 
-    warn 'render_deferred(',join(',',@$labels),')' if DEBUG;
+    warn '(render_deferred(',join(',',@$labels),') for section ',$section if DEBUG;
 
     my $renderer = $self->get_panel_renderer($seg);
 

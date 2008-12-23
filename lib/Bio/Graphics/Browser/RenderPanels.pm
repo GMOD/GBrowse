@@ -1575,7 +1575,7 @@ sub feature_file_select {
 
   return sub {
 
-    # This sub is no longer really needed
+      # This sub is no longer really needed
     return 1;
 
     my $file  = shift;

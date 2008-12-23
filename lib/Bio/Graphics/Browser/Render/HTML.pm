@@ -591,6 +591,7 @@ sub render_global_config {
         : '';
 
     my %seen;
+    local $^W = 0;  # to avoid uninit variable warnings from next line
     my @region_sizes = grep {!$seen{$_}++} 
                 sort {$b<=>$a} (shellwords($self->data_source->global_setting('region sizes')),
 				$settings->{region_size});

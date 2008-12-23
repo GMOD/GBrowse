@@ -542,6 +542,7 @@ sub background_track_render {
             )
         );
     }
+
     push @cache_track_hash_list,
         $self->render_deferred( labels          => [ $self->regionview_tracks ],
 				segment         => $self->region_segment,
@@ -1861,8 +1862,8 @@ sub update_coordinates {
 }
 
 sub asynchronous_update_overview_scale_bar {
-    my $self    = shift;
-    my $seg = $self->segment;
+    my $self = shift;
+    my $seg  = $self->segment;
 
     my $renderer = $self->get_panel_renderer($seg);
     my ( $url, $height, $width ) = $renderer->render_scale_bar(
@@ -1883,8 +1884,8 @@ sub asynchronous_update_overview_scale_bar {
 }
 
 sub asynchronous_update_region_scale_bar {
-    my $self    = shift;
-    my $seg = $self->segment;
+    my $self = shift;
+    my $seg  = $self->segment;
 
     my $renderer = $self->get_panel_renderer($seg);
     my ( $url, $height, $width ) = $renderer->render_scale_bar(
@@ -2119,7 +2120,7 @@ sub asynchronous_update_coordinates {
     my $state  = $self->state;
 
     my $whole_segment_start = $state->{seg_min};
-    my $whole_segment_stop = $state->{seg_max};
+    my $whole_segment_stop  = $state->{seg_max};
 
     my $position_updated;
     if ($action =~ /left|right/) {
@@ -2276,25 +2277,6 @@ sub position_from_regionview {
 sub update_region {
   my $self  = shift;
   my $state = shift || $self->state;
-
-# the following code is dead?
-#   if (my @features = shellwords(param('h_feat'))) {
-#     $state->{h_feat} = {};
-#     for my $hilight (@features) {
-#       last if $hilight eq '_clear_';
-#       my ($featname,$color) = split '@',$hilight;
-#       $state->{h_feat}{$featname} = $color || 'yellow';
-#     }
-#   }
-
-#   if (my @regions = shellwords(param('h_region'))) {
-#     $state->{h_region} = [];
-#     foreach (@regions) {
-#       last if $_ eq '_clear_';
-#       $_ = "$state->{ref}:$_" unless /^[^:]+:-?\d/; # add reference if not there
-#       push @{$state->{h_region}},$_;
-#     }
-#   }
 
   if ($self->setting('region segment')) {
     $state->{region_size} = param('region_size') if defined param('region_size');
@@ -2461,7 +2443,6 @@ sub regionview_bounds {
 
   my ($detail_start,$detail_stop) = (@{$state}{'start','stop'})      or return;
   my ($whole_start,$whole_stop)   = (@{$state}{'seg_min','seg_max'}) or return;
-
 
   if ($detail_stop - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
     $regionview_length = $detail_stop - $detail_start + 1;
@@ -2892,18 +2873,24 @@ sub coordinate_mapper {
     my $db = $current_segment->factory;
 
     my ( $ref, $start, $stop ) = (
-        $current_segment->seq_id, $current_segment->start,
+        $current_segment->seq_id, 
+	$current_segment->start,
         $current_segment->end
     );
     my %segments;
+
+    my $search = Bio::Graphics::Browser::RegionSearch->new(
+	{ source => $self->data_source,
+	  state  => $self->state}
+	) or die;
+    $search->init_databases;
 
     my $closure = sub {
         my ( $refname, @ranges ) = @_;
 
         unless ( exists $segments{$refname} ) {
-            $segments{$refname} = $self->whole_segment();
+            $segments{$refname} = $search->search_features($refname)->[0];
         }
-
         my $mapper  = $segments{$refname} || return;
         my $absref  = $mapper->abs_ref;
         my $cur_ref = eval { $current_segment->abs_ref }
@@ -2911,20 +2898,30 @@ sub coordinate_mapper {
         return unless $absref eq $cur_ref;
 
         my @abs_segs;
-        if ( $absref eq $refname ) {           # doesn't need remapping
+        if ( $absref eq $refname) {           # doesn't need remapping
             @abs_segs = @ranges;
         }
-        else {
+        elsif ($mapper->can('rel2abs')) {
             @abs_segs
                 = map { [ $mapper->rel2abs( $_->[0], $_->[1] ) ] } @ranges;
-        }
+        } else {
+	    my $map_start  = $mapper->start;
+	    my $map_strand = $mapper->strand;
+	    if ($map_strand >= 0) {
+		@abs_segs = map {[$_->[0]+$map_start-1,$_->[1]+$map_start-1]} @ranges;
+	    } else {
+		@abs_segs = map {[$map_start-$_->[0]+1,$map_start-$_->[1]+1]} @ranges;
+		$absref   = $mapper->seq_id;
+	    }
+	}
 
         # this inhibits mapping outside the displayed region
         if ($optimize) {
             my $in_window;
             foreach (@abs_segs) {
                 next unless defined $_->[0] && defined $_->[1];
-                $in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
+		my ($left,$right) = sort {$a<=>$b} @$_;
+                $in_window ||= $_->[0] <= $right && $_->[1] >= $left;
             }
             return $in_window ? ( $absref, @abs_segs ) : ();
         }

@@ -4,7 +4,7 @@
                       This class handles region-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: regionSelect.js,v 1.6 2008-09-25 15:19:22 mwz444 Exp $
+ $Id: regionSelect.js,v 1.7 2008-12-23 08:07:12 lstein Exp $
 
 */
 
@@ -110,6 +110,10 @@ Region.prototype.loadSegmentInfo = function() {
   if (actualWidth > expectedWidth) {
     this.padLeft     += actualWidth - expectedWidth;
   }
+
+  // We fetch the left margin again because the controller can change 
+  // the size & position of the section after it is created.
+  this.left       = this.elementLocation(document.getElementById(this.imageId),'x1');
 
   this.pixelStart   = this.left  + this.padLeft;
 }

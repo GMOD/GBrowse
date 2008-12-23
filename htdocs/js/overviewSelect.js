@@ -4,7 +4,7 @@
                       This class handles overview-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: overviewSelect.js,v 1.5 2008-09-25 15:19:22 mwz444 Exp $
+ $Id: overviewSelect.js,v 1.6 2008-12-23 08:07:12 lstein Exp $
 
 */
 
@@ -110,7 +110,11 @@ Overview.prototype.loadSegmentInfo = function() {
     this.padLeft     += actualWidth - expectedWidth;
   }
 
-  this.pixelStart   = this.left  + this.padLeft;
+  // We fetch the left margin again because the controller can change 
+  // the size & position of the section after it is created.
+  this.left       = this.elementLocation(document.getElementById(this.imageId),'x1');
+
+  this.pixelStart = this.left  + this.padLeft;
 }
 
 Overview.prototype.formatMenu = function() {

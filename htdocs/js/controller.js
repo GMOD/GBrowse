@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.64 2008-10-24 20:19:26 lstein Exp $
+ $Id: controller.js,v 1.65 2008-12-23 08:07:12 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -131,6 +131,7 @@ var GBrowseController = Class.create({
         cursor:     'text'
     });
     image.setOpacity(1);
+    image.parentNode.setStyle({width: bar_obj.width+'px'});
   },
 
   append_child_from_html:
@@ -157,10 +158,13 @@ var GBrowseController = Class.create({
 
   // Update Section Methods *****************************************
   update_sections:
-  function(section_names, param_str) {
+  function(section_names, param_str, scroll_there) {
 
     if (param_str==null){
         param_str = '';
+    }
+    if (scroll_there==null) {
+        scroll_there=false;
     }
 
     var request_str = "update_sections=1" + param_str;
@@ -176,6 +180,8 @@ var GBrowseController = Class.create({
         for (var section_name in section_html){
           html    = section_html[section_name];
           $(section_name).innerHTML = html;
+	  if (scroll_there)
+	    $(section_name).scrollTo();
         }
       }
     });
@@ -194,7 +200,6 @@ var GBrowseController = Class.create({
 		    onSuccess:  function (transport) { 
 		    Controller.update_coordinates('left 0'); // causes an elegant panel refresh
 		} 
-		
             }
      );
 
@@ -270,8 +275,8 @@ var GBrowseController = Class.create({
       method:     'post',
       parameters: {navigate: action},
       onSuccess: function(transport) {
-	    var results                 = transport.responseJSON;
-        Controller.segment_info     = results.segment_info;
+	var results                     = transport.responseJSON;
+        Controller.segment_info         = results.segment_info;
 	    var track_keys              = results.track_keys;
 	    var overview_scale_bar_hash = results.overview_scale_bar;
 	    var region_scale_bar_hash   = results.region_scale_bar;
@@ -371,7 +376,10 @@ var GBrowseController = Class.create({
   },
 
   rerender_track:
-  function(track_name) {
+  function(track_name,scroll_there) {
+
+    if (scroll_there == null)
+      scroll_there = false;
 
     var gbtrack = this.gbtracks.get(track_name);
     $(gbtrack.track_image_id).setOpacity(0.3);
@@ -397,6 +405,9 @@ var GBrowseController = Class.create({
           } // end for
           Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
         } 
+	if (scroll_there) {
+	   $(gbtrack.track_div_id).scrollTo();
+	}
       } // end onSuccess
     }); // end Ajax.Request
   }, // end rerender_track
@@ -590,12 +601,12 @@ var GBrowseController = Class.create({
 
   edit_new_file:
   function() {
-    Controller.update_sections(new Array(external_utility_div_id), '&new_edit_file=1');
+    Controller.update_sections(new Array(external_utility_div_id), '&new_edit_file=1',true);
   },
 
   edit_upload:
   function(edit_file) {
-    Controller.update_sections(new Array(external_utility_div_id), '&edit_file='+edit_file);
+    Controller.update_sections(new Array(external_utility_div_id), '&edit_file='+edit_file,true);
   },
 
   commit_file_edit:
@@ -621,7 +632,7 @@ var GBrowseController = Class.create({
         else{
         // update track if it exists
           if ( null != $(gbtrack.track_div_id)){
-            Controller.rerender_track(edited_file);
+            Controller.rerender_track(edited_file,true);
           }
           Controller.update_sections(new Array(external_listing_id));
         }
@@ -639,8 +650,8 @@ var GBrowseController = Class.create({
         file: file_name
       },
       onSuccess: function(transport) {
-        actually_remove(gbtrack.track_div_id);
         Controller.update_sections(new Array(track_listing_id,external_listing_id));
+        actually_remove(gbtrack.track_div_id);
       } // end onSuccess
     });
   },
@@ -673,6 +684,13 @@ function initialize_page() {
   Overview.prototype.initialize();
   Region.prototype.initialize();
   Details.prototype.initialize();
+}
+
+// set the colors for the rubberband regions
+function set_dragcolors(color) {
+     overviewObject.background = color;
+     regionObject.background   = color;
+     detailsObject.background  = color;
 }
 
 function create_time_key () {

@@ -6,6 +6,7 @@ use base 'Bio::Graphics::Browser::Render';
 use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Karyotype;
 use Bio::Graphics::Browser::Util qw[citation get_section_from_label url_label];
+use JSON;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
@@ -169,7 +170,6 @@ sub render_html_head {
     );
 
   # pick stylesheets;
-
   my @css_links;
   my @style = shellwords($self->setting('stylesheet') || '/gbrowse/gbrowse.css');
   for my $s (@style) {
@@ -189,6 +189,15 @@ sub render_html_head {
   push @stylesheets,{src => $self->globals->resolve_path('css/karyotype.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path($titlebar,'url')};
 
+  # colors for "rubberband" selection 
+  my $set_dragcolors = '';
+  if (my $fill = $self->data_source->global_setting('hilite fill')) {
+      $fill =~ s/^(\d+,\d+,\d+)$/rgb($1)/;
+      $fill =~ s/^(#[0-9A-F]{2}[0-9A-F]{2}[0-9A-F]{2})[0-9A-F]{2}$/$1/;
+      $fill =~ s/^(\w+):\d+$/$1/;
+      $set_dragcolors = "set_dragcolors('$fill');";
+  }
+
   # put them all together
   my @args = (-title    => $title,
               -style    => \@stylesheets,
@@ -198,7 +207,7 @@ sub render_html_head {
 	     );
   push @args,(-head=>$self->setting('head'))    if $self->setting('head');
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
-  push @args,(-onLoad=>'initialize_page()');
+  push @args,(-onLoad=>"initialize_page();$set_dragcolors");
 
   return start_html(@args);
 }
@@ -581,6 +590,12 @@ sub render_global_config {
         ? join ' ', @{ $settings->{h_region} }
         : '';
 
+    my %seen;
+    my @region_sizes = grep {!$seen{$_}++} 
+                sort {$b<=>$a} (shellwords($self->data_source->global_setting('region sizes')),
+				$settings->{region_size});
+    
+
     my $content
         = start_form( -name => 'display_settings', -id => 'display_settings' )
         . table(
@@ -610,12 +625,16 @@ sub render_global_config {
                     b( $self->tr('FEATURES_TO_HIGHLIGHT') ),
                     br,
                     textfield(
+			-id       => 'h_feat',
                         -name     => 'h_feat',
                         -value    => $feature_highlights,
                         -size     => 50,
                         -override => 1,
 		        -onChange => 'Controller.set_display_option(this.name,this.value)', 
                     ),
+		    a({-href=>'#',
+		       -onClick=>'Controller.set_display_option("h_feat","_clear_");$("h_feat").value=""'},
+		      $self->tr('CLEAR_HIGHLIGHTING'))
                 ),
             ),
         ),
@@ -632,31 +651,25 @@ sub render_global_config {
                     )
                 : ()
             ),
-            td( b( $self->tr("TRACK_NAMES") ),
-                br,
-                radio_group(
-                    -name   => "sk",
-                    -values => [ "sorted", "unsorted" ],
-                    -labels => {
-                        sorted   => $self->tr("ALPHABETIC"),
-                        unsorted => $self->tr("VARYING")
-                    },
-                    -default  => $settings->{sk},
-                    -override => 1
-                ),
-            ),
+
+            td('&nbsp;'),
 
             td( span(
                     { -title => $self->tr('REGIONS_TO_HIGHLIGHT_HINT') },
                     b( $self->tr('REGIONS_TO_HIGHLIGHT') ),
                     br,
                     textfield(
+			-id       => 'h_region',
                         -name     => 'h_region',
                         -value    => $region_highlights,
                         -size     => 50,
                         -override => 1,
 		        -onChange    => 'Controller.set_display_option(this.name,this.value)', 
                     ),
+		    a({-href=>'#',
+		       -onClick=>'Controller.set_display_option("h_region","_clear_");$("h_region").value=""'
+		      },
+		      $self->tr('CLEAR_HIGHLIGHTING'))
                 ),
             ),
         ),
@@ -671,31 +684,15 @@ sub render_global_config {
                     ),
                 )
             ),
-            td( { -id => 'ks_label', },
-                b( $self->tr('KEY_POSITION') ),
-                br,
-                radio_group(
-                    -name   => 'ks',
-                    -values => \@key_positions,
-                    -labels => {
-                        between => $self->tr('BETWEEN'),
-                        bottom  => $self->tr('BENEATH'),
-                        left    => $self->tr('LEFT'),
-                        right   => $self->tr('RIGHT'),
-                    },
-                    -default  => $settings->{ks},
-                    -override => 1,
-                    -id       => 'key positions',
-                )
-            ),
+            td('&nbsp;'),
             td( $self->setting('region segment')
                 ? ( b( $self->tr('Region_size') ),
                     br,
-                    textfield(
+                    popup_menu(
                         -name     => 'region_size',
                         -default  => $settings->{region_size},
+			-values   => \@region_sizes,
                         -override => 1,
-                        -size     => 20,
                         -onChange   => 'Controller.set_display_option(this.name,this.value)',
                     ),
 
@@ -789,7 +786,7 @@ sub upload_file_rows {
 
     my $escaped_file = CGI::escape($file);
     $return_html .= TR(
-        { -class => 'uploadbody' },
+        { -class => 'uploadbody'},
         th( { -width => '20%', -align => 'right' }, $link ),
         td( { -colspan => 3 },
             button(
@@ -809,7 +806,8 @@ sub upload_file_rows {
                 )),
     );
     $return_html .= TR( { -class => 'uploadbody' },
-        td('&nbsp;'), td( { -colspan => 3 }, @info ) );
+        td('&nbsp;'), td( { -colspan => 3}, @info ) );
+    $return_html .= span({-id => $escaped_file});
     return $return_html;
 }
 
@@ -978,7 +976,7 @@ sub edit_uploaded_file {
         . button(
         -name    => 'accept_button',
         -value   => $self->tr('ACCEPT_RETURN'),
-        -onClick => 'Controller.commit_file_edit("' . $file . '");'
+        -onClick => qq[Controller.commit_file_edit("$file");],
         );
 
     $return_str .= table(
@@ -1259,14 +1257,18 @@ sub slidertable {
 		  -onClick => "Controller.update_coordinates(this.name)"
      ),
      '&nbsp;',
-     image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
+     image_button(-src=>"$buttonsDir/mminus.png",
+		  -name=>"zoom out $fine_zoom",
+		  -style=>'background-color: transparent',
 		  -title=>"zoom out $fine_zoom",
 		  -onClick => "Controller.update_coordinates(this.name)"
      ),
      '&nbsp;',
      $self->zoomBar($segment,$whole_segment,$buttonsDir),
      '&nbsp;',
-     image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
+     image_button(-src=>"$buttonsDir/mplus.png",
+		  -name=>"zoom in $fine_zoom",
+		  -style=>'background-color: transparent',
 		  -title=>"zoom in $fine_zoom",
 		  -onClick => "Controller.update_coordinates(this.name)",
      ),

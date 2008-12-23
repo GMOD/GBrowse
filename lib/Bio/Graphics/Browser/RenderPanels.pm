@@ -222,7 +222,7 @@ sub make_requests {
 
         # get config data from the feature files
         my @extra_args = eval {
-            $feature_files->{$label}->types, $feature_files->{$label}->mtime,;
+            $feature_files->{$label}->types, $feature_files->{$label}->mtime;
         } if $feature_files && $feature_files->{$label};
 
         my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
@@ -364,8 +364,8 @@ sub wrap_rendered_track {
     }
 
     elsif ( $label =~ /^file:/ ) {
-        my $url = "?modify.${label}=" . $self->language->tr('Edit');
-        $config_click = "window.location='$url'";
+	my $escaped_file = CGI::escape($label);
+	$config_click    = qq[Controller.edit_upload('$escaped_file')];
     }
 
     else {
@@ -1029,11 +1029,15 @@ sub run_local_requests {
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
 
+	my $multiple_tracks = $label =~ /^\w.+:/ 
+	    && $label !~ /:(overview|region)/; # a plugin, uplaoded file or remote file
+
         my @keystyle = ( -key_style => 'between' )
-            if $label =~ /^\w+:/ && $label !~ /:(overview|region)/; # a plugin
+            if $multiple_tracks;
 
 	my $key = $source->setting( $label => 'key' ) || '' ;
-	my @nopad = (($key eq '') || ($key eq 'none')) && ($label !~ /^plugin:/)
+	my @nopad = (($key eq '') || ($key eq 'none')) 
+	    && !$multiple_tracks
              ? (-pad_top => 0)
              : ();
         my $panel_args = $requests->{$label}->panel_args;
@@ -1327,16 +1331,15 @@ sub add_feature_file {
     $file->render(
 		  $args{panel},
 		  $args{position},
-		  #$options,
-	          0,
+	          $options,
 		  $self->bump_density,
 		  $self->label_density,
 		  $select,
-	          undef,
+	          $self->segment,
 	);
   };
 
-  $self->error("error while rendering ",$args{file}->name,": $@") if $@;
+  warn "error while rendering ",$args{file}->name,": $@" if $@;
 }
 
 
@@ -1403,6 +1406,7 @@ sub create_panel_args {
 	      -key_style    => $keystyle,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $image_class->gdMediumBoldFont->height+2,
+              -pad_bottom   => 0,
 	      -image_class  => $image_class,
 	      -postgrid     => $postgrid,
 	      -background   => $args->{background} || '',

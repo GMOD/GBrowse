@@ -4,7 +4,7 @@
                       This class handles details-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: detailSelect.js,v 1.5 2008-09-25 15:19:22 mwz444 Exp $
+ $Id: detailSelect.js,v 1.6 2008-12-23 08:07:12 lstein Exp $
 
 */
 
@@ -15,8 +15,9 @@ var detailBalloon;
 var Details = function () {
   this.imageId    = 'Detail Scale_image';
   this.marginTop  = '35px';
-  this.background = 'blue';
-  this.fontColor  = 'white';
+  this.background = 'yellow';
+  this.fontColor  = 'blue';
+  this.border     = '1px solid black';
   this.menuWidth  = '200px';
   return this;
 }
@@ -98,6 +99,10 @@ Details.prototype.loadSegmentInfo = function() {
   if (actualWidth > expectedWidth) {
     this.padLeft     += actualWidth - expectedWidth;
   }
+
+  // We fetch the left margin again because the controller can change 
+  // the size & position of the section after it is created.
+  this.left       = this.elementLocation(document.getElementById(this.imageId),'x1');
 
   this.pixelStart   = this.left  + this.padLeft;
 }

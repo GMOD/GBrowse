@@ -408,6 +408,10 @@ sub region_segment {
     my $regionview_start = int($midpoint - $regionview_length/2 + 1);
     my $regionview_end = int($midpoint + $regionview_length/2);
 
+    if ($regionview_length > $whole->length) {
+	$regionview_length = $whole->length;
+    }
+
     if ($regionview_start < $whole_start) {
 	$regionview_start = 1;
 	$regionview_end   = $regionview_length;

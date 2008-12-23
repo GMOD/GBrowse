@@ -1,0 +1,10 @@
+hilite fill         = #E0E0E020
+hilite outline      = #A0A0A0
+overview bgcolor    = white:0.5
+region bgcolor      = white:0.5
+detail bgcolor      = white:0.5
+grid color          = cyan
+grid major color    = blue
+overview grid       = 0
+region grid         = 0
+detail grid         = 1

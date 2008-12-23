@@ -50,7 +50,7 @@ sub new {
     ($data_source,$session) = @_;
   } elsif (@_ == 1) {
     my $globals = shift;
-    $session = $globals->session();
+    $session = $globals->session(param('id'));
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
   } else {
@@ -3027,7 +3027,7 @@ sub image_link {
     $format      = 'GD' unless $format eq 'GD' || $format eq 'GD::SVG';
 
     my $source   = $self->data_source->name;
-    my $id       = $settings->{id};
+    my $id       = $self->session->id;
     my $flip     = $settings->{flip} || param('flip') || 0;
     my $keystyle = $settings->{ks};
     my $grid     = $settings->{grid} || 0;

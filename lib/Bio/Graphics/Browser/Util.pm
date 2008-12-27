@@ -27,8 +27,8 @@ use base 'Exporter';
 use Text::ParseWords qw();
 use Carp 'carp','cluck';
 
-our @EXPORT    = qw(modperl_request error citation shellwords get_section_from_label url_label);
-our @EXPORT_OK = qw(modperl_request error citation shellwords get_section_from_label url_label);
+our @EXPORT    = qw(modperl_request error citation shellwords url_label);
+our @EXPORT_OK = qw(modperl_request error citation shellwords url_label);
 
 use constant DEBUG => 1;
 
@@ -116,17 +116,6 @@ sub shellwords {
     }
     my @result = Text::ParseWords::shellwords(@args);
     return @result;
-}
-
-sub get_section_from_label {
-    my $label = shift;
-    if ($label eq 'overview' || $label =~ /:overview$/){
-        return 'overview';
-    }
-    elsif ($label eq 'region' || $label =~  /:region$/){
-        return 'region';
-    }
-    return 'detail'
 }
 
 =back

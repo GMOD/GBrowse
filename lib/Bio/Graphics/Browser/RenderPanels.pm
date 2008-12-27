@@ -8,7 +8,7 @@ use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
 use Bio::Graphics::Browser::Render;
 use Bio::Graphics::Browser::CachedTrack;
-use Bio::Graphics::Browser::Util qw[citation shellwords get_section_from_label url_label];
+use Bio::Graphics::Browser::Util qw[citation shellwords url_label];
 use Bio::Graphics::Browser::Render::Slave::Status;
 use IO::File;
 use Time::HiRes 'sleep';
@@ -381,6 +381,7 @@ sub wrap_rendered_track {
     else {
       $title = $source->setting($label=>'key') || $label;
     }
+    $title =~ s/:(overview|region|detail)$//;
 
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
     my $titlebar = span(
@@ -1030,7 +1031,7 @@ sub run_local_requests {
         next if $seenit{$label}++;
 
 	my $multiple_tracks = $label =~ /^\w.+:/ 
-	    && $label !~ /:(overview|region)/; # a plugin, uplaoded file or remote file
+	    && $label !~ /:(overview|region)/; # a plugin, uploaded file or remote file
 
         my @keystyle = ( -key_style => 'between' )
             if $multiple_tracks;
@@ -1066,7 +1067,7 @@ sub run_local_requests {
         else {
 
         my $track_args = $requests->{$label}->track_args;
-        my $track = $panel->add_track(@$track_args);
+        my $track      = $panel->add_track(@$track_args);
             # == populate the tracks with feature data ==
             $self->add_features_to_track(
                 -labels    => [ $label, ],
@@ -1561,8 +1562,8 @@ sub map_html {
 }
 
 # this returns a coderef that will indicate whether an added (external) feature is placed
-# in the overview, region or detailed panel. If the section name begins with a "?", then
-# if not otherwise stated, the feature will be placed in this section.
+# in the overview, region or detailed panel. It is necessary to avoid one section's features
+# from being placed in another section's track.
 sub feature_file_select {
   my $self             = shift;
   my $required_section = shift;
@@ -1575,14 +1576,17 @@ sub feature_file_select {
 
   return sub {
 
-      # This sub is no longer really needed
-    return 1;
+      my $file    = shift;
+      my $type    = shift;
+      my $section = $file->setting($type=>'section')
+	            || $file->setting(general=>'section');
+      my ($modifier) = $type =~ /:(.+)$/;
+      $section   ||= $modifier;
 
-    my $file  = shift;
-    my $type  = shift;
-    my $section = $file->setting($type=>'section') || $file->setting(general=>'section');
-    return $undef_defaults_to_true if !defined$section;
-    return $section =~ /$required_section/;
+      return $undef_defaults_to_true
+	  if !defined $section;
+
+      return $section  =~ /$required_section/;
   };
 }
 

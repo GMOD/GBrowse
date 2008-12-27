@@ -19,7 +19,7 @@ use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::RenderPanels;
 use Bio::Graphics::Browser::GFFPrinter;
-use Bio::Graphics::Browser::Util qw[modperl_request get_section_from_label url_label];
+use Bio::Graphics::Browser::Util qw[modperl_request url_label];
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -133,6 +133,13 @@ sub run {
 
   $self->init();
   $self->update_state();
+
+  # EXPERIMENTAL CODE -- GET RID OF THE URL PARAMETERS
+  if ($ENV{QUERY_STRING} =~ /reset/) {
+      print CGI::redirect(CGI::url(-absolute=>1,-path_info=>1));
+      exit 0;
+  }
+
   $self->render();
   $self->cleanup();
   select($old_fh);
@@ -290,7 +297,7 @@ sub asynchronous_event {
     }
 
     if ( my $element = param('update') ) {
-        warn "UPDATE HAS BEEN DEPRICATED";
+        warn "UPDATE HAS BEEN DEPRECATED";
         my $html = $self->asynchronous_update_element($element);
 	return (200,'text/html',$html);
     }
@@ -323,6 +330,10 @@ sub asynchronous_event {
         $self->init_remote_sources();
         my %track_data;
 
+	@track_names = $self->expand_track_names(@track_names);
+
+	warn "expanded names = @track_names";
+
         foreach my $track_name ( @track_names ) {
             $self->add_track_to_state($track_name);
 	    next  unless $self->segment;
@@ -331,7 +342,7 @@ sub asynchronous_event {
                 = $self->background_individual_track_render($track_name);
 
             my $track_key        = $track_keys->{$track_name};
-            my $track_section    = get_section_from_label($track_name);
+            my $track_section    = $self->get_section_from_label($track_name);
             my $image_width      = $self->get_image_width;
             my $image_element_id = $track_name . "_image";
 
@@ -517,14 +528,13 @@ sub background_track_render {
 
     $self->segment or return;
     my $cache_extra = $self->create_cache_extra();
-    my $external    = $self->external_data,
+    my $external    = $self->external_data;
 
-    # Start rendering the detail, region and overview tracks
-    my @cache_track_hash_list;
-    my $display_details = 1;
-    my $details_msg = '';
+    my $display_details   = 1;
+    my $details_msg       = '';
+    my %requests;
     if ( $self->segment->length <= $self->get_max_segment() ) {
-        push @cache_track_hash_list,
+        $requests{'detail'} =
             $self->render_deferred(
             labels          => [ $self->detail_tracks ],
             segment         => $self->segment,
@@ -543,7 +553,7 @@ sub background_track_render {
         );
     }
 
-    push @cache_track_hash_list,
+    $requests{'region'} =
         $self->render_deferred( labels          => [ $self->regionview_tracks ],
 				segment         => $self->region_segment,
 				section         => 'region', 
@@ -551,7 +561,8 @@ sub background_track_render {
 				external_tracks => $external,
 	    )
         if ( $self->state->{region_size} );
-    push @cache_track_hash_list,
+
+    $requests{'overview'} =
         $self->render_deferred( labels          => [ $self->overview_tracks ],
 				segment         => $self->whole_segment,
 				section         => 'overview', 
@@ -559,13 +570,19 @@ sub background_track_render {
 				external_tracks => $external,
 	    );
 
-    my %track_keys;
-    foreach my $cache_track_hash (@cache_track_hash_list) {
+    my (%track_keys,%seenit);
+    for my $section (keys %requests) {
+	my $cache_track_hash = $requests{$section};
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-            $track_keys{ $track_label }
+	    my $unique_label = $external->{$track_label} 
+	                       ? "$track_label:$section"
+			       : $track_label;
+            $track_keys{ $unique_label }
                 = $cache_track_hash->{$track_label}->key();
         }
     }
+
+    warn "background_track_render() return track keys ",join ' ',%track_keys if DEBUG;
 
     return (\%track_keys, $display_details, $details_msg);
 }
@@ -590,6 +607,8 @@ sub background_individual_track_render {
 
     my $display_details = 1;
     my $details_msg = '';
+
+    my $external    = $self->external_data;
     
     my $section;
     my $segment;
@@ -605,6 +624,9 @@ sub background_individual_track_render {
         $section = 'detail';
         $segment = $self->segment();
     }
+
+    $label    =~ s/:(overview|region|detail)$//
+	if $label =~ /^(file|http|ftp|das):/;
 
     if ($section eq 'detail'
 	and $self->segment
@@ -635,7 +657,10 @@ sub background_individual_track_render {
     my %track_keys;
     foreach my $cache_track_hash ( $cache_track_hash, ) {
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-            $track_keys{ $track_label }
+	    my $unique_label = $external->{$track_label} 
+	        ? "$track_label:$section"
+		: $track_label;
+            $track_keys{ $unique_label }
                 = $cache_track_hash->{$track_label}->key();
         }
     }
@@ -815,7 +840,8 @@ sub render_panels {
     # Kick off track rendering
     if ($section->{'overview'} ) {
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
-        my $panels_html   .= $self->get_blank_panels( [$self->overview_tracks,] );
+        my $panels_html   .= $self->get_blank_panels( [$self->overview_tracks],
+						      'overview' );
         my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
         $html .= div(
             $self->toggle(
@@ -830,7 +856,8 @@ sub render_panels {
     if ( $section->{'regionview'} and $self->state->{region_size} ) {
 
         my $scale_bar_html = $self->scale_bar( $seg, 'region' );
-        my $panels_html   .= $self->get_blank_panels( [$self->regionview_tracks,] );
+        my $panels_html   .= $self->get_blank_panels( [$self->regionview_tracks],
+						      'region');
         my $drag_script    = $self->drag_script( 'region_panels', 'track' );
 
         $html .= div(
@@ -845,7 +872,8 @@ sub render_panels {
 
     if ( $section->{'detailview'} ) {
         my $scale_bar_html = $self->scale_bar( $seg, 'detail' );
-        my $panels_html   .= $self->get_blank_panels( [$self->detail_tracks,] );
+        my $panels_html   .= $self->get_blank_panels( [$self->detail_tracks],
+						      'detail');
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
         my $details_msg    = div({ -id => 'details_msg', },'');
         $html .= div(
@@ -997,7 +1025,6 @@ sub region {
 	$region->set_features_by_region(@{$self->state}{'ref','start','stop'});
     }
     else { # a feature search
-	warn "FEATURE SEARCH" if DEBUG;
 	my $search = Bio::Graphics::Browser::RegionSearch->new(
 	    { source => $self->data_source,
 	      state  => $self->state,
@@ -1537,9 +1564,10 @@ sub set_default_state {
 }
 
 sub update_state {
-  my $self = shift;
+  my $self   = shift;
+
   $self->update_state_from_cgi;
-  my $state         = $self->state;
+  my $state  = $self->state;
   if ($self->segment) {
 
       # A reset won't have a segment, so we need to test for that before we use
@@ -1548,7 +1576,7 @@ sub update_state {
       $state->{seg_min} = $whole_segment->start;
       $state->{seg_max} = $whole_segment->stop;
 
-      # Open Automatically the tracks with features in them
+      # Automatically open the tracks with found features in them
       $self->auto_open();
   }
 
@@ -2508,22 +2536,26 @@ sub load_plugin_annotators {
 
 sub detail_tracks {
   my $self   = shift;
-  my $state  = $self->state;
-  my @tracks = grep {$state->{features}{$_}{visible} && !/:(overview|region)$/ && !/^_/}
-               $self->all_tracks;
+  my @tracks            = grep {!/:(overview|region)$/} $self->visible_tracks;
+  my @files_in_details  = $self->featurefiles_in_section('details');
+  my %seen;
+  return grep {!$seen{$_}++} (@tracks,@files_in_details);
+
 }
+
 sub overview_tracks {
   my $self = shift;
-  my $state = $self->state;
-  return grep {$state->{features}{$_}{visible} && /:overview$/ && !/^_/ }
-               $self->all_tracks;
+  my @tracks = grep {/:overview$/} $self->visible_tracks;
+  my @files_in_overview  = $self->featurefiles_in_section('overview');
+  return (@tracks,@files_in_overview);
 }
 
 sub regionview_tracks {
   my $self = shift;
-  my $state = $self->state;
-  return grep {$state->{features}{$_}{visible} && /:region$/ && !/^_/ }
-               $self->all_tracks;
+  my @tracks = grep {/:region$/}   $self->visible_tracks;
+  my @files_in_region  = $self->featurefiles_in_section('region');
+  return (@tracks,@files_in_region);
+  
 }
 
 sub all_tracks {
@@ -2533,10 +2565,77 @@ sub all_tracks {
 }
 
 sub visible_tracks {
-    my $self = shift;
-    return ($self->detail_tracks,
-	    $self->regionview_tracks,
-	    $self->overview_tracks);
+    my $self  = shift;
+    my $state = $self->state;
+    return grep {$state->{features}{$_}{visible} 
+		 && !/^_/
+    } $self->all_tracks;
+}
+
+sub featurefiles_in_section {
+    my $self             = shift;
+    my $desired_section  = shift;
+
+    my $external = $self->external_data;
+    my $state    = $self->state;
+    my %found;
+
+    for my $label (keys %$external) {
+	$state->{features}{$label}{visible}   or next;
+	my $file     = $external->{$label}    or next;
+	my %sections = map {$_=>1} $self->featurefile_sections($label);
+	$found{$label}++ if $sections{lc $desired_section};
+    }
+    return keys %found;
+}
+
+sub featurefile_sections {
+    my $self  = shift;
+    my $label = shift;
+    my $ff    = $self->external_data->{$label} or return;
+
+    my %sections;
+    my @tracks = (eval {$ff->labels},$ff->types);
+    for my $t (@tracks) {
+	my $section   = $ff->setting($_=>'section');
+	$section    ||= $1 if $t =~ /:(.+)$/;
+	$section    ||= 'details';
+	$sections{lc $_}++ for $section   =~ /(\w+)/g;
+    }
+    return keys %sections;
+}
+
+# given a set of track names append the section names
+# to those that correspond to file uploads
+sub expand_track_names {
+    my $self     = shift;
+    my @tracks   = @_;
+    my $external = $self->external_data;
+    my @results;
+
+    for my $t (@tracks) {
+	if ($external->{$t}) {
+	    my @sections = $self->featurefile_sections($_);
+	    push @results,"$t:$_" foreach @sections;
+	} else {
+	    push @results,$t;
+	}
+    }
+    return @results;
+ }
+
+sub get_section_from_label {
+    my $self   = shift;
+    my $label  = shift;
+
+    if ($label eq 'overview' || $label =~ /:overview$/){
+        return 'overview';
+    }
+    elsif ($label eq 'region' || $label =~  /:region$/){
+        return 'region';
+    }
+    return 'detail'
+
 }
 
 ################## get renderer for this segment #########
@@ -2552,19 +2651,19 @@ sub get_panel_renderer {
 ################## image rendering code #############
 
 # render_detailview is now obsolete
-sub render_detailview {
-  my $self = shift;
-  my $seg  = shift or return;
-  my @panels = $self->render_detailview_panels($seg);
-  my $drag_script = $self->drag_script('detail_panels','track');
-  local $^W = 0; # quash uninit variable warning
-  return div($self->toggle('Details',
-			   div({-id=>'detail_panels',-class=>'track'},
-			       @panels
-			   )
-	     )
-      ).$drag_script;
-}
+# sub render_detailview {
+#   my $self = shift;
+#   my $seg  = shift or return;
+#   my @panels = $self->render_detailview_panels($seg);
+#   my $drag_script = $self->drag_script('detail_panels','track');
+#   local $^W = 0; # quash uninit variable warning
+#   return div($self->toggle('Details',
+# 			   div({-id=>'detail_panels',-class=>'track'},
+# 			       @panels
+# 			   )
+# 	     )
+#       ).$drag_script;
+# }
 
 sub render_detailview_panels {
     my $self = shift;
@@ -2584,13 +2683,21 @@ sub render_detailview_panels {
 }
 
 sub get_blank_panels {
-    my $self = shift;
+    my $self        = shift;
     my $track_names = shift;
+    my $section     = shift;
 
     my $html  = '';
+    my $external = $self->external_data;
 
     my $image_width = $self->get_image_width;
     foreach my $track_name ( @{ $track_names || [] } ) {
+
+	my $divname = $external->{$track_name} 
+	     ? "$track_name:$section"
+	     : $track_name;
+
+	warn "$track_name => $divname" if DEBUG;
 
         my $track_html = $self->render_grey_track(
             track_name       => $track_name,
@@ -2599,7 +2706,7 @@ sub get_blank_panels {
             image_element_id => $track_name . "_image",
         );
         $track_html = $self->wrap_track_in_track_div(
-            track_name => $track_name,
+            track_name => $divname,
             track_html => $track_html,
         );
         $html .= $track_html;
@@ -2621,12 +2728,6 @@ sub get_image_width {
 
     my $image_width = $state->{'width'} + $padl + $padr;
     return $image_width;
-}
-
-sub render_regionview {
-  my $self = shift;
-  my $seg = shift;
-  return '';
 }
 
 sub render_deferred {
@@ -2745,7 +2846,7 @@ sub render_deferred_track {
 						  image_height     => EMPTY_IMAGE_HEIGHT,
 						  image_element_id => $track_name . "_image",
 						  error_message    => 'Track rendering error: '.$cache->errstr)
-    } else {
+     } else {
         my $image_width = $self->get_image_width;
         $result_html .= $self->render_grey_track(
 						 track_name       => $track_name,

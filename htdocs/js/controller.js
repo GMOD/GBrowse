@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.65 2008-12-23 08:07:12 lstein Exp $
+ $Id: controller.js,v 1.66 2008-12-27 02:59:19 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -69,8 +69,9 @@ var GBrowseController = Class.create({
   
   register_track:
   function (track_name,track_type,track_section) {
-    
+
     var gbtrack = new GBrowseTrack(track_name,track_type,track_section); 
+
     this.gbtracks.set(track_name,gbtrack);
     if (track_type=="scale_bar"){
       return gbtrack;
@@ -79,6 +80,16 @@ var GBrowseController = Class.create({
     return gbtrack;
   }, // end register_track
 
+  // Pass an iterator to execute something on each track
+  each_track:
+  function (iterator) {
+     this.gbtracks.keys().each(
+          function(key) {
+	     var track=this.gbtracks.get(key);
+             iterator(track);
+          },this);
+  }, //end each_track
+
   // Sets the time key for the tracks so we know if one is outdated
   set_last_update_keys:
   function (track_keys) {
@@ -86,7 +97,10 @@ var GBrowseController = Class.create({
 
     for (var track_name in track_keys){
       var gbtrack = this.gbtracks.get(track_name);
-      gbtrack.set_last_update_key(this.last_update_key);
+      if (gbtrack == null)
+            alert('BUG (please report): track_name = '+track_name+', gbtrack='+gbtrack);
+      if (gbtrack != null) 
+         gbtrack.set_last_update_key(this.last_update_key);
     }
     
   }, // end set_last_update_keys
@@ -100,7 +114,7 @@ var GBrowseController = Class.create({
     
   },
 
-  // Hids the detail tracks in case they shouldn't be displayed for some reason
+  // Hides the detail tracks in case they shouldn't be displayed for some reason
   hide_detail_tracks:
   function () {
     this.gbtracks.values().each(
@@ -244,7 +258,6 @@ var GBrowseController = Class.create({
         var results             = transport.responseJSON;
         var track_keys          = results.track_keys;
         Controller.segment_info = results.segment_info;
-
         $('details_msg').innerHTML = results.details_msg;
         Controller.set_last_update_keys(track_keys);
         Controller.get_multiple_tracks(track_keys);
@@ -304,6 +317,7 @@ var GBrowseController = Class.create({
       } // end onSuccess
       
     }); // end Ajax.Request
+
   }, // end update_coordinates
 
   add_track:
@@ -606,12 +620,12 @@ var GBrowseController = Class.create({
 
   edit_upload:
   function(edit_file) {
-    Controller.update_sections(new Array(external_utility_div_id), '&edit_file='+edit_file,true);
+    Controller.update_sections(new Array(external_utility_div_id), 
+        '&edit_file='+edit_file,true);
   },
 
   commit_file_edit:
   function(edited_file) {
-    var gbtrack = this.gbtracks.get(edited_file);
     var form_element = $(edit_upload_form_id);
     new Ajax.Request('#',{
       method:     'post',
@@ -631,8 +645,15 @@ var GBrowseController = Class.create({
         }
         else{
         // update track if it exists
-          if ( null != $(gbtrack.track_div_id)){
-            Controller.rerender_track(edited_file,true);
+	  var s=new Array(edited_file,
+	                 edited_file+':overview',
+			 edited_file+':region',
+			 edited_file+':detail');
+	  for (var i=0;i<s.length;i++){
+	      var gbtrack = Controller.gbtracks.get(s[i]);
+              if ( null != gbtrack) {
+                  Controller.rerender_track(s[i],true);
+	      }
           }
           Controller.update_sections(new Array(external_listing_id));
         }
@@ -642,7 +663,7 @@ var GBrowseController = Class.create({
 
   delete_upload_file:
   function(file_name) {
-    var gbtrack = this.gbtracks.get(file_name);
+
     new Ajax.Request('#',{
       method:     'post',
       parameters: {
@@ -650,8 +671,16 @@ var GBrowseController = Class.create({
         file: file_name
       },
       onSuccess: function(transport) {
-        Controller.update_sections(new Array(track_listing_id,external_listing_id));
-        actually_remove(gbtrack.track_div_id);
+	var sections = new Array('','overview','region','detail');
+	sections.each(function(section) {
+	  var name    = section.length>0 ? file_name+':'+section : file_name;
+	  var gbtrack  = Controller.gbtracks.get(name);
+	  if (gbtrack != null) {
+	      actually_remove(gbtrack.track_div_id);
+	      Controller.gbtracks.unset(name);
+          }
+          Controller.update_sections(new Array(track_listing_id,external_listing_id));
+	});
       } // end onSuccess
     });
   },
@@ -701,9 +730,9 @@ function create_time_key () {
 //prototype's remove function doesn't actually remove the element from
 //reachability.
 function actually_remove (element_name) {
-  $(element_name).remove();
-  $(element_name).innerHTML = '';
-  $(element_name).name = 'rmd';
-  $(element_name).id = 'rmd';
+  var element = $(element_name);
+  if (element==null) return;
+  var parent = element.parentNode;
+  parent.removeChild(element);
 }
 

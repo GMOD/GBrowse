@@ -5,7 +5,7 @@ use warnings;
 use base 'Bio::Graphics::Browser::Render';
 use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Karyotype;
-use Bio::Graphics::Browser::Util qw[citation get_section_from_label url_label];
+use Bio::Graphics::Browser::Util qw[citation url_label];
 use JSON;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
@@ -42,24 +42,17 @@ sub render_navbar {
   my $source   = '/'.$self->session->source.'/';
 
   my $searchform = join '',(
-                start_form(
-                    -name   => 'searchform',
-                    -id     => 'searchform',
+      start_form(
+	  -name   => 'searchform',
+	  -id     => 'searchform',
                     
-                    # Submitting through the Controller seems to have been a bad idea
-                    #-onSubmit => q[ 
-                    #    Controller.update_coordinates("set segment " + document.searchform.name.value); 
-                    #    var return_val = (document.searchform.force_submit.value==1); 
-                    #    document.searchform.force_submit.value=0;
-                    #    return return_val;
-                    #],
-                ),
-                hidden(-name=>'force_submit',-value=>0),
-                div({ -id => 'search_form_objects' },
-                  $self->render_search_form_objects(),
-                ),
-			    end_form
-			    );
+      ),
+      hidden(-name=>'force_submit',-value=>0),
+      div({ -id   => 'search_form_objects' },
+	  $self->render_search_form_objects(),
+      ),
+      end_form
+  );
 
   my $search = $self->setting('no search')
     ? '' : b($self->tr('Landmark')).':'.br().$searchform;
@@ -1198,13 +1191,13 @@ sub wrap_plugin_configuration {
 sub wrap_track_in_track_div {
     my $self       = shift;
     my %args       = @_;
-    my $track_name = $args{'track_name'};
-    my $track_html = $args{'track_html'};
+    my $track_name    = $args{'track_name'};
+    my $track_html    = $args{'track_html'};
 
-    # track_type Used in register_track() javascript method
+    # track_type used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
 
-    my $section = get_section_from_label($track_name);
+    my $section = $self->get_section_from_label($track_name);
     my $class = $track_name =~ /scale/i ? 'scale' : 'track';
 
     return div(

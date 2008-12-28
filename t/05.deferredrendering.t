@@ -53,10 +53,16 @@ use TemplateCopy; # for the template_copy() function
 # Test remote rendering
 # Notice that $ENV{GBROWSE_DOCS} is NOT set when we launch these servers.
 # It is set at run time as part of the exchange between master and slave.
-my @servers = (Bio::Graphics::Browser::Render::Slave->new(LocalPort=>8110), # main
-	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>8100), # alignments
-	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>8101), # cleavage sites
+my @servers = (Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # main
+	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # alignments
+	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # cleavage sites
     );
+
+for my $s (@servers) {
+    $s->debug(0);
+    ok($s->run);
+}
+
 # rewrite the template config files
 for ('volvox_final.conf','yeast_chr1.conf') {
     template_copy("testdata/conf/templates/$_",
@@ -66,10 +72,6 @@ for ('volvox_final.conf','yeast_chr1.conf') {
 		      '$REMOTE2'=>"http://localhost:".$servers[2]->listen_port});
 }
 
-for my $s (@servers) {
-    $s->debug(0);
-    ok($s->run);
-}
 
 
 
@@ -129,7 +131,7 @@ ok($key1);
 
 my $view = $render->render_deferred_track(
     cache_key  => $key1,
-    track_name => $track_name1,
+    track_id => $track_name1,
 );
 my @images = $view =~ m!src=\"(/gbrowse/i/volvox/[a-z0-9]+\.png)\"!g;
 ok(scalar @images,2);  # one for the main image, and one for the pad
@@ -148,7 +150,7 @@ $render->data_source->cache_time(-1);
 ok( substr(
         $render->render_deferred_track(
             cache_key  => $key1,
-            track_name => $track_name1,
+            track_id   => $track_name1,
         ),
         0, 16
     ),

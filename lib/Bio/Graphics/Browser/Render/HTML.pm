@@ -584,12 +584,12 @@ sub render_global_config {
         : '';
 
     my %seen;
-    local $^W = 0;  # to avoid uninit variable warnings from next line
-    my @region_sizes = grep {!$seen{$_}++} 
-                sort {$b<=>$a} (shellwords($self->data_source->global_setting('region sizes')),
-				$settings->{region_size});
-    
 
+    my $region_size = $settings->{region_size} || 0;
+    my @region_size  = shellwords($self->data_source->global_setting('region sizes'));
+    my @region_sizes = grep {!$seen{$_}++} 
+                          sort {$b<=>$a}
+                             grep {defined $_ && $_ > 0} ($region_size,@region_size);
     my $content
         = start_form( -name => 'display_settings', -id => 'display_settings' )
         . table(

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.67 2008-12-28 00:05:44 lstein Exp $
+ $Id: controller.js,v 1.68 2008-12-28 05:08:34 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -91,9 +91,12 @@ var GBrowseController = Class.create({
 
   unregister_track:
   function (track_name) {
-    var ids        = this.gbtrackname_to_id.get(track_name);
-    for (var i=0;i<ids;i++) this.gbtracks.unset(ids[i]);
-    this.gbtrackname_to_id.unset(track_name);
+    var id_hash  = this.gbtrackname_to_id.get(track_name);
+    if (id_hash != null) {
+       var ids = id_hash.keys();
+       for (var i=0;i<ids.length;i++) this.gbtracks.unset(ids[i]);
+       this.gbtrackname_to_id.unset(track_name);
+    }
   }, // end unregister_track
 
   // Pass an iterator to execute something on each track
@@ -312,7 +315,10 @@ var GBrowseController = Class.create({
 
     //Grey out image
     this.each_track(function(gbtrack) {
+         if ($(gbtrack.track_image_id) != null)
 	    $(gbtrack.track_image_id).setOpacity(0.3);
+         else
+            alert('REPORT THIS BUG: element '+gbtrack.track_image_id+' should not be null');
     });
     
     new Ajax.Request('#',{
@@ -661,7 +667,7 @@ var GBrowseController = Class.create({
             commit_file_edit: 1
           }).toQueryString(),
       onSuccess: function(transport) {
-        var results    = transport.responseJSON;
+        var results      = transport.responseJSON;
         var file_created = results.file_created;
         Controller.wipe_div(external_utility_div_id); 
 
@@ -694,8 +700,8 @@ var GBrowseController = Class.create({
         Controller.each_track(file_name,function(gbtrack) {
 	      actually_remove(gbtrack.track_div_id);
           });
-        Controller.unregister_track(file_name);
         Controller.update_sections(new Array(track_listing_id,external_listing_id));
+        Controller.unregister_track(file_name);
       } // end onSuccess
     });
   },
@@ -719,15 +725,11 @@ var GBrowseController = Class.create({
           Controller.add_track(eurl, function(){
             Controller.update_sections(new Array(track_listing_id,external_listing_id));
           })
-        }
-        else{
-         // update track if it exists
-	 Controller.each_track(eurl,function(gbtrack) {
+        } else
+	  Controller.each_track(eurl,function(gbtrack) {
              Controller.rerender_track(gbtrack.track_id,true);
-         });
-         Controller.update_sections(new Array(track_listing_id,external_listing_id));
+          });
         }
-      }
     });
   }
 

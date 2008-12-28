@@ -157,9 +157,9 @@ docs/README.tutorial
 etc/default/gbrowse-slave
 etc/init.d/gbrowse-slave
 htdocs/annotation_help.html
-htdocs/backgrounds/cloud.jpg
-htdocs/backgrounds/lrock005.jpg
-htdocs/backgrounds/steel.jpg
+htdocs/images/backgrounds/cloud.jpg
+htdocs/images/backgrounds/lrock005.jpg
+htdocs/images/backgrounds/steel.jpg
 htdocs/css/gbrowse.css
 htdocs/css/gbrowse_transparent.css
 htdocs/css/karyotype.css

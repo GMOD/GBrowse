@@ -135,7 +135,7 @@ sub run {
   $self->update_state();
 
   # EXPERIMENTAL CODE -- GET RID OF THE URL PARAMETERS
-  if ($ENV{QUERY_STRING} =~ /reset/) {
+  if ($ENV{QUERY_STRING} && $ENV{QUERY_STRING} =~ /reset/) {
       print CGI::redirect(CGI::url(-absolute=>1,-path_info=>1));
       exit 0;
   }
@@ -335,7 +335,7 @@ sub asynchronous_event {
 	    warn "add_track_to_state($track_name)" if DEBUG;
 
             $self->add_track_to_state($track_name);
-	    next  unless $self->segment;
+	    next unless $self->segment;
 
 	    my @track_ids = $self->expand_track_names($track_name);
 
@@ -457,6 +457,7 @@ sub asynchronous_event {
 	my $data = param('eurl');
 	$self->init_remote_sources;
 	$self->remote_sources->add_source($data);
+	$self->add_track_to_state($data);
 	warn "adding $data to remote sources" if DEBUG;
 	return (200,'application/json',{url_created=>1});
     }
@@ -2686,20 +2687,21 @@ sub get_panel_renderer {
 
 ################## image rendering code #############
 
-# render_detailview is now obsolete
-# sub render_detailview {
-#   my $self = shift;
-#   my $seg  = shift or return;
-#   my @panels = $self->render_detailview_panels($seg);
-#   my $drag_script = $self->drag_script('detail_panels','track');
-#   local $^W = 0; # quash uninit variable warning
-#   return div($self->toggle('Details',
-# 			   div({-id=>'detail_panels',-class=>'track'},
-# 			       @panels
-# 			   )
-# 	     )
-#       ).$drag_script;
-# }
+# render_detailview is now obsolete, but we retain it
+# because it is handy for regression testing.
+sub render_detailview {
+    my $self = shift;
+    my $seg  = shift or return;
+    my @panels = $self->render_detailview_panels($seg);
+    my $drag_script = $self->drag_script('detail_panels','track');
+    local $^W = 0; # quash uninit variable warning
+    return div($self->toggle('Details',
+			     div({-id=>'detail_panels',-class=>'track'},
+				 @panels
+			     )
+	       )
+	).$drag_script;
+}
 
 sub render_detailview_panels {
     my $self = shift;

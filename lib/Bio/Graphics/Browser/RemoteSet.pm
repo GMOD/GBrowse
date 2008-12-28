@@ -28,8 +28,9 @@ sub new {
 		   },ref $package || $package;
   for my $track (@{$state->{tracks}||[]}) {
     if ($track =~ /^(http|ftp|das):/) {
-      $self->add_source($track,$track);
-      next;
+	warn "adding remote track $track" if DEBUG;
+	$self->add_source($track,$track);
+	next;
     }
     my $remote_url = $config->setting($track=>'remote feature') or next;
     warn "adding remote_url = $remote_url" if DEBUG;

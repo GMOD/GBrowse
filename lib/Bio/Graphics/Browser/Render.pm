@@ -308,13 +308,14 @@ sub asynchronous_event {
         $self->init_remote_sources();
 
         my %track_html;
-        my @track_names = param('track_names');
+        my @track_ids = param('track_ids');
 
-        foreach my $track_name (@track_names) {
-            my $track_key = param( 'tk_' . $track_name ) or next;
-            $track_html{$track_name} = $self->render_deferred_track(
+        foreach my $track_id (@track_ids) {
+            my $track_key = param( 'tk_' . $track_id ) or next;
+	    warn "retrieving $track_id=>$track_key" if DEBUG;
+            $track_html{$track_id} = $self->render_deferred_track(
                 cache_key  => $track_key,
-                track_name => $track_name,
+                track_id   => $track_id,
             ) || '';
         }
 
@@ -330,62 +331,70 @@ sub asynchronous_event {
         $self->init_remote_sources();
         my %track_data;
 
-	@track_names = $self->expand_track_names(@track_names);
-
-	warn "expanded names = @track_names";
-
         foreach my $track_name ( @track_names ) {
+	    warn "add_track_to_state($track_name)" if DEBUG;
+
             $self->add_track_to_state($track_name);
 	    next  unless $self->segment;
 
-            my ( $track_keys, $display_details, $details_msg )
-                = $self->background_individual_track_render($track_name);
+	    my @track_ids = $self->expand_track_names($track_name);
 
-            my $track_key        = $track_keys->{$track_name};
-            my $track_section    = $self->get_section_from_label($track_name);
-            my $image_width      = $self->get_image_width;
-            my $image_element_id = $track_name . "_image";
+	    for my $track_id (@track_ids) {
 
-            my $track_html;
-            if ( $track_section eq 'detail' and not $display_details ) {
-                my $image_width = $self->get_image_width;
-                $track_html .= $self->render_grey_track(
-                    track_name       => $track_name,
-                    image_width      => $image_width,
-                    image_height     => EMPTY_IMAGE_HEIGHT,
-                    image_element_id => $track_name . "_image",
-                );
-            }
-            else {
-                $track_html = $self->render_deferred_track(
-                    cache_key  => $track_key,
-                    track_name => $track_name,
-                ) || '';
-            }
-            $track_html = $self->wrap_track_in_track_div(
-                track_name => $track_name,
-                track_html => $track_html,
-            );
+		warn "rendering track $track_id" if DEBUG;
 
-            my $panel_id = 'detail_panels';
-            if ( $track_name =~ /:overview$/ ) {
-                $panel_id = 'overview_panels';
-            }
-            elsif ( $track_name =~ /:region$/ ) {
-                $panel_id = 'region_panels';
-            }
+		my ( $track_keys, $display_details, $details_msg )
+		    = $self->background_individual_track_render($track_id);
 
-            $track_data{$track_name} = {
-                track_key        => $track_key,
-                track_name       => $track_name,
-                track_html       => $track_html,
-                track_section    => $track_section,
-                image_element_id => $image_element_id,
-                panel_id         => $panel_id,
-                display_details  => $display_details,
-                details_msg      => $details_msg,
-            };
-        }
+		my $track_key        = $track_keys->{$track_id};
+		my $track_section    = $self->get_section_from_label($track_id);
+		my $image_width      = $self->get_image_width;
+		my $image_element_id = $track_name . "_image";
+
+		my $track_html;
+		if ( $track_section eq 'detail' and not $display_details ) {
+		    my $image_width = $self->get_image_width;
+		    $track_html .= $self->render_grey_track(
+			track_id         => $track_name,
+			image_width      => $image_width,
+			image_height     => EMPTY_IMAGE_HEIGHT,
+			image_element_id => $track_name . "_image",
+			);
+		}
+		else {
+		    $track_html = $self->render_deferred_track(
+			cache_key  => $track_key,
+			track_id   => $track_id,
+			) || '';
+		}
+		$track_html = $self->wrap_track_in_track_div(
+		    track_id   => $track_id,
+		    track_name => $track_name,
+		    track_html => $track_html,
+		    );
+
+		my $panel_id = 'detail_panels';
+		if ( $track_name =~ /:overview$/ ) {
+		    $panel_id = 'overview_panels';
+		}
+		elsif ( $track_name =~ /:region$/ ) {
+		    $panel_id = 'region_panels';
+		}
+		warn "returning track_id=$track_id, key=$track_key, name=$track_name" if DEBUG;
+		
+		$track_data{$track_id} = {
+		    track_key        => $track_key,
+		    track_id         => $track_id,
+		    track_name       => $track_name,
+		    track_html       => $track_html,
+		    track_section    => $track_section,
+		    image_element_id => $image_element_id,
+		    panel_id         => $panel_id,
+		    display_details  => $display_details,
+		    details_msg      => $details_msg,
+		};
+	    }
+	}
 
         my $return_object = { track_data => \%track_data, };
         return ( 200, 'application/json', $return_object );
@@ -405,14 +414,14 @@ sub asynchronous_event {
     }
 
     if ( my $action = param('rerender_track') ) {
-        my $track_name = param('track_name');
+        my $track_id = param('track_id');
 
         $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
 
         my ( $track_keys, $display_details, $details_msg )
-            = $self->background_individual_track_render($track_name);
+            = $self->background_individual_track_render($track_id);
 
         my $return_object = {
             track_keys      => $track_keys,
@@ -444,8 +453,17 @@ sub asynchronous_event {
         return (200,'application/json',$return_object);
     }
 
+    if (param ('add_url')) {
+	my $data = param('eurl');
+	$self->init_remote_sources;
+	$self->remote_sources->add_source($data);
+	warn "adding $data to remote sources" if DEBUG;
+	return (200,'application/json',{url_created=>1});
+    }
+
     if ( param('delete_upload_file') ) {
         my $file = param('file');
+	warn "deleting file $file " if DEBUG;
         $self->init_remote_sources();
         $self->uploaded_sources->clear_file($file);
         $self->remote_sources->delete_source($file);
@@ -533,6 +551,7 @@ sub background_track_render {
     my $display_details   = 1;
     my $details_msg       = '';
     my %requests;
+
     if ( $self->segment->length <= $self->get_max_segment() ) {
         $requests{'detail'} =
             $self->render_deferred(
@@ -574,11 +593,9 @@ sub background_track_render {
     for my $section (keys %requests) {
 	my $cache_track_hash = $requests{$section};
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-	    my $unique_label = $external->{$track_label} 
-	                       ? "$track_label:$section"
-			       : $track_label;
-            $track_keys{ $unique_label }
-                = $cache_track_hash->{$track_label}->key();
+	    my $track_id = $self->trackname_to_id($track_label,$section);
+            $track_keys{ $track_id }
+	      = $cache_track_hash->{$track_label}->key();
         }
     }
 
@@ -624,9 +641,6 @@ sub background_individual_track_render {
         $section = 'detail';
         $segment = $self->segment();
     }
-
-    $label    =~ s/:(overview|region|detail)$//
-	if $label =~ /^(file|http|ftp|das):/;
 
     if ($section eq 'detail'
 	and $self->segment
@@ -930,9 +944,11 @@ sub scale_bar {
         height     => $height,
         url        => $url,
         status     => '',
+	section    => $this_section,
     );
     $html = $self->wrap_track_in_track_div(
-        track_name => $label,
+	track_name  => $label,
+        track_id    => $label,
         track_html => $html,
         track_type => 'scale_bar',
     );
@@ -1170,7 +1186,7 @@ sub handle_plugins {
     $self->init_plugins();
 
     my $plugin;
-    if ($plugin_base   =~ /^plugin:(.+)/) {
+    if ($plugin_base   =~ /^plugin:([^:]+)/) {
 	my $name       = $1;
 	($plugin) = grep {$_->name eq $name } $self->plugins->plugins;
     } else {
@@ -1702,8 +1718,6 @@ sub update_state_from_cgi {
   $self->update_region($state);
   $self->update_section_visibility($state);
   $self->update_external_sources();
-
-#  $self->handle_remotes();
   $self->handle_external_data();
 
 }
@@ -2536,9 +2550,12 @@ sub load_plugin_annotators {
 
 sub detail_tracks {
   my $self   = shift;
-  my @tracks            = grep {!/:(overview|region)$/} $self->visible_tracks;
-  my @files_in_details  = $self->featurefiles_in_section('details');
+  my $external = $self->external_data;
+  my @tracks            = grep {!$external->{$_}}
+                          grep {!/:(overview|region)$/} $self->visible_tracks;
+  my @files_in_details  = $self->featurefiles_in_section('detail');
   my %seen;
+
   return grep {!$seen{$_}++} (@tracks,@files_in_details);
 
 }
@@ -2592,16 +2609,22 @@ sub featurefiles_in_section {
 sub featurefile_sections {
     my $self  = shift;
     my $label = shift;
+
     my $ff    = $self->external_data->{$label} or return;
 
     my %sections;
-    my @tracks = (eval {$ff->labels},$ff->types);
-    for my $t (@tracks) {
-	my $section   = $ff->setting($_=>'section');
-	$section    ||= $1 if $t =~ /:(.+)$/;
-	$section    ||= 'details';
+    my @types  = $ff->types;
+    for my $t (@types) {
+	my $section;
+	if (my $label = eval {$ff->type2label($t)}) {
+	    $section   = $ff->setting($label => 'section');
+	    $section ||= $1 if $label =~ /:(overview|region|detail|details)$/i;
+	}
+	$section    ||= 'detail';
+	$section    =~ s/details/detail/; # foo!
 	$sections{lc $_}++ for $section   =~ /(\w+)/g;
     }
+
     return keys %sections;
 }
 
@@ -2610,12 +2633,14 @@ sub featurefile_sections {
 sub expand_track_names {
     my $self     = shift;
     my @tracks   = @_;
+
     my $external = $self->external_data;
     my @results;
 
     for my $t (@tracks) {
 	if ($external->{$t}) {
-	    my @sections = $self->featurefile_sections($_);
+	    my @sections = $self->featurefile_sections($t);
+	    @sections    = ('detail') unless @sections;
 	    push @results,"$t:$_" foreach @sections;
 	} else {
 	    push @results,$t;
@@ -2636,6 +2661,17 @@ sub get_section_from_label {
     }
     return 'detail'
 
+}
+
+# This turns track names into IDs for use at the client side.
+# This is necessary because tracks from external files/URLs
+# may generate more than one track
+sub trackname_to_id {
+    my $self = shift;
+    my ($name,$section) = @_;
+    $self->external_data->{$name}
+                   ? "$name:$section"
+		   : $name;
 }
 
 ################## get renderer for this segment #########
@@ -2693,20 +2729,19 @@ sub get_blank_panels {
     my $image_width = $self->get_image_width;
     foreach my $track_name ( @{ $track_names || [] } ) {
 
-	my $divname = $external->{$track_name} 
-	     ? "$track_name:$section"
-	     : $track_name;
+	my $divname = $self->trackname_to_id($track_name,$section);
 
 	warn "$track_name => $divname" if DEBUG;
 
         my $track_html = $self->render_grey_track(
-            track_name       => $track_name,
+            track_id         => $track_name,
             image_width      => $image_width,
             image_height     => EMPTY_IMAGE_HEIGHT,
             image_element_id => $track_name . "_image",
         );
         $track_html = $self->wrap_track_in_track_div(
-            track_name => $divname,
+	    track_name => $track_name,
+            track_id   => $divname,
             track_html => $track_html,
         );
         $html .= $track_html;
@@ -2768,17 +2803,18 @@ sub render_grey_track {
     my $image_width      = $args{'image_width'};
     my $image_height     = $args{'image_height'};
     my $image_element_id = $args{'image_element_id'};
-    my $track_name       = $args{'track_name'};
+    my $track_id         = $args{'track_id'};
 
     my $renderer = $self->get_panel_renderer();
     my $url      = $renderer->source->globals->button_url() . "/grey.png";
 
     my $html = $renderer->wrap_rendered_track(
-        label    => $track_name,
+        label    => $track_id,
         area_map => [],
         width    => $image_width,
         height   => $image_height,
         url      => $url,
+	section  => 'detail',
         status   => '',
     );
 
@@ -2791,7 +2827,7 @@ sub render_error_track {
     my $image_width      = $args{'image_width'};
     my $image_height     = $args{'image_height'};
     my $image_element_id = $args{'image_element_id'};
-    my $track_name       = $args{'track_name'};
+    my $track_id         = $args{'track_id'};
     my $error_message    = $args{'error_message'};
 
     my $gd               = GD::Image->new($image_width,$image_height);
@@ -2806,11 +2842,12 @@ sub render_error_track {
     my ($url,$path) = $self->data_source->generate_image($gd);
 
     return $self->get_panel_renderer->wrap_rendered_track(
-        label    => $track_name,
+        label    => $track_id,
         area_map => [],
         width    => $image_width,
         height   => $image_height,
         url      => $url,
+	section  => 'detail',
         status   => '',
     );
 }
@@ -2819,7 +2856,7 @@ sub render_deferred_track {
     my $self             = shift;
     my %args             = @_;
     my $cache_key        = $args{'cache_key'};
-    my $track_name       = $args{'track_name'};
+    my $track_id         = $args{'track_id'};
 
     my $renderer = $self->get_panel_renderer;
 
@@ -2831,28 +2868,28 @@ sub render_deferred_track {
     $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
 
-    warn "render_deferred_track(): $track_name: status = $status_html" if DEBUG;
+    warn "render_deferred_track(): $track_id: status = $status_html" if DEBUG;
 
     my $result_html = '';
     if ( $cache->status eq 'AVAILABLE' ) {
-        my $result = $renderer->render_tracks( { $track_name => $cache } );
-        $result_html = $result->{$track_name};
+        my $result = $renderer->render_tracks( { $track_id => $cache } );
+        $result_html = $result->{$track_id};
     }
     elsif ($cache->status eq 'ERROR') {
         my $image_width = $self->get_image_width;
         $result_html .= $self->render_error_track(
-						  track_name       => $track_name,
+						  track_id       => $track_id,
 						  image_width      => $image_width,
 						  image_height     => EMPTY_IMAGE_HEIGHT,
-						  image_element_id => $track_name . "_image",
+						  image_element_id => $track_id . "_image",
 						  error_message    => 'Track rendering error: '.$cache->errstr)
      } else {
         my $image_width = $self->get_image_width;
         $result_html .= $self->render_grey_track(
-						 track_name       => $track_name,
+						 track_id       => $track_id,
 						 image_width      => $image_width,
 						 image_height     => EMPTY_IMAGE_HEIGHT,
-						 image_element_id => $track_name . "_image",
+						 image_element_id => $track_id . "_image",
 						 );
     }
     return $status_html . $result_html;
@@ -2965,11 +3002,14 @@ sub external_data {
 	my $rel2abs      = $self->coordinate_mapper($segment,1);
 	my $rel2abs_slow = $self->coordinate_mapper($segment,0);
 	for my $featureset ($self->plugins,$self->uploaded_sources,$self->remote_sources) {
+	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} 
+	        if DEBUG;
 	    next unless $featureset;
 	    $featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow,$max_segment);
 	}
     }
-    
+
+    warn "FEATURE files = ",join ' ',%$f if DEBUG;
     return $self->{feature_files} = $f;
 }
 

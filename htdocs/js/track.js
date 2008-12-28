@@ -2,7 +2,7 @@
  track.js -- The GBrowse track object
 
  Ben Faga <faga.cshl@gmail.com>
- $Id: track.js,v 1.6 2008-10-24 20:19:26 lstein Exp $
+ $Id: track.js,v 1.7 2008-12-28 00:05:44 lstein Exp $
 
 Method structure
  - Class Utility Methods
@@ -14,12 +14,13 @@ var GBrowseTrack = Class.create({
   // Class Utility Methods ******************************************
   
   initialize:
-  function (track_name,track_type,track_section) {
+  function (track_id,track_name,track_type,track_section) {
+    this.track_id        = track_id;
     this.track_name      = track_name;
     this.track_type      = track_type;
     this.track_section   = track_section;
-    this.track_div_id    = "track_"+track_name;
-    this.track_image_id  = track_name + "_image";
+    this.track_div_id    = "track_"+track_id;
+    this.track_image_id  = track_id + "_image";
     this.last_update_key = 0;
     this.expired_count   = 0;
 

@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.3 2008-12-19 22:43:42 lstein Exp $
+# $Id: GFFPrinter.pm,v 1.4 2008-12-28 00:05:44 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -291,7 +291,7 @@ sub print_gff3_data {
     my $types   = shift;
     my $filters = shift;
 
-    my $s           = $self->segment;
+    my $s           = $self->get_segment;
     my $data_source = $self->data_source;
     my $len         = $s->length;
 

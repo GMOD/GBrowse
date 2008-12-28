@@ -12,18 +12,22 @@ function gbCheck (button,state) {
   if (!container) { return false; }
   var checkboxes = container.getElementsByTagName('input');
   if (!checkboxes) { return false; }
+
+  var added_tracks = false;
+
   if (state == 1){
     var track_names = new Array();
     for (var i=0; i<checkboxes.length; i++) {
       checkboxes[i].checked=state;
       track_names.push(checkboxes[i].value)
     }
-    Controller.add_tracks(track_names);
+    added_tracks = Controller.add_tracks(track_names);
   }
-  else{
+
+  if  (!added_tracks) {
     for (var i=0; i<checkboxes.length; i++) {
-      checkboxes[i].checked=state;
-      gbToggleTrack(checkboxes[i]);
+       checkboxes[i].checked=state;
+       gbToggleTrack(checkboxes[i]);
     }
   }
   gbTurnOff(a);
@@ -34,23 +38,29 @@ function gbCheck (button,state) {
 function gbToggleTrack (button) {
   var track_name = button.value;
   var visible    = button.checked;
-  var element    = document.getElementById("track_"+track_name);
-  if (visible) {
-    if (!element) { 
+
+  if (visible && !Controller.track_exists(track_name)) {
       Controller.add_track(track_name);
-    }
-    else if (element.style.display == "none") { 
-      element.style.display="block";
-      Controller.set_track_visibility(track_name, 1);
-    }
-    return false; 
+      return false;
   }
-  else {
-    if (element && element.style.display != "none") { 
-      element.style.display="none";
-      Controller.set_track_visibility(track_name, 0);
-    }
-  }
+
+  Controller.each_track(track_name,function(gbtrack) {
+       var el_id   = gbtrack.track_div_id;
+       var element = $(el_id);
+
+       if (visible) {
+           if (element.style.display == "none") { 
+             element.style.display="block";
+             Controller.set_track_visibility(gbtrack.track_id, 1);
+           }
+       }
+       else {
+          if (element && element.style.display != "none") { 
+              element.style.display="none";
+              Controller.set_track_visibility(track_name, 0);
+          }
+       }
+     });
 }
 
 function update_segment (formdata) {

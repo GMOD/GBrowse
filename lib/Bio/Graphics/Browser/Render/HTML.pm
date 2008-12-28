@@ -926,7 +926,7 @@ sub tableize {
   my $columns = $self->data_source->global_setting('config table columns') || 3;
   my $rows    = int( @$array/$columns + 0.99 );
 
-  my $cwidth = 100/$columns . '%';
+  my $cwidth = int(100/$columns+0.5) . '%';
 
   my $html = start_table({-border=>0,-width=>'100%'});
   for (my $row=0;$row<$rows;$row++) {
@@ -1191,22 +1191,24 @@ sub wrap_plugin_configuration {
 sub wrap_track_in_track_div {
     my $self       = shift;
     my %args       = @_;
+    my $track_id      = $args{'track_id'};
     my $track_name    = $args{'track_name'};
     my $track_html    = $args{'track_html'};
 
     # track_type used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
 
-    my $section = $self->get_section_from_label($track_name);
-    my $class = $track_name =~ /scale/i ? 'scale' : 'track';
+    my $section = $self->get_section_from_label($track_id);
+    my $class   = $track_id =~ /scale/i ? 'scale' : 'track';
 
     return div(
-        {   -id    => "track_" . $track_name,
+        {   -id    => "track_" . $track_id,
             -class => $class,
         },
         $track_html
         )
         . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("]
+	. $track_id   . q[", "]
         . $track_name . q[", "]
         . $track_type . q[", "]
         . $section

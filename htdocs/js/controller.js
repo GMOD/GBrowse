@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.66 2008-12-27 02:59:19 lstein Exp $
+ $Id: controller.js,v 1.67 2008-12-28 00:05:44 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -41,10 +41,11 @@ var GBrowseController = Class.create({
   
   initialize:
   function () {
-    this.gbtracks                 = new Hash();
+    this.gbtracks                 = new Hash(); // maps track ids to gbtrack objects
     this.segment_observers        = new Hash();
     this.retrieve_tracks          = new Hash();
-    this.ret_track_time_key           = new Hash();
+    this.ret_track_time_key       = new Hash();
+    this.gbtrackname_to_id        = new Hash(); // maps unique track ids to names
     // segment_info holds the information used in rubber.js
     this.segment_info;
     this.last_update_key;
@@ -68,48 +69,87 @@ var GBrowseController = Class.create({
   },
   
   register_track:
-  function (track_name,track_type,track_section) {
+  function (track_id,track_name,track_type,track_section) {
 
-    var gbtrack = new GBrowseTrack(track_name,track_type,track_section); 
+    if (this.gbtracks.get(track_id) != null)
+      return;
 
-    this.gbtracks.set(track_name,gbtrack);
+    var gbtrack = new GBrowseTrack(track_id,track_name,track_type,track_section); 
+
+    this.gbtracks.set(track_id,gbtrack);
+
+    if (this.gbtrackname_to_id.get(track_name) == null)
+       this.gbtrackname_to_id.set(track_name,new Hash());
+    this.gbtrackname_to_id.get(track_name).set(track_id,1);
+
     if (track_type=="scale_bar"){
       return gbtrack;
     }
-    this.retrieve_tracks.set(track_name,true);
+    this.retrieve_tracks.set(track_id,true);
     return gbtrack;
   }, // end register_track
 
+  unregister_track:
+  function (track_name) {
+    var ids        = this.gbtrackname_to_id.get(track_name);
+    for (var i=0;i<ids;i++) this.gbtracks.unset(ids[i]);
+    this.gbtrackname_to_id.unset(track_name);
+  }, // end unregister_track
+
   // Pass an iterator to execute something on each track
+  // Call as this.each_track(function(track){}) to iterate over all gbtracks.
+  // Call as this.each_track('track_name',function(track){}) to iterate over
+  // all tracks named 'track_name'
   each_track:
-  function (iterator) {
-     this.gbtracks.keys().each(
+  function () {
+     if (arguments.length >= 2) {
+       var track_name = arguments[0];
+       var iterator   = arguments[1];
+
+       if (this.gbtracks.get(track_name) != null) {
+          iterator(this.gbtracks.get(track_name));
+       } else if (this.gbtrackname_to_id.get(track_name) != null) {
+         var ids        = this.gbtrackname_to_id.get(track_name).keys();
+         for (var i=0;i<ids.length;i++)
+             iterator(this.gbtracks.get(ids[i])); // I don't know why each() doesn't work here
+       }
+
+     } else {
+       var iterator   = arguments[0];
+       this.gbtracks.keys().each(
           function(key) {
 	     var track=this.gbtracks.get(key);
              iterator(track);
           },this);
+     }
   }, //end each_track
+
+  track_exists:
+  function (track_name) {
+     return this.gbtrackname_to_id.get(track_name) != null;
+  },
+
 
   // Sets the time key for the tracks so we know if one is outdated
   set_last_update_keys:
   function (track_keys) {
     this.last_update_key = create_time_key();
 
-    for (var track_name in track_keys){
-      var gbtrack = this.gbtracks.get(track_name);
-      if (gbtrack == null)
-            alert('BUG (please report): track_name = '+track_name+', gbtrack='+gbtrack);
-      if (gbtrack != null) 
-         gbtrack.set_last_update_key(this.last_update_key);
-    }
-    
+    var track_key_hash = new Hash;
+    for (var track_name in track_keys)
+    	track_key_hash.set(track_name,1);
+
+    this.each_track(function(gbtrack) {
+        if (track_key_hash.get(gbtrack.track_name) != null) {
+	   gbtrack.set_last_update_key(this.last_update_key);
+	}
+    });
   }, // end set_last_update_keys
 
   // Sets the time key for a single track
   set_last_update_key:
   function (gbtrack) {
     var last_update_key = create_time_key();
-
     gbtrack.set_last_update_key(this.last_update_key);
     
   },
@@ -117,14 +157,12 @@ var GBrowseController = Class.create({
   // Hides the detail tracks in case they shouldn't be displayed for some reason
   hide_detail_tracks:
   function () {
-    this.gbtracks.values().each(
-      function(gbtrack) {
+    this.each_track(function(gbtrack) {
         if (gbtrack.is_standard_track() 
             && gbtrack.track_section == 'detail'){
-          $(gbtrack.track_image_id).setOpacity(0);
-        }
-      }
-    );
+          $(gbtrack.track_image_id).setOpacity(0.2);
+        }    	
+    });
   }, 
   // DOM Utility Methods ********************************************
 
@@ -189,7 +227,7 @@ var GBrowseController = Class.create({
       method:     'post',
       parameters: request_str,
       onSuccess: function(transport) {
-        var results    = transport.responseJSON;
+        var results      = transport.responseJSON;
         var section_html = results.section_html;
         for (var section_name in section_html){
           html    = section_html[section_name];
@@ -223,27 +261,22 @@ var GBrowseController = Class.create({
   set_track_visibility:
   function(track_name,visible) {
 
-    var gbtrack = this.gbtracks.get(track_name);
-    if ( null == $(gbtrack.track_div_id)){
-      // No track div
-      return;
-    }
+    this.each_track(track_name,function(gbtrack) {
 
-    new Ajax.Request('#',{
-      method:     'post',
-      parameters: {
-        set_track_visibility:  1,
-        visible:               visible,
-        track_name:            track_name
-      },
-      onSuccess: function(transport) {
-        if (visible && gbtrack.get_last_update_key() < Controller.last_update_key) {
-          Controller.rerender_track(track_name);
+      new Ajax.Request('#',{
+        method:     'post',
+        parameters: {
+          set_track_visibility:  1,
+          visible:               visible,
+          track_name:            track_name
+        },
+        onSuccess: function(transport) {
+          if (visible && gbtrack.get_last_update_key() < Controller.last_update_key) {
+            Controller.rerender_track(gbtrack.track_id);
+          }
         }
-      }
+      });
     });
-
-
   },
 
   // Kick-off Render Methods ****************************************
@@ -278,11 +311,9 @@ var GBrowseController = Class.create({
     }
 
     //Grey out image
-    this.gbtracks.values().each(
-      function(gbtrack) {
+    this.each_track(function(gbtrack) {
 	    $(gbtrack.track_image_id).setOpacity(0.3);
-      }
-    );
+    });
     
     new Ajax.Request('#',{
       method:     'post',
@@ -322,7 +353,7 @@ var GBrowseController = Class.create({
 
   add_track:
   function(track_name, onSuccessFunc) {
-    var track_names = new Array(track_name);  
+    var track_names = new Array(track_name);
     this.add_tracks(track_names, onSuccessFunc);
   },
 
@@ -333,21 +364,13 @@ var GBrowseController = Class.create({
     var found_track = false;
     for (var i = 0; i < track_names.length; i++) {
       var track_name = track_names[i];
-      if ( track_name != '' 
-        && (
-          this.gbtracks.get(track_name) == null 
-          || 
-          $(this.gbtracks.get(track_name).track_div_id) == null
-        )
-      ){
-        request_str += "&track_names="+track_name;
+      if ( !this.track_exists(track_name) ) {
+        request_str += "&track_names="+encodeURIComponent(track_name);
         found_track = true;
       }
     }
 
-    if (!found_track){
-        return;
-    }
+    if (!found_track) return false;
 
     new Ajax.Request('#',{
       method:     'post',
@@ -360,12 +383,14 @@ var GBrowseController = Class.create({
         var track_data = results.track_data;
         var track_keys = new Object();
         var get_tracks = false;
-        for (var ret_track_name in track_data){
-          var this_track_data = track_data[ret_track_name];
+
+        for (var ret_track_id in track_data){
+          var this_track_data = track_data[ret_track_id];
           var ret_gbtrack = Controller.register_track(
-            ret_track_name,
+	    ret_track_id,
+            this_track_data.track_name,
             'standard',
-             this_track_data.track_section
+            this_track_data.track_section
           );
 
           Controller.set_last_update_key(ret_gbtrack)
@@ -378,7 +403,7 @@ var GBrowseController = Class.create({
             $(ret_gbtrack.track_image_id).setOpacity(0);
           }
           else{
-            track_keys[ret_track_name]=this_track_data.track_key;
+            track_keys[ret_track_id]=this_track_data.track_key;
             get_tracks = true;
           }
         } // end for (var ret_track_name...
@@ -387,43 +412,47 @@ var GBrowseController = Class.create({
         }
       }
     });
+    return true;
   },
 
   rerender_track:
-  function(track_name,scroll_there) {
+  function(track_id,scroll_there) {
 
     if (scroll_there == null)
       scroll_there = false;
 
-    var gbtrack = this.gbtracks.get(track_name);
-    $(gbtrack.track_image_id).setOpacity(0.3);
-    this.set_last_update_key(gbtrack);
+    this.each_track(track_id,function(gbtrack) {
 
-    new Ajax.Request('#',{
-      method:     'post',
-      parameters: {
-        rerender_track:  1,
-        track_name: track_name
-      },
-      onSuccess: function(transport) {
-        var results    = transport.responseJSON;
-        var track_keys = results.track_keys;
-        if (results.display_details == 0){
-          $(gbtrack.track_image_id).setOpacity(0);
-        }
-        else{
-          time_key = create_time_key();
-          for (var track_name in track_keys){
-              Controller.retrieve_tracks.set(track_name,true);
-              Controller.ret_track_time_key.set(track_name,time_key);
-          } // end for
-          Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
-        } 
-	if (scroll_there) {
-	   $(gbtrack.track_div_id).scrollTo();
-	}
-      } // end onSuccess
-    }); // end Ajax.Request
+       $(gbtrack.track_image_id).setOpacity(0.3);
+       Controller.set_last_update_key(gbtrack);
+
+       new Ajax.Request('#',{
+         method:     'post',
+         parameters: {
+           rerender_track:  1,
+           track_id:        gbtrack.track_id
+         },
+         onSuccess: function(transport) {
+           var results    = transport.responseJSON;
+           var track_keys = results.track_keys;
+           if (results.display_details == 0){
+             $(gbtrack.track_image_id).setOpacity(0);
+           }
+           else{
+             time_key = create_time_key();
+             for (var track_id in track_keys){
+                 Controller.retrieve_tracks.set(gbtrack.track_id,true);
+                 Controller.ret_track_time_key.set(gbtrack.track_id,time_key);
+             } // end for
+             Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
+           } 
+   	   if (scroll_there) {
+	      $(gbtrack.track_div_id).scrollTo();
+	   }
+         } // end onSuccess
+       }); // end Ajax.Request
+    }); //end each_track()
+
   }, // end rerender_track
 
   // Retrieve Rendered Track Methods ********************************
@@ -433,9 +462,9 @@ var GBrowseController = Class.create({
 
     time_key = create_time_key();
     $H(track_keys).keys().each( 
-      function(track_name) {
-        Controller.retrieve_tracks.set(track_name,true);
-        Controller.ret_track_time_key.set(track_name,time_key);
+      function(track_id) {
+        Controller.retrieve_tracks.set(track_id,true);
+        Controller.ret_track_time_key.set(track_id,time_key);
       }
     );
 
@@ -447,63 +476,61 @@ var GBrowseController = Class.create({
   get_remaining_tracks:
   function (track_keys,time_out,decay,time_key){
 
-    var track_names = [];
+    var track_ids = [];
     var finished = true;
     var track_key_str = '';
     this.retrieve_tracks.keys().each(
-      function(track_name) {
-        if(Controller.retrieve_tracks.get(track_name)){
-          if (Controller.ret_track_time_key.get(track_name) == time_key){
-            track_names.push(track_name);
-            track_key_str += '&tk_'+escape(track_name)+"="+track_keys[track_name];
+      function(track_id) {
+        if(Controller.retrieve_tracks.get(track_id)){
+          if (Controller.ret_track_time_key.get(track_id) == time_key){
+            track_ids.push(track_id);
+            track_key_str += '&tk_'+escape(track_id)+"="+track_keys[track_id];
             finished = false;
           }
         }
       }
     );
 
-    if (finished){
-      return;
-    }
+    if (finished) return;
 
     new Ajax.Request('#',{
       method:     'post',
       parameters: $H({ retrieve_multiple: 1, 
-                       track_names:     track_names 
+                       track_ids:     track_ids
 		    }).toQueryString()  + track_key_str,
       onSuccess: function(transport) {
         var continue_requesting = false;
-        var results    = transport.responseJSON;
-        var track_html_hash = results.track_html;
-        for (var track_name in track_html_hash){
-          track_html    = track_html_hash[track_name];
+        var results             = transport.responseJSON;
+        var track_html_hash     = results.track_html;
+        for (var track_id in track_html_hash){
+          track_html            = track_html_hash[track_id];
 
-          var gbtrack = Controller.gbtracks.get(track_name);
-          if (Controller.ret_track_time_key.get(track_name) == time_key){
+          var gbtrack = Controller.gbtracks.get(track_id);
+          if (Controller.ret_track_time_key.get(track_id) == time_key){
             track_div = document.getElementById(gbtrack.track_div_id);
             if (track_html.substring(0,18) == "<!-- AVAILABLE -->"){
               track_div.innerHTML = track_html;
               gbtrack.track_resolved();
-              Controller.retrieve_tracks.set(track_name,false);
+              Controller.retrieve_tracks.set(track_id,false);
             }
             else if (track_html.substring(0,16) == "<!-- EXPIRED -->"){
-              Controller.retrieve_tracks.set(track_name,false);
+              Controller.retrieve_tracks.set(track_id,false);
               if (gbtrack.expired_count >= expired_limit){
                 $(gbtrack.track_image_id).setOpacity(0);
               }
               else{
                 gbtrack.increment_expired_count();
-                Controller.rerender_track(track_name);
+                Controller.rerender_track(track_id);
               }
             }
             else if (track_html.substring(0,14) == "<!-- ERROR -->"){
               gbtrack.track_resolved();
-              Controller.retrieve_tracks.set(track_name,false);
+              Controller.retrieve_tracks.set(track_id,false);
               track_div.innerHTML = track_html;
             }
             else if (track_html.substring(0,16) == "<!-- DEFUNCT -->"){
               gbtrack.track_resolved();
-              Controller.retrieve_tracks.set(track_name,false);
+              Controller.retrieve_tracks.set(track_id,false);
               $(gbtrack.track_image_id).setOpacity(0);
             }
             else {
@@ -525,17 +552,17 @@ var GBrowseController = Class.create({
   // Track Configure Methods ****************************************
 
   reconfigure_track:
-  function(track_name, serialized_form, show_track) {
+  function(track_id, serialized_form, show_track) {
     new Ajax.Request('#',{
       method:     'post',
       parameters: serialized_form +"&"+ $H({
-            reconfigure_track: track_name
+            reconfigure_track: track_id
           }).toQueryString(),
       onSuccess: function(transport) {
-        var track_div_id = Controller.gbtracks.get(track_name).track_div_id;
+        var track_div_id = Controller.gbtracks.get(track_id).track_div_id;
         Balloon.prototype.hideTooltip(1);
         if (show_track){
-          Controller.rerender_track(track_name);
+          Controller.rerender_track(track_id,true);
         }
         else{
           if ($(track_div_id) != null){
@@ -554,12 +581,11 @@ var GBrowseController = Class.create({
   configure_plugin:
   function(div_id) {
     var plugin_base  = document.pluginform.plugin.value;
-    Controller.update_sections(new Array(div_id), '&plugin_base='+plugin_base);
+    this.update_sections(new Array(div_id), '&plugin_base='+plugin_base);
   },
 
   reconfigure_plugin:
-  function(plugin_action,plugin_track_name,pc_div_id,plugin_type) {
-    var gbtrack = this.gbtracks.get(plugin_track_name);
+  function(plugin_action,plugin_track_id,pc_div_id,plugin_type) {
     var form_element = $("configure_plugin");
     new Ajax.Request('#',{
       method:     'post',
@@ -571,10 +597,9 @@ var GBrowseController = Class.create({
         Controller.wipe_div(pc_div_id); 
 
         if (plugin_type == 'annotator'){
-          // update plugin track if it exists
-          if ( null != $(gbtrack.track_div_id)){
-            Controller.rerender_track(plugin_track_name);
-          }
+	  Controller.each_track(plugin_track_id,function(gbtrack) {
+              Controller.rerender_track(gbtrack.track_id,true);
+            });
         }
         else if (plugin_type == 'filter'){
           Controller.update_coordinates("reload segment");
@@ -620,8 +645,10 @@ var GBrowseController = Class.create({
 
   edit_upload:
   function(edit_file) {
+    var gbtrack  = this.gbtracks.get(decodeURIComponent(edit_file));
+    var basename = gbtrack!=null ? gbtrack.track_name : edit_file;
     Controller.update_sections(new Array(external_utility_div_id), 
-        '&edit_file='+edit_file,true);
+   	    '&edit_file='+basename,true);
   },
 
   commit_file_edit:
@@ -645,17 +672,10 @@ var GBrowseController = Class.create({
         }
         else{
         // update track if it exists
-	  var s=new Array(edited_file,
-	                 edited_file+':overview',
-			 edited_file+':region',
-			 edited_file+':detail');
-	  for (var i=0;i<s.length;i++){
-	      var gbtrack = Controller.gbtracks.get(s[i]);
-              if ( null != gbtrack) {
-                  Controller.rerender_track(s[i],true);
-	      }
-          }
-          Controller.update_sections(new Array(external_listing_id));
+	 Controller.each_track(edited_file,function(gbtrack) {
+             Controller.rerender_track(gbtrack.track_id,true);
+         });
+         Controller.update_sections(new Array(external_listing_id));
         }
       } // end onSuccess
     });
@@ -671,16 +691,11 @@ var GBrowseController = Class.create({
         file: file_name
       },
       onSuccess: function(transport) {
-	var sections = new Array('','overview','region','detail');
-	sections.each(function(section) {
-	  var name    = section.length>0 ? file_name+':'+section : file_name;
-	  var gbtrack  = Controller.gbtracks.get(name);
-	  if (gbtrack != null) {
+        Controller.each_track(file_name,function(gbtrack) {
 	      actually_remove(gbtrack.track_div_id);
-	      Controller.gbtracks.unset(name);
-          }
-          Controller.update_sections(new Array(track_listing_id,external_listing_id));
-	});
+          });
+        Controller.unregister_track(file_name);
+        Controller.update_sections(new Array(track_listing_id,external_listing_id));
       } // end onSuccess
     });
   },
@@ -689,12 +704,31 @@ var GBrowseController = Class.create({
 
   new_remote_track:
   function(eurl) {
-    if ( eurl == ''){
-        return;
-    }
-    Controller.add_track(eurl, function(){
-      Controller.update_sections(new Array(track_listing_id,external_listing_id));
-    })
+    if ( eurl == '') return;
+
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters:{
+            add_url:    1,
+            eurl:       eurl
+      },
+      onSuccess: function(transport) {
+        var results     = transport.responseJSON;
+        var url_created = results.url_created;
+        if ( 1 == url_created ){
+          Controller.add_track(eurl, function(){
+            Controller.update_sections(new Array(track_listing_id,external_listing_id));
+          })
+        }
+        else{
+         // update track if it exists
+	 Controller.each_track(eurl,function(gbtrack) {
+             Controller.rerender_track(gbtrack.track_id,true);
+         });
+         Controller.update_sections(new Array(track_listing_id,external_listing_id));
+        }
+      }
+    });
   }
 
 });

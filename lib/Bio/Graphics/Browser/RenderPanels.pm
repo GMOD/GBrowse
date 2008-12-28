@@ -268,6 +268,7 @@ sub drag_and_drop {
 sub render_tracks {
     my $self     = shift;
     my $requests = shift;
+    my $args     = shift;
 
     my %result;
 
@@ -289,6 +290,7 @@ sub render_tracks {
             height   => $height,
             url      => $url,
             status   => $status,
+	    section  => $args->{section},
         );
     }
     
@@ -424,7 +426,9 @@ sub wrap_rendered_track {
     # the padding is a little bit of empty track that is displayed only
     # when the track is collapsed. Otherwise the track labels get moved
     # to the center of the page!
-    my $pad     = $self->render_image_pad();
+    my $pad     = $self->render_image_pad(
+	$args{section}||Bio::Graphics::Browser::Render->get_section_from_label($label),
+	);
     my $pad_url = $self->source->generate_image($pad);
     my $pad_img = img(
         {   -src    => $pad_url,
@@ -771,11 +775,25 @@ sub render_scale_bar {
 }
 
 sub render_image_pad {
-    my $self = shift;
+    my $self    = shift;
+    my ($section,$segment) = @_;
 
-    my @panel_args  = $self->create_panel_args({});
+    my $r = 'Bio::Graphics::Browser::Region';
+
+    $segment ||= $section eq 'overview'   ? 
+	             $r->whole_segment($self->segment,$self->settings)
+                 :$section eq 'region'     ?
+	             $r->region_segment($self->segment,$self->settings)
+                 :$self->segment;
+
+    my @panel_args  = $self->create_panel_args({
+	section => $section,
+	segment => $segment,
+	}
+	);
     my @track_args  = ();
-    my @extra_args  = ();
+    my @extra_args  = ($self->settings->{start},
+		       $self->settings->{stop});
     my $cache = Bio::Graphics::Browser::CachedTrack->new(
 	-cache_base => $self->get_cache_base,
 	-panel_args => \@panel_args,
@@ -1047,7 +1065,11 @@ sub run_local_requests {
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
 
         my %trackmap;
-        if ( my $file = $feature_files->{$label} ) {
+
+	(my $base = $label) =~ s/:(overview|region|detail)$//i;
+	warn "label=$label, base=$base, file=$feature_files->{$base}" if DEBUG;
+
+        if ( my $file = $feature_files->{$base} ) {
 
             # Add feature files, including remote annotations
             my $featurefile_select = $args->{featurefile_select}
@@ -1166,7 +1188,7 @@ sub add_features_to_track {
 	}
 
 	# Handle generic grouping (needed for GFF3 database)
-	$group_field{$l} = $source->code_setting($l => 'group_on') unless exists $group_field{$l};
+ 	$group_field{$l} = $source->code_setting($l => 'group_on') unless exists $group_field{$l};
 	
 	if (my $pattern = $group_pattern{$l}) {
 	  my $name = $feature->name or next;
@@ -1327,6 +1349,8 @@ sub add_feature_file {
 
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
+
+  warn "rendering file $file" if DEBUG;
 
   eval {
     $file->render(
@@ -1569,15 +1593,15 @@ sub feature_file_select {
   my $required_section = shift;
 
   my $undef_defaults_to_true;
-  if ($required_section =~ /^\?(.+)/) {
+  if ($required_section =~ /detail/) {
     $undef_defaults_to_true++;
-    $required_section = $1;
   }
 
   return sub {
 
       my $file    = shift;
       my $type    = shift;
+
       my $section = $file->setting($type=>'section')
 	            || $file->setting(general=>'section');
       my ($modifier) = $type =~ /:(.+)$/;

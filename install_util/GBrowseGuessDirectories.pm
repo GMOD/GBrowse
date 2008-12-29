@@ -1,4 +1,4 @@
-package GuessDirectories;
+package GBrowseGuessDirectories;
 
 use IO::Socket::INET;
 use File::Spec;

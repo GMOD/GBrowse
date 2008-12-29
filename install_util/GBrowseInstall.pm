@@ -11,7 +11,7 @@ use File::Path 'rmtree','mkpath';
 use File::Temp 'tempdir';
 use File::Spec;
 use IO::File;
-use GuessDirectories;
+use GBrowseGuessDirectories;
 
 my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
 		htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
@@ -38,9 +38,9 @@ sub ACTION_demo {
 	CLEANUP=>0,
 	);
     my $port = $self->config_data('portdemo') 
-	|| GuessDirectories->portdemo();
+	|| GBrowseGuessDirectories->portdemo();
     my $modules = $self->config_data('apachemodules')
-	|| GuessDirectories->apachemodules;
+	|| GBrowseGuessDirectories->apachemodules;
 
     mkdir "$dir/conf";
     mkdir "$dir/htdocs";
@@ -106,7 +106,7 @@ sub ACTION_demo {
     $mime->print($conf_data);
     $mime->close;
 
-    my $apache =  GuessDirectories->apache
+    my $apache =  GBrowseGuessDirectories->apache
 	or die "Could not find apache executable on this system. Can't run demo";
 
     print STDERR "Starting apache....\n";
@@ -136,7 +136,7 @@ sub ACTION_demostop {
 	print STDERR "Demo doesn't seem to be running.\n";
 	return;
     }
-    my $apache =  GuessDirectories->apache
+    my $apache =  GBrowseGuessDirectories->apache
 	or die "Could not find apache executable on this system. Can't stop demo";
 
     system "$apache -k stop -f $dir/conf/httpd.conf";
@@ -206,7 +206,7 @@ sub ACTION_config {
 	# next if $self->config_data($key);
 	$opts{$key} = prompt($props->{$key},
 			     $opts{$key} ||
-			     GuessDirectories->$key($opts{apache}));
+			     GBrowseGuessDirectories->$key($opts{apache}));
 	if ($props->{$key} =~ /directory/i) {
 	    my ($volume,$dir) = File::Spec->splitdir($opts{$key});
 	    my $top_level     = File::Spec->catfile($volume,$dir);
@@ -288,18 +288,18 @@ sub ACTION_install {
     $self->depends_on('config_data');
     $self->install_path->{conf} 
         ||= $self->config_data('conf')
-	    || GuessDirectories->conf;
+	    || GBrowseGuessDirectories->conf;
     $self->install_path->{htdocs}
         ||= $self->config_data('htdocs')
-	    || GuessDirectories->htdocs;
+	    || GBrowseGuessDirectories->htdocs;
     $self->install_path->{'cgi-bin'} 
         ||= $self->config_data('cgibin')
-	    || GuessDirectories->cgibin;
+	    || GBrowseGuessDirectories->cgibin;
     $self->install_path->{'etc'} 
-        ||= File::Spec->catfile($self->prefix||'',GuessDirectories->etc);
+        ||= File::Spec->catfile($self->prefix||'',GBrowseGuessDirectories->etc);
     $self->install_path->{'database'} 
         ||= $self->config_data('database')
-	    || GuessDirectories->databases;
+	    || GBrowseGuessDirectories->databases;
     
     # there's got to be a better way to avoid overwriting the config file
     my $old_conf = File::Spec->catfile($self->install_path->{conf},'GBrowse.conf');
@@ -318,10 +318,10 @@ sub ACTION_install {
 	rename "$old_conf.orig",$old_conf;
     }
 
-    my $user = $self->config_data('wwwuser') || GuessDirectories->wwwuser;
+    my $user = $self->config_data('wwwuser') || GBrowseGuessDirectories->wwwuser;
 
     # fix some directories so that www user can write into them
-    my $tmp = $self->config_data('tmp') || GuessDirectories->tmp;
+    my $tmp = $self->config_data('tmp') || GBrowseGuessDirectories->tmp;
     mkdir $tmp;
     my ($uid,$gid) = (getpwnam($user))[2,3];
 
@@ -357,7 +357,7 @@ sub ACTION_install {
 sub ACTION_install_slave {
     my $self = shift;
     $self->install_path->{'etc'} 
-        ||= File::Spec->catfile($self->prefix||'',GuessDirectories->etc);
+        ||= File::Spec->catfile($self->prefix||'',GBrowseGuessDirectories->etc);
     $self->SUPER::ACTION_install();
 }
 
@@ -432,7 +432,7 @@ sub process_etc_files {
 	    or !$self->up_to_date('_build/config_data',"blib/$_");
     }
     # generate the apache config data
-    my $includes = GuessDirectories->apache_includes || '';
+    my $includes = GBrowseGuessDirectories->apache_includes || '';
     my $target   = "blib${includes}/gbrowse2.conf";
     if ($includes && !$self->up_to_date('_build/config_data',$target)) {
 	if ($self->config_data('installconf') =~ /^[yY]/) {
@@ -514,7 +514,7 @@ sub httpd_conf {
     my ($dir,$port) = @_;
 
     my $modules = $self->config_data('apachemodules')
-	|| GuessDirectories->apachemodules;
+	|| GBrowseGuessDirectories->apachemodules;
 
     my $user    = $>;
     my ($group) = $) =~ /^(\d+)/;

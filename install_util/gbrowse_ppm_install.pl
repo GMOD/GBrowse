@@ -39,7 +39,7 @@ die "Unexpected error.  There should be an install_util directory here, but ther
 
 eval <<'END'
   use lib './install_util';
-  use GuessDirectories;
+  use GBrowseGuessDirectories;
 END
 ;
 
@@ -49,11 +49,11 @@ print STDERR "** Please indicate the location of the following Web Server direct
 my $prefix  = $^O =~ /mswin/i ? 'C:/Program Files/Apache Group/Apache2'
                               : '/usr/local/apache';
 
-my $conf    = prompt_for_directory('conf',   GuessDirectories->conf || "$prefix/conf");
+my $conf    = prompt_for_directory('conf',   GBrowseGuessDirectories->conf || "$prefix/conf");
 $prefix     = dirname($conf); # update
 
-my $htdocs  = prompt_for_directory('htdocs', GuessDirectories->htdocs || "$prefix/htdocs");
-my $cgibin  = prompt_for_directory('cgi-bin',GuessDirectories->cgibin || "$prefix/cgi-bin");
+my $htdocs  = prompt_for_directory('htdocs', GBrowseGuessDirectories->htdocs || "$prefix/htdocs");
+my $cgibin  = prompt_for_directory('cgi-bin',GBrowseGuessDirectories->cgibin || "$prefix/cgi-bin");
 
 fixup($_,"$conf/gbrowse.conf") foreach grep {-T} @files;
 

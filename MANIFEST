@@ -428,7 +428,7 @@ install_util/cgi_install.pl
 install_util/conf_install.pl
 install_util/gbrowse_ppm_install.pl
 install_util/GBrowseInstall.pm
-install_util/GuessDirectories.pm
+install_util/GBrowseGuessDirectories.pm
 install_util/htdocs_install.pl
 install_util/InstallUtil.pm
 install_util/make_clean_add.pl

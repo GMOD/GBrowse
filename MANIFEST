@@ -439,6 +439,7 @@ lib/Bio/Graphics/Browser/CachedTrack.pm
 lib/Bio/Graphics/Browser/DataBase.pm
 lib/Bio/Graphics/Browser/DataSource.pm
 lib/Bio/Graphics/Browser/GFFPrinter.pm
+lib/Bio/Graphics/Browser/GFFhelper.pm
 lib/Bio/Graphics/Browser/I18n.pm
 lib/Bio/Graphics/Browser/Markup.pm
 lib/Bio/Graphics/Browser/OptionPick.pm

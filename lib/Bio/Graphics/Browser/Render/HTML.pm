@@ -187,7 +187,7 @@ sub render_html_head {
   if (my $fill = $self->data_source->global_setting('hilite fill')) {
       $fill =~ s/^(\d+,\d+,\d+)$/rgb($1)/;
       $fill =~ s/^(#[0-9A-F]{2}[0-9A-F]{2}[0-9A-F]{2})[0-9A-F]{2}$/$1/;
-      $fill =~ s/^(\w+):\d+$/$1/;
+      $fill =~ s/^(\w+):[\d.]+$/$1/;
       $set_dragcolors = "set_dragcolors('$fill');";
   }
 

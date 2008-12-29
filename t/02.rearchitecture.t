@@ -245,5 +245,6 @@ exit 0;
 END {
 	unlink 'testdata/conf/volvox_final.conf',
      	       'testdata/conf/yeast_chr1.conf';
+	rmtree('/tmp/gbrowse_testing/images',0,0);  # in case it was left over
 }
 

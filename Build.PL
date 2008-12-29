@@ -84,13 +84,15 @@ $build->add_build_element('database');
 $build->create_build_script;
 print STDERR <<END;
 Now run:
-  ./Build config
   ./Build test
   ./Build demo          (optional)
   ./Build install       (as superuser/administrator)
-  ./Build apache_conf   (to get appropriate config file)
         -or-
   ./Build install_slave (optional, for slave installations)
+
+Other useful targets:
+  ./Build reconfig      (to reconfigure install locations)
+  ./Build demostop      (to stop the demo)
 END
 
 exit 0;

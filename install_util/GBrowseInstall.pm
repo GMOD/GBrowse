@@ -109,7 +109,9 @@ sub ACTION_demo {
     my $apache =  GuessDirectories->apache
 	or die "Could not find apache executable on this system. Can't run demo";
 
+    print STDERR "Starting apache....\n";
     system "$apache -k start -f $dir/conf/httpd.conf";
+    sleep 3;
     if (-e "$dir/logs/apache2.pid") {
 	print STDERR "Demo config and log files have been written to $dir\n";
 	print STDERR "Demo is now running on http://localhost:$port\n";

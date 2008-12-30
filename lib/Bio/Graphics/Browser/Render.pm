@@ -310,6 +310,7 @@ sub asynchronous_event {
         my %track_html;
         my @track_ids = param('track_ids');
 
+
         foreach my $track_id (@track_ids) {
             my $track_key = param( 'tk_' . $track_id ) or next;
 	    warn "retrieving $track_id=>$track_key" if DEBUG;
@@ -380,7 +381,7 @@ sub asynchronous_event {
 		elsif ( $track_name =~ /:region$/ ) {
 		    $panel_id = 'region_panels';
 		}
-		warn "returning track_id=$track_id, key=$track_key, name=$track_name" if DEBUG;
+		warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name";# if DEBUG;
 		
 		$track_data{$track_id} = {
 		    track_key        => $track_key,
@@ -553,7 +554,7 @@ sub background_track_render {
     my $details_msg       = '';
     my %requests;
 
-    if ( $self->segment->length <= $self->get_max_segment() ) {
+    if ( $self->segment->length <= $self->get_max_segment+1 ) {
         $requests{'detail'} =
             $self->render_deferred(
             labels          => [ $self->detail_tracks ],
@@ -615,7 +616,7 @@ sub create_cache_extra {
         );
     push @cache_extra,sort keys %{$settings->{h_feat}} if $settings->{h_feat};
     push @cache_extra,sort @{$settings->{h_region}}    if $settings->{h_region};
-     push @cache_extra, map { $_->config_hash() } $self->plugins->plugins;
+    push @cache_extra, map { $_->config_hash() } $self->plugins->plugins;
     return \@cache_extra;
 }
 
@@ -1272,8 +1273,12 @@ sub do_plugin_dump {
 #======================== remote sources ====================
 sub init_remote_sources {
   my $self = shift;
-  my $uploaded_sources = Bio::Graphics::Browser::UploadSet->new($self->data_source,$self->state);
-  my $remote_sources   = Bio::Graphics::Browser::RemoteSet->new($self->data_source,$self->state);
+  my $uploaded_sources = Bio::Graphics::Browser::UploadSet->new($self->data_source,
+								$self->state,
+								$self->language);
+  my $remote_sources   = Bio::Graphics::Browser::RemoteSet->new($self->data_source,
+								$self->state,
+								$self->language);
   $self->uploaded_sources($uploaded_sources);
   $self->remote_sources($remote_sources);
   return $uploaded_sources && $remote_sources;  # true if both defined
@@ -2614,8 +2619,8 @@ sub featurefile_sections {
     my $ff    = $self->external_data->{$label} or return;
 
     my %sections;
-    my @types  = $ff->types;
-    for my $t (@types) {
+    my %types  = map {$_=>1} ($ff->types,eval{$ff->configured_types});
+    for my $t (keys %types) {
 	my $section;
 	if (my $label = eval {$ff->type2label($t)}) {
 	    $section   = $ff->setting($label => 'section');
@@ -2780,7 +2785,7 @@ sub render_deferred {
 
     warn '(render_deferred(',join(',',@$labels),') for section ',$section if DEBUG;
 
-    my $renderer = $self->get_panel_renderer($seg);
+    my $renderer   = $self->get_panel_renderer($seg);
 
     my $h_callback = $self->make_hilite_callback();
 

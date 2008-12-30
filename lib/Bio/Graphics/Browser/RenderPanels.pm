@@ -1023,7 +1023,7 @@ sub run_local_requests {
     #---------------------------------------------------------------------------------
     # Track and panel creation
     
-    my %seenit;           # used to avoid possible upstream error of putting track on list multiple times
+    my %seenit;           # avoid error of putting track on list multiple times
     my %results;          # hash of {$label}{gd} and {$label}{map}
     my %feature_file_offsets;
 
@@ -1350,7 +1350,7 @@ sub add_feature_file {
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
 
-  warn "rendering file $file" if DEBUG;
+  warn "rendering file $name" if DEBUG;
 
   eval {
     $file->render(

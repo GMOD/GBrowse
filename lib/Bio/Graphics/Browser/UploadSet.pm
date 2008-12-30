@@ -14,11 +14,13 @@ sub new {
   my $package = shift;
   my $config  = shift;
   my $state   = shift;
+  my $lang    = shift;
 
   warn "initializing uploaded files..." if DEBUG;
   my $self =  bless {
 		     config        => $config,
 		     state         => $state,
+		     language      => $lang,
 		     files         => {},
 		    },ref $package || $package;
   my @urls = grep {/^file:/} @{$state->{tracks}};
@@ -28,6 +30,8 @@ sub new {
   }
   $self;
 }
+
+sub language { shift->{language} }
 
 sub files         { keys %{shift->{files}}         }
 sub url2path      { shift->{files}{shift()}        }

@@ -21,8 +21,10 @@ sub new {
   my $package = shift;
   my $config  = shift;
   my $state   = shift;
+  my $lang    = shift;
   my $self = bless {
 		    config        => $config,
+		    language      => $lang,
 		    state         => $state,
 		    sources       => {},
 		   },ref $package || $package;
@@ -39,8 +41,9 @@ sub new {
   $self;
 }
 
-sub sources       { keys %{shift->{sources}} }
-sub source2url    { shift->{sources}{shift()}  }
+sub language      { shift->{language}         }
+sub sources       { keys %{shift->{sources}}  }
+sub source2url    { shift->{sources}{shift()} }
 
 sub add_source {
   my $self   = shift;
@@ -143,7 +146,7 @@ sub get_remote_upload {
   my (undef,$filename) = $self->name_file($url,0);
   my $response         = $self->mirror($url,$filename);
   if ($response->is_error) {
-    error($config->tr('Fetch_failed',$url,$response->message));
+    error($self->language->tr('Fetch_failed',$url,$response->message));
     return;
   }
   my $fh = IO::File->new("<$filename") or return;
@@ -184,7 +187,7 @@ sub get_das_segment {
   my $config   = $self->config;
 
   unless (eval "require Bio::Das; 1;") {
-    error($config->tr('NO_DAS'));
+    error($self->language->tr('NO_DAS'));
     return;
   }
 
@@ -227,7 +230,7 @@ sub mirror {
   # Uploaded feature handling
   unless ($UA) {
     unless (eval "require LWP") {
-      error($config->tr('NO_LWP'));
+      error($self->language->tr('NO_LWP'));
       return;
     }
     $UA = LWP::UserAgent->new(agent    => "Generic-Genome-Browser/$main::VERSION",

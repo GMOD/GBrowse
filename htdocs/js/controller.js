@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.69 2008-12-29 17:19:15 lstein Exp $
+ $Id: controller.js,v 1.70 2008-12-31 01:25:08 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -659,7 +659,6 @@ var GBrowseController = Class.create({
 
   commit_file_edit:
   function(edited_file) {
-    $(external_listing_id).innerHTML='<p><b style="background-color:yellow">Working...</b></p>';
     var form_element = $(edit_upload_form_id);
     new Ajax.Request('#',{
       method:     'post',
@@ -690,6 +689,8 @@ var GBrowseController = Class.create({
 
   delete_upload_file:
   function(file_name) {
+
+    $(external_listing_id).innerHTML='<p><b style="background-color:yellow">Working...</b></p>';
 
     new Ajax.Request('#',{
       method:     'post',

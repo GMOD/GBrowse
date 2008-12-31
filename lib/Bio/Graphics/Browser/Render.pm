@@ -310,7 +310,6 @@ sub asynchronous_event {
         my %track_html;
         my @track_ids = param('track_ids');
 
-
         foreach my $track_id (@track_ids) {
             my $track_key = param( 'tk_' . $track_id ) or next;
 	    warn "retrieving $track_id=>$track_key" if DEBUG;
@@ -381,7 +380,7 @@ sub asynchronous_event {
 		elsif ( $track_name =~ /:region$/ ) {
 		    $panel_id = 'region_panels';
 		}
-		warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name";# if DEBUG;
+		warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name, panel_id=$panel_id" if DEBUG;
 		
 		$track_data{$track_id} = {
 		    track_key        => $track_key,
@@ -557,7 +556,7 @@ sub background_track_render {
     if ( $self->segment->length <= $self->get_max_segment+1 ) {
         $requests{'detail'} =
             $self->render_deferred(
-            labels          => [ $self->detail_tracks ],
+            labels          => [ $self->expand_track_names($self->detail_tracks) ],
             segment         => $self->segment,
             section         => 'detail',
             cache_extra     => $cache_extra,
@@ -575,7 +574,7 @@ sub background_track_render {
     }
 
     $requests{'region'} =
-        $self->render_deferred( labels          => [ $self->regionview_tracks ],
+        $self->render_deferred( labels          => [ $self->expand_track_names($self->regionview_tracks) ],
 				segment         => $self->region_segment,
 				section         => 'region', 
 				cache_extra     => $cache_extra, 
@@ -584,7 +583,7 @@ sub background_track_render {
         if ( $self->state->{region_size} );
 
     $requests{'overview'} =
-        $self->render_deferred( labels          => [ $self->overview_tracks ],
+        $self->render_deferred( labels          => [ $self->expand_track_names($self->overview_tracks) ],
 				segment         => $self->whole_segment,
 				section         => 'overview', 
 				cache_extra     => $cache_extra, 
@@ -667,7 +666,7 @@ sub background_individual_track_render {
 	segment     => $segment, 
         section     => $section, 
 	cache_extra => $cache_extra, 
-	external_tracks => $self->external_data,
+	external_tracks => $external,
 	);
 
     my %track_keys;
@@ -2570,14 +2569,16 @@ sub overview_tracks {
   my $self = shift;
   my @tracks = grep {/:overview$/} $self->visible_tracks;
   my @files_in_overview  = $self->featurefiles_in_section('overview');
-  return (@tracks,@files_in_overview);
+  my %seen;
+  return grep {!$seen{$_}++} (@tracks,@files_in_overview);
 }
 
 sub regionview_tracks {
   my $self = shift;
   my @tracks = grep {/:region$/}   $self->visible_tracks;
   my @files_in_region  = $self->featurefiles_in_section('region');
-  return (@tracks,@files_in_region);
+  my %seen;
+  return grep {!$seen{$_}++}  (@tracks,@files_in_region);
   
 }
 
@@ -2619,18 +2620,19 @@ sub featurefile_sections {
     my $ff    = $self->external_data->{$label} or return;
 
     my %sections;
-    my %types  = map {$_=>1} ($ff->types,eval{$ff->configured_types});
-    for my $t (keys %types) {
-	my $section;
-	if (my $label = eval {$ff->type2label($t)}) {
-	    $section   = $ff->setting($label => 'section');
-	    $section ||= $1 if $label =~ /:(overview|region|detail|details)$/i;
-	}
-	$section    ||= 'detail';
+
+    # we prefer to read the labels from the feature file,
+    # but some of the featurefile types don't support this.
+    my @labels     = eval {$ff->labels};
+
+    for my $label (@labels) {
+	my $section = $1 if $label =~ /:(overview|region|details?)$/i;
+	$section  ||= $ff->setting($label => 'section');
+	$section  ||= 'detail';
 	$section    =~ s/details/detail/; # foo!
 	$sections{lc $_}++ for $section   =~ /(\w+)/g;
     }
-
+    $sections{detail}++ unless %sections;
     return keys %sections;
 }
 
@@ -3012,7 +3014,9 @@ sub external_data {
 	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} 
 	        if DEBUG;
 	    next unless $featureset;
-	    $featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow,$max_segment);
+	    $featureset->annotate($segment,$f,
+				  $rel2abs,$rel2abs_slow,$max_segment,
+				  $self->whole_segment,$self->region_segment);
 	}
     }
 

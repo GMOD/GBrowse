@@ -1539,12 +1539,15 @@ sub share_track {
     }
 
     my $gbgff;
+    my $segment = $label =~  /:region$/   ? '$region'
+                 :$label =~  /:overview$/ ? '$overview'
+                 :'$segment';
     if ( $label =~ /^(http|ftp):/ ) {    # reexporting and imported track!
         $gbgff = $label;
     }
     else {
         $gbgff = url( -full => 1, -path_info => 1 );
-        $gbgff .= "?gbgff=1;q=\$segment;t=$labels";
+        $gbgff .= "?gbgff=1;q=$segment;t=$labels";
         $gbgff .= ";id=" . $state->{id} if $labels =~ /file:/;
     }
 

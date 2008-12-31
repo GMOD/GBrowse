@@ -72,13 +72,14 @@ Returns a string "url:label".
 sub url_label {
   my $label = shift;
   my $key;
-  if ($label =~ /^http|^ftp/) {
-    my $l = $label;
+  if ($label =~ m!^(?:http|ftp)://([^/]+)!) {
+    my $l    = $label;
+    my $host = $1;
     $l =~ s!^\W+//!!;
     my (undef,$type) = $l =~ /\S+t(ype)?=([^;\&]+)/;
     $l =~ s/\?.+//;
     ($key) = grep /$_/, reverse split('/',$l);
-    $key = "url:$key" if $key;
+    $key = "$host/$key" if $key;
     $key .= ":$type"  if $type;
   }
   return $key || $label;

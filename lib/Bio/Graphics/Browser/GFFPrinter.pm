@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.4 2008-12-28 00:05:44 lstein Exp $
+# $Id: GFFPrinter.pm,v 1.5 2008-12-31 01:25:08 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -192,8 +192,10 @@ sub labels_to_types {
     my $data_source = $self->data_source;
 
     # remove dynamic labels, such as uploads
-    my @labels = grep { !/^\w+:/ } @$labels;
-
+    my @labels = grep { /:(overview|region|detail)$/  # keep overview/region sections
+		         || 
+                         !/^\w+:/x                    # discard over dynamic sections
+                       } @$labels;
     my @types;
     for my $l (@labels) {
         my @f = shellwords( $data_source->setting( $l => 'feature' ) || '' );
@@ -261,9 +263,9 @@ sub print_configuration {
     my @labels = $labels ? @$labels : $config->labels;
 
     for my $l (@labels) {
-	# a special config setting - don't want it to leak through
 
-        next if $l =~ m/^\w+:/;  
+	# a special config setting - don't want it to leak through
+        next if $l =~ m/^\w+:/ && $l !~ m/:(overview|region}detail)$/;  
 	next if $l =~ m/^_scale/;
 
         print "[$l]\n";

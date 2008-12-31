@@ -221,15 +221,16 @@ sub make_requests {
         my @track_args = $self->create_track_args( $label, $args );
 
         # get config data from the feature files
+	(my $track = $label) =~ s/:(overview|region|details?)$//;
         my @extra_args = eval {
-            $feature_files->{$label}->types, $feature_files->{$label}->mtime;
-        } if $feature_files && $feature_files->{$label};
+            $feature_files->{$track}->types, $feature_files->{$track}->mtime;
+        } if $feature_files && $feature_files->{$track};
 
         my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
             -cache_base => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
-            -extra_args => [ @cache_extra, @extra_args ],
+            -extra_args => [ @cache_extra, @extra_args, $label ],
         );
         $cache_object->cache_time( $source->cache_time * 60 );
         $d{$label} = $cache_object;
@@ -377,8 +378,11 @@ sub wrap_rendered_track {
     }
 
     my $title;
-    if ($label =~ /\w+:(.+)/ && $label !~ /:overview|:region/) {
-      $title = $label =~ /^http|^ftp/ ? url_label($label) : $1;
+    if ($label =~ /^file:/) {
+	$title = $label;
+    }
+    elsif ($label =~ /^(http|ftp):/) {
+	$title = url_label($label);
     }
     else {
       $title = $source->setting($label=>'key') || $label;
@@ -1048,8 +1052,7 @@ sub run_local_requests {
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
 
-	my $multiple_tracks = $label =~ /^\w.+:/ 
-	    && $label !~ /:(overview|region)/; # a plugin, uploaded file or remote file
+	my $multiple_tracks = $label =~ /^(http|ftp|file|das):/ ;
 
         my @keystyle = ( -key_style => 'between' )
             if $multiple_tracks;
@@ -1066,7 +1069,7 @@ sub run_local_requests {
 
         my %trackmap;
 
-	(my $base = $label) =~ s/:(overview|region|detail)$//i;
+	(my $base = $label) =~ s/:(overview|region|details?)$//;
 	warn "label=$label, base=$base, file=$feature_files->{$base}" if DEBUG;
 
         if ( my $file = $feature_files->{$base} ) {

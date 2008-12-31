@@ -80,7 +80,7 @@ sub set_sources {
 
 sub feature_file {
   my $self = shift;
-  my ($label,$segment,$rel2abs,$slow_mapper) = @_;
+  my ($label,$segment,$rel2abs,$slow_mapper,$overview,$region) = @_;
 
   my $config   = $self->config;
   my $state = $self->state;
@@ -97,7 +97,7 @@ sub feature_file {
   }
   else {
     warn "getting featurefile for $url" if DEBUG;
-    $feature_file = $self->get_remote_upload($url,$rel2abs,$slow_mapper,$segment,$label);
+    $feature_file = $self->get_remote_upload($url,$rel2abs,$slow_mapper,$segment,$label,$overview,$region);
   }
   return unless $feature_file;
 
@@ -111,19 +111,20 @@ sub feature_file {
 
 sub transform_url {
     my $self = shift;
-    my ($url,$segment) = @_;
+    my ($url,$segment,$overview_segment,$region_segment) = @_;
 
     my ($seqid,$start,$end) = ref $segment 
 	                          ? ($segment->seq_id,$segment->start,$segment->end)
                                   : $segment =~ /^([^:]+):(.+)(?:\.\.|,)(.+)$/;
 
     # do certain substitutions on the URL
-
     # for DAS
     $url =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$seqid:$start..$end;$2!;
 
     # for gbgff and the like
     $url =~ s/\$segment/$seqid:$start..$end/g;
+    $url =~ s/\$overview/"$seqid:".$overview_segment->start.'..'.$overview_segment->end/ge if $overview_segment;
+    $url =~ s/\$region/"$seqid:".$region_segment->start.'..'.$region_segment->end/ge       if $region_segment;
     $url =~ s/\$ref/$seqid/g;
     $url =~ s/\$start/$start/e;
     $url =~ s/\$end/$end/e;
@@ -133,11 +134,11 @@ sub transform_url {
 
 sub get_remote_upload {
   my $self = shift;
-  my ($url,$rel2abs,$slow_mapper,$segment,$label) = @_;
+  my ($url,$rel2abs,$slow_mapper,$segment,$label,$overview,$region) = @_;
   my $config = $self->config;
 
   # do certain substitutions on the URL
-  $url = $self->transform_url($url,$segment);
+  $url = $self->transform_url($url,$segment,$overview,$region);
 
 #  my $id = md5_hex($url);     # turn into a filename
 #  $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
@@ -282,8 +283,11 @@ sub annotate {
   my $self = shift;
   my $segment                = shift;
   my $feature_files          = shift || {};
-  my $restricted_mapper      = shift;
-  my $unrestricted_mapper    = shift;
+  my $fast_mapper            = shift;  # fast mapper filters out features that are outside cur segment
+  my $slow_mapper            = shift;  # slow mapper doesn't
+  my $max_segment            = shift;  # ignored
+  my $whole_segment          = shift;
+  my $region_segment         = shift;
   my $state                  = $self->state;
 
   for my $url ($self->sources) {
@@ -294,10 +298,12 @@ sub annotate {
       # which remaps all coordinates. Otherwise, this is probably just a GFF
       # file and we need to filter out features that are outside the range of
       # the current segment.
-      my $mapper             = $url =~ m!(\$segment|\$ref)!
-                                     ? $unrestricted_mapper
-                                     : $restricted_mapper;
-      my $feature_file       = $self->feature_file($url,$segment,$mapper,$unrestricted_mapper);
+      my $mapper             = $url =~ m!\$(segment|ref|overview|region)!
+                                     ? $fast_mapper
+                                     : $slow_mapper;
+      my $feature_file       = $self->feature_file($url,$segment,
+						   $mapper,$slow_mapper,
+						   $whole_segment,$region_segment);
       $feature_files->{$url} = $feature_file;
   }
 }

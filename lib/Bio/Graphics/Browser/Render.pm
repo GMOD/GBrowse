@@ -332,7 +332,7 @@ sub asynchronous_event {
         my %track_data;
 
         foreach my $track_name ( @track_names ) {
-	    warn "add_track_to_state($track_name)" if DEBUG;
+	    warn "add_track_to_state($track_name)";# if DEBUG;
 
             $self->add_track_to_state($track_name);
 	    next unless $self->segment;
@@ -341,7 +341,7 @@ sub asynchronous_event {
 
 	    for my $track_id (@track_ids) {
 
-		warn "rendering track $track_id" if DEBUG;
+		warn "rendering track $track_id";# if DEBUG;
 
 		my ( $track_keys, $display_details, $details_msg )
 		    = $self->background_individual_track_render($track_id);
@@ -374,13 +374,13 @@ sub asynchronous_event {
 		    );
 
 		my $panel_id = 'detail_panels';
-		if ( $track_name =~ /:overview$/ ) {
+		if ( $track_id =~ /:overview$/ ) {
 		    $panel_id = 'overview_panels';
 		}
-		elsif ( $track_name =~ /:region$/ ) {
+		elsif ( $track_id =~ /:region$/ ) {
 		    $panel_id = 'region_panels';
 		}
-		warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name, panel_id=$panel_id" if DEBUG;
+		warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name, panel_id=$panel_id";# if DEBUG;
 		
 		$track_data{$track_id} = {
 		    track_key        => $track_key,
@@ -444,10 +444,11 @@ sub asynchronous_event {
 
         return ( 204, 'text/plain', undef ) unless ( $edited_file and $data );
         $self->init_remote_sources();
-        my $file_created = $self->handle_edit( $edited_file, $self->state, $data );
+        my ($file_created,$tracks) = $self->handle_edit( $edited_file, $self->state, $data );
 
         my $return_object = {
             file_created   => $file_created,
+	    tracks         => $tracks,
         };
 
         return (200,'application/json',$return_object);
@@ -1278,6 +1279,7 @@ sub init_remote_sources {
   my $remote_sources   = Bio::Graphics::Browser::RemoteSet->new($self->data_source,
 								$self->state,
 								$self->language);
+  for ($uploaded_sources,$remote_sources) { $_->add_files_from_state; }
   $self->uploaded_sources($uploaded_sources);
   $self->remote_sources($remote_sources);
   return $uploaded_sources && $remote_sources;  # true if both defined
@@ -1444,7 +1446,18 @@ sub handle_edit {
     my $fh = $uploaded_sources->open_file( $file, '>' ) or return;
     print $fh $data;
     close $fh;
-    return $file_created;
+
+    # parse the new file to find out what tracks it contains
+    my $uploads = Bio::Graphics::Browser::UploadSet->new($self->data_source,
+							 $self->state,
+							 $self->language);
+    $uploads->add_file($uploads->name_file($file));
+    my @sections = eval {$self->_featurefile_sections($uploads->feature_file($file))};
+    my @tracks   = map {"$file:$_"} @sections;
+
+    warn "will return tracks @tracks" if DEBUG;
+    
+    return ($file_created,\@tracks);
 }
 
 sub handle_quickie {
@@ -2616,15 +2629,19 @@ sub featurefiles_in_section {
 sub featurefile_sections {
     my $self  = shift;
     my $label = shift;
-
     my $ff    = $self->external_data->{$label} or return;
+    return $self->_featurefile_sections($ff);
+}
+
+sub _featurefile_sections {
+    my $self = shift;
+    my $ff   = shift;
 
     my %sections;
 
     # we prefer to read the labels from the feature file,
     # but some of the featurefile types don't support this.
     my @labels     = eval {$ff->labels};
-
     for my $label (@labels) {
 	my $section = $1 if $label =~ /:(overview|region|details?)$/i;
 	$section  ||= $ff->setting($label => 'section');
@@ -2632,6 +2649,12 @@ sub featurefile_sections {
 	$section    =~ s/details/detail/; # foo!
 	$sections{lc $_}++ for $section   =~ /(\w+)/g;
     }
+
+    # probe for unconfigured types, which will go into detail section by default
+    my @unconfigured  = eval {grep{!$ff->type2label($_)} $ff->types};
+    $sections{detail}++ if @unconfigured;
+
+    # last chance!
     $sections{detail}++ unless %sections;
     return keys %sections;
 }

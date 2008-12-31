@@ -57,7 +57,7 @@ function gbToggleTrack (button) {
        else {
           if (element && element.style.display != "none") { 
               element.style.display="none";
-              Controller.set_track_visibility(track_name, 0);
+              Controller.set_track_visibility(gbtrack.track_id, 0);
           }
        }
      });

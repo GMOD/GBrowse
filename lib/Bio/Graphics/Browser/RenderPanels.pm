@@ -219,12 +219,16 @@ sub make_requests {
     my %d;
     foreach my $label ( @{ $labels || [] } ) {
         my @track_args = $self->create_track_args( $label, $args );
+	my @extra_args = ();
 
         # get config data from the feature files
 	(my $track = $label) =~ s/:(overview|region|details?)$//;
-        my @extra_args = eval {
-            $feature_files->{$track}->types, $feature_files->{$track}->mtime;
-        } if $feature_files && $feature_files->{$track};
+	if ($feature_files && $feature_files->{$track}) {
+	    next unless $label =~ /:$args->{section}$/;
+	    @extra_args = eval {
+		$feature_files->{$track}->types, $feature_files->{$track}->mtime;
+	    }
+	}
 
         my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
             -cache_base => $base,

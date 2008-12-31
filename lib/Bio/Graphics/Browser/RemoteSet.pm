@@ -28,20 +28,30 @@ sub new {
 		    state         => $state,
 		    sources       => {},
 		   },ref $package || $package;
-  for my $track (@{$state->{tracks}||[]}) {
-    if ($track =~ /^(http|ftp|das):/) {
-	warn "adding remote track $track" if DEBUG;
-	$self->add_source($track,$track);
-	next;
-    }
-    my $remote_url = $config->setting($track=>'remote feature') or next;
-    warn "adding remote_url = $remote_url" if DEBUG;
-    $self->add_source($track,$remote_url);
-  }
   $self;
 }
 
+sub add_files_from_state {
+    my $self  = shift;
+    my $state = $self->state;
+    my $config = $self->config;
+
+    for my $track (@{$state->{tracks}||[]}) {
+
+	if ($track =~ /^(http|ftp|das):/) {
+	    warn "adding remote track $track" if DEBUG;
+	    $self->add_source($track,$track);
+	    next;
+	}
+	my $remote_url = $config->setting($track=>'remote feature') or next;
+	warn "adding remote_url = $remote_url" if DEBUG;
+	$self->add_source($track,$remote_url);
+    }
+}
+
 sub language      { shift->{language}         }
+sub state         { shift->{state}            }
+sub config        { shift->{config}           }
 sub sources       { keys %{shift->{sources}}  }
 sub source2url    { shift->{sources}{shift()} }
 

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.70 2008-12-31 01:25:08 lstein Exp $
+ $Id: controller.js,v 1.71 2008-12-31 18:15:57 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -98,6 +98,15 @@ var GBrowseController = Class.create({
        this.gbtrackname_to_id.unset(track_name);
     }
   }, // end unregister_track
+
+  unregister_gbtrack:
+  function (gbtrack) {
+      var id_hash = this.gbtrackname_to_id.get(gbtrack.track_name);
+      if (id_hash != null)
+           id_hash.unset(gbtrack.track_id);
+      if (this.gbtracks.get(gbtrack.track_id) != null)
+          this.gbtracks.unset(gbtrack.track_id);
+  },
 
   // Pass an iterator to execute something on each track
   // Call as this.each_track(function(track){}) to iterate over all gbtracks.
@@ -358,19 +367,21 @@ var GBrowseController = Class.create({
   }, // end update_coordinates
 
   add_track:
-  function(track_name, onSuccessFunc) {
+  function(track_name, onSuccessFunc, force) {
     var track_names = new Array(track_name);
-    this.add_tracks(track_names, onSuccessFunc);
+    this.add_tracks(track_names,onSuccessFunc,force);
   },
 
   add_tracks:
-  function(track_names, onSuccessFunc) {
+  function(track_names, onSuccessFunc, force) {
+
+    if (force == null) force=false;
 
     var request_str = "add_tracks=1";
     var found_track = false;
     for (var i = 0; i < track_names.length; i++) {
       var track_name = track_names[i];
-      if ( !this.track_exists(track_name) ) {
+      if ( force || !this.track_exists(track_name) ) {
         request_str += "&track_names="+encodeURIComponent(track_name);
         found_track = true;
       }
@@ -391,8 +402,13 @@ var GBrowseController = Class.create({
         var get_tracks = false;
 
         for (var ret_track_id in track_data){
+
+	  if (Controller.gbtracks.get(ret_track_id) != null) {
+	     continue; //oops already know this one
+	  }
+
           var this_track_data = track_data[ret_track_id];
-          var ret_gbtrack = Controller.register_track(
+          var ret_gbtrack     = Controller.register_track(
 	    ret_track_id,
             this_track_data.track_name,
             'standard',
@@ -669,20 +685,47 @@ var GBrowseController = Class.create({
       onSuccess: function(transport) {
         var results      = transport.responseJSON;
         var file_created = results.file_created;
+	var tracks       = results.tracks;
+
         Controller.wipe_div(external_utility_div_id); 
 
-        if ( 1 == file_created ){
+	var current_tracks = new Hash();
+	Controller.each_track(edited_file,function(gbtrack){
+           current_tracks.set(gbtrack.track_id,gbtrack);
+	});
+
+	var new_tracks = new Hash();
+	tracks.each(function(trackid){
+           new_tracks.set(trackid,1);
+	});
+
+	var tracks_to_delete = current_tracks.keys().findAll(function(trackid) {
+            return new_tracks.get(trackid)==null;
+	});
+	var tracks_to_add    = new_tracks.keys().findAll(function(trackid) {
+	    return current_tracks.get(trackid)==null;
+	});
+	var tracks_to_update = new_tracks.keys().findAll(function(trackid) {
+	    return current_tracks.get(trackid)!= null;
+	});
+
+	tracks_to_update.each(function(id) { 
+	   Controller.rerender_track(id,true);
+	   Controller.update_sections(new Array(external_listing_id));
+	});
+
+	tracks_to_delete.each(function(id) { 
+	   var gbtrack = current_tracks.get(id);
+	   actually_remove(gbtrack.track_div_id);
+	   Controller.unregister_gbtrack(gbtrack);
+	   Controller.update_sections(new Array(track_listing_id,external_listing_id));
+	});
+
+	if (tracks_to_add.length > 0)
           Controller.add_track(edited_file, function(){
             Controller.update_sections(new Array(track_listing_id,external_listing_id));
-          })
-        }
-        else{
-        // update track if it exists
-	 Controller.each_track(edited_file,function(gbtrack) {
-             Controller.rerender_track(gbtrack.track_id,true);
-         });
-         Controller.update_sections(new Array(external_listing_id));
-        }
+        },true);	
+
       } // end onSuccess
     });
   },

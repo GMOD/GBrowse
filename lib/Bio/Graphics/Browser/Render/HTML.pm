@@ -776,7 +776,7 @@ sub upload_file_rows {
     my $link        = a( { -href => "?$download=$file" }, "[$name]" );
 
     my @info = $self->get_uploaded_file_info( $self->track_visible($file)
-            && $uploaded_sources->feature_file($file) );
+					      && $self->external_data->{$file});
 
     my $escaped_file = CGI::escape($file);
     $return_html .= TR(

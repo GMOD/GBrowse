@@ -23,25 +23,34 @@ sub new {
 		     language      => $lang,
 		     files         => {},
 		    },ref $package || $package;
-  my @urls = grep {/^file:/} @{$state->{tracks}};
-  foreach (@urls) {
-    warn "adding $_" if DEBUG;
-    $self->_add_file($self->name_file($_));
-  }
   $self;
 }
 
+sub add_files_from_state {
+    my $self  = shift;
+    my $state = $self->state;
+
+    my @urls  = grep {/^file:/} @{$state->{tracks}};
+    warn "add_files_from_state(@urls)" if DEBUG;
+    foreach (@urls) {
+	warn "adding $_" if DEBUG;
+	$self->add_file($self->name_file($_));
+    }
+}
+
 sub language { shift->{language} }
+sub state    { shift->{state}    }
 
 sub files         { keys %{shift->{files}}         }
 sub url2path      { shift->{files}{shift()}        }
-sub _add_file     {
+sub add_file     {
   my $self = shift;
   my $url  = shift;
   my $path = shift;
+  warn "UploadSet::add_file($url)" if DEBUG;
   $self->{files}{$url} = $path;
 }
-sub _del_file     { delete shift->{files}{shift()} }
+sub del_file     { delete shift->{files}{shift()} }
 
 sub upload_file {
   my $self       = shift;
@@ -78,7 +87,7 @@ sub new_file {
   $filename =~ s/^file://;
   my ($url,$path) = $self->name_file($filename);
   warn "url = $url" if DEBUG;
-  $self->_add_file($url=>$path);
+  $self->add_file($url=>$path);
   return $url;
 }
 
@@ -120,7 +129,7 @@ sub clear_file {
   delete $state->{features}{$url};
   $state->{tracks} = [grep {$_ ne $url} @{$state->{tracks}}];
   warn "clear_uploaded_file(): deleting file = $url" if DEBUG;
-  $self->_del_file($url);
+  $self->del_file($url);
 }
 
 sub unlink_wigfiles {
@@ -142,6 +151,7 @@ sub feature_file {
 
   my $fh   = $self->open_file($url) or return;
   my $safe = $self->config->setting('allow remote callbacks') || 0;
+  warn "creating $url feature_file" if DEBUG;
   my $feature_file = Bio::Graphics::FeatureFile->new(-file             => $fh,
 						     -smart_features   => 1,
 						     -allow_whitespace => 1,

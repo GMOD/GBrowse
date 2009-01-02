@@ -1043,14 +1043,7 @@ sub region {
 	$region->set_features_by_region(@{$self->state}{'ref','start','stop'});
     }
     else { # a feature search
-	my $search = Bio::Graphics::Browser::RegionSearch->new(
-	    { source => $self->data_source,
-	      state  => $self->state,
-	    });
-	$search->init_databases(
-	    param('dbid') ? [param('dbid')]
-	                  :()
-	    );
+	my $search   = $self->get_search_object();
 	my $features = $search->search_features();
 	$region->features($features);
     }
@@ -1088,6 +1081,20 @@ sub region_segment {
     my $settings      = $self->state;
     return $self->{region_segment} = 
 	$self->region->region_segment($segment,$settings,$self->whole_segment);
+}
+
+sub get_search_object {
+    my $self = shift;
+    return $self->{searchobj} if defined $self->{searchobj};
+    my $search = Bio::Graphics::Browser::RegionSearch->new(
+	{ source => $self->data_source,
+	  state  => $self->state,
+	});
+    $search->init_databases(
+	param('dbid') ? [param('dbid')]
+	:()
+	);
+    return $self->{searchobj} = $search;
 }
 
 # ========================= plugins =======================
@@ -1160,7 +1167,6 @@ sub handle_gff_dump {
 
     my $dumper = Bio::Graphics::Browser::GFFPrinter->new(
         -data_source => $self->data_source(),
-        -source_name => param('src') || param('source') || path_info(),
         -segment    => param('q')          || param('segment'),
         -seqid      => param('ref')        || param('seqid'),
         -start      => param('start')      || 1,
@@ -1170,7 +1176,7 @@ sub handle_gff_dump {
         '-dump'     => param('d')          || '',
         -labels => [ param('type'), param('t') ],
     );
-    $dumper->get_segment();
+    $dumper->get_segment() or return 1;
 
     print header( $dumper->get_mime_type );
     $dumper->print_gff3();
@@ -1239,8 +1245,10 @@ sub handle_plugins {
             or $plugin->verb eq ( $self->tr('Import') || 'Import' ) )
         )
     {
+	my $search      = $self->get_search_object();
+	my $metasegment = $search->segment($segment);
         $self->do_plugin_header( $plugin, $cookie );
-        $self->do_plugin_dump( $plugin, $segment, $state )
+        $self->do_plugin_dump( $plugin, $metasegment, $state )
             && return 1;
     }
 
@@ -1600,6 +1608,8 @@ sub set_default_state {
 sub update_state {
   my $self   = shift;
 
+  return if param('gbgff'); # don't let dbgff requests update our coordinates!!!
+
   $self->update_state_from_cgi;
   my $state  = $self->state;
   if ($self->segment) {
@@ -1898,21 +1908,21 @@ sub update_coordinates {
   }
 
   if ($position_updated) { # clip and update param
-    if (defined $state->{seg_min} && $state->{start} < $state->{seg_min}) {
-      my $delta = $state->{seg_min} - $state->{start};
-      $state->{start} += $delta;
-      $state->{stop}  += $delta;
-    }
+      if (defined $state->{seg_min} && $state->{start} < $state->{seg_min}) {
+	  my $delta = $state->{seg_min} - $state->{start};
+	  $state->{start} += $delta;
+	  $state->{stop}  += $delta;
+      }
 
-    if (defined $state->{seg_max} && $state->{stop}  > $state->{seg_max}) {
-      my $delta = $state->{stop} - $state->{seg_max};
-      $state->{start} -= $delta;
-      $state->{stop}  -= $delta;
-    }
+      if (defined $state->{seg_max} && $state->{stop}  > $state->{seg_max}) {
+	  my $delta = $state->{stop} - $state->{seg_max};
+	  $state->{start} -= $delta;
+	  $state->{stop}  -= $delta;
+      }
 
-    # update our "name" state and the CGI parameter
-    $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
-    param(name => $state->{name});
+      # update our "name" state and the CGI parameter
+      $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
+      param(name => $state->{name});
   }
 
   elsif (param('name')) {
@@ -3029,7 +3039,9 @@ sub external_data {
     # $f will hold a feature file hash in which keys are human-readable names of
     # feature files and values are FeatureFile objects.
     my $f           = {};
-    my $max_segment = $self->get_max_segment;
+    my $max_segment  = $self->get_max_segment;
+    my $search       = $self->get_search_object;
+    my $meta_segment = $search->segment($segment);
     if ($segment) {
 	my $rel2abs      = $self->coordinate_mapper($segment,1);
 	my $rel2abs_slow = $self->coordinate_mapper($segment,0);
@@ -3037,7 +3049,7 @@ sub external_data {
 	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} 
 	        if DEBUG;
 	    next unless $featureset;
-	    $featureset->annotate($segment,$f,
+	    $featureset->annotate($meta_segment,$f,
 				  $rel2abs,$rel2abs_slow,$max_segment,
 				  $self->whole_segment,$self->region_segment);
 	}
@@ -3061,17 +3073,12 @@ sub coordinate_mapper {
     );
     my %segments;
 
-    my $search = Bio::Graphics::Browser::RegionSearch->new(
-	{ source => $self->data_source,
-	  state  => $self->state}
-	) or die;
-    $search->init_databases;
-
+    my $search = $self->get_search_object;
     my $closure = sub {
         my ( $refname, @ranges ) = @_;
 
         unless ( exists $segments{$refname} ) {
-            $segments{$refname} = $search->search_features($refname)->[0];
+            $segments{$refname} = $search->search_features({-search_term => $refname})->[0];
         }
         my $mapper  = $segments{$refname} || return;
         my $absref  = $mapper->abs_ref;

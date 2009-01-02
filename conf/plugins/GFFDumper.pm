@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.26 2006-10-04 15:17:57 lstein Exp $
+# $Id: GFFDumper.pm,v 1.27 2009-01-02 20:57:37 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -151,7 +151,7 @@ sub dump {
   for my $set (@more_feature_sets) {
     if ( $set->can('get_seq_stream') ) {
       my @feats = ();
-      my $iterator = $set->get_seq_stream;
+      my $iterator  = $set->get_seq_stream;
       while ( my $f = $iterator->next_seq ) {
 	$self->print_feature($f);
       }

@@ -1056,7 +1056,7 @@ sub run_local_requests {
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
 
-	my $multiple_tracks = $label =~ /^(http|ftp|file|das):/ ;
+	my $multiple_tracks = $label =~ /^(http|ftp|file|das|plugin):/ ;
 
         my @keystyle = ( -key_style => 'between' )
             if $multiple_tracks;

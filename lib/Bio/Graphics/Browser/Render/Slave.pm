@@ -316,7 +316,7 @@ sub render_tracks {
 sub search_features {
     my $self = shift;
 
-    my $searchterm      = param('searchterm');
+    my $searchargs      = thaw param('searchargs');
     my $tracks	        = thaw param('tracks');
     my $settings	= thaw param('settings');
     my $datasource	= thaw param('datasource');
@@ -330,7 +330,7 @@ sub search_features {
 
     warn "SERVER, dbid = ",$settings->{dbid} if DEBUG;
 
-    my $results = $search->search_features_locally($searchterm);
+    my $results = $search->search_features_locally($searchargs);
     return unless $results;
     my @features = map { $self->clone_feature($_) } grep {defined $_} @$results;
     return nfreeze(\@features);

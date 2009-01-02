@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.5 2008-12-31 01:25:08 lstein Exp $
+# $Id: GFFPrinter.pm,v 1.6 2009-01-02 20:57:37 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -29,14 +29,13 @@ sub new {
     my %options = @_;
     my $self    = bless {
         data_source => $options{-data_source},
-        source_name => $options{-source_name},
         segment     => $options{-segment},
         seqid       => $options{-seqid},
         start       => $options{-start},
         segment_end => $options{-end},
         stylesheet  => $options{-stylesheet},
         id          => $options{-id},
-        'dump'      => $options{'-dump'},
+        'dump'      => $options{'-dump'},  # in quotes because "dump" is a perl keyword
         labels      => $options{-labels},
         },
         ref $class || $class;
@@ -95,7 +94,7 @@ sub segment {
 sub check_source {
     my $self        = shift;
     my $data_source = $self->{data_source};
-    my $source_name = $self->{source_name};
+    my $source_name = $data_source->name();
 
     $source_name =~ s!^/+!!;    # get rid of leading / from path_info()
     $source_name =~ s!/+$!!;    # get rid of trailing / from path_info() !
@@ -114,6 +113,14 @@ sub check_source {
 sub get_segment {
     my $self = shift;
 
+    # check whether someone called us directly by pasting into location box
+    if ($self->{segment} =~ /^\$segment/) { 
+        print header('text/plain');
+	print "# To share this track, please paste its URL into the \"Enter Remote Annotation\" box\n",
+	"# at the bottom of a GBrowse window and not directly into your browser's Location area.\n";
+	return;
+    }
+
     my ( $seqid, $start, $end )
         = $self->{segment} =~ /^([^:]+)(?::([\d-]+)(?:\.\.|,)([\d-]+))?/;
 
@@ -121,9 +128,9 @@ sub get_segment {
     $start ||= $self->{start} || 1;
     $end   ||= $self->{end};
     unless ( defined $seqid ) {
-        print header('text/plain'),
-            "# Please provide ref, start and end arguments.\n";
-        exit 0;
+        print header('text/plain');
+	print "# Please provide ref, start and end arguments.\n";
+	return;
     }
 
     my $datasource = $self->data_source;

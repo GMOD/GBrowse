@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.15 2008-10-08 16:55:24 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.16 2009-01-02 20:57:37 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.23';
+$VERSION = '0.25';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -29,7 +29,13 @@ sub init {shift->configure_enzymes}
 
 sub config_defaults {
   my $self = shift;
-  return { on => 1};
+  return { 
+      on    => 1,
+      EcoRI => 1,
+      ClaI  => 1,
+      BamHI => 1,
+      PvuII => 1,
+  };
 }
 
 sub reconfigure {

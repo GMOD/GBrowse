@@ -90,19 +90,27 @@ sub set_features_by_region {
     return $features;
 }
 
+# For backward compatibility, you can call search_features() either
+# with a scalar string, in which case it will be treated as a search
+# string to be parsed and search (for example "chrI:1000.2000") or
+# call with a hashref containing the arguments to be passed to
+# the db adaptor's features() method.
 sub search_features {
   my $self         = shift;
-  my $search_term  = shift;
+  my $args         = shift;
 
   my $db    = $self->db;
   my $state = $self->state;
-  $search_term ||= $state->{name};
 
-  defined $search_term && length $search_term > 0 or return; 
+  $args   ||= { };
+  unless (%$args) {
+      return unless $state->{name};
+      $args->{-search_term} = $state->{name};
+  }
 
-  warn "SEARCHING FOR $search_term" if DEBUG; 
+  warn "SEARCHING FOR ",join ' ',%$args if DEBUG; 
 
-  my $features = $self->search_db($search_term);
+  my $features = $self->search_db($args);
   $self->features($features);
   return $features;
 }
@@ -144,13 +152,19 @@ sub get_whole_segment {
   $whole_segment;
 }
 
+
 sub search_db {
   my $self = shift;
-  my $name = shift;
+  my $args = shift;
 
-  my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
-  my $features = $self->lookup_features($ref,$start,$stop,$class,$name,$id);
-  return $features;
+  if (my $name = $args->{-search_term}) {
+      my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
+      return $self->lookup_features($ref,$start,$stop,$class,$name,$id);
+  }
+  else {
+      my @features = $self->db->features(%$args);
+      return wantarray ? @features : \@features;
+  }
 }
 
 sub lookup_features {

@@ -28,7 +28,7 @@ Bio::Graphics::Browser::RegionSearch -- Search through multiple databases for fe
                 state  => $session_state
               });
   $dbs->init_databases();
-  my $features = $dbs->search_features('sma-3');
+  my $features = $dbs->search_features({-search_term=>'sma-3'});
   
 
 =head1 DESCRIPTION
@@ -165,11 +165,59 @@ sub remote_dbs       { shift->{remote_dbs} }
 
 sub local_dbs        { shift->{local_dbs} }
 
-=head2 $found = $db->search_features('search term')
+=head2 @features = $db->features(@args)
+
+Pass @args to the underlying db adaptors' features() methods and return all
+matching features. Example:
+
+   @features = $db->features(-type=>'CDS')
+
+=cut
+
+sub features {
+    my $self = shift;
+
+    my %args;
+    if (@_ == 0) {
+	%args = ();
+    }
+    elsif ($_[0] !~/^-/) {
+	my @types = @_;
+	%args = (-type=>\@types);
+    }
+    else {
+	%args = @_;
+    }
+    return $self->search_features(\%args);
+}
+
+=head2 $meta_segment = $db->segment($segment)
+
+Given an existing segment, return a
+Bio::Graphics::Browser::MetaSegment object, which behaves more or less
+like a regular Bio::Das::SegmentI object, but searches multiple
+databases. Both iterative and non-iterative feature fetching is
+supported.
+
+(The class definitions for Bio::Graphics::Browser::MetaSegment are
+located in the Bio/Graphics/Browser/RegionSearch.pm file.)
+
+=cut
+
+sub segment {
+    my $self    = shift;
+    my $segment = shift;
+    return Bio::Graphics::Browser::MetaSegment->new($self,$segment);
+}
+
+=head2 $found = $db->search_features($args)
 
 This method will search all the databases for features matching the
 search term and will return the results as an array ref of
-Bio::SeqFeatureI objects.
+Bio::SeqFeatureI objects. The arguments are a hash ref containing the
+various options passed to the db adaptors' features() method
+(e.g. "-type"), or a hashref with the key "-search", in which case the
+search term is parsed as any of gbrowse's heuristic keyword searches.
 
 If no search term is provided, then it is taken from the "name" field
 of the settings object.
@@ -178,13 +226,17 @@ of the settings object.
 
 sub search_features {
     my $self        = shift;
-    my $search_term = shift;
+    my $args        = shift;
+    my $state       = $self->state;
 
-    $search_term   ||= $self->state->{name};  
-    defined $search_term or return;
+    $args          ||= {};
+    unless (%$args) {
+	return unless $state->{name};
+	$args->{-search_term} = $state->{name}
+    }
 
-    my $local  = $self->search_features_locally($search_term);
-    my $remote = $self->search_features_remotely($search_term);
+    my $local  = $self->search_features_locally($args);
+    my $remote = $self->search_features_remotely($args);
 
     my @found;
     push @found,@$local  if $local  && @$local;
@@ -193,16 +245,18 @@ sub search_features {
     # uniqueify features of the same type and name
     my %seenit;
 
-    @found = grep {defined $_ && !$seenit{$_->name,
-					  $_->type,
-					  $_->seq_id,
-					  $_->start,
-					  $_->end,
-					  $_->strand}++} @found;
-    return \@found;
+    @found = grep {
+	defined $_ 
+	    && !$seenit{($_->name||''),
+			$_->type,
+			$_->seq_id,
+			$_->start,
+			$_->end,
+			$_->strand}++} @found;
+    return wantarray ? @found : \@found;
 }
 
-=head2 $found = $db->search_features_locally('search term')
+=head2 $found = $db->search_features_locally($args)
 
 Search only the local databases for the term.
 
@@ -211,8 +265,9 @@ Search only the local databases for the term.
 
 sub search_features_locally {
     my $self        = shift;
-    my $search_term = shift;
-    defined $search_term or return;
+    my $args        = shift;
+    ref $args && %$args or return;
+
     my $state       = $self->state;
 
     my @found;
@@ -233,7 +288,7 @@ sub search_features_locally {
 						  db      => $db,
 						  }
 						); 
-	my $features = $region->search_features($search_term);
+	my $features = $region->search_features($args);
 	next unless $features && @$features;
 	$self->add_dbid_to_features($db,$features);
 	push @found,@$features if $features;
@@ -242,7 +297,7 @@ sub search_features_locally {
     return \@found;
 }
 
-=head2 $found = $db->search_features_remotely('search term')
+=head2 $found = $db->search_features_remotely($args)
 
 Search only the remote databases for the term.
 
@@ -251,8 +306,8 @@ Search only the remote databases for the term.
 
 sub search_features_remotely {
     my $self        = shift;
-    my $search_term = shift;
-    defined $search_term or return;
+    my $args        = shift;
+    ref $args && %$args or return;
 
     # each remote renderer gets a chance to search;
     # we kick off these searches before we do local
@@ -286,7 +341,7 @@ sub search_features_remotely {
 	else { # child
 	    Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
 	    $pipe->writer();
-	    $self->fetch_remote_features($search_term,$url,$pipe);
+	    $self->fetch_remote_features($args,$url,$pipe);
 	    CORE::exit 0;  # CORE::exit prevents modperl from running cleanup, etc
 	}
     }
@@ -335,11 +390,12 @@ sub search_features_remotely {
 
 sub fetch_remote_features {
     my $self = shift;
-    my ($search_term,$url,$outfh) = @_;
+    my ($args,$url,$outfh) = @_;
 
     $Storable::Deparse ||= 1;
     my $s_dsn	= nfreeze($self->source);
     my $s_set	= nfreeze($self->state);
+    my $s_args	= nfreeze($args);
     my %env     = map {$_=>$ENV{$_}} grep /^GBROWSE/,keys %ENV;
 
     my @tracks  = keys %{$self->remote_dbs->{$url}};
@@ -349,7 +405,7 @@ sub fetch_remote_features {
 			  datasource => $s_dsn,
 			  tracks     => nfreeze(\@tracks),
 			  env        => nfreeze(\%env),
-			  searchterm => $search_term,
+			  searchargs => $s_args,
 			]);
 
     my $ua      = LWP::UserAgent->new();
@@ -386,6 +442,67 @@ sub add_dbid_to_features {
     my $source = $self->source;
     my $dbid   = $source->db2id($db);
     $source->add_dbid_to_feature($_,$dbid) foreach @$features;
+}
+
+##################################################################33
+# META SEGMENT DEFINITIONS
+##################################################################33
+package Bio::Graphics::Browser::MetaSegment;
+
+our $AUTOLOAD;
+use overload 
+  '""'     => \&as_string,
+  fallback => 1;
+
+sub new {
+    my $class = shift;
+    my ($region_search,$segment) = @_;
+    return bless {db      => $region_search,
+		  segment => $segment},ref $class || $class;
+}
+
+sub AUTOLOAD {
+  my($pack,$func_name) = $AUTOLOAD=~/(.+)::([^:]+)$/;
+  return if $func_name eq 'DESTROY';
+  my $self = shift or die;
+  $self->segment->$func_name(@_);
+}
+
+sub db      { shift->{db}      }
+sub segment { shift->{segment} }
+sub as_string {
+    my $segment = shift->segment;
+    return $segment->seq_id.':'.$segment->start.'..'.$segment->end;
+}
+
+sub features {
+    my $self    = shift;
+    my $segment = $self->segment;
+    $self->db->features(-seq_id => $segment->seq_id,
+			-start  => $segment->start,
+			-end    => $segment->end,
+			-class  => eval {$segment->class} || 'Sequence',
+			@_
+	);
+}
+
+sub get_seq_stream {
+    my $self = shift;
+    my $features = $self->features(@_);
+    return Bio::Graphics::Browser::MetaSegment::Iterator->new($features);
+}
+
+package Bio::Graphics::Browser::MetaSegment::Iterator;
+
+sub new {
+    my $class    = shift;
+    my $features = shift;
+    return bless {f=>$features},ref $class || $class;
+}
+
+sub next_seq {
+    my $f = shift->{f};
+    return shift @$f;
 }
 
 1;

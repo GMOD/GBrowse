@@ -15,7 +15,7 @@ use FindBin '$Bin';
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
-use constant TEST_COUNT => 137;
+use constant TEST_COUNT => 138;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;

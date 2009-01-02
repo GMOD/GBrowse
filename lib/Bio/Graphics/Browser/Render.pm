@@ -332,7 +332,7 @@ sub asynchronous_event {
         my %track_data;
 
         foreach my $track_name ( @track_names ) {
-	    warn "add_track_to_state($track_name)";# if DEBUG;
+	    warn "add_track_to_state($track_name)" if DEBUG;
 
             $self->add_track_to_state($track_name);
 	    next unless $self->segment;
@@ -341,7 +341,7 @@ sub asynchronous_event {
 
 	    for my $track_id (@track_ids) {
 
-		warn "rendering track $track_id";# if DEBUG;
+		warn "rendering track $track_id" if DEBUG;
 
 		my ( $track_keys, $display_details, $details_msg )
 		    = $self->background_individual_track_render($track_id);
@@ -380,7 +380,7 @@ sub asynchronous_event {
 		elsif ( $track_id =~ /:region$/ ) {
 		    $panel_id = 'region_panels';
 		}
-		warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name, panel_id=$panel_id";# if DEBUG;
+		warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name, panel_id=$panel_id" if DEBUG;
 		
 		$track_data{$track_id} = {
 		    track_key        => $track_key,
@@ -1626,7 +1626,7 @@ sub default_state {
   $state->{width}        = $self->setting('default width');
   $state->{source}       = $data_source->name;
   $state->{cache}        = defined $data_source->cache_time    ? $data_source->cache_time : 1;
-  $state->{region_size}  = $self->setting('region segment');
+  $state->{region_size}    = $self->setting('region segment');
   $state->{'max segment'}  = $self->setting('max segment');
   $state->{v}            = VERSION;
   $state->{stp}          = 1;

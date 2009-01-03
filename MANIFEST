@@ -59,7 +59,7 @@ conf/plugins/FastaDumper.pm
 conf/plugins/FBTableDumper.pm
 conf/plugins/FilterTest.pm
 conf/plugins/GeneFinder.pm
-conf/plugins/GFFDumper.pm
+conf/plugins/TrackDumper.pm
 conf/plugins/OligoFinder.pm
 conf/plugins/PrimerDesigner.pm
 conf/plugins/ProteinDumper.pm

@@ -1110,8 +1110,9 @@ sub wrap_plugin_configuration {
         -onSubmit => 'return false;',
     );
     if ($config_html) {
-        my $plugin_type = $plugin->type;
-        my $plugin_name = $plugin->name;
+        my $plugin_type        = $plugin->type;
+        my $plugin_name        = $plugin->name;
+	my @plugin_description = $plugin->description;
         my @buttons;
 
         # Cancel Button
@@ -1162,8 +1163,10 @@ sub wrap_plugin_configuration {
               $plugin_type eq 'finder'
             ? $self->tr('Find')
             : $self->tr('Configure'),
-            $plugin_name
+            $plugin_name,
         );
+	$return_html .= div({-style=>'font-size:small'},@plugin_description);
+
         my $button_html = join( '&nbsp;',
             @buttons[ 0 .. @buttons - 2 ],
             b( $buttons[-1] ),

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.28 2009-01-03 04:47:26 lstein Exp $
+# $Id: GFFDumper.pm,v 1.29 2009-01-03 04:57:04 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -25,6 +25,7 @@ sub config_defaults {
 	  mode        => 'selected',
 	  disposition => 'view',
 	  coords      => 'absolute',
+	  embed       => 0,
 	  print_config=> 1,
 	 };
 }
@@ -32,9 +33,9 @@ sub config_defaults {
 sub reconfigure {
   my $self = shift;
   my $current_config = $self->configuration;
-  delete $current_config->{embed};
-  foreach my $p ( $self->config_param() ) {
-    $current_config->{$p} = $self->config_param($p);
+  my @keys = keys %{$self->config_defaults};
+  foreach my $p ( @keys ) {
+      $current_config->{$p} = $self->config_param($p);
   }
 }
 
@@ -66,13 +67,14 @@ sub configure_form {
 			));
   $html .= p(
 	     checkbox(-name=>$self->config_name('embed'),
-		      -checked=>0,
+		      -checked=>$current_config->{embed},
+		      -override=>1,
 		      -label=>'Embed DNA sequence in the GFF file')
 		      );      
   $html .= p(
 	     checkbox(-name=>$self->config_name('print_config'),
-		      -checked=>1,
-		      -default=>$self->config_name('print_config'),
+		      -checked=>$current_config->{print_config},
+		      -override=>1,
 		      -label=>'Include track configuration data')
 		      );      
   autoEscape(1);

@@ -1,13 +1,13 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.27 2009-01-02 20:57:37 lstein Exp $
+# $Id: GFFDumper.pm,v 1.28 2009-01-03 04:47:26 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
-use Bio::Graphics::Browser::GFFhelper;
+use Bio::Graphics::Browser::GFFPrinter;
 use CGI qw(:standard *sup);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.80';
+$VERSION = '0.90';
 
 @ISA = qw/ Bio::Graphics::Browser::Plugin /;
 
@@ -25,6 +25,7 @@ sub config_defaults {
 	  mode        => 'selected',
 	  disposition => 'view',
 	  coords      => 'absolute',
+	  print_config=> 1,
 	 };
 }
 
@@ -54,17 +55,6 @@ sub configure_form {
 				       3   => '3'},
 			  -default => $current_config->{version},
 			  -override => 1));
-  $html .= p(
-	     'Coordinates',
-	     radio_group(-name   => $self->config_name('coords'),
-			 -values => ['absolute','relative'],
-			 -labels => { absolute => 'relative to chromosome/contig/clone',
-				      relative => 'relative to dumped segment (start at 1)'
-				    },
-			 -default => $current_config->{coords},
-			 -override => 1
-			 )
-	    );
   autoEscape(0);
   $html .= p(
 	     radio_group(-name=>$self->config_name('disposition'),
@@ -78,6 +68,12 @@ sub configure_form {
 	     checkbox(-name=>$self->config_name('embed'),
 		      -checked=>0,
 		      -label=>'Embed DNA sequence in the GFF file')
+		      );      
+  $html .= p(
+	     checkbox(-name=>$self->config_name('print_config'),
+		      -checked=>1,
+		      -default=>$self->config_name('print_config'),
+		      -label=>'Include track configuration data')
 		      );      
   autoEscape(1);
 
@@ -110,7 +106,6 @@ sub mime_type {
         :'text/plain';
 }
 
-
 sub dump {
   my $self = shift;
   my ($segment, @more_feature_sets) = @_;
@@ -125,7 +120,11 @@ sub dump {
   my $coords        = $config->{coords};
   my $embed         = $config->{embed};
 
-  $segment->refseq($segment) if $coords eq 'relative';
+  Bio::Graphics::Browser::GFFPrinter->print_configuration
+      ($self->browser_config,
+       $mode eq 'selected' ? [$self->selected_tracks] : ()
+      )
+      if $config->{print_config};
 
   my $date = localtime;
   print "##gff-version $version\n";
@@ -151,7 +150,7 @@ sub dump {
   for my $set (@more_feature_sets) {
     if ( $set->can('get_seq_stream') ) {
       my @feats = ();
-      my $iterator  = $set->get_seq_stream;
+      my $iterator = $set->get_seq_stream;
       while ( my $f = $iterator->next_seq ) {
 	$self->print_feature($f);
       }

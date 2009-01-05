@@ -63,7 +63,7 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::RegionSearch;
 use Template;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.1 2008-12-13 22:10:02 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.2 2009-01-05 00:34:28 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
@@ -170,7 +170,7 @@ sub run {
     else {
         $search_term = $name;
     }
-    my $features = $search->search_features($search_term);
+    my $features = $search->search_features({-search_term => $search_term});
 
     # provide customized content for popup balloons
     if ( defined $rmt ) {

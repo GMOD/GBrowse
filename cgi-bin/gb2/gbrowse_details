@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Realign 'align';
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.6 2008-12-18 21:06:01 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.7 2009-01-05 00:34:28 mwz444 Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 
@@ -122,7 +122,7 @@ sub run {
     } else {
 	$search_term = $name;
     }
-    my $features = $search->search_features($search_term);
+    my $features = $search->search_features({-search_term => $search_term});
 
     warn "features = @$features" if DEBUG;
     warn "segments = ",join ' ',$features->[0]->segments if (DEBUG && @$features);

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.72 2009-01-06 07:38:24 lstein Exp $
+ $Id: controller.js,v 1.73 2009-01-06 09:13:12 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -196,7 +196,7 @@ var GBrowseController = Class.create({
         cursor:     'text'
     });
     image.setOpacity(1);
-    image.parentNode.setStyle({width: bar_obj.width+'px'});
+    image.ancestors()[0].setStyle({width: bar_obj.width+'px'});
   },
 
   append_child_from_html:
@@ -236,7 +236,8 @@ var GBrowseController = Class.create({
     for (var i = 0; i < section_names.length; i++) {
       request_str += "&section_names="+section_names[i];
     }
-    new Ajax.Request('#',{
+
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters: request_str,
       onSuccess: function(transport) {
@@ -258,13 +259,13 @@ var GBrowseController = Class.create({
 
      var param = {set_display_option: 1};
      param[option] = value;
-     new Ajax.Request('#',
+     new Ajax.Request(document.URL,
             {
 		    method: 'post', 
 		    parameters: param,
-		    onSuccess:  function (transport) { 
-		    Controller.update_coordinates('left 0'); // causes an elegant panel refresh
-		} 
+		    onComplete:  function (transport) {
+		      Controller.update_coordinates('left 0'); // causes an elegant panel refresh
+		    } 
             }
      );
 
@@ -281,7 +282,7 @@ var GBrowseController = Class.create({
 
     this.each_track(track_id,function(gbtrack) {
 
-      new Ajax.Request('#',{
+      new Ajax.Request(document.URL,{
         method:     'post',
         parameters: {
           set_track_visibility:  1,
@@ -302,11 +303,11 @@ var GBrowseController = Class.create({
   first_render:
   function()  {
 
-    new Ajax.Request('#',{
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters: {first_render: 1},
       onSuccess: function(transport) {
-        var results             = transport.responseJSON;
+	var results             = transport.responseJSON;
         var track_keys          = results.track_keys;
         Controller.segment_info = results.segment_info;
         $('details_msg').innerHTML = results.details_msg;
@@ -336,26 +337,26 @@ var GBrowseController = Class.create({
             alert('REPORT THIS BUG: element '+gbtrack.track_image_id+' should not be null');
     });
     
-    new Ajax.Request('#',{
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters: {navigate: action},
       onSuccess: function(transport) {
-	var results                     = transport.responseJSON;
-        Controller.segment_info         = results.segment_info;
-	    var track_keys              = results.track_keys;
-	    var overview_scale_bar_hash = results.overview_scale_bar;
-	    var region_scale_bar_hash   = results.region_scale_bar;
-	    var detail_scale_bar_hash   = results.detail_scale_bar;
+	var results                 = transport.responseJSON;
+        Controller.segment_info     = results.segment_info;
+	var track_keys              = results.track_keys;
+	var overview_scale_bar_hash = results.overview_scale_bar;
+	var region_scale_bar_hash   = results.region_scale_bar;
+	var detail_scale_bar_hash   = results.detail_scale_bar;
         Controller.set_last_update_keys(track_keys);
-    
+
         if (overview_scale_bar_hash){
-          Controller.update_scale_bar(overview_scale_bar_hash);
+	    Controller.update_scale_bar(overview_scale_bar_hash);
         }
         if (region_scale_bar_hash){
-          Controller.update_scale_bar(region_scale_bar_hash);
+	    Controller.update_scale_bar(region_scale_bar_hash);
         }
         if (detail_scale_bar_hash){
-          Controller.update_scale_bar(detail_scale_bar_hash);
+	    Controller.update_scale_bar(detail_scale_bar_hash);
         }
     
         // Update the segment sections
@@ -395,7 +396,7 @@ var GBrowseController = Class.create({
 
     if (!found_track) return false;
 
-    new Ajax.Request('#',{
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters: request_str,
       onSuccess: function(transport) {
@@ -454,7 +455,7 @@ var GBrowseController = Class.create({
        $(gbtrack.track_image_id).setOpacity(0.3);
        Controller.set_last_update_key(gbtrack);
 
-       new Ajax.Request('#',{
+       new Ajax.Request(document.URL,{
          method:     'post',
          parameters: {
            rerender_track:  1,
@@ -521,7 +522,7 @@ var GBrowseController = Class.create({
 
     if (finished) return;
 
-    new Ajax.Request('#',{
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters: $H({ retrieve_multiple: 1, 
                        track_ids:     track_ids
@@ -581,7 +582,7 @@ var GBrowseController = Class.create({
 
   reconfigure_track:
   function(track_id, serialized_form, show_track) {
-    new Ajax.Request('#',{
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters: serialized_form +"&"+ $H({
             reconfigure_track: track_id
@@ -615,7 +616,7 @@ var GBrowseController = Class.create({
   reconfigure_plugin:
   function(plugin_action,plugin_track_id,pc_div_id,plugin_type) {
     var form_element = $("configure_plugin");
-    new Ajax.Request('#',{
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
             plugin_action: plugin_action,
@@ -682,7 +683,7 @@ var GBrowseController = Class.create({
   commit_file_edit:
   function(edited_file) {
     var form_element = $(edit_upload_form_id);
-    new Ajax.Request('#',{
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
             edited_file: edited_file,
@@ -741,7 +742,7 @@ var GBrowseController = Class.create({
 
     $(external_listing_id).innerHTML='<p><b style="background-color:yellow">Working...</b></p>';
 
-    new Ajax.Request('#',{
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters: {
         delete_upload_file: 1,
@@ -765,7 +766,7 @@ var GBrowseController = Class.create({
 
     $(external_listing_id).innerHTML='<p><b style="background-color:yellow">Working...</b></p>';
 
-    new Ajax.Request('#',{
+    new Ajax.Request(document.URL,{
       method:     'post',
       parameters:{
             add_url:    1,

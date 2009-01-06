@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.222 2008-12-18 18:41:59 lstein Exp $
+# $Id: Browser.pm,v 1.223 2009-01-06 09:13:12 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -245,6 +245,7 @@ sub get_source_from_cgi {
     my $self = shift;
 
     my $source = CGI::param('source') || CGI::param('src') || CGI::path_info();
+    $source    =~ s!\#$!!;  # get rid of trailing # left by IE
     $source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
     $source    =~ s!/+$!!;
     

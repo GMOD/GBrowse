@@ -67,22 +67,34 @@ TH.linkmenu       {
 .multiplechoicetitle  { background-color: lightblue;
 		        font-size: small;
 }
-.searchtitle      { background-color: rgba(240,240,240,0.4);
+.searchtitle      { background-color: rgb(240,240,240);
+		    background:       url(/gbrowse2/images/buttons/grey_0.4_pixel.png);
+		    background-color: rgba(240,240,240,0.4);
 	            font-size: small;
 }
-.searchbody       { background-color: rgba(224,224,224,0.4);
+.searchbody       { background-color: rgb(224,224,224);
+		    background:       url(/gbrowse2/images/buttons/dark_0.4_pixel.png);
+		    background-color: rgba(224,224,224,0.4);
 	            font-size: small;
 }
-.settingstitle    { background-color: rgba(224,224,224,0.4);
+.settingstitle    { background-color: rgb(224,224,224);
+		    background:       url(/gbrowse2/images/buttons/dark_0.4_pixel.png);
+		    background-color: rgba(224,224,224,0.4);
 	            font-size: small;
 }
-.settingsbody     { background-color: rgba(240,240,240,0.4);
+.settingsbody     { background-color: rgb(240,240,240);
+		    background:       url(/gbrowse2/images/buttons/grey_0.4_pixel.png);
+		    background-color: rgba(240,240,240,0.4);
 	            font-size: small;
 }
-.uploadtitle      { background-color: rgba(224,224,224,0.4);
+.uploadtitle      { background-color: rgb(224,224,224);
+		    background:       url(/gbrowse2/images/buttons/dark_0.4_pixel.png);
+		    background-color: rgba(224,224,224,0.4);
 	            font-size: small;
 }
-.uploadbody       { background-color: rgba(240,240,240,0.4);
+.uploadbody       { background-color: rgb(240,240,240);
+		    background:       url(/gbrowse2/images/buttons/grey_0.4_pixel.png);
+		    background-color: rgba(240,240,240,0.4);
 	            font-size: small;
 }
 .technicalinfo    { background-color: #FFFFFF; }

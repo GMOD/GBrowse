@@ -83,11 +83,11 @@ function create_drag (div_name) {
    Sortable.create(
 		  div_name,
 		  {
-		  constraint: 'vertical',
-		      tag: 'div',
-		      only: 'track',
-		      handle: 'titlebar',
-		      scroll: window,
+		      tag:     'div',
+		      constraint:  'vertical',
+  		      only:    'track',
+		      handle:  'titlebar',
+		      scroll:   window,
 		      onUpdate: function() {
 		      var postData = Sortable.serialize(div_name,{name:'label'});
 		      new Ajax.Request(document.URL,{method:'post',postBody:postData});

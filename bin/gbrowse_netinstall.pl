@@ -248,6 +248,10 @@ unless ($skip_bioperl) {
   }
 }
 
+print STDERR "\n *** Installing Bio::Graphics ***\n";
+
+CPAN::Shell->install('Bio::Graphics');
+
 print STDERR "\n *** Installing Generic-Genome-Browser ***\n";
 
 my $latest_version = find_gbrowse_latest();

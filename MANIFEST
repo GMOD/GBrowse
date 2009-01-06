@@ -59,7 +59,6 @@ conf/plugins/FastaDumper.pm
 conf/plugins/FBTableDumper.pm
 conf/plugins/FilterTest.pm
 conf/plugins/GeneFinder.pm
-conf/plugins/TrackDumper.pm
 conf/plugins/OligoFinder.pm
 conf/plugins/PrimerDesigner.pm
 conf/plugins/ProteinDumper.pm
@@ -71,10 +70,11 @@ conf/plugins/Spectrogram.pm
 conf/plugins/Submitter.pm
 conf/plugins/test.pm
 conf/plugins/TestFinder.pm
+conf/plugins/TrackDumper.pm
 conf/slave_preload.conf
+conf/solid_gray_colors
 conf/submitter_plugin.conf
 conf/transparent_colors
-conf/solid_gray_colors
 conf/yeast_chr1+2.conf
 conf/yeast_renderfarm.conf
 conf/yeast_simple.conf
@@ -157,9 +157,6 @@ docs/README.tutorial
 etc/default/gbrowse-slave
 etc/init.d/gbrowse-slave
 htdocs/annotation_help.html
-htdocs/images/backgrounds/cloud.jpg
-htdocs/images/backgrounds/lrock005.jpg
-htdocs/images/backgrounds/steel.jpg
 htdocs/css/gbrowse.css
 htdocs/css/gbrowse_transparent.css
 htdocs/css/karyotype.css
@@ -192,6 +189,7 @@ htdocs/images/balloons/GPlain/down_right.png
 htdocs/images/balloons/GPlain/up_left.png
 htdocs/images/balloons/GPlain/up_right.png
 htdocs/images/buttons/ajax-loader.gif
+htdocs/images/buttons/dark_0.4_pixel.png
 htdocs/images/buttons/green.gif
 htdocs/images/buttons/green1.gif
 htdocs/images/buttons/green2.gif
@@ -206,6 +204,7 @@ htdocs/images/buttons/green_l2.gif
 htdocs/images/buttons/green_r1.gif
 htdocs/images/buttons/green_r2.gif
 htdocs/images/buttons/grey.png
+htdocs/images/buttons/grey_0.4_pixel.png
 htdocs/images/buttons/minus.gif
 htdocs/images/buttons/minus.png
 htdocs/images/buttons/minus12.png
@@ -427,8 +426,8 @@ INSTALL
 install_util/cgi_install.pl
 install_util/conf_install.pl
 install_util/gbrowse_ppm_install.pl
-install_util/GBrowseInstall.pm
 install_util/GBrowseGuessDirectories.pm
+install_util/GBrowseInstall.pm
 install_util/htdocs_install.pl
 install_util/InstallUtil.pm
 install_util/make_clean_add.pl
@@ -438,8 +437,8 @@ lib/Bio/Graphics/Browser.pm
 lib/Bio/Graphics/Browser/CachedTrack.pm
 lib/Bio/Graphics/Browser/DataBase.pm
 lib/Bio/Graphics/Browser/DataSource.pm
-lib/Bio/Graphics/Browser/GFFPrinter.pm
 lib/Bio/Graphics/Browser/GFFhelper.pm
+lib/Bio/Graphics/Browser/GFFPrinter.pm
 lib/Bio/Graphics/Browser/I18n.pm
 lib/Bio/Graphics/Browser/Markup.pm
 lib/Bio/Graphics/Browser/OptionPick.pm

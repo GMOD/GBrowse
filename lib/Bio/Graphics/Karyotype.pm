@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.9 2008-12-19 03:11:01 lstein Exp $
+# $Id: Karyotype.pm,v 1.10 2009-01-06 22:14:25 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -8,7 +8,7 @@ package Bio::Graphics::Karyotype;
 use strict;
 use Bio::Graphics::Panel;
 use GD 'gdSmallFont';
-use CGI qw(img div b url table TR th td b escapeHTML a br);
+use CGI qw(img div span b url table TR th td b escapeHTML a br);
 use Carp 'croak';
 
 # there is a bug in the ideogram glyph that causes a core dump when
@@ -45,7 +45,7 @@ sub chrom_width {
 }
 
 sub chrom_height {
-    return shift->data_source->karyotype_setting('chrom_height') || 100;
+    return shift->data_source->karyotype_setting('chrom_height') || 140;
 }
 
 sub chrom_background {
@@ -117,7 +117,7 @@ sub to_html {
 
     my $panel  = $self->{panels}{$seqid}{panel};
     # workaround bug/coredump in ideogram glyph
-    next if $panel->height < SUPPRESS_SMALL_CHROMOSOMES;  
+    next if $panel->height < SUPPRESS_SMALL_CHROMOSOMES;
     my $url    = $source->generate_image($panel->gd);
     my $margin = Bio::Graphics::Panel->can('rotate') 
 	         ? $self->chrom_height - $panel->gd->height
@@ -126,7 +126,7 @@ sub to_html {
     my $imagemap  = $self->image_map(scalar $panel->boxes,"${seqid}.");
     $html     .= 
 	div(
-	    {-style=>"float:left;margin-top:${margin}px;margin-left:0.5em;margin-right;0.5em"},
+	    {-style=>"cursor:default;float:left;margin-top:${margin}px;margin-left:0.5em;margin-right;0.5em"},
 	    div({-style=>'position:relative'},
 		img({-src=>$url,-border=>0}),
 		$imagemap
@@ -162,12 +162,12 @@ sub image_map {
 	my $link = $self->feature2link($boxes->[$i][0]);
 	$divs .= div({-class => 'nohilite',
 		      -id    => "box_${id}",
-		      -style => "top:${top}px; left:${left}px; width:${width}px; height:${height}px",
+		      -style => "z-index:10; top:${top}px; left:${left}px; width:${width}px; height:${height}px",
 		      -title => $name,
-		      -onMouseOver=>"k_hilite_feature('$id',true)",
-		      -onMouseOut =>"k_unhilite_feature('$id')",
+		      -onMouseOver=>"k_hilite_feature(this,true)",
+		      -onMouseOut =>"k_unhilite_feature(this)",
 		      -onMouseDown=>"location.href='$link'",
-		     },''
+		     },'&nbsp;'
 	    )."\n";
     }
     return $divs;
@@ -249,7 +249,9 @@ sub generate_panels {
 					   -length=> $chrom->length,
 					   -pad_top=>10,
 					   -pad_bottom=>10,
-					   -pad_right => 20,
+					   -pad_right => 10,
+					   -bgcolor => $self->data_source->global_setting('overview bgcolor')
+					    || 'wheat:0.5'
 	);
 
     if (my @hits  = $self->hits($chrom->seq_id)) {
@@ -309,7 +311,7 @@ sub hits_table {
     my $sort_order = $self->seqid_order;
     my $url  = url(-path_info=>1)."?name=";
 
-    # a big long map call here
+    # a way long map call here
     my @rows      = map {
 	my $name  = $_->display_name || '';
 	my $link  = $self->feature2link($_);
@@ -321,8 +323,8 @@ sub hits_table {
 	    
 	TR({-class=>'nohilite',
 	    -id=>"feature_${id}",
-	    -onMouseOver=>"k_hilite_feature('$id')",
-	    -onMouseOut =>"k_unhilite_feature('$id')",
+	    -onMouseOver=>"k_hilite_feature(this)",
+	    -onMouseOut =>"k_unhilite_feature(this)",
 	   },
 	   th({-align=>'left'},a({-href=>$link},$name)),
 	   td($_->method),
@@ -341,7 +343,7 @@ sub hits_table {
 
     return 
 	b($count),
-	div({-id=>'scrolling_table'},
+	div({-id=>'scrolling_table',-style=>'cursor:default'},
 	    table({-class=>'searchbody',-width=>'100%'},
 		  TR(
 		      th({-align=>'left'},

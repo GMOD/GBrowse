@@ -1,26 +1,39 @@
 // helper utilities for the karyotype module.
 
-function k_dohilite (base_id,hilite_it,autoscroll) {
-    var graphical_feature = $("box_"    + base_id);
-    var text_feature      = $("feature_"+ base_id)
-    var classname         = hilite_it ? 'hilite' : 'nohilite';
+function k_dohilite (el,hilite_it,autoscroll) {
 
-    if (graphical_feature) {
-        graphical_feature.className=classname;
-    }
+    var classname   = hilite_it ? 'hilite' : 'nohilite';
 
-    if (text_feature) {
-         text_feature.className=classname;
-         var top = text_feature.positionedOffset().top;
-         if (autoscroll)
-          $('scrolling_table').scrollTop = top;
-    }
+    Element.extend(el);
+    var id    = el.identify();
+    var base  = id.gsub(/^\w+_/,'');
+
+    if (autoscroll) {
+	var f = $('feature_'+base);
+	// for some reason this kills IE and causes the rows to
+	// lose their fgcolor
+    	// var top = f.positionedOffset().top;
+	var top = 0;
+	var e   = f;
+	while (e) {
+	    top += e.offsetTop;
+	    e    = e.offsetParent;
+	    if (e==null) break;
+	    if (e.tagName.toUpperCase() == 'BODY') break;
+	    if (Element.getStyle(e,'position') != 'static') break;
+	}
+	$('scrolling_table').scrollTop = top;
+     }
+
+    $('box_'+base).className     = classname;
+    $('feature_'+base).className = classname;
 }
 
-function k_hilite_feature (base_id,autoscroll) {
-    k_dohilite(base_id,true,autoscroll);
+function k_hilite_feature (el,autoscroll) {
+    k_dohilite(el,true,autoscroll);
 }
 
-function k_unhilite_feature (base_id) {
-    k_dohilite(base_id,false,false);
+function k_unhilite_feature (el) {
+    k_dohilite(el,false,false);
 }
+

@@ -138,7 +138,7 @@ sub run {
   if ($ENV{QUERY_STRING} && $ENV{QUERY_STRING} =~ /reset/) {
       print CGI::redirect(CGI::url(-absolute=>1,-path_info=>1));
   } else {
-      warn "render()";
+      warn "render()" if DEBUG;
       $self->render();
   }
 

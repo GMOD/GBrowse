@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.73 2009-01-06 09:13:12 lstein Exp $
+ $Id: controller.js,v 1.74 2009-01-06 22:14:25 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -807,8 +807,11 @@ function initialize_page() {
 
 // set the colors for the rubberband regions
 function set_dragcolors(color) {
+    if (overviewObject != null)
      overviewObject.background = color;
+    if (regionObject != null)
      regionObject.background   = color;
+    if (detailsObject != null)
      detailsObject.background  = color;
 }
 

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.74 2009-01-06 22:14:25 lstein Exp $
+ $Id: controller.js,v 1.75 2009-01-06 23:05:38 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -800,6 +800,12 @@ function initialize_page() {
   });
   
   Controller.first_render();
+
+  // The next statement is to avoid the scalebars from being "out of sync"
+  // when manually advancing the browser with its forward/backward buttons.
+  Controller.update_coordinates('left 0');
+
+  // These statements get the rubberbanding running.
   Overview.prototype.initialize();
   Region.prototype.initialize();
   Details.prototype.initialize();

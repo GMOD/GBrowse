@@ -227,8 +227,8 @@ sub asynchronous_event {
 
     if ( my $action = param('navigate') ) {
 
-        $self->init_database();
-        $self->asynchronous_update_coordinates($action);
+        my $updated = $self->asynchronous_update_coordinates($action);
+        $self->init_database() if $updated;
 
         my ( $track_keys, $display_details, $details_msg )
             = $self->background_track_render();
@@ -717,6 +717,7 @@ sub render_header {
   my $self    = shift;
   my $cookie = $self->create_cookie();
   my $header = CGI::header(
+      -cache_control =>'no-cache',
       -cookie  => $cookie,
       -charset => $self->tr('CHARSET'),
       );

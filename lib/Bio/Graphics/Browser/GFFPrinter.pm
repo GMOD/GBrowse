@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.6 2009-01-02 20:57:37 lstein Exp $
+# $Id: GFFPrinter.pm,v 1.7 2009-01-06 07:38:24 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -40,7 +40,7 @@ sub new {
         },
         ref $class || $class;
 
-    $self->check_source();
+    $self->check_source() or return;
     return $self;
 }
 
@@ -51,17 +51,21 @@ sub print_gff3 {
     my $types  = $labels ? $self->labels_to_types($labels) : undef;
     my $files  = $labels ? $self->labels_to_files($labels) : undef;
 
-    $self->print_configuration( $self->data_source(), $labels );
-    $self->print_configuration( $_, [ $_->labels ] ) for @$files;
+    if ($self->get_do_stylesheet) {
+	$self->print_configuration( $self->data_source(), $labels );
+	$self->print_configuration( $_, [ $_->labels ] ) for @$files;
+    }
 
     my %filters
         = map { $_ => $self->data_source->setting( $_ => 'filter' ) || undef }
         @$labels;
 
     my $date = localtime;
+    my $segment = $self->get_segment;
     print "##gff-version 3\n";
     print "##date $date\n";
     print "##source gbrowse gbgff gff3 dumper\n";
+    print "##sequence-region ",$segment->seq_id,':',$segment->start,'..',$segment->end,"\n";
 
     $self->print_gff3_data( $_, $types, \%filters ) for $self->db;
     $self->print_gff3_data($_) for @$files;
@@ -103,11 +107,11 @@ sub check_source {
         unless ( $data_source->globals->valid_source($source_name) ) {
             print header('text/plain'), "# Invalid source $source_name; "
                 . "you may not have permission to access this data source.\n";
-            exit 0;
+	    return;
         }
     }
 
-    return;
+    return 1;
 }
 
 sub get_segment {
@@ -206,10 +210,7 @@ sub labels_to_types {
     my @types;
     for my $l (@labels) {
         my @f = shellwords( $data_source->setting( $l => 'feature' ) || '' );
-        unless (@f) {
-            print "# Unknown track type $l\n";
-            exit 0;
-        }
+	next unless @f;
         push @types, @f;
     }
     return \@types;

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.71 2008-12-31 18:15:57 lstein Exp $
+ $Id: controller.js,v 1.72 2009-01-06 07:38:24 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -29,6 +29,7 @@ var detail_container_id     = 'detail_panels';
 var external_utility_div_id = 'external_utility_div'; 
 var edit_upload_form_id     = 'edit_upload_form';
 var page_title_id           = 'page_title';
+var galaxy_form_id          = 'galaxy_form';
 var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
 
@@ -271,16 +272,21 @@ var GBrowseController = Class.create({
 
   // Signal Change to Server Methods ********************************
   set_track_visibility:
-  function(track_name,visible) {
+  function(track_id,visible) {
 
-    this.each_track(track_name,function(gbtrack) {
+    var gbtrack    = this.gbtracks.get(track_id);
+    if (gbtrack == null) return;
+
+    var track_name = gbtrack.track_name;
+
+    this.each_track(track_id,function(gbtrack) {
 
       new Ajax.Request('#',{
         method:     'post',
         parameters: {
           set_track_visibility:  1,
-          visible:               visible,
-          track_name:            track_name
+          visible:             visible,
+          track_name:          track_name
         },
         onSuccess: function(transport) {
           if (visible && gbtrack.get_last_update_key() < Controller.last_update_key) {
@@ -643,10 +649,10 @@ var GBrowseController = Class.create({
       var loc_str = "?plugin="+plugin_base+";plugin_action="+encodeURI(plugin_action);
       if(source == 'config'){
         var form_element = $("configure_plugin");
-        window.location=loc_str + ";" + form_element.serialize();
+        window.open(loc_str + ";" + form_element.serialize());
       }
       else{
-        window.location=loc_str;
+	window.open(loc_str);
       }
     }
     else if (plugin_type == 'filter'){
@@ -786,7 +792,7 @@ var Controller = new GBrowseController; // singleton
 
 function initialize_page() {
   //event handlers
-  [page_title_id,visible_span_id,search_form_objects_id].each(function(el) {
+    [page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
     if ($(el) != null) {
       Controller.segment_observers.set(el,1);
     }

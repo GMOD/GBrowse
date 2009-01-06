@@ -30,7 +30,7 @@ use Carp 'carp','cluck';
 our @EXPORT    = qw(modperl_request error citation shellwords url_label);
 our @EXPORT_OK = qw(modperl_request error citation shellwords url_label);
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 =over 4
 

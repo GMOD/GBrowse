@@ -125,7 +125,7 @@ for (1..3) {
     for (qw(Clones Motifs Transcripts)) {
 	    skip($skipit,exists $content->{$_});
 	    skip($skipit,exists $content->{$_}{imagedata});
-	    skip($skipit,length($content->{$_}{imagedata}->png) > 0);
+	    skip($skipit,length($content->{$_}{imagedata}) > 0);
 	}
 }
 # now we test whether parallel rendering is working

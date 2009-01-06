@@ -10,12 +10,10 @@ use CGI 'cookie','param','unescape';
 use Digest::MD5 'md5_hex';
 use File::Spec;
 
-use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
+use constant URL_FETCH_TIMEOUT    => 20;  #  seconds max!
 use constant URL_FETCH_MAX_SIZE   => 50_000_000;  # don't accept any files larger than 50 Meg
 
 use constant DEBUG=>0;
-
-my $UA;
 
 sub new {
   my $package = shift;
@@ -150,15 +148,12 @@ sub get_remote_upload {
   # do certain substitutions on the URL
   $url = $self->transform_url($url,$segment,$overview,$region);
 
-#  my $id = md5_hex($url);     # turn into a filename
-#  $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
-#  $id = $1;
-
   my (undef,$filename) = $self->name_file($url,0);
   my $response         = $self->mirror($url,$filename);
   if ($response->is_error) {
-    error($self->language->tr('Fetch_failed',$url,$response->message));
-    return;
+      # error($self->language->tr('Fetch_failed',$url,$response->message));
+      warn "$url: ",$response->message;
+      return;
   }
   my $fh = IO::File->new("<$filename") or return;
   my $in_overview    = $rel2abs ne $slow_mapper && $self->probe_for_overview_sections($fh);
@@ -167,7 +162,7 @@ sub get_remote_upload {
 				    -map_coords     => $in_overview ? $slow_mapper : $rel2abs,
 				    -smart_features => 1,
 				    -safe_world     => 
-				       $self->config->setting('allow remote callbacks')||0,
+				       $self->config->global_setting('allow remote callbacks')||0,
     );
   warn "get_remote_feature_data(): got $feature_file" if DEBUG;
  
@@ -239,36 +234,36 @@ sub mirror {
   my $config = $self->config;
 
   # Uploaded feature handling
-  unless ($UA) {
-    unless (eval "require LWP") {
-      error($self->language->tr('NO_LWP'));
-      return;
-    }
-    $UA = LWP::UserAgent->new(agent    => "Generic-Genome-Browser/$main::VERSION",
-			      timeout  => URL_FETCH_TIMEOUT,
-			      max_size => URL_FETCH_MAX_SIZE,
-			     );
-    my $http_proxy = $self->http_proxy;
-    my $ftp_proxy  = $self->ftp_proxy;
-
-    $UA->proxy(http => $http_proxy) if $http_proxy && $http_proxy ne 'none';
-    $UA->proxy(ftp => $http_proxy)  if $ftp_proxy  && $ftp_proxy  ne 'none';
+  unless (LWP::UserAgent->can('new')) {
+      unless (eval "require LWP") {
+	  error($self->language->tr('NO_LWP'));
+	  return;
+      }
   }
+  my $ua = LWP::UserAgent->new(agent    => "Generic-Genome-Browser/$main::VERSION",
+				timeout  => URL_FETCH_TIMEOUT,
+				max_size => URL_FETCH_MAX_SIZE,
+      );
+  my $http_proxy = $self->http_proxy;
+  my $ftp_proxy  = $self->ftp_proxy;
+
+  $ua->proxy(http => $http_proxy) if $http_proxy && $http_proxy ne 'none';
+  $ua->proxy(ftp => $http_proxy)  if $ftp_proxy  && $ftp_proxy  ne 'none';
 
   my $request = HTTP::Request->new(GET => $url);
   if (-e $filename) {
-    my($mtime) = (stat($filename))[9];
-    if($mtime) {
-      $request->header('If-Modified-Since' =>
-		       HTTP::Date::time2str($mtime));
-    }
+      my($mtime) = (stat($filename))[9];
+      if($mtime) {
+	  $request->header('If-Modified-Since' =>
+			   HTTP::Date::time2str($mtime));
+      }
   }
 
   my ($volume,$dirs,$file) = File::Spec->splitpath($filename);
   $file = "$file-$$";
   my $tmpfile  = File::Spec->catfile($volume,$dirs,$file);
 
-  my $response = $UA->request($request,$tmpfile);
+  my $response = $ua->request($request,$tmpfile);
 
   if ($response->is_success) {  # we got a new file, so need to process it
       my $fh     = IO::File->new($tmpfile);

@@ -38,6 +38,8 @@ sub render_navbar {
   my $self    = shift;
   my $segment = shift;
 
+  warn "render_navbar()" if DEBUG;
+
   my $settings = $self->state;
   my $source   = '/'.$self->session->source.'/';
 
@@ -57,38 +59,11 @@ sub render_navbar {
   my $search = $self->setting('no search')
     ? '' : b($self->tr('Landmark')).':'.br().$searchform;
 
-  my $plugin_form = join '',(
-			     start_form(-name=>'pluginform',-id=>'pluginform',
-					-onSubmit=>'return false'),
-			     $self->plugin_menu(),
-			     end_form);
+  my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
 
-  my $source_form = join '',(
-			     start_form(-name=>'sourceform',
-					-id=>'sourceform',
-					-onSubmit=>''),
-			     $self->source_menu(),
-			     end_form
-			    );
+  my $source_form = div({-id=>'source_form'},$self->source_form());
 
-  my $sliderform = '';
-  if ($segment) {
-    $sliderform =
-      join '',(
-	       start_form(-name=>'sliderform',-id=>'sliderform',-onSubmit=>'return false'),
-	       b($self->tr('Scroll').': '),
-	       $self->slidertable($segment),
-	       b(
-		 checkbox(-name=>'flip',
-			  -checked=>$settings->{flip},-value=>1,
-			  -label=>$self->tr('Flip'),-override=>1,
-              -onClick => 'Controller.update_coordinates(this.name + " " + this.checked)',
-                )
-		),
-	       hidden(-name=>'navigate',-value=>1,-override=>1),
-	       end_form
-	      );
-  }
+  my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
 
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
@@ -106,8 +81,63 @@ sub render_navbar {
 		       )
     )
     . div( { -id => "plugin_configure_div"},'&nbsp;'  )
-    . br({-clear=>'all'})
-;
+    . br({-clear=>'all'});
+}
+
+sub plugin_form {
+    my $self     = shift;
+    my $settings = $self->state;
+
+    return $settings->{GALAXY_URL}
+    ? button(-name    => $self->tr('SEND_TO_GALAXY'),
+	      -onClick  => $self->galaxy_link).
+       button(-name    => $self->tr('CANCEL'),
+	      -onClick => $self->galaxy_clear.";Controller.update_sections(['plugin_form'])",
+       )
+     : join '',(
+	start_form(-name=>'pluginform',
+		   -id=>'pluginform',
+		   -onSubmit=>'return false'),
+	   $self->plugin_menu(),
+	   end_form);
+}
+
+
+sub source_form {
+    my $self = shift;
+    join '',(
+	start_form(-name=>'sourceform',
+		   -id=>'sourceform',
+		   -onSubmit=>''),
+	$self->source_menu(),
+	end_form
+    );
+}
+
+sub sliderform {
+    my $self    = shift;
+    my $segment = shift;
+    my $settings = $self->state;
+    if ($segment) {
+	return
+	    join '',(
+		start_form(-name=>'sliderform',-id=>'sliderform',-onSubmit=>'return false'),
+		b($self->tr('Scroll').': '),
+		$self->slidertable($segment),
+		b(
+		    checkbox(-name=>'flip',
+			     -checked=>$settings->{flip},-value=>1,
+			     -label=>$self->tr('Flip'),-override=>1,
+			     -onClick => 'Controller.update_coordinates(this.name + " " + this.checked)',
+		    )
+		),
+		hidden(-name=>'navigate',-value=>1,-override=>1),
+		end_form
+	    );
+    } 
+    else  {
+	return '';
+    }
 }
 
 sub render_search_form_objects {
@@ -334,11 +364,36 @@ sub render_instructions {
   my $reset_link   = a({-href=>"?reset=1",-class=>'reset_button'},'['.$self->tr('RESET').']');
   my $help_link    = a({-href=>$self->general_help(),-target=>'help'},'['.$self->tr('Help').']');
   my $plugin_link  = $self->plugin_links($self->plugins);
+  my $galaxy_link  = a({-href=>'javascript:'.$self->galaxy_link},'['.$self->tr('SEND_TO_GALAXY').']');
+  my $image_link   = a({-href=>'?make_image=GD',-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']');
   my $oligo        = $self->plugins->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
   my $rand         = substr(md5_hex(rand),0,5);
 
+  my @standard_links1        = (
+      a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
+	'['.$self->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
+      );
+
+  my @standard_links2        = (
+      $help_link,
+      $reset_link
+      );
+
+  my @segment_showing_links =(
+      a({-href=>'?bookmark=1'},'['.$self->tr('BOOKMARK').']'),
+      a({-href        => '#',
+	 -onMouseDown => "GPlain.showTooltip(event,'url:?share_track=all')"},
+	'[' . ($self->tr('SHARE_ALL') || "Share These Tracks" ) .']'),
+      $plugin_link,
+      $galaxy_link,
+      $image_link,
+      $svg_link,
+      );
+
+  my $segment_present = $self->region->feature_count == 1;
+
   # standard status bar
-  my $html =  ''; 
+  my $html =  '';
 
   $html .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		   TR(
@@ -355,26 +410,79 @@ sub render_instructions {
 			),
 		     ),
 		   TR(
-		      th({-align=>'left', -colspan=>2,-class=>'linkmenu'},
-			 $settings->{name} || $settings->{ref} ?
-			 (
-			  a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
-			    '['.$self->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
-			  a({-href=>'?bookmark=1'},'['.$self->tr('BOOKMARK').']'),
-              a({-href        => '#',
-                 -onMouseDown => "GPlain.showTooltip(event,'url:?share_track=all')"},
-                '[' . ($self->tr('SHARE_ALL') || "Share These Tracks" ) .']'),
-			  a({-href=>'?make_image=GD',-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']'),
-			  $plugin_link,
-			  $svg_link,
-			 ) : (),
-			 $help_link,
-			 $reset_link
-			),
-		     )
-		  );
+		       th({-align=>'left', -colspan=>2,-class=>'linkmenu'},
+			  @standard_links1,
+			  $segment_present ? @segment_showing_links : (),
+			  @standard_links2
+		       ),
+		 )
+      );
   return $html;
 }
+
+# for the subset of plugins that are named in the 'quicklink plugins' option, create
+# quick links for them.
+sub plugin_links {
+  my $self    = shift;
+  my $plugins = shift;
+
+  my $quicklink_setting = $self->setting('quicklink plugins') or return '';
+  my @plugins           = shellwords($quicklink_setting)      or return '';
+  my $labels            = $plugins->menu_labels;
+
+  my @result;
+  for my $p (@plugins) {
+    my $plugin = $plugins->plugin($p) or next;
+    my $action = "?plugin=$p;plugin_do=".$self->tr('Go');
+    push @result,a({-href=>$action,-target=>'_new'},"[$labels->{$p}]");
+  }
+  return join ' ',@result;
+}
+
+sub galaxy_form {
+    my $self     = shift;
+    my $segment  = shift;
+
+    my $settings = $self->state;
+    my $source   = $self->data_source;
+
+    my $galaxy_url = $settings->{GALAXY_URL} 
+                  || $source->global_setting('galaxy outgoing') ;
+    return '' unless $galaxy_url;
+
+    my $URL  = $source->global_setting('galaxy incoming');
+    $URL    ||= url(-full=>1,-path_info=>1);
+
+    my $action = $galaxy_url =~ /\?/ ? "$galaxy_url&URL=$URL" : "$galaxy_url?URL=$URL";
+    
+    my $html = start_multipart_form(-name  => 'galaxyform',
+				    -action => $action,
+				    -method => 'POST');
+
+    # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
+    # when Galaxy posts the URL.
+    my $dbkey  = $source->global_setting('galaxy build name') || $source->name;
+    my $labels = join('+',map {escape($_)} $self->detail_tracks);
+
+    my $seg = $segment->seq_id.':'.$segment->start.'..'.$segment->end;
+		      
+    $html .= hidden(-name=>'dbkey',-value=>$dbkey);
+    $html .= hidden(-name=>'gbgff',-value=>1);
+    $html .= hidden(-name=>'q',-value=>$seg);
+    $html .= hidden(-name=>'t',-value=>$labels);
+    $html .= hidden(-name=>'s',-value=>'off');
+    $html .= hidden(-name=>'d',-value=>'edit');
+    $html .= endform();
+
+# Copied from gbrowse 1.69 -- not sure if still appropriate
+#   my $plugin_action = param('plugin_action');
+#   if ($plugin_action eq $CONFIG->tr('Go') && param('plugin') eq 'invoke_galaxy') {
+#     $html .= script('document.galaxyform.submit()');
+#   }
+
+  return $html;
+}
+
 
 # This surrounds the track table with a toggle
 sub render_toggle_track_table {
@@ -879,7 +987,7 @@ sub das_table {
 
 	  my $f = $remote_sources->transform_url($url,$segment);
 
-	  next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
+	  next unless $url =~ /^(ftp|http):/ && exists $feature_files->{$url};
 	  my $escaped_url = CGI::escape($url);
           my $ulabel = url_label($url);
           $ulabel = '' unless $ulabel ne $url;
@@ -892,7 +1000,7 @@ sub das_table {
          ),
 		 br,
 		 a({-href=>$f,-target=>'help'},'['.$self->tr('Download').']'),
-		 $self->get_uploaded_file_info($self->track_visible($url) && $feature_files->{$url})
+		 $feature_files->{$url} && $self->get_uploaded_file_info($self->track_visible($url) && $feature_files->{$url})
 	      );
       }
   }
@@ -1095,6 +1203,13 @@ sub plugin_configuration_form {
           ),
           end_form(),
           end_html();
+}
+
+# wrap arbitrary HTML in a named div
+sub wrap_in_div {
+    my $self   = shift;
+    my $div_id = shift;
+    return div({-id=>$div_id},@_);
 }
 
 # Wrap the plugin configuration html into a form and tie it into the controller 

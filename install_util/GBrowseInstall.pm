@@ -261,7 +261,10 @@ sub apache_conf {
     my $docs    = basename($dir);
     my $perl5lib= $self->added_to_INC;
     my $inc     = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
-    my $fcgi_inc= $perl5lib ? "-initial-env PERL5LIB=\"$perl5lib\""        : '';
+    my $fcgi_inc= $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
+    my $modperl_switches = $perl5lib
+	? "PerlSwitches ".join ' ',map{"-I$_"} split ':',$perl5lib
+        : '';
 
     return <<END;
 Alias        "/$docs/i/" "$tmp/images/"
@@ -277,8 +280,23 @@ ScriptAlias  "/gb2"      "$cgibin/gb2"
   SetEnv GBROWSE_CONF   "$conf"
 </Directory>
 
+
 <IfModule mod_fastcgi.c>
-  FastCgiConfig $fcgi_inc -initial-env GBROWSE_CONF="$conf"
+  Alias /fgb2 "$cgibin/gb2"
+  <Location /fgb2>
+    SetHandler   fastcgi-script
+  </Location>
+  FastCgiConfig $fcgi_inc -initial-env GBROWSE_CONF=$conf
+</IfModule>
+
+<IfModule mod_perl.c>
+   Alias /mgb2 "$cgibin/gb2"
+   $modperl_switches
+   <Location /mgb2>
+     SetHandler perl-script
+     PerlResponseHandler ModPerl::Registry
+     PerlOptions +ParseHeaders
+   </Location>
 </IfModule>
 END
 }

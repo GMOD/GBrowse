@@ -9,6 +9,7 @@ use Bio::Graphics::Browser::Util 'shellwords';
 use Bio::Graphics::Browser::Render::Slave::Status;
 use LWP::UserAgent;
 use HTTP::Request::Common 'POST';
+use Carp 'cluck';
 use Storable 'nfreeze','thaw';
 
 use constant DEBUG => 0;
@@ -228,8 +229,12 @@ sub search_features {
     my $self        = shift;
     my $args        = shift;
     my $state       = $self->state;
-
     $args          ||= {};
+
+    if ($args && !ref($args)) {
+	$args = {-search_term=>$args};  #adjust for changed API
+    }
+
     unless (%$args) {
 	return unless $state->{name};
 	$args->{-search_term} = $state->{name}

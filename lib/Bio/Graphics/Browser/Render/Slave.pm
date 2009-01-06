@@ -307,7 +307,7 @@ sub render_tracks {
 	$results{$label} = {map       => $map,
 			    width     => $width,
 			    height    => $height,
-			    imagedata => $imagedata};
+			    imagedata => eval{$imagedata->gd2}};
     }
     my $content = nfreeze \%results;
     return $content;

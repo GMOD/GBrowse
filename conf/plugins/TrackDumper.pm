@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::TrackDumper;
-# $Id: TrackDumper.pm,v 1.1 2009-01-03 05:44:37 lstein Exp $
+# $Id: TrackDumper.pm,v 1.2 2009-01-06 07:38:24 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -133,7 +133,7 @@ sub dump {
 	  -labels      => $mode eq 'selected' 
 	                  ? [$self->selected_tracks] 
 	                  : []
-	  );
+	  ) or return;
       $dumper->print_gff3();
   }
 

@@ -804,6 +804,7 @@ sub open_database {
 
   # remember mapping of this database to this track
   $self->{db2track}{$db}{$dbid}++;
+
   return $db;
 }
 

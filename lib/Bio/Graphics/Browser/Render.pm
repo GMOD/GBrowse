@@ -137,10 +137,10 @@ sub run {
   # EXPERIMENTAL CODE -- GET RID OF THE URL PARAMETERS
   if ($ENV{QUERY_STRING} && $ENV{QUERY_STRING} =~ /reset/) {
       print CGI::redirect(CGI::url(-absolute=>1,-path_info=>1));
-      exit 0;
+  } else {
+      $self->render();
   }
 
-  $self->render();
   $self->cleanup();
   select($old_fh);
 
@@ -169,10 +169,16 @@ sub set_source {
 
 sub init {
     my $self = shift;
+    warn "init()" if DEBUG;
+    warn "set_default_state()" if DEBUG;
     $self->set_default_state();
+    warn "init_database()" if DEBUG;
     $self->init_database();
+    warn "init_plugins()" if DEBUG;
     $self->init_plugins();
+    warn "init_remote_sources()" if DEBUG;
     $self->init_remote_sources();
+    warn "init done" if DEBUG;
 }
 
 # this prints out the HTTP data from an asynchronous event
@@ -403,6 +409,8 @@ sub asynchronous_event {
         my $visible    = param('visible');
         my $track_name = param('track_name');
 
+	warn "set_track_visibility: ",param('track_name'),'=>',param('visible') if DEBUG;
+
         if ($visible) {
             $self->add_track_to_state($track_name);
         }
@@ -524,6 +532,11 @@ sub asynchronous_event {
     # redirect to the bookmark
     if (param('bookmark')) {
 	return (302,undef,$self->bookmark_link($self->state));
+    }
+
+    # redirect to galaxy form submission
+    if (param('galaxy')) {
+	return (302,undef,$self->galaxy_link($self->state));
     }
 
     # redirect to the imagelink
@@ -687,6 +700,8 @@ sub background_individual_track_render {
 sub render {
   my $self           = shift;
 
+  warn "render()" if DEBUG;
+
   # NOTE: these handle_* methods will return true
   # if they want us to exit before printing the header
   $self->handle_gff_dump()  && return;
@@ -732,6 +747,8 @@ sub allparams {
 sub render_body {
   my $self     = shift;
 
+  warn "render_body()" if DEBUG;
+
   my $region   = $self->region;
   my $features = $region->features;
 
@@ -751,6 +768,7 @@ sub render_body {
       print $self->render_navbar($seg);
       print $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
       print $self->render_config($seg);
+      print $self->render_galaxy_form($seg);
   }
   else {
       print $self->render_navbar();
@@ -848,6 +866,8 @@ sub render_panels {
     my $self    = shift;
     my $seg     = shift;
     my $section = shift;
+
+    warn "render_panels()" if DEBUG;
 
     my $html = '';
 
@@ -960,6 +980,7 @@ sub scale_bar {
 sub render_config {
   my $self = shift;
   my $seg = shift;
+  warn "render_config()" if DEBUG;
   return $self->render_toggle_track_table(). 
       $self->render_global_config().
       $self->render_toggle_external_table;
@@ -1174,10 +1195,10 @@ sub handle_gff_dump {
         -stylesheet => param('stylesheet') || param('s'),
         -id         => param('id'),
         '-dump'     => param('d')          || '',
-        -labels => [ param('type'), param('t') ],
-    );
-    $dumper->get_segment() or return 1;
+        -labels     => [ param('type'), param('t') ],
+    ) or return 1;
 
+    $dumper->get_segment() or return 1;
     print header( $dumper->get_mime_type );
     $dumper->print_gff3();
 
@@ -1219,7 +1240,7 @@ sub handle_plugins {
     ### CONFIGURE  ###############################################
     if ($plugin_action eq $self->tr('Configure')) {
 	$self->plugin_configuration_form($plugin);
-	exit 0;
+	return 1;
     }
     
 
@@ -1270,13 +1291,21 @@ sub do_plugin_dump {
     my $state   = shift;
     my @additional_feature_sets;
 
-    #if ($segment && $state && $segment->length <= $MAX_SEGMENT) {
-    #   my $feature_files = load_external_sources($segment,$state);
-    #   @additional_feature_sets = values %{$feature_files};
-    #}
     $plugin->dump( $segment, @additional_feature_sets );
     return 1;
 }
+
+# this generates the form that is sent to Galaxy
+# defined in HTML.pm
+sub render_galaxy_form {
+    my $self = shift;
+    my $seg  = shift;
+    $self->wrap_in_div('galaxy_form',
+		     $self->galaxy_form($seg));
+}
+
+# to be inherited
+sub galaxy_form { }
 
 #======================== remote sources ====================
 sub init_remote_sources {
@@ -1295,6 +1324,7 @@ sub init_remote_sources {
 
 sub cleanup {
   my $self = shift;
+  warn "cleanup()" if DEBUG;
   my $state = $self->state;
   $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}"
       if $state->{ref};  # to remember us by :-)
@@ -1608,7 +1638,9 @@ sub set_default_state {
 sub update_state {
   my $self   = shift;
 
-  return if param('gbgff'); # don't let dbgff requests update our coordinates!!!
+  warn "update_state()" if DEBUG;
+
+  return if param('gbgff'); # don't let gbgff requests update our coordinates!!!
 
   $self->update_state_from_cgi;
   my $state  = $self->state;
@@ -1625,6 +1657,7 @@ sub update_state {
   }
 
   $self->session->unlock;
+  $self->session->flush();
 }
 
 sub default_state {
@@ -1747,7 +1780,7 @@ sub update_state_from_cgi {
   $self->update_section_visibility($state);
   $self->update_external_sources();
   $self->handle_external_data();
-
+  $self->update_galaxy_url($state);
 }
 
 # Handle returns from the track configuration form
@@ -2009,7 +2042,8 @@ sub asynchronous_update_sections {
 
     # Init Plugins if need be
     if (   $handle_section_name{'plugin_configure_div'}
-        || $handle_section_name{'tracks_panel'} )
+        || $handle_section_name{'tracks_panel'}
+	|| $handle_section_name{'plugin_form'})
     {
         $self->init_plugins();
     }
@@ -2069,6 +2103,16 @@ sub asynchronous_update_sections {
             $return_object->{'plugin_configure_div'}
                 = "No plugin was specified.\n";
         }
+    }
+
+    # Galaxy form
+    if ( $handle_section_name{'galaxy_form'} ) {
+	$return_object->{'galaxy_form'} = $self->galaxy_form($self->segment);
+    }
+
+    # Galaxy form
+    if ( $handle_section_name{'plugin_form'} ) {
+	$return_object->{'plugin_form'} = $self->plugin_form();
     }
 
     # External File Stuff
@@ -2372,6 +2416,18 @@ sub update_section_visibility {
 sub update_external_sources {
   my $self = shift;
   $self->remote_sources->set_sources([param('eurl')]) if param('eurl');
+}
+
+sub update_galaxy_url {
+    my $self  = shift;
+    my $state = shift;
+    if (my $url = param('GALAXY_URL')) {
+	warn "setting galaxy";
+	$state->{GALAXY_URL} = $url;
+    } elsif (param('clear_galaxy')) {
+	warn "clearing galaxy";
+	delete $state->{GALAXY_URL};
+    }
 }
 
 ##################################################################3
@@ -2877,10 +2933,11 @@ sub render_error_track {
     my $white            = $gd->colorAllocate(255,255,255);
     my $pink             = $gd->colorAllocate(255,181,197);
     $gd->filledRectangle(0,0,$image_width,$image_height,$pink);
-    my ($swidth,$sheight) = (GD->gdGiantFont->width * length($error_message),GD->gdGiantFont->height);
+    my $font             = GD->gdMediumBoldFont;
+    my ($swidth,$sheight) = ($font->width * length($error_message),$font->height);
     my $xoff              = ($image_width - $swidth)/2;
     my $yoff              = ($image_height - $sheight)/2;
-    $gd->string(GD->gdGiantFont,$xoff,$yoff,$error_message,$black);
+    $gd->string($font,$xoff,$yoff,$error_message,$black);
     my ($url,$path) = $self->data_source->generate_image($gd);
 
     return $self->get_panel_renderer->wrap_rendered_track(
@@ -3183,23 +3240,22 @@ sub bookmark_link {
   return "?".$q->query_string();
 }
 
-# for the subset of plugins that are named in the 'quicklink plugins' option, create
-# quick links for them.
-sub plugin_links {
-  my $self    = shift;
-  my $plugins = shift;
+sub galaxy_link {
+    my $self = shift;
 
-  my $quicklink_setting = $self->setting('quicklink plugins') or return '';
-  my @plugins           = shellwords($quicklink_setting)      or return '';
-  my @result;
-  for my $p (@plugins) {
-    my $plugin = $plugins->plugin($p) or next;
-    my $name   = $plugin->name;
-    my $action = "?plugin=$p;plugin_do=".$self->tr('Go');
-    push @result,a({-href=>$action},"[$name]");
-  }
-  return join ' ',@result;
+    my $settings   = shift;
+    my $galaxy_url = $settings->{GALAXY_URL} 
+                     || $self->data_source->global_setting('galaxy outgoing');
+    return '' unless $galaxy_url;
+    my $clear_it  = $self->galaxy_clear;
+    my $submit_it = q(document.galaxyform.submit());
+    return "$clear_it;$submit_it";
 }
+
+sub galaxy_clear {
+    return q(new Ajax.Request(document.URL,{method:'post',postBody:'clear_galaxy=1'}));
+}
+
 
 sub image_link {
     my $self = shift;

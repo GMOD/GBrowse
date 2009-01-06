@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.5 2008-12-18 18:41:59 lstein Exp $
+# $Id: CachedTrack.pm,v 1.6 2009-01-06 07:38:24 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -144,8 +144,8 @@ sub errstr {
 
 sub put_data {
     my $self            = shift;
-    my ($gd,$map)       = @_;
-    $self->{data}{gd}   = $gd;
+    my ($gd2,$map)       = @_;
+    $self->{data}{gd}   = $gd2;
     $self->{data}{map}  = $map;
     my $datafile        = $self->datafile;
     store $self->{data},$datafile;
@@ -167,7 +167,14 @@ sub get_data {
 sub gd {
     my $self = shift;
     my $data = $self->get_data or return;
-    return $data->{gd};
+
+    # the ? statement here is to accomodate a change in the code
+    # in which we went from storing the GD object directly to storing
+    # the (slightly smaller) gd2 object.
+    return (ref $data->{gd} 
+	    && $data->{gd}->isa('GD::Image')) 
+	? $data->{gd}
+        : GD::Image->newFromGd2Data($data->{gd});
 }
 
 sub map {

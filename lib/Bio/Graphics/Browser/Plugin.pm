@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.17 2008-09-09 20:53:36 lstein Exp $
+# $Id: Plugin.pm,v 1.18 2009-01-06 07:38:24 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -770,7 +770,7 @@ sub config_name {
 sub selected_tracks {
   my $self = shift;
   my $page_settings = $self->page_settings;
-  return grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
+  return grep {!/^_/ && $page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
 }
 
 sub selected_features {

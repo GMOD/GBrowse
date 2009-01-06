@@ -220,16 +220,30 @@ sub make_requests {
     foreach my $label ( @{ $labels || [] } ) {
         my @track_args = $self->create_track_args( $label, $args );
 	my @extra_args = ();
+	my $ff_error;
 
         # get config data from the feature files
 	(my $track = $label) =~ s/:(overview|region|details?)$//;
-	if ($feature_files && $feature_files->{$track}) {
+	if ($feature_files && exists $feature_files->{$track}) {
+
+	    my $feature_file = $feature_files->{$track};
+
+	    unless (ref $feature_file) { # upload problem!
+		my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
+		    -cache_base => $base,
+		    -panel_args => \@panel_args,
+		    -track_args => \@track_args,
+		    );
+		$cache_object->flag_error("Could not fetch data for $track");
+		$d{$track} = $cache_object;
+		next;
+	    }
+
 	    next unless $label =~ /:$args->{section}$/;
 	    @extra_args = eval {
-		$feature_files->{$track}->types, $feature_files->{$track}->mtime;
+		$feature_file->{$track}->types, $feature_file->{$track}->mtime;
 	    }
 	}
-
         my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
             -cache_base => $base,
             -panel_args => \@panel_args,
@@ -448,6 +462,7 @@ sub wrap_rendered_track {
         }
     );
 
+
     return div({-class=>'centered_block',-style=>"width:${width}px"},
         ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
         . ( $map_html || '' );
@@ -533,6 +548,7 @@ sub run_remote_requests {
       Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('starting');
 
       my $child   = fork();
+
       die "Couldn't fork: $!" unless defined $child;
       if ($child) {
 	  Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('parent');
@@ -564,16 +580,15 @@ sub run_remote_requests {
 	    for my $label (keys %$contents) {
 		my $map = $contents->{$label}{map}        
 		or die "Expected a map from remote server, but got nothing!";
-		my $gd  = $contents->{$label}{imagedata}  
+		my $gd2 = $contents->{$label}{imagedata}  
 		or die "Expected imagedata from remote server, but got nothing!";
-		$requests->{$label}->put_data($gd,$map);
+		$requests->{$label}->put_data($gd2,$map);
 	    }
 	    $slave_status->mark_up($url);
 	}
 	else {
 	    my $uri = $request->uri;
 	    my $response_line = $response->status_line;
-	    warn "$uri; fetch failed: $response_line";
 	    $slave_status->mark_down($url);
 	  
 	    # try to recover from a transient slave failure; this only works
@@ -786,6 +801,8 @@ sub render_image_pad {
     my $self    = shift;
     my ($section,$segment) = @_;
 
+    warn "render_image_pad($section)" if DEBUG;
+
     my $r = 'Bio::Graphics::Browser::Region';
 
     $segment ||= $section eq 'overview'   ? 
@@ -793,7 +810,6 @@ sub render_image_pad {
                  :$section eq 'region'     ?
 	             $r->region_segment($self->segment,$self->settings)
                  :$self->segment;
-
     my @panel_args  = $self->create_panel_args({
 	section => $section,
 	segment => $segment,
@@ -811,9 +827,9 @@ sub render_image_pad {
     unless ($cache->status eq 'AVAILABLE') {
 	my $panel = Bio::Graphics::Panel->new(@panel_args);
 	$cache->lock;
-	$cache->put_data($panel->gd,'');
+	$cache->put_data($panel->gd->gd2,'');
     }
-    
+
     return $cache->gd;
 }
 
@@ -1118,7 +1134,7 @@ sub run_local_requests {
         my $map = $self->make_map( scalar $panel->boxes,
             $panel, $label,
             \%trackmap, 0 );
-        $requests->{$label}->put_data( $gd, $map );
+        $requests->{$label}->put_data( $gd->gd2, $map );
     }
 }
 

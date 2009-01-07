@@ -52,8 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.9 2009-01-05 16:17:33 sheldon_mckay Exp $
-
+#$Id: gbrowse_syn.PLS,v 1.9.2.10 2009-01-07 17:47:01 sheldon_mckay Exp $
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -202,13 +201,14 @@ options_table();
 print end_form();
 print $CONF->footer || end_html();
 
-# remeber former source for the checkbox
+# remember former source for the checkbox
 $page_settings->{old_src} = $CONF->search_src;
 exit 0;
 
+
 sub species_chooser {
-  my @species = grep {$_ ne $CONF->search_src} keys %$MAP;
-  my $src = $CONF->search_src;
+  my $src = $CONF->search_src();
+  my @species = grep {$_ ne $src} keys %$MAP;
   my $default = $CONF->page_settings->{species} || \@species;
   push @$default, $CONF->page_settings('old_src');
 
@@ -216,7 +216,7 @@ sub species_chooser {
     $default = [keys %$MAP];
   }
  
-  b(wiki_help('',$CONF->tr('Aligned Species'))) . ':' . br .
+  b(wiki_help('Aligned_Species',,$CONF->tr('Aligned Species'))) . ':' . br .
   checkbox_group(
 		 -id        => 'speciesChooser',
 		 -name      => 'species',
@@ -232,14 +232,14 @@ sub species_chooser {
 sub expand_notice {
   my $state = param('display') || $CONF->page_settings->{display};
   my $ref = $CONF->search_src; 
-  my $title = b(wiki_help("Display Mode",$CONF->tr("Display Mode")), ':');
+  my $title = b(wiki_help("Display_Mode",$CONF->tr("Display Mode")), ':');
   if ($state eq 'expanded') {
-    return br, $title, br,  "Expanded: Three species/panel ",
+    return br, $title, br,  "Three species/panel ",
 	a( {-href => url.'?display=compact'}, 'Click to show all species in one panel');
   } 
   else {
-    return br, $title, br, 'Compact: All species in a single panel ',
-    a( {-href => url.'?display=expanded'}, 'Click to expand');
+    return br, $title, br, 'All species in one panel ',
+    a( {-href => url.'?display=expanded'}, 'Click to show reference plus two species/panel');
   }
 }
 
@@ -1090,11 +1090,13 @@ sub navigation_table {
 
 sub expand_display {
   my $options = [qw/expanded compact/];
+  my $labels  = { expanded => 'ref. species plus 2',
+		  compact  => 'all species in one panel' };
   my $default = ['expanded'];
   my $name    = 'display';
 
   b(' ', wiki_help("Display Mode",$CONF->tr('Display Mode')), ': ') .
-  popup_menu({-name => $name, -values => $options, -default => $default});
+  popup_menu({-name => $name, -labels => $labels, -values => $options, -default => $default});
 }
 
 sub options_table {
@@ -1106,7 +1108,7 @@ sub options_table {
 		table({-cellpadding => 5, -width => '100%', -border => 0, -class => 'searchtitle'},
 		      TR(
 			 td(
-			    b(wiki_help('Image widths',$CONF->tr('Image widths')), ': '),
+			    b(wiki_help('Image Widths',$CONF->tr('Image widths')), ': '),
 			    span( $radio_style, radio_group( -name   => 'imagewidth',
 							     -values => [640,768,800,1024,1280],
 							     -default=>$CONF->page_settings('imagewidth'),
@@ -1121,7 +1123,7 @@ sub options_table {
 			 ),
 		      TR(
 			 td( {-colspan => 3},
-			     b(wiki_help('Image options',$CONF->tr('Image options')), ': '),
+			     b(wiki_help('Image Options',$CONF->tr('Image options')), ': '),
 			     div(
 				 span($radio_style, option_check('Chain alignments', 'aggregate')),$space,
 				 span($radio_style, option_check('Flip minus strand panels', 'pflip')),$space,
@@ -1139,7 +1141,7 @@ sub options_table {
 sub option_check {
   my $label = shift;
   my $name  = shift;
-  my $label = wiki_help($label,$CONF->tr($label));
+  $label = wiki_help($label,$CONF->tr($label));
   my $checked = $CONF->page_settings("$name") ? 'on' : 'off';
   return $label.' '.radio_group(-name => $name, -values => [qw/on off/], -default =>$checked);
 }
@@ -1386,7 +1388,7 @@ sub remap_coordinates {
 # take a vote to flip the panel: the majority strand wins
 sub panel_is_flipped { 
   my $key = shift;
-  return 0 if $CONF->page_settings('pflip') eq 'off';
+  return 0 unless $CONF->page_settings('pflip');
   my $panel_flip = $CONF->panel_flip($key);
   my $yes = $panel_flip->{$key}{yes} || 0;
   my $no  = $panel_flip->{$key}{no}  || 0;
@@ -1594,8 +1596,10 @@ sub wiki_help {
   my $label = shift;
   my @body  = shift || $label;
   my $url   = HELP;
+  $label =~ s/\s+/_/g;
   return a({-href => "${url}#${label}", -target => '_wiki_help'},@body);
 }
+
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

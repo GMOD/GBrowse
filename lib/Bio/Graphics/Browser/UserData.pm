@@ -36,13 +36,14 @@ sub convert_ucsc_file {
   my $self = shift;
   my ($in,$out) = @_;
 
-  eval "require Bio::Graphics::Wiggle::Loader" 
+  eval "require Bio::Graphics::Wiggle::Loader;1" 
     unless Bio::Graphics::Wiggle::Loader->can('new');
+
   my $dummy_name = $self->name_file('foo');
   $dummy_name    =~ s/foo$//; # get the directory part only!
 
-  my $loader = Bio::Graphics::Wiggle::Loader->new($dummy_name);
   eval {
+      my $loader = Bio::Graphics::Wiggle::Loader->new($dummy_name);
       $loader->load($in);
       my $featurefile = $loader->featurefile('featurefile');
       print $out $featurefile;

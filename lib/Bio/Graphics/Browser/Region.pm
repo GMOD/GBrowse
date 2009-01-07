@@ -57,7 +57,7 @@ sub segments {
 sub seg {
   my $self = shift;
   unless (exists $self->{segment}) {
-      my $segments = $self->segments;
+      my $segments     = $self->segments;
       $self->{segment} = $segments->[0] if @$segments;
       if (my $seg = $self->{segment}) {
 	  my $state = $self->state;
@@ -138,10 +138,10 @@ sub features2segments {
 }
 
 sub get_whole_segment {
-  my $self = shift;
-
+  my $self    = shift;
   my $segment = shift;
-  my $factory = $segment->factory;
+
+  my $factory = $self->source->open_database();
 
   # the segment class has been deprecated, but we still must support it
   my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
@@ -384,7 +384,7 @@ sub whole_segment {
     my $self    = shift;
     my $segment = shift || $self->seg;
     my $db      = $segment->factory;
-    my $class   = eval {$segment->seq_id->class} || eval{$db->refclass};
+    my $class   = eval {$segment->seq_id->class} || eval{$db->refclass} || 'Sequence';
     my ($whole) = $db->segment(-class=>$class,
 			       -name=>$segment->seq_id);
     return $whole;
@@ -403,10 +403,8 @@ sub region_segment {
     my $segment  = shift || $self->seg;
     my $settings = shift;
     my $whole    = shift;
-    $whole     ||= $self->whole_segment($segment) or return;
 
-    my $db       = $whole->factory;
-    my $class    = eval {$segment->seq_id->class} || eval{$db->refclass};
+    $whole     ||= $self->whole_segment($segment) or return;
 
     my $regionview_length = $settings->{region_size};
     my $detail_start      = $segment->start;
@@ -437,10 +435,16 @@ sub region_segment {
 	$regionview_end   = $whole_end;
     }
 
-    my ($region_segment) = $db->segment(-class => $class,
-					-name  => $segment->seq_id,
-					-start => $regionview_start,
-					-end   => $regionview_end);
+    my $db       = eval {$segment->factory};
+    my $class    = eval {$segment->seq_id->class} || eval{$db->refclass};
+
+    my ($region_segment) = $db ? $db->segment(-class => $class,
+					      -name  => $segment->seq_id,
+					      -start => $regionview_start,
+					      -end   => $regionview_end)
+                              :Bio::Graphics::Feature->new(-name  => $segment->seq_id,
+							   -start => $regionview_start,
+							   -end   => $regionview_end);
     return $region_segment;
 }
 

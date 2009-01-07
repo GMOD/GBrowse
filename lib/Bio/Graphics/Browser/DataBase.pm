@@ -22,6 +22,7 @@ Bio::Graphics::Browser::DataBase -- A simple cache for database handles
 use strict;
 use warnings;
 use Data::Dumper 'Dumper';
+use constant DEBUG=>0;
 
 my %DB;  #this is the cache
 
@@ -31,6 +32,8 @@ sub open_database {
 
   my $key   = Dumper($adaptor,@argv);
   return $DB{$key} if exists $DB{$key};
+
+  warn "open database @argv" if DEBUG;
 
   $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;
   die "Could not open database: $@" unless $DB{$key};

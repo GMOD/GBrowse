@@ -824,7 +824,9 @@ sub render_external_table {
     my $self = shift;
     my $feature_files = shift;
 
+    $self->init_database();
     my $state = $self->state;
+
     my $content 
         = div( { -id => "external_utility_div" }, '' )
         . start_form( -name => 'externalform', -id => 'externalform' )
@@ -1347,13 +1349,16 @@ sub do_plugin_header {
 }
 
 sub slidertable {
-  my $self = shift;
-  my $segment = shift;
+  my $self    = shift;
+  my $state   = $self->state;
 
-  my $whole_segment = $self->whole_segment;
+  # try to avoid reopening the database -- recover segment
+  # and whole segment lengths from our stored state if available
+  my $span  = $self->thin_segment->length;
+  my $max   = $self->thin_whole_segment->length;
+
   my $buttonsDir    = $self->globals->button_url;
 
-  my $span       = $segment->length;
   my $half_title = $self->unit_label(int $span/2);
   my $full_title = $self->unit_label($span);
   my $half       = int $span/2;
@@ -1378,7 +1383,7 @@ sub slidertable {
 		  -onClick => "Controller.update_coordinates(this.name)"
      ),
      '&nbsp;',
-     $self->zoomBar($segment,$whole_segment,$buttonsDir),
+     $self->zoomBar($span,$max),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/mplus.png",
 		  -name=>"zoom in $fine_zoom",
@@ -1407,15 +1412,13 @@ sub slidertable {
 sub zoomBar {
   my $self = shift;
 
-  my ($segment,$whole_segment) = @_;
+  my ($length,$max) = @_;
 
   my $show   = $self->tr('Show');
-  my $length = $segment->length;
-  my $max    = $whole_segment->length;
 
   my %seen;
   my @r         = sort {$a<=>$b} $self->data_source->get_ranges();
-  my @ranges	= grep {!$seen{$_}++ && $_<=$max} sort {$b<=>$a} $segment->length,@r;
+  my @ranges	= grep {!$seen{$_}++ && $_<=$max} sort {$b<=>$a} @r,$length;
 
   my %labels    = map {$_=>$show.' '.$self->unit_label($_)} @ranges;
   return popup_menu(-class   => 'searchtitle',

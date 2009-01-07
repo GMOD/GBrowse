@@ -32,12 +32,16 @@ sub new {
   my $class       = shift;
   my %options     = @_;
   my $segment       = $options{-segment};
+  my $whole_segment = $options{-whole_segment};
+  my $region_segment= $options{-region_segment};
   my $data_source   = $options{-source};
   my $page_settings = $options{-settings};
   my $language      = $options{-language};
 
   my $self  = bless {},ref $class || $class;
   $self->segment($segment);
+  $self->whole_segment($whole_segment);
+  $self->region_segment($region_segment);
   $self->source($data_source);
   $self->settings($page_settings);
   $self->language($language);
@@ -49,6 +53,20 @@ sub segment {
   my $self = shift;
   my $d = $self->{segment};
   $self->{segment} = shift if @_;
+  return $d;
+}
+
+sub whole_segment {
+  my $self = shift;
+  my $d = $self->{whole_segment};
+  $self->{whole_segment} = shift if @_;
+  return $d;
+}
+
+sub region_segment {
+  my $self = shift;
+  my $d = $self->{region_segment};
+  $self->{region_segment} = shift if @_;
   return $d;
 }
 
@@ -801,15 +819,10 @@ sub render_image_pad {
     my $self    = shift;
     my ($section,$segment) = @_;
 
-    warn "render_image_pad($section)" if DEBUG;
-
-    my $r = 'Bio::Graphics::Browser::Region';
-
-    $segment ||= $section eq 'overview'   ? 
-	             $r->whole_segment($self->segment,$self->settings)
-                 :$section eq 'region'     ?
-	             $r->region_segment($self->segment,$self->settings)
+    $segment ||= $section  eq 'overview'  ? $self->whole_segment
+                 :$section eq 'region'    ? $self->region_segment
                  :$self->segment;
+
     my @panel_args  = $self->create_panel_args({
 	section => $section,
 	segment => $segment,
@@ -1341,7 +1354,7 @@ sub get_iterator {
   }
 
   my $db_segment;
-  if (eval{$segment->factory eq $db}) {
+  if (eval{$segment->factory||'' eq $db}) {
       $db_segment   = $segment;
   } else {
       ($db_segment) = $db->segment($segment->seq_id,$segment->start,$segment->end);

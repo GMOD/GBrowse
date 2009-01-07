@@ -125,7 +125,10 @@ sub run {
   my $fh   = shift || \*STDOUT;
   my $old_fh = select($fh);
 
-  warn "RUN(): URI = ",url(-path=>1,-query=>1) if DEBUG;
+  warn "RUN(): ",
+       request_method(),': ',
+       url(-path=>1),' ',
+       query_string() if DEBUG;
 
   $self->set_source();
 
@@ -310,7 +313,7 @@ sub asynchronous_event {
     }
 
     if ( param('retrieve_multiple') ) {
-        $self->init_database();
+        # $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
 
@@ -1032,6 +1035,7 @@ sub render_bottom {
 
 sub init_database {
   my $self = shift;
+  return $self->db() if $self->db();  # already done
 
   my $dsn = $self->data_source;
   my $db  = $dsn->open_database();
@@ -1049,10 +1053,12 @@ sub region {
 
     return $self->{region} if exists $self->{region};
 
+    my $db = $self->data_source->open_database();
+
     my $region   = Bio::Graphics::Browser::Region->new(
  	{ source => $self->data_source,
  	  state  => $self->state,
- 	  db     => $self->db }
+ 	  db     => $db }
  	) or die;
 
     # run any "find" plugins
@@ -1077,8 +1083,45 @@ sub region {
     return $self->{region} = $region;
 }
 
+sub thin_segment {
+    my $self  = shift;
+    my $state = $self->state;
+    if (exists $state->{ref}) {
+	return Bio::Graphics::Feature->new(-seq_id => $state->{ref},
+					   -start  => $state->{start},
+					   -end    => $state->{stop});
+    } else {
+	return $self->segment;
+    }
+}
+
+sub thin_whole_segment {
+    my $self  = shift;
+    my $state = $self->state;
+    if (exists $state->{ref} && exists $state->{seg_min}) {
+	return Bio::Graphics::Feature->new(-seq_id => $state->{ref},
+					   -start  => $state->{seg_min},
+					   -end    => $state->{seg_max});
+    } else {
+	return $self->whole_segment;
+    }
+}
+
+sub thin_region_segment {
+    my $self  = shift;
+    my $state = $self->state;
+    my $thin_segment       = $self->thin_segment;
+    my $thin_whole_segment = $self->thin_whole_segment;
+
+    return Bio::Graphics::Browser::Region->region_segment(
+	$thin_segment,
+	$state,
+	$thin_whole_segment);
+}
+
 sub segment {
     my $self   = shift;
+    my $state  = $self->state;
     my $region = $self->region or return;
     return $region->seg;
 }
@@ -2035,7 +2078,9 @@ sub asynchronous_update_detail_scale_bar {
 sub asynchronous_update_sections {
     my $self          = shift;
     my $section_names = shift;
-    $self->init_database();
+
+    # avoid unecessary database inits
+    #    $self->init_database();
 
     my $source        = $self->data_source;
     my $return_object = {};
@@ -2060,29 +2105,30 @@ sub asynchronous_update_sections {
 
     # Page Title
     if ( $handle_section_name{'page_title'} ) {
-        my $segment     = $self->segment;
+	my $segment     = $self->thin_segment;  # avoids a db open
         my $dsn         = $self->data_source;
         my $description = $dsn->description;
         $return_object->{'page_title'} = $description . '<br>'
             . $self->tr(
             'SHOWING_FROM_TO',
-            scalar $source->unit_label( $segment->length ),
+            scalar $source->unit_label($segment->length),
             $segment->seq_id,
-            $source->commas( $segment->start ),
-            $source->commas( $segment->end )
+            $source->commas($segment->start),
+            $source->commas($segment->end)
             );
     }
 
     # Span that shows the range
     if ( $handle_section_name{'span'} ) {
         my $container
-	    = $self->slidertable($self->segment);
+	    = $self->slidertable();
         $return_object->{'span'} = $container;
     }
 
     # Unused Search Field
     if ( $handle_section_name{'search_form_objects'} ) {
-        $return_object->{'search_form_objects'} = $self->render_search_form_objects();
+        $return_object->{'search_form_objects'} 
+	    = $self->render_search_form_objects();
     }
 
     # Plugin Configuration Form
@@ -2109,7 +2155,7 @@ sub asynchronous_update_sections {
 
     # Galaxy form
     if ( $handle_section_name{'galaxy_form'} ) {
-	$return_object->{'galaxy_form'} = $self->galaxy_form($self->segment);
+	$return_object->{'galaxy_form'} = $self->galaxy_form($self->thin_segment);
     }
 
     # Galaxy form
@@ -2775,12 +2821,16 @@ sub trackname_to_id {
 
 ################## get renderer for this segment #########
 sub get_panel_renderer {
-  my $self = shift;
-  my $seg  = shift || $self->segment;
-  return Bio::Graphics::Browser::RenderPanels->new(-segment  => $seg,
-						   -source   => $self->data_source,
-						   -settings => $self->state,
-						   -language => $self->language,
+  my $self   = shift;
+  my $seg    = shift || $self->segment;
+  my $whole  = shift || $self->whole_segment;
+  my $region = shift || $self->region_segment;
+  return Bio::Graphics::Browser::RenderPanels->new(-segment        => $seg,
+						   -whole_segment  => $whole,
+						   -region_segment => $region,
+						   -source         => $self->data_source,
+						   -settings       => $self->state,
+						   -language       => $self->language,
 						  );}
 
 ################## image rendering code #############
@@ -2871,14 +2921,17 @@ sub render_deferred {
     my %args = @_;
 
     my $labels      = $args{labels}          || [ $self->detail_tracks ];
-    my $seg         = $args{segment}         || $self->segment;
+    my $seg         = $args{segment}         || $self->thin_segment;
     my $section     = $args{section}         || 'detail';
     my $cache_extra = $args{cache_extra}     || $self->create_cache_extra();
     my $external    = $args{external_tracks} || $self->external_data;
 
     warn '(render_deferred(',join(',',@$labels),') for section ',$section if DEBUG;
 
-    my $renderer   = $self->get_panel_renderer($seg);
+    my $renderer   = $self->get_panel_renderer($seg,
+					       $self->thin_whole_segment,
+					       $self->thin_region_segment
+	);
 
     my $h_callback = $self->make_hilite_callback();
 
@@ -2886,7 +2939,7 @@ sub render_deferred {
         {   labels           => $labels,
             section          => $section,
             deferred         => 1,
-            whole_segment    => $self->whole_segment(),
+            whole_segment    => $self->thin_whole_segment(),
 	    external_features=> $external,
             hilite_callback  => $h_callback || undef,
             cache_extra      => $cache_extra,
@@ -2959,7 +3012,10 @@ sub render_deferred_track {
     my $cache_key        = $args{'cache_key'};
     my $track_id         = $args{'track_id'};
 
-    my $renderer = $self->get_panel_renderer;
+    my $renderer = $self->get_panel_renderer($self->thin_segment,
+					     $self->thin_whole_segment,
+					     $self->thin_region_segment
+	);
 
     my $base  = $renderer->get_cache_base();
     my $cache = Bio::Graphics::Browser::CachedTrack->new(
@@ -2973,12 +3029,12 @@ sub render_deferred_track {
 
     my $result_html = '';
     if ( $cache->status eq 'AVAILABLE' ) {
-        my $result = $renderer->render_tracks( { $track_id => $cache } );
+        my $result   = $renderer->render_tracks( { $track_id => $cache } );
         $result_html = $result->{$track_id};
     }
     elsif ($cache->status eq 'ERROR') {
         my $image_width = $self->get_image_width;
-        $result_html .= $self->render_error_track(
+        $result_html   .= $self->render_error_track(
 						  track_id       => $track_id,
 						  image_width      => $image_width,
 						  image_height     => EMPTY_IMAGE_HEIGHT,
@@ -2987,7 +3043,7 @@ sub render_deferred_track {
      } else {
         my $image_width = $self->get_image_width;
         $result_html .= $self->render_grey_track(
-						 track_id       => $track_id,
+						 track_id         => $track_id,
 						 image_width      => $image_width,
 						 image_height     => EMPTY_IMAGE_HEIGHT,
 						 image_element_id => $track_id . "_image",

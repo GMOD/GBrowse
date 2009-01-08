@@ -461,6 +461,7 @@ lib/Bio/Graphics/Browser/UserData.pm
 lib/Bio/Graphics/Browser/Util.pm
 lib/Bio/Graphics/GBrowseFeature.pm
 lib/Bio/Graphics/Karyotype.pm
+lib/CGI/Toggle.pm
 libalign/CAlign.pm
 libalign/CAlign.xs
 libalign/Changes

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.77 2009-01-07 00:04:57 lstein Exp $
+ $Id: controller.js,v 1.78 2009-01-08 16:42:29 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -333,8 +333,8 @@ var GBrowseController = Class.create({
     this.each_track(function(gbtrack) {
          if ($(gbtrack.track_image_id) != null)
 	    $(gbtrack.track_image_id).setOpacity(0.3);
-         else
-            alert('REPORT THIS BUG: element '+gbtrack.track_image_id+' should not be null');
+	 //  else
+	 //  alert('REPORT THIS BUG: element '+gbtrack.track_image_id+' should not be null');
     });
     
     new Ajax.Request(document.URL,{

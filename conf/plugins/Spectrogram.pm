@@ -1,4 +1,4 @@
-# $Id: Spectrogram.pm,v 1.8 2007-03-31 14:33:36 sheldon_mckay Exp $
+# $Id: Spectrogram.pm,v 1.9 2009-01-08 16:42:29 lstein Exp $
 # bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
@@ -83,12 +83,12 @@ use List::Util qw/shuffle max/;
 
 use Data::Dumper;
 
+use vars qw/@ISA $CONFIG $VERSION/;
 
-use vars qw/@ISA $CONFIG/;
+use constant IMAGE_DIR   => '/gbrowse2/images/help';
+use constant BUTTONS_DIR => '/gbrowse2/images/buttons'; 
 
-use constant IMAGE_DIR   => '/gbrowse/images/help';
-use constant BUTTONS_DIR => '/gbrowse/images/buttons'; 
-
+$VERSION = 1.1;
 @ISA = qw/ Bio::Graphics::Browser::Plugin /;
 
 sub init {
@@ -344,9 +344,15 @@ sub configure_form {
   my $conf    = $self->configuration;
   my $segment = ($self->segments)[0];
 
-  my $description = $self->description;
   my $state       = { on => 0, override => 1 };
-  my $form = toggle($state, 'What is a DNA spectrogram?', $description);
+  my $description = p(
+      $self->_help_message($state,
+			   span({-class=>'searchtitle'},
+				'What is a DNA spectrogram?'),
+			   $self->long_description)
+      );
+
+  my $form = $description;
  
   my $msg = $self->_help_message( $state, 'Sliding window size', split "NL", <<'END;');
 Window size is the number of bases to include in each calculation.NL
@@ -434,7 +440,7 @@ sub _help_message {
   my $details = table( {-width => 800},
 		      Tr( td( {-class => 'databody'}, ul(@items))));
   
-  toggle( $state, $section, $details );
+  $self->toggle( $state, $section, $details );
 }
   
 sub make_numeric {
@@ -478,6 +484,15 @@ sub _process_msg {
 }
 
 sub description {
+    my $self = shift;
+    return p(<<END);
+The DNA Spectrogram plugin builds a spectrogram for digitized DNA sequence using
+the short-time fourier transform (STFT) method. The plugin was written by 
+Sheldon McKay (mckays\@cshl.edu).
+END
+}
+
+sub long_description {
   my $image_dir = IMAGE_DIR;
   return table( {-width => 800}, Tr( td({-class => 'databody'},
 	   p(<<END) . 
@@ -566,14 +581,15 @@ END
 }
 
 sub toggle {
-  my ($state,$section_head,@body) = @_;
-  my $buttons_dir = $CONFIG->setting('buttons') || BUTTONS_DIR;
-  $state ||= {};
-  $state->{plus_img}  = "$buttons_dir/query.png";
-  $state->{minus_img} = "$buttons_dir/minus12.png";
+    my $self = shift;
+    my ($state,$section_head,@body) = @_;
+    my $buttons_dir = $CONFIG->globals->button_url || BUTTONS_DIR;
+    $state ||= {};
+    $state->{plus_img}  = "$buttons_dir/query.png";
+    $state->{minus_img} = "$buttons_dir/minus12.png";
 
-  my ($label) = $CONFIG->tr($section_head) || $section_head;
-  return toggle_section($state,$label,b($label),@body);
+    my ($label) = $self->language->tr($section_head) || $section_head;
+    return toggle_section($state,$label,b($label),@body);
 }
 
 1;

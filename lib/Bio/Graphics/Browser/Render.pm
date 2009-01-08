@@ -1774,7 +1774,11 @@ sub add_track_to_state {
 
   return unless length $label; # refuse to add empty tracks!
 
-  my $state  = $self->state;
+  # don't add invalid track
+  my %potential_tracks = map {$_=>1} $self->potential_tracks;
+  return unless $potential_tracks{$label};
+
+  my $state   = $self->state;
   my %current = map {$_=> 1} @{$state->{tracks}};
   push @{$state->{tracks}},$label unless $current{$label};
 
@@ -1913,11 +1917,11 @@ sub update_tracks {
   $self->set_tracks($self->split_labels(param('label'))) if param('label');
   $self->set_tracks($self->split_labels(param('t')))     if param('t');
 
-  if (my @selected = split_labels(param('enable'))) {
+  if (my @selected = $self->split_labels(param('enable'))) {
     $state->{features}{$_}{visible} = 1 foreach @selected;
   }
 
-  if (my @selected = split_labels(param('disable'))) {
+  if (my @selected = $self->split_labels(param('disable'))) {
     $state->{features}{$_}{visible} = 0 foreach @selected;
   }
 
@@ -2639,7 +2643,7 @@ sub regionview_bounds {
 
 sub split_labels {
   my $self = shift;
-  my @results = map {/^(http|ftp|das)/ ? $_ : split /[ +-]/} @_;
+  my @results = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
   foreach (@results) {
       tr/$;/-/;  # unescape hyphens
   }
@@ -2651,7 +2655,9 @@ sub set_tracks {
     my @labels = @_;
     my $state  = $self->state;
 
-    $state->{tracks} = \@labels;
+    my %potential = map {$_=>1} $self->potential_tracks;
+
+    $state->{tracks} = [grep {$potential{$_}} @labels];
     $self->load_plugin_annotators(\@labels);
     $state->{features}{$_}{visible} = 0 foreach $self->data_source->labels;
     $state->{features}{$_}{visible} = 1 foreach @labels;
@@ -2709,10 +2715,25 @@ sub regionview_tracks {
   
 }
 
+# all tracks currently in our state; this MAY go out of date if the
+# configuration file changes.
 sub all_tracks {
     my $self  = shift;
     my $state = $self->state;
     return @{$state->{tracks}};
+}
+
+# all potential tracks; this is guaranteed to be up to date with the
+# configuration file.
+sub potential_tracks {
+    my $self   = shift;
+    my $source = $self->data_source;
+    return grep {!/^_/} ($source->detail_tracks,
+			 $source->overview_tracks,
+			 $source->plugin_tracks,
+			 $source->regionview_tracks,
+			 $self->uploaded_sources->files,
+			 $self->remote_sources->sources);
 }
 
 sub visible_tracks {
@@ -3269,6 +3290,16 @@ sub general_help {
   return shift->globals->url_base."/general_help.html";
 }
 
+sub join_selected_tracks {
+    my $self = shift;
+
+    my @selected = $self->visible_tracks;
+    foreach (@selected) { # escape hyphens
+	tr/-/$;/;
+    }
+    return join '-',@selected;
+}
+
 sub bookmark_link {
   my $self     = shift;
   my $settings = shift;
@@ -3279,12 +3310,7 @@ sub bookmark_link {
     $q->param(-name=>$_,-value=>$settings->{$_});
   }
 
-  # handle selected features slightly differently
-  my @selected = grep {$settings->{features}{$_}{visible} && !/^(file|ftp|http):/} @{$settings->{tracks}};
-  foreach (@selected) { # escape hyphens
-      tr/-/$;/;
-  }
-  $q->param(-name=>'label',-value=>join('-',@selected));
+  $q->param(-name=>'label',-value=>$self->join_selected_tracks);
 
   # handle external urls
   my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
@@ -3332,18 +3358,14 @@ sub image_link {
     my $tracks   = $settings->{tracks};
     my $width    = $settings->{width};
     my $name     = "$settings->{ref}:$settings->{start}..$settings->{stop}";
-    my @selected = $self->visible_tracks;
-    foreach (@selected) { # escape hyphens
-	tr/-/$;/;
-    }
-    my $type     = join '+',map{CGI::escape($_)} map {/\s/?qq("$_"):$_} @selected;
+    my $selected = $self->join_selected_tracks;
     my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}
                              } map {/\s/?"$_":$_}
     grep {
 	$settings->{features}{$_}{options}
     } @$tracks;
     $id        ||= ''; # to prevent uninit variable warnings
-    my $img_url  = "$url/?name=$name;label=$type;width=$width;id=$id";
+    my $img_url  = "$url/?name=$name;label=$selected;width=$width;id=$id";
     $img_url    .= ";flip=$flip"         if $flip;
     $img_url    .= ";options=$options"   if $options;
     $img_url    .= ";format=$format"     if $format;

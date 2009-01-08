@@ -840,7 +840,8 @@ sub render_image_pad {
     unless ($cache->status eq 'AVAILABLE') {
 	my $panel = Bio::Graphics::Panel->new(@panel_args);
 	$cache->lock;
-	$cache->put_data($panel->gd->gd2,'');
+	my $gd = $panel->gd;
+	$cache->put_data($gd,'');
     }
 
     return $cache->gd;
@@ -1105,7 +1106,7 @@ sub run_local_requests {
 	(my $base = $label) =~ s/:(overview|region|details?)$//;
 	warn "label=$label, base=$base, file=$feature_files->{$base}" if DEBUG;
 
-        if ( my $file = $feature_files->{$base} ) {
+        if ( my $file = ($feature_files->{$base}) ) {
 
             # Add feature files, including remote annotations
             my $featurefile_select = $args->{featurefile_select}
@@ -1147,7 +1148,7 @@ sub run_local_requests {
         my $map = $self->make_map( scalar $panel->boxes,
             $panel, $label,
             \%trackmap, 0 );
-        $requests->{$label}->put_data( $gd->gd2, $map );
+        $requests->{$label}->put_data($gd, $map );
     }
 }
 
@@ -1385,8 +1386,6 @@ sub add_feature_file {
 
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
-
-  warn "rendering file $name" if DEBUG;
 
   eval {
     $file->render(

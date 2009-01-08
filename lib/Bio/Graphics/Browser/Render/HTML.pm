@@ -500,13 +500,7 @@ sub render_track_table {
 
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
-  my @labels     = grep {!/^_/} ($source->detail_tracks,
-				 $source->overview_tracks,
-				 $source->plugin_tracks,
-				 $source->regionview_tracks,
-				 $self->uploaded_sources->files,
-				 $self->remote_sources->sources,
-  );
+  my @labels     = $self->potential_tracks;
   my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 

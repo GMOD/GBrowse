@@ -1,0 +1,96 @@
+---
+name: GBrowse
+version: 1.984
+author:
+  - 'Lincoln Stein <lincoln.stein@gmail.com>'
+abstract: The GMOD Generic Genome Browser
+license: perl
+resources:
+  license: http://dev.perl.org/licenses/
+requires:
+  Bio::Graphics: 1.82
+  Bio::Root::Version: 1.005009001
+  CGI::Session: 4.02
+  Digest::MD5: 0
+  File::Temp: 0
+  GD: 2.07
+  IO::String: 0
+  JSON: 0
+  LWP: 0
+  Storable: 0
+  perl: 5.008
+recommends:
+  DBD::Pg: 0
+  DBD::mysql: 0
+  DBI: 0
+  DB_File::Lock: 0
+provides:
+  Bio::Graphics::Browser:
+    file: lib/Bio/Graphics/Browser.pm
+  Bio::Graphics::Browser::CachedTrack:
+    file: lib/Bio/Graphics/Browser/CachedTrack.pm
+  Bio::Graphics::Browser::DataBase:
+    file: lib/Bio/Graphics/Browser/DataBase.pm
+  Bio::Graphics::Browser::DataSource:
+    file: lib/Bio/Graphics/Browser/DataSource.pm
+  Bio::Graphics::Browser::GFFPrinter:
+    file: lib/Bio/Graphics/Browser/GFFPrinter.pm
+  Bio::Graphics::Browser::GFFhelper:
+    file: lib/Bio/Graphics/Browser/GFFhelper.pm
+  Bio::Graphics::Browser::I18n:
+    file: lib/Bio/Graphics/Browser/I18n.pm
+  Bio::Graphics::Browser::Markup:
+    file: lib/Bio/Graphics/Browser/Markup.pm
+  Bio::Graphics::Browser::MetaSegment:
+    file: lib/Bio/Graphics/Browser/RegionSearch.pm
+  Bio::Graphics::Browser::MetaSegment::Iterator:
+    file: lib/Bio/Graphics/Browser/RegionSearch.pm
+  Bio::Graphics::Browser::OptionPick:
+    file: lib/Bio/Graphics/Browser/OptionPick.pm
+  Bio::Graphics::Browser::PadAlignment:
+    file: lib/Bio/Graphics/Browser/PadAlignment.pm
+  Bio::Graphics::Browser::Plugin:
+    file: lib/Bio/Graphics/Browser/Plugin.pm
+    version: 0.20
+  Bio::Graphics::Browser::PluginSet:
+    file: lib/Bio/Graphics/Browser/PluginSet.pm
+  Bio::Graphics::Browser::Realign:
+    file: lib/Bio/Graphics/Browser/Realign.pm
+  Bio::Graphics::Browser::Region:
+    file: lib/Bio/Graphics/Browser/Region.pm
+  Bio::Graphics::Browser::RegionSearch:
+    file: lib/Bio/Graphics/Browser/RegionSearch.pm
+  Bio::Graphics::Browser::RemoteSet:
+    file: lib/Bio/Graphics/Browser/RemoteSet.pm
+  Bio::Graphics::Browser::Render:
+    file: lib/Bio/Graphics/Browser/Render.pm
+  Bio::Graphics::Browser::Render::HTML:
+    file: lib/Bio/Graphics/Browser/Render/HTML.pm
+  Bio::Graphics::Browser::Render::Slave:
+    file: lib/Bio/Graphics/Browser/Render/Slave.pm
+  Bio::Graphics::Browser::Render::Slave::Status:
+    file: lib/Bio/Graphics/Browser/Render/Slave/Status.pm
+  Bio::Graphics::Browser::RenderPanels:
+    file: lib/Bio/Graphics/Browser/RenderPanels.pm
+  Bio::Graphics::Browser::Session:
+    file: lib/Bio/Graphics/Browser/Session.pm
+  Bio::Graphics::Browser::Shellwords:
+    file: lib/Bio/Graphics/Browser/Shellwords.pm
+  Bio::Graphics::Browser::UploadSet:
+    file: lib/Bio/Graphics/Browser/UploadSet.pm
+  Bio::Graphics::Browser::UserData:
+    file: lib/Bio/Graphics/Browser/UserData.pm
+  Bio::Graphics::Browser::Util:
+    file: lib/Bio/Graphics/Browser/Util.pm
+  Bio::Graphics::GBrowseFeature:
+    file: lib/Bio/Graphics/GBrowseFeature.pm
+  Bio::Graphics::Karyotype:
+    file: lib/Bio/Graphics/Karyotype.pm
+  CGI::Toggle:
+    file: lib/CGI/Toggle.pm
+  FakeHomol:
+    file: lib/Bio/Graphics/Browser/GFFhelper.pm
+generated_by: Module::Build version 0.280801
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2

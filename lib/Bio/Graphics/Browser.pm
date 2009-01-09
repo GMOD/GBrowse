@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.120 2008-12-16 18:02:53 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.121 2009-01-09 23:33:19 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1122,7 +1122,7 @@ sub render_composite_track {
   }
 
   $map ||= '';
-  my $map_name = "${section}_map";
+  my $map_name = param('hmap') || "${section}_map";
 
   # The javascript functions for rubber-band selection
   # need this ID as a hook, please do not change it

@@ -156,7 +156,6 @@ docs/pod/README-lucegene.pod
 docs/README.tutorial
 etc/default/gbrowse-slave
 etc/init.d/gbrowse-slave
-GFFDumper.pm
 htdocs/annotation_help.html
 htdocs/css/gbrowse.css
 htdocs/css/gbrowse_transparent.css

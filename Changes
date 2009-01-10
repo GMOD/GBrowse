@@ -1,3 +1,7 @@
+CVS Commits:
+
+$Log: not supported by cvs2svn $
+
 1.67    * Templates now the norm, use gbrowse_not to get the "no templates" version.
 	* The das script now works (more or less) with Bio::DB::SeqFeature::Store adaptor. Not tested
 	with chado adaptor.

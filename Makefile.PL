@@ -8,7 +8,7 @@ use IO::File;
 use Cwd;
 require 5.005003;
 
-my $VERSION     = '1.69.024';
+my $VERSION     = '1.69.025';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN GBROWSE_ROOT
@@ -306,7 +306,7 @@ WriteMakefile(
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
 				 'bin/ucsc_genes2gff.PLS' => 'bin/ucsc_genes2gff.pl',
-				 'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
+#				 'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
 				 'bin/register_moby_services.PLS' => 'bin/register_moby_services.pl',
 				 'bin/wiggle2gff3.PLS' => 'bin/wiggle2gff3.pl',
 				 'install_util/gbrowse_ppm_install.PLS' => 'install_util/gbrowse_ppm_install.pl',
@@ -327,7 +327,7 @@ WriteMakefile(
 				 'bin/process_wormbase.pl',
 				 'bin/process_sgd.pl',
 				 'bin/process_gadfly.pl',
-                                 'bin/load_genbank.pl',
+#                                 'bin/load_genbank.pl',
                                  'bin/wiggle2gff3.pl',
 				],
 	      'LIBS'	     => [''], # e.g., '-lm'

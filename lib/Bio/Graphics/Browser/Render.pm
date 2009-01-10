@@ -512,7 +512,10 @@ sub asynchronous_event {
 
     # Change the order of tracks if any "label[]" parameters are present
     if ( my @labels = param('label[]') ) {
-        foreach (@labels) {s/%5F/_/g}
+        foreach (@labels) {
+	    s/%5F/_/g;
+	    s/:(overview|region|detail)$// if /^(plugin|file|http|ftp):/;
+	}
         my %seen;
         @{ $settings->{tracks} } = grep { length() > 0 && !$seen{$_}++ }
             ( @labels, @{ $settings->{tracks} } );
@@ -2683,15 +2686,12 @@ sub load_plugin_annotators {
 }
 
 sub detail_tracks {
-  my $self   = shift;
+  my $self     = shift;
   my $external = $self->external_data;
-  my @tracks            = grep {!$external->{$_}}
-                          grep {!/:(overview|region)$/} $self->visible_tracks;
-  my @files_in_details  = $self->featurefiles_in_section('detail');
-  my %seen;
-
-  return grep {!$seen{$_}++} (@tracks,@files_in_details);
-
+  my %files_in_details = map {$_=>1} $self->featurefiles_in_section('detail','expand');
+  my @tracks           = grep {$files_in_details{$_}
+			       || !/:(overview|region)$/} $self->visible_tracks;
+  return @tracks;
 }
 
 sub overview_tracks {
@@ -2735,14 +2735,16 @@ sub potential_tracks {
 sub visible_tracks {
     my $self  = shift;
     my $state = $self->state;
-    return grep {$state->{features}{$_}{visible} 
+    my @tracks = grep {$state->{features}{$_}{visible} 
 		 && !/^_/
-    } $self->all_tracks;
+           } $self->all_tracks;
+    return @tracks;
 }
 
 sub featurefiles_in_section {
     my $self             = shift;
     my $desired_section  = shift;
+    my $expand           = shift;
 
     my $external = $self->external_data;
     my $state    = $self->state;
@@ -2752,6 +2754,7 @@ sub featurefiles_in_section {
 	$state->{features}{$label}{visible}   or next;
 	my $file     = $external->{$label}    or next;
 	my %sections = map {$_=>1} $self->featurefile_sections($label);
+	$label .= ":".lc $desired_section if $expand;
 	$found{$label}++ if $sections{lc $desired_section};
     }
     return keys %found;
@@ -2890,9 +2893,9 @@ sub get_blank_panels {
     my $track_names = shift;
     my $section     = shift;
 
-    my $html  = '';
-    my $external = $self->external_data;
+    my $settings = $self->state;
 
+    my $html  = '';
     my $image_width = $self->get_image_width;
     foreach my $track_name ( @{ $track_names || [] } ) {
 

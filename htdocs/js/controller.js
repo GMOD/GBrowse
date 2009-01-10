@@ -2,7 +2,8 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.79 2009-01-10 07:20:07 lstein Exp $
+ Ben Faga <ben.faga@gmail.com>
+ $Id: controller.js,v 1.80 2009-01-10 12:19:21 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -476,7 +477,7 @@ var GBrowseController = Class.create({
              Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
            } 
    	   if (scroll_there) {
-	      $(gbtrack.track_div_id).scrollTo();
+	      new Effect.ScrollTo(gbtrack.track_div_id);
 	   }
          } // end onSuccess
        }); // end Ajax.Request
@@ -611,11 +612,13 @@ var GBrowseController = Class.create({
   function(div_id) {
     var plugin_base  = document.pluginform.plugin.value;
     this.update_sections(new Array(div_id), '&plugin_base='+plugin_base);
+    new Effect.ScrollTo(div_id);
   },
 
   reconfigure_plugin:
-  function(plugin_action,plugin_track_id,pc_div_id,plugin_type) {
-    var form_element = $("configure_plugin");
+  function(plugin_action,plugin_track_id,pc_div_id,plugin_type,form_element) {
+    if (form_element==null)
+       form_element = $("configure_plugin");
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({

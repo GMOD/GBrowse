@@ -1207,22 +1207,22 @@ sub plugin_configuration_form {
     my $plugin_name = $plugin->name;
 
     print CGI::header('text/html');
-    print start_html(),
-              start_form(
+    print start_form(
 		  -name     => 'configure_plugin',
 		  -id       => 'configure_plugin',
 		  ),
-	  submit(
-            -name    => 'plugin_button',
-            -value   => $self->tr('Configure_plugin'),
-          ),
+	  button(-value => $self->tr('Cancel'),
+ 		 -onClick=>'Balloon.prototype.hideTooltip(1)'),
+	  button(-value => $self->tr('Configure_plugin'),
+ 		 -onClick=>'Controller.reconfigure_plugin('
+                 . '"'.$self->tr('Configure_plugin').'"'
+                 . qq(, "plugin:$plugin_name")
+                 . qq(, "plugin_configure_div")
+                 . qq(, "$plugin_type")
+                 . qq(, this.parentNode)
+		 . ');Balloon.prototype.hideTooltip(1)'),
           $plugin->configure_form(),
-	  submit(
-            -name    => 'plugin_button',
-            -value   => $self->tr('Configure_plugin'),
-          ),
-          end_form(),
-          end_html();
+          end_form();
 }
 
 # wrap arbitrary HTML in a named div

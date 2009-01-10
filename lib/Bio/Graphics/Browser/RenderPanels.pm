@@ -258,9 +258,9 @@ sub make_requests {
 	    }
 
 	    next unless $label =~ /:$args->{section}$/;
-	    @extra_args = eval {
-		$feature_file->{$track}->types, $feature_file->{$track}->mtime;
-	    }
+	    @extra_args =  eval {
+		$feature_file->types, $feature_file->mtime;
+	    };
 	}
         my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
             -cache_base => $base,
@@ -524,7 +524,7 @@ sub run_remote_requests {
   my %env        = map {$_=>$ENV{$_}}    grep /^GBROWSE/,keys %ENV;
   my %args       = map {$_=>$args->{$_}} grep /^-/,keys %$args;
 
-  $args{section} = $args->{section};
+  $args{$_}  = $args->{$_} foreach ('section','image_class','cache_extra');
 
   # serialize the data source and settings
   my $s_dsn	= Storable::nfreeze($source);
@@ -1636,14 +1636,13 @@ sub feature_file_select {
   }
 
   return sub {
-
       my $file    = shift;
       my $type    = shift;
 
       my $section = $file->setting($type=>'section')
 	            || $file->setting(general=>'section');
-      my ($modifier) = $type =~ /:(.+)$/;
-      $section   ||= $modifier;
+      my ($modifier) = $type =~ /:(overview|region}detail)$/;
+      $section     ||= $modifier;
 
       return $undef_defaults_to_true
 	  if !defined $section;

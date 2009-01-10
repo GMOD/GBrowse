@@ -252,7 +252,6 @@ sub render_tracks {
     $self->Debug("rendering tracks @$tracks");
 
 
-
     # BUG: duplicated code from Render.pm -- move into a common place
     $panel_args->{section} ||= '';  # prevent uninit variable warnings
     if ($panel_args->{section} eq 'overview') {

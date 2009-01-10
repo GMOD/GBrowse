@@ -383,6 +383,7 @@ Given a detail segment, return the whole seq_id that contains it
 sub whole_segment {
     my $self    = shift;
     my $segment = shift || $self->seg;
+    return unless $segment;
     my $db      = $segment->factory;
     my $class   = eval {$segment->seq_id->class} || eval{$db->refclass} || 'Sequence';
     my ($whole) = $db->segment(-class=>$class,

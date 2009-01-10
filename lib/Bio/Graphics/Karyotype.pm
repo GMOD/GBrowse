@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.10 2009-01-06 22:14:25 lstein Exp $
+# $Id: Karyotype.pm,v 1.11 2009-01-10 12:19:21 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -247,10 +247,10 @@ sub generate_panels {
     my $height = int($chrom->length * $pixels_per_base);
     my $panel  = Bio::Graphics::Panel->new(-width => $height,  # not an error, will rotate image later
 					   -length=> $chrom->length,
-					   -pad_top=>10,
+					   -pad_top   =>10,
 					   -pad_bottom=>10,
-					   -pad_right => 10,
-					   -bgcolor => $self->data_source->global_setting('overview bgcolor')
+					   -pad_right => 0,
+					   -bgcolor   => $self->data_source->global_setting('overview bgcolor')
 					    || 'wheat:0.5'
 	);
 

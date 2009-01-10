@@ -25,8 +25,12 @@ function k_dohilite (el,hilite_it,autoscroll) {
 	$('scrolling_table').scrollTop = top;
      }
 
-    $('box_'+base).className     = classname;
-    $('feature_'+base).className = classname;
+     var el;
+
+     if ((el = $('box_'+base)) != null)
+         el.className     = classname;
+     if ((el = $('feature_'+base)) != null)
+         el.className     = classname;
 }
 
 function k_hilite_feature (el,autoscroll) {

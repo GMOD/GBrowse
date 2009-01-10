@@ -291,6 +291,12 @@ sub asynchronous_event {
         return ( 200, 'application/json', $return_object );
     }
 
+    if ( param('upload_table') ) {
+	$self->init_remote_sources();
+        my $html        = $self->render_external_table();
+        return ( 200, 'text/html', $html );
+    }
+
     if ( my $track_name = param('configure_track') ) {
         my $html = $self->track_config($track_name);
         return ( 200, 'text/html', $html );
@@ -759,25 +765,30 @@ sub render_body {
 
   my $title    = $self->generate_title($features);
 
-  print $self->render_top($title);
-  print $self->render_title($title,$self->state->{name} && @$features == 0);
-  print $self->render_instructions;
+  print $self->render_html_start($title);
+  print $self->render_top($title,$features);
 
   if ($region->feature_count > 1) {
       print $self->render_navbar();
       print $self->render_multiple_choices($features,$self->state->{name});
-      print $self->render_config();
+      print $self->render_toggle_track_table;
+      print $self->render_toggle_external_table;
+      print $self->render_global_config();
   }
 
   elsif (my $seg = $region->seg) {
       print $self->render_navbar($seg);
       print $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
-      print $self->render_config($seg);
+      print $self->render_toggle_track_table;
+      print $self->render_toggle_external_table;
+      print $self->render_global_config($seg);
       print $self->render_galaxy_form($seg);
   }
   else {
       print $self->render_navbar();
-      print $self->render_config();
+      print $self->render_toggle_track_table;
+      print $self->render_toggle_external_table;
+      print $self->render_global_config();
   }
 
   print $self->render_bottom($features);
@@ -796,11 +807,11 @@ sub generate_title {
     return !$features || !$state->{name}     ? $description
          : @$features == 0                   ? $self->tr('NOT_FOUND',$state->{name})
 	 : @$features == 1 ? "$description: ".
-	                      $self->tr('SHOWING_FROM_TO',
-					scalar $dsn->unit_label($features->[0]->length),
-					$features->[0]->seq_id,
-					$dsn->commas($features->[0]->start),
-					$dsn->commas($features->[0]->end))
+				   $self->tr('SHOWING_FROM_TO',
+					     scalar $dsn->unit_label($features->[0]->length),
+					     $features->[0]->seq_id,
+					     $dsn->commas($features->[0]->start),
+					     $dsn->commas($features->[0]->end))
 	 : "$description: ".$self->tr('HIT_COUNT',scalar @$features);
 }
 
@@ -982,14 +993,6 @@ sub scale_bar {
     return $html
 }
 
-sub render_config {
-  my $self = shift;
-  my $seg = shift;
-  warn "render_config()" if DEBUG;
-  return $self->render_toggle_track_table(). 
-      $self->render_global_config().
-      $self->render_toggle_external_table;
-}
 
 #never called, method in HTML.pm with same name is run instead
 sub render_toggle_track_table {
@@ -2112,14 +2115,7 @@ sub asynchronous_update_sections {
 	my $segment     = $self->thin_segment;  # avoids a db open
         my $dsn         = $self->data_source;
         my $description = $dsn->description;
-        $return_object->{'page_title'} = $description . '<br>'
-            . $self->tr(
-            'SHOWING_FROM_TO',
-            scalar $source->unit_label($segment->length),
-            $segment->seq_id,
-            $source->commas($segment->start),
-            $source->commas($segment->end)
-            );
+        $return_object->{'page_title'} = $self->generate_title([$segment]);
     }
 
     # Span that shows the range
@@ -3346,7 +3342,7 @@ sub image_link {
     my $settings = shift;
     my $format   = shift;
 
-    $format      = 'GD' unless $format eq 'GD' || $format eq 'GD::SVG';
+    $format      = 'GD' unless $format && $format=~ /^(GD|GD::SVG|PDF)$/;
 
     my $source   = $self->data_source->name;
     my $id       = $self->session->id;

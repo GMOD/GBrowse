@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.78 2009-01-08 16:42:29 lstein Exp $
+ $Id: controller.js,v 1.79 2009-01-10 07:20:07 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -247,7 +247,7 @@ var GBrowseController = Class.create({
           html    = section_html[section_name];
           $(section_name).innerHTML = html;
 	  if (scroll_there)
-	    $(section_name).scrollTo();
+	    new Effect.ScrollTo(section_name);
         }
       }
     });
@@ -676,6 +676,7 @@ var GBrowseController = Class.create({
   function(edit_file) {
     var gbtrack  = this.gbtracks.get(decodeURIComponent(edit_file));
     var basename = gbtrack!=null ? gbtrack.track_name : edit_file;
+    visibility('upload_tracks_panel',1);
     Controller.update_sections(new Array(external_utility_div_id), 
    	    '&edit_file='+basename,true);
   },

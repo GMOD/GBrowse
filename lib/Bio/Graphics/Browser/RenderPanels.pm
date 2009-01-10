@@ -639,6 +639,8 @@ sub sort_local_remote {
     my $self     = shift;
     my $requests = shift;
 
+    warn "requests = ",join ' ',keys %$requests if DEBUG;
+
     my @uncached;
     if ($self->settings->{cache}){
         @uncached = grep {$requests->{$_}->needs_refresh} keys %$requests;
@@ -1080,6 +1082,7 @@ sub run_local_requests {
 	$conf{'-filter'} ? ($_ => $conf{'-filter'})
 	               : ()
     } @labels_to_generate;
+
 
     for my $label (@labels_to_generate) {
 

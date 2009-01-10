@@ -26,6 +26,7 @@ BODY              { background: url(../images/backgrounds/lrock005.jpg);
                     font-family: sans-serif;
 	            font-size: small;
                   }
+DIV               { margin: 0; }
 H1                { color: navy;
                     font-family: sans-serif; 
                   }

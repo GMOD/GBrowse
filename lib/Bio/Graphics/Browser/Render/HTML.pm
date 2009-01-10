@@ -11,14 +11,16 @@ use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
 use Text::Tabs;
-eval "use GD::SVG";
 
 use constant JS    => '/gbrowse/js';
 use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
 use constant DEBUG => 0;
 
-sub render_top {
+use constant HAVE_SVG => eval "require GD::SVG; 1";
+our $CAN_PDF;
+
+sub render_html_start {
   my $self  = shift;
   my $title = shift;
   my $dsn   = $self->data_source;
@@ -26,6 +28,22 @@ sub render_top {
   $html    .= $self->render_balloon_settings();
   $html    .= $self->render_select_menus();
   return $html;
+}
+
+sub render_top {
+    my $self = shift;
+    my ($title,$features) = @_;
+    my $html =  $self->render_user_header;
+    $html   .=  $self->render_title($title,$self->state->{name} && @$features == 0);
+    $html   .=  $self->render_instructions;
+    return  $self->toggle({nodiv=>1},'banner','',$html)
+	  . $self->render_links;
+}
+
+sub render_user_header {
+    my $self = shift;
+    my $settings = $self->state;
+    return $settings->{head} ? $self->data_source->global_setting('header') : '';
 }
 
 sub render_bottom {
@@ -80,8 +98,7 @@ sub render_navbar {
 			   )
 		       )
     )
-    . div( { -id => "plugin_configure_div"},'&nbsp;'  )
-    . br({-clear=>'all'});
+      . div( { -id => "plugin_configure_div"},'');
 }
 
 sub plugin_form {
@@ -265,6 +282,7 @@ GPlain.images = "$balloon_images/GPlain";
 var GFade = new Balloon;
 BalloonConfig(GFade,'GFade');
 GFade.images = "$balloon_images/GBubble";
+GFade.opacity = 100;
 
 // A formatted box
 // Note: Box is a subclass of Balloon
@@ -352,72 +370,79 @@ sub render_title {
     my $self  = shift;
     my $title = shift;
     my $error = shift;
-    return h1({-id=>'page_title',-class=>$error ? 'error' : 'normal'},$title),
+    my $settings = $self->state;
+    return $settings->{head}
+        ? h1({-id=>'page_title',-class=>$error ? 'error' : 'normal'},$title)
+	: '';
 }
 
 sub render_instructions {
   my $self = shift;
-  my $settings = $self->session->page_settings;
+  my $settings = $self->state;
+  my $oligo        = $self->plugins->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
 
-  my $svg_link     = GD::SVG::Image->can('new') ?
-    a({-href=>'?make_image=GD::SVG',-target=>'_blank'},'['.$self->tr('SVG_LINK').']'):'';
-  my $reset_link   = a({-href=>"?reset=1",-class=>'reset_button'},'['.$self->tr('RESET').']');
+  return $settings->{head}
+  ? div({-class=>'searchtitle'},
+      $self->toggle('Instructions',
+		    div({-style=>'margin-left:2em'},
+			$self->setting('search_instructions') ||
+			$self->tr('SEARCH_INSTRUCTIONS',$oligo),
+			$self->setting('navigation_instructions') ||
+			$self->tr('NAVIGATION_INSTRUCTIONS'),
+			br(),
+			$self->examples()
+		    )
+		  )
+      )
+  : '';
+}
+
+sub render_links {
+  my $self     = shift;
+  my $settings = $self->state;
+
+  my $svg_link     = HAVE_SVG
+      ? a({-href=>'?make_image=GD::SVG',-target=>'_blank'},      '['.$self->tr('SVG_LINK').']')
+      : '';
+
+  my $pdf_link     = HAVE_SVG && $self->can_generate_pdf()
+    ? a({-href=>'?make_image=PDF',    -target=>'_blank'},'['.$self->tr('PDF_LINK').']')
+    : '';
+
+  my $reset_link   = a({-href=>'?reset=1',-class=>'reset_button'},    '['.$self->tr('RESET').']');
   my $help_link    = a({-href=>$self->general_help(),-target=>'help'},'['.$self->tr('Help').']');
   my $plugin_link  = $self->plugin_links($self->plugins);
-  my $galaxy_link  = a({-href=>'javascript:'.$self->galaxy_link},'['.$self->tr('SEND_TO_GALAXY').']');
-  my $image_link   = a({-href=>'?make_image=GD',-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']');
-  my $oligo        = $self->plugins->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
+  my $galaxy_link  = a({-href=>'javascript:'.$self->galaxy_link},     '['.$self->tr('SEND_TO_GALAXY').']');
+  my $image_link   = a({-href=>'?make_image=GD',-target=>'_blank'},   '['.$self->tr('IMAGE_LINK').']');
   my $rand         = substr(md5_hex(rand),0,5);
 
-  my @standard_links1        = (
-      a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
-	'['.$self->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
-      );
 
-  my @standard_links2        = (
+  my @standard_links        = (
       $help_link,
       $reset_link
       );
 
   my @segment_showing_links =(
       a({-href=>'?bookmark=1'},'['.$self->tr('BOOKMARK').']'),
+      a({-href=>'#',
+	 -onMouseDown=>'visibility("upload_tracks_panel",1);new Effect.ScrollTo("upload_tracks_panel");setTimeout(\'new Effect.Highlight("upload_tracks_panel_title")\',1000)'},
+      '['.$self->tr('Add_your_own_tracks').']'),
       a({-href        => '#',
-	 -onMouseDown => "GPlain.showTooltip(event,'url:?share_track=all')"},
+	 -onMouseDown => "GFade.showTooltip(event,'url:?share_track=all')"},
 	'[' . ($self->tr('SHARE_ALL') || "Share These Tracks" ) .']'),
       $plugin_link,
       $galaxy_link,
       $image_link,
       $svg_link,
+      $pdf_link,
       );
 
   my $segment_present = $self->region->feature_count == 1;
 
   # standard status bar
-  my $html =  '';
-
-  $html .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
-		   TR(
-		      td({-align=>'left', -colspan=>2},
-			 $self->toggle('Instructions',
-				       br(),
-				       $self->setting('search_instructions') ||
-				       $self->tr('SEARCH_INSTRUCTIONS',$oligo),
-				       $self->setting('navigation_instructions') ||
-				       $self->tr('NAVIGATION_INSTRUCTIONS'),
-				       br(),
-				       $self->examples()
-				      )
-			),
-		     ),
-		   TR(
-		       th({-align=>'left', -colspan=>2,-class=>'linkmenu'},
-			  @standard_links1,
-			  $segment_present ? @segment_showing_links : (),
-			  @standard_links2
-		       ),
-		 )
-      );
-  return $html;
+  return div({-class=>'searchtitle',-style=>'font-weight:bold'},
+	     $segment_present ? @segment_showing_links : (),
+	     @standard_links);
 }
 
 # for the subset of plugins that are named in the 'quicklink plugins' option, create
@@ -565,7 +590,8 @@ sub render_track_table {
 				      -override   => 1,
 				     );
       $table = $self->tableize(\@checkboxes);
-      my $visible = exists $settings->{section_visible}{$id} ? $settings->{section_visible}{$id} : 1;
+      my $visible = exists $settings->{section_visible}{$id} 
+                    ? $settings->{section_visible}{$id} : 1;
 
       my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
 						   $id,
@@ -811,12 +837,11 @@ sub render_global_config {
 # This surrounds the external table with a toggle
 sub render_toggle_external_table {
   my $self     = shift;
-  return $self->toggle('UPLOAD_TRACKS', $self->render_external_table());
+  return a({-name=>'upload_tracks'},$self->toggle('upload_tracks', $self->render_external_table()));
 }
 
 sub render_external_table {
     my $self = shift;
-    my $feature_files = shift;
 
     $self->init_database();
     my $state = $self->state;
@@ -835,10 +860,9 @@ sub upload_table {
   my $settings  = $self->state;
 
   # start the table.
-  my $cTable = start_table({-border=>0,-width=>'100%',-id=>'upload_table',})
+  my $cTable = start_table({-border=>0,-cellspacing=>0,-cellpadding=>0,-width=>'100%',-id=>'upload_table',})
     . TR(
 	 th({-class=>'uploadtitle', -colspan=>4, -align=>'left'},
-	    $self->tr('Upload_title').':',
 	    a({-href=>$self->annotation_help(),-target=>'_new'},'['.$self->tr('HELP').']'))
 	);
 
@@ -995,8 +1019,12 @@ sub das_table {
             -onClick => 'Controller.delete_upload_file("' . $url . '");'
          ),
 		 br,
-		 a({-href=>$f,-target=>'help'},'['.$self->tr('Download').']'),
-		 $feature_files->{$url} && $self->get_uploaded_file_info($self->track_visible($url) && $feature_files->{$url})
+		 a({-href=>$f,-target=>'help'},
+		   '['.$self->tr('Download').']'),
+		 $feature_files->{$url} 
+		 && $self->get_uploaded_file_info($self->track_visible($url) 
+						  && $feature_files->{$url}
+		 )
 	      );
       }
   }
@@ -1013,11 +1041,7 @@ sub das_table {
        ),
     );
 
-  return table({-border=>0,-width=>'100%'},
-	       TR(
-		  th({-class=>'uploadtitle',-align=>'left',-colspan=>2},
-		     $self->tr('Remote_title').':',
-		     a({-href=>$self->annotation_help().'#remote',-target=>'help'},'['.$self->tr('Help').']'))),
+  return table({-border=>0,-cellspacing=>0,-cellpadding=>0,-width=>'100%'},
 	       TR({-class=>'uploadbody'},\@rows),
 	      );
 }
@@ -1746,19 +1770,25 @@ sub html_frag {
 ############################## toggle code ########################
 sub toggle {
   my $self = shift;
+
+  my %args = ();
+  if (ref $_[0]) {
+      %args = %{shift()};
+  }
+  
   my $title = shift;
   my @body  = @_;
 
   my $page_settings = $self->state;
 
   my $id    = "\L${title}_panel\E";
-  my $label = $self->tr($title)                              or return '';
+  my $label = $self->tr($title) || '';
   my $state = $self->data_source->section_setting($title)    or return '';
   return '' if $state eq 'off';
   my $visible = exists $page_settings->{section_visible}{$id} ? 
     $page_settings->{section_visible}{$id} : $state eq 'open';
 
-  return $self->toggle_section({on=>$visible},
+  return $self->toggle_section({on=>$visible,%args},
 			       $id,
 			       b($label),
 			       @body);
@@ -1786,13 +1816,45 @@ sub toggle_section {
 		       -style=>$visible ? 'display:inline' : 'display:none',
 		       -onClick=>"visibility('$name',0)"
                      },
-		     img({-src=>$minus,-alt=>'-'}).'&nbsp;'.span({-class=>'tctl'},$section_title));
+		     img({-src=>$minus,-alt=>'-'}).'&nbsp;'.span({-class=>'tctl',-id=>"${name}_title"},$section_title));
   my $content  = div({-id    => $name,
 		      -style=>$visible ? 'display:inline' : 'display:none',
 		      -class => 'el_visible'},
 		     @section_body);
-  my @result = $config{nodiv} ? ($show_ctl.$hide_ctl,$content) : div(($show_ctl.$hide_ctl,$content));
+  my @result = $config{nodiv} ? (div({-style=>'float:left'},$show_ctl.$hide_ctl),$content)
+                              : div($show_ctl.$hide_ctl,$content);
   return wantarray ? @result : "@result";
+}
+
+sub can_generate_pdf {
+    my $self   = shift;
+    my $source = $self->data_source;
+
+    return $CAN_PDF if defined $CAN_PDF;
+    return $CAN_PDF = $source->global_setting('generate pdf') 
+	if defined $source->global_setting('generate pdf');
+
+    return $CAN_PDF=0 unless `which inkscape`;
+    # see whether we have the needed .inkscape and .gnome2 directories
+    my $home = (getpwuid($<))[7];
+    my $user = (getpwuid($<))[0];
+    my $inkscape_dir = File::Spec->catfile($home,'.inkscape');
+    my $gnome2_dir   = File::Spec->catfile($home,'.gnome2');
+    if (-e $inkscape_dir && -w $inkscape_dir
+	&&  -e $gnome2_dir   && -w $gnome2_dir) {
+	return $CAN_PDF=1;
+    } else {
+	print STDERR
+	    join(' ',
+		 qq(GBROWSE NOTICE: To enable PDF generation, please enter the directory "$home"),
+		 qq(and run the commands:),
+		 qq("sudo mkdir .inkscape .gnome2"),
+		 qq(and "sudo chown $user .inkscape .gnome2". ),
+		 qq(To turn off this message add "generate pdf = 0"),
+		 qq(to the [GENERAL] section of your GBrowse.conf configuration file.)
+	    );
+	return $CAN_PDF=0;
+    }
 }
 
 1;

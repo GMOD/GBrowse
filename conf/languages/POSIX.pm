@@ -28,7 +28,7 @@ but fields that contain whitespace must be contained in
 double or single quotes.
 END
 
-   SHOWING_FROM_TO => 'Showing %s from %s, positions %s to %s',
+   SHOWING_FROM_TO => '%s from %s:%s..%s',
 
    INSTRUCTIONS      => 'Instructions',
 
@@ -51,6 +51,8 @@ END
    IMAGE_LINK => 'Link to Image',
 
    SVG_LINK   => 'High-res Image',
+
+   PDF_LINK   => 'Download PDF',
 
    SVG_DESCRIPTION => <<END,
 <p>
@@ -201,7 +203,7 @@ END
 
    DATA_SOURCE => 'Data Source',
 
-   UPLOAD_TRACKS=>'Add your own tracks',
+   UPLOAD_TRACKS=>'Add custom tracks',
 
    UPLOAD_TITLE=> 'Upload your own data',
 
@@ -398,7 +400,7 @@ END
 
  NO_SOURCES        => 'There are no readable data sources configured.  Perhaps you do not have permission to view them.',
 
- ADD_YOUR_OWN_TRACKS => 'Add Your Own Tracks',
+ ADD_YOUR_OWN_TRACKS => 'Add custom tracks',
 
  INVALID_SOURCE    => 'The source named %s is invalid.',
 
@@ -432,7 +434,7 @@ END
 
  OPTIONS_UPDATED   => 'A new site configuration is in effect; all page settings have been reset to their defaults',
 
- SEND_TO_GALAXY    => 'Send this Region to Galaxy',
+ SEND_TO_GALAXY    => 'Send to Galaxy',
 
  NO_DAS            => 'Installation error: Bio::Das module must be installed for DAS URLs to work. Please inform this site\'s webmaster.',
 

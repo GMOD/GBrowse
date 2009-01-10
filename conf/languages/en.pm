@@ -28,7 +28,7 @@ but fields that contain whitespace must be contained in
 double or single quotes.
 END
 
-   SHOWING_FROM_TO => 'Showing %s from %s, positions %s to %s',
+   SHOWING_FROM_TO => '%s from %s:%s..%s',
 
    INSTRUCTIONS      => 'Instructions',
 

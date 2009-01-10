@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 1.984
+version: 1.985
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -24,7 +24,55 @@ recommends:
   DBD::mysql: 0
   DBI: 0
   DB_File::Lock: 0
+  GD::SVG: 0
+  Safe::World: 0
+  Statistics::Descriptive: 0
 provides:
+  Bio::DB::Das::BioSQL:
+    file: lib/Bio/DB/Das/BioSQL.pm
+    version: 0.02
+  Bio::DB::Das::BioSQL::BioDatabaseAdaptor:
+    file: lib/Bio/DB/Das/BioSQL/BioDatabaseAdaptor.pm
+  Bio::DB::Das::BioSQL::DBAdaptor:
+    file: lib/Bio/DB/Das/BioSQL/DBAdaptor.pm
+  Bio::DB::Das::BioSQL::Feature:
+    file: lib/Bio/DB/Das/BioSQL/Segment.pm
+  Bio::DB::Das::BioSQL::Iterator:
+    file: lib/Bio/DB/Das/BioSQL/Iterator.pm
+  Bio::DB::Das::BioSQL::PartialSeqAdaptor:
+    file: lib/Bio/DB/Das/BioSQL/PartialSeqAdaptor.pm
+  Bio::DB::Das::BioSQL::Segment:
+    file: lib/Bio/DB/Das/BioSQL/Segment.pm
+    version: 0.02
+  Bio::DB::Das::Chado:
+    file: lib/Bio/DB/Das/Chado.pm
+    version: 0.11
+  Bio::DB::Das::Chado::Segment:
+    file: lib/Bio/DB/Das/Chado/Segment.pm
+    version: 0.11
+  Bio::DB::Das::Chado::Segment::Feature:
+    file: lib/Bio/DB/Das/Chado/Segment/Feature.pm
+    version: 0.12
+  Bio::DB::Das::ChadoIterator:
+    file: lib/Bio/DB/Das/Chado.pm
+  Bio::DB::GFF::Aggregator::match_gap:
+    file: lib/Bio/DB/GFF/Aggregator/match_gap.pm
+  Bio::DB::GFF::Aggregator::orf:
+    file: lib/Bio/DB/GFF/Aggregator/orf.pm
+    version: 1.00
+  Bio::DB::GFF::Aggregator::reftranscript:
+    file: lib/Bio/DB/GFF/Aggregator/reftranscript.pm
+    version: 0.10
+  Bio::DB::GFF::Aggregator::waba_alignment:
+    file: lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
+    version: 0.20
+  Bio::DB::GFF::Aggregator::wormbase_gene:
+    file: lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
+    version: 0.30
+  Bio::DB::GFF::SyntenyBlock:
+    file: lib/Bio/DB/GFF/SyntenyBlock.pm
+  Bio::DB::GFF::SyntenyIO:
+    file: lib/Bio/DB/GFF/SyntenyIO.pm
   Bio::Graphics::Browser:
     file: lib/Bio/Graphics/Browser.pm
   Bio::Graphics::Browser::CachedTrack:

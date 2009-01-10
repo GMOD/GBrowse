@@ -52,6 +52,8 @@ END
 
    SVG_LINK   => 'High-res Image',
 
+   PDF_LINK   => 'Download PDF',
+
    SVG_DESCRIPTION => <<END,
 <p>
 The following link will generate this image in Scalable Vector

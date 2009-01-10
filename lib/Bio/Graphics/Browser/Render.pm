@@ -2724,12 +2724,15 @@ sub all_tracks {
 sub potential_tracks {
     my $self   = shift;
     my $source = $self->data_source;
+    my $uploads = $self->uploaded_sources;
+    my $remotes = $self->remote_sources;
     return grep {!/^_/} ($source->detail_tracks,
 			 $source->overview_tracks,
 			 $source->plugin_tracks,
 			 $source->regionview_tracks,
-			 $self->uploaded_sources->files,
-			 $self->remote_sources->sources);
+			 $uploads ? $uploads->files   : (),
+			 $remotes ? $remotes->sources : ()
+                        );
 }
 
 sub visible_tracks {

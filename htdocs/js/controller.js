@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.80 2009-01-10 12:19:21 lstein Exp $
+ $Id: controller.js,v 1.81 2009-01-12 22:04:25 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -582,16 +582,25 @@ var GBrowseController = Class.create({
   // Track Configure Methods ****************************************
 
   reconfigure_track:
-  function(track_id, serialized_form, show_track) {
+  function(track_id, form_element) {
+
+    if (form_element==null)
+       form_element = $("track_config_form");
+    else
+       Element.extend(form_element);
+
+    var show_box   = form_element['show_track'];
+    var show_track = $(show_box).getValue();
+
     new Ajax.Request(document.URL,{
       method:     'post',
-      parameters: serialized_form +"&"+ $H({
+      parameters: form_element.serialize() +"&"+ $H({
             reconfigure_track: track_id
           }).toQueryString(),
       onSuccess: function(transport) {
         var track_div_id = Controller.gbtracks.get(track_id).track_div_id;
         Balloon.prototype.hideTooltip(1);
-        if (show_track){
+        if (show_track == track_id){
           Controller.rerender_track(track_id,true);
         }
         else{
@@ -619,12 +628,16 @@ var GBrowseController = Class.create({
   function(plugin_action,plugin_track_id,pc_div_id,plugin_type,form_element) {
     if (form_element==null)
        form_element = $("configure_plugin");
+    else
+       Element.extend(form_element);
+
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
             plugin_action: plugin_action,
             reconfigure_plugin: 1
           }).toQueryString(),
+
       onSuccess: function(transport) {
         Controller.wipe_div(pc_div_id); 
 

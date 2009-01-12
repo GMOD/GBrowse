@@ -1206,7 +1206,8 @@ sub plugin_configuration_form {
     my $plugin_type = $plugin->type;
     my $plugin_name = $plugin->name;
 
-    print CGI::header('text/html');
+    print CGI::header(-type=>'text/html',     
+		      -cache_control =>'no-cache');
     print start_form(
 		  -name     => 'configure_plugin',
 		  -id       => 'configure_plugin',
@@ -1499,8 +1500,8 @@ sub track_config {
     $cit_txt =~ s/(.{512}).+/$1\.\.\./;
     my $citation = h4($key) . p($cit_txt);
     my $height = $data_source->fallback_setting( $label => 'height' ) || 5;
-    my $width = $data_source->fallback_setting( $label => 'linewidth' ) || 1;
-    my $glyph = $data_source->fallback_setting( $label => 'glyph' ) || 'box';
+    my $width  = $data_source->fallback_setting( $label => 'linewidth' ) || 1;
+    my $glyph  = $data_source->fallback_setting( $label => 'glyph' ) || 'box';
     my @glyph_select = shellwords(
         $data_source->fallback_setting( $label => 'glyph select' ) );
     @glyph_select
@@ -1531,16 +1532,16 @@ END
     ### Create the javascript that will serialize the form.
     # I'm not happy about this but the prototype method only seems to be
     # reporting the default values when the form is inside a balloon.
-    my $form_serialized_js = join q[+'&'+], map {qq['$_='+escape($_.value)]} (
-        "format_option", "glyph",  "bgcolor", "fgcolor",
-        "linewidth",     "height", "limit",
-    );
+#    my $form_serialized_js = join q[+'&'+], map {qq['$_='+escape($_.value)]} (
+#        "format_option", "glyph",  "bgcolor", "fgcolor",
+#        "linewidth",     "height", "limit",
+#    );
 
     # "show_track" is a special case since it's a checkbox
     # :( This is so ugly.
-    my $preserialize_js = "var show_track_checked = 0;"
-        . "if(show_track.checked){show_track_checked =1;}";
-    $form_serialized_js .= q[+'&'+] . "'show_track='+show_track_checked";
+#    my $preserialize_js = "var show_track_checked = 0;"
+#        . "if(show_track.checked){show_track_checked =1;}";
+#    $form_serialized_js .= q[+'&'+] . "'show_track='+show_track_checked";
 
     $form .= table(
         { -border => 0 },
@@ -1641,9 +1642,13 @@ END
                     . '&nbsp;'
                     . button(
                     -name => $self->tr('Change'),
-                    -onClick =>
-                        "$preserialize_js;Controller.reconfigure_track('$label',$form_serialized_js, show_track.checked);",
-                    )
+                    -onClick =><<END
+	    Element.extend(this);
+	    var ancestors    = this.ancestors();
+	    var form_element = ancestors.find(function(el) {return el.nodeName=='FORM'; });
+	    Controller.reconfigure_track('$label',form_element)
+END
+		)
             )
         ),
     );

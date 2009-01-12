@@ -191,6 +191,8 @@ sub run_asynchronous_event {
     my ($status,$mime_type,$data) = $self->asynchronous_event
 	or return;
 
+    warn "asynchronus event returning status=$status, mime-type=$mime_type" if DEBUG;
+
     if ($status == 204) { # no content
 	print CGI::header( -status => '204 No Content' );
     }
@@ -199,12 +201,14 @@ sub run_asynchronous_event {
     }
     elsif ($mime_type eq 'application/json') {
 	print CGI::header(-status=>$status,
+			  -cache_control => 'no-cache',
 			  -type  => $mime_type),
 	      JSON::to_json($data);
     }
     else {
-	print CGI::header(-status => $status,
-			  -type   => $mime_type),
+	print CGI::header(-status        => $status,
+			  -cache_control => 'no-cache',
+			  -type          => $mime_type),
 	       $data;
     }
     return 1;  # no further processing needed
@@ -450,7 +454,6 @@ sub asynchronous_event {
     }
 
     if ( param('reconfigure_plugin') ) {
-
         # init_plugins will do the configure call needed
         $self->init_plugins();
 	return (204,'text/plain',undef);
@@ -2473,10 +2476,10 @@ sub update_galaxy_url {
     my $self  = shift;
     my $state = shift;
     if (my $url = param('GALAXY_URL')) {
-	warn "setting galaxy";
+	warn "setting galaxy" if DEBUG;
 	$state->{GALAXY_URL} = $url;
     } elsif (param('clear_galaxy')) {
-	warn "clearing galaxy";
+	warn "clearing galaxy" if DEBUG;
 	delete $state->{GALAXY_URL};
     }
 }

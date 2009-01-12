@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 1.985
+version: 1.986
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -57,9 +57,6 @@ provides:
     file: lib/Bio/DB/Das/Chado.pm
   Bio::DB::GFF::Aggregator::match_gap:
     file: lib/Bio/DB/GFF/Aggregator/match_gap.pm
-  Bio::DB::GFF::Aggregator::orf:
-    file: lib/Bio/DB/GFF/Aggregator/orf.pm
-    version: 1.00
   Bio::DB::GFF::Aggregator::reftranscript:
     file: lib/Bio/DB/GFF/Aggregator/reftranscript.pm
     version: 0.10

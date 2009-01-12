@@ -323,7 +323,6 @@ sub asynchronous_event {
     }
 
     if ( param('retrieve_multiple') ) {
-        # $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
 
@@ -332,7 +331,7 @@ sub asynchronous_event {
 
         foreach my $track_id (@track_ids) {
             my $track_key = param( 'tk_' . $track_id ) or next;
-	    warn "retrieving $track_id=>$track_key" if DEBUG;
+	    warn "retrieving $track_id=>$track_key"; # if DEBUG;
             $track_html{$track_id} = $self->render_deferred_track(
                 cache_key  => $track_key,
                 track_id   => $track_id,
@@ -1846,9 +1845,10 @@ sub reconfigure_track {
     my $self  = shift;
     my $label = shift;
     my $state = $self->state();
-    $state->{features}{$label}{visible} = param('show_track') ? 1 : 0;
-    $state->{features}{$label}{options} = param('format_option');
-    $state->{features}{$label}{limit}   = param('limit');
+    $state->{features}{$label}{visible}  = param('show_track') ? 1 : 0;
+    $state->{features}{$label}{options}  = param('format_option');
+    $state->{features}{$label}{limit}    = param('limit');
+    warn "stranded = $state->{features}{$label}{stranded} = ",param('stranded');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
     for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 'linewidth' ) {
         my $value = param($s);
@@ -1856,6 +1856,7 @@ sub reconfigure_track {
             if $value eq $dynamic;
         $state->{features}{$label}{override_settings}{$s} = $value;
     }
+    $state->{features}{$label}{override_settings}{stranded} = param('stranded') || 0;
 }
 
 sub track_config {

@@ -1489,19 +1489,18 @@ sub track_config {
         $state->{features}{$label}{override_settings} = {};
     }
 
-    my $override = $state->{features}{$label}{override_settings};
-
+    my $override = $state->{features}{$label}{override_settings}||{};
     my $return_html = start_html();
 
     # truncate too-long citations
-    my $cit_txt = citation( $data_source, $label, $self->language )
-        || $self->tr('NO_CITATION');
+    my $cit_txt = citation( $data_source, $label, $self->language ) || ''; #$self->tr('NO_CITATION');
 
     $cit_txt =~ s/(.{512}).+/$1\.\.\./;
     my $citation = h4($key) . p($cit_txt);
-    my $height = $data_source->fallback_setting( $label => 'height' ) || 5;
-    my $width  = $data_source->fallback_setting( $label => 'linewidth' ) || 1;
-    my $glyph  = $data_source->fallback_setting( $label => 'glyph' ) || 'box';
+    my $height   = $data_source->fallback_setting( $label => 'height' )    || 5;
+    my $width    = $data_source->fallback_setting( $label => 'linewidth' ) || 1;
+    my $glyph    = $data_source->fallback_setting( $label => 'glyph' )     || 'box';
+    my $stranded = $data_source->fallback_setting( $label => 'stranded');
     my @glyph_select = shellwords(
         $data_source->fallback_setting( $label => 'glyph select' ) );
     @glyph_select
@@ -1529,19 +1528,6 @@ END
         -id   => $form_name,
     );
 
-    ### Create the javascript that will serialize the form.
-    # I'm not happy about this but the prototype method only seems to be
-    # reporting the default values when the form is inside a balloon.
-#    my $form_serialized_js = join q[+'&'+], map {qq['$_='+escape($_.value)]} (
-#        "format_option", "glyph",  "bgcolor", "fgcolor",
-#        "linewidth",     "height", "limit",
-#    );
-
-    # "show_track" is a special case since it's a checkbox
-    # :( This is so ugly.
-#    my $preserialize_js = "var show_track_checked = 0;"
-#        . "if(show_track.checked){show_track_checked =1;}";
-#    $form_serialized_js .= q[+'&'+] . "'show_track='+show_track_checked";
 
     $form .= table(
         { -border => 0 },
@@ -1626,36 +1612,44 @@ END
                 )
             )
         ),
-        TR( td(),
-            td( button(
-                    -style   => 'background:pink',
-                    -name    => $self->tr('Revert'),
-                    -onClick => $reset_js
+        TR( th( { -align => 'right' }, $self->tr('STRANDED') ),
+            td(checkbox(
+                    -name    => 'stranded',
+		    -override=> 1,
+		    -value   => 1,
+                    -checked => defined $override->{'stranded'} 
+		                  ? $override->{'stranded'} 
+                                  : $stranded,
+		    -label   => '',
                 )
             )
         ),
-        TR( td(),
-            td( button(
-                    -name    => $self->tr('Cancel'),
-                    -onClick => 'Balloon.prototype.hideTooltip(1)'
-                    )
-                    . '&nbsp;'
-                    . button(
-                    -name => $self->tr('Change'),
-                    -onClick =><<END
+        TR(td({-colspan=>2},
+	      button(
+                    -style   => 'background:pink',
+                    -name    => $self->tr('Revert'),
+                    -onClick => $reset_js
+	      ),
+	      button(
+		  -name    => $self->tr('Cancel'),
+		  -onClick => 'Balloon.prototype.hideTooltip(1)'
+	      ),
+	      button(
+		  -name => $self->tr('Change'),
+		  -onClick =><<END
 	    Element.extend(this);
 	    var ancestors    = this.ancestors();
 	    var form_element = ancestors.find(function(el) {return el.nodeName=='FORM'; });
 	    Controller.reconfigure_track('$label',form_element)
 END
-		)
-            )
-        ),
+	      )
+	   )
+	)
     );
     $form .= end_form();
 
     $return_html
-        .= table( TR( td( { -valign => 'top', -width => '50%' }, [ $citation, $form ] ) ) );
+        .= table( TR( td( { -valign => 'top' }, [ $citation, $form ] ) ) );
     $return_html .= end_html();
     return $return_html;
 }

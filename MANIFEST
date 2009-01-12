@@ -443,7 +443,6 @@ lib/Bio/DB/Das/Chado.pm
 lib/Bio/DB/Das/Chado/Segment.pm
 lib/Bio/DB/Das/Chado/Segment/Feature.pm
 lib/Bio/DB/GFF/Aggregator/match_gap.pm
-lib/Bio/DB/GFF/Aggregator/orf.pm
 lib/Bio/DB/GFF/Aggregator/reftranscript.pm
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm

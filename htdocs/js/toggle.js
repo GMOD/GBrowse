@@ -11,17 +11,23 @@ function setVisState (element_name,is_visible) {
 }
 
 function visibility (element_name,is_visible) {
-   var element = document.getElementById(element_name);
-   var show_control = document.getElementById(element_name + "_show");
-   var hide_control = document.getElementById(element_name + "_hide");
+   var element       = document.getElementById(element_name);
+   var show_control  = document.getElementById(element_name + "_show");
+   var hide_control  = document.getElementById(element_name + "_hide");
+   var title_control = document.getElementById(element_name+"_title");
+   var break_element = document.getElementById(element_name + "_break");
    if (is_visible == 1) {
       turnOn(element);
       turnOff(show_control);
       turnOn(hide_control);
+      if (break_element != null)
+	  turnOff(break_element);
    } else {
       turnOff(element);
       turnOff(hide_control);
       turnOn(show_control);
+      if (break_element != null)
+	  break_element.style.display='block';
    }
    setVisState(element_name,is_visible);
    return false;

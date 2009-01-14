@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.223 2009-01-06 09:13:12 lstein Exp $
+# $Id: Browser.pm,v 1.224 2009-01-14 00:17:17 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -31,7 +31,8 @@ sub new {
     return $CONFIG_CACHE{$config_file_path}{object};
   }
 
-  my $self = $class->SUPER::new(-file=>$config_file_path);
+  my $self = $class->SUPER::new(-file=>$config_file_path,
+                                -safe=>1);
 
   # a little trick here -- force the setting of "config_base" from the config file
   # base if not explicitly overridden

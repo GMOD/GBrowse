@@ -26,7 +26,7 @@ BODY              { background: url(../images/backgrounds/lrock005.jpg);
                     font-family: sans-serif;
 	            font-size: small;
                   }
-DIV               { margin: 0; }
+DIV               { margin: 0 }
 H1                { color: navy;
                     font-family: sans-serif; 
                   }
@@ -72,30 +72,42 @@ TH.linkmenu       {
 		    background:       url(/gbrowse2/images/buttons/grey_0.4_pixel.png);
 		    background-color: rgba(240,240,240,0.4);
 	            font-size: small;
+		    margin-left:   1em;
+		    margin-right:  1em;
 }
 .searchbody       { background-color: rgb(224,224,224);
 		    background:       url(/gbrowse2/images/buttons/dark_0.4_pixel.png);
 		    background-color: rgba(224,224,224,0.4);
+		    margin-left:   1em;
+		    margin-right:  1em;
 	            font-size: small;
 }
 .settingstitle    { background-color: rgb(224,224,224);
 		    background:       url(/gbrowse2/images/buttons/dark_0.4_pixel.png);
 		    background-color: rgba(224,224,224,0.4);
+		    margin-left:   1em;
+		    margin-right:  1em;
 	            font-size: small;
 }
 .settingsbody     { background-color: rgb(240,240,240);
 		    background:       url(/gbrowse2/images/buttons/grey_0.4_pixel.png);
 		    background-color: rgba(240,240,240,0.4);
+		    margin-left:  1em;
+		    margin-right: 1em;
 	            font-size: small;
 }
 .uploadtitle      { background-color: rgb(224,224,224);
 		    background:       url(/gbrowse2/images/buttons/dark_0.4_pixel.png);
 		    background-color: rgba(224,224,224,0.4);
+		    margin-left:  1em;
+		    margin-right: 1em;
 	            font-size: small;
 }
 .uploadbody       { background-color: rgb(240,240,240);
 		    background:       url(/gbrowse2/images/buttons/grey_0.4_pixel.png);
 		    background-color: rgba(240,240,240,0.4);
+		    margin-left:   1em;
+		    margin-right:  1em;
 	            font-size: small;
 }
 .technicalinfo    { background-color: #FFFFFF; }

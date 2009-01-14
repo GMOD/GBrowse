@@ -100,7 +100,7 @@ sub clear_cached_dbids {
 
   $setting = $source->global_setting('option')
 
-Like setting() except that it is only for 'general' options. If the
+Like code_setting() except that it is only for 'general' options. If the
 option is not found in the datasource config file, then looks in the
 global file.
 
@@ -109,9 +109,9 @@ global file.
 sub global_setting {
   my $self   = shift;
   my $option = shift;
-  my $value  = $self->setting(general=>$option);
+  my $value  = $self->code_setting(general=>$option);
   return $value if defined $value;
-  return $self->globals->setting(general=>$option);
+  return $self->globals->code_setting(general=>$option);
 }
 
 # format for time can be in any of the forms...

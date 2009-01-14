@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.11 2009-01-10 12:19:21 lstein Exp $
+# $Id: Karyotype.pm,v 1.12 2009-01-14 00:17:17 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -118,7 +118,9 @@ sub to_html {
     my $panel  = $self->{panels}{$seqid}{panel};
     # workaround bug/coredump in ideogram glyph
     next if $panel->height < SUPPRESS_SMALL_CHROMOSOMES;
+
     my $url    = $source->generate_image($panel->gd);
+
     my $margin = Bio::Graphics::Panel->can('rotate') 
 	         ? $self->chrom_height - $panel->gd->height
                  : 5;
@@ -344,7 +346,7 @@ sub hits_table {
     return 
 	b($count),
 	div({-id=>'scrolling_table',-style=>'cursor:default'},
-	    table({-class=>'searchbody',-width=>'100%'},
+	    table({-class=>'searchbody',-style=>'width:98.8%'}, #firefox display problems
 		  TR(
 		      th({-align=>'left'},
 			 [$self->trans('NAME'),

@@ -1848,9 +1848,9 @@ sub make_link_target {
 
   $label    ||= $source->feature2label($feature) or return;
   my $link_target = $source->code_setting($label,'link_target')
-    || $source->code_setting('LINK DEFAULTS' => 'link_target')
-    || $source->code_setting(general => 'link_target')
-    || '_new';
+    || $source->code_setting('TRACK DEFAULTS' => 'link_target')
+    || $source->globals->code_setting(general => 'link_target')
+    || '_blank';
   $link_target = eval {$link_target->($feature,$panel,$track)} if ref($link_target) eq 'CODE';
   $source->_callback_complain($label=>'link_target') if $@;
   return $link_target;

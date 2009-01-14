@@ -331,7 +331,7 @@ sub asynchronous_event {
 
         foreach my $track_id (@track_ids) {
             my $track_key = param( 'tk_' . $track_id ) or next;
-	    warn "retrieving $track_id=>$track_key"; # if DEBUG;
+	    warn "retrieving $track_id=>$track_key" if DEBUG;
             $track_html{$track_id} = $self->render_deferred_track(
                 cache_key  => $track_key,
                 track_id   => $track_id,
@@ -767,35 +767,31 @@ sub render_body {
 
   my $region   = $self->region;
   my $features = $region->features;
+  my $settings = $self->state;
 
   my $title    = $self->generate_title($features);
 
   print $self->render_html_start($title);
   print $self->render_top($title,$features);
+  print $self->render_navbar($region->seg);
 
   if ($region->feature_count > 1) {
-      print $self->render_navbar();
       print $self->render_multiple_choices($features,$self->state->{name});
       print $self->render_toggle_track_table;
       print $self->render_toggle_external_table;
-      print $self->render_global_config();
   }
 
   elsif (my $seg = $region->seg) {
-      print $self->render_navbar($seg);
       print $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
       print $self->render_toggle_track_table;
       print $self->render_toggle_external_table;
-      print $self->render_global_config($seg);
       print $self->render_galaxy_form($seg);
   }
   else {
-      print $self->render_navbar();
       print $self->render_toggle_track_table;
       print $self->render_toggle_external_table;
-      print $self->render_global_config();
   }
-
+  print $self->render_global_config();
   print $self->render_bottom($features);
 }
 
@@ -901,9 +897,9 @@ sub render_panels {
 						      'overview' );
         my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
         $html .= div(
-            $self->toggle(
+            $self->toggle({tight=>1},
                 'Overview',
-                div({ -id => 'overview_panels', -class => 'track' },
+                div({ -id => 'overview_panels', -class => 'track', -style=>'padding:3px' },
                     $scale_bar_html, $panels_html,
                 )
             )
@@ -918,9 +914,9 @@ sub render_panels {
         my $drag_script    = $self->drag_script( 'region_panels', 'track' );
 
         $html .= div(
-            $self->toggle(
+            $self->toggle({tight=>1},
                 'Region',
-                div({ -id => 'region_panels', -class => 'track' },
+                div({ -id => 'region_panels', -class => 'track', -style=>'padding-bottom:3px' },
                     $scale_bar_html, $panels_html,
                 )
             )
@@ -934,10 +930,13 @@ sub render_panels {
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
         my $details_msg    = div({ -id => 'details_msg', },'');
         $html .= div(
-            $self->toggle(
+            $self->toggle({tight=>1},
                 'Details',
-                div({ -id => 'detail_panels', -class => 'track' },
-                    $details_msg,$scale_bar_html, $panels_html,
+                div({ -id => 'detail_panels', -class => 'track'},
+                    $details_msg,
+		    $scale_bar_html, 
+		    $panels_html,
+		    div({-align=>'left'},$self->html_frag('html4',$self->state))
                 )
             )
         ) . $drag_script;
@@ -1039,6 +1038,11 @@ sub render_bottom {
   my $self = shift;
   my $features = shift;
   croak "render_bottom() should not be called in parent class";
+}
+
+sub html_frag {
+  my $self = shift;
+  croak "html_frag() should not be called in parent class";
 }
 
 sub init_database {

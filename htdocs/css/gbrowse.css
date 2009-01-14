@@ -67,21 +67,27 @@ TH.linkmenu       {
 }
 .searchtitle      { background-color: #E6EBF0;
 	            font-size: small;
+		    margin-left: 1em;
 }
 .searchbody       { background-color: #F2F6FA;
 	            font-size: small;
+		    margin-left: 1em;
 }
 .settingstitle    { background-color: #E6EBF0;
 	            font-size: small;
+		    margin-left: 1em;
 }
 .settingsbody     { background-color: #F2F6FA;
 	            font-size: small;
+		    margin-left: 1em;
 }
 .uploadtitle      { background-color: #E6EBF0;
 	            font-size: small;
+		    margin-left: 1em;
 }
 .uploadbody       { background-color: #F2F6FA;
 	            font-size: small;
+		    margin-left: 1em;
 }
 .technicalinfo    { background-color: #FFFFFF; }
 .toggle           { color: #3366FF; }

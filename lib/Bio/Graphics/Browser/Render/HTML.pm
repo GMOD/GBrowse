@@ -35,6 +35,7 @@ sub render_top {
     my ($title,$features) = @_;
     my $html =  $self->render_user_header;
     $html   .=  $self->render_title($title,$self->state->{name} && @$features == 0);
+    $html   .=  $self->html_frag('html1',$self->state);
     $html   .=  $self->render_instructions;
     return  $self->toggle({nodiv=>1},'banner','',$html)
 	  . $self->render_links;
@@ -85,8 +86,7 @@ sub render_navbar {
 
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
-			   $self->html_frag('html1',$segment,$settings)||'',
-			   table({-border=>0,-class=>'searchbody'},
+			   table({-border=>0},
 				 TR(td($search),td($plugin_form)),
 				 TR(td({-align=>'left'},
 				       $source_form,
@@ -95,7 +95,8 @@ sub render_navbar {
 				       $sliderform || '&nbsp;'
 				    )
 				 )
-			   )
+			   ),
+			   $self->html_frag('html3',$self->state)
 		       )
     )
       . div( { -id => "plugin_configure_div"},'');
@@ -377,9 +378,9 @@ sub render_title {
 }
 
 sub render_instructions {
-  my $self = shift;
+  my $self     = shift;
   my $settings = $self->state;
-  my $oligo        = $self->plugins->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
+  my $oligo    = $self->plugins->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
 
   return $settings->{head}
   ? div({-class=>'searchtitle'},
@@ -390,7 +391,8 @@ sub render_instructions {
 			$self->setting('navigation_instructions') ||
 			$self->tr('NAVIGATION_INSTRUCTIONS'),
 			br(),
-			$self->examples()
+			$self->examples(),
+			br(),$self->html_frag('html2',$self->state)
 		    )
 		  )
       )
@@ -617,11 +619,12 @@ sub render_track_table {
   autoEscape(1);
   my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories);
   return join( "\n",
-		      start_form(-name=>'trackform',
-				 -id=>'trackform'),
-		      div({-class=>'searchbody',-style=>'padding-left:1em'},$slice_and_dice),
-		      end_form
-		     );
+	       start_form(-name=>'trackform',
+			  -id=>'trackform'),
+	       div({-class=>'searchbody',-style=>'padding-left:1em'},$slice_and_dice),
+	       end_form,
+	       $self->html_frag('html5',$settings),
+	       );
 }
 
 sub indent_categories {
@@ -685,7 +688,6 @@ sub render_multiple_choices {
     my $self     = shift;
     my $features = shift;
     my $terms2hilite = shift;
-
     my $karyotype = Bio::Graphics::Karyotype->new(source   => $self->data_source,
 						  language => $self->language);
     $karyotype->add_hits($features);
@@ -720,116 +722,117 @@ sub render_global_config {
                              grep {defined $_ && $_ > 0} ($region_size,@region_size);
     my $content
         = start_form( -name => 'display_settings', -id => 'display_settings' )
-        . table(
-        { -class => 'searchbody', -border => 0, -width => '100%' },
-        TR( { -class => 'searchtitle' },
-            td( b(  checkbox(
-                        -name     => 'grid',
-                        -label    => $self->tr('SHOW_GRID'),
-                        -override => 1,
-                        -checked  => $settings->{grid} || 0,
-			-onChange => 'Controller.set_display_option(this.name,this.checked ? 1 : 0)', 
-                    )
-                )
-            ),
-            td( b( $self->tr('Image_width') ),
-                br,
-                radio_group(
-                    -name     => 'width',
-                    -values   => \@widths,
-                    -default  => $settings->{width},
-                    -override => 1,
-		    -onChange => 'Controller.set_display_option(this.name,this.value)', 
-                ),
-            ),
-            td( span(
-                    { -title => $self->tr('FEATURES_TO_HIGHLIGHT_HINT') },
-                    b( $self->tr('FEATURES_TO_HIGHLIGHT') ),
-                    br,
-                    textfield(
-			-id       => 'h_feat',
-                        -name     => 'h_feat',
-                        -value    => $feature_highlights,
-                        -size     => 50,
-                        -override => 1,
-		        -onChange => 'Controller.set_display_option(this.name,this.value)', 
-                    ),
-		    a({-href=>'#',
-		       -onClick=>'Controller.set_display_option("h_feat","_clear_");$("h_feat").value=""'},
-		      $self->tr('CLEAR_HIGHLIGHTING'))
-                ),
-            ),
-        ),
-        TR( { -class => 'searchtitle' },
-            td( $self->data_source->cache_time
-                ? ( b(  checkbox(
-                            -name     => 'cache',
-                            -label    => $self->tr('CACHE_TRACKS'),
-                            -override => 1,
-                            -checked  => $settings->{cache},
-                            -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
-                        )
-                    )
-                    )
-                : ()
-            ),
+        . div( {-class=>'searchbody'},
+	       table ({-border => 0, -cellspacing=>0},
+		      TR( { -class => 'searchtitle' },
+			  td( b(  checkbox(
+				      -name     => 'grid',
+				      -label    => $self->tr('SHOW_GRID'),
+				      -override => 1,
+				      -checked  => $settings->{grid} || 0,
+				      -onChange => 'Controller.set_display_option(this.name,this.checked ? 1 : 0)', 
+				  )
+			      )
+			  ),
+			  td( b( $self->tr('Image_width') ),
+			      br,
+			      radio_group(
+				  -name     => 'width',
+				  -values   => \@widths,
+				  -default  => $settings->{width},
+				  -override => 1,
+				  -onChange => 'Controller.set_display_option(this.name,this.value)', 
+			      ),
+			  ),
+			  td( span(
+				  { -title => $self->tr('FEATURES_TO_HIGHLIGHT_HINT') },
+				  b( $self->tr('FEATURES_TO_HIGHLIGHT') ),
+				  br,
+				  textfield(
+				      -id       => 'h_feat',
+				      -name     => 'h_feat',
+				      -value    => $feature_highlights,
+				      -size     => 50,
+				      -override => 1,
+				      -onChange => 'Controller.set_display_option(this.name,this.value)', 
+				  ),
+				  a({-href=>'#',
+				     -onClick=>'Controller.set_display_option("h_feat","_clear_");$("h_feat").value=""'},
+				    $self->tr('CLEAR_HIGHLIGHTING'))
+			      ),
+			  ),
+		      ),
+		      TR( { -class => 'searchtitle' },
+			  td( $self->data_source->cache_time
+			      ? ( b(  checkbox(
+					  -name     => 'cache',
+					  -label    => $self->tr('CACHE_TRACKS'),
+					  -override => 1,
+					  -checked  => $settings->{cache},
+					  -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
+				      )
+				  )
+			      )
+			      : ()
+			  ),
 
-            td('&nbsp;'),
-
-            td( span(
-                    { -title => $self->tr('REGIONS_TO_HIGHLIGHT_HINT') },
-                    b( $self->tr('REGIONS_TO_HIGHLIGHT') ),
-                    br,
-                    textfield(
-			-id       => 'h_region',
-                        -name     => 'h_region',
-                        -value    => $region_highlights,
-                        -size     => 50,
-                        -override => 1,
-		        -onChange    => 'Controller.set_display_option(this.name,this.value)', 
-                    ),
-		    a({-href=>'#',
-		       -onClick=>'Controller.set_display_option("h_region","_clear_");$("h_region").value=""'
-		      },
-		      $self->tr('CLEAR_HIGHLIGHTING'))
-                ),
-            ),
-        ),
-        TR( { -class => 'searchtitle' },
-            td( { -align => 'left' },
-                b(  checkbox(
-                        -name     => 'show_tooltips',
-                        -label    => $self->tr('SHOW_TOOLTIPS'),
-                        -override => 1,
-                        -checked  => $settings->{show_tooltips},
-                        -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
-                    ),
-                )
-            ),
-            td('&nbsp;'),
-            td( $self->setting('region segment')
-                ? ( b( $self->tr('Region_size') ),
-                    br,
-                    popup_menu(
-                        -name     => 'region_size',
-                        -default  => $settings->{region_size},
-			-values   => \@region_sizes,
-                        -override => 1,
-                        -onChange   => 'Controller.set_display_option(this.name,this.value)',
-                    ),
-
-                    )
-                : (),
-            ),
-        ),
-        TR( { -class => 'searchtitle' },
-            td( {   -colspan => 3,
-                    -align   => 'right'
-                },
-                b( submit( -name => $self->tr('Update_settings') ) )
-            )
-        )
-        ) . end_form();
+			  td('&nbsp;'),
+			  
+			  td( span(
+				  { -title => $self->tr('REGIONS_TO_HIGHLIGHT_HINT') },
+				  b( $self->tr('REGIONS_TO_HIGHLIGHT') ),
+				  br,
+				  textfield(
+				      -id       => 'h_region',
+				      -name     => 'h_region',
+				      -value    => $region_highlights,
+				      -size     => 50,
+				      -override => 1,
+				      -onChange    => 'Controller.set_display_option(this.name,this.value)', 
+				  ),
+				  a({-href=>'#',
+				     -onClick=>'Controller.set_display_option("h_region","_clear_");$("h_region").value=""'
+				    },
+				    $self->tr('CLEAR_HIGHLIGHTING'))
+			      ),
+			  ),
+		      ),
+		      TR( { -class => 'searchtitle' },
+			  td( { -align => 'left' },
+			      b(  checkbox(
+				      -name     => 'show_tooltips',
+				      -label    => $self->tr('SHOW_TOOLTIPS'),
+				      -override => 1,
+				      -checked  => $settings->{show_tooltips},
+				      -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
+				  ),
+			      )
+			  ),
+			  td('&nbsp;'),
+			  td( $self->setting('region segment')
+			      ? ( b( $self->tr('Region_size') ),
+				  br,
+				  popup_menu(
+				      -name     => 'region_size',
+				      -default  => $settings->{region_size},
+				      -values   => \@region_sizes,
+				      -override => 1,
+				      -onChange   => 'Controller.set_display_option(this.name,this.value)',
+				  ),
+				  
+			      )
+			      : (),
+			  ),
+		      ),
+		      TR( { -class => 'searchtitle' },
+			  td( {   -colspan => 3,
+				  -align   => 'right'
+			      },
+			      b( submit( -name => $self->tr('Update_settings') ) )
+			  )
+		      )
+	       )
+	) . end_form();
 
     return $self->toggle( 'Display_settings', $content );
 }
@@ -849,9 +852,10 @@ sub render_external_table {
     my $content 
         = div( { -id => "external_utility_div" }, '' )
         . start_form( -name => 'externalform', -id => 'externalform' )
-        . $self->upload_table
-        . $self->das_table
+        . div({-class=>'uploadbody'},$self->upload_table,
+	      $self->das_table)
         . end_form();
+    $content .= $self->html_frag('html6',$state);
     return $content;
 }
 
@@ -1758,9 +1762,9 @@ sub share_track {
 ################### various utilities ###################
 
 sub html_frag {
-  my $self = shift;
+  my $self     = shift;
   my $fragname = shift;
-  my $a = $self->data_source->code_setting(general => $fragname);
+  my $a = $self->data_source->global_setting($fragname);
   return $a->(@_) if ref $a eq 'CODE';
   return $a || '';
 }
@@ -1803,6 +1807,9 @@ sub toggle_section {
   my $buttons = $self->globals->button_url;
   my $plus  = "$buttons/plus.png";
   my $minus = "$buttons/minus.png";
+  my $break = div({-id=>"${name}_break",
+		   -style=>$visible ? 'display:none' : 'display:block'
+		  },'&nbsp;');
 
   my $show_ctl = div({-id=>"${name}_show",
 		       -class=>'ctl_hidden',
@@ -1820,8 +1827,9 @@ sub toggle_section {
 		      -style=>$visible ? 'display:inline' : 'display:none',
 		      -class => 'el_visible'},
 		     @section_body);
-  my @result = $config{nodiv} ? (div({-style=>'float:left'},$show_ctl.$hide_ctl),$content)
-                              : div($show_ctl.$hide_ctl,$content);
+  my @result =  $config{nodiv} ? (div({-style=>'float:left'},$show_ctl.$hide_ctl),$content)
+                :$config{tight}? (div({-style=>'float:left'},$show_ctl.$hide_ctl).$break,$content)
+                : div($show_ctl.$hide_ctl,$content);
   return wantarray ? @result : "@result";
 }
 

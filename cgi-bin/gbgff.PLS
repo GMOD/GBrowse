@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.13 2008-12-05 15:14:01 lstein Exp $
+# $Id: gbgff.PLS,v 1.1.2.14 2009-01-14 16:16:28 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -128,8 +128,10 @@ sub print_gff3 {
     my $types  = $labels ? $self->labels_to_types($labels) : undef;
     my $files  = $labels ? $self->labels_to_files($labels) : undef;
 
-    $self->print_configuration($_,$labels)      for $self->config;
-    $self->print_configuration($_,[$_->labels]) for @$files;
+    if (param('c')) {
+	$self->print_configuration($_,$labels)      for $self->config;
+	$self->print_configuration($_,[$_->labels]) for @$files;
+    }
 
     my %filters = map {$_ => $self->config->setting($_=>'filter')||undef} @$labels;
 

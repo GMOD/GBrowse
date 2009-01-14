@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Plugin::FilterTest;
 
-# $Id: FilterTest.pm,v 1.2.14.1 2008-03-17 22:16:37 lstein Exp $
+# $Id: FilterTest.pm,v 1.2.14.2 2009-01-14 16:16:28 lstein Exp $
 # Filter plugin to filter features from the genes track
 
 use strict;
@@ -66,7 +66,7 @@ sub filter
     my $value        = $config->{filter_value};
 
     # save the orignal key
-    my $key = $browser->setting( $name => 'key' );
+    my $key = $browser->setting( $name => 'key' ) || '';
     $self->{original_key} ||= $key;
 
     if ( $config->{filter_on} eq 'yes' )

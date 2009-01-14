@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.117 2008-12-20 00:38:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.118 2009-01-14 16:16:28 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1729,6 +1729,7 @@ sub track_share {
 	$gbgff       =~ s/gbrowse/gbgff/;
 	$gbgff      .= "?q=\$segment;t=$labels";
 	$gbgff      .= ";id=".$settings->{id} if $labels =~ /file:/;
+	$gbgff      .= ";c=1";  # get configuration
     }
 
     my $das_types    =  join (';',

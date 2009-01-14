@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.1.2.7.2.2.2.3 2008-09-15 14:51:23 lstein Exp $
+#  $Id: PluginSet.pm,v 1.1.2.7.2.2.2.4 2009-01-14 16:16:28 lstein Exp $
 
 use strict;
 use Digest::MD5;
@@ -178,9 +178,9 @@ sub menu_labels {
       $labels{$_} = $verbs{$plugins->{$_}->type} ||
         ucfirst $plugins->{$_}->type;
     }
-    my $name = $plugins->{$_}->type eq 'filter' ?  
-               $config->setting($plugins->{$_}->name => 'key') : 
-               $plugins->{$_}->name;
+    my $name = $plugins->{$_}->type eq 'filter' 
+	            ? $config->setting($plugins->{$_}->name => 'key') || $plugins->{$_}->name
+                    : $plugins->{$_}->name;
     $labels{$_} .= " $name";
     $labels{$_} =~ s/^\s+//;
   }

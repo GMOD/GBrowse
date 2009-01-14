@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.10 2009-01-07 17:47:01 sheldon_mckay Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.11 2009-01-14 14:57:16 sheldon_mckay Exp $
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -80,7 +80,7 @@ use constant VERTICAL_PAD       => 40;
 use constant ALIGN_HEIGHT       => 6;  
 use constant MAX_SPAN           => 0.3;     # largest gap allowed for merging inset panels
 use constant TOO_SMALL          => 0.02;    # minimum span for displayed alignments
-use constant MAX_GAP            => 200_001; # maximum gap for chaining
+use constant MAX_GAP            => 50_001;  # maximum gap for chaining
 use constant MAX_SEGMENT        => 400_001; 
 use constant EXTENSION          => 'syn';   # extsnsion for species conf files
 use constant DEBUG              => 0;
@@ -91,7 +91,7 @@ use constant HELP               => 'http://gmod.org/wiki/GBrowse_syn_Help';
 # keys (not counting this constant!).
 use constant SETTINGS => 
     ( 
-      aggregate  => 1, # chain alignments
+      aggregate  => 0 , # chain alignments
       pgrid      => 1,  # gridlines
       shading    => 1,  # shaded polygons
       tiny       => 0,  # ignore small alignments

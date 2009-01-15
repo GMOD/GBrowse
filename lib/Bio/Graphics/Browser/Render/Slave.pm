@@ -151,6 +151,7 @@ sub run {
 	my $child = fork();
 	$self->Fatal("Couldn't fork: $!") unless defined $child;
 	if ($child) {
+	    $self->Info("Forked child PID $child");
 	    $c->close();
 	} else {
 	    $self->process_connection($c);

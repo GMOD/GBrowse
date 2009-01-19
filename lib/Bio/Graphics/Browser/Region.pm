@@ -39,7 +39,6 @@ sub feature_count {
 # get/set list of features that we are working on
 sub features {
     my $self = shift;
-    Carp::cluck("setting features to @{$_[0]}") if DEBUG && @_;
     my $d    = $self->{features};
     $self->{features} = shift if @_;
     return $d;

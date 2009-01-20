@@ -1,5 +1,5 @@
 package Bio::DB::Tagger;
-# $Id: Tagger.pm,v 1.1 2009-01-19 16:44:13 lstein Exp $
+# $Id: Tagger.pm,v 1.2 2009-01-20 17:57:19 lstein Exp $
 
 use Carp 'croak';
 use DBI;
@@ -48,6 +48,9 @@ Bio::DB::Tagger -- Simple object tagging system
  my @objects  = $tagger->search_tag($tag);
 
  my @tags  = $tagger->tags;
+ 
+ my $iterator = $tagger->tag_match('prefix');
+ while (my $tag = $iterator->next_tag) { }
 
 =head1 DESCRIPTION
 
@@ -177,6 +180,28 @@ sub tags {
     my $self = shift;
     my $ary  = $self->dbh->selectcol_arrayref('SELECT tname FROM tagname');
     return wantarray ? @$ary : $ary;
+}
+
+=item $iterator = $tagger->tag_match('prefix')
+
+Returns an iterator that matches all tags beginning with 'prefix'
+(case insensitive). Call $iterator->next_tag() to get the next match.
+
+=cut
+
+sub tag_match {
+    my $self   = shift;
+    my $prefix = shift;
+    my $sth   = $self->dbh->prepare(<<END) or croak $self->dbh->errstr;
+SELECT tname 
+  FROM tagname 
+ WHERE tname LIKE ?
+END
+;
+    $prefix =~ s/%/\\%/g;
+    $prefix =~ s/_/\\_/g;
+    $sth->execute($prefix.'%') or croak $sth->errstr;
+    return Bio::DB::Tagger::Iterator->new($sth);
 }
 
 =item $tags = $tagger->tag_counts()
@@ -548,6 +573,25 @@ sub initialize {
 }
 
 =back
+
+=cut
+
+package Bio::DB::Tagger::Iterator;
+
+sub new {
+    my $class = shift;
+    my $sth   = shift;
+    return bless {sth=>$sth},ref $class || $class;
+}
+
+sub next_tag {
+    my $self  = shift;
+    my ($tag) = $self->{sth}->fetchrow_array or return;
+    return $tag;
+}
+
+sub next { shift->next_tag }
+
 
 =head1 SEE ALSO
 

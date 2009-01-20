@@ -527,7 +527,8 @@ sub invert_types {
 
 sub default_labels {
   my $self = shift;
-  my $defaults = $self->setting('general'=>'default features');
+  my $defaults  = $self->setting('general'=>'default tracks');
+  $defaults   ||= $self->setting('general'=>'default features'); # backward compatibility
   return $self->scale_tracks,shellwords($defaults||'');
 }
 

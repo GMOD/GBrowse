@@ -27,6 +27,7 @@ my $build = GBrowseInstall->new(
 	'Storable'            => 0,
 	'JSON'                => 0,
 	'LWP'                 => 0,
+        'ExtUtils::CBuilder'  => 0,
     },
     recommends  => { 
 	'DB_File::Lock'            => 0,

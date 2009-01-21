@@ -64,7 +64,7 @@ for ('volvox_final.conf','yeast_chr1.conf') {
 }
 
 for my $s (@servers) {
-    $s->debug(3);
+    $s->debug(0);
     ok($s->run);
 }
 
@@ -422,8 +422,6 @@ my $data;
 my $io = IO::String->new($data);
 $CGI::Q = new CGI('name=kinase;label=Clones-Transcripts-Motifs');
 $ENV{'HTTP_ACCEPT_LANGUAGE'} = 'en';
-
-warn "here I am";
 
 # start with a fresh renderer!
 $render      = Bio::Graphics::Browser::Render::HTML->new($source,$session);

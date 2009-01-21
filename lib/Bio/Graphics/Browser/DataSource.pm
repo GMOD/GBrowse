@@ -866,9 +866,9 @@ sub clear_cache {
 
 Given a GD::Image object, this method calls its png() or gif() methods
 (depending on GD version), stores the output into the temporary
-directory given by the "tmpimages" option in the configuration file,
-and returns a two element list consisting of the URL to the image and
-the physical path of the image.
+"images" subdirectory of the directory given by the "tmp_base" option
+in the configuration file. It returns a two element list consisting of
+the URL to the image and the physical path of the image.
 
 =cut
 

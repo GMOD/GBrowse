@@ -266,8 +266,6 @@ sub render_tracks {
 	    
     # generate the panels
     $self->Debug("Calling RenderPanels->new()");
-    my $tmpdir = $datasource->global_setting('tmp_slave') || $self->tmpdir;
-    $datasource->globals->setting('general',tmpimages=>$tmpdir);
     my $renderer = Bio::Graphics::Browser::RenderPanels->new(-segment  => $segment,
 							     -source   => $datasource,
 							     -settings => $settings,
@@ -360,12 +358,6 @@ sub clone_feature {
     $clone->gbrowse_dbid($f->gbrowse_dbid) 
 	if $level == 0 && $f->can('gbrowse_dbid');
     return $clone;
-}
-
-sub tmpdir {
-    my $self   = shift;
-    my $tmpdir = File::Spec->tmpdir();
-    return File::Spec->catfile($tmpdir,'gbrowse_slave');
 }
 
 sub setup_environment {

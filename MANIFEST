@@ -500,7 +500,7 @@ t/03.render.t
 t/04.remoteserver.t
 t/05.deferredrendering.t
 t/06.featuresearch.t
-t/07.karotype.t
+t/07.karyotype.t
 t/08.calign.t
 t/Test.pm
 t/testdata/conf/enzymes.txt

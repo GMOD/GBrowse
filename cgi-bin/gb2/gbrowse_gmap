@@ -16,7 +16,11 @@ encased after the __DATA__ token.
 
 =head1 Usage
 
-=head2 GMap API Key
+=head2 GMap API Key (Depricated)
+
+Since this script is now using PhyloGeoViz for the GMap interactions, we no
+longer need the api key.  I'm keeping this section of comments in case we ever
+need it again.
 
 To use this, a GMap API key must be supplied in the GBrowse configuration file.
 As of writing, keys are freely available from Google at
@@ -39,31 +43,73 @@ The "yeast_chr1" portion should be replaced with the coorect data source.
 Also, "localhost" should be changed to your url.  A relative url may not work
 because Google ties the api key to a URL.
 
+=head2 Current Data Requirements
+
+=over 4
+
+=item * Different Populations will have different track types.
+
+=item * Latitude and Longitude
+
+A track is identified as being a population if it has latitude and longitude
+values assigned in the configuration file.
+
+=item * Haplotypes
+
+Each haplotype of a population is stored as a feature with the "score" value
+deterimining its weight.  The feature "name" is the haplotype name. For
+features to be considered as part of the same population group, they must all
+share the same start and end.
+
+=item * Start and end of all used features the same.
+
+Only features that have the same start and end as the chosen feature will be
+displayed.  If a feature has a different start or end, it will be excluded.
+
+=item * SeqFeature::Store is being used.
+
+I'm pretty sure that this won't work for anything other than SeqFeature::Store.
+I haven't tested that assumption though.  There should be a way to generalize
+this.  The feature searching is where I'm conserned about it.
+
+=back
+
 =head2 TODO
 
 This is currently a work in progress.
 
 =over 4
 
-=item * Import longitude and latitude data 
+=item * Pie Size
 
-=item * Use longitude and latitude to place pins
+Need to add some sort of configuration to pass the pie sizes in kilometers
+because it is completely skewed right now.
 
-=item * Modify the pins to be graphical representations of the population at that point.
+=item * PhyloGeoViz location
 
-=item * Determine appropriate size, zoom level and center of the map on load.
+Add a config option for the where the PhyloGeoViz newviewer.php file is located.
+
+=item * Demo Data
+
+Need to create a dummy dataset and config file that can be shared as a demo.
+
+=item * Doesn't load correctly in balloon
+
+Currently the local phylogeoviz doesn't correctly load in the balloon.
+
+=item * Other Interesting Features
 
 =back
 
 =cut
 
-
 use strict;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::RegionSearch;
 use Template;
+use JSON;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.2 2009-01-05 00:34:28 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.3 2009-01-22 05:52:21 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
@@ -89,6 +135,7 @@ use constant DEBUG => 0;
 use CGI qw(:standard *table *TR escape);
 
 sub new {
+    print STDERR "NEW GMAP RENDERER\n";
     my $package = shift;
     my $conf    = shift;
     return bless {
@@ -121,6 +168,7 @@ sub source {
 
 sub run {
     my $self = shift;
+    print STDERR "++ Running ++\n";
 
     my $conf    = $self->globals;
     my $session = $conf->session;
@@ -137,14 +185,15 @@ sub run {
     my $db_id = param('db_id');
     my $rmt   = param('remote');
 
-#    print STDERR "name : $name\n"   if ( defined $name );
-#    print STDERR "class : $class\n" if ( defined $class );
-#    print STDERR "ref : $ref\n"     if ( defined $ref );
-#    print STDERR "start : $start\n" if ( defined $start );
-#    print STDERR "end : $end\n"     if ( defined $end );
-#    print STDERR "f_id : $f_id\n"   if ( defined $f_id );
-#    print STDERR "db_id : $db_id\n" if ( defined $db_id );
-#    print STDERR "rmt : $rmt\n"     if ( defined $rmt );
+    #print STDERR Dumper(param())." \n";
+    #    print STDERR "name : $name\n"   if ( defined $name );
+    #    print STDERR "class : $class\n" if ( defined $class );
+    #    print STDERR "ref : $ref\n"     if ( defined $ref );
+    #    print STDERR "start : $start\n" if ( defined $start );
+    #    print STDERR "end : $end\n"     if ( defined $end );
+    #    print STDERR "f_id : $f_id\n"   if ( defined $f_id );
+    #    print STDERR "db_id : $db_id\n" if ( defined $db_id );
+    #    print STDERR "rmt : $rmt\n"     if ( defined $rmt );
 
     $self->state->{dbid} = $db_id if $db_id;    # to search correct database
 
@@ -170,43 +219,171 @@ sub run {
     else {
         $search_term = $name;
     }
-    my $features = $search->search_features({-search_term => $search_term});
+    my $features
+        = $search->search_features( { -search_term => $search_term } );
 
     # provide customized content for popup balloons
     if ( defined $rmt ) {
         print header, start_html;
         print end_html;
+        return;
     }
-
-    elsif ( not @{ $features || [] } ) {
+    if ( not @{ $features || [] } ) {
         print header, start_html;
         print "No Features Found\n";
         print end_html;
+        return;
     }
-    else {
-        warn scalar( @{ $features || [] } ) . "\n";
-        my $html;
-        my $template = Template->new(
-            FILTERS => {
-                dump => sub { Dumper( shift() ) },
-                nbsp => sub { my $s = shift; $s =~ s{\s+}{\&nbsp;}g; $s },
-            },
-            )
-            or $self->error(
-            "Couldn't create Template object: " . Template->error() );
 
-        print header();
-        my $css         = $self->source->global_setting('stylesheet');
-        my $style_sheet = $self->globals->resolve_path( $css, 'url' );
-        my %options     = (
-            style_sheet  => $style_sheet,
-            gmap_api_key => $self->source->global_setting('gmap_api_key'),
-        );
-        $template->process( \*DATA, \%options, \$html )
-            or die $template->error();
-        print $html;
+    # Now that we know that we have a feature, let's begin
 
+    # Get all the tracks that have latitude and longitude values.  We are going
+    # to take all of the features in this region that have geolocation and
+    # display them.
+    my %type_geolocation;
+    foreach my $type ( keys %{ $self->source->{'config'} || {} } ) {
+        if (    defined $self->source->{'config'}{$type}{'latitude'}
+            and defined $self->source->{'config'}{$type}{'longitude'} )
+        {
+            my $feature_key = $self->source->{'config'}{$type}{'feature'};
+            $type_geolocation{$feature_key}
+                = $self->source->{'config'}{$type};
+        }
     }
+
+    # If there is only one feature, we need to see what other features are
+    # at this location.
+    my $feature = $features->[0];
+    my $fstart  = $feature->start;
+    my $fend    = $feature->end;
+    my $fref    = $feature->ref;
+
+    $search_term = "$fref:$fstart..$fend";
+
+   # This is a bit sketchy but when using SeqFeature::Store, and serching only
+   # on a span of sequence, search_features() returns a SeqFeature::Segment
+   # object.  I don't know if this is the same behavior in the other adaptors.
+    my $segments
+        = $search->search_features( { -search_term => $search_term } );
+    my $segment = $segments->[0];
+
+    # Get the features in this segment that are of the same geolocation
+    my @seg_features = $segment->features( map { $_->{'feature'} }
+            values %type_geolocation );
+
+    #print STDERR Dumper(map {$_->{'type'}}@seg_features)." \n";
+    #print STDERR Dumper(@seg_features) . " \n";
+
+    my %population_data;
+    my %hap_names;
+
+    # Extract the population data from the features.  Only keep the features
+    # that have the same start and stop.  Populate the population data hash.
+    # Example:
+    # $population_data{'polymorphic_sequence_variant:CS'}->{'GT'}=$score;
+    foreach my $seg_feature (@seg_features) {
+        next
+            unless ( $seg_feature->{'start'} == $fstart
+            and $seg_feature->{'stop'} == $fend );
+        my $feature_key = $seg_feature->{'type'}
+            . (
+            defined $seg_feature->{'source'}
+            ? ":" . $seg_feature->{'source'}
+            : ''
+            );
+        my $score = $seg_feature->{'score'};
+        my $name  = $seg_feature->{'name'};
+        $population_data{$feature_key}->{$name} += $score;
+        $hap_names{$name} = 1;
+    }
+
+    # Create the values that will be passed to PhyloGeoViz
+    my @sorted_pop_keys = sort keys %population_data;
+    my @sorted_pop_names
+        = map { $type_geolocation{$_}->{'key'} } @sorted_pop_keys;
+    my @sorted_hap_names = sort keys %hap_names;
+    my $numpops          = scalar(@sorted_pop_names);
+    my $numhaps          = scalar(@sorted_hap_names);
+    my @pop_lat
+        = map { $type_geolocation{$_}->{'latitude'} } @sorted_pop_keys;
+    my @pop_lng
+        = map { $type_geolocation{$_}->{'longitude'} } @sorted_pop_keys;
+    my @pop_include = map {1} @sorted_pop_keys;
+    my @hap_include = map {1} @sorted_hap_names;
+    my @hapgroups   = ();
+
+    my @pop_haps;
+    foreach my $pop_key (@sorted_pop_keys) {
+        my @haps;
+        foreach my $hap_name (@sorted_hap_names) {
+            push @haps, ( $population_data{$pop_key}->{$hap_name} || 0 );
+        }
+        push @pop_haps, \@haps;
+    }
+
+    #print STDERR Dumper( \%population_data ) . " \n";
+    #print STDERR Dumper( \@sorted_pop_names ) . " \n";
+    #print STDERR Dumper( \@sorted_hap_names ) . " \n";
+    #print STDERR Dumper( \@pop_haps ) . " \n";
+
+    #my $numpops     = 2;
+    #my $numhaps     = 2;
+    #my @pop_names   = ( 'Iowa', 'Else' );
+    #my @hap_names   = ( 'Gold', 'Purple' );
+    #my @pop_lat     = ( 37.0625, 25 );
+    #my @pop_lng     = ( -95.677068, -95 );
+    #my @pop_haps    = ( [ 9, 1 ], [ 5, 5 ] );
+    #my @hapgroups   = ( 'Up', 'Down' );
+    #my @pop_include = ( 1, 1 );
+    #my @hap_include = ( 1, 1 );
+
+    my $html;
+    my $template = Template->new(
+        FILTERS => {
+            dump => sub { Dumper( shift() ) },
+            nbsp => sub { my $s = shift; $s =~ s{\s+}{\&nbsp;}g; $s },
+        },
+        )
+        or $self->error(
+        "Couldn't create Template object: " . Template->error() );
+
+    print header();
+    my $css = $self->source->global_setting('stylesheet');
+    my $style_sheet = $self->globals->resolve_path( $css, 'url' );
+
+    #my $phylo_url = 'http://phylogeoviz.org/latest/newviewer.php';
+    #my $phylo_url = 'http://localhost:8081/phylo/printparams.php';
+    my $phylo_url = 'http://localhost:8081/phylo/newviewer.php';
+
+    my @params = (
+        [ 'numpops',     $numpops ],
+        [ 'numhaps',     $numhaps ],
+        [ 'pop_names',   JSON::to_json( \@sorted_pop_names ) ],
+        [ 'hap_names',   JSON::to_json( \@sorted_hap_names ) ],
+        [ 'pop_lat',     JSON::to_json( \@pop_lat ) ],
+        [ 'pop_lng',     JSON::to_json( \@pop_lng ) ],
+        [ 'pop_haps',    JSON::to_json( \@pop_haps ) ],
+        [ 'hapgroups',   JSON::to_json( \@hapgroups ) ],
+        [ 'pop_include', JSON::to_json( \@pop_include ) ],
+        [ 'hap_include', JSON::to_json( \@hap_include ) ]
+    );
+
+    # must escape the JSON objects
+    my $request_str
+        = join( '&', map { $_->[0] . "=" . CGI::escape( $_->[1] ) } @params );
+
+    my %options = (
+        style_sheet  => $style_sheet,
+        gmap_api_key => $self->source->global_setting('gmap_api_key'),
+        numpops      => $numpops,
+        numhaps      => $numhaps,
+        request_str  => $request_str,
+        phylo_url    => $phylo_url,
+    );
+    $template->process( \*DATA, \%options, \$html )
+        or die $template->error();
+    print $html;
+    return;
 }
 
 __DATA__
@@ -215,21 +392,31 @@ __DATA__
 <link rel="stylesheet" type="text/css" href="[% style_sheet %]" />
   <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
     <title>Google Maps and GBrowse</title>
-    <script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=[% gmap_api_key %]"
-      type="text/javascript"></script>
+    <script type="text/javascript" src="/js/prototype.js"></script>
     <script type="text/javascript">
 
     //<![CDATA[
 
     function load() {
-      if (GBrowserIsCompatible()) {
-        var map = new GMap2(document.getElementById("map"));
-        map.setCenter(new GLatLng(37.0625, -95.677068), 1);
-        var point = new GLatLng(37.0625, -95.677068);
-        markerOptions = { title:"Iowa City", clickable:true };
-        var marker = new GMarker(point, markerOptions);
-        map.addOverlay(marker);
+      if (false && GBrowserIsCompatible()) {
+        //var map = new GMap2(document.getElementById("map"));
+        //map.setCenter(new GLatLng(37.0625, -95.677068), 1);
+        //var point = new GLatLng(37.0625, -95.677068);
+        //markerOptions = { title:"Iowa City", clickable:true };
+        //var marker = new GMarker(point, markerOptions);
+        //map.addOverlay(marker);
       }
+      //Phylo
+            $("phylodiv").innerHTML      = "Loading...";
+      var requestStr = '[% request_str %]';
+      new Ajax.Request('[% phylo_url %]',{
+         method:     'post',
+          parameters: requestStr,
+         onSuccess: function(transport) {
+            $("phylodiv").innerHTML      = transport.responseText;
+          }
+        });
+
     }
 
     //]]>
@@ -237,6 +424,10 @@ __DATA__
 
 </head>
 <body onload="load()" onunload="GUnload()">
-    <div id="map" style="width: 300px; height: 300px"></div>
+    <!-- div id="map" style="width: 300px; height: 300px"></div-->
+    <a href="[% phylo_url %]?[% request_str %]">Local PhyloGeoViz</a><BR>
+      <!--a href="http://localhost:8081/phylo/printparams.php?[% request_str %]">print Params </a><BR-->
+        <a href="http://phylogeoviz.org/latest/newviewer.php?[% request_str %]">Official PhyloGeoViz</a>
+    <div id="phylodiv"></div>
 </body>
 </html>

@@ -27,6 +27,10 @@ SYNOPSIS:
 
 TO INSTALL:
 
+Detailed install and configure instructions are available at
+http://gmod.org/wiki/GBrowse_2.0_HOWTO and we suggest you follow
+that. What follows here is a brief synopsis.
+
 1) You will need a bunch of Perl prerequisites:
 
     Module                  Version
@@ -47,7 +51,7 @@ TO INSTALL:
     available on CPAN (www.cpan.org), or by using the CPAN shell
     ("perl -MCPAN -e shell").
 
-- You will need the Bioperl DEVELOPER release (version 1.5.2). It is
+- You will need the Bioperl DEVELOPER release (version 1.5.9). It is
   quite stable, so you should not need to worry about installing it,
   but if you wish, you can set up GBrowse to use a non-installed
   version of Bioperl simply by unpacking it in your home directory

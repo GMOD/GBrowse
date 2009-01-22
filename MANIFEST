@@ -468,7 +468,6 @@ lib/Bio/Graphics/Browser/Region.pm
 lib/Bio/Graphics/Browser/RegionSearch.pm
 lib/Bio/Graphics/Browser/RemoteSet.pm
 lib/Bio/Graphics/Browser/Render.pm
-lib/Bio/Graphics/Browser/Render.pm.orig
 lib/Bio/Graphics/Browser/Render/HTML.pm
 lib/Bio/Graphics/Browser/Render/Slave.pm
 lib/Bio/Graphics/Browser/Render/Slave/Status.pm

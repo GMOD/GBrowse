@@ -167,7 +167,7 @@ sub apache_includes {
     my $self = shift;
     return '/etc/apache2/conf.d' if -d '/etc/apache2/conf.d';
     return '/etc/apache/conf.d'  if -d '/etc/apache/conf.d';
-    return '/etc/httpd/conf.d'   if -d '/etc/httpd/conf.id';
+    return '/etc/httpd/conf.d'   if -d '/etc/httpd/conf.d';
     return;
 }
 

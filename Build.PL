@@ -37,6 +37,7 @@ my $build = GBrowseInstall->new(
 	'GD::SVG'                  => 0,
 	'Statistics::Descriptive'  => 0,
 	'Safe::World'              => 0,
+	'FCGI'                     => 0,
     },
     script_files => [
 	'bin/gbrowse_slave',

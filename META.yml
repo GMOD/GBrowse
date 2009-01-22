@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 1.986
+version: 1.987
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -12,6 +12,7 @@ requires:
   Bio::Root::Version: 1.005009001
   CGI::Session: 4.02
   Digest::MD5: 0
+  ExtUtils::CBuilder: 0
   File::Temp: 0
   GD: 2.07
   IO::String: 0
@@ -24,6 +25,7 @@ recommends:
   DBD::mysql: 0
   DBI: 0
   DB_File::Lock: 0
+  FCGI: 0
   GD::SVG: 0
   Safe::World: 0
   Statistics::Descriptive: 0
@@ -72,6 +74,7 @@ provides:
     file: lib/Bio/DB/GFF/SyntenyIO.pm
   Bio::Graphics::Browser:
     file: lib/Bio/Graphics/Browser.pm
+    version: 1.987
   Bio::Graphics::Browser::CachedTrack:
     file: lib/Bio/Graphics/Browser/CachedTrack.pm
   Bio::Graphics::Browser::DataBase:

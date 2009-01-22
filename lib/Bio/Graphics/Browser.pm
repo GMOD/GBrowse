@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.224 2009-01-14 00:17:17 lstein Exp $
+# $Id: Browser.pm,v 1.225 2009-01-22 19:44:48 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -18,6 +18,7 @@ use Carp 'croak','carp';
 use CGI 'redirect','url';
 
 my %CONFIG_CACHE;
+our $VERSION = 1.987;
 
 sub new {
   my $class            = shift;

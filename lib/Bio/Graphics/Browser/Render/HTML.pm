@@ -1462,7 +1462,9 @@ sub source_menu {
   my @sources      = $globals->data_sources;
   my $show_sources = $self->setting('show sources');
   $show_sources    = 1 unless defined $show_sources;   # default to true
+  @sources         = grep {$globals->data_source_show($_)} @sources;
   my $sources = $show_sources && @sources > 1;
+
   return b($self->tr('DATA_SOURCE')).br.
     ( $sources ?
       popup_menu(-name   => 'source',

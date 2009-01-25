@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.225 2009-01-22 19:44:48 lstein Exp $
+# $Id: Browser.pm,v 1.226 2009-01-25 19:19:24 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -212,7 +212,13 @@ sub data_sources {
 sub data_source_description {
   my $self = shift;
   my $dsn  = shift;
-  $self->setting($dsn=>'description');
+  return $self->setting($dsn=>'description');
+}
+
+sub data_source_show {
+    my $self = shift;
+    my $dsn  = shift;
+    return !$self->setting($dsn=>'hide');
 }
 
 sub data_source_path {

@@ -17,11 +17,34 @@ Welcome to the Generic Genome Browser!
 
 <p>
 
-An example in-memory database from yeast chromosome 1 has been
+Example in-memory databases from yeast chromosomes 1 and 2 have been
 installed for you.  Try it at this URL:
 
 <blockquote>
-<a href="/cgi-bin/gb2/gbrowse/yeast">/cgi-bin/gb2/gbrowse/yeast</a>
+<a href="/cgi-bin/gb2/gbrowse/yeast">/cgi-bin/gb2/gbrowse/yeast</a> (simple example)
+<a href="/cgi-bin/gb2/gbrowse/yeast_advanced">/cgi-bin/gb2/gbrowse/yeast_advanced</a> (advanced example)
+<a href="/cgi-bin/gb2/gbrowse/yeast_renderfarm">/cgi-bin/gb2/gbrowse/yeast_renderfarm</a> (renderfarm example)
+</blockquote>
+
+<p>
+The "renderfarm" example will only work if a local gbrowse_slave
+render slave daemon is running. To launch the daemon, run this command
+as the root user:
+
+<pre>
+% /etc/init.d/gbrowse-slave start
+</pre>
+
+<p>
+
+If you allowed the install process to adjust your Apache
+configuration, you can use the alias /gb2 as an alternative to
+/cgi-bin/gb2:
+
+<blockquote>
+<a href="/gb2/gbrowse/yeast">/gb2/gbrowse/yeast</a>
+<a href="/gb2/gbrowse/yeast_advanced">/gb2/gbrowse/yeast_advanced</a>
+<a href="/gb2/gbrowse/yeast_renderfarm">/gb2/gbrowse/yeast_renderfarm</a>
 </blockquote>
 
 

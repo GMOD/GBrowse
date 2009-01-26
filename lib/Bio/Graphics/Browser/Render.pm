@@ -2722,9 +2722,10 @@ sub regionview_tracks {
 # all tracks currently in our state; this MAY go out of date if the
 # configuration file changes.
 sub all_tracks {
-    my $self  = shift;
-    my $state = $self->state;
-    return @{$state->{tracks}};
+    my $self   = shift;
+    my $state  = $self->state;
+    my $source = $self->data_source;
+    return grep {$source->authorized($_)} @{$state->{tracks}};
 }
 
 # all potential tracks; this is guaranteed to be up to date with the

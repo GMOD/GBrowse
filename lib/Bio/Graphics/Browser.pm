@@ -1,10 +1,10 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.226 2009-01-25 19:19:24 lstein Exp $
+# $Id: Browser.pm,v 1.227 2009-01-26 14:46:28 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
 use warnings;
-use base 'Bio::Graphics::FeatureFile';
+use base 'Bio::Graphics::Browser::AuthorizedFeatureFile';
 
 use File::Spec;
 use File::Path 'mkpath';
@@ -45,23 +45,6 @@ sub new {
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
   return $self;
-}
-
-## override setting to default to the [general] section
-sub setting {
-  my $self = shift;
-  my @args = @_;
-  if (@args == 1) {
-    unshift @args,'general';
-  }
-  elsif (!defined $args[0]) {
-    $args[0] = 'general';
-  }
-  else {
-    $args[0] = 'general'
-      if $args[0] ne 'general' && lc($args[0]) eq 'general';  # buglet
-  }
-  $self->SUPER::setting(@args);
 }
 
 ## methods for dealing with paths
@@ -218,7 +201,8 @@ sub data_source_description {
 sub data_source_show {
     my $self = shift;
     my $dsn  = shift;
-    return !$self->setting($dsn=>'hide');
+    return if $self->setting($dsn=>'hide');
+    return $self->authorized($dsn);
 }
 
 sub data_source_path {

@@ -1,6 +1,8 @@
 package Bio::DB::Tagger;
-# $Id: Tagger.pm,v 1.2 2009-01-20 17:57:19 lstein Exp $
+# $Id: Tagger.pm,v 1.3 2009-01-26 14:46:28 lstein Exp $
 
+use strict;
+use warnings;
 use Carp 'croak';
 use DBI;
 use Bio::DB::Tagger::Tag;
@@ -34,7 +36,7 @@ Bio::DB::Tagger -- Simple object tagging system
  $tagger->clear_tags($object_name);                      # delete all tags attached to object
  $tagger->delete_tag($object_name,$tag_name [,$value]);  # delete one tag attached to object
 
- $tagger->nuke_tag($tag_name);                          # delete this tag completely
+ $tagger->nuke_tag($tag_name);                           # delete this tag completely
  $tagger->nuke_object($object_name);
  $tagger->nuke_author($author_name);
 
@@ -157,7 +159,8 @@ SELECT count(*)
   AND   tname=?
 END
 ;
-    my @bind = ($object,$tag);
+    my $name = ref($tag) ? $tag->name : $tag;
+    my @bind = ($object,$name);
     if (defined $value) {
 	$query .= 'AND tvalue=?';
 	push @bind,$value;
@@ -196,6 +199,7 @@ sub tag_match {
 SELECT tname 
   FROM tagname 
  WHERE tname LIKE ?
+ ORDER BY tname
 END
 ;
     $prefix =~ s/%/\\%/g;
@@ -261,23 +265,26 @@ Returns true on success.
 
 sub add_tag {
     my $self = shift;
-    my ($objectname,$tag);
+    my ($objectname,$tag,%args);
 
     if (@_ == 2) {
 	$objectname = shift;
 	$tag        = shift;
     } else {
-	my %args    = @_;
+	%args    = @_;
 	$tag        = $args{-tag};
-	unless (ref $tag && $tag->isa('Bio::DB::Tagger::Tag')) {
-	    $tag = Bio::DB::Tagger::Tag->new(-name  => $tag,
-					     -value => $args{-value},
-					     -author=> $args{-author});
-	}
+	$objectname = $args{-object};
+    }
+    unless (ref $tag && $tag->isa('Bio::DB::Tagger::Tag')) {
+	$tag = Bio::DB::Tagger::Tag->new(-name  => $tag,
+					 -value => $args{-value},
+					 -author=> $args{-author}
+	    );
     }
     
     croak 'usage: add_tag(-object=>$object_name,-tag=>$tag)'
 	unless defined $objectname && $tag;
+    return if $self->has_tag($objectname,$tag);
     $self->_set_tags($objectname,[$tag]);
 }
 
@@ -300,6 +307,40 @@ sub set_tags {
     defined $object && $tags && ref $tags eq 'ARRAY'
 	or croak 'Usage: $tagger->set_tags(-object=>$object_name,-tags=>[$tag1,$tag2...])';
     $self->_set_tags($object,$tags,1);
+}
+
+=item $result = $tagger->set_tag(@args);
+
+Set a tag, replacing all previous tags of the same name.
+
+Arguments: B<-object>  Name of the object to tag.
+           B<-tag>     A Bio::DB::Tagger::Tag object, or tag name
+
+Returns true on success.
+
+=cut
+
+sub set_tag {
+    my $self = shift;
+    my %args;
+    if (@_ == 2) {
+	%args = (-object=> shift(),
+		 -tag   => shift());
+    } else {
+	%args = @_;
+    }
+
+    my $object = $args{-object};
+    my $tag    = $args{-tag};
+    defined $object && $tag
+	or croak 'Usage: $tagger->set_tag(-object=>$object_name,-tag=>$tag)';
+    $tag = Bio::DB::Tagger::Tag->new(-name=>$tag,
+				     -value=>$args{-value},
+				     -author=>$args{-author}
+	)
+	unless ref $tag;
+    $self->delete_tag($object,$tag);
+    $self->add_tag($object,$tag);
 }
 
 =item $result = $tagger->clear_tags($objectname);
@@ -325,7 +366,12 @@ optionally by value.
 sub delete_tag {
     my $self       = shift;
     my ($objectname,$tagname,$tagvalue) = @_;
-    my $query = <<END;
+    my $dbh  = $self->dbh;
+
+    $dbh->begin_work;
+
+    eval {
+	my $query = <<END;
 DELETE FROM tag
  USING tag,tagname,object
  WHERE tag.oid=object.oid
@@ -334,12 +380,31 @@ DELETE FROM tag
    AND tagname.tname=?
 END
 ;
-    my @bind = ($objectname,$tagname);
-    if (defined $tagvalue) {
-	$query .= ' AND tag.value=?';
-	push @bind,$tagvalue;
+	my @bind = ($objectname,$tagname);
+	if (defined $tagvalue) {
+	    $query .= ' AND tag.value=?';
+	    push @bind,$tagvalue;
+	}
+	$dbh->do($query,{},@bind) or die $dbh->errstr;
+
+	# remove defunct tags
+	my ($count)  = $dbh->selectrow_array(<<END);
+SELECT count(*)
+  FROM tag,tagname
+  WHERE tag.tid=tagname.tid
+    AND tagname.tname=?
+END
+;
+	warn "will nuke tag $tagname" if $count == 0;
+	$self->nuke_tag($tagname) if $count == 0;
+	$dbh->commit;
+    };
+    if ($@) {
+	warn $@;
+	$dbh->rollback;
+	return;
     }
-    return $self->dbh->do($query,{},@bind);
+    return 1;
 }
 
 =item $result = $tagger->nuke_object($objectname);
@@ -382,12 +447,12 @@ successful.
 =cut
 
 sub nuke_tag {
-    my $self       = shift;
+    my $self    = shift;
     my $tagname = shift;
     $self->_nuke_object($tagname,
-			  'tag',
-			  'tname',
-			  'tid');
+			'tagname',
+			'tname',
+			'tid');
 }
 
 sub _nuke_object {
@@ -395,23 +460,29 @@ sub _nuke_object {
     my ($name,$table,$namefield,$idfield) = @_;
     my $dbh        = $self->dbh;
 
-    $dbh->begin_work;
+    my $in_transaction = !$dbh->{AutoCommit};
+
+    my $rows = 0;
+    $dbh->begin_work unless $in_transaction;
     eval {
-	my $sth = $dbh->prepare(<<END);
+	my $query =<<END;
 DELETE FROM $table,tag
-      WHERE $table.$idfield=tag.$idfield
-        AND $table.$namefield=?
+      USING $table
+      LEFT JOIN tag ON $table.$idfield=tag.$idfield
+      WHERE $table.$namefield=?
 END
 ;
-	$sth->execute($name);
-	
+	my $sth = $dbh->prepare($query);
+	$rows = $sth->execute($name);
+	$dbh->commit unless $in_transaction;
     };
     if ($@) {
+	die $@ if $in_transaction;
 	warn $@;
-	$dbh->rollback;
+	$dbh->rollback unless $in_transaction;
 	return;
     }
-    return 1;
+    return $rows;
 }
 
 sub _set_tags {

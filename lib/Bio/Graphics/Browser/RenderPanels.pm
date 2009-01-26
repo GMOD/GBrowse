@@ -123,6 +123,9 @@ sub request_panels {
 
   # If we don't call clone_databases early, then we can have
   # a race condition where the parent hits the DB before the child
+  # NOTE: commented out because clone logic has changed - may need to reenable this
+  # for postgresql databases
+  # Bio::Graphics::Browser::DataBase->clone_databases();
 
   my $do_local  = @$local_labels;
   my $do_remote = @$remote_labels;
@@ -134,8 +137,6 @@ sub request_panels {
   # fork a second time and process them in parallel.
   if ($args->{deferred}) {
       $SIG{CHLD} = 'IGNORE';
-      
-      $self->clone_databases($local_labels) if $do_local;
 
       # need to prepare modperl for the fork
       Bio::Graphics::Browser::Render->prepare_modperl_for_fork();
@@ -150,6 +151,7 @@ sub request_panels {
       }
 
       Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
+      Bio::Graphics::Browser::DataBase->clone_databases();
 
       open STDIN, "</dev/null" or die "Couldn't reopen stdin";
       open STDOUT,">/dev/null" or die "Couldn't reopen stdout";
@@ -162,6 +164,7 @@ sub request_panels {
 					 $local_labels );
           }
           else {
+	      Bio::Graphics::Browser::DataBase->clone_databases(); # yes, again!
               $self->run_remote_requests( $data_destinations, 
 					  $args,
 					  $remote_labels );
@@ -229,7 +232,7 @@ sub make_requests {
     my $feature_files  = $args->{external_features};
     my $labels         = $args->{labels};
 
-    warn "MAKE_REQUESTS, labels = ",join ',',@$labels if DEBUG;
+    warn "[$$] MAKE_REQUESTS, labels = ",join ',',@$labels if DEBUG;
 
     my $base        = $self->get_cache_base();
     my @panel_args  = $self->create_panel_args($args);
@@ -262,6 +265,7 @@ sub make_requests {
 		$feature_file->types, $feature_file->mtime;
 	    };
 	}
+	warn "[$$] creating CachedTrack for $label" if DEBUG;
         my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
             -cache_base => $base,
             -panel_args => \@panel_args,
@@ -575,6 +579,7 @@ sub run_remote_requests {
 
       # THIS PART IS IN THE CHILD
       Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
+      Bio::Graphics::Browser::DataBase->clone_databases();
       my @labels   = keys %{$renderers{$url}};
       my $s_track  = Storable::nfreeze(\@labels);
 
@@ -670,22 +675,6 @@ sub sort_local_remote {
     my @local     = grep {!$is_remote{$_}} @uncached;
 
     return (\@local,\@remote);
-}
-
-# this subroutine makes sure that all the data sources get their
-# clone() methods called to inform them that we have crossed a
-# fork().
-sub clone_databases {
-    my $self   = shift;
-    my $tracks = shift;
-    my $source = $self->source;
-    my %dbs;
-    for my $label (@$tracks) {
-	my $db = eval {$source->open_database($label)};
-	next unless $db;
-	$dbs{$db} = $db;
-    }
-    eval {$_->clone()} foreach values %dbs;
 }
 
 #moved from Render.pm
@@ -1559,6 +1548,7 @@ sub create_track_args {
 				   -end   => $segment->end,
 				   -class => $class);
       };
+      warn $@ if $@;
       @args = ($segment,
 	       @default_args,
 	       $source->default_style,

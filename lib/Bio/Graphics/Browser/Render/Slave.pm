@@ -154,6 +154,7 @@ sub run {
 	    $self->Info("Forked child PID $child");
 	    $c->close();
 	} else {
+	    Bio::Graphics::Browser::DataBase->clone_databases();
 	    $self->process_connection($c);
 	    $d->close();
 	    $c->close();

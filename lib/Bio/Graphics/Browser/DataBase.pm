@@ -43,4 +43,19 @@ sub open_database {
   $DB{$key};
 }
 
+=item Bio::Graphics::Browser::DataBase->clone_databases()
+
+Call this after a fork in the child process to make sure that all open
+databases have had a chance to clone themselves if they need
+to. Otherwise you will get random database failures.
+
+=cut
+
+sub clone_databases {
+    my $self = shift;
+    eval {$_->clone()} 
+      foreach values %DB;
+}
+
+
 1;

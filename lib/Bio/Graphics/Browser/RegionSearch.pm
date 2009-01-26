@@ -344,6 +344,7 @@ sub search_features_remotely {
 	    $select->add($pipe);
 	}
 	else { # child
+	    Bio::Graphics::Browser::DataBase->clone_databases();
 	    Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
 	    $pipe->writer();
 	    $self->fetch_remote_features($args,$url,$pipe);

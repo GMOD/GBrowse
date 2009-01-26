@@ -125,14 +125,17 @@ sub run {
   my $fh   = shift || \*STDOUT;
   my $old_fh = select($fh);
 
-  warn "RUN(): ",
+  warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
        query_string() if DEBUG;
 
   $self->set_source();
 
-  return if $self->run_asynchronous_event;
+  if ($self->run_asynchronous_event) {
+      warn "[$$] asynchronous exit" if DEBUG;
+      return ;
+  }
 
   $self->init();
   $self->update_state();
@@ -141,14 +144,19 @@ sub run {
   if ($ENV{QUERY_STRING} && $ENV{QUERY_STRING} =~ /reset/) {
       print CGI::redirect(CGI::url(-absolute=>1,-path_info=>1));
   } else {
-      warn "render()" if DEBUG;
+      warn "[$$] render()" if DEBUG;
       $self->render();
   }
 
+  warn "[$$] cleanup" if DEBUG;
   $self->cleanup();
   select($old_fh);
 
+  warn "[$$] session flush" if DEBUG;
+
   $self->session->flush;
+
+  warn "[$$] synchronous exit" if DEBUG;
 }
 
 sub set_source {
@@ -191,7 +199,7 @@ sub run_asynchronous_event {
     my ($status,$mime_type,$data) = $self->asynchronous_event
 	or return;
 
-    warn "asynchronus event returning status=$status, mime-type=$mime_type" if DEBUG;
+    warn "[$$] asynchronous event returning status=$status, mime-type=$mime_type" if DEBUG;
 
     if ($status == 204) { # no content
 	print CGI::header( -status => '204 No Content' );
@@ -516,7 +524,7 @@ sub asynchronous_event {
     if ( my @labels = param('label[]') ) {
         foreach (@labels) {
 	    s/%5F/_/g;
-	    s/:(overview|region|detail)$// if /^(plugin|file|http|ftp):/;
+	    s/:(overview|region|detail)$// if m/^(plugin|file|http|ftp):/;
 	}
         my %seen;
         @{ $settings->{tracks} } = grep { length() > 0 && !$seen{$_}++ }
@@ -1695,14 +1703,15 @@ sub set_default_state {
 sub update_state {
   my $self   = shift;
 
-  warn "update_state()" if DEBUG;
+  warn "[$$] update_state()" if DEBUG;
 
   return if param('gbgff'); # don't let gbgff requests update our coordinates!!!
 
   $self->update_state_from_cgi;
   my $state  = $self->state;
-  if ($self->segment) {
 
+  warn "[$$] CGI updated" if DEBUG;
+  if ($self->segment) {
       # A reset won't have a segment, so we need to test for that before we use
       # one in whole_segment().
       my $whole_segment = $self->whole_segment;
@@ -1715,6 +1724,7 @@ sub update_state {
 
   $self->session->unlock;
   $self->session->flush();
+  warn "[$$] update_state() done" if DEBUG;
 }
 
 sub default_state {

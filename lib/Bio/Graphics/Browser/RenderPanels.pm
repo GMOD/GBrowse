@@ -598,6 +598,8 @@ sub run_remote_requests {
 
 	my $response = $ua->request($request);
 
+	warn "$url=>@labels: ",$response->status_line if DEBUG;
+
 	if ($response->is_success) {
 	    my $contents = Storable::thaw($response->content);
 	    for my $label (keys %$contents) {
@@ -1501,6 +1503,8 @@ sub segment_coordinates {
   my $self    = shift;
   my $segment = shift;
   my $flip    = shift;
+
+  return unless $segment;
 
   # Create the tracks that we will need
   my ($seg_start,$seg_stop ) = ($segment->start,$segment->end);

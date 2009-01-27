@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.81 2009-01-12 22:04:25 lstein Exp $
+ $Id: controller.js,v 1.82 2009-01-27 00:37:23 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -147,7 +147,8 @@ var GBrowseController = Class.create({
   // Sets the time key for the tracks so we know if one is outdated
   set_last_update_keys:
   function (track_keys) {
-    this.last_update_key = create_time_key();
+    var last_update_key  = create_time_key();
+    this.last_update_key = last_update_key;
 
     var track_key_hash = new Hash;
     for (var track_name in track_keys)
@@ -155,7 +156,7 @@ var GBrowseController = Class.create({
 
     this.each_track(function(gbtrack) {
         if (track_key_hash.get(gbtrack.track_name) != null) {
-	   gbtrack.set_last_update_key(this.last_update_key);
+	   gbtrack.set_last_update_key(last_update_key);
 	}
     });
   }, // end set_last_update_keys
@@ -276,7 +277,7 @@ var GBrowseController = Class.create({
   set_track_visibility:
   function(track_id,visible) {
 
-    var gbtrack    = this.gbtracks.get(track_id);
+    var gbtrack  = this.gbtracks.get(track_id);
     if (gbtrack == null) return;
 
     var track_name = gbtrack.track_name;
@@ -291,7 +292,9 @@ var GBrowseController = Class.create({
           track_name:          track_name
         },
         onSuccess: function(transport) {
-          if (visible && gbtrack.get_last_update_key() < Controller.last_update_key) {
+          if (visible && 
+	      gbtrack.get_last_update_key() == null ||
+	      gbtrack.get_last_update_key() < Controller.last_update_key) {
             Controller.rerender_track(gbtrack.track_id);
           }
         }

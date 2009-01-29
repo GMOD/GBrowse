@@ -499,6 +499,7 @@ sub galaxy_form {
     $html .= hidden(-name=>'t',-value=>$labels);
     $html .= hidden(-name=>'s',-value=>'off');
     $html .= hidden(-name=>'d',-value=>'edit');
+    $html .= hidden(-name=>'m',-value=>'application/x-gff3');
     $html .= endform();
 
 # Copied from gbrowse 1.69 -- not sure if still appropriate

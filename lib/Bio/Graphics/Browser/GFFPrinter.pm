@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.7 2009-01-06 07:38:24 lstein Exp $
+# $Id: GFFPrinter.pm,v 1.8 2009-01-29 23:52:35 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -37,6 +37,7 @@ sub new {
         id          => $options{-id},
         'dump'      => $options{'-dump'},  # in quotes because "dump" is a perl keyword
         labels      => $options{-labels},
+	mimetype    => $options{-mimetype},
         },
         ref $class || $class;
 
@@ -191,6 +192,8 @@ sub get_do_stylesheet {
 
 sub get_mime_type {
     my $self = shift;
+    warn "mime = $self->{mimetype}";
+    return $self->{mimetype} if defined $self->{mimetype};
     my $dump = $self->{'dump'} || '';
     return 'application/x-gff3'       if $dump eq 'edit';
     return 'application/octet-stream' if $dump eq 'save';

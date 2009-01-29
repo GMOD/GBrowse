@@ -1258,9 +1258,10 @@ sub handle_gff_dump {
         -start      => param('start')      || 1,
         -end        => param('stop')       || param('end'),
         -stylesheet => param('stylesheet') || param('s'),
-        -id         => param('id'),
+        -id         => scalar param('id'),
         '-dump'     => param('d')          || '',
         -labels     => [ param('type'), param('t') ],
+        -mimetype   => scalar param('m'),
     ) or return 1;
 
     $dumper->get_segment() or return 1;

@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.18 2009-01-30 13:16:27 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.19 2009-01-30 23:49:59 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -127,6 +127,8 @@ sub is_zoom {
 sub reconfigure {
   my $self = shift;
   my $conf = $self->configuration;
+
+  $conf->{width} = $self->browser_config->plugin_setting('width') || IMAGEWIDTH;
 
   $conf->{size_range} = undef;
   $conf->{target}     = undef;
@@ -727,6 +729,7 @@ sub segment_map {
   my %feature_files;
   $feature_files{Primers} = $feats if $feats;
   my $panel_options = { 
+    -width           => $conf->{width},
     section          => '',
     segment          => $$segment,
     tracks           => \@tracks,
@@ -998,6 +1001,7 @@ sub _hide {
 
 sub segment_info {
   my ($self,$segment) = @_;
+  my $conf     = $self->configuration;
   my $config   = $self->browser_config;
   my $settings = $self->page_settings;
   my $pad_left   = $config->setting('pad_left')  || $config->image_padding;
@@ -1007,8 +1011,8 @@ sub segment_info {
   _hide(segment              => $segment->ref .':'. $segment->start .'..'. $segment->end);
   _hide(image_padding        => $pad_left);
   _hide(max_segment          => $max);
-  _hide(details_pixel_ratio  => $segment->length/$settings->{width});
-  _hide(detail_width         => $settings->{width} + $pad_left + $pad_right);
+  _hide(details_pixel_ratio  => $segment->length/$conf->{width});
+  _hide(detail_width         => $conf->{width} + $pad_left + $pad_right);
 }
 
 

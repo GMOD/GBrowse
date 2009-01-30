@@ -4,7 +4,7 @@
                       This class handles primers-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: primerSelect.js,v 1.1.2.2 2008-07-18 10:37:50 sheldon_mckay Exp $
+ $Id: primerSelect.js,v 1.1.2.3 2009-01-30 13:51:04 sheldon_mckay Exp $
 
 */
 
@@ -50,6 +50,8 @@ Primers.prototype.initialize = function() {
   self.getSegment(i);
   self.addSelectMenu('primer');
   self.addSelectBox('primer');
+
+  self.image = i;
   primersObject = self;
 }
 
@@ -96,6 +98,7 @@ Primers.prototype.stopRubber = function(event) {
     selectAreaIsActive = false;
 
     if (width) {
+	YAHOO.util.Dom.setStyle(self.image,'border','2px solid gainsboro');
 	document.mainform.submit();
     }
 }

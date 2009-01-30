@@ -3,6 +3,11 @@
 	* Fixed Galaxy support to return correct MIME type. This
           should correct problems people have had with track data not
           loading into Galaxy.
+        * fixed bug that was causing remote tracks that didn't happen
+          to contain any features in current view to remain greyed out
+
+1.90    * server farm rearchitecture introduced
+	* big cleanup of defunct files; migrating to Module::Build
 
 1.67    * Templates now the norm, use gbrowse_not to get the "no templates" version.
 	* The das script now works (more or less) with Bio::DB::SeqFeature::Store adaptor. Not tested

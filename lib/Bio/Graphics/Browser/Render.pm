@@ -1195,7 +1195,10 @@ sub init_plugins {
 					       $self->language,
 					       @plugin_path);
   $self->fatal_error("Could not initialize plugins") unless $plugins;
-  $plugins->configure($self->db,$self->state,$self->language,$self->session);
+  $plugins->configure($self->db,
+		      $self->state,
+		      $self->language,
+		      $self->session);
   $self->plugins($plugins);
 
   $self->load_plugin_annotators();
@@ -1253,15 +1256,12 @@ sub handle_gff_dump {
 
     my $dumper = Bio::Graphics::Browser::GFFPrinter->new(
         -data_source => $self->data_source(),
-        -segment    => param('q')          || param('segment'),
-        -seqid      => param('ref')        || param('seqid'),
-        -start      => param('start')      || 1,
-        -end        => param('stop')       || param('end'),
-        -stylesheet => param('stylesheet') || param('s'),
-        -id         => scalar param('id'),
-        '-dump'     => param('d')          || '',
-        -labels     => [ param('type'), param('t') ],
-        -mimetype   => scalar param('m'),
+        -segment     => param('q')          || param('segment') || undef,
+        -stylesheet  => param('stylesheet') || param('s')       || undef,
+        -id          => param('id')         || undef,         
+        '-dump'      => param('d')          || undef,
+        -labels      => [ param('type'), param('t') ],
+        -mimetype    => param('m')          || undef,
     ) or return 1;
 
     $dumper->get_segment() or return 1;
@@ -3201,8 +3201,9 @@ sub external_data {
     my $search       = $self->get_search_object;
     my $meta_segment = $search->segment($segment);
     if ($segment) {
-	my $rel2abs      = $self->coordinate_mapper($segment,1);
-	my $rel2abs_slow = $self->coordinate_mapper($segment,0);
+	my $search       = $self->get_search_object;
+	my $rel2abs      = $search->coordinate_mapper($segment,1);
+	my $rel2abs_slow = $search->coordinate_mapper($segment,0);
 	for my $featureset ($self->plugins,$self->uploaded_sources,$self->remote_sources) {
 	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} 
 	        if DEBUG;
@@ -3216,69 +3217,6 @@ sub external_data {
     warn "FEATURE files = ",join ' ',%$f if DEBUG;
     return $self->{feature_files} = $f;
 }
-
-sub coordinate_mapper {
-    my $self            = shift;
-    my $current_segment = shift;
-    my $optimize        = shift;
-
-    my $db = $current_segment->factory;
-
-    my ( $ref, $start, $stop ) = (
-        $current_segment->seq_id, 
-	$current_segment->start,
-        $current_segment->end
-    );
-    my %segments;
-
-    my $search = $self->get_search_object;
-    my $closure = sub {
-        my ( $refname, @ranges ) = @_;
-
-        unless ( exists $segments{$refname} ) {
-            $segments{$refname} = $search->search_features({-search_term => $refname})->[0];
-        }
-        my $mapper  = $segments{$refname} || return;
-        my $absref  = $mapper->abs_ref;
-        my $cur_ref = eval { $current_segment->abs_ref }
-            || eval { $current_segment->ref }; # account for api changes in Bio::SeqI
-        return unless $absref eq $cur_ref;
-
-        my @abs_segs;
-        if ( $absref eq $refname) {           # doesn't need remapping
-            @abs_segs = @ranges;
-        }
-        elsif ($mapper->can('rel2abs')) {
-            @abs_segs
-                = map { [ $mapper->rel2abs( $_->[0], $_->[1] ) ] } @ranges;
-        } else {
-	    my $map_start  = $mapper->start;
-	    my $map_strand = $mapper->strand;
-	    if ($map_strand >= 0) {
-		@abs_segs = map {[$_->[0]+$map_start-1,$_->[1]+$map_start-1]} @ranges;
-	    } else {
-		@abs_segs = map {[$map_start-$_->[0]+1,$map_start-$_->[1]+1]} @ranges;
-		$absref   = $mapper->seq_id;
-	    }
-	}
-
-        # this inhibits mapping outside the displayed region
-        if ($optimize) {
-            my $in_window;
-            foreach (@abs_segs) {
-                next unless defined $_->[0] && defined $_->[1];
-		my ($left,$right) = sort {$a<=>$b} @$_;
-                $in_window ||= $_->[0] <= $right && $_->[1] >= $left;
-            }
-            return $in_window ? ( $absref, @abs_segs ) : ();
-        }
-        else {
-            return ( $absref, @abs_segs );
-        }
-    };
-    return $closure;
-}
-
 
 # Delete the segments so that they can be recreated with new parameters
 sub delete_stored_segments {
@@ -3327,21 +3265,21 @@ sub bookmark_link {
   my $settings = shift;
 
   my $q = new CGI('');
-  my @keys = qw(start stop ref width version flip);
+  my @keys = qw(start stop ref width version flip grid);
   foreach (@keys) {
-    $q->param(-name=>$_,-value=>$settings->{$_});
+    $q->param(-name=>$_,   -value=>$settings->{$_});
   }
-
+  $q->param(-name=>'id',   -value=>$settings->{userid});  # slight inconsistenty here
   $q->param(-name=>'label',-value=>$self->join_selected_tracks);
 
   # handle external urls
   my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
-  $q->param(-name=>'eurl',-value=>\@url);
+  $q->param(-name=>'eurl',    -value=>\@url);
   $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
   my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
-  $q->param(-name=>'h_feat',-value=>\@h_feat) if @h_feat;
-  $q->param(-name=>'id',-value=>$settings->{id});
-  $q->param(-name=>'grid',-value=>$settings->{grid});
+  $q->param(-name=>'h_feat',  -value=>\@h_feat) if @h_feat;
+
+  warn 'query string = ',$q->query_string();
 
   return "?".$q->query_string();
 }

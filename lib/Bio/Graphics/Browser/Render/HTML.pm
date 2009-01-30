@@ -478,7 +478,11 @@ sub galaxy_form {
     return '' unless $galaxy_url;
 
     my $URL  = $source->global_setting('galaxy incoming');
-    $URL    ||= url(-full=>1,-path_info=>1);
+    if (!$URL) {
+	$URL = url(-full=>1,-path_info=>1);
+    } else {
+      $URL .= "/".$source->name;
+    }
 
     my $action = $galaxy_url =~ /\?/ ? "$galaxy_url&URL=$URL" : "$galaxy_url?URL=$URL";
     
@@ -495,6 +499,7 @@ sub galaxy_form {
 		      
     $html .= hidden(-name=>'dbkey',-value=>$dbkey);
     $html .= hidden(-name=>'gbgff',-value=>1);
+    $html .= hidden(-name=>'id',   -value=>$settings->{userid});
     $html .= hidden(-name=>'q',-value=>$seg);
     $html .= hidden(-name=>'t',-value=>$labels);
     $html .= hidden(-name=>'s',-value=>'off');
@@ -1693,7 +1698,7 @@ sub share_track {
     else {
         $gbgff = url( -full => 1, -path_info => 1 );
         $gbgff .= "?gbgff=1;q=$segment;t=$labels";
-        $gbgff .= ";id=" . $state->{id} if $labels =~ /file:/;
+        $gbgff .= ";id=" . $state->{userid} if $labels =~ /file(:|%3A)/;
     }
 
     my $das_types = join( ';',

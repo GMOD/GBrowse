@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbgff,v 1.2 2008-12-19 22:43:42 lstein Exp $
+# $Id: gbgff,v 1.3 2009-01-30 22:06:19 lstein Exp $
 
 # just redirect to gbrowse in same directory
 
@@ -21,6 +21,7 @@ my $end       = param('end') || param('stop');
 my $dump      = param('d');
 my $type      = param('t')   || param('type');
 my $id        = param('id');
+my $stylesheet= param('s');
 
 my $url       = dirname($base);
 $url         .= '/gbrowse';
@@ -28,9 +29,10 @@ $url         .= "/".($source || $path_info);
 $url         .= "/?";
 $url         .= "gbgff=1";
 $url         .= ";q=".($segment || "$ref:$start..$end");
-$url         .= ";d=$dump" if defined $dump;
-$url         .= ";t=$type" if defined $type;
-$url         .= ";id=$id"  if defined $id;
+$url         .= ";d=$dump"          if defined $dump;
+$url         .= ";t=$type"          if defined $type;
+$url         .= ";id=$id"           if defined $id;
+$url         .= ";s=$stylesheet"    if defined $stylesheet;
 
 print redirect($url);
 

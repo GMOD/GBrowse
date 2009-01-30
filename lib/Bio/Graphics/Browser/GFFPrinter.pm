@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.8 2009-01-29 23:52:35 lstein Exp $
+# $Id: GFFPrinter.pm,v 1.9 2009-01-30 22:06:19 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -20,7 +20,12 @@ package Bio::Graphics::Browser::GFFPrinter;
 #     http://my.host/cgi-bin/gbrowse/volvox?gbgff=1;q=ctgA:1..2000;\
 #           t=Genes+ExampleFeatures+file:my_upload.txt;id=session_id
 
+use strict;
+
 use CGI 'param', 'path_info', 'header';
+use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::UserData;
+use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::FeatureFile;
 use Bio::Graphics::Browser::Shellwords;
 
@@ -29,10 +34,6 @@ sub new {
     my %options = @_;
     my $self    = bless {
         data_source => $options{-data_source},
-        segment     => $options{-segment},
-        seqid       => $options{-seqid},
-        start       => $options{-start},
-        segment_end => $options{-end},
         stylesheet  => $options{-stylesheet},
         id          => $options{-id},
         'dump'      => $options{'-dump'},  # in quotes because "dump" is a perl keyword
@@ -41,7 +42,9 @@ sub new {
         },
         ref $class || $class;
 
-    $self->check_source() or return;
+    $self->check_source()                  or return;
+    $self->get_segment($options{-segment}) or return;
+
     return $self;
 }
 
@@ -116,10 +119,13 @@ sub check_source {
 }
 
 sub get_segment {
-    my $self = shift;
+    my $self    = shift;
+    return $self->{segment} unless @_;
+
+    my $segment = shift;
 
     # check whether someone called us directly by pasting into location box
-    if ($self->{segment} =~ /^\$segment/) { 
+    if ($segment =~ /^\$segment/) { 
         print header('text/plain');
 	print "# To share this track, please paste its URL into the \"Enter Remote Annotation\" box\n",
 	"# at the bottom of a GBrowse window and not directly into your browser's Location area.\n";
@@ -127,14 +133,11 @@ sub get_segment {
     }
 
     my ( $seqid, $start, $end )
-        = $self->{segment} =~ /^([^:]+)(?::([\d-]+)(?:\.\.|,)([\d-]+))?/;
+        = $segment =~ /^([^:]+)(?::([\d-]+)(?:\.\.|,)([\d-]+))?/;
 
-    $seqid ||= $self->{'seqid'};
-    $start ||= $self->{start} || 1;
-    $end   ||= $self->{end};
     unless ( defined $seqid ) {
         print header('text/plain');
-	print "# Please provide ref, start and end arguments.\n";
+	print "# Please provide the segment argument.\n";
 	return;
     }
 
@@ -192,7 +195,6 @@ sub get_do_stylesheet {
 
 sub get_mime_type {
     my $self = shift;
-    warn "mime = $self->{mimetype}";
     return $self->{mimetype} if defined $self->{mimetype};
     my $dump = $self->{'dump'} || '';
     return 'application/x-gff3'       if $dump eq 'edit';
@@ -222,9 +224,7 @@ sub labels_to_types {
 sub labels_to_files {
     my $self   = shift;
     my $labels = shift;
-
-    my @labels = grep {/^file:/} @$labels;
-    @labels or return [];
+    @$labels or return [];
 
     # get the feature files, if appropriate
     my $id = $self->get_id or return [];
@@ -235,13 +235,17 @@ sub labels_to_files {
 
     my @files;
 
-    my $dir
-        = $data_source->tmpdir( $data_source->source . "/uploaded_file/$id" );
-    my $mapper = $data_source->coordinate_mapper( $segment, 1 );
-    for my $filename (@labels) {
-        my ($base) = $filename =~ /([^:\\\/]+)$/;
-        $base =~ tr/-/_/;
-        my $path        = "$dir/$base";
+    my $search = Bio::Graphics::Browser::RegionSearch->new(
+	{
+	    source => $data_source,
+	    state  => { },
+	}
+	);
+    $search->init_databases();
+
+    my $mapper = $search->coordinate_mapper( $segment, 1 );
+    for my $filename (@$labels) {
+	my $path = Bio::Graphics::Browser::UserData->file2path($data_source,$id,$filename);
         my $featurefile = eval {
             Bio::Graphics::FeatureFile->new(
                 -file           => $path,
@@ -249,6 +253,7 @@ sub labels_to_files {
                 -map_coords     => $mapper,
             );
         };
+	warn "Error while loading remote feature file $filename: $@" if $@;
         push @files, $featurefile if $featurefile;
     }
 

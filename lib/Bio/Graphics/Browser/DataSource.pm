@@ -210,46 +210,6 @@ sub commas {
 #  return 1.0;   # for now
 #}
 
-#copied from lib/ .. / Browser.pm
-sub gd_cache_path {
-  my $self = shift;
-  my ($cache_name,@keys) = @_;
-  return unless $self->setting(general=>$cache_name);
-  my $signature = md5_hex(@keys);
-  my ($uri,$path) = $self->globals->tmpdir($self->source.'/cache_overview');
-  my $extension   = 'gd';
-  return "$path/$signature.$extension";
-}
-
-sub gd_cache_check {
-  my $self = shift;
-  my ($cache_name,$path) = @_;
-  return if param('nocache');
-  my $cache_file_mtime   = (stat($path))[9] || 0;
-  my $conf_file_mtime    = $self->mtime;
-  my $cache_expiry       = $self->config->setting(general=>$cache_name) 
-                               * 60*60;  # express expiry time as seconds
-  if ($cache_file_mtime 
-      && ($cache_file_mtime > $conf_file_mtime) 
-      && (time() - $cache_file_mtime < $cache_expiry)) {
-    my $gd = GD::Image->newFromGd($path);
-    return $gd;
-  }
-  else {
-    return;
-  }
-}
-
-
-sub gd_cache_write {
-  my $self = shift;
-  my $path = shift or return;
-  my $gd   = shift;
-  my $file = IO::File->new(">$path") or return;
-  print $file $gd->gd;
-  close $file;
-}
-
 sub overview_bgcolor { shift->global_setting('overview bgcolor')         }
 sub detailed_bgcolor { shift->global_setting('detailed bgcolor')         }
 sub key_bgcolor      { shift->global_setting('key bgcolor')              }

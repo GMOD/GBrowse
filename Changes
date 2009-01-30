@@ -1,3 +1,6 @@
+1.989   * Another attempted fix of Galaxy problems. The galaxy_incoming option was not handled correctly.
+	* Fix track dumping/sharing so that uploaded files are dumped/shared correctly.
+
 1.988	* Fix handling of DBI databases so that various intermittent SQL errors ("server went away")
 	  no longer occur.
 	* Fixed Galaxy support to return correct MIME type. This

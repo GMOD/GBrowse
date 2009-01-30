@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::TrackDumper;
-# $Id: TrackDumper.pm,v 1.2 2009-01-06 07:38:24 lstein Exp $
+# $Id: TrackDumper.pm,v 1.3 2009-01-30 22:06:19 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -127,9 +127,8 @@ sub dump {
   if ($version == 3 && $config->{print_config}) {
       my $dumper = Bio::Graphics::Browser::GFFPrinter->new(
 	  -data_source => $conf,
-	  -seqid       => $segment->seq_id,
-	  -start       => $segment->start,
-	  -end         => $segment->end,
+	  -id          => $page_settings->{userid},
+	  -segment     => $segment->seq_id.':'.$segment->start.'..'.$segment->end,
 	  -labels      => $mode eq 'selected' 
 	                  ? [$self->selected_tracks] 
 	                  : []

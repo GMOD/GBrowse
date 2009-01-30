@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.18 2009-01-06 07:38:24 lstein Exp $
+# $Id: Plugin.pm,v 1.19 2009-01-30 22:06:19 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -296,6 +296,27 @@ following idiom:
 This facility is intended to be used for any settings that should not
 be changed by the end user.  Persistent user preferences should be
 stored in the hash returned by configuration().
+
+=item $search = $self->region_search
+
+This method returns a Bio::Graphics::Browser::RegionSearch object,
+which you can use to search all local and remote databases. The
+interface is this:
+
+ $features = $search->search_features(\%args);
+
+where \%args are the various arguments (e.g. -type, -seq_id, -name)
+passed to the dbadaptors' search_features() method. Alternatively:
+
+ $features = $search->search_features('keyword string')
+
+which implements GBrowse's heuristic search.
+
+The result is an array reference of features found.
+
+The search object also has a get_seq_stream() method that accepts the
+same arguments as search_features() but returns an iterator. The
+iterator implements a next_seq() method.
 
 =item $language = $self->language
 
@@ -712,6 +733,14 @@ sub segments {
   my $self = shift;
   my $d = $self->{segments};
   $self->{segments} = shift if @_;
+  $d;
+}
+
+# get/store a RegionSearch object (see Bio::Graphics::Browser::RegionSearch)
+sub region_search {
+  my $self = shift;
+  my $d = $self->{region_search};
+  $self->{region_search} = shift if @_;
   $d;
 }
 

@@ -118,21 +118,28 @@ sub name_file {
   my $self      = shift;
   my $filename  = shift;
   my $strip     = shift;
-  $strip        = 1 unless defined $strip;
 
   my $state     = $self->state;
   my $config    = $self->config;
-
-  # keep last non-[\\\/:] part of name
-  my ($name) = $strip ? $filename =~ /([^:\\\/]+)$/ : $filename;
-  $name                  =~ tr!-/!__!; # get rid of hyphens and slashes
-
   my $id        = $state->{userid} or return;
-  my $tmpdir    = $config->globals->tmpdir($config->name,'userdata',$id);
-  my $path      = File::Spec->catfile($tmpdir,$name);
-  my $url       = "file:$name";
+
+  my ($url,$path) = $self->file2path($config,$id,$filename,$strip);
   warn "name_file() returns => ($url,$path)" if DEBUG;
   return ($url,$path);
+}
+
+sub file2path {
+    my $self  = shift;
+    my ($config,$id,$filename,$strip) = @_;
+    $strip        = 1 unless defined $strip;    
+
+    # keep last non-[\\\/:] part of name
+    my ($name) = $strip ? $filename =~ /([^:\\\/]+)$/ : $filename;
+    $name                  =~ tr!-/!__!; # get rid of hyphens and slashes
+    my $tmpdir    = $config->globals->tmpdir($config->name,'userdata',$id);
+    my $path      = File::Spec->catfile($tmpdir,$name);
+    my $url       = "file:$name";
+    return wantarray ? ($url,$path) : $path;
 }
 
 sub http_proxy {
@@ -140,6 +147,7 @@ sub http_proxy {
   my $config = $self->config;
   my $proxy  = $config->setting('proxy') || '';
   return $config->setting('http proxy') || $proxy || '';
+
 }
 
 sub ftp_proxy {

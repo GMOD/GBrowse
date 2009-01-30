@@ -308,7 +308,6 @@ Search only the remote databases for the term.
 
 =cut
 
-
 sub search_features_remotely {
     my $self        = shift;
     my $args        = shift;
@@ -448,6 +447,75 @@ sub add_dbid_to_features {
     my $source = $self->source;
     my $dbid   = $source->db2id($db);
     $source->add_dbid_to_feature($_,$dbid) foreach @$features;
+}
+
+=head2 $mapper = $search->coordinate_mapper($segment,$optimize)
+
+Create a Bio::Graphics coordinator mapper on the current segment. If
+optimize set to true, then features that map outside the current
+segment's seqid and region are nulled.
+
+=cut
+
+sub coordinate_mapper {
+    my $self            = shift;
+    my $current_segment = shift;
+    my $optimize        = shift;
+
+    my $db = $current_segment->factory;
+
+    my ( $ref, $start, $stop ) = (
+        $current_segment->seq_id, 
+	$current_segment->start,
+        $current_segment->end
+    );
+    my %segments;
+
+    my $closure = sub {
+        my ( $refname, @ranges ) = @_;
+
+        unless ( exists $segments{$refname} ) {
+            $segments{$refname} = $self->search_features({-search_term => $refname})->[0];
+        }
+        my $mapper  = $segments{$refname} || return;
+        my $absref  = $mapper->abs_ref;
+        my $cur_ref = eval { $current_segment->abs_ref }
+            || eval { $current_segment->ref }; # account for api changes in Bio::SeqI
+        return unless $absref eq $cur_ref;
+
+        my @abs_segs;
+        if ( $absref eq $refname) {           # doesn't need remapping
+            @abs_segs = @ranges;
+        }
+        elsif ($mapper->can('rel2abs')) {
+            @abs_segs
+                = map { [ $mapper->rel2abs( $_->[0], $_->[1] ) ] } @ranges;
+        } else {
+	    my $map_start  = $mapper->start;
+	    my $map_strand = $mapper->strand;
+	    if ($map_strand >= 0) {
+		@abs_segs = map {[$_->[0]+$map_start-1,$_->[1]+$map_start-1]} @ranges;
+	    } else {
+		@abs_segs = map {[$map_start-$_->[0]+1,$map_start-$_->[1]+1]} @ranges;
+		$absref   = $mapper->seq_id;
+	    }
+	}
+
+        # this inhibits mapping outside the displayed region
+        if ($optimize) {
+            my $in_window;
+            foreach (@abs_segs) {
+                next unless defined $_->[0] && defined $_->[1];
+		my ($left,$right) = sort {$a<=>$b} @$_;
+                $in_window ||= $_->[0] <= $right && $_->[1] >= $left;
+            }
+            return $in_window ? ( $absref, @abs_segs ) : ();
+        }
+        else {
+            return ( $absref, @abs_segs );
+        }
+    };
+    return $closure;
 }
 
 ##################################################################33

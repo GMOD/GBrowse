@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.17 2009-01-30 12:56:06 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.18 2009-01-30 13:16:27 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -998,18 +998,17 @@ sub _hide {
 
 sub segment_info {
   my ($self,$segment) = @_;
-  my $config = $self->browser_config;
+  my $config   = $self->browser_config;
   my $settings = $self->page_settings;
-  my $pad    = $config->image_padding;
-  my $max    = $config->setting('max segment') || MAX_SEGMENT;
-  my $width  = ($settings->{width} * OVERVIEW_RATIO);
-  my $whole_segment = $config->whole_segment($segment);
+  my $pad_left   = $config->setting('pad_left')  || $config->image_padding;
+  my $pad_right  = $config->setting('pad_right') || $config->image_padding;
+  my $max        = $config->setting('max segment') || MAX_SEGMENT;
 
   _hide(segment              => $segment->ref .':'. $segment->start .'..'. $segment->end);
-  _hide(image_padding        => $pad);
+  _hide(image_padding        => $pad_left);
   _hide(max_segment          => $max);
   _hide(details_pixel_ratio  => $segment->length/$settings->{width});
-  _hide(detail_width         => $settings->{width} + 2*$pad);
+  _hide(detail_width         => $settings->{width} + $pad_left + $pad_right);
 }
 
 

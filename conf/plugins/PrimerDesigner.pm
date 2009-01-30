@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.16 2008-10-30 19:56:50 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.17 2009-01-30 12:56:06 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -395,7 +395,8 @@ sub design_primers {
     fatal_error
 	"Unsure what to do with object $dna. I was expecting a sequence string"
   }
-  elsif ( !$dna ) {
+
+  if ( !$dna ) {
     fatal_error "There is no DNA sequence in the database";
   }
 

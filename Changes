@@ -1,6 +1,8 @@
-CVS Commits:
-
-$Log: not supported by cvs2svn $
+1.988	* Fix handling of DBI databases so that various intermittent SQL errors ("server went away")
+	  no longer occur.
+	* Fixed Galaxy support to return correct MIME type. This
+          should correct problems people have had with track data not
+          loading into Galaxy.
 
 1.67    * Templates now the norm, use gbrowse_not to get the "no templates" version.
 	* The das script now works (more or less) with Bio::DB::SeqFeature::Store adaptor. Not tested

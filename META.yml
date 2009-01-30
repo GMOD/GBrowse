@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 1.987
+version: 1.988
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -8,7 +8,7 @@ license: perl
 resources:
   license: http://dev.perl.org/licenses/
 requires:
-  Bio::Graphics: 1.82
+  Bio::Graphics: 1.83
   Bio::Root::Version: 1.005009001
   CGI::Session: 4.02
   Digest::MD5: 0
@@ -82,7 +82,9 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser:
     file: lib/Bio/Graphics/Browser.pm
-    version: 1.987
+    version: 1.988
+  Bio::Graphics::Browser::AuthorizedFeatureFile:
+    file: lib/Bio/Graphics/Browser/AuthorizedFeatureFile.pm
   Bio::Graphics::Browser::CachedTrack:
     file: lib/Bio/Graphics/Browser/CachedTrack.pm
   Bio::Graphics::Browser::DataBase:

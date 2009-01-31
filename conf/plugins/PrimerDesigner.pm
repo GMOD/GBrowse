@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.19 2009-01-30 23:49:59 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.20 2009-01-31 00:43:46 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -292,7 +292,7 @@ sub configure_form {
 	. reset
 	. '&nbsp;'
 	. $self->back_button;
-    $html .= $buttons.
+    $html .= div({-id => 'topButtons'},$buttons) .
 	table( { -style => "width:${table_width}px" }, Tr( \@rows ) ).
 	$buttons;
   }

@@ -4,7 +4,7 @@
                       This class handles primers-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: primerSelect.js,v 1.1.2.3 2009-01-30 13:51:04 sheldon_mckay Exp $
+ $Id: primerSelect.js,v 1.1.2.4 2009-01-31 00:43:46 sheldon_mckay Exp $
 
 */
 
@@ -52,6 +52,14 @@ Primers.prototype.initialize = function() {
   self.addSelectBox('primer');
 
   self.image = i;
+
+  // Get rid of top buttons if the image is not very tall and 
+  // the bottom buttons are visible without scrolling down
+  if (self.height < 600) {
+    var buttons = document.getElementById('topButtons');
+    buttons.innerHTML = '';
+  } 
+
   primersObject = self;
 }
 
@@ -98,11 +106,13 @@ Primers.prototype.stopRubber = function(event) {
     selectAreaIsActive = false;
 
     if (width) {
-	YAHOO.util.Dom.setStyle(self.image,'border','2px solid gainsboro');
+	var image = document.getElementById('panels');
+        self.setOpacity(image,0.3,'black');
 	document.mainform.submit();
     }
 }
 
+// null function
 Primers.prototype.formatMenu = function() {}
 
 

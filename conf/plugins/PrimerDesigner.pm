@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.20 2009-01-31 00:43:46 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.21 2009-02-02 21:24:48 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -72,19 +72,17 @@ use CGI qw/:standard escape html3/;
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
 
-use constant BINARY            => 'primer3';
-use constant BINPATH           => '/usr/local/bin';
-use constant METHOD            => 'local';
-use constant IMAGE_PAD         => 25;
-use constant MAXRANGE          => 300;
-use constant IMAGEWIDTH        => 800;
-use constant DEFAULT_SEG_SIZE  => 10000;
-use constant DEFAULT_FINE_ZOOM => 1000;
-use constant STYLE             => '/gbrowse';
-use constant IMAGES            => '/gbrowse/images';
-use constant MAX_SEGMENT       => 1_000_000;
-use constant OVERVIEW_RATIO    => 0.9;
-use constant JS                => '/gbrowse/js';
+use constant PROGRAM          => 'primer3';
+use constant BINPATH          => '/usr/local/bin';
+use constant METHOD           => 'local';
+use constant MAXRANGE         => 300;
+use constant IMAGEWIDTH       => 800;
+use constant DEFAULT_SEG_SIZE => 10000;
+use constant ZOOM_INCREMENT   => 1000;
+use constant JS               => '/gbrowse/js';
+use constant IMAGES           => '/gbrowse/images';
+use constant CSS              => '/gbrowse';
+use constant MAX_SEGMENT      => 1_000_000;
 
 use vars '@ISA';
 
@@ -128,7 +126,7 @@ sub reconfigure {
   my $self = shift;
   my $conf = $self->configuration;
 
-  $conf->{width} = $self->browser_config->plugin_setting('width') || IMAGEWIDTH;
+  $conf->{width} = $self->browser_config->plugin_setting('image width') || IMAGEWIDTH;
 
   $conf->{size_range} = undef;
   $conf->{target}     = undef;
@@ -146,8 +144,9 @@ sub reconfigure {
   }
 
   if ($lb && $rb) {
+    my $max_range = $self->browser_config->plugin_setting('max range') || MAXRANGE; 
     my $min_size = $rb - $lb + 40;
-    my $max_size = $min_size + MAXRANGE;
+    my $max_size = $min_size + $max_range;
 
     # round to nearest 50 bp
     $conf->{size_range} = join '-', map {$_||=50} nearest(50, $min_size, $max_size);
@@ -177,7 +176,7 @@ sub configure_form {
   my $self = shift;
   my ($segment,$target,$lb,$rb,$feats) = @_;
   ($segment) = @{ $self->segments } unless $segment;
-  $segment ||= fatal_error "This plugin requires a sequence region";
+  $segment ||= fatal_error("This plugin requires a sequence region");
   my $browser = $self->browser_config;
   my $conf = $self->configuration;
 
@@ -317,9 +316,9 @@ sub dump {
   my $conf = $self->configuration;
   $self->reconfigure;
 
-  my $js            = $self->browser_config->relative_path_setting('js') || JS;
+  my $js            = $self->browser_config->relative_path_setting('js')     || JS;
   my $img           = $self->browser_config->relative_path_setting('images') || IMAGES;
-  my $css           = $self->browser_config->relative_path_setting('stylesheet') || STYLE;
+  my $css           = $self->browser_config->relative_path_setting('stylesheet') || CSS;
   $css .= "/gbrowse.css" unless $css =~ /gbrowse.css/;
 
   # dumpers provide their own headers, so make sure boiler plate
@@ -385,8 +384,10 @@ sub design_primers {
   my $ptarget = join ',', $tstart,1;
   
   # make the segment a manageable size 
-  if (!$ptarget && $segment->length > DEFAULT_SEG_SIZE) {
-    $segment = $self->refocus($segment, $target, DEFAULT_SEG_SIZE);
+  my $default_size = $self->browser_config->plugin_setting('default segment') 
+      || DEFAULT_SEG_SIZE;
+  if (!$ptarget && $segment->length > $default_size) {
+    $segment = $self->refocus($segment, $target, $default_size);
   }
 
   my $dna = $segment->seq;
@@ -394,12 +395,11 @@ sub design_primers {
     $dna = $dna->seq;
   }
   elsif ( ref $dna ) {
-    fatal_error
-	"Unsure what to do with object $dna. I was expecting a sequence string"
+    fatal_error("Unsure what to do with object $dna. I was expecting a sequence string");
   }
 
   if ( !$dna ) {
-    fatal_error "There is no DNA sequence in the database";
+    fatal_error("There is no DNA sequence in the database");
   }
 
   # unless a product size range range is specified, just keep looking
@@ -415,22 +415,23 @@ sub design_primers {
   $atts{excluded}                  = $exclude if $exclude;
   $atts{PRIMER_PRODUCT_SIZE_RANGE} = $size_range;
 
-  # get a PCR object
-  my $pcr = Bio::PrimerDesigner->new( program => BINARY,
-				      method  => METHOD );
-  $pcr or fatal_error  pre(Bio::PrimerDesigner->error);
 
   my $binpath = $self->browser_config->plugin_setting('binpath') || BINPATH;
-  my $method = $binpath =~ /http/i ? 'remote' : METHOD;
+  my $method  = $self->browser_config->plugin_setting('method')  || METHOD;
+  $method  = 'remote' if $binpath =~ /http/i;
+
+  my $pcr = Bio::PrimerDesigner->new( program => PROGRAM,
+                                      method  => $method );
+  $pcr or fatal_error(pre(Bio::PrimerDesigner->error));
 
   if ( $method eq 'local' && $binpath ) {
-    $pcr->binary_path($binpath) or fatal_error pre($pcr->error);
+    $pcr->binary_path($binpath) or fatal_error(pre($pcr->error));
   }
   else {
-    $pcr->url($binpath) or fatal_error pre($pcr->error);
+    $pcr->url($binpath) or fatal_error(pre($pcr->error));
   }
 
-  my $res = $pcr->design(%atts) or fatal_error pre($pcr->error);
+  my $res = $pcr->design(%atts) or fatal_error(pre($pcr->error));
 
   $self->primer_results( $res, $segment, $lb, $rb );
 }
@@ -447,7 +448,7 @@ sub primer_results {
   $raw_output =~ s/^(SEQUENCE=\w{25}).+$/$1... \(truncated for display only\)/m;
 
   # Give up if primer3 failed
-  fatal_error "No primers found:".pre($raw_output) unless $res->left;
+  fatal_error("No primers found:".pre($raw_output)) unless $res->left;
 
   my @attributes = qw/ left right startleft startright tmleft tmright
       qual lqual rqual leftgc rightgc lselfany lselfend rselfany rselfend/;
@@ -968,7 +969,7 @@ sub slidertable {
 
 sub get_zoomincrement {
   my $self = shift;
-  my $zoom = $self->browser_config->setting('fine zoom') || DEFAULT_FINE_ZOOM;
+  my $zoom = $self->browser_config->setting('zoom increment') || ZOOM_INCREMENT;
   $zoom;
 }
 
@@ -1006,13 +1007,12 @@ sub segment_info {
   my $settings = $self->page_settings;
   my $pad_left   = $config->setting('pad_left')  || $config->image_padding;
   my $pad_right  = $config->setting('pad_right') || $config->image_padding;
-  my $max        = $config->setting('max segment') || MAX_SEGMENT;
 
   _hide(segment              => $segment->ref .':'. $segment->start .'..'. $segment->end);
   _hide(image_padding        => $pad_left);
-  _hide(max_segment          => $max);
   _hide(details_pixel_ratio  => $segment->length/$conf->{width});
   _hide(detail_width         => $conf->{width} + $pad_left + $pad_right);
+  _hide(max_segment          => MAX_SEGMENT);
 }
 
 

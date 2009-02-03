@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.118 2009-01-14 16:16:28 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.119 2009-02-03 17:22:27 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2212,7 +2212,7 @@ sub get_features {
     fatal_error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
   }
 
-  eval {$db->biosql->version($settings->{version})};
+  eval {$db->biosql->version($settings->{version}) if $db->can('biosql')};
 
   # if no name is specified but there is a "initial landmark" defined in the
   # config file, then we default to that.
@@ -2601,7 +2601,7 @@ sub _region_panel {
 					 -grid         => 0,
 					 -pad_top      => 5,
 					 -bgcolor      => $CONFIG->setting("overview bgcolor")
-					                  || DEFAULT_OVERVIEW_BGCOLOR,
+					                  || DEFAULT_OVERVIEW_BGCOLOR(),
 					});
 
   my $hidden = hidden(-name=>'seg_min',-value=>$region->start,-override=>1) .

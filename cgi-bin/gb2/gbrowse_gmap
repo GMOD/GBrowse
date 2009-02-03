@@ -109,7 +109,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Template;
 use JSON;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.3 2009-01-22 05:52:21 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.4 2009-02-03 04:44:22 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
@@ -129,6 +129,7 @@ exit 0;
 package GMapRenderer;
 
 use strict;
+use Math::Trig;
 use Data::Dumper;
 use constant DEBUG => 0;
 
@@ -164,6 +165,61 @@ sub source {
     my $d    = $self->{source};
     $self->{source} = shift if @_;
     $d;
+}
+
+sub distance_in_km {
+
+    # Algorhythm described by By Chris Veness
+    # Found at http://www.movable-type.co.uk/scripts/latlong.html
+
+    my $self  = shift;
+    my %args  = @_;
+    my $lat1  = $args{'lat1'} || 0;
+    my $lng1 = $args{'lng1'} || 0;
+    my $lat2  = $args{'lat2'} || 0;
+    my $lng2 = $args{'lng2'} || 0;
+    my $debug = $args{'debug'} || 0;
+
+    my $earth_radius    = 6371;
+    my $lat_dist  = deg2rad( $lat2 - $lat1 );
+    my $lng_dist = deg2rad( $lng2 - $lng1 );
+
+    # I don't know what a or c stand for so I'm leaving them as $a and $c
+    my $a
+        = sin( $lat_dist / 2 ) * sin( $lat_dist / 2 )
+        + cos( deg2rad($lat1) ) * cos( deg2rad($lat2) ) *
+        sin( $lng_dist / 2 ) *
+        sin( $lng_dist / 2 );
+    my $c = 2 * atan2( sqrt($a), sqrt( 1 -$a ) );
+    return $earth_radius * $c;
+}
+
+sub get_pie_sizes {
+    my $self = shift;
+    my $lats = shift;
+    my $lngs = shift;
+
+    # Get max distance
+    my $max_distance=0;
+    my $min_distance=-1;
+    for (my $i =0; $i<=$#{$lats||[]};$i++){
+        my $lat1 = $lats->[$i];
+        my $lng1 = $lngs->[$i];
+        for (my $j =$i+1; $j<=$#{$lats||[]};$j++){
+            my $lat2 = $lats->[$j];
+            my $lng2 = $lngs->[$j];
+            my $dist = $self->distance_in_km(
+                lat1 => $lat1,
+                lng1 => $lng1,
+                lat2 => $lat2,
+                lng2 => $lng2,
+            );
+            $max_distance = $dist if ($dist > $max_distance);
+            $min_distance = $dist if ($min_distance < 0 || $dist < $min_distance);
+        }
+    }
+    my $max_size = int($min_distance/3);
+    return ( $max_size, $max_size, $max_size);
 }
 
 sub run {
@@ -310,7 +366,7 @@ sub run {
         = map { $type_geolocation{$_}->{'longitude'} } @sorted_pop_keys;
     my @pop_include = map {1} @sorted_pop_keys;
     my @hap_include = map {1} @sorted_hap_names;
-    my @hapgroups   = ();
+    my @hapgroups   = map {'Haplotypes'} @sorted_hap_names;
 
     my @pop_haps;
     foreach my $pop_key (@sorted_pop_keys) {
@@ -320,6 +376,9 @@ sub run {
         }
         push @pop_haps, \@haps;
     }
+
+    my @pie_sizes = $self->get_pie_sizes(\@pop_lat,\@pop_lng);
+
 
     #print STDERR Dumper( \%population_data ) . " \n";
     #print STDERR Dumper( \@sorted_pop_names ) . " \n";
@@ -351,9 +410,13 @@ sub run {
     my $css = $self->source->global_setting('stylesheet');
     my $style_sheet = $self->globals->resolve_path( $css, 'url' );
 
-    #my $phylo_url = 'http://phylogeoviz.org/latest/newviewer.php';
-    #my $phylo_url = 'http://localhost:8081/phylo/printparams.php';
-    my $phylo_url = 'http://localhost:8081/phylo/newviewer.php';
+    my $phylo_url = 'http://phylogeoviz.org/latest/newviewer.php';
+    if ( defined $self->source->{'config'}{'phylogeoviz_url'}){
+        $phylo_url = $self->source->{'config'}{'phylogeoviz_url'};
+    }
+
+    #$phylo_url = 'http://localhost:8081/phylo/printparams.php';
+    #my $phylo_url = 'http://localhost:8081/phylo/newviewer.php';
 
     my @params = (
         [ 'numpops',     $numpops ],
@@ -365,7 +428,8 @@ sub run {
         [ 'pop_haps',    JSON::to_json( \@pop_haps ) ],
         [ 'hapgroups',   JSON::to_json( \@hapgroups ) ],
         [ 'pop_include', JSON::to_json( \@pop_include ) ],
-        [ 'hap_include', JSON::to_json( \@hap_include ) ]
+        [ 'hap_include', JSON::to_json( \@hap_include ) ],
+        [ 'radii_in_km', JSON::to_json( \@pie_sizes ) ],
     );
 
     # must escape the JSON objects
@@ -387,47 +451,8 @@ sub run {
 }
 
 __DATA__
-<html>
-<head>
-<link rel="stylesheet" type="text/css" href="[% style_sheet %]" />
-  <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
-    <title>Google Maps and GBrowse</title>
-    <script type="text/javascript" src="/js/prototype.js"></script>
-    <script type="text/javascript">
-
-    //<![CDATA[
-
-    function load() {
-      if (false && GBrowserIsCompatible()) {
-        //var map = new GMap2(document.getElementById("map"));
-        //map.setCenter(new GLatLng(37.0625, -95.677068), 1);
-        //var point = new GLatLng(37.0625, -95.677068);
-        //markerOptions = { title:"Iowa City", clickable:true };
-        //var marker = new GMarker(point, markerOptions);
-        //map.addOverlay(marker);
-      }
-      //Phylo
-            $("phylodiv").innerHTML      = "Loading...";
-      var requestStr = '[% request_str %]';
-      new Ajax.Request('[% phylo_url %]',{
-         method:     'post',
-          parameters: requestStr,
-         onSuccess: function(transport) {
-            $("phylodiv").innerHTML      = transport.responseText;
-          }
-        });
-
-    }
-
-    //]]>
-    </script>
-
-</head>
-<body onload="load()" onunload="GUnload()">
-    <!-- div id="map" style="width: 300px; height: 300px"></div-->
-    <a href="[% phylo_url %]?[% request_str %]">Local PhyloGeoViz</a><BR>
-      <!--a href="http://localhost:8081/phylo/printparams.php?[% request_str %]">print Params </a><BR-->
-        <a href="http://phylogeoviz.org/latest/newviewer.php?[% request_str %]">Official PhyloGeoViz</a>
-    <div id="phylodiv"></div>
-</body>
-</html>
+<iframe frameborder=1 scrolling=auto height=800 width=800 src="[% phylo_url %]?[% request_str %]">ALT</iframe>
+<BR>
+<a href="[% phylo_url %]?[% request_str %]">Local PhyloGeoViz</a>
+<BR>
+<a href="http://phylogeoviz.org/latest/newviewer.php?[% request_str %]">Official PhyloGeoViz</a>

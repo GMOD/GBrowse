@@ -74,6 +74,17 @@ this.  The feature searching is where I'm conserned about it.
 
 =back
 
+=head2 Example Data
+
+contig1	Ensembl FASTA	scaffold	1	793	.	.	.	Name=contig1
+contig1	POPA	polymorphic_sequence_variant	50	50	8	.	.	ID=snp.POPA.contig1.50.AA;Name=AA;stackpos=1
+contig1	POPA	polymorphic_sequence_variant	50	50	4	.	.	ID=snp.POPA.contig1.50.AG;Name=AG;stackpos=2
+contig1	POPB	polymorphic_sequence_variant	50	50	1	.	.	ID=snp.POPB.contig1.50.AA;Name=AA;stackpos=1
+contig1	POPB	polymorphic_sequence_variant	50	50	4	.	.	ID=snp.POPB.contig1.50.AG;Name=AG;stackpos=2
+contig1	POPB	polymorphic_sequence_variant	50	50	5	.	.	ID=snp.POPB.contig1.50.NN;Name=NN;stackpos=4
+contig1	POPC	polymorphic_sequence_variant	50	50	3	.	.	ID=snp.POPC.contig1.50.AA;Name=AA;stackpos=1
+contig1	POPC	polymorphic_sequence_variant	50	50	2	.	.	ID=snp.POPC.contig1.50.AG;Name=AG;stackpos=2
+
 =head2 TODO
 
 This is currently a work in progress.
@@ -109,7 +120,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Template;
 use JSON;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.4 2009-02-03 04:44:22 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.5 2009-02-03 04:56:52 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';

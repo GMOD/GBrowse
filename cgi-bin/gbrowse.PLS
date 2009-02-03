@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.119 2009-02-03 17:22:27 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.120 2009-02-03 19:41:58 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2216,9 +2216,11 @@ sub get_features {
 
   # if no name is specified but there is a "initial landmark" defined in the
   # config file, then we default to that.
+
   $settings->{name} ||= $CONFIG->setting('initial landmark')
     if defined $CONFIG->setting('initial landmark') && !defined $settings->{q};
 
+  warn "calling lookup_features_from_db";
   my @features = lookup_features_from_db($db,$settings);
 
   # sort of hacky way to force keyword search on wildcards
@@ -2320,7 +2322,7 @@ sub lookup_features_from_db {
 
   my @segments;
 
-  warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}, version = $settings->{version}" if DEBUG;
+  warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}, version = $settings->{version}, feature_id = $settings->{feature_id}" if DEBUG;
 
   my $divisor = $CONFIG->setting(general=>'unit_divider')     || 1;
   my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;

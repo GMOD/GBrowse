@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.11 2009-02-03 19:41:58 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.12 2009-02-04 20:41:49 scottcain Exp $
 
 =head1 NAME
 
@@ -114,7 +114,7 @@ sub new {
     my $self = {};
     my $class_type = shift;
 
-    my ( $name,$factory,$base_start,$stop,$db_id,$target,$feature_id, ) = @_;
+    my ( $name,$factory,$base_start,$stop,$db_id,$target,$feature_id,$srcf_id ) = @_;
 
     bless $self, ref $class_type || $class_type;
     $self->{'factory'} = $factory;
@@ -231,11 +231,12 @@ sub new {
             $base_start = $base_start ? $base_start : $$hashref{fmin} + 1;
             $stop       = $stop       ? $stop       : $$hashref{fmax};
             $db_id      = $$hashref{uniquename};
+            $srcf_id = $$hashref{srcfeature_id};
 
             next if (!defined ($base_start) or !defined($stop) or !defined($db_id));
 
-            warn "calling factory->segment with name:$name, start:$base_start, stop:$stop, db_id:$db_id\n" if DEBUG;
-            push @segments, $factory->segment(-name=>$name,-start=>$base_start,-stop=>$stop,-db_id=>$db_id);
+            warn "calling factory->segment with name:$name, start:$base_start, stop:$stop, db_id:$db_id, srcfeature_id:$srcf_id\n" if DEBUG;
+            push @segments, $factory->segment(-name=>$name,-start=>$base_start,-stop=>$stop,-db_id=>$db_id,-srcfeature_id=>$srcf_id);
 
             warn "segments array in constructor:@segments" if DEBUG;
 
@@ -244,6 +245,7 @@ sub new {
             $stop       ='';
             $db_id      ='';
             $strand     ='';
+            $srcf_id    ='';
         }
 
         $landmark_is_src_query->finish;
@@ -345,7 +347,7 @@ sub new {
             warn $factory,$base_start,$stop,$strand if DEBUG;
 
             #unless ($landmark_feature_id && $base_start && $stop) {
-                $fetch_uniquename_query->execute($feature_id);
+                $fetch_uniquename_query->execute($landmark_feature_id);
                 my $resultref = $fetch_uniquename_query->fetchrow_hashref;
                 warn Dumper($resultref) if DEBUG;
                 $base_start = $$resultref{'fmin'} +1;
@@ -803,7 +805,7 @@ is defined, then -callback is ignored.
 sub features {
   my $self = shift;
 
-  warn "Segment->features() args:@_\n" if DEBUG;
+  warn "Segment->features() args:@_" if DEBUG;
 
   # In some cases (url search : ?name=foo) $self isn't a hash ref ie
   # object but a simple scalar ie string. So we need to get the
@@ -822,7 +824,7 @@ sub features {
 
   my ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop);
   if (ref($self) and $_[0] and $_[0] =~ /^-/) {
-    ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory) =
+    ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,) =
       $self->_rearrange([qw(TYPES 
                             TYPE
                             ATTRIBUTES 

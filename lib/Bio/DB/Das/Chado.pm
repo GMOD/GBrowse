@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.13 2009-02-03 19:41:58 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.14 2009-02-05 19:50:32 scottcain Exp $
 
 =head1 NAME
 
@@ -773,6 +773,8 @@ sub get_feature_by_name {
   my $self = shift;
   my @args = @_;
 
+  warn "in get_feature_by_name, args:@args" if DEBUG;
+
   if ( @args == 1 ) {
       @args = (-name => $args[0]);
   }
@@ -807,6 +809,7 @@ sub _by_alias_by_name {
   my $wildcard = 0;
   if ($name =~ /\*/) {
     $wildcard = 1;
+    undef $class;
   }
 
   warn "name:$name in get_feature_by_name" if DEBUG;
@@ -837,7 +840,7 @@ sub _by_alias_by_name {
            $type = join(',', map($$type{$_}, keys %$type) ); 
       }
       $from_part =  " feature f ";
-      $where_part.= " f.type_id in ( $type ) ";
+      $where_part.= " AND f.type_id in ( $type ) ";
   }
 
   if ($self->organism_id) {
@@ -860,7 +863,7 @@ sub _by_alias_by_name {
     }
 
     $where_part = $where_part ?
-                    "$alias_only_where AND $where_part"
+                    "$alias_only_where $where_part"
                   : $alias_only_where;
 
    }
@@ -881,7 +884,7 @@ sub _by_alias_by_name {
     }
 
     $where_part = $where_part ?
-                    "$alias_only_where AND $where_part"
+                    "$alias_only_where $where_part"
                   : $alias_only_where;
    }
   }
@@ -898,7 +901,7 @@ sub _by_alias_by_name {
     }
 
     $where_part = $where_part ?
-                    "$name_only_where AND $where_part" 
+                    "$name_only_where $where_part" 
                   : $name_only_where;
   }
 
@@ -1009,6 +1012,7 @@ sub _by_alias_by_name {
         $jsth->execute($$hashref{'srcfeature_id'})
                  or die ("getting assembly info failed");
         my $src_name = $jsth->fetchrow_hashref;
+        warn "src_name:$$src_name{'name'}" if DEBUG;
         $parent_segment =
              Bio::DB::Das::Chado::Segment->new($$src_name{'name'},$self);
         $old_srcfeature_id=$$hashref{'srcfeature_id'};
@@ -1518,8 +1522,12 @@ sub attributes {
     my $type_id = $$hashref{'type_id'};
     ## warn("DEBUG: dgg ugly prot. patch; type=$type_id for ftid=$feature_id\n");
     
-    if(  $type_id == $self->name2term('polypeptide') 
-      || $type_id == $self->name2term('protein')
+    if(  $self->name2term('polypeptide') 
+         && $type_id 
+         && $type_id == $self->name2term('polypeptide') 
+      || $self->name2term('protein') 
+         && $type_id 
+         && $type_id == $self->name2term('protein')
       ) {
       $sth = $self->dbh->prepare("select residues from feature where feature_id = ?");
       $sth->execute($feature_id); # or $self->throw("failed to get feature_id in attributes"); 

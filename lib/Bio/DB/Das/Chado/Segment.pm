@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.13 2009-02-05 19:50:32 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.14 2009-02-06 20:55:51 scottcain Exp $
 
 =head1 NAME
 
@@ -980,10 +980,10 @@ sub features {
     my $featureslice;
     if ($factory->srcfeatureslice 
        && $srcfeature_id 
-       && $interbase_start 
-       && $rend){
+       && defined $interbase_start 
+       && defined $rend){
       $featureslice = "featureloc_slice($srcfeature_id,$interbase_start, $rend)";
-    }elsif ($interbase_start && $rend){
+    }elsif (defined $interbase_start && defined $rend){
       $featureslice = "featureslice($interbase_start, $rend)";
     }else {
       $featureslice = "featureloc";

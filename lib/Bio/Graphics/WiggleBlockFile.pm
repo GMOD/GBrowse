@@ -8,7 +8,7 @@ Bio::Graphics::WiggleBlockFile -- Binary storage for dense genomic features
 
  # all positions are 1-based
 
- my $wig = Bio::Graphics::Wiggle->new('./test.wig',
+ my $wig = Bio::Graphics::WiggleBlockFile->new('./test.wig',
                                       $writeable,
                                      { seqid => $seqid,
                                        step  => $step,
@@ -58,7 +58,7 @@ precision!
 
 =over 4
 
-=item $wig = Bio::Graphics::Wiggle->new($filename,$writeable,{options})
+=item $wig = Bio::Graphics::WiggleBlockFile->new($filename,$writeable,{options})
 
 Open/create a wiggle-format data file:
 

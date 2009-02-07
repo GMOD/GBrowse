@@ -138,33 +138,23 @@ sub request_panels {
   if ($args->{deferred}) {
       $SIG{CHLD} = 'IGNORE';
 
-      # need to prepare modperl for the fork
-      Bio::Graphics::Browser::Render->prepare_modperl_for_fork();
-      Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('starting');
-
-      my $child = fork();
-      die "Couldn't fork: $!" unless defined $child;
+      my $child = Bio::Graphics::Browser::Render->fork();
 
       if ($child) {
-	  Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('parent');
 	  return $data_destinations;
       }
-
-      Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
-      Bio::Graphics::Browser::DataBase->clone_databases();
 
       open STDIN, "</dev/null" or die "Couldn't reopen stdin";
       open STDOUT,">/dev/null" or die "Couldn't reopen stdout";
       POSIX::setsid()          or die "Couldn't start new session";
 
       if ( $do_local && $do_remote ) {
-          if ( fork() ) {
+          if ( Bio::Graphics::Browser::Render->fork() ) {
               $self->run_local_requests( $data_destinations, 
 					 $args,
 					 $local_labels );
           }
           else {
-	      Bio::Graphics::Browser::DataBase->clone_databases(); # yes, again!
               $self->run_remote_requests( $data_destinations, 
 					  $args,
 					  $remote_labels );
@@ -566,20 +556,10 @@ sub run_remote_requests {
 
   for my $url (keys %renderers) {
 
-      Bio::Graphics::Browser::Render->prepare_modperl_for_fork();
-      Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('starting');
-
-      my $child   = fork();
-
-      die "Couldn't fork: $!" unless defined $child;
-      if ($child) {
-	  Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('parent');
-	  next;
-      }
+      my $child   = Bio::Graphics::Browser::Render->fork();
+      next if $child;
 
       # THIS PART IS IN THE CHILD
-      Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
-      Bio::Graphics::Browser::DataBase->clone_databases();
       my @labels   = keys %{$renderers{$url}};
       my $s_track  = Storable::nfreeze(\@labels);
 

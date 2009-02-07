@@ -3387,6 +3387,29 @@ sub fcgi_request {
     $FCGI_REQUEST = $request && $request->IsFastCGI ? $request : 0;
 }
 
+sub fork {
+    my $self = shift;
+
+    $self->prepare_modperl_for_fork();
+    $self->prepare_fcgi_for_fork('starting');
+
+    my $child = CORE::fork();
+    print STDERR "forked $child" if DEBUG;
+    die "Couldn't fork: $!" unless defined $child;
+
+    if ($child) { # parent process
+	$self->prepare_fcgi_for_fork('parent');
+    }
+
+    else {
+	Bio::Graphics::Browser::DataBase->clone_databases();
+	Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
+    }
+
+    return $child;
+}
+
+
 sub prepare_modperl_for_fork {
     my $self = shift;
     my $r    = modperl_request() or return;

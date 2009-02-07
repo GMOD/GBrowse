@@ -356,19 +356,12 @@ sub search_features_remotely {
     for my $url (keys %$remote_dbs) {
 
 	my $pipe  = IO::Pipe->new();
-	Bio::Graphics::Browser::Render->prepare_modperl_for_fork();
-	Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('starting');
-	my $child = CORE::fork();
-	print STDERR "forked $child" if DEBUG;
-	die "Couldn't fork: $!" unless defined $child;
+	my $child = Bio::Graphics::Browser::Render->fork();
 	if ($child) { # parent
-	    Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('parent');
 	    $pipe->reader();
 	    $select->add($pipe);
 	}
 	else { # child
-	    Bio::Graphics::Browser::DataBase->clone_databases();
-	    Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
 	    $pipe->writer();
 	    $self->fetch_remote_features($args,$url,$pipe);
 	    {

@@ -118,10 +118,13 @@ sub init_databases {
 	$dbs{$dbid}{remotes}{$remote}++ if $remote;
     }
 
+    my $default_dbid = $self->source->global_setting('database');
+    $default_dbid   .= ":database" unless $default_dbid =~ /:database$/;
+
     # try to spread the work out as much as possible among the remote renderers
     my %remotes;
     for my $dbid (keys %dbs) {
-	if (my @remote = keys %{$dbs{$dbid}{remotes}}) {
+	if ((my @remote = keys %{$dbs{$dbid}{remotes}}) && ($dbid ne $default_dbid)) {
 	    my ($least_used) = sort {($remotes{$a}||0) <=> ($remotes{$b}||0)} @remote;
 	    $self->{remote_dbs}{$least_used}{$dbid}++;
 	    $remotes{$least_used}++;
@@ -133,7 +136,7 @@ sub init_databases {
 		    { source     => $source,
 		      state      => $self->state,
 		      db         => $db,
-		      searchopts => $dbs{$dbid}{options},
+		      searchopts => $dbs{$dbid}{options}
 		    }
 		);
 	}
@@ -240,12 +243,15 @@ sub search_features {
 	$args->{-search_term} = $state->{name}
     }
 
-    my $local  = $self->search_features_locally($args);
-    my $remote = $self->search_features_remotely($args);
+    warn "search_features (",join ' ',%$args,')' if DEBUG;
+
+    local $self->{shortcircuit} = 0;
+    my $local   = $self->search_features_locally($args);  # if default db has a hit, then we short circuit
+    my $remote  = $self->search_features_remotely($args) unless $self->{shortcircuit};
 
     my @found;
-    push @found,@$local  if $local  && @$local;
-    push @found,@$remote if $remote && @$remote;
+    push @found,@$local    if $local    && @$local;
+    push @found,@$remote   if $remote   && @$remote;
 
     # uniqueify features of the same type and name
     my %seenit;
@@ -283,8 +289,20 @@ sub search_features_locally {
 
     my @dbs = keys %{$local_dbs};
 
+    # the default database is treated slightly differently - it is searched
+    # first, and finding a hit in it short-circuits other hits
+    my $default_dbid = $self->source->global_setting('database');
+    $default_dbid   .= ":database" unless $default_dbid =~ /:database$/;
+
+    warn "default_dbid = $default_dbid" if DEBUG;
+
+    my %is_default = map {
+	$_=>($self->source->db2id($_) eq $default_dbid)
+    } @dbs;
+    @dbs           = sort {$is_default{$b} cmp $is_default{$a}} @dbs;
+
     for my $db (@dbs) {
-	warn "searching in $db: ",$self->source->db2id($db) if DEBUG;
+	warn "searching in ",$self->source->db2id($db) if DEBUG;
 	# allow explicit db_id to override cached list of local dbs
 	my $region   = $local_dbs->{$db} || 
 	    Bio::Graphics::Browser::Region->new(
@@ -293,10 +311,16 @@ sub search_features_locally {
 						  db      => $db,
 						  }
 						); 
-	my $features = $region->search_features($args);
+ 	my $features = $region->search_features($args);
 	next unless $features && @$features;
 	$self->add_dbid_to_features($db,$features);
-	push @found,@$features if $features;
+	push @found,@$features;
+
+	if ($is_default{$db}) {
+	    warn "got a hit in the default database, so short-circuiting" if DEBUG;
+	    $self->{shortcircuit}++;
+	    last;
+	}
     }
 
     return \@found;
@@ -347,6 +371,12 @@ sub search_features_remotely {
 	    Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
 	    $pipe->writer();
 	    $self->fetch_remote_features($args,$url,$pipe);
+	    {
+		no warnings;
+		# bug workaround: prevent Session destroy method from
+		# flushing incomplete state!
+		*CGI::Session::DESTROY = sub { }; 
+             }
 	    CORE::exit 0;  # CORE::exit prevents modperl from running cleanup, etc
 	}
     }

@@ -1,5 +1,5 @@
 package Bio::DB::Tagger;
-# $Id: Tagger.pm,v 1.3 2009-01-26 14:46:28 lstein Exp $
+# $Id: Tagger.pm,v 1.4 2009-02-07 03:21:31 lstein Exp $
 
 use strict;
 use warnings;
@@ -168,6 +168,43 @@ END
     my ($count) = $self->dbh->selectrow_array($query,{},@bind)
 	or croak $self->dbh->errstr;
     return $count;
+}
+
+=item @tags = $tagger->get_tag($object,$tag)
+
+Returns all the tags of type $tag.
+
+=cut
+
+sub get_tag {
+    my $self         = shift;
+    my ($object,$tag,$value) = @_;
+    my $query = <<END;
+SELECT distinct tname,tvalue,aname,tmodified
+  FROM tag
+   NATURAL JOIN tagname
+   NATURAL JOIN author
+   NATURAL JOIN object
+  WHERE oname=?
+  AND   tname=?
+END
+;
+    my $name = ref($tag) ? $tag->name : $tag;
+    my @bind = ($object,$name);
+
+    my $sth = $self->dbh->prepare($query)
+	or croak $self->dbh->errstr;
+    $sth->execute(@bind)
+	or croak $self->dbh->errstr;
+    my @result;
+    while (my ($tag,$value,$author,$modified) = $sth->fetchrow_array) {
+	push @result,
+	Bio::DB::Tagger::Tag->new(-name=>$tag,
+				  -value=>$value,
+				  -author=>$author,
+				  -modified=>$modified);
+    }
+    return @result;
 }
 
 =item $tags = $tagger->tags()
@@ -492,6 +529,8 @@ sub _set_tags {
     my $dbh = $self->dbh;
     $dbh->begin_work;
     eval {
+	warn "here I am";
+
 	local $dbh->{RaiseError}=1;
 	# create/get object id
 	my $oid = $self->object_to_id($objectname,1);
@@ -501,6 +540,8 @@ sub _set_tags {
 	    my $tid = $self->tag_to_id($tag->name,1);
 	    my $aid = $self->author_to_id($tag->author,1);
 	    my $value = $tag->value;
+
+	    warn "tag = $tag, value = $value";
 	    
 	    my $sth = $dbh->prepare(
 		"INSERT INTO tag (oid,tid,aid,tvalue) VALUES (?,?,?,?)"

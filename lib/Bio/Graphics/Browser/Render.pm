@@ -131,6 +131,7 @@ sub run {
        query_string() if DEBUG;
 
   $self->set_source();
+  my $state = $self->state;
 
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if DEBUG;
@@ -155,7 +156,6 @@ sub run {
   warn "[$$] session flush" if DEBUG;
 
   $self->session->flush;
-
   warn "[$$] synchronous exit" if DEBUG;
 }
 
@@ -1106,7 +1106,7 @@ sub region {
 sub thin_segment {
     my $self  = shift;
     my $state = $self->state;
-    if (exists $state->{ref}) {
+    if (defined $state->{ref}) {
 	return Bio::Graphics::Feature->new(-seq_id => $state->{ref},
 					   -start  => $state->{start},
 					   -end    => $state->{stop});
@@ -1118,7 +1118,7 @@ sub thin_segment {
 sub thin_whole_segment {
     my $self  = shift;
     my $state = $self->state;
-    if (exists $state->{ref} && exists $state->{seg_min}) {
+    if (defined $state->{ref} && defined $state->{seg_min}) {
 	return Bio::Graphics::Feature->new(-seq_id => $state->{ref},
 					   -start  => $state->{seg_min},
 					   -end    => $state->{seg_max});
@@ -1177,7 +1177,8 @@ sub get_search_object {
 	  state  => $self->state,
 	});
     $search->init_databases(
-	param('dbid') ? [param('dbid')]
+#	param('dbid') ? [param('dbid')]
+	$self->state->{dbid} ? [$self->state->{dbid}]
 	:()
 	);
     return $self->{searchobj} = $search;
@@ -1712,19 +1713,24 @@ sub update_state {
   my $state  = $self->state;
 
   warn "[$$] CGI updated" if DEBUG;
-  if ($self->segment) {
+  if (my $seg = $self->segment) {
       # A reset won't have a segment, so we need to test for that before we use
       # one in whole_segment().
       my $whole_segment = $self->whole_segment;
       $state->{seg_min} = $whole_segment->start;
       $state->{seg_max} = $whole_segment->stop;
 
+      $state->{ref}     ||= $seg->seq_id;
+      $state->{start}   ||= $seg->start;
+      $state->{stop}    ||= $seg->end;
+
       # Automatically open the tracks with found features in them
       $self->auto_open();
   }
 
-  $self->session->unlock;
   $self->session->flush();
+  $self->session->unlock;
+
   warn "[$$] update_state() done" if DEBUG;
 }
 
@@ -2034,6 +2040,8 @@ sub update_coordinates {
 
   elsif (param('name')) {
       undef $state->{ref};  # no longer valid
+      undef $state->{start};
+      undef $state->{stop};
       $state->{name} = param('name');
       $state->{dbid} = param('dbid') if param('dbid'); # get rid of this
   }
@@ -2347,6 +2355,16 @@ sub asynchronous_update_coordinates {
 	    my $delta = $state->{stop} - $whole_segment_stop;
 	    $state->{start} -= $delta;
 	    $state->{stop}  -= $delta;
+	}
+	
+
+	unless (defined $state->{ref}) {
+	    warn "BUG: working around no ref defined bug; tell Lincoln bug is not fixed";
+	    if (my $seg = $self->segment) {
+		$state->{ref}   = $seg->seq_id;
+		$state->{start} = $seg->start;
+		$state->{stop}   = $seg->stop;
+	    }
 	}
 
 	# update our "name" state and the CGI parameter

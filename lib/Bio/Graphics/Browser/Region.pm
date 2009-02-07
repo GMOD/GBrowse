@@ -27,7 +27,7 @@ sub new {
 sub source     { shift->{source} }
 sub state      { shift->{state}  }
 sub db         { shift->{db}     }
-sub searchopts { shift->{searchopts}     }
+sub searchopts { shift->{searchopts}  }
 
 sub feature_count { 
     my $self = shift;
@@ -171,6 +171,8 @@ sub lookup_features {
   my ($name,$start,$stop,$class,$literal_name,$id) = @_;
   my $source = $self->source;
 
+  warn "lookup_features($name)" if DEBUG;
+
   my $refclass = $source->global_setting('reference class') || 'Sequence';
 
   my $db      = $self->db;
@@ -230,7 +232,7 @@ sub lookup_features {
 	      if length $name_to_try > 3 and $name_to_try !~ /\*$/;
 
 	  for my $n (@sloppy_names) {
-	      for my $c (@classes) {
+	      for my $c ('',@classes) {
 		  $features = $self->_feature_get($db,$n,$c,$start_to_try,$stop_to_try);
 		  last SEARCHING if @$features;
 	      }
@@ -253,7 +255,6 @@ sub _feature_get {
   my ($db,$name,$class,$start,$stop) = @_;
 
   my $refclass = $self->source->global_setting('reference class') || 'Sequence';
-  $class     ||= '';
 
   my @argv = (-name  => $name);
   push @argv,(-class => $class) if defined $class;

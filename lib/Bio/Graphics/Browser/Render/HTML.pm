@@ -162,11 +162,16 @@ sub render_search_form_objects {
     my $self     = shift;
     my $settings = $self->state;
 
+    # avoid exposing the internal database ids to the public
+    my $search_value = $settings->{name} =~ /^id:/ && $self->region->features 
+	                ? eval{$self->region->features->[0]->display_name}
+			: $settings->{name};
     return textfield(
         -name    => 'name',
         -id      => 'landmark_search_field',
         -size    => 25,
-        -default => $settings->{name}
+        -default => $search_value,
+	-override=>1,
     ) . submit( -name => $self->tr('Search') );
 }
 

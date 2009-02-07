@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.10 2009-01-26 23:11:21 lstein Exp $
+# $Id: Session.pm,v 1.11 2009-02-07 03:21:32 lstein Exp $
 
 use strict;
 use warnings;
@@ -26,6 +26,7 @@ sub new {
   $self->{session}    = CGI::Session->new($driver,$id,$session_args);
   $self->lock($self->{session}->id) unless $id;  # if we have a newly-created ID, then lock now
   $self->source($default_source) unless defined $self->source;
+  $self->{pid} = $$;
   $self;
 }
 
@@ -48,6 +49,7 @@ sub lock {
 
 sub unlock {
     my $self     = shift;
+    warn "[$$] session unlock" if DEBUG;
     return unless $self->lockfh;
     close $self->lockfh;
     $self->lockfh(undef);
@@ -63,6 +65,8 @@ sub lockfile {
 
 sub flush {
   my $self = shift;
+  return unless $$ == $self->{pid};
+  warn "[$$] session flush" if DEBUG;
   $self->{session}->flush if $self->{session};
 }
 
@@ -116,10 +120,13 @@ sub config_hash {
   return $session->param($source);
 }
 
-sub DESTROY {
-    my $self = shift;
-    $self->flush;
-    $self->unlock;
-}
+# problem with explicit DESTROY is that it gets called in all child
+# processes. Better to have the unlock happen when filehandle is truly
+# destroyed.
+#sub DESTROY {
+#    my $self = shift;
+#    $self->flush;
+#    $self->unlock;
+#}
 
 1;

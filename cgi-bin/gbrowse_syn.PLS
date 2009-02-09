@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.11 2009-01-14 14:57:16 sheldon_mckay Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.12 2009-02-09 09:45:47 sheldon_mckay Exp $
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -207,6 +207,8 @@ exit 0;
 
 
 sub species_chooser {
+  # pointless if < 3 species
+  return '' if keys %$MAP < 3;
   my $src = $CONF->search_src();
   my @species = grep {$_ ne $src} keys %$MAP;
   my $default = $CONF->page_settings->{species} || \@species;
@@ -230,6 +232,8 @@ sub species_chooser {
 }
 
 sub expand_notice {
+  # pointless if < 4 species
+  return '' if keys %$MAP < 4;
   my $state = param('display') || $CONF->page_settings->{display};
   my $ref = $CONF->search_src; 
   my $title = b(wiki_help("Display_Mode",$CONF->tr("Display Mode")), ':');
@@ -255,7 +259,8 @@ sub source_popup {
 		     );
   } 
   else {
-    return $CONF->description($CONF->source).br;
+    return '';
+    #return $CONF->description($CONF->source).br;
   }
 }
 
@@ -410,25 +415,15 @@ sub draw_image {
   #
 
   my (%hit_positions);
-  my $position = 0;
-  my %position; 
-  
-  my $num_species = keys %$MAP;
-  
-  my $pos_by_src = $num_species == 1 || $num_species % 2;
+  my $pidx = 0;
+  my %species = map {$_->src2 => 1} @hits;
+  my %position = map {$_ => ++$pidx} sort keys %species;
   for my $h (sort {($b->end-$b->start)<=>($a->end-$a->start)} @hits) {
     my $src = $h->src2;
-    if ($pos_by_src) {
-      $position{$src} ||= ++$position;
-    }
-    else {
-      $position{$src} = $position++;
-    }
     my $span_key = $hit2span->{$h};
     $span{$span_key}{position} = $position{$src};
     $hit_positions{$h} ||= $span{$span_key}{position};
   }
-
   
   # Create the middle (reference) panel
   my ($upper_ff,$lower_ff,%is_upper);
@@ -623,8 +618,8 @@ sub draw_image {
   my $border  = $gd->colorResolve(Bio::Graphics::Panel->color_name_to_rgb($color));
   $gd->filledRectangle(@rect,$bgcolor);
   $gd->rectangle(@rect,$border);
-  my $title = $MAP->{$src}{desc};
-  $gd->string(GD::gdSmallFont,$rect[0]+5,$rect[1],$MAP->{$src}{desc},$black);
+  my $title = $MAP->{$src}{desc} . ' (reference)';
+  $gd->string(GD::gdSmallFont,$rect[0]+5,$rect[1],$title,$black);
   push @map_items,Area({shape=>'rect',
 			coords=>join(',',@rect),
 			title=>$ref_title});
@@ -1047,7 +1042,7 @@ sub navigation_table {
   $CONF->section_setting(Search => 'open');
 
  		   
-  $table .= toggle( $CONF->tr('Intructions'),
+  $table .= toggle( $CONF->tr('Instructions'),
 			   div({-class=>'searchtitle'},
 			       br.'Select a Region to Browse and a Reference species:',
 			       p($CONF->show_examples())));
@@ -1089,6 +1084,7 @@ sub navigation_table {
 }
 
 sub expand_display {
+  return '' if keys %$MAP < 4;
   my $options = [qw/expanded compact/];
   my $labels  = { expanded => 'ref. species plus 2',
 		  compact  => 'all species in one panel' };
@@ -1152,16 +1148,13 @@ sub source_menu {
   my $show_sources = $CONF->setting('show sources');
   $show_sources    = 1 unless defined $show_sources;   # default to true
   my $sources = $show_sources && @sources > 1;
-  return b(wiki_help('Data Source',$CONF->tr('Data Source')), ': ') . br.
-    ( $sources ?
+  return $sources ? b(wiki_help('Data Source',$CONF->tr('Data Source')), ': ') . br.
       popup_menu(-name   => 'source',
 		 -values => \@sources,
 		 -labels => { map {$_ => $CONF->description($_)} $CONF->sources},
 		 -default => $CONF->setting('search_src'),
 		 -onChange => 'document.mainform.submit()',
-		)
-	: $CONF->description($CONF->source)
-      );
+		 ) : '<br>';
 }
 
 

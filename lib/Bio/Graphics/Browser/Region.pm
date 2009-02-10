@@ -278,6 +278,7 @@ sub _feature_get {
 
   # Deal with multiple hits.  Winnow down to just those that
   # were mentioned in the config file.
+  $class     ||= '';  # to get rid of uninit variable warnings
   my $types = $self->source->_all_types($db);
   my @filtered = grep {
     my $type    = $_->type;

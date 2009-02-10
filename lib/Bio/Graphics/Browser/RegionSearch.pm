@@ -119,6 +119,7 @@ sub init_databases {
     }
 
     my $default_dbid = $self->source->global_setting('database');
+    $default_dbid  ||= '';
     $default_dbid   .= ":database" unless $default_dbid =~ /:database$/;
 
     # try to spread the work out as much as possible among the remote renderers
@@ -292,6 +293,7 @@ sub search_features_locally {
     # the default database is treated slightly differently - it is searched
     # first, and finding a hit in it short-circuits other hits
     my $default_dbid = $self->source->global_setting('database');
+    $default_dbid  ||= '';
     $default_dbid   .= ":database" unless $default_dbid =~ /:database$/;
 
     warn "default_dbid = $default_dbid" if DEBUG;

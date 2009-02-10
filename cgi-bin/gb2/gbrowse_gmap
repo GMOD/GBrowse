@@ -5,7 +5,8 @@
 =head1 GBrowse/GMap Mashup
 
 The purpose of this code is to create a mash up of GBrowse data and Google Maps
-that displays diversity data of a feature in the locations that they were sampled.
+that displays diversity data of a feature in the locations that they were
+sampled.
 
 =head1 Code
 
@@ -31,12 +32,20 @@ following:
 
   gmap_api_key = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-=head2 Balloon Configuration
+=head2 Configuration
 
-To place the mashup in a balloon, simply add something like the following to
-the track configuration.
+To place the mashup in a balloon, simply add a modified version of the
+following to the track configuration.
 
-  balloon click = http://localhost/cgi-bin/gbrowse_gmap/yeast_chr1?ref=$ref;start=$start;end=$end;name=$name;class=$class;db_id=general
+  balloon click = http://localhost/cgi-bin/gbrowse_gmap/yeast_chr1?ref=$ref;start=$start;end=$end;name=$name;class=$class;balloon=1
+
+Similarly, to set the mashup as a feature link add a modified version of the
+following to the track configuration.
+
+  link = http://localhost/cgi-bin/gbrowse_gmap/yeast_chr1?ref=$ref;start=$start;end=$end;name=$name;class=$class;
+
+Note that the only difference between the two URLs was the balloon option.  The
+balloon option needs to be set to 1 if it will be popped up in a balloon.
 
 The "yeast_chr1" portion should be replaced with the coorect data source.
 
@@ -74,27 +83,22 @@ this.  The feature searching is where I'm conserned about it.
 
 =back
 
-=head2 Example Data
+=head3 Example Data
 
-contig1	Ensembl FASTA	scaffold	1	793	.	.	.	Name=contig1
-contig1	POPA	polymorphic_sequence_variant	50	50	8	.	.	ID=snp.POPA.contig1.50.AA;Name=AA;stackpos=1
-contig1	POPA	polymorphic_sequence_variant	50	50	4	.	.	ID=snp.POPA.contig1.50.AG;Name=AG;stackpos=2
-contig1	POPB	polymorphic_sequence_variant	50	50	1	.	.	ID=snp.POPB.contig1.50.AA;Name=AA;stackpos=1
-contig1	POPB	polymorphic_sequence_variant	50	50	4	.	.	ID=snp.POPB.contig1.50.AG;Name=AG;stackpos=2
-contig1	POPB	polymorphic_sequence_variant	50	50	5	.	.	ID=snp.POPB.contig1.50.NN;Name=NN;stackpos=4
-contig1	POPC	polymorphic_sequence_variant	50	50	3	.	.	ID=snp.POPC.contig1.50.AA;Name=AA;stackpos=1
-contig1	POPC	polymorphic_sequence_variant	50	50	2	.	.	ID=snp.POPC.contig1.50.AG;Name=AG;stackpos=2
+  contig1	Contig	scaffold	1	793	.	.	.	Name=contig1
+  contig1	POPA	SNP	50	50	8	.	.	ID=snp.POPA.contig1.50.AA;Name=AA
+  contig1	POPA	SNP	50	50	4	.	.	ID=snp.POPA.contig1.50.AG;Name=AG
+  contig1	POPB	SNP	50	50	1	.	.	ID=snp.POPB.contig1.50.AA;Name=AA
+  contig1	POPB	SNP	50	50	4	.	.	ID=snp.POPB.contig1.50.AG;Name=AG
+  contig1	POPB	SNP	50	50	5	.	.	ID=snp.POPB.contig1.50.NN;Name=NN
+  contig1	POPC	SNP	50	50	3	.	.	ID=snp.POPC.contig1.50.AA;Name=AA
+  contig1	POPC	SNP	50	50	2	.	.	ID=snp.POPC.contig1.50.AG;Name=AG
 
 =head2 TODO
 
 This is currently a work in progress.
 
 =over 4
-
-=item * Pie Size
-
-Need to add some sort of configuration to pass the pie sizes in kilometers
-because it is completely skewed right now.
 
 =item * PhyloGeoViz location
 
@@ -120,7 +124,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Template;
 use JSON;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.5 2009-02-03 04:56:52 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.6 2009-02-10 12:56:29 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
@@ -186,22 +190,24 @@ sub distance_in_km {
     my $self  = shift;
     my %args  = @_;
     my $lat1  = $args{'lat1'} || 0;
-    my $lng1 = $args{'lng1'} || 0;
+    my $lng1  = $args{'lng1'} || 0;
     my $lat2  = $args{'lat2'} || 0;
-    my $lng2 = $args{'lng2'} || 0;
+    my $lng2  = $args{'lng2'} || 0;
     my $debug = $args{'debug'} || 0;
 
-    my $earth_radius    = 6371;
-    my $lat_dist  = deg2rad( $lat2 - $lat1 );
-    my $lng_dist = deg2rad( $lng2 - $lng1 );
+    my $earth_radius = 6371;
+    my $lat_dist     = deg2rad( $lat2 - $lat1 );
+    my $lng_dist     = deg2rad( $lng2 - $lng1 );
 
     # I don't know what a or c stand for so I'm leaving them as $a and $c
     my $a
-        = sin( $lat_dist / 2 ) * sin( $lat_dist / 2 )
-        + cos( deg2rad($lat1) ) * cos( deg2rad($lat2) ) *
-        sin( $lng_dist / 2 ) *
-        sin( $lng_dist / 2 );
-    my $c = 2 * atan2( sqrt($a), sqrt( 1 -$a ) );
+        = sin( $lat_dist / 2 ) 
+        * sin( $lat_dist / 2 )
+        + cos( deg2rad($lat1) ) 
+        * cos( deg2rad($lat2) ) 
+        * sin( $lng_dist / 2 )
+        * sin( $lng_dist / 2 );
+    my $c = 2 * atan2( sqrt($a), sqrt( 1 - $a ) );
     return $earth_radius * $c;
 }
 
@@ -211,12 +217,12 @@ sub get_pie_sizes {
     my $lngs = shift;
 
     # Get max distance
-    my $max_distance=0;
-    my $min_distance=-1;
-    for (my $i =0; $i<=$#{$lats||[]};$i++){
+    my $max_distance = 0;
+    my $min_distance = -1;
+    for ( my $i = 0; $i <= $#{ $lats || [] }; $i++ ) {
         my $lat1 = $lats->[$i];
         my $lng1 = $lngs->[$i];
-        for (my $j =$i+1; $j<=$#{$lats||[]};$j++){
+        for ( my $j = $i + 1; $j <= $#{ $lats || [] }; $j++ ) {
             my $lat2 = $lats->[$j];
             my $lng2 = $lngs->[$j];
             my $dist = $self->distance_in_km(
@@ -225,12 +231,13 @@ sub get_pie_sizes {
                 lat2 => $lat2,
                 lng2 => $lng2,
             );
-            $max_distance = $dist if ($dist > $max_distance);
-            $min_distance = $dist if ($min_distance < 0 || $dist < $min_distance);
+            $max_distance = $dist if ( $dist > $max_distance );
+            $min_distance = $dist
+                if ( $min_distance < 0 || $dist < $min_distance );
         }
     }
-    my $max_size = int($min_distance/3);
-    return ( $max_size, $max_size, $max_size);
+    my $max_size = int( $min_distance / 3 );
+    return ( $max_size, $max_size, $max_size );
 }
 
 sub run {
@@ -243,14 +250,15 @@ sub run {
     $self->source( $conf->create_data_source( $session->source ) );
     $self->state( $session->page_settings );
 
-    my $name  = param('name');
-    my $class = param('class');
-    my $ref   = param('ref');
-    my $start = param('start');
-    my $end   = param('end');
-    my $f_id  = param('feature_id');
-    my $db_id = param('db_id');
-    my $rmt   = param('remote');
+    my $name    = param('name');
+    my $class   = param('class');
+    my $ref     = param('ref');
+    my $start   = param('start');
+    my $end     = param('end');
+    my $f_id    = param('feature_id');
+    my $db_id   = param('db_id');
+    my $rmt     = param('remote');
+    my $balloon = param('balloon');
 
     #print STDERR Dumper(param())." \n";
     #    print STDERR "name : $name\n"   if ( defined $name );
@@ -304,9 +312,9 @@ sub run {
 
     # Now that we know that we have a feature, let's begin
 
-    # Get all the tracks that have latitude and longitude values.  We are going
-    # to take all of the features in this region that have geolocation and
-    # display them.
+   # Get all the tracks that have latitude and longitude values.  We are going
+   # to take all of the features in this region that have geolocation and
+   # display them.
     my %type_geolocation;
     foreach my $type ( keys %{ $self->source->{'config'} || {} } ) {
         if (    defined $self->source->{'config'}{$type}{'latitude'}
@@ -388,8 +396,7 @@ sub run {
         push @pop_haps, \@haps;
     }
 
-    my @pie_sizes = $self->get_pie_sizes(\@pop_lat,\@pop_lng);
-
+    my @pie_sizes = $self->get_pie_sizes( \@pop_lat, \@pop_lng );
 
     #print STDERR Dumper( \%population_data ) . " \n";
     #print STDERR Dumper( \@sorted_pop_names ) . " \n";
@@ -422,8 +429,8 @@ sub run {
     my $style_sheet = $self->globals->resolve_path( $css, 'url' );
 
     my $phylo_url = 'http://phylogeoviz.org/latest/newviewer.php';
-    if ( defined $self->source->{'config'}{'phylogeoviz_url'}){
-        $phylo_url = $self->source->{'config'}{'phylogeoviz_url'};
+    if ( defined $self->source->{'config'}{'general'}{'phylogeoviz_url'} ) {
+        $phylo_url = $self->source->{'config'}{'general'}{'phylogeoviz_url'};
     }
 
     #$phylo_url = 'http://localhost:8081/phylo/printparams.php';
@@ -447,13 +454,28 @@ sub run {
     my $request_str
         = join( '&', map { $_->[0] . "=" . CGI::escape( $_->[1] ) } @params );
 
+    # For some reason, the balloon interprets the escaping.
+    # So we must escape again if it is a balloon.
+    if ($balloon) {
+        $request_str = CGI::escape($request_str);
+    }
+
+    my $iframe_height = '90%';
+    my $iframe_width  = '100%';
+    if ($balloon) {
+        $iframe_height = '800';
+        $iframe_width  = '700';
+    }
+
     my %options = (
-        style_sheet  => $style_sheet,
-        gmap_api_key => $self->source->global_setting('gmap_api_key'),
-        numpops      => $numpops,
-        numhaps      => $numhaps,
-        request_str  => $request_str,
-        phylo_url    => $phylo_url,
+        style_sheet   => $style_sheet,
+        gmap_api_key  => $self->source->global_setting('gmap_api_key'),
+        numpops       => $numpops,
+        numhaps       => $numhaps,
+        request_str   => $request_str,
+        phylo_url     => $phylo_url,
+        iframe_width  => $iframe_width,
+        iframe_height => $iframe_height,
     );
     $template->process( \*DATA, \%options, \$html )
         or die $template->error();
@@ -462,7 +484,7 @@ sub run {
 }
 
 __DATA__
-<iframe frameborder=1 scrolling=auto height=800 width=800 src="[% phylo_url %]?[% request_str %]">ALT</iframe>
+<iframe frameborder=1 scrolling=auto height=[% iframe_height %] width=[% iframe_width %] src="[% phylo_url %]?[% request_str %]">ALT</iframe>
 <BR>
 <a href="[% phylo_url %]?[% request_str %]">Local PhyloGeoViz</a>
 <BR>

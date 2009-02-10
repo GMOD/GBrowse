@@ -121,7 +121,7 @@ sub name_file {
 
   my $state     = $self->state;
   my $config    = $self->config;
-  my $id        = $state->{userid} or return;
+  my $id        = $state->{uploadid} || $state->{userid} or return;
 
   my ($url,$path) = $self->file2path($config,$id,$filename,$strip);
   warn "name_file() returns => ($url,$path)" if DEBUG;

@@ -1697,13 +1697,14 @@ sub share_track {
     my $segment = $label =~  /:region$/   ? '$region'
                  :$label =~  /:overview$/ ? '$overview'
                  :'$segment';
+    my $upload_id = $state->{uploadid} || $state->{userid};
     if ( $label =~ /^(http|ftp):/ ) {    # reexporting and imported track!
         $gbgff = $label;
     }
     else {
         $gbgff = url( -full => 1, -path_info => 1 );
         $gbgff .= "?gbgff=1;q=$segment;t=$labels";
-        $gbgff .= ";id=" . $state->{userid} if $labels =~ /file(:|%3A)/;
+        $gbgff .= ";id=$upload_id" if $labels =~ /file(:|%3A)/;
     }
 
     my $das_types = join( ';',

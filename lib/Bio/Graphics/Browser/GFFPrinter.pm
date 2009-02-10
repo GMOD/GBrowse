@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.9 2009-01-30 22:06:19 lstein Exp $
+# $Id: GFFPrinter.pm,v 1.10 2009-02-10 01:19:27 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -245,6 +245,7 @@ sub labels_to_files {
 
     my $mapper = $search->coordinate_mapper( $segment, 1 );
     for my $filename (@$labels) {
+	$filename =~ s/:(detail|overview|region).*$//;
 	my $path = Bio::Graphics::Browser::UserData->file2path($data_source,$id,$filename);
         my $featurefile = eval {
             Bio::Graphics::FeatureFile->new(
@@ -281,7 +282,7 @@ sub print_configuration {
     for my $l (@labels) {
 
 	# a special config setting - don't want it to leak through
-        next if $l =~ m/^\w+:/ && $l !~ m/:(overview|region}detail)$/;  
+        next if $l =~ m/^\w+:/ && $l !~ m/:(overview|region|details?)$/;  
 	next if $l =~ m/^_scale/;
 
         print "[$l]\n";

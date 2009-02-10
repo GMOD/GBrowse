@@ -1753,6 +1753,7 @@ sub default_state {
   $state->{ks}           = 'between';
   $state->{grid}         = 1;
   $state->{sk}           = $self->setting("default varying") ? "unsorted" : "sorted";
+  $state->{uploadid}     = Bio::Graphics::Browser::Util->generate_id;
 
   # if no name is specified but there is a "initial landmark" defined in the
   # config file, then we default to that.
@@ -3287,7 +3288,7 @@ sub bookmark_link {
   foreach (@keys) {
     $q->param(-name=>$_,   -value=>$settings->{$_});
   }
-  $q->param(-name=>'id',   -value=>$settings->{userid});  # slight inconsistenty here
+  $q->param(-name=>'id',   -value=>$settings->{userid});  # slight inconsistency here
   $q->param(-name=>'label',-value=>$self->join_selected_tracks);
 
   # handle external urls

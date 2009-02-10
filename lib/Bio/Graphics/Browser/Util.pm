@@ -26,6 +26,7 @@ use strict;
 use base 'Exporter';
 use Text::ParseWords qw();
 use Carp 'carp','cluck';
+use Digest::MD5;
 
 our @EXPORT    = qw(modperl_request error citation shellwords url_label);
 our @EXPORT_OK = qw(modperl_request error citation shellwords url_label);
@@ -117,6 +118,18 @@ sub shellwords {
     }
     my @result = Text::ParseWords::shellwords(@args);
     return @result;
+}
+
+=item $id = generate_id
+
+Generate a new md5 hash of a random value for use in various IDs.
+
+=cut
+
+sub generate_id {
+    my $md5 = new Digest::MD5();
+    $md5->add($$ , time() , rand(time) );
+    return $md5->hexdigest();
 }
 
 =back

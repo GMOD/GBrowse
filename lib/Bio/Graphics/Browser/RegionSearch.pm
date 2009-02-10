@@ -86,6 +86,8 @@ sub init_databases {
     my $track_labels = shift;
     my $local_only   = shift;
 
+    my $state        = $self->state;
+
     $self->{local_dbs}  = {};
     $self->{remote_dbs} = {};
 
@@ -111,6 +113,7 @@ sub init_databases {
 	    $remote = $slave_status->select(@remotes);
 	}
 	my ($dbid)         = $source->db_settings($l);
+	next if $state->{dbid} && $state->{dbid} ne $dbid;
 	my $search_options = $source->setting($dbid => 'search options') || '';
 
 	next if $search_options eq 'none';  # ignore this in the search
@@ -319,7 +322,7 @@ sub search_features_locally {
 	push @found,@$features;
 
 	if ($is_default{$db}) {
-	    warn "got a hit in the default database, so short-circuiting" if DEBUG;
+	    warn "hit @found in the default database, so short-circuiting" if DEBUG;
 	    $self->{shortcircuit}++;
 	    last;
 	}

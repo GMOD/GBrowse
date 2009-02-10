@@ -57,7 +57,7 @@ Prints an error message
 
 sub error {
   my @msg = @_;
-  cluck "@_" if DEBUG;
+  warn "@_";# if DEBUG;
   print CGI::h2({-class=>'error'},@msg);
 }
 

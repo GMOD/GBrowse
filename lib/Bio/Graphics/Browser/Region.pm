@@ -184,11 +184,12 @@ sub lookup_features {
   my @classes = $class ? ($class) 
                        : (split /\s+/,$source->global_setting('automatic classes')||'');
 
-  my $features = [];
-
   if (defined $id && $db->can('get_feature_by_id')) { # this overrides everything else
-      return [$db->get_feature_by_id($id)];
+      my $f = $db->get_feature_by_id($id);
+      return $f ? [$f] : [];
   }
+
+  my $features = [];
 
  SEARCHING:
   {

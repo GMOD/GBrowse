@@ -4,10 +4,10 @@ package Bio::Graphics::Browser::UploadSet;
 use strict;
 use base 'Bio::Graphics::Browser::UserData';
 
-use Bio::Graphics::Browser::Util 'shellwords';
+use Bio::Graphics::Browser::Util 'shellwords','error';
 use CGI 'cookie','param';
 use Digest::MD5 'md5_hex';
-use Carp qw/carp croak/;
+use Carp qw/carp croak cluck/;
 use constant DEBUG=>0;
 
 sub new {
@@ -30,7 +30,7 @@ sub add_files_from_state {
     my $self  = shift;
     my $state = $self->state;
 
-    my @urls  = grep {/^file:/} @{$state->{tracks}};
+    my @urls  = grep {/^file:/ && $state->{features}{$_}} @{$state->{tracks}};
     warn "add_files_from_state(@urls)" if DEBUG;
     foreach (@urls) {
 	warn "adding $_" if DEBUG;
@@ -107,7 +107,7 @@ sub open_file {
   warn "path = $path" if DEBUG;
 
   unless (open (F,"${mode}${path}")) {
-    carp "Can't open the file named $url.  Perhaps it has been purged? (error: $!)";
+    carp "Can't open the file named $url. It may be bad or purged (error: $!)";
     $self->clear_file($url);
     return;
   }
@@ -152,13 +152,29 @@ sub feature_file {
   my $fh   = $self->open_file($url) or return;
   my $safe = $self->config->setting('allow remote callbacks') || 0;
   warn "creating $url feature_file" if DEBUG;
-  my $feature_file = Bio::Graphics::FeatureFile->new(-file             => $fh,
-						     -smart_features   => 1,
-						     -allow_whitespace => 1,
-						     -safe_world       => $safe,
-						     @args,
-						    );
+  my $feature_file = eval {
+      Bio::Graphics::FeatureFile->new(-file             => $fh,
+				      -smart_features   => 1,
+				      -allow_whitespace => 1,
+				      -safe_world       => $safe,
+				      @args,
+	  );
+  };
   close $fh;
+
+  # BUG: breaking encapsulation here
+  unless ($feature_file) {
+      warn "clear file 0";
+      $self->clear_file($url);
+      warn "clear file 1";
+      error("An error occurred while processing the uploaded file $url");
+      print CGI::start_form,
+            CGI::submit('OK'),
+            CGI::end_form;
+      print "<pre>$@</pre>";
+      return;
+  }
+
   $feature_file->name($url);
   $feature_file;
 }
@@ -175,14 +191,15 @@ sub annotate {
 
   for my $url ($self->files) {
     next unless $state->{features}{$url}{visible};
-    my $has_overview_sections = $self->probe_for_overview_sections($self->open_file($url));
+    my $fh = $self->open_file($url) or next;
+    my $has_overview_sections = $self->probe_for_overview_sections($fh);
     next if $possibly_too_big && !$has_overview_sections;
     my $feature_file = $self->feature_file($url,
 					   ($has_overview_sections
 					    ? $slow_mapper
 					    : $fast_mapper)
-					  )
-      or next;
+	)
+	or next;
     $feature_file->name($url);
     $feature_files->{$url} = $feature_file;
   }

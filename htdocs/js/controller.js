@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.82 2009-01-27 00:37:23 lstein Exp $
+ $Id: controller.js,v 1.83 2009-02-12 16:42:30 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -805,6 +805,26 @@ var GBrowseController = Class.create({
           });
         }
     });
+  },
+
+  // Utility methods *********************************
+  show_error:
+  function (message) {
+      var outerdiv = $('errordiv');
+      var innerdiv = $('errormsg');
+      if (innerdiv != null)
+	  innerdiv.innerHTML = message;
+      if (outerdiv != null)
+	  new Effect.BlindDown(outerdiv);
+      return false;
+  },
+
+  hide_error:
+  function () {
+      var outerdiv = $('errordiv');
+      if (outerdiv != null)
+	  new Effect.BlindUp(outerdiv);
+      return false;
   }
 
 });

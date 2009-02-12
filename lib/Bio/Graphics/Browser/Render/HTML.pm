@@ -33,12 +33,31 @@ sub render_html_start {
 sub render_top {
     my $self = shift;
     my ($title,$features) = @_;
-    my $html =  $self->render_user_header;
+    my $err  =  $self->render_error_div;
+    my $html = '';
+    $html   .=  $self->render_user_header;
     $html   .=  $self->render_title($title,$self->state->{name} && @$features == 0);
     $html   .=  $self->html_frag('html1',$self->state);
     $html   .=  $self->render_instructions;
-    return  $self->toggle({nodiv=>1},'banner','',$html)
+    return  $err
+	  . $self->toggle({nodiv=>1},'banner','',$html)
 	  . $self->render_links;
+}
+
+sub render_error_div {
+    my $self   = shift;
+    my $button = button({-onClick=>'Controller.hide_error()',
+			 -name=>'Ok'});
+    return div({-class=>'errorpanel',
+		-style=>'display:none',
+		-id=>'errordiv'},
+	       table(
+		   TR(
+		       td(span({-id=>'errormsg'},'no error')),
+		       td({-align=>'right'},$button)
+		   )
+	       )
+	);
 }
 
 sub render_user_header {
@@ -423,10 +442,15 @@ sub render_links {
   my $image_link   = a({-href=>'?make_image=GD',-target=>'_blank'},   '['.$self->tr('IMAGE_LINK').']');
   my $rand         = substr(md5_hex(rand),0,5);
 
+  my $debug_link   = a({-href    => '#',
+			-onClick => 'Controller.show_error("this is a test of an error message")'},
+		       'Make an Error');
+
 
   my @standard_links        = (
       $help_link,
-      $reset_link
+      $reset_link,
+      $debug_link,
       );
 
   my @segment_showing_links =(

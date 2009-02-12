@@ -92,6 +92,10 @@ TH.linkmenu       {
 .technicalinfo    { background-color: #FFFFFF; }
 .toggle           { color: #3366FF; }
 .error            { color: red; }
+.errorpanel       { background-color: lightyellow;    
+		    margin:  -8px -8px  0px -8px;
+		    padding:  8px  8px  0px  8px;
+		  }
 .note             { color: red; }
 .pre              { font-family: monospace; }
 .popup            { COLOR: #9F141A;

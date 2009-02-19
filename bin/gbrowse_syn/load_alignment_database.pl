@@ -16,8 +16,8 @@ use Bio::DB::GFF::Util::Binning 'bin';
 use constant MINBIN=>1000;
 
 # Edit these constants as required
-use constant USERNAME => 'root';
-use constant PASSWORD => 'passwd';
+use constant USERNAME => 'gbAdmin';
+use constant PASSWORD => 'admin8pmb';
 
 
 my $dsn = shift or die <<END;

@@ -1,20 +1,21 @@
 #!/usr/bin/perl -w
 
 # A script to prepare alignments for loading into a GBrowse_syn database and 
-# map actual sequence coordinates from a MAVID or PECAN alignment
+# map actual sequence coordinates from a clustal alignment
 # so that indels are taken into account.
 
-# Please NOTE: This script is specific to the alignments provided by Mercator output
+# Please NOTE: This script is specific to the alignments provided for WormBase
+# species.  It will need to be modified to suit other alignments.
 
 use strict;
 use Bio::AlignIO;
 use List::Util qw/min max/;
 use Getopt::Long;
 
-# The name parsing is for mercator so it assumes using Mercator and either PECAN or MAVID for the 
-# WGA.
+# The name parsing is for mercator.
+
 # The format used in this example is 'fasta' adjust if necessary
-use constant OFFSET => 4; # this is the offset of how many cols are in the map file per taxon
+use constant OFFSET => 4;
 my $aln_name = 'output.mfa';
 my $format = 'fasta';
 my $mapfile = 'map';
@@ -22,6 +23,7 @@ my $genomefile = 'genomes';
 my $debug = 0;
 my $dir;
 GetOptions(
+	   'a|aln|i|input:s' => \$aln_name,
 	   'v|verbose!' => \$debug,
 	   'f|format:s' => \$format,
 	   'd|dir:s'    => \$dir,

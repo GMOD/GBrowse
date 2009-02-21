@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.12 2009-02-09 09:45:47 sheldon_mckay Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.13 2009-02-21 01:11:51 stajich Exp $
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -108,7 +108,7 @@ use constant SETTINGS =>
       species    => undef
       );
 
-use vars qw/$CONF_DIR $SCONF $CONF $VERSION $MAP $SYNTENY_IO @hits/;
+use vars qw($CONF_DIR $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSION $SYNTENY_IO @hits);
 
 # initialization
 $CONF_DIR   = conf_dir($CONF_DIR);
@@ -124,11 +124,11 @@ $SCONF      = open_config($CONF_DIR,$extension);
 $SYNTENY_IO = Bio::DB::GFF::SyntenyIO->new($CONF->setting('join'));
 
 my ($source, $old_source) = $CONF->source;
-$MAP = db_map();
 my ($page_settings,$session) = page_settings();
 $CONF->page_settings($page_settings);
-
 $CONF->search_src($page_settings->{search_src});
+$CONF->source($page_settings->{source});
+$MAP = db_map();
 
 my $segment = landmark2segment($page_settings);
 
@@ -247,23 +247,6 @@ sub expand_notice {
   }
 }
 
-sub source_popup {
-  my @sources = $CONF->sources;
-  if (@sources > 1) {
-    return popup_menu(-name=>'source',
-		      -values=>\@sources,
-		      -labels => { map {$_ => $CONF->description($_)} $CONF->sources},
-		      -default => $CONF->source,
-		      -override=>1,
-		      -onChange => 'document.mainform.submit()'
-		     );
-  } 
-  else {
-    return '';
-    #return $CONF->description($CONF->source).br;
-  }
-}
-
 sub landmark_search {
   my $segment = shift;
   my $default = format_segment($segment) if $segment;
@@ -316,7 +299,6 @@ sub _type_from_box {
 sub draw_image {
   my ($page_settings,$hits,@species) = @_;
   my ($toggle_section,@hits);
-
   for my $species (@species) {
     push @hits, grep {$_->src2 eq $species} @$hits;
   }
@@ -1148,12 +1130,13 @@ sub source_menu {
   my $show_sources = $CONF->setting('show sources');
   $show_sources    = 1 unless defined $show_sources;   # default to true
   my $sources = $show_sources && @sources > 1;
+  my $source = $CONF->get_source;
   return $sources ? b(wiki_help('Data Source',$CONF->tr('Data Source')), ': ') . br.
-      popup_menu(-name   => 'source',
+      popup_menu(-onchange => 'document.mainform.submit()',
+		 -name   => 'source',
 		 -values => \@sources,
 		 -labels => { map {$_ => $CONF->description($_)} $CONF->sources},
-		 -default => $CONF->setting('search_src'),
-		 -onChange => 'document.mainform.submit()',
+		 -default => $source,		 
 		 ) : '<br>';
 }
 

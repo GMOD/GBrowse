@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Synteny;
 
-# $Id: Synteny.pm,v 1.1.2.3 2008-09-15 14:51:23 lstein Exp $
+# $Id: Synteny.pm,v 1.1.2.4 2009-02-21 00:59:31 stajich Exp $
 
 use strict;
 
@@ -53,7 +53,7 @@ sub get_source {
   $new_source =~ s!/+$!!;
   # gbrowse_syn expects a list
   if ( wantarray ) {
-    my $old_source = cookie('sbrowse_source')
+    my $old_source = cookie('source')
 	unless $new_source && param('.cgifields');
     $source = $new_source || $old_source;
     $source ||= $self->source;
@@ -90,7 +90,7 @@ sub show_examples {
   while (@examples) {
     my $species = shift @examples;
     my $name    = shift @examples;
-    push @urls, a({-href=>"?src=$src;search_src=$species;name=$name"},"$species $name");
+    push @urls, a({-href=>"?search_src=$species;name=$name"},"$species $name");
   }
  
  return b( $self->tr('Examples') ) . ': ' . join( ', ', @urls ) . ". ";

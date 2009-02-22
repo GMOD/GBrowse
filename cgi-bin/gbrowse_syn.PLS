@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.14 2009-02-21 01:13:32 stajich Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.15 2009-02-22 02:01:57 stajich Exp $
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -120,14 +120,14 @@ $CONF->read_configuration($CONF_DIR,'synconf');
 my $extension = $CONF->setting('config_extension') || EXTENSION;
 $SCONF      = open_config($CONF_DIR,$extension);
 
-$SYNTENY_IO = Bio::DB::GFF::SyntenyIO->new($CONF->setting('join'));
-
 my ($source, $old_source) = $CONF->source;
 my ($page_settings,$session) = page_settings();
 $CONF->page_settings($page_settings);
 $CONF->search_src($page_settings->{search_src});
 $CONF->source($page_settings->{source});
 $MAP = db_map();
+
+$SYNTENY_IO = Bio::DB::GFF::SyntenyIO->new($CONF->setting('join'));
 
 my $segment = landmark2segment($page_settings);
 
@@ -181,7 +181,7 @@ print overview_panel($CONF->whole_segment($segment),$segment) if $segment;
 if ($segment) {
   # make sure no hits go off-screen
   remap_coordinates($_) for @hits;
-
+  
   my %species = map {$_->src2 => 1} @hits;  
   my @species = sort keys %species;
 
@@ -193,8 +193,8 @@ if ($segment) {
   }
   else {
     draw_image($page_settings,\@hits,@species);
-  }
-}
+  } 
+} 
 
 options_table();
 print end_form();
@@ -301,7 +301,7 @@ sub draw_image {
   for my $species (@species) {
     push @hits, grep {$_->src2 eq $species} @$hits;
   }
-
+  
   my $src     = $CONF->page_settings("search_src");
   my $segment = $CONF->current_segment or return;
   my $max_segment = $CONF->setting('max_segment') || MAX_SEGMENT;

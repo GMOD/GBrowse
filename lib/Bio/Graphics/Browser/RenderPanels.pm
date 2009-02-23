@@ -356,9 +356,15 @@ sub wrap_rendered_track {
 #    $img_style .= ";filter:alpha(opacity=100);moz-opacity:1";
 
     # commented out alt because it interferes with balloon tooltips is IE
+    my $map_id = "${label}_map";
+
+    # Work around bug in google chrome which is manifested by the <area> link information
+    # on all EVEN reloads of the element by ajax calls. Weird.
+    $map_id   .= "_".int(rand(1000)) if CGI->user_agent =~ /chrome/i;  
+
     my $img = img(
         {   -src    => $url,
-            -usemap => "#${label}_map",
+            -usemap => "#${map_id}",
             -width  => $width,
             -id     => "${label}_image",
             -height => $height,
@@ -455,7 +461,7 @@ sub wrap_rendered_track {
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
     $show_titlebar &&= $label !~ /scale/i;
 
-    my $map_html = $self->map_html($map);
+    my $map_html = $self->map_html($map,$map_id);
 
     # the padding is a little bit of empty track that is displayed only
     # when the track is collapsed. Otherwise the track labels get moved
@@ -474,9 +480,9 @@ sub wrap_rendered_track {
         }
     );
 
-
-    return div({-class=>'centered_block',-style=>"width:${width}px"},
-        ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
+    return div({-class=>'centered_block',
+		-style=>"width:${width}px"},
+	       ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
         . ( $map_html || '' );
 
 }
@@ -898,8 +904,13 @@ sub make_map {
 	$mousedown = $balloonclick =~ /^(http|ftp):/
 	    ? "$balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
 	      "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
-	    : "$balloon_ct.showTooltip(event,'$balloonclick',$stick)";
-	undef $href;
+	      : "$balloon_ct.showTooltip(event,'$balloonclick',$stick)";
+	undef $target;
+	# workarounds to accomodate observation that some browsers don't respect cursor:pointer styles in
+	# <area> tags unless there is an href defined
+	$href =   CGI->user_agent =~ /msie/i    ? undef
+                : CGI->user_agent =~ /firefox/i ? undef
+                : 'javascript:void(0)';
       }
     }
     my %attributes = (
@@ -908,7 +919,7 @@ sub make_map {
 		      target      => $target,
 		      onmouseover => $mouseover,
 		      onmousedown => $mousedown,
-		      style       => $style
+		      style       => $style,
 		      );
 
     my $ftype = $box->[0]->primary_tag || 'feature';
@@ -1577,12 +1588,14 @@ sub get_cache_base {
 sub map_html {
   my $self = shift;
   my $map  = shift;
+  my $id   = shift;
 
   my @data = @$map;
 
   my $name = shift @data or return '';
+  $id    ||= "${name}_map";
 
-  my $html  = qq(\n<map name="${name}_map" id="${name}_map">\n);
+  my $html  = qq(\n<map name="$id" id="$id">\n);
   for (@data) {
     my (undef,$x1,$y1,$x2,$y2,%atts) = split "\t";
     $x1 or next;

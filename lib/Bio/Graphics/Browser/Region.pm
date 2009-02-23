@@ -266,11 +266,14 @@ sub _feature_get {
   @features  = grep {$_->length} $db->get_feature_by_name(@argv)   
       if !defined($start) && !defined($stop);
 
+
   @features  = grep {$_->length} $db->get_features_by_alias(@argv) 
       if !@features
       && !defined($start) 
       && !defined($stop) 
       && $db->can('get_features_by_alias');
+
+#  warn "get_feature_by_alias(@argv) => @features";
 
   @features  = grep {$_->length} $db->segment(@argv)               
       if !@features && $name !~ /[*?]/;

@@ -1842,6 +1842,10 @@ sub toggle_section {
 
   my $visible = $config{on};
 
+  # IE hack
+  my $ie      = CGI->user_agent =~ /MSIE/;
+  $config{tight} = undef if $ie;
+
   my $buttons = $self->globals->button_url;
   my $plus  = "$buttons/plus.png";
   my $minus = "$buttons/minus.png";

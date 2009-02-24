@@ -360,7 +360,8 @@ sub wrap_rendered_track {
 
     # Work around bug in google chrome which is manifested by the <area> link information
     # on all EVEN reloads of the element by ajax calls. Weird.
-    $map_id   .= "_".int(rand(1000)) if CGI->user_agent =~ /chrome/i;  
+    my $agent  = CGI->user_agent || '';
+    $map_id   .= "_".int(rand(1000)) if $agent =~ /chrome/i;  
 
     my $img = img(
         {   -src    => $url,

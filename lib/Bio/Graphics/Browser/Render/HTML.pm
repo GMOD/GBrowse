@@ -1843,7 +1843,8 @@ sub toggle_section {
   my $visible = $config{on};
 
   # IE hack
-  my $ie      = CGI->user_agent =~ /MSIE/;
+  my $agent      = CGI->user_agent || '';
+  my $ie         = $agent =~ /MSIE/;
   $config{tight} = undef if $ie;
 
   my $buttons = $self->globals->button_url;

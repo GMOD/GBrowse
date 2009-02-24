@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbrowse_img,v 1.7 2009-02-24 04:32:38 lstein Exp $
+# $Id: gbrowse_img,v 1.8 2009-02-24 04:42:17 lstein Exp $
 
 use strict;
 
@@ -182,16 +182,19 @@ sub render_image {
 						  );
     
     warn "returned labels = ",join ',',%$result if DEBUG;
-    my $data = $self->consolidate_images(@{$result}{grep {$result->{$_}} @labels});
+    my $data  = $self->consolidate_images(@{$result}{grep {$result->{$_}} @labels});
+
+    my $seg = $render->segment;
+    my $fname = $seg->seq_id.':'.$seg->start.'..'.$seg->end;
+
     if ($format eq 'GD') {
-	print $self->header('image/png');	
+	print $self->header(-type=>'image/png',
+			    -content_disposition => "filename=$fname.png");	
 	print $data
     } 
     elsif ($format eq 'GD::SVG' && $convert_to_pdf) {
-	my $seg = $render->segment;
 	print $self->header(-type=>'application/pdf',
-			    -content_disposition => 'filename='.$seg->seq_id.':'.$seg->start.'..'.$seg->end.".pdf"
-	    );
+			    -content_disposition => "filename=$fname.pdf");
 
 	my ($infh,$in)   = tempfile(UNLINK=>0,SUFFIX=>'.svg');
 	my ($outfh,$out) = tempfile(UNLINK=>0,SUFFIX=>'.pdf');
@@ -206,7 +209,8 @@ sub render_image {
 	unlink $in,$out;
     }
     elsif ($format eq 'GD::SVG') {
-	print $self->header('image/svg+xml');
+	print $self->header(-type => 'image/svg+xml',
+			    -content_disposition => "filename=$fname.svg");
 	print $data
     } 
     else { 

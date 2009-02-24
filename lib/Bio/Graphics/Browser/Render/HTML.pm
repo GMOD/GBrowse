@@ -442,7 +442,7 @@ sub render_links {
   my $image_link   = a({-href=>'?make_image=GD',-target=>'_blank'},   '['.$self->tr('IMAGE_LINK').']');
   my $rand         = substr(md5_hex(rand),0,5);
 
-  my $debug_link   = a({-href    => '#',
+  my $debug_link   = a({-href    => 'javascript:void(0)',
 			-onClick => 'Controller.show_error("this is a test of an error message")'},
 		       'Make an Error');
 

@@ -1210,12 +1210,17 @@ sub add_features_to_track {
 	}
 
 	# Handle generic grouping (needed for GFF3 database)
- 	$group_field{$l} = $source->code_setting($l => 'group_on') unless exists $group_field{$l};
+ 	$group_field{$l} = $source->code_setting($l => 'group_on') 
+	    unless exists $group_field{$l};
 	
 	if (my $pattern = $group_pattern{$l}) {
 	  my $name = $feature->name or next;
 	  (my $base = $name) =~ s/$pattern//i;
-	  $groups{$l}{$base} ||= Bio::Graphics::Feature->new(-type   => 'group');
+	  $groups{$l}{$base} 
+	    ||= Bio::Graphics::Feature->new(-type   => 'group',
+					    -name   => $feature->display_name,
+					    -strand => $feature->strand,
+	      );
 	  $groups{$l}{$base}->add_segment($feature);
 	  next;
 	}
@@ -1223,7 +1228,8 @@ sub add_features_to_track {
 	if (my $field = $group_field{$l}) {
 	  my $base = eval{$feature->$field};
 	  if (defined $base) {
-	    $groups{$l}{$base} ||= Bio::Graphics::Feature->new(-start  => $feature->start,
+	    $groups{$l}{$base} ||= Bio::Graphics::Feature->new(-name   => $feature->display_name,
+							       -start  => $feature->start,
 							       -end    => $feature->end,
 							       -strand => $feature->strand,
 							       -type   => $feature->primary_tag);

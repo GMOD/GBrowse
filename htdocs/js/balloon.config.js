@@ -63,7 +63,7 @@ BalloonConfig = function(balloon, set) {
       balloon.padding     = 5;
       balloon.shadow      = 0;
       balloon.stem        = false;
-      balloon.opacity     = 90;
+      balloon.opacity     = 100;
       break;
 
     // A simple balloon (current favorite)    
@@ -72,7 +72,7 @@ BalloonConfig = function(balloon, set) {
       balloon.shadow      = 0;  
       balloon.stemHeight  = 15;
       balloon.stemOverlap = 1;
-      balloon.opacity     = 85;
+      balloon.opacity     = 100;
       break;
 
     // The original cartoon bubble
@@ -84,7 +84,7 @@ BalloonConfig = function(balloon, set) {
       balloon.stemOverlap = 3;                
       balloon.vOffset     = 1; 
       balloon.hOffset     = 1; 
-      balloon.opacity     = 85;
+      balloon.opacity     = 100;
       balloon.trackCursor = false;
       break;
 
@@ -97,7 +97,7 @@ BalloonConfig = function(balloon, set) {
       balloon.stemOverlap = 3;
       balloon.vOffset     = 1;
       balloon.hOffset     = 1;
-      balloon.opacity     = 85;
+      balloon.opacity     = 100;
       balloon.allowFade   = true;
       balloon.trackCursor = false;
       break;

@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.83 2009-02-12 16:42:30 lstein Exp $
+ $Id: controller.js,v 1.84 2009-02-24 03:41:12 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -814,8 +814,9 @@ var GBrowseController = Class.create({
       var innerdiv = $('errormsg');
       if (innerdiv != null)
 	  innerdiv.innerHTML = message;
-      if (outerdiv != null)
-	  new Effect.BlindDown(outerdiv);
+      if (outerdiv != null) {
+	 new Effect.BlindDown(outerdiv);
+      }
       return false;
   },
 

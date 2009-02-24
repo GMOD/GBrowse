@@ -114,8 +114,7 @@ TH.linkmenu       {
 .toggle           { color: #E0E0E0; }
 .error            { color: red; }
 .errorpanel       { background-color: lightyellow;    
-		    margin:  -8px -8px  0px -8px;
-		    padding:  8px  8px  0px  8px;
+		    margin:   -8px 0px  0px  -8px;
 		  }
 .note             { color: red; }
 .pre              { font-family: monospace; }

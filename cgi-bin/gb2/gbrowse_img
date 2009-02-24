@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbrowse_img,v 1.6 2009-01-20 17:57:19 lstein Exp $
+# $Id: gbrowse_img,v 1.7 2009-02-24 04:32:38 lstein Exp $
 
 use strict;
 
@@ -270,8 +270,8 @@ sub _consolidate_svg {
 	    if (m!</svg>!) {
 		last;
 	    }
-	    elsif (/<svg height="(\d+)"/) {
-		$current_height = $1;
+	    elsif (/<svg height="([\d.]+)"/) {
+		$current_height = int($1+0.5);
 		$svg .= qq(<g transform="translate(0,$offset)">\n);
 	    }
 	    elsif ($current_height) {

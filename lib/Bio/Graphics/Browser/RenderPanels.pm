@@ -521,7 +521,7 @@ sub run_remote_requests {
   my $source     = $self->source;
   my $settings   = $self->settings;
   my $lang       = $self->language;
-  my %env        = map {$_=>$ENV{$_}}    grep /^GBROWSE/,keys %ENV;
+  my %env        = map {$_=>$ENV{$_}}    grep /^(GBROWSE|HTTP)/,keys %ENV;
   my %args       = map {$_=>$args->{$_}} grep /^-/,keys %$args;
 
   $args{$_}  = $args->{$_} foreach ('section','image_class','cache_extra');
@@ -908,9 +908,10 @@ sub make_map {
 	undef $target;
 	# workarounds to accomodate observation that some browsers don't respect cursor:pointer styles in
 	# <area> tags unless there is an href defined
-	$href =   CGI->user_agent =~ /msie/i    ? undef
-                : CGI->user_agent =~ /firefox/i ? undef
-                : 'javascript:void(0)';
+	my $agent =  CGI->user_agent || '';
+	$href     =  $agent =~ /msie/i    ? undef
+                     : $agent =~ /firefox/i ? undef
+                     : 'javascript:void(0)';
       }
     }
     my %attributes = (

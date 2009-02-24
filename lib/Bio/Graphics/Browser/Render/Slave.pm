@@ -367,7 +367,7 @@ sub setup_environment {
 
     my $env     = thaw($env_str);
     for my $key (keys %$env) {
-	next unless $key =~ /^GBROWSE/;
+	next unless $key =~ /^(GBROWSE|HTTP)/;
 	$ENV{$key}       = $env->{$key};
     }
 }

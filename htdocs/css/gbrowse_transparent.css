@@ -80,6 +80,7 @@ TH.linkmenu       {
 		    background-color: rgba(224,224,224,0.4);
 		    margin-left:   1em;
 		    margin-right:  1em;
+		    margin-bottom: 3px;
 	            font-size: small;
 }
 .settingstitle    { background-color: rgb(224,224,224);
@@ -114,7 +115,7 @@ TH.linkmenu       {
 .toggle           { color: #E0E0E0; }
 .error            { color: red; }
 .errorpanel       { background-color: lightyellow;    
-		    margin:   -8px 0px  0px  -8px;
+		    margin:   -8px 8px  8px  -8px;
 		  }
 .note             { color: red; }
 .pre              { font-family: monospace; }

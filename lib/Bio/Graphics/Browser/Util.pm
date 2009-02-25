@@ -56,9 +56,15 @@ Prints an error message
 =cut
 
 sub error {
-  my @msg = @_;
+  my ($msg,$details) = @_;
   warn "@_";# if DEBUG;
-  print CGI::h2({-class=>'error'},@msg);
+  $msg     =~ s/'/\\'/g;
+  $details =~ s/'/\\'/g;
+  $msg     =~ s/\n/<br>/g;
+  $details =~ s/\n/<br>/g;
+  print CGI::script({-type=>'text/javascript'},
+	       qq[Controller.show_error('$msg','$details')]);
+#  print CGI::h2({-class=>'error'},@msg);
 }
 
 

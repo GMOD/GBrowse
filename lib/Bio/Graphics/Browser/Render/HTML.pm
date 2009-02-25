@@ -55,7 +55,12 @@ sub render_error_div {
 		   TR(
 		       td(span({-id=>'errormsg'},'no error')),
 		       td({-align=>'right'},$button)
-		   )
+		   ),
+	       ),
+	       div({-class=>'errorpanel',
+		    -style=>'display:none;margin: 6px 6px 6px 6px',
+		    -id   =>'errordetails'},
+		   'no details'
 	       )
 	);
 }
@@ -443,7 +448,7 @@ sub render_links {
   my $rand         = substr(md5_hex(rand),0,5);
 
   my $debug_link   = a({-href    => 'javascript:void(0)',
-			-onClick => 'Controller.show_error("this is a test of an error message")'},
+			-onClick => 'Controller.show_error("This is a test of an error message.","A stitch in time saves nine.")'},
 		       'Make an Error');
 
 

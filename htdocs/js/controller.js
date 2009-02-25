@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.84 2009-02-24 03:41:12 lstein Exp $
+ $Id: controller.js,v 1.85 2009-02-25 18:11:12 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -809,24 +809,48 @@ var GBrowseController = Class.create({
 
   // Utility methods *********************************
   show_error:
-  function (message) {
-      var outerdiv = $('errordiv');
-      var innerdiv = $('errormsg');
-      if (innerdiv != null)
-	  innerdiv.innerHTML = message;
+  function (message,details) {
+      var outerdiv    = $('errordiv');
+      var innerdiv    = $('errormsg');
+      var detailsdiv  = $('errordetails');
+      if (innerdiv != null) {
+          var caption = detailsdiv.visible() ? 'Hide details' : 'Show details';
+	  innerdiv.innerHTML = message +
+                               ' <a id="detailscaption" href="javascript:void(0)" onClick="Controller.show_hide_errordetails()">'
+			       +caption
+			       +'</a>';
+      }			     
+      if (detailsdiv != null) {
+          detailsdiv.innerHTML  = details;
+      }
       if (outerdiv != null) {
 	 new Effect.BlindDown(outerdiv);
       }
-      return false;
   },
 
   hide_error:
   function () {
-      var outerdiv = $('errordiv');
+      var outerdiv   = $('errordiv');
+      var detailsdiv = $('errordetails');
       if (outerdiv != null)
 	  new Effect.BlindUp(outerdiv);
       return false;
-  }
+  },
+
+ show_hide_errordetails:
+ function () {
+    var detailsdiv = $('errordetails');
+    var caption    = $('detailscaption');
+    if (detailsdiv == null) return;
+    if (caption    == null) return;
+    if (detailsdiv.visible()) {
+       caption.innerHTML="Show details";
+       detailsdiv.hide();
+    } else {
+       caption.innerHTML="Hide details";
+       detailsdiv.show();
+    }
+ }
 
 });
 

@@ -167,11 +167,8 @@ sub feature_file {
       warn "clear file 0";
       $self->clear_file($url);
       warn "clear file 1";
-      error("An error occurred while processing the uploaded file $url");
-      print CGI::start_form,
-            CGI::submit('OK'),
-            CGI::end_form;
-      print "<pre>$@</pre>";
+      error("An error occurred while processing the uploaded file $url.",
+	    "<pre>$@</pre>");
       return;
   }
 

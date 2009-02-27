@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.9 2008-11-03 01:48:04 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.10 2009-02-27 19:02:51 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -47,10 +47,6 @@ var tooltipIsSuppressed;
 // This is constructor that is called to initialize the Balloon object  //
 //////////////////////////////////////////////////////////////////////////
 var Balloon = function () {
-
-  // Get default configuration from balloon.config.js
-  BalloonConfig(this);
-
   // Cursor track enabled by default
   this.trackCursor = true;
 
@@ -80,7 +76,12 @@ var Balloon = function () {
 // This is the function that is called on mouseover.  It has a built-in //
 // delay time to avoid balloons popping up on rapid mouseover events    //
 //////////////////////////////////////////////////////////////////////////
-Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
+Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
+  // If the objext is not configured by now, fall back to default
+  if (!this.configured) {
+    BalloonConfig(this,'GBubble');
+  }
+
   // Awful IE bug, page load aborts if the balloon is fired
   // before the page is fully loaded.
   if (this.isIE() && document.readyState.match(/complete/i)) {
@@ -97,10 +98,21 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     return false;
   }
 
+  // We use 1-100 scale for opacity internally
+  if (this.opacity && this.opacity < 1) {
+    this.opacity = parseInt(parseFloat(this.opacity) * 100);
+  }
+  else if (this.opacity && this.opacity == 1) {
+    this.opacity = 100;
+  }
+  else if (!this.opacity) {
+    this.opacity == 100;
+  }
+
   // Sorry Konqueror, no fade-in or translucency for you!
   if (this.isKonqueror()) {
     this.allowFade = false;
-    this.opacity   = null;
+    this.opacity   = 100;
   }
 
   // With IE, fading and translucency are not very compatible
@@ -122,11 +134,15 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
   }
 
   // Don't fire on mouseover if a non-sticky balloon is visible
-  if (balloonIsVisible && !balloonIsSticky && mouseOver) return false;
+  if (balloonIsVisible && !balloonIsSticky && mouseOver) {
+    return false;
+  }
 
   // Don't start a non-sticky balloon if a sticky one is visible
-  if (balloonIsVisible && balloonIsSticky && !sticky) return false;
-  
+  if (balloonIsVisible && balloonIsSticky && !sticky) {
+    return false;
+  }
+
   // Ignore repeated firing of mouseover->mouseout events on 
   // the same element (Safari)
   var el = this.getEventTarget(evt);
@@ -141,13 +157,12 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     var override = balloonIsSticky && !balloonIsVisible;
     Balloon.prototype.hideTooltip(override)
   }
-  if (!mouseOver) el.onmouseup  = function() {return false};
+  if (!mouseOver) {
+    el.onmouseup  = function() {return false};
+  }
   el.onmouseout = closeBalloon;
-
+  
   balloonIsSticky = sticky;
-
-  // force balloon width and/or height if requested
-  this.width  = width;
 
   this.hideTooltip();
 
@@ -159,26 +174,22 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     return false;
   }
 
+  this.width  = width;
+  this.height = height;
+  this.actualWidth = null;
+
   // Put the balloon contents and images into a visible (but offscreen)
   // element so they will be preloaded and have a layout to 
   // calculate the balloon dimensions
-  if (!this.container) {
-    this.container = document.createElement('div');
-    document.body.appendChild(this.container);
-    this.setStyle(this.container,'position','absolute');
-    this.setStyle(this.container,'top',-8888);
-    this.setStyle(this.container,'display','inline');
-    this.setStyle(this.container,'z-index',2);
-    this.setStyle(this.container,'color',this.fontColor);
-    this.setStyle(this.container,'font-family',this.fontFamily);
-    this.setStyle(this.container,'font-size',this.fontSize);
-  }
-  else {
-    this.setStyle(this.container,'display','inline');
-  }
-
+  this.container = document.createElement('div');
+  this.container.id = 'container';
+  document.body.appendChild(this.container);
+  this.setStyle(this.container,'position','absolute');
+  this.setStyle(this.container,'top',-8888);
+  this.setStyle(this.container,'font-family',this.fontFamily);
+  this.setStyle(this.container,'font-size',this.fontSize);
   this.container.innerHTML = unescape(this.currentHelpText);
-
+  
   // make sure balloon image path is complete
   if (this.images) {
     // main background image
@@ -200,8 +211,9 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
   // handled properly by IE < 6.  Also, if opacity is set to
   // < 1 (translucent balloons), any version of IE does not
   // handle the image properly.
+  // Google chrome is a bit dodgey too
   // If there is an IE image provided, use that instead.
-  if (this.ieImage && this.isIE()) {
+  if (this.ieImage && (this.isIE() || this.isChrome())) {
     if (this.isOldIE() || this.opacity || this.allowFade) {    
       this.balloonImage = this.ieImage;
     }
@@ -228,12 +240,14 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
   currentBalloonClass = this;
 
   // Capture coordinates for mousedown or click
-  if (!mouseOver) this.setActiveCoordinates(evt);
+  if (!mouseOver) {
+    this.setActiveCoordinates(evt);
+  }
 
   // Remember which event started this
   this.currentEvent = evt;
 
-  // prevent interaction with drag and drop
+  // prevent interaction with gbrowse drag and drop
   evt.cancelBubble  = true;
 
   // Make delay time short for onmousedown
@@ -301,7 +315,7 @@ Balloon.prototype.doShowTooltip = function() {
 
   // do we have a cursor position?
   if (!(self.activeTop && self.activeRight)) {
-    self.setActiveCoordinates();
+     //self.setActiveCoordinates();
   }
 
   // balloon orientation
@@ -310,8 +324,10 @@ Balloon.prototype.doShowTooltip = function() {
   
   // get the preloaded balloon contents
   var helpText = self.container.innerHTML;
-
-  self.contents.innerHTML = helpText;
+  var wrapper = document.createElement('div');
+  wrapper.id = 'contentWrapper';
+  self.contents.appendChild(wrapper);
+  wrapper.innerHTML = helpText;
 
   // how and where to draw the balloon
   self.setBalloonStyle(vOrient,hOrient,pageWidth,pageLeft);
@@ -348,6 +364,11 @@ Balloon.prototype.addCloseButton = function () {
     document.body.appendChild(closeButton);
   }
 
+  // I have no idea why
+  if (self.isIE()) {
+    BalloonLeft = BalloonLeft - 5;
+  }
+
   self.setStyle(closeButton,'top',balloonTop);
   self.setStyle(closeButton,'left',BalloonLeft);
   self.setStyle(closeButton,'display','inline');
@@ -377,16 +398,13 @@ Balloon.prototype.makeBalloon = function() {
     if (parts[i] == 'contents') self.contents = child;
     self.parts.push(child);
   }
+  //self.parts.push(balloon);
 
-  if (balloonIsSticky) {
-    self.setStyle('contents','margin-right',10); 
-  }
-  else if (self.displayTime)  {
+  if (self.displayTime)  {
     self.timeoutAutoClose = window.setTimeout(this.hideTooltip,self.displayTime);
   }
   return balloon;
 }
-
 
 Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft) {
   var self = currentBalloonClass;
@@ -395,22 +413,33 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   if (typeof(self.shadow) != 'number') self.shadow = 0;
   if (!self.stem) self.stemHeight = 0;
 
-  // If width and/or height are specified, harden the
-  // balloon at those dimensions, but not if the space needed
-  // is less the the space that would be used.
-  if (self.width) {
-    var widthUsed = self.getLoc('contents','width');
-    var newWidth = widthUsed > self.width ? self.width : widthUsed;
-    self.setStyle('contents','width',newWidth);
-  }
-  if (self.height) {
-    var heightUsed = YAHOO.util.Dom.getStyle('contents','height');
-    var newHeight = heightUsed > self.height ? self.height : heightUsed;
-    self.setStyle('contents','height',newHeight+(2*self.padding));
-  }
-
   var fullPadding   = self.padding + self.shadow;
   var insidePadding = self.padding;
+
+  self.actualWidth = self.getLoc(this.container,'width');
+  if (self.isIE()) {
+    self.actualWidth += fullPadding;
+  }
+
+  if (self.height) {
+    self.setStyle('contentWrapper','height',self.height);
+  }
+
+  if (self.width) {
+    self.setStyle('contentWrapper','width',self.width);
+  }
+  else {
+    self.setStyle('contentWrapper','width',self.actualWidth);
+  }
+
+  // not too big...
+  if (!self.width && self.maxWidth && self.actualWidth > self.maxWidth) {
+    self.setStyle('contentWrapper','width',self.maxWidth);
+  }
+  // not too small...
+  if (!self.width && self.minWidth && self.actualWidth < self.minWidth) {
+    self.setStyle('contentWrapper','width',self.minWidth);
+  }
 
   self.setStyle(balloon,'position','absolute');
   self.setStyle(balloon,'top',-9999);
@@ -420,18 +449,9 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   self.setStyle('contents','color',self.fontColor);
   self.setStyle('contents','font-family',self.fontFamily);
   self.setStyle('contents','font-size',self.fontSize);
-
-  // Fading and transparency in IE is hard!  Argh!
-  if (self.isIE() && !self.allowFade) { 
-    self.setStyle('contents','background','url('+self.balloonImage+') top left no-repeat');
-    self.setStyle('contents','padding-top',fullPadding);
-    self.setStyle('contents','padding-left',fullPadding);
-  }
-  else {
-    self.setStyle(balloon,'background','url('+self.balloonImage+') top left no-repeat');
-    self.setStyle(balloon,'padding-top',fullPadding);
-    self.setStyle(balloon,'padding-left',fullPadding);
-  }  
+  self.setStyle('contents','background','url('+self.balloonImage+') top left no-repeat');
+  self.setStyle('contents','padding-top',fullPadding);
+  self.setStyle('contents','padding-left',fullPadding);
 
   self.setStyle('bottomRight','background','url('+self.balloonImage+') bottom right no-repeat');
   self.setStyle('bottomRight','position','absolute');
@@ -483,6 +503,9 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
       self.setStyle(stem,'top',0-height);
       self.setStyle(stem,'left',self.shadow);
     }
+    if (self.fadeOK && self.isIE()) {
+      self.parts.push(stem);
+    }
   }
 
   if (self.allowFade) {
@@ -503,19 +526,19 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
     self.setStyle(balloon,'left',activeLeft);
   }
 
-  if (!self.width) {
-    var width = self.getLoc('contents','width');
-    if (width > self.maxWidth) width = self.maxWidth + 50;
-    if (width < self.minWidth) width = self.minWidth;
-    self.setStyle(balloon,'width',width);
-  }
-
   // oversized contents? Scrollbars for sticky balloons, clipped for non-sticky
   var overflow = balloonIsSticky ? 'auto' : 'hidden';
-  self.setStyle('contents','overflow',overflow);
+  
+  // avoid double scrollbars with iframes
+  if (self.contents.innerHTML.match(/iframe/i)) {
+    overflow = 'hidden';
+  }
 
+  self.setStyle('contentWrapper','overflow',overflow);
+
+  // a bit of room for the closebutton
   if (balloonIsSticky) {
-    self.setStyle('contents','padding-right',self.closeButtonWidth);
+    self.setStyle('contentWrapper','margin-right',self.closeButtonWidth);
   }
 
   // Make sure the balloon is not offscreen horizontally.
@@ -539,9 +562,14 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   // IE7 quirk -- look for unwanted overlap cause by an off by 1px error
   var vOverlap = self.isOverlap('topRight','bottomRight');
   var hOverlap = self.isOverlap('bottomLeft','bottomRight');
-  if (vOverlap) self.setStyle('topRight','height',balloonHeight-vOverlap[1]);
-  if (hOverlap) self.setStyle('bottomLeft','width',balloonWidth-hOverlap[0]);
+  if (vOverlap) {
+    self.setStyle('topRight','height',balloonHeight-vOverlap[1]);
+  }
+  if (hOverlap) {
+    self.setStyle('bottomLeft','width',balloonWidth-hOverlap[0]);
+  }
 
+  // vertical position of the balloon
   if (vOrient == 'up') {
     var activeTop = self.activeTop - balloonHeight;
     self.setStyle(balloon,'top',activeTop);
@@ -550,7 +578,6 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
     var activeTop = self.activeBottom;
     self.setStyle(balloon,'top',activeTop);
   }
-
 
   // Make sure the balloon is vertically contained in the window
   var balloonTop    = self.getLoc(balloon,'y1');
@@ -561,7 +588,7 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   if (vOrient == 'up' && deltaTop) {
     var newHeight = balloonHeight - deltaTop;
     if (newHeight > (self.padding*2)) {
-      self.setStyle('contents','height',newHeight);
+      self.setStyle('contentWrapper','height',newHeight);
       self.setStyle(balloon,'top',self.pageTop+self.padding);
       self.setStyle(balloon,'height',newHeight);
     }
@@ -569,17 +596,26 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   if (vOrient == 'down' && deltaBottom) {
     var newHeight = balloonHeight - deltaBottom - scrollBar;
     if (newHeight > (self.padding*2) + scrollBar) {
-      self.setStyle('contents','height',newHeight);
+      self.setStyle('contentWrapper','height',newHeight);
       self.setStyle(balloon,'height',newHeight);
     }
   }
 
+  // For IE, harden the dimensions for the outer layers
+  if (this.isIE()) {
+    var finalWidth  = parseInt(YAHOO.util.Dom.getStyle('contentWrapper','width'));
+    self.setStyle('contents','width',finalWidth+10);
+    self.setStyle('balloon','width',finalWidth+fullPadding);
+  }
+ 
+  // Make edges match the main balloon body
   self.setStyle('topRight','height', self.getLoc(balloon,'height'));
   self.setStyle('bottomLeft','width', self.getLoc(balloon,'width'));
 
   self.hOrient = hOrient;
   self.vOrient = vOrient;
 }
+
 
 // Fade method adapted from an example on 
 // http://brainerror.net/scripts/javascript/blendtrans/
@@ -606,24 +642,12 @@ Balloon.prototype.setOpacity = function(opc) {
 
   var o = parseFloat(opc/100);
 
-  // For fading in IE, just the contents can fade
-  // otherwise, the whole balloon
-  if (self.fadeOK) {
-    var el = self.isIE() ? self.contents : self.activeBalloon;
-    self.doOpacity(o,opc,el);
-    return false;
-  }
+  // opacity handled differently for IE
+  var parts = self.isIE() ? self.parts : [self.activeBalloon];
 
-  var els = new Array;
-  if (self.isIE()) {
-    els.push(self.parts);
-  }
-  else {
-    els.push(self.activeBalloon);
-  }
-  var len = els.length;
+  var len = parts.length;
   for (var i=0;i<len;i++) {
-    self.doOpacity(o,opc,els[i]);
+    self.doOpacity(o,opc,parts[i]);
   }
 }
 
@@ -657,17 +681,23 @@ Balloon.prototype.hideTooltip = function(override) {
     window.clearTimeout(self.timeoutTooltip);
     window.clearTimeout(self.timeoutFade);
     window.clearTimeout(self.timeoutAutoClose);
-    b = b || self.activeBalloon;
     if (balloonIsSticky) {
       self.currentElement = null;
     }
+    if (b) {
+      self.parent.removeChild(b);
+    }
+    if (c) {
+      self.parent.removeChild(c);
+    }
   }
-
-  if (b) {
-    Balloon.prototype.setStyle(b,'display','none');
-  }
-  if (c) {
-    Balloon.prototype.setStyle(c,'display','none');
+  else {
+    if (b) {
+      Balloon.prototype.setStyle(b,'display','none');
+    }
+    if (c) {
+      Balloon.prototype.setStyle(c,'display','none');
+    }
   }
 
   Balloon.prototype.showHide(1);
@@ -693,24 +723,31 @@ hideAllTooltips = function() {
 Balloon.prototype.setActiveCoordinates = function(evt) {
   var self = currentBalloonClass;
   if (!self) {
-    return false;
+    return true;
   }
   var evt = evt || window.event || self.currentEvent;
   if (!evt) {
-    return false;
+    return true;
   }
 
   // avoid silent NaN errors
-  self.hOffset = self.hOffset || 10;
-  self.vOffset = self.vOffset || 10;
-  self.stemHeight = self.stemHeight || 0;
+  self.hOffset = self.hOffset || 1;
+  self.vOffset = self.vOffset || 1;
+  self.stemHeight = self.stem && self.stemHeight ? (self.stemHeight|| 0) : 0;
+
+  var scrollTop  = 0;
+  var scrollLeft = 0;
+  if (self.isIE()) {
+    var scrollTop  = window.pageYOffset || document.documentElement.scrollTop  || 0; 
+    var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || 0;
+  }
 
   var XY = self.eventXY(evt);
-  var adjustment    = self.hOffset < 20 ? 10 : 0;
-  self.activeTop    = XY[1] - adjustment - self.vOffset - self.stemHeight;
-  self.activeLeft   = XY[0] - adjustment - self.hOffset;
-  self.activeRight  = XY[0] + adjustment + self.hOffset;
-  self.activeBottom = XY[1] + adjustment + self.vOffset + self.stemHeight;
+  adjustment   = self.hOffset < 20 ? 10 : 0;
+  self.activeTop    = scrollTop  + XY[1] - adjustment - self.vOffset - self.stemHeight;
+  self.activeLeft   = scrollLeft + XY[0] - adjustment - self.hOffset;
+  self.activeRight  = scrollLeft + XY[0];
+  self.activeBottom = scrollTop  + XY[1] + self.vOffset + 2*adjustment;
 
   // dynamic positioning but only if the balloon is not sticky
   // and cursor tracking is enabled
@@ -736,7 +773,6 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
     else if (self.vOrient == 'down') {
       self.setStyle(b,'top',self.activeBottom);
     }
-
   }
 
   return true;
@@ -748,7 +784,9 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
 Balloon.prototype.eventXY = function(event) {
   var XY = new Array(2);
   var e = event || window.event;
-
+  if (!e) {
+    return false;
+  }
   if (e.pageX || e.pageY) {
     XY[0] = e.pageX;
     XY[1] = e.pageY;
@@ -773,9 +811,22 @@ Balloon.prototype.getEventTarget = function(event) {
 
 
 Balloon.prototype.setStyle = function(el,att,val) {
-  if (!el) return false;
-  if (val && att.match(/left|top|bottom|right|width|height|padding|margin/)) val += 'px'; 
-  if (typeof(el) != 'object') el = document.getElementById(el);
+  if (!el) { 
+    return false;
+  }
+  if (typeof(el) != 'object') {
+    el = document.getElementById(el);
+  }
+  if (!el) {
+    return false;
+  }
+  
+  if (val && att.match(/left|top|bottom|right|width|height|padding|margin/)) {
+    val = new String(val);
+    if (!val.match(/auto/)) {
+      val += 'px';
+    }
+  }
 
   // z-index does not work as expected
   if (att == 'z-index') {
@@ -827,7 +878,7 @@ Balloon.prototype.showHide = function(visible) {
   // IE z-index bug fix (courtesy of Lincoln Stein)
   if (self.isOldIE()) {
     if (!visible) {
-      var balloonSelects = document.getElementById('contents').getElementsByTagName('select');
+      var balloonSelects = document.getElementById('contentWrapper').getElementsByTagName('select');
       var myHash = new Object();
       for (var i=0; i<balloonSelects.length; i++) {
         var id = balloonSelects[i].id || balloonSelects[i].name;
@@ -1015,5 +1066,10 @@ Balloon.prototype.isOldIE = function() {
 
 // test for Konqueror
 Balloon.prototype.isKonqueror = function() {
-  return navigator.userAgent.indexOf( 'Konqueror' ) != -1;
+  return navigator.userAgent.toLowerCase().indexOf( 'konqueror' ) != -1;
+}
+
+// and Google chrome
+Balloon.prototype.isChrome = function() {
+  return navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
 }

@@ -312,13 +312,13 @@ GPlain.images = "$balloon_images/GPlain";
 var GFade = new Balloon;
 BalloonConfig(GFade,'GFade');
 GFade.images = "$balloon_images/GBubble";
-GFade.opacity = 100;
+GFade.opacity = 1;
 
 // A formatted box
 // Note: Box is a subclass of Balloon
 var GBox = new Box;
 BalloonConfig(GBox,'GBox');
-GBox.images = "$balloon_images/GBox";
+GBox.images = "$balloon_images/GBubble";
 END
 ;
     							   
@@ -1675,7 +1675,7 @@ END
                     -style   => 'background:pink',
                     -name    => $self->tr('Revert'),
                     -onClick => $reset_js
-	      ),
+	      ), br, 
 	      button(
 		  -name    => $self->tr('Cancel'),
 		  -onClick => 'Balloon.prototype.hideTooltip(1)'

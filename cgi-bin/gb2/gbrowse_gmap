@@ -124,7 +124,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Template;
 use JSON;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.6 2009-02-10 12:56:29 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.7 2009-02-27 05:58:35 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
@@ -436,9 +436,13 @@ sub run {
     #$phylo_url = 'http://localhost:8081/phylo/printparams.php';
     #my $phylo_url = 'http://localhost:8081/phylo/newviewer.php';
 
-    my @params = (
+    my $iframe_height = '90%';
+    my $iframe_width  = '100%';
+
+    my @phylo_link_params = (
         [ 'numpops',     $numpops ],
         [ 'numhaps',     $numhaps ],
+        [ 'anchor_pies', 1 ],
         [ 'pop_names',   JSON::to_json( \@sorted_pop_names ) ],
         [ 'hap_names',   JSON::to_json( \@sorted_hap_names ) ],
         [ 'pop_lat',     JSON::to_json( \@pop_lat ) ],
@@ -450,21 +454,25 @@ sub run {
         [ 'radii_in_km', JSON::to_json( \@pie_sizes ) ],
     );
 
+    if ($balloon) {
+        $iframe_height = '400';
+        $iframe_width  = '400';
+        my $map_padding = 40;
+        push @phylo_link_params, (
+            [ 'map_width', $iframe_width - $map_padding],
+            [ 'map_height', $iframe_height - $map_padding],
+            [ 'map_only', 1],
+        );
+    }
+
     # must escape the JSON objects
     my $request_str
-        = join( '&', map { $_->[0] . "=" . CGI::escape( $_->[1] ) } @params );
+        = join( '&', map { $_->[0] . "=" . CGI::escape( $_->[1] ) } @phylo_link_params );
 
     # For some reason, the balloon interprets the escaping.
     # So we must escape again if it is a balloon.
     if ($balloon) {
         $request_str = CGI::escape($request_str);
-    }
-
-    my $iframe_height = '90%';
-    my $iframe_width  = '100%';
-    if ($balloon) {
-        $iframe_height = '800';
-        $iframe_width  = '700';
     }
 
     my %options = (

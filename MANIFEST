@@ -173,8 +173,6 @@ htdocs/gmod_cog.jpeg
 htdocs/images/backgrounds/cloud.jpg
 htdocs/images/backgrounds/lrock005.jpg
 htdocs/images/backgrounds/steel.jpg
-htdocs/images/balloons/GBox/balloon.png
-htdocs/images/balloons/GBox/close.png
 htdocs/images/balloons/GBubble/balloon.png
 htdocs/images/balloons/GBubble/balloon_ie.png
 htdocs/images/balloons/GBubble/close.png
@@ -211,6 +209,8 @@ htdocs/images/buttons/minus12.png
 htdocs/images/buttons/mminus.png
 htdocs/images/buttons/mplus.gif
 htdocs/images/buttons/mplus.png
+htdocs/images/buttons/panleft.png
+htdocs/images/buttons/panright.png
 htdocs/images/buttons/plus.gif
 htdocs/images/buttons/plus.png
 htdocs/images/buttons/query.png

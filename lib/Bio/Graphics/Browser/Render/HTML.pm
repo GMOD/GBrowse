@@ -302,23 +302,27 @@ sub render_balloon_settings {
 var GBubble = new Balloon;
 BalloonConfig(GBubble,'GBubble');
 GBubble.images = "$balloon_images/GBubble";
+GBubble.allowEventHandlers = true;
 
 // A simpler popup balloon style
 var GPlain = new Balloon;
 BalloonConfig(GPlain,'GPlain');
 GPlain.images = "$balloon_images/GPlain";
+GPlain.allowEventHandlers = true;
 
 // Like GBubble but fades in
 var GFade = new Balloon;
 BalloonConfig(GFade,'GFade');
 GFade.images = "$balloon_images/GBubble";
 GFade.opacity = 1;
+GFade.allowEventHandlers = true;
 
 // A formatted box
 // Note: Box is a subclass of Balloon
 var GBox = new Box;
 BalloonConfig(GBox,'GBox');
 GBox.images = "$balloon_images/GBubble";
+GBox.allowEventHandlers = true;
 END
 ;
     							   

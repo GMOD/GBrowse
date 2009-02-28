@@ -1,5 +1,5 @@
 package Bio::DB::Tagger::Tag;
-# $Id: Tag.pm,v 1.1 2009-01-19 16:44:13 lstein Exp $
+# $Id: Tag.pm,v 1.2 2009-02-28 00:05:44 lstein Exp $
 
 use Carp 'croak';
 use overload
@@ -134,10 +134,7 @@ Convert into a name:value string
 
 sub asString {
     my $self              = shift;
-
-    my $name  = $self->name;
-    my $value = $self->value;
-    return defined $value ? "$name:$value" : $name;
+    return $self->name;
 }
 
 =back

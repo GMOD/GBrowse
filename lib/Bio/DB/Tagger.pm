@@ -1,5 +1,5 @@
 package Bio::DB::Tagger;
-# $Id: Tagger.pm,v 1.4 2009-02-07 03:21:31 lstein Exp $
+# $Id: Tagger.pm,v 1.5 2009-02-28 00:05:44 lstein Exp $
 
 use strict;
 use warnings;
@@ -245,6 +245,29 @@ END
     return Bio::DB::Tagger::Iterator->new($sth);
 }
 
+=item $iterator = $tagger->tag_match('prefix')
+
+Returns an iterator that matches all tags beginning with 'prefix'
+(case insensitive). Call $iterator->next_tag() to get the next match.
+
+=cut
+
+sub author_match {
+    my $self   = shift;
+    my $prefix = shift;
+    my $sth   = $self->dbh->prepare(<<END) or croak $self->dbh->errstr;
+SELECT aname
+  FROM author
+ WHERE aname LIKE ?
+ ORDER BY aname
+END
+;
+    $prefix =~ s/%/\\%/g;
+    $prefix =~ s/_/\\_/g;
+    $sth->execute($prefix.'%') or croak $sth->errstr;
+    return Bio::DB::Tagger::Iterator->new($sth);
+}
+
 =item $tags = $tagger->tag_counts()
 
 =item @tags = $tagger->tag_counts()
@@ -432,8 +455,7 @@ SELECT count(*)
     AND tagname.tname=?
 END
 ;
-	warn "will nuke tag $tagname" if $count == 0;
-	$self->nuke_tag($tagname) if $count == 0;
+	$self->nuke_tag($tagname)     if $count == 0;
 	$dbh->commit;
     };
     if ($@) {
@@ -529,20 +551,16 @@ sub _set_tags {
     my $dbh = $self->dbh;
     $dbh->begin_work;
     eval {
-	warn "here I am";
-
 	local $dbh->{RaiseError}=1;
 	# create/get object id
 	my $oid = $self->object_to_id($objectname,1);
-	$dbh->do("DELETE FROM tag WERE oid=$oid")
+	$dbh->do("DELETE FROM tag WHERE oid=$oid")
 	    if $replace;
 	for my $tag (@$tags) {
 	    my $tid = $self->tag_to_id($tag->name,1);
 	    my $aid = $self->author_to_id($tag->author,1);
 	    my $value = $tag->value;
 
-	    warn "tag = $tag, value = $value";
-	    
 	    my $sth = $dbh->prepare(
 		"INSERT INTO tag (oid,tid,aid,tvalue) VALUES (?,?,?,?)"
 		);

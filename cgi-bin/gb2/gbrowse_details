@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Realign 'align';
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.8 2009-01-06 07:38:24 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.9 2009-02-28 00:05:44 lstein Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 
@@ -450,9 +450,12 @@ sub print_multiple {
 	    $LINK = "$obj : (<a href='$LINK'>Aligned Sequence</a>)";
     }
 
-	# wrap way long lines. Note : ading '" prevent this regexp from wrapping html tags
-	$obj =~ s/([^<>\s\'\"\/;&]{60})/$1 /g;  
-
+	# Wrap way long lines, but not those involving HTML tags
+	$obj = join "", 
+	map{ s/([^\s\'\"\/;&]{60})/$1 /g 
+		 unless /\</; $_ 
+	} split /(<[^>]*>)/,$obj;
+    
 	if ($isFirst) {
 	    $isFirst =0 ;
 	    $string .= join '',TR({-valign=>'top',-class=>'databody'},

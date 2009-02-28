@@ -496,12 +496,12 @@ sub wrap_rendered_track {
 
 	my $style  = 'opacity:0.4;position:absolute;border:none';
 	$style    .= ';filter:alpha(opacity=40);moz-opacity:0,4';
-        my $pan_left   = a( {-href => "lefturl"},
+        my $pan_left   = a( {-href => $lefturl},
 			    img({ -style  => $style . ';left:0',
 				  -class  => 'panleft',
 				  -src    => "$buttons/panleft.png"})
 	    );
-	my $pan_right  = a( {-href => "$righturl"},
+	my $pan_right  = a( {-href => $righturl},
 			    img({ -style  => $style . ';right:0',
 				  -class  => 'panright',
 				  -src    => "$buttons/panright.png"})

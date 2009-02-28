@@ -487,30 +487,28 @@ sub wrap_rendered_track {
     # Add arrows for pannning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $segment = $self->segment;
-	my $half    = int(abs($segment->end - $segment->start)/2);
-	my $lstart  = $segment->start - $half;
-	my $middle  = $segment->start + $half;
-	my $rend    = $segment->end   + $half; 
-        my $lefturl  = "?ref=".$segment->ref.";start=$lstart;stop=$middle";
-	my $righturl = "?ref=".$segment->ref.";start=$middle;stop=$rend";
-
-	my $style  = 'opacity:0.4;position:absolute;border:none';
-	$style    .= ';filter:alpha(opacity=40);moz-opacity:0,4';
-        my $pan_left   = a( {-href => $lefturl},
-			    img({ -style  => $style . ';left:0',
-				  -class  => 'panleft',
-				  -src    => "$buttons/panleft.png"})
+	my $length  = $segment->length;
+	my $half    = int($length/2);
+	my $style    = 'opacity:0.4;position:absolute;border:none;cursor:pointer';
+	$style      .= ';filter:alpha(opacity=40);moz-opacity:0,4';
+        my $pan_left   =  img({
+	    -style   => $style . ';left:0',
+	    -class   => 'panleft',
+	    -src     => "$buttons/panleft.png",
+	    -onClick => "Controller.update_coordinates('left $half')"
+			      },
 	    );
-	my $pan_right  = a( {-href => $righturl},
-			    img({ -style  => $style . ';right:0',
-				  -class  => 'panright',
-				  -src    => "$buttons/panright.png"})
+	my $pan_right  = img({ -style   => $style . ';right:0',
+			       -class   => 'panright',
+			       -src     => "$buttons/panright.png",
+			       -onClick => "Controller.update_coordinates('right $half')",
+			     }
 	    );
 
 	$img = $pan_left . $img . $pan_right;
     }
     return div({-class=>'centered_block',
-		-style=>"width:${width}px;border:1px solid red;position:relative"},
+		-style=>"width:${width}px;position:relative"},
 	       ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
         . ( $map_html || '' );
 

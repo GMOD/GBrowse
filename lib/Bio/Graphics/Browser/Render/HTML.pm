@@ -1429,7 +1429,8 @@ sub slidertable {
   my $fine_zoom  = $self->get_zoomincrement();
 
   my @lines =
-    (image_button(-src     => "$buttonsDir/green_l2.gif",-name=>"left $full",
+    (image_button(-src     => "$buttonsDir/green_l2.gif",
+		  -name=>"left $full",
 		  -title   => "left $full_title",
 		  -onClick => "Controller.update_coordinates(this.name)"
      ),

@@ -489,23 +489,36 @@ sub wrap_rendered_track {
 	my $segment = $self->segment;
 	my $length  = $segment->length;
 	my $half    = int($length/2);
-	my $style    = 'opacity:0.4;position:absolute;border:none;cursor:pointer';
-	$style      .= ';filter:alpha(opacity=40);moz-opacity:0,4';
+	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
+	$style      .= ';filter:alpha(opacity=35);moz-opacity:0.35';
         my $pan_left   =  img({
-	    -style   => $style . ';left:0',
+	    -style   => $style . ';left:10px',
 	    -class   => 'panleft',
 	    -src     => "$buttons/panleft.png",
 	    -onClick => "Controller.update_coordinates('left $half')"
 			      },
 	    );
-	my $pan_right  = img({ -style   => $style . ';right:0',
+	my $pan_left2  =  img({
+            -style   => $style . ';left:-3px',
+            -class   => 'panleft',
+            -src     => "$buttons/panleft2.png",
+            -onClick => "Controller.update_coordinates('left $length')"
+                              },
+            );
+	my $pan_right  = img({ -style   => $style . ';right:10px',
 			       -class   => 'panright',
 			       -src     => "$buttons/panright.png",
 			       -onClick => "Controller.update_coordinates('right $half')",
 			     }
 	    );
+        my $pan_right2  = img({ -style   => $style . ';right:-3px',
+                               -class   => 'panright',
+                               -src     => "$buttons/panright2.png",
+                               -onClick => "Controller.update_coordinates('right $length')",
+                             }
+            );
 
-	$img = $pan_left . $img . $pan_right;
+	$img = $pan_left2 . $pan_left . $img . $pan_right . $pan_right2;
     }
     return div({-class=>'centered_block',
 		-style=>"width:${width}px;position:relative"},

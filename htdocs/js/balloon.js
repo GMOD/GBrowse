@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.10 2009-02-27 19:02:51 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.11 2009-03-02 09:26:51 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -177,6 +177,9 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
   this.width  = width;
   this.height = height;
   this.actualWidth = null;
+
+  // make sure old balloons are removed
+  this.cleanup();
 
   // Put the balloon contents and images into a visible (but offscreen)
   // element so they will be preloaded and have a layout to 
@@ -674,8 +677,8 @@ Balloon.prototype.hideTooltip = function(override) {
   if (balloonIsSticky && !override) return false;
 
   var self = currentBalloonClass;
-  var b = document.getElementById('balloon');
-  var c = document.getElementById('closeButton');
+  Balloon.prototype.showHide(1);
+  Balloon.prototype.cleanup();
 
   if (self) {
     window.clearTimeout(self.timeoutTooltip);
@@ -684,27 +687,33 @@ Balloon.prototype.hideTooltip = function(override) {
     if (balloonIsSticky) {
       self.currentElement = null;
     }
-    if (b) {
-      self.parent.removeChild(b);
-    }
-    if (c) {
-      self.parent.removeChild(c);
-    }
   }
-  else {
-    if (b) {
-      Balloon.prototype.setStyle(b,'display','none');
-    }
-    if (c) {
-      Balloon.prototype.setStyle(c,'display','none');
-    }
-  }
-
-  Balloon.prototype.showHide(1);
 
   balloonIsVisible = false;
   balloonIsSticky  = false;
 }
+
+// Garbage collection
+Balloon.prototype.cleanup = function() {
+  var self = currentBalloonClass;
+  var body;
+  if (self) {
+    body = self.parent   ? self.parent 
+         : self.parentID ? document.getElementById(self.parentID) || document.body
+         : document.body;
+  }
+  else {
+    body = document.body;
+  }
+
+  var bubble = document.getElementById('balloon');
+  var close  = document.getElementById('closeButton');
+  var cont   = document.getElementById('container');
+  if (bubble) { body.removeChild(bubble) } 
+  if (close)  { body.removeChild(close)  }
+  if (cont)   { body.removeChild(cont)   }
+}
+
 
 // this function is meant to be called externally to clear
 // any open balloons
@@ -877,8 +886,9 @@ Balloon.prototype.showHide = function(visible) {
 
   // IE z-index bug fix (courtesy of Lincoln Stein)
   if (self.isOldIE()) {
-    if (!visible) {
-      var balloonSelects = document.getElementById('contentWrapper').getElementsByTagName('select');
+    var balloonContents = document.getElementById('contentWrapper');
+    if (!visible && balloonContents) {
+      var balloonSelects = balloonContents.getElementsByTagName('select');
       var myHash = new Object();
       for (var i=0; i<balloonSelects.length; i++) {
         var id = balloonSelects[i].id || balloonSelects[i].name;

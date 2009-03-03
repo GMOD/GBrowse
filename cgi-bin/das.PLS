@@ -49,25 +49,29 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.10 2008-09-15 14:51:22 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.11 2009-03-03 23:34:32 lstein Exp $
 
+use strict;
 use Bio::DB::GFF;
 use File::Basename 'basename';
 use CGI qw/header path_info param url request_method escapeHTML/ ;
 use Carp;
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Util;
-use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
+use Bio::Graphics::Browser::Util 'shellwords';
+use File::Spec;
+use vars qw($DB $DSN $TRACK $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
+            $SO_FETCH %SO_HASH %TYPE2SUBTYPES
             %CACHED_TYPES %FORCED_GROUP %NO_PARENT);
 
-#$Id: das.PLS,v 1.6.8.1.2.10 2008-09-15 14:51:22 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+use constant SO => 'http://www.sequenceontology.org/release/2.3/so_2_3.obo';
+
+#$Id: das.PLS,v 1.6.8.1.2.11 2009-03-03 23:34:32 lstein Exp $
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
 use constant CAPABILITIES => join '; ',qw(error-segment/1.0 unknown-segment/1.0 unknown-feature/1.0
-					  feature-by-id/1.0 group-by-id/1.0 component/1.0 
-					  supercomponent/1.0
+					  feature-by-id/1.0 group-by-id/1.0 sources/1.0
                                           dna/1.0 features/1.0 stylesheet/1.0 types/1.0
                                           entry_points/1.0 dsn/1.0 sequence/1.0
                                           );
@@ -92,14 +96,23 @@ $HEADER = 0;
 my ($junk,$dsn,$operation) = split '/',path_info();
 
 $DSN = $dsn;
+if ($DSN =~ /(.+)\|(.+)/) { # composite
+    $DSN   = $1;
+    $TRACK = $2;
+}
+
 $operation ||= '';
 my %sources = map {$_=>1} $CONFIG->sources;
 
 do { error_header('please append a command such as /types, to this URL',400); exit 0 } unless $DSN;
-do { list_dsns();   exit 0 } if $dsn eq 'dsn' or $operation eq 'dsn';
-do { error_header('invalid data source, use the dsn command to get list',401); exit 0 } 
+do { list_dsns();      exit 0 } if $dsn eq 'dsn'     or $operation eq 'dsn';
+do { list_sources();   exit 0 } if $dsn eq 'sources' or $operation eq 'sources';
+do { error_header('invalid data source; use the sources or dsn command to get list',401); exit 0 } 
       unless $sources{$DSN};
 $CONFIG->source($DSN);
+
+do { error_header('invalid data source; use the sources or dsn command to get a list',401); exit 0}
+     if $TRACK && !$CONFIG->setting($TRACK=>'das category');
 
 do { error_header('Could not open database',500); exit 0 }
      unless $DB = open_database();
@@ -127,15 +140,76 @@ sub list_dsns {
     my $old_source = $CONFIG->source($dsn);
     if (my $mapmaster = $CONFIG->setting('das mapmaster')) {
       $mapmaster = "$self_url/$dsn" if $mapmaster eq 'SELF';
-      print "$j<DSN>\n";
-      print qq($j$j<SOURCE id="$dsn">$dsn</SOURCE>\n);
-      print qq($j$j<MAPMASTER>),$mapmaster,qq(</MAPMASTER>\n);
-      print qq($j$j<DESCRIPTION>),$CONFIG->description($dsn),qq(</DESCRIPTION>\n);
-      print "$j</DSN>\n";
+      for my $track ($CONFIG->labels) {
+	  next if $track =~ /:/;
+	  next unless $CONFIG->setting($track=>'das category');
+	  my $citation    = $CONFIG->citation($track);
+	  my $key         = $CONFIG->setting($track=>'key');
+	  my $description = $CONFIG->description($dsn)."; $track track";
+	  $description   .= "; $key"      if $key;
+	  $description   .= "; $citation" if $citation;
+	  print "$j<DSN>\n";
+	  print qq($j$j<SOURCE id="$dsn|$track">$dsn|$track</SOURCE>\n);
+	  print qq($j$j<MAPMASTER>),$mapmaster,qq(</MAPMASTER>\n);
+	  print qq($j$j<DESCRIPTION>),$description,qq(</DESCRIPTION>\n);
+	  print "$j</DSN>\n";
+      }
     }
     $CONFIG->source($old_source);
   }
   print "</DASDSN>\n";
+}
+
+sub list_sources {
+  my $j = ' 'x3;
+  ok_header();
+  print <<END;
+<?xml version='1.0' encoding='UTF-8' ?>
+END
+
+
+  my $self_url = url(-full=>1);
+  $self_url    =~ s/sources.*$//;
+
+  my $old_source = $CONFIG->source();
+  
+  print "<SOURCES>\n";
+
+ SOURCE:
+  for my $dsn (sort $CONFIG->sources) {
+      $CONFIG->source($dsn);
+      my $sourceinfo = $CONFIG->setting('das source') or next;
+      my %a = $sourceinfo =~ /-(\w+)\s([^-]+)/g;
+      for (keys %a) { $a{$_} =~ s/\s+$// }; # trim
+      for (qw(maintainer version created coordinates authority source testrange)) {
+	  next if exists $a{$_};
+	  warn "'das source' option requires mandatory '$_' field; skipping\n";
+	  next SOURCE;
+      }
+
+      for my $track ($CONFIG->labels) {
+	  next if $track =~ /:/;
+	  next unless $CONFIG->setting($track=>'das category');
+	  my $citation    = $CONFIG->citation($track);
+	  my $key         = $CONFIG->setting($track=>'key');
+	  my $title       = $CONFIG->description($dsn);
+	  my $description = $CONFIG->description($dsn)."; $track track";
+	  $description   .= "; $key"      if $key;
+	  $description   .= "; $citation" if $citation;
+	  
+	  print <<END;
+     <SOURCE uri="$dsn|$track" title="$key" description="$description">
+        <MAINTAINER email="$a{maintainer}" />
+        <VERSION uri="$dsn|$track">
+  	  <COORDINATES uri="$a{coordinates}" authority="$a{authority}" test_range="$a{testrange}" taxid="$a{taxid}" species="$a{species}">$a{authority},$a{source}</COORDINATES>
+	  <CAPABILITY type="das1:command" query_uri="URL" />
+        </VERSION>
+     </SOURCE>
+END
+      }
+  }
+  print "</SOURCES>\n";
+  $CONFIG->source($old_source);
 }
 
 # -----------------------------------------------------------------
@@ -227,23 +301,10 @@ END
 sub features {
   my @segments = get_segments();
 
-  my $summary = param('summary');
+  my $summary  = param('summary');
   my $url      = get_url();
   my @filter   = param('type');
   my @category = param('category');
-
-  my (@ordinary_categories,$want_supercomponent,$want_component);
-  foreach (@category) {
-    if (lc($_) eq 'component') {
-      $want_component++;
-    }
-    elsif (lc($_) eq 'supercomponent') {
-      $want_supercomponent++;
-    }
-    else {
-      push @ordinary_categories,$_;
-    }
-  }
 
   my ($category2type,$type2category,$top_types) = categories($CONFIG);
   my %valid_types = map {$_=>1} @$top_types;
@@ -255,8 +316,10 @@ sub features {
   push @filter,map {exists $category2type->{$_}
 		    ? @{$category2type->{$_}} 
 		    : $_ 
-                   } @ordinary_categories;
-  @filter = map {$CONFIG->setting(feature=>$_)} $CONFIG->labels unless @filter;
+                    } @category;
+  my @tracks = $TRACK ? $TRACK : $CONFIG->labels;
+  @filter = map  {shellwords($CONFIG->setting($_ => 'feature'))} 
+           @tracks unless @filter && !$TRACK;
   @filter = grep {$valid_types{$_}} @filter;
 
   ok_header();
@@ -270,11 +333,6 @@ END
 
   foreach (@segments) {
     my ($reference,$refclass,$start,$stop) = @$_;
-
-    dump_components($reference,$refclass,$start,$stop,$type2category)      if $want_component;
-    dump_supercomponents($reference,$refclass,$start,$stop,$type2category) if $want_supercomponent;
-
-    next if !@ordinary_categories && ($want_supercomponent || $want_component);
 
     my @segs = get_segment_obj($reference,$refclass,$start,$stop);
     error_segment($reference,$start,$stop) unless @segs;
@@ -348,15 +406,33 @@ sub print_feature {
     my $category      = shift;
     my $agg_map       = shift;
     my $count         = shift || 0;
-    my $id            = shift || $f->id;
+    my $group         = shift || $parent || $f;
+    my $level         = shift || 0;
+    my $sequence      = shift || 0;
 
     my @subparts     = $f->get_SeqFeatures;
     my $no_parent    = @subparts && no_parent_wanted($f);
 
-    _print_feature($f,$parent,$category,$agg_map,$count,$id)
+    _print_feature($f,
+		   $parent,
+		   $category,
+		   $agg_map,
+		   $count,
+		   $group,
+		   $level,
+		   $sequence,
+	)
 	unless $no_parent;
 
-    print_feature($_,($no_parent ? undef : $parent||$f),$category,$agg_map,++$count) foreach @subparts;
+    print_feature($_,
+		  ($no_parent ? undef : $f),
+		  $category,
+		  $agg_map,
+		  ++$count,
+		  $group,
+		  $level+1,
+		  $sequence++,
+	) foreach @subparts;
 }
 
 sub _print_feature {
@@ -367,11 +443,11 @@ sub _print_feature {
   my $category      = shift;
   my $agg_map       = shift || {};
   my $count         = shift;
-  my $id            = shift;
+  my $group         = shift;
+  my $level         = shift || 0;
+  my $sequence      = shift || 0;
 
-  $type           = $f->type;
-
-  my $flabel      = $f->info || $f->type;
+  my $flabel      = $f->display_name;
   my $source      = $f->source;
   my $method      = $f->method;
   my $start       = $f->start;
@@ -379,26 +455,32 @@ sub _print_feature {
   my $score       = $f->score;
   my $orientation = $f->strand || 0;
   my $phase       = $f->phase;
-  # to avoid binary IDs!
-  $id             = unpack('L',$id) 
-      if ref($DB) eq 'Bio::DB::GFF::Adaptor::berkeleydb';
-  my $fid         = $id;
-  my @notes       = $f->notes if $f->can('notes');
-  my $attributes  = $f->attributes if $f->can('attributes');
 
-  my ($group,$gclass);
+  my $type        = guess_type($f);
+  my $typelabel   = $f->type;
+
+  my $pid         = feature2id($parent) if $parent;
+  my $id          = feature2id($f) || $pid;
+  $id            .= ".$sequence" if $id eq $pid;
+  warn "sequence = $sequence, id =$id";
+  my $counter     = 0;
+  my @child_ids   = map {feature2id($_)||"$id.".$counter++} $f->get_SeqFeatures;
+
+  my @notes       = $f->notes if $f->can('notes');
+  my %attributes  = $f->attributes if $f->can('attributes');
+
+  my $gclass;
   if ($f->can('group')) { # Bio::DB::GFF feature
-    $group       = $f->group;
     $gclass      = (ref($group) && $group->can('class')) 
 	               ? $group->class 
 		       : 'anonymous';
   } else {
-    $group       = defined $parent ? $parent->id : $id;
     $gclass      = '';
   }
 
-  my $group_type    = forced_group($parent||$f) || $type;
-  $group_type =~ s/\:\w+$//;
+  my $group_type  = forced_group($parent||$f) || $type;
+
+  $group_type     =~ s/\:\w+$//;
 
   # This is way nasty.  The aggregator may have changed the method of the
   # main feature, so we need to change it back to what it was originally
@@ -415,42 +497,30 @@ sub _print_feature {
       if defined($start) && defined($end) && $start > $end;
 
   # group stuff
-  my $groupid       = length($gclass) ? "$gclass:$group" : $group;
-  my $info          = $f->info;
-  my ($group_info,$link,$gtype);
+  my $groupid       = $group->primary_id;
+  my $grouplabel    = $group->display_name;
+  my ($group_info,$link,$gtype,$url);
 
-  if (ref($info)) {
-    my $class = $info->class;
-    $fid = "$class:$info/$id";
-    $id = $info;
-    my $url = $CONFIG->make_link($parent || $f);
-    $url ||= 'none';
-    if($url ne 'none') {
+  $url = $CONFIG->make_link($f);
+  $url  ||= 'none';
+  if ($url ne 'none') {
       hack_link(\$url);
-      $link = qq(<LINK href="$url">$info</LINK>);
-      $gtype = qq( type="$group_type")
-    }
+      $link = qq(<LINK href="$url">$flabel</LINK>);
+  }
+  if (@child_ids) {
+      my $track = $TRACK || $CONFIG->feature2label($group);
+      my $glyph = $CONFIG->fallback_setting($track=>'glyph');
+      $gtype    = " type='$type'";
   }
 
-  else {  # repeated code here, but not sure of logic
-      $fid    = "$f";
-      my $url = $CONFIG->make_link($parent || $f);
-      $url  ||= 'none';
-      if ($url ne 'none') {
-	hack_link(\$url);
-	$link = qq(<LINK href="$url">$type</LINK>);
-      }
+  if (%attributes) {
+    for my $tag (keys %attributes) {
+	next if $tag =~ /parent_id/ || $tag =~ /load_id/;
+	my @values = ref($attributes{$tag}) ? @{$attributes{$tag}} : $attributes{$tag};
+	$group_info .= qq(\n\t<NOTE tag="$tag">$_</NOTE>) foreach @values;
     }
-
-  if (@notes) {
-    $group_info = join "\n",map {qq(<NOTE>$_</NOTE>)} @notes;
-  }
-
-  if ($attributes) {
-    for my $tag (keys %$attributes) {
-      my @values = ref($attributes->{$tag}) ? @{$attributes->{$tag}} : $attributes->{$tag};
-      $group_info .= qq(\n\t<NOTE tag="$tag">$_</NOTE>) foreach @values;
-    }
+  } elsif (@notes) {
+      $group_info = join "\n",map {qq(<NOTE>$_</NOTE>)} @notes;
   }
 
   my ($target,$target_info);
@@ -461,29 +531,14 @@ sub _print_feature {
     $target_info = qq(<TARGET id="$seqid" start="$start" stop="$stop" />);
   }
 	
-  if ($category eq 'component') {
-    my $strt = 1;
-    my $stp  = $end - $start + 1;
-    $target_info = qq(<TARGET id="$id" start="$strt" stop="$stp" />);
-  }
-
-  my $map;
-  my ($has_subparts,$has_superparts) 
-      = describe_component($type,$type2category);
-
-  if ($has_subparts || $has_superparts) {
-    $map = qq( reference="yes")
-  } else {
-    $map = qq() 
-  }
-  $map .= qq( subparts="yes")   if $has_subparts;
-  $map .= qq( superparts="yes") if $has_superparts;
+  my ($map,$type2category);
+  $map = qq() ;
 
   $start ||= '';  $end ||= '';
 
   print <<END;
-   <FEATURE id="$fid" label="$flabel">
-      <TYPE id="$type" category="$category"$map>$type</TYPE>
+   <FEATURE id="$id" label="$flabel">
+      <TYPE id="$type" category="$category"$map>$typelabel</TYPE>
       <METHOD id="$method">$method</METHOD>
       <START>$start</START>
       <END>$end</END>
@@ -492,18 +547,19 @@ sub _print_feature {
       <PHASE>$phase</PHASE>
 END
 ;
-  print qq(      $link\n) if $link;
-  print qq(      $target_info\n) if $target_info;
+  print qq(      <PARENT id="$pid"/>\n)  if defined $pid;
+  print qq(      <PART   id="$_"/>\n)    foreach @child_ids;
+  print qq(      $link\n)                if $link;
+  print qq(      $target_info\n)         if $target_info;
 
-  if ($info || $groupid) {
+  if (defined $groupid) {
     $gtype     ||= '';
-    $groupid   ||= '';
     if ($group_info) {
-      print qq(      <GROUP id="$groupid"$gtype>\n);
+      print qq(      <GROUP id="$groupid" label="$grouplabel" $gtype>\n);
       print qq(        $group_info\n)  if $group_info;
       print qq(      </GROUP>\n);
     } else {
-      print qq(      <GROUP id="$groupid"$gtype />\n);
+      print qq(      <GROUP id="$groupid"$gtype/>\n);
     }
   }
   print <<END;
@@ -514,8 +570,8 @@ END
 
 sub error_segment {
   my ($reference,$start,$stop) = @_;
-  my $authoritative = $CONFIG->setting('das mapmaster')
-    eq (url(-full=>1) . "/".$CONFIG->source);
+  my $mapmaster     = $CONFIG->setting('das mapmaster');
+  my $authoritative = $mapmaster && $mapmaster eq (url(-full=>1) . "/".$CONFIG->source);
   my $tag = $authoritative ? 'ERRORSEGMENT' : 'UNKNOWNSEGMENT';
   my $attributes = '';
   $attributes .= qq( start="$start") if defined $start;
@@ -526,6 +582,16 @@ sub error_segment {
 sub error_id {
   my $id = shift;
   print qq(    <UNKNOWNFEATURE id="$id" />\n);
+}
+
+sub feature2id {
+    my $f     = shift;
+
+    my $id = $f->primary_id;
+    # HACK
+    $id             = unpack('L',$id)
+	if ref($DB) eq 'Bio::DB::GFF::Adaptor::berkeleydb';
+    return $id;
 }
 
 sub dump_components {
@@ -600,84 +666,6 @@ END
   ;
     }
     print qq(</SEGMENT>\n);
-  }
-}
-
-sub dump_supercomponents {
-  my ($reference,$refclass,$reqstart,$reqend,$type2category) = @_;
-  my @seq = get_segment_obj($reference,$refclass,$reqstart,$reqend);
-
-  error_segment($reference,$reqstart,$reqend) unless @seq;
-
-  for my $seq (@seq) {
-
-    $seq->absolute(1);
-
-    my @types = keys %{$type2category->{__subparts__}} or return;
-    my @parts = $seq->features(-type=>\@types,-merge=>0);
-
-    my $printed_something;
-
-    for my $part (@parts) {
-      my $target          = $part->target or next;
-      $target->can('start') or next;
-
-      $printed_something++;
-
-      my $start  = defined $reqstart ? $reqstart : $part->start;
-      my $stop   = defined $reqend   ? $reqend   : $part->end;
-
-      my ($tstart,$tstop) = ($target->start,$target->stop);
-      my $version = seq2version($part->name);
-
-      print qq(<SEGMENT id="$reference" start="$start" stop="$stop" version="1.0">\n);
-      my $end;
-      ($start,$end) =  ($part->start,$part->end);
-
-      my $orientation = '+1';
-      my $type   = $part->type;
-      my $method = $part->method;
-
-      $type =~ s/Super//i;
-      $type = ucfirst $type;
-
-      my ($has_subparts,$has_superparts) = describe_component($type,$type2category);
-
-      my $description = qq(category="supercomponent" reference="yes");
-      $description .= qq( subparts="yes")   if $has_subparts;
-      $description .= qq( superparts="yes") if $has_superparts;
-      my $id       = $target;
-      my $targetid = $target;
-
-      # avoid giving out information on nonrequested parts
-      if (defined($reqstart) && defined($reqend)) {
-	next unless $start <= $reqend && $end >= $reqstart;
-      }
-      # flip start and end coordinates of target on negative strands
-      ($tstart,$tstop) = ($tstop,$tstart) if $part->strand < 0;
-
-      print <<END
-   <FEATURE id="$id" label="$id">
-      <TYPE id="$type" $description>$part</TYPE>
-      <METHOD id="$method">$method</METHOD>
-      <START>$start</START>
-      <END>$end</END>
-      <SCORE>-</SCORE>
-      <ORIENTATION>$orientation</ORIENTATION>
-      <PHASE>-</PHASE>
-      <TARGET id="$id" start="$tstart" stop="$tstop">$id</TARGET>
-   </FEATURE>
-END
-  ;
-      print qq(</SEGMENT>\n);
-    }
-    unless ($printed_something) {
-      $seq->absolute(0);
-      my $reference = $seq->ref;
-      my $start     = $seq->start;
-      my $stop      = $seq->stop;
-      print qq(  <SEGMENT id="$reference" start="$start" stop="$stop" version="1.0" />\n);
-    }
   }
 }
 
@@ -773,16 +761,6 @@ END
 
 }
 
-sub describe_component {
-  my ($type,$type2category) = @_;
-  (my $base = $type) =~ s/:[^:]+$//;
-  my $has_subparts   = $type2category->{__subparts__}{$type}
-    || $type2category->{__subparts__}{$base};
-  my $has_superparts = $type2category->{__superparts__}{$type}
-    || $type2category->{__superparts__}{$base};
-  return ($has_subparts,$has_superparts);
-}
-
 sub stylesheet {
   my $config = $CONFIG;
   my ($category2type,$type2category) = categories($config);
@@ -799,51 +777,110 @@ sub stylesheet {
 END
 ;
 
-  for my $cat (keys %{$category2type}) {
-    $cat ||= 'default';
+  local $^W=0;
+
+  for my $cat ('default',keys %{$category2type}) {
 
     print qq(  <CATEGORY id="$cat">\n);
 
-    my @types = exists $category2type->{$cat} ? @{$category2type->{$cat}} : 'default';
-    my %doneit;
+    my (%seenit,%doneit);
 
-    for my $type (@types) {
-      my $label =  $cat eq 'default' ? 'TRACK DEFAULTS'
-	                             : $type2category->{__label__}{$type} || $CONFIG->type2label($type);
-      my $forced_type = $CONFIG->setting($label=>'das type');
-      my $typeid = $forced_type || $type;
-      next if $doneit{$typeid}++;
+    my @types = grep {!$seenit{$_}++} exists $category2type->{$cat} 
+                       ? @{$category2type->{$cat}} 
+                       : 'default';
 
-      print qq(     <TYPE id="$typeid">\n);
-      my %type_style = $config->config->style($label);
+    for my $toplevel (@types) {
+	
+	my $subtypemap     = expand_types($toplevel);
+	
+	for my $type ('default',keys %$subtypemap) {
 
-      my %style = (%default_style,map {ref $type_style{$_}?():($_=>$type_style{$_})} keys %type_style);
-      delete $style{-feature};
-      delete $style{-feature_low};
-      delete $style{-link} if $style{-link} eq 'AUTO';
-      my $glyph = $style{'-das glyph'} || $style{-glyph} || 'box';
+	    my $label =  $type eq 'default' ? 'TRACK DEFAULTS'
+		: $type2category->{__label__}{$toplevel} || $CONFIG->type2label($toplevel);
 
-      print qq(        <GLYPH>\n);
-      print qq(           <\U$glyph\E>\n);
-      for my $attribute (keys %style) {
-	(my $name = $attribute) =~ s/^-//;
-	$name =~ s/\s/_/g;
-	next if $name =~ /glyph|category|das/;
-	my $value = escapeHTML($style{$attribute});
-	print qq(              <\U$name\E>$value<\U/$name\E>\n);
-      }
-      print qq(           </\U$glyph\E>\n);
-      print qq(        </GLYPH>\n);
-      print qq(     </TYPE>\n);
+	    my $forced_type = $CONFIG->setting($label=>'das type');
+	    my $typeid = $type eq 'default' 
+		           ? 'default' 
+			   : ($forced_type || guess_type($type));
+	    next if $doneit{$typeid}++;
+
+	    my ($glyph,%style);
+
+	    my %type_style = $config->config->style($label);
+	    %style = (%default_style,map {ref $type_style{$_}
+					  ?()
+					      :($_=>$type_style{$_})
+		      } keys %type_style);
+	    delete $style{-feature};
+	    delete $style{-feature_low};
+	    delete $style{-link} if $style{-link} eq 'AUTO';
+
+	    my $parts = $subtypemap->{$type};
+
+	    if ($parts > 0) { # a group!
+		next unless $cat eq 'group';
+		$glyph = guess_glyph($style{-glyph},1);
+		if ($style{-glyph} eq 'gene' && $type eq $toplevel) {
+		    $glyph = 'HIDDEN' ;
+		    %style = ();
+		}
+	    }
+	    else {
+		next if $cat eq 'group';
+		$glyph = $style{'-das glyph'} || guess_glyph($style{-glyph} || 'box');
+	    }
+
+	    print qq(     <TYPE id="$typeid" label="$type">\n);
+
+	    print qq(        <GLYPH>\n);
+	    print qq(           <\U$glyph\E>\n);
+	    for my $attribute (keys %style) {
+		(my $name = $attribute) =~ s/^-//;
+		$name =~ s/\s/_/g;
+		next if $name =~ /glyph|category|das/;
+		my $value = escapeHTML($style{$attribute});
+		print qq(              <\U$name\E>$value<\U/$name\E>\n);
+	    }
+	    print qq(           </\U$glyph\E>\n);
+	    print qq(        </GLYPH>\n);
+	    print qq(     </TYPE>\n);
+	}
     }
+
     print qq(  </CATEGORY>\n);
   }
-
+  
   print <<END;
 </STYLESHEET>
 </DASSTYLE>
 END
 ;
+}
+
+sub guess_glyph {
+    my $suggested_glyph = shift;
+    my $group           = shift;
+
+    my $class = "Bio::Graphics::Glyph::$suggested_glyph";
+
+    eval "require $class" unless $class->can('new');
+    if ($group) {
+	return $class->isa('Bio::Graphics::Glyph::transcript') ? 'HAT'
+	      : $class->isa('Bio::Graphics::Glyph::cds')       ? 'HAT'
+	      : 'LINE';
+    } else {
+	return $class->isa('Bio::Graphics::Glyph::arrow')        ? 'ARROW'
+	    :$class->isa('Bio::Graphics::Glyph::anchored_arrow') ? 'ANCHORED_ARROW'
+	    :$class->isa('Bio::Graphics::Glyph::crossbox')       ? 'CROSS'
+	    :$class->isa('Bio::Graphics::Glyph::ex')             ? 'EX'
+	    :$class->isa('Bio::Graphics::Glyph::line')           ? 'LINE'
+	    :$class->isa('Bio::Graphics::Glyph::span')           ? 'SPAN'
+	    :$class->isa('Bio::Graphics::Glyph::text_in_box')    ? 'TEXT'
+	    :$class->isa('Bio::Graphics::Glyph::toomany')        ? 'TOOMANY'
+	    :$class->isa('Bio::Graphics::Glyph::triangle')       ? 'TRIANGLE'
+	    :$class->isa('Bio::Graphics::Glyph::primers')        ? 'PRIMERS'
+	    :'BOX';
+    }
 }
 
 # calculate type and category from type and method
@@ -895,7 +932,6 @@ sub no_parent_wanted {
   }
   $no_parent = $CONFIG->setting($label => 'das flatten')
                 || $CONFIG->setting('TRACK DEFAULTS' => 'das flatten')
-	        || $DB->isa('Bio::DB::SeqFeature::Store')
 	       if $label;
   return $NO_PARENT{$type} = $no_parent;
 }
@@ -926,7 +962,7 @@ sub error_header {
 }
 
 sub ok_header {
-  print header(-type          =>'text/plain',
+  print header(-type          =>'text/xml',
 	       -X_DAS_Version => $VERSION,
 	       -X_DAS_Status  => "200",
 	       -X_DAS_Capabilities => CAPABILITIES,
@@ -1021,40 +1057,42 @@ sub categories {
   my @labels = $config->labels;
 
   for my $label (@labels) {
-    my $category       = $config->setting($label=>'das category');
-    my $has_subparts   = $config->setting($label=>'das subparts');
-    my $has_superparts = $config->setting($label=>'das superparts');
-    my $structural     = $config->setting($label=>'das landmark') ||
-      $has_subparts || $has_superparts;
+      next if $TRACK && $TRACK ne $label;
+      my $category       = $config->setting($label=>'das category');
+      my $has_subparts   = $config->setting($label=>'das subparts');
+      my $has_superparts = $config->setting($label=>'das superparts');
+      my $structural     = $config->setting($label=>'das landmark') ||
+	  $has_subparts || $has_superparts;
 	
-    $category ||= 'structural' if $structural;
-    next unless $category;  # skip sections without a category marked
+      $category ||= 'structural' if $structural;
+      next unless $category;  # skip sections without a category marked
 
-    my @composite_types = $config->label2type($label);
+      my @composite_types = $config->label2type($label);
 
-    push @types,@composite_types;
-    my $t   = Bio::DB::GFF->parse_types(@composite_types);
+      push @types,@composite_types;
+      my $t   = Bio::DB::GFF->parse_types(@composite_types);
 
-    if ($DB->can('aggregators')) {
-      $_->disaggregate($t,$DB) foreach $DB->aggregators;
-    }
-    my @t = map {defined($_->[1]) ? join(':',@$_) : $_->[0]} @$t;
+      if ($DB->can('aggregators')) {
+	  $_->disaggregate($t,$DB) foreach $DB->aggregators;
+      }
+      my @t = map {defined($_->[1]) ? join(':',@$_) : $_->[0]} @$t;
 
-    my %seenit;
-    my @all_types = grep {!$seenit{$_}++} @t,@composite_types;
+      my %seenit;
+      my @all_types = grep {!$seenit{$_}++} @t,@composite_types;
 
-    push @{$category2type{$category}},(@composite_types,@all_types);
-    $type2category{$_} = $category foreach @composite_types;
+      push @{$category2type{$category}},    (@composite_types,@all_types);
+      push @{$category2type{'group'}},      (@composite_types,@all_types);
+      $type2category{$_} = $category foreach @composite_types;
 
-    for my $type (@all_types) {
+      for my $type (@all_types) {
 
-      $type2category{$type} = $category;
-      my $typeobj      = Bio::DB::GFF::Typename->new($type);
-      $type2category{__label__}{$type}      = $label;
-      $type2category{__fuzzy__}{$typeobj}   = $typeobj;
-      $type2category{__subparts__}{$type}++   if $has_subparts;
-      $type2category{__superparts__}{$type}++ if $has_superparts;
-    }
+	  $type2category{$type} = $category;
+	  my $typeobj      = Bio::DB::GFF::Typename->new($type);
+	  $type2category{__label__}{$type}      = $label;
+	  $type2category{__fuzzy__}{$typeobj}   = $typeobj;
+	  $type2category{__subparts__}{$type}++   if $has_subparts;
+	  $type2category{__superparts__}{$type}++ if $has_superparts;
+      }
   }
   $CACHED_TYPES{$dsn} = [\(%category2type,%type2category,@types)];
   return @{$CACHED_TYPES{$dsn}};
@@ -1070,6 +1108,91 @@ sub hack_link {
   $$url_ref =~ s!^(\.\.\/)+!!;
   $$url_ref = $self_url."/$$url_ref";
 }
+
+sub guess_type {
+    my $feature  = shift;
+    my $type     = ref $feature ? $feature->method : $feature;
+
+    my $track    = $TRACK || $CONFIG->feature2label($feature);
+    my $glyph    = $CONFIG->fallback_setting($track=>'glyph');
+    my $hash     = so_hash() or return 'SO:0000001';
+    return $hash->{lc $type} || 'SO:0000001';
+}
+
+sub so_hash {
+    return \%SO_HASH if tied %SO_HASH;
+
+    my $so_file = File::Spec->catfile(File::Spec->tmpdir,'SO.obo');
+    my $so_hash = File::Spec->catfile(File::Spec->tmpdir,'SO.db');
+
+    fetch_sofile($so_file) or return unless -e $so_file;
+
+    eval 'use DB_File' unless DB_File->can('new');
+    eval 'use Fcntl'   unless Fcntl->can('O_CREAT');
+
+    hash_sofile($so_file,$so_hash)
+	or return unless -e $so_hash && 
+	                 (stat($so_hash))[9] >= (stat($so_file))[9];
+    tie %SO_HASH,'DB_File',$so_hash,Fcntl->O_RDONLY,0666,$DB_File::DB_HASH or return;    
+    return \%SO_HASH;
+}
+
+sub fetch_sofile {
+    return if $SO_FETCH++; # only try once per session
+
+    my $so_file = shift;
+    my $so_url  = SO;
+    require 'LWP::Simple' unless LWP::Simple->can('mirror');
+
+    my $result = eval {
+	local $SIG{ALRM} = sub {die "timeout"};
+	alarm(5);
+	my $result = LWP::Simple::mirror($so_url => $so_file);
+	alarm 0;
+	LWP::Simple::is_success($result);
+    };
+    return $result;
+}
+
+sub hash_sofile {
+    my ($so_file,$so_hash) = @_;
+    my %hash;
+    tie %hash,'DB_File',$so_hash,Fcntl->O_CREAT|Fcntl->O_RDWR,0666,$DB_File::DB_HASH or return;
+    open my $f,$so_file or return;
+    local $/ = '';  # paragraph mode
+    while (<$f>) {
+	next unless /\[Term\]/;
+	my ($id)     = /^id: +(SO:\d+)/m;
+	my ($name)   = /^name: (.+)/m;
+	my @synonyms = /^synonym: "(.+)"/mg;
+	$hash{lc $_} = $id foreach ($name,@synonyms);
+    }
+}
+
+# Given a feature type, return all the subtypes that it contains
+# in the form [type,has_children]
+sub expand_types {
+    my $type = shift;
+    unless (exists $TYPE2SUBTYPES{$type}) {
+	$TYPE2SUBTYPES{$type} = {};
+      TRY: {
+	  my $iterator = $DB->features(-types=>$type,-iterator=>1) or last TRY;
+	  my $example  = $iterator->next_seq                       or last TRY;
+	  _add_types($TYPE2SUBTYPES{$type},$example);
+	}
+    }
+
+    return $TYPE2SUBTYPES{$type};
+}
+
+sub _add_types {
+    my ($hash,$feature)       = @_;
+    my @subparts              = $feature->get_SeqFeatures;
+    $hash->{$feature->method} = @subparts;
+    _add_types($hash,$_) foreach @subparts;
+}
+
+__END__
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.73 2009-01-08 20:21:32 lstein Exp $
+# $Id: Chado.pm,v 1.74 2009-03-03 20:30:34 scottcain Exp $
 
 =head1 NAME
 
@@ -128,6 +128,10 @@ sub new {
   my $username = $arg{-user};
   my $password = $arg{-pass};
 
+  $self->{db_args}->{dsn}      = $dsn;
+  $self->{db_args}->{username} = $username;
+  $self->{db_args}->{password} = $password;
+
   my $dbh = DBI->connect( $dsn, $username, $password )
     or $self->throw("unable to open db handle");
   $self->dbh($dbh);
@@ -149,14 +153,14 @@ sub new {
                                'relationship',
                                'relationship type','Relationship Ontology',
                                'autocreated')
-                            OR c.cv_id = ".$self->sofa_id().")";
+                            OR c.cv_id = ?)";
 
     warn "cvterm query: $cvterm_query\n" if DEBUG;
 
   my $sth = $self->dbh->prepare($cvterm_query)
     or warn "unable to prepare select cvterms";
 
-  $sth->execute or $self->throw("unable to select cvterms");
+  $sth->execute($self->sofa_id()) or $self->throw("unable to select cvterms");
 
 #  my $cvterm_id  = {}; replaced with better-named variables
 #  my $cvname = {};
@@ -190,6 +194,7 @@ sub new {
 
     }
   }
+  $sth->finish;
 
   $self->term2name(\%term2name);
   $self->name2term(\%name2term, \%termcv);
@@ -254,6 +259,7 @@ sub use_all_feature_names {
     else {
         $self->{use_all_feature_names} = 0;
     }
+    $exists->finish;
 
     return $self->{use_all_feature_names};
 }
@@ -285,6 +291,7 @@ sub organism_id {
     $org_query->execute($organism_name) or die "organism query failed:$!";
 
     my($organism_id) = $org_query->fetchrow_array;
+    $org_query->finish;
 
     if ($organism_id) {
         return $self->{'organism_id'} = $organism_id;
@@ -367,6 +374,7 @@ sub sofa_id {
   my $data = $sth->fetchrow_hashref(); 
   my $sofa_id = $$data{'cv_id'};
 
+  $sth->finish;
   return $self->{'sofa_id'} = $sofa_id if $sofa_id;
 
   $query = "select cv_id from cv where name in (
@@ -380,6 +388,7 @@ sub sofa_id {
   $data = $sth->fetchrow_hashref();
   $sofa_id = $$data{'cv_id'};
 
+  $sth->finish;
   return $self->{'sofa_id'} = $sofa_id if $sofa_id;
 
   $self->throw("unable to find SO or SOFA in the database!");
@@ -635,8 +644,8 @@ interrupted.  When a callback is provided, the method returns undef.
 
 sub features {
   my $self = shift;
-  my ($type,$types,$callback,$attributes,$iterator) = 
-       $self->_rearrange([qw(TYPE TYPES CALLBACK ATTRIBUTES ITERATOR)],
+  my ($type,$types,$callback,$attributes,$iterator,$feature_id) = 
+       $self->_rearrange([qw(TYPE TYPES CALLBACK ATTRIBUTES ITERATOR FEATURE_ID)],
 			@_);
 
   $type ||= $types; #GRRR
@@ -646,7 +655,8 @@ sub features {
                                             -attributes => $attributes,
                                             -callback => $callback,
                                             -iterator => $iterator,
-                                            -factory  => $self
+                                            -factory  => $self,
+                                            -feature_id=>$feature_id,
                                            );
   return @features;
 }
@@ -763,6 +773,8 @@ sub get_feature_by_name {
   my $self = shift;
   my @args = @_;
 
+  warn "in get_feature_by_name, args:@args" if DEBUG;
+
   if ( @args == 1 ) {
       @args = (-name => $args[0]);
   }
@@ -797,6 +809,7 @@ sub _by_alias_by_name {
   my $wildcard = 0;
   if ($name =~ /\*/) {
     $wildcard = 1;
+    undef $class;
   }
 
   warn "name:$name in get_feature_by_name" if DEBUG;
@@ -827,7 +840,7 @@ sub _by_alias_by_name {
            $type = join(',', map($$type{$_}, keys %$type) ); 
       }
       $from_part =  " feature f ";
-      $where_part.= " f.type_id in ( $type ) ";
+      $where_part.= " AND f.type_id in ( $type ) ";
   }
 
   if ($self->organism_id) {
@@ -850,7 +863,7 @@ sub _by_alias_by_name {
     }
 
     $where_part = $where_part ?
-                    "$alias_only_where AND $where_part"
+                    "$alias_only_where $where_part"
                   : $alias_only_where;
 
    }
@@ -871,7 +884,7 @@ sub _by_alias_by_name {
     }
 
     $where_part = $where_part ?
-                    "$alias_only_where AND $where_part"
+                    "$alias_only_where $where_part"
                   : $alias_only_where;
    }
   }
@@ -888,7 +901,7 @@ sub _by_alias_by_name {
     }
 
     $where_part = $where_part ?
-                    "$name_only_where AND $where_part" 
+                    "$name_only_where $where_part" 
                   : $name_only_where;
   }
 
@@ -942,7 +955,7 @@ sub _by_alias_by_name {
        where
          f.feature_id = ? and fl.rank=0 and 
          (fd.dbxref_id is null or fd.dbxref_id in
-          (select dbxref_id from dbxref where db_id =".$self->gff_source_db_id."))
+          (select dbxref_id from dbxref where db_id = ?))
        order by fl.srcfeature_id
         ");
 
@@ -951,7 +964,7 @@ sub _by_alias_by_name {
 
     # getting feature info
   while (my $feature_id_ref = $sth->fetchrow_hashref) {
-    $isth->execute($$feature_id_ref{'feature_id'})
+    $isth->execute($$feature_id_ref{'feature_id'},$self->gff_source_db_id)
              or $self->throw("getting feature info failed");
 
     if ($isth->rows == 0) { #this might be a srcfeature
@@ -964,7 +977,9 @@ sub _by_alias_by_name {
       $is_srcfeature_query->execute($$feature_id_ref{'feature_id'})
              or $self->throw("checking if feature is a srcfeature failed");
 
-####FIXME!
+      $sth->finish;
+      $isth->finish;
+      $jsth->finish;
       if ($is_srcfeature_query->rows == 1) {#yep, its a srcfeature
           #build a feature out of the srcfeature:
           warn "Yep, $name is a srcfeature" if DEBUG;
@@ -976,14 +991,15 @@ sub _by_alias_by_name {
             warn "srcfeature args:$args[0]" if DEBUG;
 
           my @seg = ($self->segment(@args));           
+
+          $is_srcfeature_query->finish;
           return @seg;
       }
       else {
+          $is_srcfeature_query->finish;
           return; #I got nothing!
       }
-
     }
-
 
       #getting chromosome info
     my $old_srcfeature_id=-1;
@@ -996,6 +1012,7 @@ sub _by_alias_by_name {
         $jsth->execute($$hashref{'srcfeature_id'})
                  or die ("getting assembly info failed");
         my $src_name = $jsth->fetchrow_hashref;
+        warn "src_name:$$src_name{'name'}" if DEBUG;
         $parent_segment =
              Bio::DB::Das::Chado::Segment->new($$src_name{'name'},$self);
         $old_srcfeature_id=$$hashref{'srcfeature_id'};
@@ -1007,11 +1024,11 @@ sub _by_alias_by_name {
       #Fetch the recursively mapped  position
 
         my $sql = "select fl.fmin,fl.fmax,fl.strand,fl.phase
-                   from feat_remapping(".$$feature_id_ref{'feature_id'}.")  fl
+                   from feat_remapping(?)  fl
                    where fl.rank=0";
         my $recurs_sth =  $self->dbh->prepare($sql);
         $sql =~ s/\s+/ /gs ;
-        $recurs_sth->execute();
+        $recurs_sth->execute($$feature_id_ref{'feature_id'});
         my $hashref2 = $recurs_sth->fetchrow_hashref;
         my $strand_ = $$hashref{'strand'};
         my $phase_ = $$hashref{'phase'};
@@ -1044,6 +1061,7 @@ sub _by_alias_by_name {
                                         $$hashref{'feature_id'}
                                                                );
         push @features, $feat;
+        $recurs_sth->finish;
         #END Recursive Mapping
       } else {
      
@@ -1126,7 +1144,8 @@ sub _by_alias_by_name {
                                                                );
                         push @features, $feat;
             }
-
+            $exon_query->finish;
+            $transcript_query->finish;
         }
         else {
          #the normal case where you don't infer CDS features 
@@ -1150,10 +1169,23 @@ sub _by_alias_by_name {
       } 
     }
   }
-  @features;
+  $sth->finish;
+  $isth->finish;
+  $jsth->finish;
+  return @features;
 }
 
 *fetch_feature_by_name = \&get_feature_by_name; 
+
+sub get_feature_by_feature_id {
+  my $self = shift;
+  my $f_id = shift;
+
+  my @features = $self->features(-feature_id => $f_id);
+  return @features;
+}
+
+*fetch = *get_feature_by_primary_id = \&get_feature_by_feature_id;
 
 sub _complex_search {
     my $self = shift;
@@ -1217,6 +1249,8 @@ sub srcfeature2name {
 
     my $hashref = $sth->fetchrow_hashref;
     $self->{'srcfeature_id'}->{$id} = $$hashref{'name'};
+
+    $sth->finish;
     return $self->{'srcfeature_id'}->{$id};
 }
 
@@ -1238,6 +1272,8 @@ sub gff_source_db_id {
 
     my $hashref = $sth->fetchrow_hashref;
     $self->{'gff_source_db_id'} = $$hashref{'db_id'}; 
+
+    $sth->finish;
     return $self->{'gff_source_db_id'};
 }
 
@@ -1251,15 +1287,16 @@ sub source2dbxref {
     my $self   = shift;
     my $source = shift;
 
-    return 'fake' unless defined($self->gff_source_db_id);
+    #Why was this here?  Debugging?
+    #return 'fake' unless defined($self->gff_source_db_id);
 
     return $self->{'source_dbxref'}->{$source}
         if $self->{'source_dbxref'}->{$source};
 
     my $sth = $self->dbh->prepare("
-        select dbxref_id,accession from dbxref where db_id=".$self->gff_source_db_id
+        select dbxref_id,accession from dbxref where db_id= ?"
     );
-    $sth->execute();
+    $sth->execute($self->gff_source_db_id);
 
     while (my $hashref = $sth->fetchrow_hashref) {
         warn "s2d:accession:$$hashref{accession}, dbxref_id:$$hashref{dbxref_id}\n" if DEBUG;
@@ -1268,8 +1305,8 @@ sub source2dbxref {
         $self->{'dbxref_source'}->{$$hashref{dbxref_id}} = $$hashref{accession};
     } 
 
+    $sth->finish;
     return $self->{'source_dbxref'}->{$source}; 
-
 }
 
 =head2 dbxref2source
@@ -1292,11 +1329,12 @@ sub dbxref2source {
     }
 
     my $sth = $self->dbh->prepare("
-        select dbxref_id,accession from dbxref where db_id=".$self->gff_source_db_id
+        select dbxref_id,accession from dbxref where db_id=?"
     );
-    $sth->execute();
+    $sth->execute($self->gff_source_db_id);
 
     if  ($sth->rows < 1) {
+        $sth->finish;
         return ".";
     }
 
@@ -1308,6 +1346,7 @@ sub dbxref2source {
         $self->{'dbxref_source'}->{$$hashref{dbxref_id}} = $$hashref{accession};
     }
                                                                        
+    $sth->finish;
     if (defined $self->{'dbxref_source'} && $dbxref
            && defined $self->{'dbxref_source'}->{$dbxref}) {
         return $self->{'dbxref_source'}->{$dbxref};
@@ -1315,7 +1354,6 @@ sub dbxref2source {
         $self->{'dbxref_source'}->{$dbxref} = "." if $dbxref;
         return ".";
     }
-
 }
 
 =head2 source_dbxref_list
@@ -1336,9 +1374,9 @@ sub source_dbxref_list {
     my $self = shift;
     return $self->{'source_dbxref_list'} if defined $self->{'source_dbxref_list'};
 
-    my $query = "select dbxref_id from dbxref where db_id = ".$self->gff_source_db_id;
+    my $query = "select dbxref_id from dbxref where db_id = ?";
     my $sth = $self->dbh->prepare($query);
-    $sth->execute();
+    $sth->execute($self->gff_source_db_id);
 
     #unpack it here to make it easier
     my @dbxref_list;
@@ -1346,6 +1384,7 @@ sub source_dbxref_list {
         push @dbxref_list, $$row[0];
     }
 
+    $sth->finish;
     $self->{'source_dbxref_list'} = join (",",@dbxref_list);
     return $self->{'source_dbxref_list'};
 }
@@ -1419,7 +1458,8 @@ sub search_notes {
     $score = sprintf("%.2f",$score);
     push @results, [$acc, $name, $score];
   }
-  @results;
+  $sth->finish;
+  return @results;
 }
 
 =cut
@@ -1471,7 +1511,7 @@ sub attributes {
   my $arrayref = $sth->fetchall_arrayref;
 
   my @array = @$arrayref;
-  return () if scalar @array == 0;
+  ($sth->finish && return ()) if scalar @array == 0;
 
 ## dgg; ugly patch to copy polypeptide/protein residues into 'translation' attribute
 # need to add to gfffeatureatts ..
@@ -1482,8 +1522,12 @@ sub attributes {
     my $type_id = $$hashref{'type_id'};
     ## warn("DEBUG: dgg ugly prot. patch; type=$type_id for ftid=$feature_id\n");
     
-    if(  $type_id == $self->name2term('polypeptide') 
-      || $type_id == $self->name2term('protein')
+    if(  $self->name2term('polypeptide') 
+         && $type_id 
+         && $type_id == $self->name2term('polypeptide') 
+      || $self->name2term('protein') 
+         && $type_id 
+         && $type_id == $self->name2term('protein')
       ) {
       $sth = $self->dbh->prepare("select residues from feature where feature_id = ?");
       $sth->execute($feature_id); # or $self->throw("failed to get feature_id in attributes"); 
@@ -1504,6 +1548,7 @@ sub attributes {
       push @result, @la;
    }
 
+  $sth->finish;
   return @result if wantarray;
 
   return $result[0] if $tag;
@@ -1566,6 +1611,8 @@ sub check_chado_reference_class {
     my $data = $sth->fetchrow_hashref();
     my $refid= $$data{'feature_id'};
     ## warn("check_chado_reference_class: $refclass = $type_id -> $refid"); # DEBUG
+
+    $sth->finish;
     return $refid;
   }
 }
@@ -1597,7 +1644,8 @@ sub chado_reference_class {
   $sth->execute(MAP_REFERENCE_TYPE) or $self->throw("trying to find chado_reference_class");
   my $data = $sth->fetchrow_hashref(); #? FIXME: could be many values *?
   my $ref_cvtermid = $$data{'cvterm_id'};
-  
+ 
+  $sth->finish; 
   if($ref_cvtermid) {
     $query = "select name from cvterm where cvterm_id = ?";
     $sth = $self->dbh->prepare($query);
@@ -1605,7 +1653,9 @@ sub chado_reference_class {
     $data = $sth->fetchrow_hashref();
     $chado_reference_class = $$data{'name'} if ($$data{'name'});
     # warn("chado_reference_class: $chado_reference_class = $ref_cvtermid"); # DEBUG
+    $sth->finish;
   }
+
   return $self->{'chado_reference_class'} = $chado_reference_class;
 }
 
@@ -1637,6 +1687,29 @@ sub _segclass { return SEGCLASS }
 
 sub absolute {return}
 
+#implemented exactly the same as Bio::DB::SeqFeature::Store::DBI::mysql
+sub clone {
+  #this is EO's implementation for the BDSFS::DBI::Pg implementation
+  #he says Pg's clone method is flawed
+    my $self = shift;
+
+#    my $dsn  = $self->{db_args}->{dsn};
+#    my $user = $self->{db_args}->{username};
+#    my $pass = $self->{db_args}->{password};
+
+#    $self->dbh()->{InactiveDestroy} = 1;
+#    my $new_dbh = DBI->connect($dsn,$user,$pass) or $self->throw($DBI::errstr);
+#    $new_dbh->{InactiveDestroy} = 1;
+#    $self->{dbh} = $new_dbh unless $self->is_temp;
+
+
+#  this is the BDSFS::DBI::mysql implementation
+    $self->{dbh}{InactiveDestroy} = 1;
+    $self->{dbh} = $self->{dbh}->clone
+       ; # unless $self->is_temp;
+}
+
+
 #this sub doesn't work and just causes annoying warnings
 #sub DESTROY {
 #        my $self = shift;
@@ -1657,6 +1730,7 @@ sub aggregators { return(); }
 =head1 END LEFTOVERS
 
 =cut
+
 
 package Bio::DB::Das::ChadoIterator;
 

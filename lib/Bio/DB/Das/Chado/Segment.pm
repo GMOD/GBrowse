@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.90 2009-01-08 20:21:32 lstein Exp $
+# $Id: Segment.pm,v 1.91 2009-03-03 20:29:22 scottcain Exp $
 
 =head1 NAME
 
@@ -114,7 +114,7 @@ sub new {
     my $self = {};
     my $class_type = shift;
 
-    my ( $name,$factory,$base_start,$stop,$db_id,$target,$feature_id ) = @_;
+    my ( $name,$factory,$base_start,$stop,$db_id,$target,$feature_id,$srcf_id ) = @_;
 
     bless $self, ref $class_type || $class_type;
     $self->{'factory'} = $factory;
@@ -189,15 +189,17 @@ sub new {
        where f.feature_id = ?
          " );
 
-    my $feature_query = $factory->dbh->prepare( "
-       select f.name,f.feature_id,f.seqlen,f.type_id,fl.fmin,fl.fmax,fl.strand
-       from feature f, featureloc fl,f.is_obsolete
-       where fl.feature_id = ? and
-             ? = f.feature_id
-         " );
+    #not used any more
+    #my $feature_query = $factory->dbh->prepare( "
+    #   select f.name,f.feature_id,f.seqlen,f.type_id,fl.fmin,fl.fmax,fl.strand
+    #   from feature f, featureloc fl,f.is_obsolete
+    #   where fl.feature_id = ? and
+    #         ? = f.feature_id
+    #     " );
 
     my $fetch_uniquename_query = $factory->dbh->prepare( "
-       select f.name,fl.fmin,fl.fmax,f.uniquename,f.is_obsolete from feature f, featureloc fl
+       select f.name,fl.fmin,fl.fmax,f.uniquename,f.is_obsolete,fl.srcfeature_id,fl.strand
+       from feature f, featureloc fl
        where f.feature_id = ? and
              f.feature_id = fl.feature_id 
          ");
@@ -223,24 +225,32 @@ sub new {
 
             warn "$base_start, $stop\n" if DEBUG;
 
-            warn Dumper($hashref) if DEBUG;
+            warn "Looping through feature_ids in constructor:\n"
+                  .Dumper($hashref) if DEBUG;
 
             $base_start = $base_start ? $base_start : $$hashref{fmin} + 1;
             $stop       = $stop       ? $stop       : $$hashref{fmax};
             $db_id      = $$hashref{uniquename};
+            $srcf_id = $$hashref{srcfeature_id};
 
             next if (!defined ($base_start) or !defined($stop) or !defined($db_id));
 
-            warn "calling factory->segment with name:$name, start:$base_start, stop:$stop, db_id:$db_id\n" if DEBUG;
-            push @segments, $factory->segment(-name=>$name,-start=>$base_start,-stop=>$stop,-db_id=>$db_id);
+            warn "calling factory->segment with name:$name, start:$base_start, stop:$stop, db_id:$db_id, srcfeature_id:$srcf_id\n" if DEBUG;
+            push @segments, $factory->segment(-name=>$name,-start=>$base_start,-stop=>$stop,-db_id=>$db_id,-srcfeature_id=>$srcf_id);
+
+            warn "segments array in constructor:@segments" if DEBUG;
 
             #reset these variables so subsequent passes through the loop wont be confused
             $base_start ='';
             $stop       ='';
             $db_id      ='';
             $strand     ='';
+            $srcf_id    ='';
         }
 
+        $landmark_is_src_query->finish;
+        $fetch_uniquename_query->finish;
+        $srcfeature_query->finish;
         if (@segments < 2) {
             return $segments[0]; #I don't think this should ever happen
         }
@@ -325,20 +335,44 @@ sub new {
 
 
             warn $self if DEBUG;
+            
+            $fetch_uniquename_query->finish;
+            $srcfeature_query->finish;
+            $landmark_is_src_query->finish;
             return $self;
         }
 
         else { #return a Feature object for the feature_id
+            warn $landmark_feature_id if DEBUG;
+            warn $factory,$base_start,$stop,$strand if DEBUG;
+
+            #unless ($landmark_feature_id && $base_start && $stop) {
+                $fetch_uniquename_query->execute($landmark_feature_id);
+                my $resultref = $fetch_uniquename_query->fetchrow_hashref;
+                warn Dumper($resultref) if DEBUG;
+                $base_start = $$resultref{'fmin'} +1;
+                $stop       = $$resultref{'fmax'};
+                $strand     = $$resultref{'strand'};
+                warn "after fetching coord info: $base_start, $stop, $strand" 
+                  if DEBUG;
+            #}
+
             my ($feat) = $self->features(
                           -feature_id => $landmark_feature_id,
                           -factory    => $factory,
                           -start      => $base_start,
                           -stop       => $stop,
                           -strand     => $strand, );
+            $fetch_uniquename_query->finish;
+            $srcfeature_query->finish;
+            $landmark_is_src_query->finish;
             return $feat;
         }
     }
     else {
+        $fetch_uniquename_query->finish;
+        $landmark_is_src_query->finish;
+        $srcfeature_query->finish;
         warn "no segment found" if DEBUG;
         return;    #nothing returned
     }
@@ -509,17 +543,23 @@ sub _search_by_name {
       $isth->execute or Bio::Root::Root->throw("query for accession failed");
       $rows_returned = $isth->rows;
 
+      $sth->finish;
+      $isth->finish;
       return if $rows_returned == 0;
 
       if ($rows_returned == 1) {
         my $hashref = $isth->fetchrow_hashref;
         my $feature_id = $$hashref{'feature_id'};
+        $sth->finish;
+        $isth->finish;
         return \$feature_id;
       } else {
         my @feature_ids;
         while (my $hashref = $isth->fetchrow_hashref) {
           push @feature_ids, $$hashref{'feature_id'};
         }
+        $sth->finish;
+        $isth->finish;
         return \@feature_ids; 
       }
 
@@ -527,12 +567,16 @@ sub _search_by_name {
       my $hashref = $isth->fetchrow_hashref;
       my $feature_id = $$hashref{'feature_id'};
       warn "found $feature_id in feature_synonym" if DEBUG;
+      $sth->finish;
+      $isth->finish;
       return \$feature_id;
     } else {
        my @feature_ids;
        while (my $hashref = $isth->fetchrow_hashref) {
          push @feature_ids, $$hashref{'feature_id'};
        }
+       $sth->finish;
+       $isth->finish;
        return \@feature_ids;
     }
 
@@ -540,12 +584,15 @@ sub _search_by_name {
     my $hashref = $sth->fetchrow_hashref;
     my $feature_id = $$hashref{'feature_id'};
     warn "feature_id in _search_by_name:$feature_id" if DEBUG;
+    $sth->finish;
     return \$feature_id;
   } else {
      my @feature_ids;
      while (my $hashref = $sth->fetchrow_hashref) {
+       warn "feature_ids in _search_by_name$$hashref{'feature_id'}" if DEBUG;
        push @feature_ids, $$hashref{'feature_id'};
      }
+     $sth->finish;
      return \@feature_ids;
   }
 }
@@ -759,18 +806,26 @@ is defined, then -callback is ignored.
 sub features {
   my $self = shift;
 
-  warn "Segment->features() args:@_\n" if DEBUG;
+  warn "Segment->features() args:@_" if DEBUG;
 
   # In some cases (url search : ?name=foo) $self isn't a hash ref ie
   # object but a simple scalar ie string. So we need to get the
   # factory the right way before accessing it
+  my ($factory,$feature_id);
   if (ref ($self) &&  $self->factory->do2Level) {
     return $self->_features2level(@_);
   }# should put an else here to try to get the factory from @_
+  else {
+    if ($_[0] and $_[0] =~ /^-/) {
+      my %args = @_;
+      $factory    = $args{-factory}    if ($args{-factory});
+      $feature_id = $args{-feature_id} if ($args{-feature_id});
+    }
+  }
 
-  my ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory);
-  if ($_[0] and $_[0] =~ /^-/) {
-    ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory) =
+  my ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop);
+  if (ref($self) and $_[0] and $_[0] =~ /^-/) {
+    ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,) =
       $self->_rearrange([qw(TYPES 
                             TYPE
                             ATTRIBUTES 
@@ -778,10 +833,8 @@ sub features {
                             ITERATOR 
                             CALLBACK 
                             START
-                            STOP
-                            FEATURE_ID
-                            FACTORY)],@_);
-    warn "$types\n" if DEBUG;
+                            STOP)],@_);
+    warn "$types" if DEBUG;
   } else {
     $types = \@_;
   }
@@ -792,6 +845,7 @@ sub features {
   }
 
   warn "@$types\n" if (defined $types and DEBUG);
+  warn $factory if DEBUG;
 
   $factory ||=$self->factory();
   my $feat     = Bio::DB::Das::Chado::Segment::Feature->new();
@@ -885,6 +939,8 @@ sub features {
 
   my $order_by    = "order by f.type_id,fl.fmin ";
 
+  warn $feature_id if DEBUG;
+
   my $where_part;
   my $from_part;
   if ($feature_id) {
@@ -910,21 +966,27 @@ sub features {
       #we get the srcfeature_id of the reference class feature
       my $srcquery = "select srcfeature_id ";
       $srcquery   .= "from featureloc fl join feature f on (fl.srcfeature_id = f.feature_id) ";
-      $srcquery   .= "where fl.feature_id = ? and f.type_id = $refclass";
+      $srcquery   .= "where fl.feature_id = ? and f.type_id = ?";
 
       my $sth = $factory->dbh->prepare($srcquery);
-      $sth->execute($feature_id) or $self->throw("refclass_srcfeature query failed");
+      $sth->execute($feature_id,$refclass) or $self->throw("refclass_srcfeature query failed");
       my $hashref = $sth->fetchrow_hashref();
       my $srcfeature_id = $hashref->{srcfeature_id} || undef;
       $where_part .= " and fl.srcfeature_id = $srcfeature_id " if(defined($srcfeature_id));
+      $sth->finish;
     }
 
   } else {
     my $featureslice;
-    if ($factory->srcfeatureslice){
+    if ($factory->srcfeatureslice 
+       && $srcfeature_id 
+       && defined $interbase_start 
+       && defined $rend){
       $featureslice = "featureloc_slice($srcfeature_id,$interbase_start, $rend)";
-    }else{
+    }elsif (defined $interbase_start && defined $rend){
       $featureslice = "featureslice($interbase_start, $rend)";
+    }else {
+      $featureslice = "featureloc";
     }
     $from_part   = "from (feature f join $featureslice fl ON (f.feature_id = fl.feature_id)) "
                   ."left join feature_dbxref fd ON (f.feature_id = fd.feature_id 
@@ -935,8 +997,11 @@ sub features {
                   ."fl.srcfeature_id = $srcfeature_id and fl.rank=0 ";
   }
 
+  #the ref $self check had to be added here to make gbrowse_details work
+  #The good news is that gbrowse_details should always be calling with the
+  #feature_id, so this won't be needed anyway.
   $where_part .= " and f.organism_id = ".$self->factory->organism_id
-      if $self->factory->organism_id;
+      if (ref $self && $self->factory->organism_id);
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
 
@@ -958,9 +1023,9 @@ sub features {
 
   warn "Segement->features query:$query" if DEBUG;
 
-  my $sth = $factory->dbh->prepare($query);
+  my $feature_query = $factory->dbh->prepare($query);
 
-   $sth->execute or $self->throw("feature query failed"); 
+   $feature_query->execute or $self->throw("feature query failed"); 
   #   $factory->dbh->do("set enable_hashjoin=1");
    $factory->dbh->do("set enable_seqscan=1");
 
@@ -985,7 +1050,7 @@ sub features {
 #  my $sth_srcfeature_id_to_name = $self->factory->dbh->prepare("
 #    select name from feature where feature_id = ?;");
 
-  while (my $hashref = $sth->fetchrow_hashref) {
+  while (my $hashref = $feature_query->fetchrow_hashref) {
 
     warn "dbstart:$$hashref{fmim}, dbstop:$$hashref{fmax}" if DEBUG;
     warn "start:$base_start, stop:$stop\n" if DEBUG;
@@ -1040,6 +1105,9 @@ sub features {
   #  warn "$feat->{annotation}, $$hashref{nbeg}, $fstart, $$hashref{nend}, $fend\n" if DEBUG;
   }
 
+  warn "returning @features\n" if DEBUG;
+
+  $feature_query->finish;
   if ($iterator) {
    warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
     return Bio::DB::Das::ChadoIterator->new(\@features) if @features;
@@ -1202,13 +1270,14 @@ sub _features2level(){
       #we get the srcfeature_id of the reference class feature
       my $srcquery = "select srcfeature_id ";
       $srcquery   .= "from featureloc fl join feature f on (fl.srcfeature_id = f.feature_id) ";
-      $srcquery   .= "where fl.feature_id = ? and f.type_id = $refclass";
+      $srcquery   .= "where fl.feature_id = ? and f.type_id = ?";
 
-      my $sth = $factory->dbh->prepare($srcquery);
+      my $sth = $factory->dbh->prepare($srcquery,$refclass);
       $sth->execute($feature_id) or $self->throw("refclass_srcfeature query failed");
       my $hashref = $sth->fetchrow_hashref();
       my $srcfeature_id = $hashref->{srcfeature_id} || undef;
       $where_part .= " and fl.srcfeature_id = $srcfeature_id " if(defined($srcfeature_id));
+      $sth->finish;
     }
 
   } else {
@@ -1360,6 +1429,7 @@ sub _features2level(){
       push @features, $feat;
   }
 
+  $sth->finish;
   if ($iterator) {
     warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
     return Bio::DB::Das::ChadoIterator->new(\@features) if @features;
@@ -1416,12 +1486,14 @@ sub dna {
   	 
     my $sth = $self->factory->dbh->prepare("
       select residues from feature
-      where feature_id = $r_id ");
+      where feature_id = ?");
 
-    $sth->execute or $self->throw("seq query failed");
+    $sth->execute($r_id) or $self->throw("seq query failed");
   	 
     my $array_ref = $sth->fetchrow_arrayref;
     my $seq = $$array_ref[0];
+
+    $sth->finish;
     return $seq;
   }
 
@@ -1459,9 +1531,10 @@ sub dna {
   }
 
   $sth->execute or $self->throw("seq query failed");
-
+  
   my $array_ref = $sth->fetchrow_arrayref;
   my $seq = $$array_ref[0]; 
+  $sth->finish;
 
   if ($reversed) {
     $seq = reverse $seq;
@@ -1530,7 +1603,9 @@ the segment was originally generated.
 
 =cut
 
-sub factory {shift->{factory} } 
+sub factory {my $self = shift;
+             confess unless ref $self;
+             return $self->{factory} } 
 
 =head2 srcfeature_id
 
@@ -1550,20 +1625,47 @@ sub srcfeature_id {
   return $self->{'srcfeature_id'};
 }
 
-=head2 source_tag
+=head2 source
 
-  Title   : source_tag
-  Usage   : $obj->source_tag($newval)
-  Function: Returns the source_tag (not to be confused with source?)
-  Returns : Always returns Bio::DB::Das::Chado::Segment
-  Args    : none
-
-It is not clear to me what this is really used for, but this is exactly
-what Bio::DB::SeqFeature::Store::Segment does.
+  Title   : source
+  Usage   : $obj->source($newval)
+  Function: Returns the source; sets with an argument
+  Returns : A string that is the source
+  Args    : A string to set the source
 
 =cut
 
-sub source_tag   { __PACKAGE__ }
+sub source {
+  my $self = shift;
+  my $source;
+
+  return $self->{'source'} = shift if @_;
+  return $self->{'source'} if defined ($self->{'source'});
+ 
+  #fine, not set, get by query 
+
+  my $query = "SELECT dbx.accession FROM feature_dbxref fd
+                                         JOIN dbxref dbx USING (dbxref_id)
+               WHERE fd.feature_id = ?
+                 AND dbx.db_id = ?";
+  my $sth = $self->factory->dbh->prepare($query);
+  $sth->execute($self->feature_id, $self->factory->gff_source_db_id)
+      or $self->throw("failed to get source via query");
+
+  ($source) = $sth->fetchrow_array;
+
+  $sth->finish;
+  return $source;
+}
+
+=head2 source_tag
+
+  Title   : source_tag
+  Function: aliased to source() for Bio::SeqFeatureI compatibility
+
+=cut
+
+*source_tag  = \&source;
 
 =head2 alphabet
 
@@ -1605,6 +1707,8 @@ sub desc {
     where feature_id =  ? and type_id in (select cvterm_id from cvterm where name = 'Note') ");
   $sth->execute( $self->feature_id );
   my $hashref = $sth->fetchrow_hashref();
+
+  $sth->finish;
   return $self->{'desc'}= $hashref->{value};
 }
 
@@ -1617,6 +1721,8 @@ sub species {
     where organism_id = (select organism_id from feature where feature_id = ?) ");
   $sth->execute( $self->srcfeature_id );
   my $hashref = $sth->fetchrow_hashref();
+  $sth->finish;
+  
 ## this is dying; why? dgg
 #  my $spp= Bio::Species->new( -classification => [ $hashref->{species}, $hashref->{genus} ]  );
   
@@ -1687,17 +1793,17 @@ sub sourceseq {
   return $self->{'sourceseq'} if $self->{'sourceseq'};
 
   my $dbh  = $self->factory->dbh;
-  my $sth  = $dbh->prepare ("
+  my $sourceseq_query  = $dbh->prepare("
       select name from feature where feature_id = ?");
-  $sth->execute($self->srcfeature_id)
+  $sourceseq_query->execute($self->srcfeature_id)
       or $self->throw("getting sourceseq name query failed"); 
 
-  return if $sth->rows < 1;
-  my $hashref = $sth->fetchrow_hashref;
+  return if $sourceseq_query->rows < 1;
+  my $hashref = $sourceseq_query->fetchrow_hashref;
   
+  $sourceseq_query->finish;
   $self->{'sourceseq'} = $$hashref{'name'};
   return $self->{'sourceseq'};
- 
 }
 
 =head2 refseq

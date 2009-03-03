@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.74 2009-03-03 20:30:34 scottcain Exp $
+# $Id: Chado.pm,v 1.75 2009-03-03 21:03:59 scottcain Exp $
 
 =head1 NAME
 
@@ -1705,7 +1705,10 @@ sub clone {
 
 #  this is the BDSFS::DBI::mysql implementation
     $self->{dbh}{InactiveDestroy} = 1;
-    $self->{dbh} = $self->{dbh}->clone
+    $self->{dbh} = $self->{dbh}->clone({}) 
+       #magic from perlmonks to silence a warning:
+       # http://www.perlmonks.org/?node_id=594175
+       # without the empty {} you get warnings about unrecognised attribute name
        ; # unless $self->is_temp;
 }
 

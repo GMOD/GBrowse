@@ -184,6 +184,7 @@ sub organism {
 
     my ($genus, $species) = $organism_query->fetchrow_array;
 
+    $organism_query->finish;
     $self->{'organism'} = "$genus $species";
     return $self->{'organism'};
 }
@@ -332,6 +333,7 @@ sub is_analysis {
 
   my ($is_analysis) = $sth->fetchrow_array;
 
+  $sth->finish;
   return $self->{'is_analysis'} = $is_analysis;
 } 
 
@@ -567,15 +569,6 @@ sub seq_id {
   return $self->{'seq_id'};
 }
 
-=head2 source_tag()
-
-  Title   : source_tag
-  Function: aliased to source() for Bio::SeqFeatureI compatibility
-
-=cut
-
-*source_tag = \&source;
-
 ######################################################################
 # ISA Bio::SeqFeatureI
 ######################################################################
@@ -796,6 +789,7 @@ sub target {
 # on target per feature, Bio::Graphics::Browser doesn't support it
 
   my $hashref = $sth->fetchrow_hashref;
+  $sth->finish;
 
   if ($$hashref{'name'}) {
       my $segment = Bio::DB::Das::Chado::Segment->new(
@@ -1042,16 +1036,18 @@ sub sub_SeqFeature {
     $sql =~ s/\s+/ /gs if DEBUG;
     warn $sql if DEBUG;
 
-    my $sth = $self->factory->dbh->prepare($sql);
-    $sth->execute or $self->throw("subfeature query failed; here's the sql:$sql");
+    my $subfeature_query = $self->factory->dbh->prepare($sql);
+    $subfeature_query->execute 
+        or $self->throw("subfeature query failed; here's the sql:$sql");
 
     #$self->factory->dbh->trace(0) if DEBUG;
 
-    my $rows = $sth->rows;
-    return if ($rows<1);    #nothing retrieve during query
+    my $rows = $subfeature_query->rows;
+    ($subfeature_query->finish && return) 
+        if ($rows<1);    #nothing retrieve during query
 
     my @p_e_cache;
-    while (my $hashref = $sth->fetchrow_hashref) {
+    while (my $hashref = $subfeature_query->fetchrow_hashref) {
 
       next if ($$hashref{is_obsolete} and !$self->factory->allow_obsolete);
       next unless $$hashref{srcfeature_id} == $self->srcfeature_id;
@@ -1066,16 +1062,17 @@ sub sub_SeqFeature {
 
       my $source_query = $self->factory->dbh->prepare("
             select d.accession from dbxref d,feature_dbxref fd
-            where fd.feature_id = $$hashref{feature_id} and
+            where fd.feature_id = ? and
                   fd.dbxref_id  = d.dbxref_id and
-                  d.db_id = ".$self->factory->gff_source_db_id);
-      $source_query->execute();
+                  d.db_id = ?");
+      $source_query->execute($$hashref{feature_id}, $self->factory->gff_source_db_id);
 
       my ($source) = $source_query->fetchrow_array;
       my $type_obj = Bio::DB::GFF::Typename->new(
            $self->factory->term2name($$hashref{type_id}),
            $source
       );
+      $source_query->finish;
 
       warn "creating new subfeat, $$hashref{name}, $base_start, $stop, $$hashref{phase}" if DEBUG;
 
@@ -1101,6 +1098,7 @@ sub sub_SeqFeature {
       }
     }
 
+    $subfeature_query->finish;
     #now deal with converting polypeptide and exons to CDS
 
     my @cds_utr_features 
@@ -1672,6 +1670,7 @@ sub synonyms {
     push @synonyms, $$hashref{name} if ($$hashref{name} ne $name);
   }
 
+  $sth->finish;
   return @synonyms;
 }
 
@@ -1724,6 +1723,7 @@ failed");
 $link_str='/cgi-bin/cmap/viewer?ref_map_aids='.$$hashref{map_aid}.'&data_source='.$data_source.'&highlight='.$$hashref{'feature_name'};
   }
 
+  $sth->finish;
   return $link_str;
 }
 

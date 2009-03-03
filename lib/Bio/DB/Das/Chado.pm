@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.14 2009-02-05 19:50:32 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.15 2009-03-03 20:25:02 scottcain Exp $
 
 =head1 NAME
 
@@ -1693,20 +1693,20 @@ sub clone {
   #he says Pg's clone method is flawed
     my $self = shift;
 
-    my $dsn  = $self->{db_args}->{dsn};
-    my $user = $self->{db_args}->{username};
-    my $pass = $self->{db_args}->{password};
+#    my $dsn  = $self->{db_args}->{dsn};
+#    my $user = $self->{db_args}->{username};
+#    my $pass = $self->{db_args}->{password};
 
-    $self->dbh()->{InactiveDestroy} = 1;
-    my $new_dbh = DBI->connect($dsn,$user,$pass) or $self->throw($DBI::errstr);
-    $new_dbh->{InactiveDestroy} = 1;
-    $self->{dbh} = $new_dbh unless $self->is_temp;
+#    $self->dbh()->{InactiveDestroy} = 1;
+#    my $new_dbh = DBI->connect($dsn,$user,$pass) or $self->throw($DBI::errstr);
+#    $new_dbh->{InactiveDestroy} = 1;
+#    $self->{dbh} = $new_dbh unless $self->is_temp;
 
 
 #  this is the BDSFS::DBI::mysql implementation
-#    $self->{dbh}{InactiveDestroy} = 1;
-#    $self->{dbh} = $self->{dbh}->clone
-#        unless $self->is_temp;
+    $self->{dbh}{InactiveDestroy} = 1;
+    $self->{dbh} = $self->{dbh}->clone
+       ; # unless $self->is_temp;
 }
 
 

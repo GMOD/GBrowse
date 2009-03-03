@@ -124,7 +124,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Template;
 use JSON;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.7 2009-02-27 05:58:35 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.8 2009-03-03 04:32:27 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
@@ -475,9 +475,11 @@ sub run {
         $request_str = CGI::escape($request_str);
     }
 
+    my $gmap_api_key = $self->source->global_setting('gmap_api_key') || "";
+
     my %options = (
         style_sheet   => $style_sheet,
-        gmap_api_key  => $self->source->global_setting('gmap_api_key'),
+        gmap_api_key  => $gmap_api_key,
         numpops       => $numpops,
         numhaps       => $numhaps,
         request_str   => $request_str,

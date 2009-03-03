@@ -49,7 +49,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.11 2009-03-03 23:34:32 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.12 2009-03-03 23:51:54 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -57,7 +57,7 @@ use File::Basename 'basename';
 use CGI qw/header path_info param url request_method escapeHTML/ ;
 use Carp;
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Util 'shellwords';
+use Bio::Graphics::Browser::Util;
 use File::Spec;
 use vars qw($DB $DSN $TRACK $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
@@ -66,7 +66,7 @@ use vars qw($DB $DSN $TRACK $HEADER %ERRCODES $CONFIG
 
 use constant SO => 'http://www.sequenceontology.org/release/2.3/so_2_3.obo';
 
-#$Id: das.PLS,v 1.6.8.1.2.11 2009-03-03 23:34:32 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.12 2009-03-03 23:51:54 lstein Exp $
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';

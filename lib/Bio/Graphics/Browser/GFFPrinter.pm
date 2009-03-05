@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.10 2009-02-10 01:19:27 lstein Exp $
+# $Id: GFFPrinter.pm,v 1.11 2009-03-05 23:03:00 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -43,7 +43,8 @@ sub new {
         ref $class || $class;
 
     $self->check_source()                  or return;
-    $self->get_segment($options{-segment}) or return;
+    $self->get_segment($options{-segment}) or return
+	if $options{-segment};
 
     return $self;
 }
@@ -356,4 +357,28 @@ sub do_wigfile_substitution {
     };
     warn $@ if $@;
 }
+
+# Experimental feature: 
+# list all the labels that are marked "discoverable" 
+sub print_scan {
+    my $self   = shift;
+    my $config = $self->data_source;
+    my @labels = $config->labels;
+    print "# Discoverable tracks from ",CGI->self_url,"\n";
+    for my $l (@labels) {
+	next if $l =~ /^_/;
+	next if $l =~ /:\w+/;
+	next unless    $config->fallback_setting($l => 'discoverable');
+	next if        $config->code_setting($l=>'global feature');
+	my $key      = $config->code_setting($l => 'key');
+	my $citation = $config->code_setting($l => 'citation');
+	print <<END;
+[$l]
+key      = $key
+citation = $citation
+
+END
+    }
+}
+
 1;

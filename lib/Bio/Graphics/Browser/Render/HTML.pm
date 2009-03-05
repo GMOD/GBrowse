@@ -572,6 +572,8 @@ sub render_track_table {
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
   my @labels     = $self->potential_tracks;
+
+  warn "potential tracks = @labels" if DEBUG;
   my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 
@@ -613,7 +615,8 @@ sub render_track_table {
     next if $seenit{$category}++;
     my $table;
     my $id = "${category}_section";
-    my $category_title   = (split m/:/,$category)[-1];
+    my $category_title   = (split m/(?<!\\):/,$category)[-1];
+    $category_title      =~ s/\\//g;
 
     if ($category eq $self->tr('REGION') 
 	&& !$self->setting('region segment')) {
@@ -676,10 +679,14 @@ sub indent_categories {
     my ($contents,$categories) = @_;
 
     my $category_hash = {};
+    my %sort_order;
+    my $sort_index = 0;
 
     for my $category (@$categories) {
 	my $cont   = $contents->{$category} || '';
-	my @parts  = split m/:/,$category;
+
+	my @parts  = map {s/\\//g; $_} split m/(?<!\\):/,$category;
+	$sort_order{$_} = $sort_index++ foreach @parts;
 
 	my $i      = $category_hash;
 
@@ -694,7 +701,6 @@ sub indent_categories {
 	}
     }
     my $i               = 1;
-    my %sort_order      = map {$_=>$i++} map {split m/:/} @$categories;
     my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order);
 }
 

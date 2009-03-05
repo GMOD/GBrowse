@@ -41,6 +41,7 @@ sub add_files_from_state {
 	    $self->add_source($track,$track);
 	    next;
 	}
+
 	my $remote_url = $config->setting($track=>'remote feature') or next;
 	warn "adding remote_url = $remote_url" if DEBUG;
 	$self->add_source($track,$remote_url);

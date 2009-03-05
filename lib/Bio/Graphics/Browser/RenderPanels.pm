@@ -353,7 +353,6 @@ sub wrap_rendered_track {
 
     my $collapsed = $settings->{track_collapsed}{$label};
     my $img_style = $collapsed ? "display:none" : "display:inline";
-#    $img_style .= ";filter:alpha(opacity=100);moz-opacity:1";
 
     # commented out alt because it interferes with balloon tooltips is IE
     my $map_id = "${label}_map";
@@ -1112,12 +1111,16 @@ sub run_local_requests {
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
 
-	my $multiple_tracks = $label =~ /^(http|ftp|file|das|plugin):/ ;
+	(my $base = $label) =~ s/:(overview|region|details?)$//;
+	warn "label=$label, base=$base, file=$feature_files->{$base}" if DEBUG;
+
+	my $multiple_tracks = $base =~ /^(http|ftp|file|das|plugin):/ 
+	    || $source->code_setting($base=>'remote feature');
 
         my @keystyle = ( -key_style => 'between' )
             if $multiple_tracks;
 
-	my $key = $source->setting( $label => 'key' ) || '' ;
+	my $key = $source->setting( $base => 'key' ) || '' ;
 	my @nopad = (($key eq '') || ($key eq 'none')) 
 	    && !$multiple_tracks
              ? (-pad_top => 0)
@@ -1128,9 +1131,6 @@ sub run_local_requests {
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
 
         my %trackmap;
-
-	(my $base = $label) =~ s/:(overview|region|details?)$//;
-	warn "label=$label, base=$base, file=$feature_files->{$base}" if DEBUG;
 
         if ( my $file = ($feature_files->{$base}) ) {
 

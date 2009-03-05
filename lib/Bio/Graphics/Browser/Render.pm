@@ -1253,11 +1253,11 @@ sub plugin_find {
 sub handle_gff_dump {
     my $self = shift;
 
-    return unless ( param('gbgff') );
+    my $gff_action = param('gbgff') or return;
+    my $segment    = param('q') || param('segment') || undef,
 
     my $dumper = Bio::Graphics::Browser::GFFPrinter->new(
         -data_source => $self->data_source(),
-        -segment     => param('q')          || param('segment') || undef,
         -stylesheet  => param('stylesheet') || param('s')       || undef,
         -id          => param('id')         || undef,         
         '-dump'      => param('d')          || undef,
@@ -1265,9 +1265,15 @@ sub handle_gff_dump {
         -mimetype    => param('m')          || undef,
     ) or return 1;
 
-    $dumper->get_segment() or return 1;
-    print header( $dumper->get_mime_type );
-    $dumper->print_gff3();
+    if ($gff_action eq 'scan') {
+	print header('text/plain');
+	$dumper->print_scan();
+    }
+    else {
+	$dumper->get_segment($segment) or return 1;
+	print header( $dumper->get_mime_type );
+	$dumper->print_gff3();
+    }
 
     return 1;
 }
@@ -2765,7 +2771,9 @@ sub potential_tracks {
     my $source = $self->data_source;
     my $uploads = $self->uploaded_sources;
     my $remotes = $self->remote_sources;
-    return grep {!/^_/} ($source->detail_tracks,
+    my %seenit;
+    return grep {!$seenit{$_}++
+	      && !/^_/} ($source->detail_tracks,
 			 $source->overview_tracks,
 			 $source->plugin_tracks,
 			 $source->regionview_tracks,
@@ -2842,10 +2850,11 @@ sub expand_track_names {
     my @tracks   = @_;
 
     my $external = $self->external_data;
+    my $source   = $self->data_source;
     my @results;
 
     for my $t (@tracks) {
-	if ($external->{$t}) {
+	if ($external->{$t} || $source->code_setting($t=>'remote feature')) {
 	    my @sections = $self->featurefile_sections($t);
 	    @sections    = ('detail') unless @sections;
 	    push @results,"$t:$_" foreach @sections;
@@ -3194,6 +3203,7 @@ sub categorize_track {
   my $category;
   for my $l ($self->language->language) {
     $category      ||= $self->setting($label=>"category:$l");
+
   }
   $category        ||= $self->setting($label => 'category');
   $category        ||= '';  # prevent uninit variable warnings
@@ -3224,8 +3234,7 @@ sub external_data {
 	my $rel2abs      = $search->coordinate_mapper($segment,1);
 	my $rel2abs_slow = $search->coordinate_mapper($segment,0);
 	for my $featureset ($self->plugins,$self->uploaded_sources,$self->remote_sources) {
-	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} 
-	        if DEBUG;
+	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} if DEBUG;
 	    next unless $featureset;
 	    $featureset->annotate($meta_segment,$f,
 				  $rel2abs,$rel2abs_slow,$max_segment,

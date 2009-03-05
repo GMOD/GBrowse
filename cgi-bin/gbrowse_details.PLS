@@ -49,7 +49,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.11 2009-02-28 00:04:47 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.12 2009-03-05 20:05:49 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -93,6 +93,15 @@ $CONFIG->source(get_source());
 getLinkURLs(\%URLS);
 
 my $head_name = !$class || $class eq 'Sequence' ? $name : "$class:$name";  # gff3 compatibility
+
+unless (defined $name or defined $f_id or defined $start) {
+    print header,
+    start_html('gbrowse_details error'),
+    p({-class=>'error'},
+      'This script must be called with one or more of the parameters name, feature_id or db_id.');
+    end_html;
+    exit 0;
+}
 
 my $db = open_database();
 

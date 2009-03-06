@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.92 2009-03-03 22:13:00 scottcain Exp $
+# $Id: Segment.pm,v 1.93 2009-03-06 21:37:07 scottcain Exp $
 
 =head1 NAME
 
@@ -334,7 +334,7 @@ sub new {
             $self->strand($strand);
 
 
-            warn $self if DEBUG;
+            warn $self, ref $self if DEBUG;
             
             $fetch_uniquename_query->finish;
             $srcfeature_query->finish;
@@ -904,6 +904,11 @@ sub features {
     if ($types && scalar @$types != 0) {
 
       warn "first type:$$types[0]\n" if DEBUG;
+
+      if (ref $$types[0] eq 'ARRAY') {
+          @$types = @{$$types[0]};
+          warn "first type after deref:$$types[0]\n" if DEBUG;
+      }
 
       my $temp_type = $$types[0];
       my $temp_source = '';

@@ -140,7 +140,7 @@ sub run {
 	  $state->{features}{$_}{visible}
       }
       @{$state->{tracks}};
-  }a
+  }
 
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if DEBUG;

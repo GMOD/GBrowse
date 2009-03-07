@@ -1083,9 +1083,14 @@ sub das_table {
       }
   }
 
+  my $url_help = $self->tr('Remote_url_help');
   push @rows,
-    th({-align=>'right',-width=>'20%'},
-		$self->tr('Remote_url')).
+    th({-align=>'right',
+	-width      =>'20%',
+	-onMouseOver=>"GBubble.showTooltip(event,'$url_help')",
+	-style      => 'cursor:pointer',
+       },
+       $self->tr('Remote_url')).
     td(textfield(-name=>'eurl',-id=>'eurl',-size=>80,-value=>'',-override=>1),
        $presets,
        button(

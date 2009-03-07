@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.85 2009-02-25 18:11:12 lstein Exp $
+ $Id: controller.js,v 1.86 2009-03-07 19:41:30 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -376,6 +376,12 @@ var GBrowseController = Class.create({
     }); // end Ajax.Request
 
   }, // end update_coordinates
+
+  scroll:
+  function (direction,length_units) {
+     var length = this.segment_info.detail_stop - this.segment_info.detail_start + 1;
+     this.update_coordinates(direction + ' ' + Math.round(length_units*length));
+  }, // end scroll
 
   add_track:
   function(track_name, onSuccessFunc, force) {

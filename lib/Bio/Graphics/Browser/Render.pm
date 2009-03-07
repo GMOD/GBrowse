@@ -133,6 +133,15 @@ sub run {
   $self->set_source();
   my $state = $self->state;
 
+  if (DEBUG) {  # trying to debug "white tracks" bug
+      warn "tracks = ",join ' ',@{$state->{tracks}};
+      warn "visible tracks = ",join ' ',
+      grep {
+	  $state->{features}{$_}{visible}
+      }
+      @{$state->{tracks}};
+  }a
+
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if DEBUG;
       return ;
@@ -1854,10 +1863,11 @@ sub update_state_from_cgi {
 
   $self->update_options($state);
   if (param('revert')) {
-    $self->default_tracks($state);
+      $self->default_tracks($state);
   }
   else {
-    $self->update_tracks($state);
+      $self->remove_invalid_tracks($state);
+      $self->update_tracks($state);
   }
 
   $self->update_coordinates($state);
@@ -2691,6 +2701,17 @@ sub split_labels {
       tr/$;/-/;  # unescape hyphens
   }
   @results;
+}
+
+# remove any tracks that the client still thinks are valid
+# but which have been removed from the config file
+sub remove_invalid_tracks {
+    my $self = shift;
+    my $state = shift;
+    my %potential = map {$_=>1} $self->potential_tracks;
+    my @defunct   = grep {!$potential{$_}} keys %{$state->{features}};
+    delete $state->{features}{$_} foreach @defunct;
+    $state->{tracks} = [grep {$potential{$_}} @{$state->{tracks}}];
 }
 
 sub set_tracks {

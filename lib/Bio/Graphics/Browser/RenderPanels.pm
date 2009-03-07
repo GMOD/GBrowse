@@ -370,7 +370,6 @@ sub wrap_rendered_track {
             -height => $height,
             -border => 0,
             -name   => $label,
-            #-alt    => $label,
             -style  => $img_style
         }
     );
@@ -485,35 +484,32 @@ sub wrap_rendered_track {
 
     # Add arrows for pannning to details scalebar panel
     if ($is_scalebar && $is_detail) {
-	my $segment = $self->segment;
-	my $length  = $segment->length;
-	my $half    = int($length/2);
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
 	$style      .= ';filter:alpha(opacity=35);moz-opacity:0.35';
         my $pan_left   =  img({
 	    -style   => $style . ';left:10px',
 	    -class   => 'panleft',
 	    -src     => "$buttons/panleft.png",
-	    -onClick => "Controller.update_coordinates('left $half')"
+	    -onClick => "Controller.scroll('left',0.5)"
 			      },
 	    );
 	my $pan_left2  =  img({
             -style   => $style . ';left:-3px',
             -class   => 'panleft',
             -src     => "$buttons/panleft2.png",
-            -onClick => "Controller.update_coordinates('left $length')"
+            -onClick => "Controller.scroll('left',1)",
                               },
             );
 	my $pan_right  = img({ -style   => $style . ';right:10px',
 			       -class   => 'panright',
 			       -src     => "$buttons/panright.png",
-			       -onClick => "Controller.update_coordinates('right $half')",
+			       -onClick => "Controller.scroll('right',0.5)",
 			     }
 	    );
         my $pan_right2  = img({ -style   => $style . ';right:-3px',
                                -class   => 'panright',
                                -src     => "$buttons/panright2.png",
-                               -onClick => "Controller.update_coordinates('right $length')",
+                               -onClick => "Controller.scroll('right',1)",
                              }
             );
 

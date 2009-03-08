@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.122 2009-03-08 15:15:35 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.123 2009-03-08 15:20:45 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -3111,7 +3111,6 @@ use strict;
 use Bio::Graphics::FeatureFile;
 use Bio::Graphics::Browser::Util 'shellwords';
 use Carp 'croak';
-use CGI 'url';
 use Socket;  # for inet_aton() call
 
 use vars '@ISA';
@@ -3430,16 +3429,6 @@ sub make_link {
   }
 
   return $self->link_pattern($link,$feature,$panel);
-}
-
-#gbrowse_syn can't cope with '../../' relative URL links
-sub _cgi_url {
-    my $src;
-    my $url = url();                                                                                                                                                                                             
-    $url =~ s![^/]+$!!;;
-    $url .= 'gbrowse_details';
-    $url .= "/$src" if $src;    
-    return $url;
 }
 
 # make the title for an object on a clickable imagemap

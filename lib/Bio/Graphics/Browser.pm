@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.121 2009-01-09 23:33:19 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.122 2009-03-08 15:15:35 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1117,8 +1117,7 @@ sub render_composite_track {
   my $css_map = $self->map_css($boxes,$section) if $section eq 'detail';
 
   if ($args->{image_and_map}) {
-    my $map_array = $self->map_array($boxes);
-    return $gd, $map_array;
+    return $gd, $boxes;
   }
 
   $map ||= '';
@@ -1441,6 +1440,8 @@ sub generate_panels {
   # cached panels need to be retrieved
   for my $l (keys %cached) {
     @{$results{$l}}{qw(image map width height file gd boxes)} = $self->get_cached_panel($cache_key{$l});
+    # for apps that rely on the image_and_maps syntax, format the boxes
+    $results{$l}{boxes} = $self->map_array($results{$l}{boxes});
   }
 
   return \%results;
@@ -1784,9 +1785,9 @@ sub make_map {
         my $iframe_style = "style=padding-right:16px";
         $style = "cursor:pointer";
         $mousedown = $balloonclick =~ /^(http|ftp):/
-            ? "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width=$iframe_width height=$height " .
+            ? "$balloon_ct.showTooltip(event,'<iframe width=$iframe_width height=$height " .
               "frameborder=0 src=$balloonclick $iframe_style></iframe>')"
-	      : "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',1,$click_width)";
+	      : "$balloon_ct.showTooltip(event,'$balloonclick',1,$click_width)";
         undef $href;
       }
     }
@@ -2232,12 +2233,17 @@ sub _feature_get {
 	  @segments  = grep {$_->length} $db->segment(@argv);
 	  @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !@segments;
       } else {
-	  @segments  = grep {$_->length} $db->get_feature_by_name(@argv)   if !defined($start) && !defined($stop);
+	  @segments  = grep {$_->length} $db->get_feature_by_name(@argv)  if !defined($start) && !defined($stop);
 	  @segments  = grep {$_->length} $db->get_features_by_alias(@argv) if !@segments && !defined($start)
 	      && !defined($stop)
 	      && $db->can('get_features_by_alias');
 	  @segments  = grep {$_->length} $db->segment(@argv)               if !@segments && $name !~ /[*?]/;
       }
+  }
+
+  # one last try for Bio::DB::GFF
+  if (defined $f_id && defined $name && !@segments) {
+    @segments  = grep {$_->length} $db->get_feature_by_name(@argv);
   }
 
   return unless @segments;
@@ -3105,6 +3111,7 @@ use strict;
 use Bio::Graphics::FeatureFile;
 use Bio::Graphics::Browser::Util 'shellwords';
 use Carp 'croak';
+use CGI 'url';
 use Socket;  # for inet_aton() call
 
 use vars '@ISA';
@@ -3362,6 +3369,8 @@ sub make_link {
   my $self     = shift;
   my ($feature,$panel,$label,$data_source,$track)  = @_;
 
+  $data_source ||= $self->source();
+
   if ($feature->can('url')) {
     my $link = $feature->url;
     return $link if defined $link;
@@ -3411,15 +3420,26 @@ sub make_link {
                :$feature->can('primary_key') ? CGI::escape($feature->primary_key)
                :undef;
 
+    my $url = "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end";
     if (defined $f_id) {
-      return "../../gbrowse_details/$data_source?feature_id=$f_id;ref=$ref;start=$start;end=$end";
+      return $url . ";feature_id=$f_id";
     }
     else {
-      return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end";
+      return $url;
     }
   }
 
   return $self->link_pattern($link,$feature,$panel);
+}
+
+#gbrowse_syn can't cope with '../../' relative URL links
+sub _cgi_url {
+    my $src;
+    my $url = url();                                                                                                                                                                                             
+    $url =~ s![^/]+$!!;;
+    $url .= 'gbrowse_details';
+    $url .= "/$src" if $src;    
+    return $url;
 }
 
 # make the title for an object on a clickable imagemap

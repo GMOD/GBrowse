@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.15 2009-02-22 02:01:57 stajich Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.16 2009-03-08 15:15:34 sheldon_mckay Exp $
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -68,6 +68,7 @@ use Bio::DB::GFF::SyntenyBlock;
 use List::Util qw/min max sum/;
 use Digest::MD5 'md5_hex';
 
+use CGI::Pretty 'html3';
 
 use Data::Dumper;
 
@@ -81,7 +82,7 @@ use constant MAX_SPAN           => 0.3;     # largest gap allowed for merging in
 use constant TOO_SMALL          => 0.02;    # minimum span for displayed alignments
 use constant MAX_GAP            => 50_001;  # maximum gap for chaining
 use constant MAX_SEGMENT        => 400_001; 
-use constant EXTENSION          => 'syn';   # extsnsion for species conf files
+use constant EXTENSION          => 'syn';   # extension for species conf files
 use constant DEBUG              => 0;
 use constant HELP               => 'http://gmod.org/wiki/GBrowse_syn_Help';
 
@@ -133,6 +134,7 @@ my $segment = landmark2segment($page_settings);
 
 if ($segment) {
   my $name = format_segment($segment);
+  
   if (ref $segment ne 'Bio::DB::GFF::RelSegment') {
     redirect(url()."?name=$name");
   }
@@ -142,19 +144,20 @@ if ($segment) {
   $page_settings->{name} = $name;
 }
 
-my $cookie  = CGI::Cookie->new(-name    => $CGI::Session::NAME,
-			       -value   => $session->id,
-			       -path    => url(-absolute=>1),
-			       -expires => '+1d');
+my @reset = (0,0);
+if (param('reset')) {
+  @reset = (1, 'All settings have been reset to their default values');
+}
+$CONF->print_top($CONF->setting('description'),@reset,$session);
 
-print_header(-cookie => [$cookie], -expires => 'now');
-
-print start_html( -title => $CONF->setting('description'),
-		  -style => $CONF->setting('stylesheet'));
-
+# Which aligned species have been asked for
 my @requested_species  = _unique(@{$page_settings->{species}});
+if (!@requested_species) {
+  @requested_species  = grep {$_ ne $page_settings->{search_src}} keys %$MAP;
+}
 
 if ($segment) {
+
   @hits = map {$SYNTENY_IO->get_synteny_by_range(-src   => $page_settings->{search_src},
 						 -ref   => $segment->abs_ref,
 						 -start => $segment->abs_start,
@@ -166,15 +169,6 @@ my $header = $CONF->setting('header');
 $header = &$header if ref $header;
 print $header || h1($CONF->setting('description'));
 search_form($segment);
-
-# alert for global reset
-if (param('reset')) {
-  print <<END;
-<script type="text/javascript">
-  alert("All settings have been reset to their default values");
-</script>
-END
-}
 
 print overview_panel($CONF->whole_segment($segment),$segment) if $segment;
 
@@ -611,10 +605,18 @@ sub draw_image {
   for my $box (@$ref_boxes) {
     ref $box or next;
     my ($feature,$fname) = _type_from_box($box);
-    next unless $feature =~ /^match(_part)?$/;
-    $ref_boxes{$fname} = 
-      [$im_pad+$box->[1],$ref_top+$box->[2],$im_pad+$box->[3],$ref_top+$box->[4]];
-    $gd->rectangle($im_pad+$box->[1],$ref_top+$box->[2],$im_pad+$box->[3],$ref_top+$box->[4],$black) if DEBUG;
+    my @rect = ($im_pad+$box->[1],$ref_top+$box->[2],$im_pad+$box->[3],$ref_top+$box->[4]);
+    if ($feature =~ /^match(_part)?$/) {
+      $ref_boxes{$fname} = \@rect;		
+    }
+    else {
+      my %atts = %{$box->[5]};
+      my $url = url();
+      $url =~ s/gbrowse_syn.*$//;
+      $atts{href} =~ s/\.\.\/\.\.\//$url/ if $atts{href};
+      push @map_items,Area({shape=>'rect',coords=>join(',',@rect),%atts});
+    }	
+    $gd->rectangle(@rect,$black) if DEBUG;
   }
 
   # now for the hits in each individual panel
@@ -626,11 +628,20 @@ sub draw_image {
     for my $box (@$boxes) {
       ref $box or next;
       my ($feature,$fname) = _type_from_box($box);
-      next unless $feature =~ /^match(_part)?$/;
-      $panel_boxes{$fname} = [$left+$box->[1],$top+$box->[2],$left+$box->[3],$top+$box->[4]];
+      #next unless $feature =~ /^match(_part)?$/;
+      my @rect = ($left+$box->[1],$top+$box->[2],$left+$box->[3],$top+$box->[4]);
+      if ($feature =~ /^match(_part)?$/) {                                                                                                                                                                         
+        $panel_boxes{$fname} = \@rect;                                                                                                                                                                               
+      }                                                                                                                                                                                                            
+      else {                                                                                                                                                                                                       
+        push @map_items, Area( {
+	  shape  => 'rect',
+	  coords => join(',',@rect),
+	  %{$box->[5]}});
+      }
       $tcolors{$fname} = $span{$key}{tcolor};
       # for debugging
-      $gd->rectangle($left+$box->[1],$top+$box->[2],$left+$box->[3],$top+$box->[4],$black) if DEBUG;
+      $gd->rectangle(@rect,$black) if DEBUG;
     }
   }
   
@@ -752,7 +763,9 @@ sub draw_image {
 		       ),
 		);
   
-  print Map({-name=>$map_name},@map_items);
+  my $map = Map({-name=>$map_name},reverse @map_items);
+  $map =~ s/\</\n\</g;
+  print $map;
 }
 
 sub segment2image {
@@ -767,6 +780,8 @@ sub segment2image {
 
   my $dsn = $MAP->{$src}{db} or return;
   $SCONF->source($dsn);
+  # make sure balloon tooltips are turned on 
+  $SCONF->setting('GENERAL','balloon tips',1);
 
   my @tracks    = shellwords($CONF->setting($dsn => 'tracks'));
   my $ff_scale  = Bio::Graphics::FeatureFile->new;
@@ -840,6 +855,7 @@ sub segment2image {
 					    }
 					    );
   
+
   # restore original padding
   unless ($src eq $CONF->search_src()) {
     $SCONF->setting('general','pad_left'  => $pl);
@@ -1061,7 +1077,7 @@ sub navigation_table {
 			  ) # end table
 		    ); # end toggle section
 
-  print $table;
+  print $table,br;
 }
 
 sub expand_display {
@@ -1136,7 +1152,7 @@ sub source_menu {
 		 -values => \@sources,
 		 -labels => { map {$_ => $CONF->description($_)} $CONF->sources},
 		 -default => $source,		 
-		 ) : '<br>';
+		 ) : $CONF->description($sources[0]);
 }
 
 
@@ -1247,6 +1263,10 @@ sub overview {
 						    -bgcolor       => $CONF->setting('overview bgcolor') || OVERVIEW_BGCOLOR,
 						  }
 						  );
+
+  # Sorry for the hack -- some naughty person has changed the API
+  $overview =~ s/<area/<map name="overview_map" id="overview_map">\n<area/i;
+  $overview .= "</map>\n";
 
   return div({-id=>'overview',-class=>'track'},'Reference genome: ',i($ref),$overview);
 }
@@ -1571,12 +1591,21 @@ sub wiki_help {
   my $label = shift;
   my @body  = shift || $label;
   my $url   = HELP;
+  (my $blabel = $label) =~ s/_/ /g;
   $label =~ s/\s+/_/g;
-  return a({-href => "${url}#${label}", -target => '_wiki_help'},@body);
+  
+  return a({ 
+	-href => "${url}#${label}", 
+	-target => '_wiki_help',
+	-onmouseover => "balloon.showTooltip(event,'Click for more information about <b><i>$blabel</i></b>')"},
+	@body);
 }
-
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+
+
+
+

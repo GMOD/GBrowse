@@ -328,6 +328,7 @@ END
     my $img    = $config{images} || "$images/balloons";
     $balloon_settings .= <<END;
 var $balloon = new Balloon;
+BalloonConfig($balloon);
 $balloon.images              = '$img';
 $balloon.balloonImage        = 'balloon.png';
 $balloon.ieImage             = 'balloon_ie.png';

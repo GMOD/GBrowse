@@ -49,7 +49,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.12 2009-03-05 20:05:49 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.13 2009-03-08 15:15:34 sheldon_mckay Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -75,8 +75,8 @@ $INDEX  = 0;
 %URLS   = ();
 %formatterCache = ();
 
-my $src   = param('src') || param('source');
-my $name  = param('name');
+my $src   = param('src')  || param('source');
+my $name  = param('name') || '';
 my $class = param('class');
 my $ref   = param('ref');
 my $start = param('start');
@@ -121,7 +121,6 @@ if ($f_id) {
 	  $f->attach_seq($segment->seq);
       }
   }
-
 }
 else {
   @features = sort {$b->length<=>$a->length} 

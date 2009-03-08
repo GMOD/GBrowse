@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Synteny;
 
-# $Id: Synteny.pm,v 1.1.2.4 2009-02-21 00:59:31 stajich Exp $
+# $Id: Synteny.pm,v 1.1.2.5 2009-03-08 15:15:35 sheldon_mckay Exp $
 
 use strict;
 
@@ -714,6 +714,95 @@ sub _lookup {
   my $hash = $self->{lookup}->{$param};
   $hash->{$key} = $val if defined $val;
   return $hash->{$key};
+}
+
+sub print_top {
+  my $self = shift;
+  my $title     = shift;
+  my $reset_all = shift;
+  my $alert     = shift;
+  my $session   = shift;
+  local $^W = 0;  # to avoid a warning from CGI.pm
+
+  my @stylesheet_headers;
+  my @stylesheets = shellwords($self->setting('stylesheet') || '/gbrowse/gbrowse.css');
+  for my $ss (@stylesheets) {
+      my ($url,$media) = $ss =~ /^([^(]+)(?:\((.+)\))?/;
+      $media ||= 'all';
+      push @stylesheet_headers,CGI::Link({-rel=>'stylesheet',
+					  -type=>'text/css',
+					  -href=>$self->relative_path($url),
+					  -media=>$media});
+  }
+
+  my $cookie  = CGI::Cookie->new(-name    => $CGI::Session::NAME,
+ 			        -value   => $session->id,
+			        -path    => url(-absolute=>1),
+			        -expires => '+1d');
+
+  print_header(-cookie => [$cookie], -expires => 'now');
+
+  my @args = (-title => $title,
+	      -encoding=>$self->tr('CHARSET'),
+	     );
+  push @args,(-head=>$self->setting('head'))    if $self->setting('head');
+  push @args,(-gbrowse_images => $self->relative_path_setting('buttons') || '/gbrowse/images/buttons');
+  push @args,(-gbrowse_js     => $self->relative_path_setting('js')      || '/gbrowse/js');
+  push @args,(-reset_toggle   => 1)               if $reset_all;
+
+  my @onload;
+  push @onload, $self->setting('onload') if $self->setting('onload');
+  push @onload, "alert('$alert')"          if $alert;
+
+  # push all needed javascript files onto top of page
+  my $js            = $self->relative_path_setting('js') || '/gbrowse/js';
+  my @js;
+  push @js, qw(yahoo-dom-event.js balloon.config.js balloon.js);
+
+  push @js, 'bookmark.js';
+  my @scripts = map { {src=> "$js/$_" } } @js;
+  push @args, (-script => \@scripts);
+  push @args, (-onLoad => join('; ',@onload));
+  push @args, (-head   => \@stylesheet_headers);
+
+  print start_html(@args);
+  $self->print_balloon_settings();
+}
+
+sub print_balloon_settings {
+  my $self = shift;
+  my $custom_balloons    = $self->setting('custom balloons');
+  my $images             = $self->relative_path('images');
+  my %config_values = $custom_balloons =~ /\[([^]]+)\]([^[]+)/g;
+  $config_values{'balloon'} ||= <<END;
+images    =  $images/balloons
+delayTime =  500
+END
+
+  my $balloon_settings;
+
+  for my $balloon (keys %config_values) {
+    my %config = $config_values{$balloon} =~ /(\w+)\s*=\s*(\S+)/g;
+    my $img    = $config{images} || "$images/balloons";
+    $balloon_settings .= <<END;
+var $balloon = new Balloon;
+BalloonConfig(balloon);
+$balloon.images              = '$img';
+$balloon.balloonImage        = 'balloon.png';
+$balloon.ieImage             = 'balloon_ie.png';
+$balloon.upLeftStem          = 'up_left.png';
+$balloon.downLeftStem        = 'down_left.png';
+$balloon.upRightStem         = 'up_right.png';
+$balloon.downRightStem       = 'down_right.png';
+$balloon.closeButton         = 'close.png';
+END
+    for my $option (keys %config) {
+      next if $option eq 'images';
+      my $value = $config{$option} =~ /^[\d.-]+$/ ? $config{$option} : "'$config{$option}'";
+      $balloon_settings .= "$balloon.$option = $value;\n";
+    }
+  }
+  print "<script>\n$balloon_settings\n</script>\n";
 }
 
 1;

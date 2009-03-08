@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.12 2009-03-02 10:21:41 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.13 2009-03-08 15:16:46 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -47,8 +47,13 @@ var tooltipIsSuppressed;
 // This is constructor that is called to initialize the Balloon object  //
 //////////////////////////////////////////////////////////////////////////
 var Balloon = function () {
-  // Cursor track enabled by default
+  // Cursor tracking enabled by default
   this.trackCursor = true;
+  
+  // Cursor tracking halts after one of these vertical
+  // or horizontal thresholds are reached
+  this.stopTrackingX = 100;
+  this.stopTrackingY = 50;
 
   // Track the cursor every time the mouse moves
   document.onmousemove = this.setActiveCoordinates;
@@ -146,7 +151,9 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
   // Ignore repeated firing of mouseover->mouseout events on 
   // the same element (Safari)
   var el = this.getEventTarget(evt);
-  if (sticky && mouseOver && this.isSameElement(el,this.currentElement)) return false;
+  if (sticky && mouseOver && this.isSameElement(el,this.currentElement)) {
+    return false;
+  }  
   this.firingElement = el;
 
   // A new sticky balloon can erase an old one
@@ -195,6 +202,7 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
   
   // make sure balloon image path is complete
   if (this.images) {
+
     // main background image
     this.balloonImage  = this.balloonImage  ? this.images +'/'+ this.balloonImage  : false;
     this.ieImage       = this.ieImage       ? this.images +'/'+ this.ieImage       : false;
@@ -256,6 +264,7 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
   // Make delay time short for onmousedown
   var delay = mouseOver ? this.delayTime : 1;
   this.timeoutTooltip = window.setTimeout(this.doShowTooltip,delay);
+  this.pending = true;
 }
 
 
@@ -318,8 +327,9 @@ Balloon.prototype.doShowTooltip = function() {
 
   // do we have a cursor position?
   if (!(self.activeTop && self.activeRight)) {
-     //self.setActiveCoordinates();
+//     self.setActiveCoordinates();
   }
+
 
   // balloon orientation
   var vOrient = self.activeTop > pageMid ? 'up' : 'down';
@@ -327,6 +337,7 @@ Balloon.prototype.doShowTooltip = function() {
   
   // get the preloaded balloon contents
   var helpText = self.container.innerHTML;
+  self.actualWidth = self.getLoc(self.container,'width') + 10;
   self.parent.removeChild(self.container);
   var wrapper = document.createElement('div');
   wrapper.id = 'contentWrapper';
@@ -342,9 +353,13 @@ Balloon.prototype.doShowTooltip = function() {
   }
 
   balloonIsVisible = true;
-  
+  self.pending = false;  
+
   // in IE < 7, hide <select> elements
   self.showHide();
+
+  self.startX = self.activeLeft;
+  self.startY = self.activeTop;
 
   self.fade(0,self.opacity,self.fadeIn);
 }
@@ -386,7 +401,9 @@ Balloon.prototype.makeBalloon = function() {
   var self = currentBalloonClass;
 
   var balloon = document.getElementById('balloon');
-  if (balloon) self.parent.removeChild(balloon);
+  if (balloon) {
+    self.cleanup();
+  }
 
   balloon = document.createElement('div');
   balloon.setAttribute('id','balloon');
@@ -419,35 +436,40 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
 
   var fullPadding   = self.padding + self.shadow;
   var insidePadding = self.padding;
-
-  self.actualWidth = self.getLoc(this.container,'width');
-  if (self.isIE()) {
-    self.actualWidth += fullPadding;
-  }
-
-  if (self.height) {
-    self.setStyle('contentWrapper','height',self.height);
-  }
-
-  if (self.width) {
-    self.setStyle('contentWrapper','width',self.width);
-  }
-  else {
-    self.setStyle('contentWrapper','width',self.actualWidth);
-  }
-
-  // not too big...
-  if (!self.width && self.maxWidth && self.actualWidth > self.maxWidth) {
-    self.setStyle('contentWrapper','width',self.maxWidth);
-  }
-  // not too small...
-  if (!self.width && self.minWidth && self.actualWidth < self.minWidth) {
-    self.setStyle('contentWrapper','width',self.minWidth);
-  }
+  var outerWidth    = self.actualWidth + fullPadding;
+  var innerWidth    = self.actualWidth;  
 
   self.setStyle(balloon,'position','absolute');
   self.setStyle(balloon,'top',-9999);
   self.setStyle(balloon,'z-index',1000000);
+
+  if (self.height) {
+    self.setStyle('contentWrapper','height',self.height-fullPadding);
+  }
+
+  if (self.width) {
+    self.setStyle(balloon,'width',self.width);  
+    innerWidth = self.width - fullPadding;
+    if (balloonIsSticky) {
+      innerWidth -= self.closeButtonWidth;
+    }
+    self.setStyle('contentWrapper','width',innerWidth);
+  }
+  else {
+    self.setStyle(balloon,'width',outerWidth);
+    self.setStyle('contentWrapper','width',innerWidth);
+  }
+
+  // not too big...
+  if (!self.width && self.maxWidth && outerWidth > self.maxWidth) {
+    self.setStyle(balloon,'width',self.maxWidth);
+    self.setStyle('contentWrapper','width',self.maxWidth-fullPadding);
+  }
+  // not too small...
+  if (!self.width && self.minWidth && outerWidth < self.minWidth) {
+    self.setStyle(balloon,'width',self.minWidth);
+    self.setStyle('contentWrapper','width',self.minWidth-fullPadding);
+  }
 
   self.setStyle('contents','z-index',2);
   self.setStyle('contents','color',self.fontColor);
@@ -532,12 +554,6 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
 
   // oversized contents? Scrollbars for sticky balloons, clipped for non-sticky
   var overflow = balloonIsSticky ? 'auto' : 'hidden';
-  
-  // avoid double scrollbars with iframes
-  if (self.contents.innerHTML.match(/iframe/i)) {
-    overflow = 'hidden';
-  }
-
   self.setStyle('contentWrapper','overflow',overflow);
 
   // a bit of room for the closebutton
@@ -553,10 +569,14 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   var scrollBar     = 20;
 
   if (hOrient == 'right' && balloonRight > (self.pageRight - fullPadding)) {
-    self.setStyle(balloon,'width',(self.pageRight - balloonLeft) - fullPadding - scrollBar);
+    var width = (self.pageRight - balloonLeft) - fullPadding - scrollBar;
+    self.setStyle(balloon,'width',width);
+    self.setStyle('contentWrapper','width',width-fullPadding);
   }
   else if (hOrient == 'left' && balloonLeft < (self.pageLeft + fullPadding)) {
-    self.setStyle(balloon,'width',(balloonRight - self.pageLeft) - fullPadding);
+    var width = (balloonRight - self.pageLeft) - fullPadding;
+    self.setStyle(balloon,'width',width);
+    self.setStyle('contentWrapper','width',width-fullPadding);
   }
 
   // Get the width/height for the right and bottom outlines
@@ -585,14 +605,14 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
 
   // Make sure the balloon is vertically contained in the window
   var balloonTop    = self.getLoc(balloon,'y1');
-  var balloonBottom = self.getLoc(balloon,'y2');
+  var balloonBottom = self.height ? balloonTop + self.height : self.getLoc(balloon,'y2');
   var deltaTop      = balloonTop < self.pageTop ? self.pageTop - balloonTop : 0;
   var deltaBottom   = balloonBottom > self.pageBottom ? balloonBottom - self.pageBottom : 0;
 
   if (vOrient == 'up' && deltaTop) {
     var newHeight = balloonHeight - deltaTop;
     if (newHeight > (self.padding*2)) {
-      self.setStyle('contentWrapper','height',newHeight);
+      self.setStyle('contentWrapper','height',newHeight-fullPadding);
       self.setStyle(balloon,'top',self.pageTop+self.padding);
       self.setStyle(balloon,'height',newHeight);
     }
@@ -600,18 +620,25 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   if (vOrient == 'down' && deltaBottom) {
     var newHeight = balloonHeight - deltaBottom - scrollBar;
     if (newHeight > (self.padding*2) + scrollBar) {
-      self.setStyle('contentWrapper','height',newHeight);
+      self.setStyle('contentWrapper','height',newHeight-fullPadding);
       self.setStyle(balloon,'height',newHeight);
     }
   }
 
-  // For IE, harden the dimensions for the outer layers
-  if (this.isIE()) {
-    var finalWidth  = parseInt(YAHOO.util.Dom.getStyle('contentWrapper','width'));
-    self.setStyle('contents','width',finalWidth+10);
-    self.setStyle('balloon','width',finalWidth+fullPadding);
+  // If we have an iframe, make sure it fits properly
+  var iframe = balloon.getElementsByTagName('iframe');
+  if (iframe[0]) {
+    iframe = iframe[0];
+    var w = self.getLoc('contentWrapper','width');
+    if (balloonIsSticky && !this.isIE()) {
+      w -= self.closeButtonWidth;
+    }
+    var h = self.getLoc('contentWrapper','height');
+    self.setStyle(iframe,'width',w);
+    self.setStyle(iframe,'height',h);
+    self.setStyle('contentWrapper','overflow','hidden');
   }
- 
+
   // Make edges match the main balloon body
   self.setStyle('topRight','height', self.getLoc(balloon,'height'));
   self.setStyle('bottomLeft','width', self.getLoc(balloon,'width'));
@@ -672,7 +699,7 @@ Balloon.prototype.doOpacity = function(op,opc,el) {
   self.setStyle(el,'KhtmlOpacity',op);
 }
 
-Balloon.prototype.hideTooltip = function(override) {
+Balloon.prototype.hideTooltip = function(override) { 
   // some browsers pass the event object == we don't want it
   if (override && typeof override == 'object') override = false;
   if (balloonIsSticky && !override) return false;
@@ -688,6 +715,8 @@ Balloon.prototype.hideTooltip = function(override) {
     if (balloonIsSticky) {
       self.currentElement = null;
     }
+    self.startX = 0;
+    self.startY = 0;
   }
 
   balloonIsVisible = false;
@@ -762,26 +791,34 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
   // dynamic positioning but only if the balloon is not sticky
   // and cursor tracking is enabled
   if (balloonIsVisible && !balloonIsSticky && self.trackCursor) {
-    var b = self.activeBalloon;
-    var bwidth  = self.getLoc(b,'width');
-    var bheight = self.getLoc(b,'height');
-    var btop    = self.getLoc(b,'y1');
-    var bleft   = self.getLoc(b,'x1');
+    var deltaX = Math.abs(self.activeLeft - self.startX);
+    var deltaY = Math.abs(self.activeTop - self.startY);
 
-    if (self.hOrient == 'right') {
-      self.setStyle(b,'left',self.activeRight);
+    if (deltaX > self.stopTrackingX || deltaY > self.stopTrackingY) {
+      self.hideTooltip();
     }
-    else if (self.hOrient == 'left') {
-      self.setStyle(b,'right',null);
-      var newLeft = self.activeLeft - bwidth;
-      self.setStyle(b,'left',newLeft);
-    }
+    else {
+      var b = self.activeBalloon;
+      var bwidth  = self.getLoc(b,'width');
+      var bheight = self.getLoc(b,'height');
+      var btop    = self.getLoc(b,'y1');
+      var bleft   = self.getLoc(b,'x1');
 
-    if (self.vOrient == 'up') {
-      self.setStyle(b,'top',self.activeTop - bheight);
-    }
-    else if (self.vOrient == 'down') {
-      self.setStyle(b,'top',self.activeBottom);
+      if (self.hOrient == 'right') {
+        self.setStyle(b,'left',self.activeRight);
+      }
+      else if (self.hOrient == 'left') {
+        self.setStyle(b,'right',null);
+        var newLeft = self.activeLeft - bwidth;
+        self.setStyle(b,'left',newLeft);
+      }
+
+      if (self.vOrient == 'up') {
+        self.setStyle(b,'top',self.activeTop - bheight);
+      }
+      else if (self.vOrient == 'down') {
+        self.setStyle(b,'top',self.activeBottom);
+      }
     }
   }
 
@@ -861,7 +898,9 @@ Balloon.prototype.getLoc = function(el,request) {
     case ('width')  : return (parseInt(region.right)  - parseInt(region.left));
     case ('height') : return (parseInt(region.bottom) - parseInt(region.top));
     case ('region') : return region; 
- }
+  }
+
+  return region;
 }
 
 // We don't know if numbers are overridden with strings

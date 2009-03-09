@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Synteny;
 
-# $Id: Synteny.pm,v 1.1.2.5 2009-03-08 15:15:35 sheldon_mckay Exp $
+# $Id: Synteny.pm,v 1.1.2.6 2009-03-09 10:17:17 sheldon_mckay Exp $
 
 use strict;
 
@@ -58,7 +58,8 @@ sub get_source {
     $source = $new_source || $old_source;
     $source ||= $self->source;
     
-    # the default, whatever it is    $self->source($source);
+    # the default, whatever it is    
+   $self->source($source);
     return ( $source, $old_source );
   } 
   # otherwise just the source
@@ -716,7 +717,7 @@ sub _lookup {
   return $hash->{$key};
 }
 
-sub print_top {
+sub print_page_top {
   my $self = shift;
   my $title     = shift;
   my $reset_all = shift;
@@ -803,6 +804,16 @@ END
     }
   }
   print "<script>\n$balloon_settings\n</script>\n";
+}
+
+sub source {
+  my $self = shift;
+  my $d    = $self->{source};
+  if (@_) {
+    my $source = shift;
+    $self->{source} = $source;
+  }
+  $d;
 }
 
 1;

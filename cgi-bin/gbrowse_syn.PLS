@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.16 2009-03-08 15:15:34 sheldon_mckay Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.17 2009-03-09 10:17:17 sheldon_mckay Exp $
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -121,8 +121,8 @@ $CONF->read_configuration($CONF_DIR,'synconf');
 my $extension = $CONF->setting('config_extension') || EXTENSION;
 $SCONF      = open_config($CONF_DIR,$extension);
 
-my ($source, $old_source) = $CONF->source;
 my ($page_settings,$session) = page_settings();
+my $source = $page_settings->{source};
 $CONF->page_settings($page_settings);
 $CONF->search_src($page_settings->{search_src});
 $CONF->source($page_settings->{source});
@@ -148,12 +148,18 @@ my @reset = (0,0);
 if (param('reset')) {
   @reset = (1, 'All settings have been reset to their default values');
 }
-$CONF->print_top($CONF->setting('description'),@reset,$session);
+$CONF->print_page_top($CONF->setting('description'),@reset,$session);
+
+# warning if trying to search with no species
+if (!$segment && param('name') && !$CONF->page_settings("search_src")) {
+  print warning("Error: select a species to search");
+}
 
 # Which aligned species have been asked for
 my @requested_species  = _unique(@{$page_settings->{species}});
 if (!@requested_species) {
-  @requested_species  = grep {$_ ne $page_settings->{search_src}} keys %$MAP;
+  my $search_src = $page_settings->{search_src} || 'nosrc';
+  @requested_species  = grep {$_ ne $search_src} keys %$MAP;
 }
 
 if ($segment) {
@@ -252,7 +258,7 @@ sub species_search {
   my $default = $CONF->page_settings("search_src");
   my %labels = map {$_=>$MAP->{$_}{desc}} keys %$MAP; 
   my $values  = [sort {$MAP->{$a}{desc} cmp $MAP->{$b}{desc}} keys %labels];
-  unshift @$values, undef;
+  unshift @$values, '';
 
   my $onchange = "document.mainform.submit()";
   return b(wiki_help('Reference_Species',$CONF->tr('Reference Species'))) . ':' . br .
@@ -892,9 +898,6 @@ sub landmark2segment {
   }
 
   $source ||= $CONF->page_settings("search_src");
-  if ($name && !$source) {
-    print header, warning("Error: a species must be defined for searching");
-  }
 
   my $segment  = _do_search($name,$source) if $name && $source;
 
@@ -1030,7 +1033,7 @@ sub navigation_table {
     $slidertable = $CONF->slidertable;
   }
   elsif (my $name = $CONF->page_settings('name')) {
-    $slidertable = "$name not found in ".$CONF->search_src;
+    $slidertable = "$name not found in ".($CONF->search_src||'NO SPECIES SELECTED');
     my $style = "font-size:90%;color:red";
     $slidertable = p(b(span({-style=>$style},$slidertable)));
   }
@@ -1401,6 +1404,7 @@ sub locations2pixels {
   $loc = nearest(100,$loc);
 
   my ($ref_location,$hit_location) = $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$loc);
+  $ref_location && $hit_location || return 0;
 
   $ref_location -= $hit->start if $ref_location;
   $hit_location -= $hit->tstart if $hit_location;
@@ -1437,7 +1441,7 @@ sub grid_coords {
   my $offset = $start;
   until ($offset > $hit->end) {
     my $pair = locations2pixels($offset,$hit,$refbox,$hitbox,$flip);
-    push @pairs, $pair;
+    push @pairs, $pair if $pair;
     $offset += $step;
   }
 
@@ -1451,7 +1455,10 @@ sub grid_step {
 }
 
 sub page_settings {
-  my $source = $CONF->get_source;
+  my $source = $CONF->source;
+  if (!$source) {
+    ($source) = $CONF->sources;
+  }
   my $session
       = Bio::Graphics::Browser::PageSettings->new( $CONF, param('id') );
   $source ||= $session->source;

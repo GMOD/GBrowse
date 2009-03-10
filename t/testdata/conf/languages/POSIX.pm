@@ -10,13 +10,13 @@
    PAGE_TITLE => 'Genome browser',
 
    SEARCH_INSTRUCTIONS => <<END,
-<b>Searching:</b> Search using a sequence name, gene name,
+<b>Search</b> using a sequence name, gene name,
 locus%s, or other landmark. The wildcard
 character * is allowed.
 END
 
    NAVIGATION_INSTRUCTIONS => <<END,
-<br><b>Navigation:</b> Click one of the rulers to center on a location, or click and drag to
+<br><b>Navigate</b> by clicking one of the rulers to center on a location, or click and drag to
 select a region. Use the Scroll/Zoom buttons to change magnification
 and position.
 END
@@ -28,7 +28,7 @@ but fields that contain whitespace must be contained in
 double or single quotes.
 END
 
-   SHOWING_FROM_TO => 'Showing %s from %s, positions %s to %s',
+   SHOWING_FROM_TO => '%s from %s:%s..%s',
 
    INSTRUCTIONS      => 'Instructions',
 
@@ -193,13 +193,17 @@ END
 
    CLEAR_HIGHLIGHTING => 'Clear highlighting',
 
-   UPDATE      => 'Update Image',
+   UPDATE      => 'Update',
+
+   UPDATE_TRACKS => 'Update Tracks',
+
+   UPDATE_SETTINGS => 'Update Appearance',
 
    DUMPS       => 'Reports &amp; Analysis',
 
    DATA_SOURCE => 'Data Source',
 
-   UPLOAD_TRACKS=>'Add your own tracks',
+   UPLOAD_TRACKS=>'Add custom tracks',
 
    UPLOAD_TITLE=> 'Upload your own data',
 
@@ -215,7 +219,9 @@ END
 
    REMOTE_TITLE => 'Add remote annotations',
 
-   REMOTE_URL   => 'Enter Remote Annotation URL',
+   REMOTE_URL   => 'Enter remote track URL',
+
+   REMOTE_URL_HELP => 'Enter the URL of a remote DAS track, GBrowse track, or internet-accessible track definition file.',
 
    UPDATE_URLS  => 'Update',
 
@@ -382,7 +388,7 @@ END
 
  NOT_FOUND => 'The landmark named <i>%s</i> is not recognized. See the help pages for suggestions.',
 
- TOO_BIG   => 'Detailed view is limited to %s. Click and drag in the overview or region to make a smaller selection.',
+ TOO_BIG   => 'Detailed view is limited to %s. Click and drag on one of the scalebars to make a smaller selection.',
 
  PURGED    => "Can't find the file named %s.  Perhaps it has been purged?.",
 
@@ -396,7 +402,7 @@ END
 
  NO_SOURCES        => 'There are no readable data sources configured.  Perhaps you do not have permission to view them.',
 
- ADD_YOUR_OWN_TRACKS => 'Add Your Own Tracks',
+ ADD_YOUR_OWN_TRACKS => 'Add custom tracks',
 
  INVALID_SOURCE    => 'The source named %s is invalid.',
 
@@ -430,7 +436,7 @@ END
 
  OPTIONS_UPDATED   => 'A new site configuration is in effect; all page settings have been reset to their defaults',
 
- SEND_TO_GALAXY    => 'Send this Region to Galaxy',
+ SEND_TO_GALAXY    => 'Send to Galaxy',
 
  NO_DAS            => 'Installation error: Bio::Das module must be installed for DAS URLs to work. Please inform this site\'s webmaster.',
 
@@ -447,7 +453,7 @@ END
  SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
 To share this track with another GBrowse genome browser,
 first copy the URL below, then go to the other GBrowse and
-paste the URL into the "Enter Remote Annotation" field at
+paste the URL into the "Enter remote track URL" field at
 the bottom of the page. If this track is from an uploaded file,
 then be aware that sharing this URL with another user potentially
 allows <b>all</b> your uploaded data to be viewable by that user.
@@ -456,7 +462,7 @@ END
  SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
 To share all currently selected tracks with another GBrowse genome
 browser, first copy the URL below, then go to the other GBrowse and
-paste the URL into the "Enter Remote Annotation" field at
+paste the URL into the "Enter remote track URL" field at
 the bottom of the page. If any of the selected tracks are from an uploaded file,
 then be aware that sharing this URL with another user potentially
 allows <b>all</b> your uploaded data to be viewable by that user.

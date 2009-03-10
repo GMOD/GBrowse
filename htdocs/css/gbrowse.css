@@ -102,6 +102,9 @@ TH.linkmenu       {
                     CURSOR: help;
                     TEXT-DECORATION: none
                   }
+.ctl_visible,
+.ctl_hidden       { z-index:10; }
+
 #autoComplete1 {  position:relative;text-align:left;z-index:9050; }
 #autoCompleteSearch1 { position:relative; }
 #autoCompleteInput1     { position:relative;width:20em;height:1.7em}

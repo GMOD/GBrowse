@@ -430,7 +430,8 @@ sub asynchronous_event {
         my $visible    = param('visible');
         my $track_name = param('track_name');
 
-	warn "set_track_visibility: ",param('track_name'),'=>',param('visible'); # if DEBUG;
+	warn "set_track_visibility: ",
+	param('track_name'),'=>',param('visible') if DEBUG;
 
         if ($visible) {
             $self->add_track_to_state($track_name);

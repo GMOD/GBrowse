@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.86 2009-03-07 19:41:30 lstein Exp $
+ $Id: controller.js,v 1.87 2009-03-10 18:19:21 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -830,6 +830,7 @@ var GBrowseController = Class.create({
           detailsdiv.innerHTML  = details;
       }
       if (outerdiv != null) {
+         scroll(0,0);
 	 new Effect.BlindDown(outerdiv);
       }
   },

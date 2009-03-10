@@ -11,6 +11,7 @@ bin/process_sgd.pl
 bin/process_wormbase.pl
 bin/register_moby_services.pl
 bin/report_missing_language_tags.pl
+bin/scan_gbrowse.pl
 bin/ucsc_genes2gff.pl
 bin/windows_install.pl
 Build.PL
@@ -159,6 +160,7 @@ etc/init.d/gbrowse-slave
 htdocs/annotation_help.html
 htdocs/css/gbrowse.css
 htdocs/css/gbrowse_transparent.css
+htdocs/css/gbrowse_warm.css
 htdocs/css/karyotype.css
 htdocs/css/titlebar-default.css
 htdocs/css/titlebar-safari.css
@@ -241,6 +243,7 @@ htdocs/images/help/upload.gif
 htdocs/images/help/worm_exons_spec.png
 htdocs/images/help/worm_telomeric_spec.png
 htdocs/images/help/yeast_I_genes_spec.png
+htdocs/images/spinner.gif
 htdocs/index.html
 htdocs/js/animation.js
 htdocs/js/autocomplete.js

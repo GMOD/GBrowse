@@ -133,15 +133,6 @@ sub run {
   $self->set_source();
   my $state = $self->state;
 
-  if (DEBUG) {  # trying to debug "white tracks" bug
-      warn "tracks = ",join ' ',@{$state->{tracks}};
-      warn "visible tracks = ",join ' ',
-      grep {
-	  $state->{features}{$_}{visible}
-      }
-      @{$state->{tracks}};
-  }
-
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if DEBUG;
       return ;
@@ -439,7 +430,7 @@ sub asynchronous_event {
         my $visible    = param('visible');
         my $track_name = param('track_name');
 
-	warn "set_track_visibility: ",param('track_name'),'=>',param('visible') if DEBUG;
+	warn "set_track_visibility: ",param('track_name'),'=>',param('visible'); # if DEBUG;
 
         if ($visible) {
             $self->add_track_to_state($track_name);
@@ -1827,17 +1818,17 @@ sub add_track_to_state {
   my %current = map {$_=> 1} @{$state->{tracks}};
   push @{$state->{tracks}},$label unless $current{$label};
 
-  warn "ADD TRACK TO STATE WAS: ",
+  warn "[$$]ADD TRACK TO STATE WAS: ",
     join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n" if DEBUG;
 
   if($state->{features}{$label}){
     $state->{features}{$label}{visible}=1;
   }
   else{
-    $state->{features}{$label} = {visible=>1,options=>0,limit=>0};
+    $state->{features}{$label}{visible} = {visible=>1,options=>0,limit=>0};
   }
 
-  warn "ADD TRACK TO STATE NOW: ",
+  warn "[$$] ADD TRACK TO STATE NOW: ",
     join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n" if DEBUG;
 }
 
@@ -1845,8 +1836,6 @@ sub remove_track_from_state {
   my $self  = shift;
   my $label = shift;
   my $state  = $self->state;
-
-#  $state->{features}{$label} = {visible=>0,options=>0,limit=>0};
   delete $state->{features}{$label};
   $self->session->flush;
 }
@@ -2084,6 +2073,15 @@ sub asynchronous_update_overview_scale_bar {
         width    => $width,
         image_id => $image_id,
     };
+}
+
+sub debug_visible {
+    my $self  = shift;
+    my $state = shift;
+    warn "[$$] ",join ' ',map {
+	$_ . '=>' . $state->{features}{$_}{visible}
+    }
+    @{$state->{tracks}};
 }
 
 sub asynchronous_update_region_scale_bar {
@@ -3435,6 +3433,10 @@ sub fork {
     else {
 	Bio::Graphics::Browser::DataBase->clone_databases();
 	Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
+
+        # prevent CGI::Session from autoflushing in children, which
+	# causes annoying race conditions
+	undef *CGI::Session::DESTROY;
     }
 
     return $child;

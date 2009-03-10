@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.11 2009-02-07 03:21:32 lstein Exp $
+# $Id: Session.pm,v 1.12 2009-03-10 13:57:24 lstein Exp $
 
 use strict;
 use warnings;
@@ -25,6 +25,7 @@ sub new {
   $self->lock($id) if $id;
   $self->{session}    = CGI::Session->new($driver,$id,$session_args);
   $self->lock($self->{session}->id) unless $id;  # if we have a newly-created ID, then lock now
+  warn "[$$] session fetch for ",$self->id if DEBUG;
   $self->source($default_source) unless defined $self->source;
   $self->{pid} = $$;
   $self;
@@ -66,8 +67,10 @@ sub lockfile {
 sub flush {
   my $self = shift;
   return unless $$ == $self->{pid};
-  warn "[$$] session flush" if DEBUG;
+  warn "[$$] session flush for ",$self->id if DEBUG;
   $self->{session}->flush if $self->{session};
+  warn "[$$] SESSION FLUSH ERROR: ",$self->{session}->errstr 
+      if $self->{session}->errstr;
 }
 
 sub modified {
@@ -90,7 +93,7 @@ sub session { shift->{session} }
 
 sub page_settings {
   my $self        = shift;
-  my $hash                 = $self->config_hash;
+  my $hash        = $self->config_hash;
   $hash->{page_settings} ||= {};
   $hash->{page_settings}{userid} = $self->id;     # store the id in our state
   return $hash->{page_settings};
@@ -114,7 +117,7 @@ sub source {
 
 sub config_hash {
   my $self = shift;
-  my $source = $self->source;
+  my $source  = $self->source;
   my $session = $self->{session};
   $session->param($source=>{}) unless $session->param($source);
   return $session->param($source);

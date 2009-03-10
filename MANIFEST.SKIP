@@ -50,9 +50,15 @@ cgi-bin/gbrowset
 debian
 ^conf/templates
 \.tt2$
-NFS_benchmark_results\.old
+NFS_bechmark_results\.ods
 build-stamp
 install-stamp
 htdocs/js/balloon_modified.js
 htdocs/js/balloon_new.js
 ^docs/tutorial
+cgi-bin/gbrowse_img
+docs/developer_notes/old_makefile.pl
+docs/developer_notes/ubuntu_notes.txt
+dummy_form.html
+htdocs/databases/
+

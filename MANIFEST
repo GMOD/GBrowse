@@ -165,9 +165,6 @@ htdocs/css/karyotype.css
 htdocs/css/titlebar-default.css
 htdocs/css/titlebar-safari.css
 htdocs/css/tracks.css
-htdocs/databases/ideograms/human_cytobands.gff
-htdocs/databases/ideograms/mouse_cytobands.gff
-htdocs/databases/ideograms/rat_cytobands.gff
 htdocs/gbrowse_karyotype_help.html
 htdocs/general_help.html
 htdocs/general_help.html.zh
@@ -503,6 +500,9 @@ sample_data/yeast_chr1+2/yeast_chr1+2.gff3
 sample_data/yeast_scaffolds/chr1.fa
 sample_data/yeast_scaffolds/chr2.fa
 sample_data/yeast_scaffolds/chromosomes.gff3
+sample_data/ideograms/human_cytobands.gff
+sample_data/ideograms/mouse_cytobands.gff
+sample_data/ideograms/rat_cytobands.gff
 t/01yeast.t
 t/02.rearchitecture.t
 t/03.render.t

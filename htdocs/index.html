@@ -13,18 +13,18 @@
 
 Welcome to the Generic Genome Browser!
 
-<h2>Example Database</h2>
+<h2>Example Databases</h2>
 
 <p>
 
 Example in-memory databases from yeast chromosomes 1 and 2 have been
-installed for you.  Try it at this URL:
+installed for you.  Try them at these URL:
 
-<blockquote>
-<a href="/cgi-bin/gb2/gbrowse/yeast">/cgi-bin/gb2/gbrowse/yeast</a> (simple example)
-<a href="/cgi-bin/gb2/gbrowse/yeast_advanced">/cgi-bin/gb2/gbrowse/yeast_advanced</a> (advanced example)
-<a href="/cgi-bin/gb2/gbrowse/yeast_renderfarm">/cgi-bin/gb2/gbrowse/yeast_renderfarm</a> (renderfarm example)
-</blockquote>
+<ul>
+<li><a href="/cgi-bin/gb2/gbrowse/yeast">http://your.host/cgi-bin/gb2/gbrowse/yeast</a> (simple example)</li>
+<li><a href="/cgi-bin/gb2/gbrowse/yeast_advanced">http://your.host/cgi-bin/gb2/gbrowse/yeast_advanced</a> (advanced example)</li>
+<li><a href="/cgi-bin/gb2/gbrowse/yeast_renderfarm">http://your.host/cgi-bin/gb2/gbrowse/yeast_renderfarm</a> (renderfarm example)</li>
+</ul>
 
 <p>
 The "renderfarm" example will only work if a local gbrowse_slave
@@ -35,17 +35,39 @@ as the root user:
 % /etc/init.d/gbrowse-slave start
 </pre>
 
-<p>
+<h3>Alternative URLs</h3>
 
 If you allowed the install process to adjust your Apache
 configuration, you can use the alias /gb2 as an alternative to
 /cgi-bin/gb2:
 
-<blockquote>
-<a href="/gb2/gbrowse/yeast">/gb2/gbrowse/yeast</a>
-<a href="/gb2/gbrowse/yeast_advanced">/gb2/gbrowse/yeast_advanced</a>
-<a href="/gb2/gbrowse/yeast_renderfarm">/gb2/gbrowse/yeast_renderfarm</a>
-</blockquote>
+<ul>
+<li><a href="/gb2/gbrowse/yeast">http://your.host/gb2/gbrowse/yeast</a></li>
+<li><a href="/gb2/gbrowse/yeast_advanced">http://your.host/gb2/gbrowse/yeast_advanced</a></li>
+<li><a href="/gb2/gbrowse/yeast_renderfarm">http://your.host/gb2/gbrowse/yeast_renderfarm</a></li>
+</ul>
+
+<h3>Accelerated Demos</h3>
+
+If you have FastCGI and/or ModPerl installed, you will have access to
+accelerated versions of gbrowse a these URLs:
+
+<ul>
+  <li>FastCGI
+      <ul>
+	<li><a href="/fgb2/gbrowse/yeast">http://your.host/fgb2/gbrowse/yeast</a></li>
+	<li><a href="/fgb2/gbrowse/yeast_advanced">http://your.host/fgb2/gbrowse/yeast_advanced</a></li>
+	<li><a href="/fgb2/gbrowse/yeast_renderfarm">http://your.host/fgb2/gbrowse/yeast_renderfarm</a></li>
+      </ul>
+  </li>
+  <li>ModPerl
+      <ul>
+	<li><a href="/mgb2/gbrowse/yeast">http://your.host/mgb2/gbrowse/yeast</a></li>
+	<li><a href="/mgb2/gbrowse/yeast_advanced">http://your.host/mgb2/gbrowse/yeast_advanced</a></li>
+	<li><a href="/mgb2/gbrowse/yeast_renderfarm">http://your.host/mgb2/gbrowse/yeast_renderfarm</a></li>
+      </ul>
+  </li>
+</ul>
 
 
 <h2>Directory Paths</h2>
@@ -126,6 +148,6 @@ To find out more about Gbrowse, try the:
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="http://www.cshl.org/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Nov 12 18:13:40 EST 2008
+Last modified: Tue Mar 10 16:00:55 EDT 2009
 <!-- hhmts end -->
 </body> </html>

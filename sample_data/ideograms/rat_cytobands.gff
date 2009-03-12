@@ -1,25 +1,25 @@
 ##gff-version 3
-##sequence-region 1 1 267910886
-##sequence-region 2 1 258207540
-##sequence-region 3 1 171063335
-##sequence-region 4 1 187126005
-##sequence-region 5 1 173096209
-##sequence-region 6 1 147636619
-##sequence-region 7 1 143002779
-##sequence-region 8 1 129041809
-##sequence-region 9 1 113440463
-##sequence-region 10 1 110718848
-##sequence-region 11 1 87759784
-##sequence-region 12 1 46782294
-##sequence-region 13 1 111154910
-##sequence-region 14 1 112194335
-##sequence-region 15 1 109758846
-##sequence-region 16 1 90238779
-##sequence-region 17 1 97296363
-##sequence-region 18 1 87265094
-##sequence-region 19 1 59218465
-##sequence-region 20 1 55268282
-##sequence-region X 1 160699376
+1	ensembl	chromosome	1	267910886	.	.	.	ID=1;Name=Chr1
+2	ensembl	chromosome	1	258207540	.	.	.	ID=2;Name=Chr2
+3	ensembl	chromosome	1	171063335	.	.	.	ID=3;Name=Chr3
+4	ensembl	chromosome	1	187126005	.	.	.	ID=4;Name=Chr4
+5	ensembl	chromosome	1	173096209	.	.	.	ID=5;Name=Chr5
+6	ensembl	chromosome	1	147636619	.	.	.	ID=6;Name=Chr6
+7	ensembl	chromosome	1	143002779	.	.	.	ID=7;Name=Chr7
+8	ensembl	chromosome	1	129041809	.	.	.	ID=8;Name=Chr8
+9	ensembl	chromosome	1	113440463	.	.	.	ID=9;Name=Chr9
+10	ensembl	chromosome	1	110718848	.	.	.	ID=10;Name=Chr10
+11	ensembl	chromosome	1	87759784	.	.	.	ID=11;Name=Chr11
+12	ensembl	chromosome	1	46782294	.	.	.	ID=12;Name=Chr12
+13	ensembl	chromosome	1	111154910	.	.	.	ID=13;Name=Chr13
+14	ensembl	chromosome	1	112194335	.	.	.	ID=14;Name=Chr14
+15	ensembl	chromosome	1	109758846	.	.	.	ID=15;Name=Chr15
+16	ensembl	chromosome	1	90238779	.	.	.	ID=16;Name=Chr16
+17	ensembl	chromosome	1	97296363	.	.	.	ID=17;Name=Chr17
+18	ensembl	chromosome	1	87265094	.	.	.	ID=18;Name=Chr18
+19	ensembl	chromosome	1	59218465	.	.	.	ID=19;Name=Chr19
+20	ensembl	chromosome	1	55268282	.	.	.	ID=20;Name=Chr20
+X	ensembl	chromosome	1	160699376	.	.	.	ID=X;Name=ChrX
 1	ensembl	chromosome_band	24380791	38569611	.	.	.	Parent=1;Name=p11;Alias=1p11;Stain=gneg
 1	ensembl	chromosome_band	10191970	24380790	.	.	.	Parent=1;Name=p12;Alias=1p12;Stain=gvar
 1	ensembl	chromosome_band	1	10191969	.	.	.	Parent=1;Name=p13;Alias=1p13;Stain=gneg

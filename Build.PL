@@ -27,6 +27,7 @@ my $build = GBrowseInstall->new(
 	'Storable'            => 0,
 	'JSON'                => 0,
 	'LWP'                 => 0,
+	'Statistics::Descriptive'  => 0,
         'ExtUtils::CBuilder'  => 0,
     },
     recommends  => { 
@@ -35,7 +36,6 @@ my $build = GBrowseInstall->new(
 	'DBD::mysql'               => 0,
 	'DBD::Pg'                  => 0,
 	'GD::SVG'                  => 0,
-	'Statistics::Descriptive'  => 0,
 	'Safe::World'              => 0,
 	'FCGI'                     => 0,
     },

@@ -1,28 +1,28 @@
 ##gff-version 3
-##sequence-region 1 1 245522847
-##sequence-region 2 1 243018229
-##sequence-region 3 1 199505740
-##sequence-region 4 1 191411218
-##sequence-region 5 1 180857866
-##sequence-region 6 1 170975699
-##sequence-region 7 1 158628139
-##sequence-region 8 1 146274826
-##sequence-region 9 1 138429268
-##sequence-region X 1 154824264
-##sequence-region Y 1 57701691
-##sequence-region 10 1 135413628
-##sequence-region 11 1 134452384
-##sequence-region 12 1 132449811
-##sequence-region 13 1 114142980
-##sequence-region 14 1 106368585
-##sequence-region 15 1 100338915
-##sequence-region 16 1 88827254
-##sequence-region 17 1 78774742
-##sequence-region 18 1 76117153
-##sequence-region 19 1 63811651
-##sequence-region 20 1 62435964
-##sequence-region 21 1 46944323
-##sequence-region 22 1 49554710
+1	ensembl	chromosome	1	245522847	.	.	.	ID=1;Name=Chr1
+2	ensembl	chromosome	1	243018229	.	.	.	ID=2;Name=Chr2
+3	ensembl	chromosome	1	199505740	.	.	.	ID=3;Name=Chr3
+4	ensembl	chromosome	1	191411218	.	.	.	ID=4;Name=Chr4
+5	ensembl	chromosome	1	180857866	.	.	.	ID=5;Name=Chr5
+6	ensembl	chromosome	1	170975699	.	.	.	ID=6;Name=Chr6
+7	ensembl	chromosome	1	158628139	.	.	.	ID=7;Name=Chr7
+8	ensembl	chromosome	1	146274826	.	.	.	ID=8;Name=Chr8
+9	ensembl	chromosome	1	138429268	.	.	.	ID=9;Name=Chr9
+10	ensembl	chromosome	1	135413628	.	.	.	ID=10;Name=Chr10
+11	ensembl	chromosome	1	134452384	.	.	.	ID=11;Name=Chr11
+12	ensembl	chromosome	1	132449811	.	.	.	ID=12;Name=Chr12
+13	ensembl	chromosome	1	114142980	.	.	.	ID=13;Name=Chr13
+14	ensembl	chromosome	1	106368585	.	.	.	ID=14;Name=Chr14
+15	ensembl	chromosome	1	100338915	.	.	.	ID=15;Name=Chr15
+16	ensembl	chromosome	1	88827254	.	.	.	ID=16;Name=Chr16
+17	ensembl	chromosome	1	78774742	.	.	.	ID=17;Name=Chr17
+18	ensembl	chromosome	1	76117153	.	.	.	ID=18;Name=Chr18
+19	ensembl	chromosome	1	63811651	.	.	.	ID=19;Name=Chr19
+20	ensembl	chromosome	1	62435964	.	.	.	ID=20;Name=Chr20
+21	ensembl	chromosome	1	46944323	.	.	.	ID=21;Name=Chr21
+22	ensembl	chromosome	1	49554710	.	.	.	ID=22;Name=Chr22
+X	ensembl	chromosome	1	154824264	.	.	.	ID=X;Name=ChrX
+Y	ensembl	chromosome	1	57701691	.	.	.	ID=Y;Name=ChrY
 1	ensembl	chromosome_band	1	2300000	.	.	.	Parent=1;Name=p36.33;Alias=1p36.33;Stain=gneg
 1	ensembl	chromosome_band	2300001	5300000	.	.	.	Parent=1;Name=p36.32;Alias=1p36.32;Stain=gpos25
 1	ensembl	chromosome_band	5300001	7100000	.	.	.	Parent=1;Name=p36.31;Alias=1p36.31;Stain=gneg

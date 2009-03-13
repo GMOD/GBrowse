@@ -229,16 +229,18 @@ sub print_top {
 
   my $titlebar    = is_safari() ? 'titlebar-safari.css' : 'titlebar-default.css';
 
-  my @stylesheet_headers;
+  my @extra_headers;
   my @stylesheets = shellwords($CONFIG->setting('stylesheet') || '/gbrowse/gbrowse.css');
   for my $ss (@stylesheets) {
       my ($url,$media) = $ss =~ /^([^(]+)(?:\((.+)\))?/;
       $media ||= 'all';
-      push @stylesheet_headers,CGI::Link({-rel=>'stylesheet',
-					  -type=>'text/css',
-					  -href=>$CONFIG->relative_path($url),
-					  -media=>$media});
+      push @extra_headers,CGI::Link({-rel=>'stylesheet',
+				     -type=>'text/css',
+				     -href=>$CONFIG->relative_path($url),
+				     -media=>$media});
   }
+
+  push @extra_headers,$CONFIG->setting('head') if $CONFIG->setting('head');
 
   print_header(-expires=>'now');
   my @args = (-title => $title,
@@ -246,7 +248,6 @@ sub print_top {
 			  {src=>$CONFIG->relative_path($titlebar)}],
 	      -encoding=>$CONFIG->tr('CHARSET'),
 	     );
-  push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
   push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;
   push @args,(-gbrowse_images => $CONFIG->relative_path_setting('buttons') || '/gbrowse/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->relative_path_setting('js')      || '/gbrowse/js');
@@ -277,7 +278,7 @@ sub print_top {
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args, (-script => \@scripts);
   push @args, (-onLoad => join('; ',@onload));
-  push @args, (-head   => \@stylesheet_headers);
+  push @args, (-head   => \@extra_headers);
 
   print start_html(@args) unless $HTML++;
   print_balloon_settings()  if $b_tips;

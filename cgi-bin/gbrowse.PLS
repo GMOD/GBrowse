@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.121 2009-02-20 19:14:48 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.122 2009-03-13 02:10:34 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -3176,6 +3176,7 @@ sub galaxy_form {
   $html .= endform();
 
   my $plugin_action = param('plugin_action');
+  $plugin_action   ||= '';
 
   if ($plugin_action eq $CONFIG->tr('Go') && param('plugin') eq 'invoke_galaxy') {
     $html .= script('document.galaxyform.submit()');

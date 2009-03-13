@@ -240,15 +240,15 @@ sub render_html_head {
     );
 
   # pick stylesheets;
-  my @css_links;
+  my @extra_headers;
   my @style = shellwords($self->setting('stylesheet') || '/gbrowse/gbrowse.css');
   for my $s (@style) {
       my ($url,$media) = $s =~ /^([^(]+)(?:\((.+)\))?/;
       $media ||= 'all';
-      push @css_links,CGI::Link({-rel=>'stylesheet',
-				 -type=>'text/css',
-				 -href=>$self->globals->resolve_path($url,'url'),
-				 -media=>$media});
+      push @extra_headers,CGI::Link({-rel=>'stylesheet',
+				     -type=>'text/css',
+				     -href=>$self->globals->resolve_path($url,'url'),
+				     -media=>$media});
   }
 
 
@@ -268,14 +268,15 @@ sub render_html_head {
       $set_dragcolors = "set_dragcolors('$fill');";
   }
 
+  push @extra_headers,$self->setting('head')  if $self->setting('head');
+
   # put them all together
   my @args = (-title    => $title,
               -style    => \@stylesheets,
               -encoding => $self->tr('CHARSET'),
 	      -script   => \@scripts,
-	      -head     => \@css_links,
+	      -head     => \@extra_headers,
 	     );
-  push @args,(-head=>$self->setting('head'))    if $self->setting('head');
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
   push @args,(-onLoad=>"initialize_page();$set_dragcolors");
 

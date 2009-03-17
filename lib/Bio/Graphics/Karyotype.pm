@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.12 2009-01-14 00:17:17 lstein Exp $
+# $Id: Karyotype.pm,v 1.13 2009-03-17 12:43:36 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -217,7 +217,21 @@ sub chromosomes {
   my $self        = shift;
   my $db          = $self->db;
   my $chrom_type  = $self->chrom_type;
-  return $db->features($chrom_type);
+  my @chroms      = $db->features($chrom_type);
+  
+  # if no chromosomes defined, then generate from seqids
+  unless (@chroms) {
+      my @seq_ids = keys %{$self->{hits}};
+      @chroms     = map {
+	  Bio::Graphics::Feature->new(
+	      -name   => $_->display_name,
+	      -seq_id => $_->seq_id,
+	      -start  => 1,
+	      -end    => $_->length,
+	      -type   => 'chromosome')
+      } map {$db->segment(-name=>$_)} @seq_ids;
+  }
+  return @chroms;
 }
 
 sub generate_panels {

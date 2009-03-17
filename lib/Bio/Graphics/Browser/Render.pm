@@ -1876,7 +1876,6 @@ sub reconfigure_track {
     $state->{features}{$label}{visible}  = param('show_track') ? 1 : 0;
     $state->{features}{$label}{options}  = param('format_option');
     $state->{features}{$label}{limit}    = param('limit');
-    warn "stranded = $state->{features}{$label}{stranded} = ",param('stranded');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
     for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 'linewidth' ) {
         my $value = param($s);

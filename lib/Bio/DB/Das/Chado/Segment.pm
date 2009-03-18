@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.94 2009-03-18 15:52:29 scottcain Exp $
+# $Id: Segment.pm,v 1.95 2009-03-18 20:30:54 scottcain Exp $
 
 =head1 NAME
 
@@ -98,7 +98,7 @@ use Bio::DB::GFF::Typename;
 use Data::Dumper;
 #dgg;not working# use Bio::Species;
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -419,6 +419,7 @@ sub feature_id {
   return $self->{'feature_id'};
 }
 
+*primary_id = \&feature_id;
 
 =head2 strand()
 

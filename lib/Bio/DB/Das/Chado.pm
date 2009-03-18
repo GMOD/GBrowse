@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.76 2009-03-18 15:52:23 scottcain Exp $
+# $Id: Chado.pm,v 1.77 2009-03-18 20:30:50 scottcain Exp $
 
 =head1 NAME
 
@@ -96,7 +96,7 @@ use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
 use constant MAP_REFERENCE_TYPE => 'MapReferenceType'; #dgg
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 $VERSION = 0.11;
 @ISA = qw(Bio::Root::Root Bio::DasI);
@@ -806,6 +806,11 @@ sub _by_alias_by_name {
   my ($name, $class, $ref, $base_start, $stop, $operation) 
        = $self->_rearrange([qw(NAME CLASS REF START END OPERATION)],@_);
 
+  if ($name =~ /^id:(\d+)/) {
+    my $feature_id = $1;
+    return $self->get_feature_by_feature_id($feature_id);
+  }
+
   my $wildcard = 0;
   if ($name =~ /\*/) {
     $wildcard = 1;
@@ -1202,6 +1207,14 @@ sub get_feature_by_feature_id {
 
   my @features = $self->features(-feature_id => $f_id);
   return @features;
+}
+
+sub get_feature_by_id {
+  my $self = shift;
+  my $f_id = shift;
+
+  my @features = $self->features(-feature_id => $f_id);
+  return $features[0];
 }
 
 *fetch = *get_feature_by_primary_id = \&get_feature_by_feature_id;

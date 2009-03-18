@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.75 2009-03-03 21:03:59 scottcain Exp $
+# $Id: Chado.pm,v 1.76 2009-03-18 15:52:23 scottcain Exp $
 
 =head1 NAME
 
@@ -96,7 +96,7 @@ use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
 use constant MAP_REFERENCE_TYPE => 'MapReferenceType'; #dgg
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 $VERSION = 0.11;
 @ISA = qw(Bio::Root::Root Bio::DasI);
@@ -964,6 +964,9 @@ sub _by_alias_by_name {
 
     # getting feature info
   while (my $feature_id_ref = $sth->fetchrow_hashref) {
+
+    warn "feature_id in features method loop:".$$feature_id_ref{feature_id} if DEBUG;
+
     $isth->execute($$feature_id_ref{'feature_id'},$self->gff_source_db_id)
              or $self->throw("getting feature info failed");
 
@@ -1014,7 +1017,7 @@ sub _by_alias_by_name {
         my $src_name = $jsth->fetchrow_hashref;
         warn "src_name:$$src_name{'name'}" if DEBUG;
         $parent_segment =
-             Bio::DB::Das::Chado::Segment->new($$src_name{'name'},$self);
+             Bio::DB::Das::Chado::Segment->new($$src_name{'name'},$self,undef,undef,undef,undef,$$hashref{'srcfeature_id'});
         $old_srcfeature_id=$$hashref{'srcfeature_id'};
       }
         #now build the feature
@@ -1047,6 +1050,11 @@ sub _by_alias_by_name {
           $interbase_start = $$hashref{'fmin'};
         }
         $base_start = $interbase_start +1;
+
+        my $type_obj =  Bio::DB::GFF::Typename->new(
+                     $self->term2name($$hashref{type_id}),
+                     $self->dbxref2source($$hashref{dbxref_id}) || "");
+
         my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                                         $self,
                                         $parent_segment,
@@ -1129,12 +1137,17 @@ sub _by_alias_by_name {
                     $stop = $$exonref{fmax};
                 }
 
+                my $type_obj = Bio::DB::GFF::Typename->new(
+                     'CDS',
+                     $self->dbxref2source($$hashref{'dbxref_id'}) || '');
+
+
                         my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                                         $self,
                                         $parent_segment,
                                         $parent_segment->seq_id,
                                         $start,$stop,
-                                        'CDS',
+                                        $type_obj,
                                         $$hashref{'score'},
                                         $$hashref{'strand'},
                                         $$hashref{'phase'},
@@ -1151,12 +1164,18 @@ sub _by_alias_by_name {
          #the normal case where you don't infer CDS features 
             my $interbase_start = $$hashref{'fmin'};
             $base_start = $interbase_start +1;
+
+            my $type_obj = Bio::DB::GFF::Typename->new(
+                   $self->term2name($$hashref{'type_id'}),
+                   $self->dbxref2source($$hashref{'dbxref_id'}) || '');
+
+
             my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                                         $self,
                                         $parent_segment,
                                         $parent_segment->seq_id,
                                         $base_start,$$hashref{'fmax'},
-                                        $self->term2name($$hashref{'type_id'}),
+                                        $type_obj,
                                         $$hashref{'score'},
                                         $$hashref{'strand'},
                                         $$hashref{'phase'},

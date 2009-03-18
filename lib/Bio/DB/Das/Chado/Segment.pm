@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.93 2009-03-06 21:37:07 scottcain Exp $
+# $Id: Segment.pm,v 1.94 2009-03-18 15:52:29 scottcain Exp $
 
 =head1 NAME
 
@@ -333,8 +333,14 @@ sub new {
             $self->name($name);
             $self->strand($strand);
 
+            my $source = $self->source();
+            my $type_obj = Bio::DB::GFF::Typename->new(
+                     $type,
+                     $source);
 
-            warn $self, ref $self if DEBUG;
+            $self->type($type_obj);
+
+#            warn $self, ref $self, Dumper($self) if DEBUG;
             
             $fetch_uniquename_query->finish;
             $srcfeature_query->finish;
@@ -620,14 +626,22 @@ sub class {
 
   Title   : type
   Usage   : $obj->type($newval)
-  Function: alias of class() for backward compatibility
-  Returns : value of type (a scalar)
-  Args    : on set, new value (a scalar or undef, optional)
-
+  Function: used to be alias of class() for backward compatibility,
+            now behaves the same as Bio::DB::Das::Chado::Segment::Feature->type
+  Returns : A Bio::DB::GFF::Typename object
+  Args    : on set, new value: Bio::DB::GFF::Typename object
 
 =cut
 
-*type = \&class;
+sub type {
+  my $self = shift;
+
+  return $self->{'type'} = shift if @_;
+  return $self->{'type'};
+}
+
+
+#*type = \&class;
 
 =head2 seq_id
 
@@ -861,7 +875,13 @@ sub features {
 
   #UGG, allow both -types and -type to be used in the args
   if ($type_placeholder and !$types) {
-    $$types[0] = $type_placeholder;
+    if (ref $type_placeholder eq 'ARRAY') {
+      $types = $type_placeholder;
+    }
+    else {
+      $$types[0] = $type_placeholder;
+    }
+    warn "what sort of thing is type_placeholder?:".ref $type_placeholder if DEBUG;
   }
 
   warn "@$types\n" if (defined $types and DEBUG);
@@ -1013,7 +1033,7 @@ sub features {
     }else {
       $featureslice = "featureloc";
     }
-    $from_part   = "from (feature f join $featureslice fl ON (f.feature_id = fl.feature_id)) "
+    $from_part   = "from (feature f left join $featureslice fl ON (f.feature_id = fl.feature_id)) "
                   ."left join feature_dbxref fd ON (f.feature_id = fd.feature_id 
                         AND fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id.")) "
                   ."left join analysisfeature af ON (f.feature_id = af.feature_id)";
@@ -1058,6 +1078,16 @@ sub features {
   #   $factory->dbh->do("set enable_hashjoin=1");
    $factory->dbh->do("set enable_seqscan=1");
 
+  if ($feature_query->rows < 1 and $sql_types) {
+    #standard feature query failed to find anything
+    #try looking for srcfeatures:
+    my $srcfeature_query = "SELECT f.name,f.type_id,f.uniquename,f.feature_id, fd.dbxref_id,f.is_obsolete,f.seqlen FROM feature f left join feature_dbxref fd ON (f.feature_id = fd.feature_id AND fd.dbxref_id in (select dbxref_id from dbxref where db_id=2)) WHERE $sql_types order by f.type_id";
+    warn "srcfeature_query:$srcfeature_query" if DEBUG;
+
+    $feature_query = $factory->dbh->prepare($srcfeature_query);
+    $feature_query->execute or $self->throw("srcfeature query failed");
+  }
+
   # Old query (doesn't use RTree index):
   #
   #    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
@@ -1092,13 +1122,18 @@ sub features {
     if ($feature_id && 
         defined($stop) && $stop != $$hashref{fmax} ) {
       $stop = $$hashref{fmin} + $stop + 1;  
+    } elsif (defined($$hashref{seqlen})) {
+      $stop = $$hashref{seqlen};
     } else {
       $stop = $$hashref{fmax};
     }
+
     if ($feature_id && 
-        defined($base_start) && $base_start != ($$hashref{fmin}+1) ) {
+        defined($base_start) && defined($$hashref{fmin}) && $base_start != ($$hashref{fmin}+1) ) {
       my $interbase_start = $$hashref{fmin} + $base_start - 1;
       $base_start = $interbase_start + 1;
+    } elsif (defined($$hashref{seqlen})) {
+      $base_start         = 1;
     } else {
       my $interbase_start = $$hashref{fmin};
       $base_start         = $interbase_start +1;
@@ -1110,7 +1145,23 @@ sub features {
                      $factory->term2name($$hashref{type_id}),
                      $source);
 
-    $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+    if (defined $$hashref{seqlen}) { #this is a srcfeature
+      $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+                       $factory,
+                       undef,
+                       undef,
+                       $base_start,$stop,
+                       $type,
+                       undef,
+                       undef,
+                       undef,
+                       $$hashref{name},
+                       $$hashref{uniquename},
+                       $$hashref{feature_id}
+      );
+    }
+    else {
+      $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                        $factory,
                        $feature_id? undef :$self, #only give the segment as the
                                             # parent if the feature_id wasn't 
@@ -1126,6 +1177,7 @@ sub features {
                        $$hashref{phase},
                        $$hashref{name},
                        $$hashref{uniquename},$$hashref{feature_id});
+    }
 
     push @features, $feat;
 
@@ -1775,8 +1827,8 @@ compatability.
 sub get_feature_stream {
   my $self = shift;
   my @args = @_;
-  my $features = $self->features(@args);
     warn "get_feature_stream args: @_\n" if DEBUG;
+  my $features = $self->features(@args);
     warn "using get_feature_stream\n" if DEBUG;
     warn "feature array: $features\n" if DEBUG;
     warn "first feature: $$features[0]\n" if DEBUG;

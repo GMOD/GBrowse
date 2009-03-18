@@ -24,6 +24,7 @@ use Bio::Root::Root;
 use Bio::LocationI;
 use Data::Dumper;
 use URI::Escape;
+use Carp 'cluck';
 
 use constant DEBUG => 0;
 
@@ -98,6 +99,10 @@ sub new {
   $self->score($score);
   $self->strand($strand);
   $self->phase($phase);
+
+  if (ref $type ne 'Bio::DB::GFF::Typename') {
+    cluck "trying to construct a feature without a Typename:$type, $group";
+  }
 
   $self->type($type);
   $self->group($group);
@@ -704,6 +709,10 @@ sub length {
 
 sub method {
   my $self = shift;
+
+#  cluck 'in Feature->method' unless $self->type->can('method');
+#  warn Dumper($self) unless $self->type->can('method');
+
   return $self->type->method();
 }
 
@@ -842,7 +851,7 @@ sub all_tags {
   Title   : source
   Usage   : $f->source();
   Function: caches and returns the source from a GFF file, this is stored
-            in featureprop with a tag of 'GFF_Source'
+            in dbxref with a db of 'GFF_Source'
   Returns : See above
   Args    : none
 

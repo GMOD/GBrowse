@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.15 2009-03-03 20:25:02 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.16 2009-03-19 12:49:06 scottcain Exp $
 
 =head1 NAME
 
@@ -806,6 +806,11 @@ sub _by_alias_by_name {
   my ($name, $class, $ref, $base_start, $stop, $operation) 
        = $self->_rearrange([qw(NAME CLASS REF START END OPERATION)],@_);
 
+  if ($name =~ /^id:(\d+)/) {
+    my $feature_id = $1;
+    return $self->get_feature_by_feature_id($feature_id);
+  }
+
   my $wildcard = 0;
   if ($name =~ /\*/) {
     $wildcard = 1;
@@ -964,6 +969,9 @@ sub _by_alias_by_name {
 
     # getting feature info
   while (my $feature_id_ref = $sth->fetchrow_hashref) {
+
+    warn "feature_id in features method loop:".$$feature_id_ref{feature_id} if DEBUG;
+
     $isth->execute($$feature_id_ref{'feature_id'},$self->gff_source_db_id)
              or $self->throw("getting feature info failed");
 
@@ -1014,7 +1022,7 @@ sub _by_alias_by_name {
         my $src_name = $jsth->fetchrow_hashref;
         warn "src_name:$$src_name{'name'}" if DEBUG;
         $parent_segment =
-             Bio::DB::Das::Chado::Segment->new($$src_name{'name'},$self);
+             Bio::DB::Das::Chado::Segment->new($$src_name{'name'},$self,undef,undef,undef,undef,$$hashref{'srcfeature_id'});
         $old_srcfeature_id=$$hashref{'srcfeature_id'};
       }
         #now build the feature
@@ -1047,6 +1055,11 @@ sub _by_alias_by_name {
           $interbase_start = $$hashref{'fmin'};
         }
         $base_start = $interbase_start +1;
+
+        my $type_obj =  Bio::DB::GFF::Typename->new(
+                     $self->term2name($$hashref{type_id}),
+                     $self->dbxref2source($$hashref{dbxref_id}) || "");
+
         my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                                         $self,
                                         $parent_segment,
@@ -1129,12 +1142,17 @@ sub _by_alias_by_name {
                     $stop = $$exonref{fmax};
                 }
 
+                my $type_obj = Bio::DB::GFF::Typename->new(
+                     'CDS',
+                     $self->dbxref2source($$hashref{'dbxref_id'}) || '');
+
+
                         my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                                         $self,
                                         $parent_segment,
                                         $parent_segment->seq_id,
                                         $start,$stop,
-                                        'CDS',
+                                        $type_obj,
                                         $$hashref{'score'},
                                         $$hashref{'strand'},
                                         $$hashref{'phase'},
@@ -1151,12 +1169,18 @@ sub _by_alias_by_name {
          #the normal case where you don't infer CDS features 
             my $interbase_start = $$hashref{'fmin'};
             $base_start = $interbase_start +1;
+
+            my $type_obj = Bio::DB::GFF::Typename->new(
+                   $self->term2name($$hashref{'type_id'}),
+                   $self->dbxref2source($$hashref{'dbxref_id'}) || '');
+
+
             my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                                         $self,
                                         $parent_segment,
                                         $parent_segment->seq_id,
                                         $base_start,$$hashref{'fmax'},
-                                        $self->term2name($$hashref{'type_id'}),
+                                        $type_obj,
                                         $$hashref{'score'},
                                         $$hashref{'strand'},
                                         $$hashref{'phase'},
@@ -1183,6 +1207,14 @@ sub get_feature_by_feature_id {
 
   my @features = $self->features(-feature_id => $f_id);
   return @features;
+}
+
+sub get_feature_by_id {
+  my $self = shift;
+  my $f_id = shift;
+
+  my @features = $self->features(-feature_id => $f_id);
+  return $features[0];
 }
 
 *fetch = *get_feature_by_primary_id = \&get_feature_by_feature_id;
@@ -1705,7 +1737,10 @@ sub clone {
 
 #  this is the BDSFS::DBI::mysql implementation
     $self->{dbh}{InactiveDestroy} = 1;
-    $self->{dbh} = $self->{dbh}->clone
+    $self->{dbh} = $self->{dbh}->clone({}) 
+       #magic from perlmonks to silence a warning:
+       # http://www.perlmonks.org/?node_id=594175
+       # without the empty {} you get warnings about unrecognised attribute name
        ; # unless $self->is_temp;
 }
 

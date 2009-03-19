@@ -98,7 +98,6 @@ sub new {
   $self->score($score);
   $self->strand($strand);
   $self->phase($phase);
-
   $self->type($type);
   $self->group($group);
   $self->uniquename($uniquename);
@@ -842,7 +841,7 @@ sub all_tags {
   Title   : source
   Usage   : $f->source();
   Function: caches and returns the source from a GFF file, this is stored
-            in featureprop with a tag of 'GFF_Source'
+            in dbxref with a db of 'GFF_Source'
   Returns : See above
   Args    : none
 

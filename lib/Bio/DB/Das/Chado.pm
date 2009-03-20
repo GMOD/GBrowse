@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.77 2009-03-18 20:30:50 scottcain Exp $
+# $Id: Chado.pm,v 1.78 2009-03-20 18:59:22 scottcain Exp $
 
 =head1 NAME
 
@@ -810,6 +810,15 @@ sub _by_alias_by_name {
     my $feature_id = $1;
     return $self->get_feature_by_feature_id($feature_id);
   }
+
+  my @temp_array = split /:/, $name;
+  if (scalar @temp_array == 2) {
+    if ($self->source2dbxref($temp_array[0]) > 0) {
+      warn "assuming that the name with a colon ($name) is coming from a multiple hit search result (ie, is of the form 'source:name'";
+      $name = $temp_array[1];
+    }
+  }
+
 
   my $wildcard = 0;
   if ($name =~ /\*/) {

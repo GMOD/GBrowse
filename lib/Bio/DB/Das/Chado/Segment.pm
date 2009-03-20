@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.15 2009-03-19 12:49:09 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.16 2009-03-20 19:15:24 scottcain Exp $
 
 =head1 NAME
 
@@ -98,7 +98,7 @@ use Bio::DB::GFF::Typename;
 use Data::Dumper;
 #dgg;not working# use Bio::Species;
 
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -1079,7 +1079,7 @@ sub features {
   #   $factory->dbh->do("set enable_hashjoin=1");
    $factory->dbh->do("set enable_seqscan=1");
 
-  if ($feature_query->rows < 1 and $sql_types) {
+  if ($feature_query->rows < 1 and $sql_types and !defined($interbase_start) and !defined($rend)) {
     #standard feature query failed to find anything
     #try looking for srcfeatures:
     my $srcfeature_query = "SELECT f.name,f.type_id,f.uniquename,f.feature_id, fd.dbxref_id,f.is_obsolete,f.seqlen FROM feature f left join feature_dbxref fd ON (f.feature_id = fd.feature_id AND fd.dbxref_id in (select dbxref_id from dbxref where db_id=2)) WHERE $sql_types order by f.type_id";

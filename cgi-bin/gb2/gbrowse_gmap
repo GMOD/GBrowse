@@ -116,6 +116,8 @@ Currently the local phylogeoviz doesn't correctly load in the balloon.
 
 =back
 
+=head1 Interesting Methods
+
 =cut
 
 use strict;
@@ -124,10 +126,24 @@ use Bio::Graphics::Browser::RegionSearch;
 use Template;
 use JSON;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.8 2009-03-03 04:32:27 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.9 2009-03-22 21:36:18 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
+
+# Colors were chosen based on a chart found at
+# http://www.mrexcel.com/forum/showthread.php?t=374530
+# These colors should be discerned by everyone
+my @color_list = (
+    '#F0E442',    # Yellow
+    '#0072B2',    # Blue
+    '#D55E00',    # Vermillion
+    '#CC79A7',    # Reddish Purple
+    '#000000',    # Black
+    '#E69F00',    # Orange
+    '#56B4E9',    # Sky Blue
+    '#2B9F78',    # Bluish Green
+);
 
 my $conf_dir  = $ENV{GBROWSE_CONF}   || DEFAULT_CONF;
 my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
@@ -257,7 +273,6 @@ sub run {
     my $end     = param('end');
     my $f_id    = param('feature_id');
     my $db_id   = param('db_id');
-    my $rmt     = param('remote');
     my $balloon = param('balloon');
 
     #print STDERR Dumper(param())." \n";
@@ -268,7 +283,6 @@ sub run {
     #    print STDERR "end : $end\n"     if ( defined $end );
     #    print STDERR "f_id : $f_id\n"   if ( defined $f_id );
     #    print STDERR "db_id : $db_id\n" if ( defined $db_id );
-    #    print STDERR "rmt : $rmt\n"     if ( defined $rmt );
 
     $self->state->{dbid} = $db_id if $db_id;    # to search correct database
 
@@ -297,12 +311,6 @@ sub run {
     my $features
         = $search->search_features( { -search_term => $search_term } );
 
-    # provide customized content for popup balloons
-    if ( defined $rmt ) {
-        print header, start_html;
-        print end_html;
-        return;
-    }
     if ( not @{ $features || [] } ) {
         print header, start_html;
         print "No Features Found\n";
@@ -372,6 +380,26 @@ sub run {
         $hap_names{$name} = 1;
     }
 
+    # If we only want the population details menu, then print that and return
+    if ( param('pop_details') ) {
+        my $pop_name = param('pop_name');
+        print STDERR "PD:\n";
+        print STDERR Dumper( \%population_data ) . " \n";
+        unless (
+            $self->print_pop_details(
+                pop_name         => $pop_name,
+                type_geolocation => \%type_geolocation,
+                population_data  => \%population_data,
+            )
+            )
+        {
+            print header, start_html;
+            print "Failed to print population details.\n";
+            print end_html;
+        }
+        return;
+    }
+
     # Create the values that will be passed to PhyloGeoViz
     my @sorted_pop_keys = sort keys %population_data;
     my @sorted_pop_names
@@ -397,6 +425,18 @@ sub run {
     }
 
     my @pie_sizes = $self->get_pie_sizes( \@pop_lat, \@pop_lng );
+    my @set_hap_colors;
+
+    for ( my $i = 0; $i <= $#sorted_hap_names; $i++ ) {
+        push @set_hap_colors, [ $sorted_hap_names[$i], $color_list[$i] ];
+    }
+
+    # options to be passed into the link back
+    my %link_options = ( pop_details => 1, );
+    $link_options{'ref'}   = $ref   if ( defined $ref );
+    $link_options{'start'} = $start if ( defined $start );
+    $link_options{'end'}   = $end   if ( defined $end );
+    $link_options{'db_id'} = $db_id if ( defined $db_id );
 
     #print STDERR Dumper( \%population_data ) . " \n";
     #print STDERR Dumper( \@sorted_pop_names ) . " \n";
@@ -440,34 +480,37 @@ sub run {
     my $iframe_width  = '100%';
 
     my @phylo_link_params = (
-        [ 'numpops',     $numpops ],
-        [ 'numhaps',     $numhaps ],
-        [ 'anchor_pies', 1 ],
-        [ 'pop_names',   JSON::to_json( \@sorted_pop_names ) ],
-        [ 'hap_names',   JSON::to_json( \@sorted_hap_names ) ],
-        [ 'pop_lat',     JSON::to_json( \@pop_lat ) ],
-        [ 'pop_lng',     JSON::to_json( \@pop_lng ) ],
-        [ 'pop_haps',    JSON::to_json( \@pop_haps ) ],
-        [ 'hapgroups',   JSON::to_json( \@hapgroups ) ],
-        [ 'pop_include', JSON::to_json( \@pop_include ) ],
-        [ 'hap_include', JSON::to_json( \@hap_include ) ],
-        [ 'radii_in_km', JSON::to_json( \@pie_sizes ) ],
+        [ 'numpops',        $numpops ],
+        [ 'numhaps',        $numhaps ],
+        [ 'anchor_pies',    1 ],
+        [ 'pop_names',      JSON::to_json( \@sorted_pop_names ) ],
+        [ 'hap_names',      JSON::to_json( \@sorted_hap_names ) ],
+        [ 'pop_lat',        JSON::to_json( \@pop_lat ) ],
+        [ 'pop_lng',        JSON::to_json( \@pop_lng ) ],
+        [ 'pop_haps',       JSON::to_json( \@pop_haps ) ],
+        [ 'hapgroups',      JSON::to_json( \@hapgroups ) ],
+        [ 'set_hap_colors', JSON::to_json( \@set_hap_colors ) ],
+        [ 'pop_include',    JSON::to_json( \@pop_include ) ],
+        [ 'hap_include',    JSON::to_json( \@hap_include ) ],
+        [ 'radii_in_km',    JSON::to_json( \@pie_sizes ) ],
+        [ 'link_options',   JSON::to_json( \%link_options ) ],
     );
 
     if ($balloon) {
         $iframe_height = '400';
         $iframe_width  = '400';
         my $map_padding = 40;
-        push @phylo_link_params, (
-            [ 'map_width', $iframe_width - $map_padding],
-            [ 'map_height', $iframe_height - $map_padding],
-            [ 'map_only', 1],
-        );
+        push @phylo_link_params,
+            (
+            [ 'map_width',  $iframe_width - $map_padding ],
+            [ 'map_height', $iframe_height - $map_padding ],
+            [ 'map_only',   1 ],
+            );
     }
 
     # must escape the JSON objects
-    my $request_str
-        = join( '&', map { $_->[0] . "=" . CGI::escape( $_->[1] ) } @phylo_link_params );
+    my $request_str = join( '&',
+        map { $_->[0] . "=" . CGI::escape( $_->[1] ) } @phylo_link_params );
 
     # For some reason, the balloon interprets the escaping.
     # So we must escape again if it is a balloon.
@@ -475,11 +518,8 @@ sub run {
         $request_str = CGI::escape($request_str);
     }
 
-    my $gmap_api_key = $self->source->global_setting('gmap_api_key') || "";
-
     my %options = (
         style_sheet   => $style_sheet,
-        gmap_api_key  => $gmap_api_key,
         numpops       => $numpops,
         numhaps       => $numhaps,
         request_str   => $request_str,
@@ -491,6 +531,60 @@ sub run {
         or die $template->error();
     print $html;
     return;
+}
+
+=pod
+
+=head2 print_pop_details
+
+This method prints out the population details for the given feature.  This is
+to be presented in a smallish popup balloon.  It presents population
+information and creates links to GBrowse.
+
+The reason that this is not it's own script is that it is just a small portion
+of the gbrowse_gmap project.  I'm trying to minimize the file footprint of this
+project.
+
+=cut 
+
+sub print_pop_details {
+    my $self             = shift;
+    my %args             = @_;
+    my $pop_name         = $args{pop_name} or return 0;
+    my $type_geolocation = $args{type_geolocation} or return 0;
+    my $population_data  = $args{population_data} or return 0;
+
+    my $pop_key = undef;
+    foreach my $local_pop_key ( keys %$type_geolocation ) {
+        print STDERR "POP_KEY $local_pop_key\n";
+        if ( $type_geolocation->{$local_pop_key}{'key'} eq $pop_name ) {
+            print STDERR "FOUND\n";
+            $pop_key = $local_pop_key;
+            last;
+        }
+    }
+    return 0 unless ( defined $pop_key );
+
+    my $longitude = $type_geolocation->{$pop_key}{'longitude'};
+    my $latitude  = $type_geolocation->{$pop_key}{'latitude'};
+    my $category  = $type_geolocation->{$pop_key}{'category'};
+
+    print header, start_html;
+    print qq[
+        <div id="phylo_popup_div" >
+        $pop_name <br>
+        Location: $latitude, $longitude <br>
+        <table>
+    ];
+    for my $hap_name ( sort keys %{ $population_data->{$pop_key} } ) {
+        print "<tr> <td>$hap_name:</td> <td>"
+            . $population_data->{$pop_key}{$hap_name}
+            . "</td></tr>\n";
+    }
+    print "</table>";
+    print "</div>";
+    print end_html;
+    return 1;
 }
 
 __DATA__

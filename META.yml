@@ -18,6 +18,7 @@ requires:
   IO::String: 0
   JSON: 0
   LWP: 0
+  Statistics::Descriptive: 0
   Storable: 0
   perl: 5.008
 recommends:
@@ -28,7 +29,6 @@ recommends:
   FCGI: 0
   GD::SVG: 0
   Safe::World: 0
-  Statistics::Descriptive: 0
 provides:
   Bio::DB::Das::BioSQL:
     file: lib/Bio/DB/Das/BioSQL.pm

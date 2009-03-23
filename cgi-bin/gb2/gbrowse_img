@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbrowse_img,v 1.8 2009-02-24 04:42:17 lstein Exp $
+# $Id: gbrowse_img,v 1.9 2009-03-23 17:42:26 lstein Exp $
 
 use strict;
 
@@ -160,6 +160,7 @@ sub render_image {
     my @labels   = $render->expand_track_names($render->detail_tracks);
 
     my $format   = param('format') || 'GD';
+    my $flip     = param('flip')   || 0;
 
     warn "labels = ",join ',',@labels if DEBUG;
     unshift @labels,'_scale';
@@ -176,7 +177,8 @@ sub render_image {
 						      external_features => $external,
 						      section           => 'detail',
 						      cache_extra       => [$format],
-						      image_class      => $format,
+						      image_class       => $format,
+						      flip              => $flip,
 						      -key_style        => 'between',
 						      }
 						  );

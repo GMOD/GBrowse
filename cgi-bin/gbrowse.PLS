@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.122 2009-03-13 02:10:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.123 2009-03-24 00:15:26 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -595,18 +595,19 @@ sub hide {
 
 sub segment_info {
   my ($settings,$segment,$whole_segment) = @_;
-  my $pad   = $CONFIG->image_padding;
-  my $max   = $CONFIG->setting('max segment') || MAX_SEGMENT;
-  my $width = ($settings->{width} * OVERVIEW_RATIO);
+  my $padl   = $CONFIG->setting('pad_left')  || $CONFIG->image_padding;
+  my $padr   = $CONFIG->setting('pad_right') || $CONFIG->image_padding;
+  my $max    = $CONFIG->setting('max segment') || MAX_SEGMENT;
+  my $width  = ($settings->{width} * OVERVIEW_RATIO);
 
-  hide(image_padding        => $pad);
+  hide(image_padding        => $padl);
   hide(max_segment          => $max);
   hide(overview_start       => $whole_segment->start);
   hide(overview_stop        => $whole_segment->end);
   hide(overview_pixel_ratio => $whole_segment->length/$width);
   hide(details_pixel_ratio  => $segment->length/$settings->{width});
-  hide(detail_width         => $settings->{width} + 2*$pad);
-  hide(overview_width       => $width + 2*$pad);
+  hide(detail_width         => $settings->{width} + $padl + $padr);
+  hide(overview_width       => $width + $padl + $padr);
 
   if ($settings->{region_size}) {
     my ($rstart, $rend) = get_regionview_seg($settings,$segment->start, $segment->end,

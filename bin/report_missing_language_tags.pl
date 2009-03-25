@@ -13,5 +13,5 @@ for my $file (<*.pm>) {
   my $contents = require "./$file";
   my @missing = sort grep {!$contents->{$_}} keys %$posix;
   next unless @missing;
-  print "$file: @missing\n\n";
+  print "$file:\n".join("\n", @missing)."\n\n";
 }

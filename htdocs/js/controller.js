@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.87 2009-03-10 18:19:21 lstein Exp $
+ $Id: controller.js,v 1.88 2009-03-27 02:10:09 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -250,6 +250,10 @@ var GBrowseController = Class.create({
           $(section_name).innerHTML = html;
 	  if (scroll_there)
 	    new Effect.ScrollTo(section_name);
+	    if ((section_name=="search_form_objects") 
+	      && ($('autocomplete_choices') != null)) {
+	    	initAutocomplete();
+	    }
         }
       }
     });

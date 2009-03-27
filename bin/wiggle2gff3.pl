@@ -174,6 +174,7 @@ use Bio::Graphics::Wiggle::Loader;
 use Getopt::Long;
 use Pod::Usage;
 use File::Spec;
+use File::Temp 'tempfile',':seekable';
 
 my ($show_help, $method, $source, $use_gff3, $use_featurefile, 
     $base_directory, $trackname);
@@ -208,11 +209,27 @@ $loader->{trackname} = $trackname if defined $trackname;
 my $type = $use_featurefile ? 'featurefile' : 'gff3';
 
 while (my $file = shift) {
-  my $fh   = IO::File->new($file) or die "could not open $file: $!";
-  print STDERR "Processing $file...";
-  $loader->load($fh);
-  print STDERR "done.\n";
-  print $loader->featurefile($type,$method,$source);
+
+    my $fh;
+
+    if ($file =~ /\.(gz|bz2)$/) {
+	warn "creating tempfile";
+	$fh = tempfile();
+	my $unzipper = $file =~ /\.gz$/ ? 'gunzip -c' : 'bunzip2 -c';
+	my $unzip    = IO::File->new("$unzipper $file|");
+	my $data;
+	while ($unzip->read($data,1024)) {
+	    $fh->print($data);
+	}
+	$unzip->close;
+	seek($fh,0,SEEK_SET);
+    } else {
+	$fh   = IO::File->new($file) or die "could not open $file: $!";
+    }
+    print STDERR "Processing $file...";
+    $loader->load($fh);
+    print STDERR "done.\n";
+    print $loader->featurefile($type,$method,$source);
 }
 
 1;

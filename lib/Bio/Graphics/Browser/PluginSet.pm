@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.10 2008-10-08 16:55:24 lstein Exp $
+#  $Id: PluginSet.pm,v 1.11 2009-03-27 02:10:09 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -114,9 +114,13 @@ sub configure {
 
 sub annotate {
   my $self = shift;
-  my $segment       = shift;
-  my $feature_files = shift || {};
-  my $coordinate_mapper = shift;
+  my $segment                = shift;
+  my $feature_files          = shift || {};
+  my $fast_mapper            = shift;  # fast mapper filters out features that are outside cur segment
+  my $slow_mapper            = shift;  # slow mapper doesn't
+  my $max_segment            = shift;  # ignored
+  my $whole_segment          = shift;
+  my $region_segment         = shift;
 
   my @plugins = $self->plugins;
 
@@ -125,9 +129,13 @@ sub annotate {
     my $name = "plugin:".$p->name;
     next unless $p->page_settings && $p->page_settings->{features}{$name}{visible};
     warn "Plugin $name is visible, so running it on segment $segment" if DEBUG;
-    my $features = $p->annotate($segment,$coordinate_mapper) or next;
-    $features->name($name);
-    $feature_files->{$name} = $features;
+    if ($max_segment < $segment->length+1) {
+	$feature_files->{$name} = Bio::Graphics::FeatureFile->new();  # empty
+    } else {
+	my $features = $p->annotate($segment,$fast_mapper) or next;
+	$features->name($name);
+	$feature_files->{$name} = $features;
+    }
   }
 }
 

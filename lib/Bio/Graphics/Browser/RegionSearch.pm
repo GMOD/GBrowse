@@ -546,6 +546,29 @@ sub coordinate_mapper {
     return $closure;
 }
 
+sub features_by_prefix {
+    my $self  = shift;
+    my $match = shift;
+    my $limit = shift;
+
+    # do name search for autocomplete...
+    # only local databases for now
+    my $local_dbs = $self->local_dbs;
+    my (@f,$count);
+    for my $region (values %{$local_dbs}) {
+	my $db = $region->db;
+	eval {
+	    my $i = $db->get_seq_stream(-name=>"${match}*",
+					-aliases=>0);
+	    while (my $f = $i->next_seq) {
+		push @f,$f;
+		last if $limit && $count++ > $limit;
+	    }
+	};
+    }
+    return \@f;
+}
+
 ##################################################################33
 # META SEGMENT DEFINITIONS
 ##################################################################33

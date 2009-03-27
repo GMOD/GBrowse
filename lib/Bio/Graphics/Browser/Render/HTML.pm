@@ -190,13 +190,23 @@ sub render_search_form_objects {
     my $search_value = $settings->{name} =~ /^id:/ && $self->region->features 
 	                ? eval{$self->region->features->[0]->display_name}
 			: $settings->{name};
-    return textfield(
+    my $html = textfield(
         -name    => 'name',
         -id      => 'landmark_search_field',
         -size    => 25,
         -default => $search_value,
 	-override=>1,
-    ) . submit( -name => $self->tr('Search') );
+    );
+    if ($self->setting('autocomplete')) {
+	$html .= <<END
+<span id="indicator1" style="display: none">
+  <img src="/gbrowse2/images/spinner.gif" alt="Working..." />
+</span>
+<div id="autocomplete_choices" class="autocomplete"></div>
+END
+    }
+    $html .= submit( -name => $self->tr('Search') );
+    return $html;
 }
 
 sub render_html_head {
@@ -219,7 +229,7 @@ sub render_html_head {
 
  if ($self->setting('autocomplete')) {
     push @scripts,{src=>"$js/$_"}
-      foreach qw(connection.js autocomplete.js);
+      foreach qw(controls.js autocomplete.js);
   }
 
   # our own javascript
@@ -278,7 +288,8 @@ sub render_html_head {
 	      -head     => \@extra_headers,
 	     );
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
-  push @args,(-onLoad=>"initialize_page();$set_dragcolors");
+  my $autocomplete = ''; # $self->setting('autocomplete') ? 'initAutocomplete()' : '';
+  push @args,(-onLoad=>"initialize_page();$set_dragcolors;$autocomplete");
 
   return start_html(@args);
 }
@@ -1929,6 +1940,24 @@ sub can_generate_pdf {
 	    );
 	return $CAN_PDF=0;
     }
+}
+
+sub format_autocomplete {
+    my $self     = shift;
+    my $features = shift;
+    my $partial  = shift;
+    my %names;
+    for my $f (@$features) {
+	my $name = $f->display_name or next;
+	$names{$name}++;
+    }
+    my $html = "<ul>\n";
+    for my $n (sort keys %names) {
+	$n =~ s/($partial)/<b>$1<\/b>/i;
+	$html .= "<li>$n</li>\n";
+    }
+    $html .= "</ul>\n";
+    return $html;
 }
 
 1;

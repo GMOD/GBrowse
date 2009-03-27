@@ -26,7 +26,7 @@ use constant DEBUG                => 0;
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
 use constant REGION_SCALE_LABEL   => 'Region Scale';
 use constant DETAIL_SCALE_LABEL   => 'Detail Scale';
-use constant EMPTY_IMAGE_HEIGHT   => 40;
+use constant EMPTY_IMAGE_HEIGHT   => 12;
 use constant MAX_SEGMENT          => 1_000_000;
 use constant TOO_MANY_SEGMENTS    => 5_000;
 use constant OVERVIEW_RATIO       => 1.0;
@@ -430,7 +430,6 @@ sub asynchronous_event {
         my $visible    = param('visible');
         my $track_name = param('track_name');
 
-	warn "set_track_visibility: ",
 	param('track_name'),'=>',param('visible') if DEBUG;
 
         if ($visible) {
@@ -568,11 +567,23 @@ sub asynchronous_event {
 	return (302,undef,$self->image_link($self->state,$format));
     }
 
+    # autocomplete support
+    if (my $match  = param('autocomplete')) {
+	my $search = $self->get_search_object;
+	my $matches= $search->features_by_prefix($match,100);
+	my $autocomplete = $self->format_autocomplete($matches,$match);
+	return (200,'text/html',$autocomplete);
+    }
+
     return unless $events;
     warn "processing asynchronous event(s)" if DEBUG;
     return (204,'text/plain',undef);
     $self->session->flush if $self->session;
     1;
+}
+
+sub format_autocomplete {
+    croak "implement in subclass";
 }
 
 sub background_track_render {
@@ -1178,7 +1189,6 @@ sub get_search_object {
 	  state  => $self->state,
 	});
     $search->init_databases(
-#	param('dbid') ? [param('dbid')]
 	$self->state->{dbid} ? [$self->state->{dbid}]
 	:()
 	);
@@ -3248,6 +3258,7 @@ sub external_data {
     my $max_segment  = $self->get_max_segment;
     my $search       = $self->get_search_object;
     my $meta_segment = $search->segment($segment);
+    my $too_big      =  $segment && ($segment->length > $max_segment+1);
     if ($segment) {
 	my $search       = $self->get_search_object;
 	my $rel2abs      = $search->coordinate_mapper($segment,1);
@@ -3255,6 +3266,7 @@ sub external_data {
 	for my $featureset ($self->plugins,$self->uploaded_sources,$self->remote_sources) {
 	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} if DEBUG;
 	    next unless $featureset;
+
 	    $featureset->annotate($meta_segment,$f,
 				  $rel2abs,$rel2abs_slow,$max_segment,
 				  $self->whole_segment,$self->region_segment);

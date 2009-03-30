@@ -725,7 +725,7 @@ sub nest_toggles {
 
     my $result = '';
     for my $key (sort { 
-	           $sort->{$a}<=>$sort->{$b} || $a cmp $b
+	           ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b
 		      }  keys %$hash) {
 	if ($key eq '__contents__') {
 	    $result .= $hash->{$key}."\n";
@@ -1095,7 +1095,7 @@ sub das_table {
       }
   }
 
-  my $url_help = $self->tr('Remote_url_help');
+  my $url_help = $self->tr('Remote_url_help')||'';
   push @rows,
     th({-align=>'right',
 	-width      =>'20%',

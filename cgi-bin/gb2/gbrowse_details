@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Realign 'align';
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.10 2009-03-05 23:03:00 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.11 2009-03-30 18:23:53 lstein Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 
@@ -43,7 +43,8 @@ exit 0;
 package DetailRenderer;
 
 use strict;
-use constant DEBUG=>0;
+use constant DEBUG   => 0;
+use constant MAX_DNA => 500_000;
 
 use CGI qw(:standard *table *TR escape);
 
@@ -278,16 +279,19 @@ sub print_features {
 	$string .= CGI::end_table();
 	
 	if ($subtable or $subf==0) {
-	    my $dna = $self->get_seq($f);
-	    $dna    = $dna->seq if ref $dna;  # compensate for API changes
-	    $string .= $self->print_dna($f,
-					$dna,
-					$f->abs_start,
-					$f->strand,
-					\@subfeatures,
-					$subf+1) if $dna;
-	}
-	
+	   if ($f->length > MAX_DNA) {
+	      $string .= "<b><i>Sequence display limited to ".MAX_DNA." bases</i></b>";
+	   } else {
+	      my $dna = $self->get_seq($f);
+	      $dna    = $dna->seq if ref $dna;  # compensate for API changes
+	      $string .= $self->print_dna($f,
+	  				  $dna,
+					  $f->abs_start,
+					  $f->strand,
+					  \@subfeatures,
+					  $subf+1) if $dna;
+	   }
+        }
     }
     return $string;
 }

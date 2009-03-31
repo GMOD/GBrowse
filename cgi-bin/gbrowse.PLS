@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.123 2009-03-24 00:15:26 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.124 2009-03-31 04:41:24 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -115,7 +115,8 @@ use constant GLOBAL_TIMEOUT => 60;  # 60 seconds to failure unless overridden in
 
 local $CGI::USE_PARAM_SEMICOLONS = 1;
 $HAVE_SVG = eval {require GD::SVG; 1};
-chomp($HAVE_PDF = `which inkscape 2>/dev/null`);
+chomp($HAVE_PDF = `which inkscape 2>/dev/null`)
+    if $ENV{SHELL};
 
 # IMPORTANT DATA STRUCTURES
 

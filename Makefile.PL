@@ -8,7 +8,7 @@ use IO::File;
 use Cwd;
 require 5.005003;
 
-my $VERSION     = '1.69.025';
+my $VERSION     = '1.69.030';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN GBROWSE_ROOT INSTALL_BASE
@@ -293,7 +293,6 @@ WriteMakefile(
 				 Text::ParseWords  => 1,
 				 CGI::Session      => 4.02,
 				 File::Temp        => 0,
-				 Class::Base       => 0,
 				 Digest::MD5       => 0,
                                  Statistics::Descriptive => 0,
 				},

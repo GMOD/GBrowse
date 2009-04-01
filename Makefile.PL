@@ -295,6 +295,7 @@ WriteMakefile(
 				 File::Temp        => 0,
 				 Digest::MD5       => 0,
                                  Statistics::Descriptive => 0,
+                                 Bio::Graphics     => 1.92,
 				},
 	      PL_FILES       => {
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',

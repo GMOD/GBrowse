@@ -272,7 +272,7 @@ END
 
    SETTINGS_INSTRUCTIONS => <<END,
 La boite <i>Voir</i> active ou désctive la piste. L'option
-<i>Compacter</i> force la piste à être consensée pour que 
+<i>Compacter</i> force la piste à être condensée pour que 
 les annotations se chevauchent. Les options <i>'Etendre'</i>
 et <i>Hyperétendre</i> activent un contrôle de collision qui
 utilise des algorithmes de mise en page plus lents et plus rapides.

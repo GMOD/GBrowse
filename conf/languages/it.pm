@@ -51,6 +51,8 @@ END
 
    IMAGE_LINK => "Vai all'Immagine",
 
+   PDF_LINK   => 'Scarica il PDF',
+
    SVG_LINK   => 'Immagine ad Alta Risoluzione',
 #ale#   SVG_LINK   => 'Immagine in qualita` di pubblicazione',
    SVG_DESCRIPTION => <<END,
@@ -337,6 +339,8 @@ END
    # HELP PAGES
    #--------------
 
+   OK                 => 'OK',
+
    CLOSE_WINDOW => 'Chiudi la finestra',
 
    TRACK_DESCRIPTIONS => 'Descrizione delle tracce & Citazioni',
@@ -359,9 +363,7 @@ END
 
  BACK_TO_BROWSER => 'Torna al Visualizzatore',
 
- PLUGIN_SEARCH_1   => '%s (mediante ricerca %s)',
-
- PLUGIN_SEARCH_2   => '&lt;ricerca %s&gt;',
+ PLUGIN_SEARCH   => 'ricerca con il plugin %s',
 
  CONFIGURE_PLUGIN   => 'Configura',
 
@@ -418,5 +420,60 @@ END
  OPTIONS_RESET => 'Tutte le pagine di configurazione saranno resettate ai valori predefiniti',
 
  OPTIONS_UPDATED => 'E\' in vigore una nuova configurazione; tutte le pagine di configurazione saranno resettate ai valori predefiniti',
-  
+ 
+ SEND_TO_GALAXY    => 'Invia questa regione a Galaxy',
+
+ NO_DAS            => 'Errore di installazione: il modulo Bio::Das deve essere installato perche\' gli URL di DAS lavorino. Informare l\'amministratore di questo sito.',
+
+ SHOW_OR_HIDE_TRACK => '<b>Mostra o nascondi questa traccia</b>',
+
+ CONFIGURE_THIS_TRACK   => '<b>Clicca per cambiare l\'impostazione della traccia.</b>',
+
+ SHARE_THIS_TRACK   => '<b>Condividi questa traccia</b>',
+
+ SHARE_ALL          => 'Condividi queste tracce',
+
+ SHARE              => 'Condividi %s',
+
+ SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
+Per condividere questa traccia con un altro visualizzatore genomico GBrowse,
+copia l\'URL sottostante, vai nell\'altro GBrowse e incolla l\'URL nel campo
+"Inserisci URL di annotazioni" in fondo alla pagina. Se questa traccia
+deriva da un file caricato, e viene condiviso l\'URL con un altro 
+utente, con <b>tutti<\b> i permessi, i dati caricati saranno 
+visibili da questo utente.
+END
+
+ SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
+Per condividere queste tracce con un altro visualizzatore genomico GBrowse,
+copia l\'URL sottostante, vai nell\'altro GBrowse e incolla l\'URL nel campo
+"Inserisci URL di annotazioni" in fondo alla pagina. Se queste tracce
+derivano da un file caricato, e viene condiviso l\'URL con un altro 
+utente, con <b>tutti<\b> i permessi, i dati caricati saranno 
+visibili da questo utente.
+END
+
+ SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,
+Per condividere questa traccia con un altro visualizzatore genomico usando
+<a href="http://www.biodas.org" target="_new">Distributed Annotation System
+ (DAS)</a>, copia l\'URL sottostante, vai nell\'altro visualizzatore e 
+inserisci l\'URL come una nuova sorgente DAS.
+<i>Tracce quantitative (file "wiggle") e file caricati non possono essere
+condivisi usando DAS.</i>
+END
+
+ SHARE_DAS_INSTRUCTIONS_ALL_TRACKS => <<END,
+Per condividere queste tracce con un altro visualizzatore genomico usando
+<a href="http://www.biodas.org" target="_new">Distributed Annotation System
+ (DAS)</a>, copia l\'URL sottostante, vai nell\'altro visualizzatore e 
+inserisci l\'URL come una nuova sorgente DAS.
+<i>Tracce quantitative (file "wiggle") e file caricati non possono essere
+condivisi usando DAS.</i>
+END
+
 };
+
+
+
+
+

@@ -44,6 +44,8 @@ END
 
    IMAGE_LINK => 'Ligar a imagen',
 
+   PDF_LINK   => 'Bajar PDF',
+
    SVG_LINK   => 'Imagen de alta resolución',
 
    SVG_DESCRIPTION => <<END,
@@ -310,6 +312,8 @@ END
    # HELP PAGES
    #--------------
 
+   OK                 => 'OK',
+
    CLOSE_WINDOW => 'Cerrar esta ventana',
 
    TRACK_DESCRIPTIONS => 'Seguir la pista de descripciones & citas',
@@ -332,9 +336,11 @@ END
 
  BACK_TO_BROWSER => 'Regresar al buscador',
 
- PLUGIN_SEARCH_1   => '%s (por medio de %s búsqueda)',
+ PLUGIN_SEARCH   => 'Buscar por medio del %s accesorio (plugin)',
 
- PLUGIN_SEARCH_2   => '&lt;%s busca&gt;',
+ PLUGIN_SEARCH_1   => 'Busqueda 1 por medio del %s accesorio (plugin)',
+
+ PLUGIN_SEARCH_2   => 'Busqueda 2 por medio del %s accesorio (plugin)',
 
  CONFIGURE_PLUGIN   => 'Configurar',
 

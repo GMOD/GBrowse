@@ -1,7 +1,8 @@
 # do not remove the { } from the top and bottom of this page!!!
 #Simple_Chinese language module by Li DaoFeng <lidaof@cau.edu.cn>
 #Modified from Tradition_Chinese version by Jack Chen <chenn@cshl.edu>
-#translation updated 2008.04.30
+#Updated by Lam Man Ting Melody <paladinoflab@yahoo.com.hk> and Hu Zhiliang <zhilianghu@gmail.com>
+#translation updated 2009.03.29
 {
 
  CHARSET =>   'GB2312',
@@ -26,7 +27,7 @@ END
 但对于数据已有的空白区域，则必须用单引号或双引号包括它们。
 END
 
-   SHOWING_FROM_TO => '从%s 中显示 %s, 位置从 %s 到 %s',
+   SHOWING_FROM_TO => '显示 %s ，来自 %s，从 %s 到 %s',
 
    INSTRUCTIONS      => '介绍',
 
@@ -42,17 +43,19 @@ END
 
    HIDE_HEADER       => '隐藏标题',
 
-   LANDMARK => '标志或区域',
+   LANDMARK => '域标',
 
    BOOKMARK => '添加到书签',
 
    IMAGE_LINK => '图像链接',
 
+   PDF_LINK=> '下载PDF',
+
    SVG_LINK   => '高质量SVG图像',
 
    SVG_DESCRIPTION => <<END,
 <p>
-下面的链接将产生SVG格式的图像。SVG格式对比jpg或png格式有许多优点。
+点击下面的链接将产生SVG格式的图像。SVG格式比jpg或png格式有更多优点。
 </p>
 <ul>
 <li>不影响图像质量的情况下改变图像大小
@@ -68,19 +71,19 @@ href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Mac
 | <a
 href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows</a>
 <br />
-Linux用户可以尝试 <a href="http://xml.apache.org/batik/">Batik SVG 查看器</a>.
+Linux用户可以尝试使用 <a href="http://xml.apache.org/batik/">Batik SVG 查看器</a>.
 </p>
 <p>
 <a href="%s" target="_blank">在新浏览器窗口中查看SVG图像</a></p>
 <p>
 按control-click (Macintosh) 或
-鼠标右键 (Windows) 后选择适当选项可以图像保存到磁盘。
+鼠标右键 (Windows) 后选择适当选项可以将图像保存到计算机磁盘上。
 </p>   
 END
 
    IMAGE_DESCRIPTION => <<END,
 <p>
-生成内嵌于网页的图像, 剪切并粘贴图像的URL到HTML页面:
+生成内嵌于网页的图像, 剪切并粘贴图像的网址到HTML页面:
 </p>
 <pre>
 &lt;IMAGE src="%s" /&gt;
@@ -93,13 +96,13 @@ END
 </p>
 
 <p>
-如果选择显示概要 (染色体 或 contig), 尽量缩小查看区域。
+如果选择显示概观 (染色体 或 contig), 请尽量缩小查看区域。
 </p>
 END
 
    TIMEOUT  => <<'END',
 请求超时。您选择显示的区域可能太大而不能显示。
-尝试关掉一些数据通道 或 选择稍小的区域.  如果仍然过大，请按红色的 "重置" 按钮。
+尝试关掉一些数据通道 或 选择稍小的区域.  如果仍未能奏效，请按红色的 "重置" 按钮。
 END
 
    GO       => '执行',
@@ -108,13 +111,13 @@ END
 
    SEARCH   => '查询',
 
-   DUMP     => '显示',
+   DUMP     => '倾印',
 
-   HIGHLIGHT   => '高亮',
+   HIGHLIGHT   => '衬色',
 
    ANNOTATE     => '注释',
 
-   SCROLL   => '卷动/缩放',
+   SCROLL   => '移动/缩放',
 
    RESET    => '重置',
 
@@ -132,7 +135,7 @@ END
 
    EXTERNAL_TRACKS => '<i>外部数据通道（斜体）</i>',
 
-   OVERVIEW_TRACKS => '<sup>*</sup>数据通道概要',
+   OVERVIEW_TRACKS => '<sup>*</sup>数据通道概观',
 
    REGION_TRACKS => '<sup>**</sup>数据通道区域',
 
@@ -180,7 +183,7 @@ END
 
    SET_OPTIONS => '设定数据通道选项...',
 
-   CLEAR_HIGHLIGHTING => '清除高亮',
+   CLEAR_HIGHLIGHTING => '清除衬色',
 
    UPDATE      => '更新图像',
 
@@ -210,9 +213,9 @@ END
 
    PRESETS      => '--选择当前网址--',
 
-   FEATURES_TO_HIGHLIGHT => '高亮特性 (特性1 特性2...)',
+   FEATURES_TO_HIGHLIGHT => '衬色特性 (特性1 特性2...)',
 
-   REGIONS_TO_HIGHLIGHT => '高亮区域 (区域1:起始..结束 区域2:起始..结束)',
+   REGIONS_TO_HIGHLIGHT => '衬色区域 (区域1:起始..结束 区域2:起始..结束)',
 
    FEATURES_TO_HIGHLIGHT_HINT => '提示: 用特征@color 选择颜色, 如 \'NUT21@lightblue\'',
 
@@ -220,7 +223,7 @@ END
 
    NO_TRACKS    => '*空白*',
 
-   FILE_INFO    => '最后修改 %s.  注释标志: %s',
+   FILE_INFO    => '最后修改于 %s.  注释标志: %s',
 
    FOOTER_1     => <<END,
 注意: 此页面使用cookies来保存和恢复用户偏好信息。
@@ -235,15 +238,15 @@ END
 
    HIT_COUNT      => '下列 %d 区域符合您的要求',
 
-   POSSIBLE_TRUNCATION  => '搜索结果可能限于 %d 次; 结果列表可能不完全。',
+   POSSIBLE_TRUNCATION  => '搜索结果：大约有 %d 相符结果; 列出的结果可能不完整	。',
 
-   MATCHES_ON_REF => '符合于 %s',
+   MATCHES_ON_REF => '相符结果; %s',
 
    SEQUENCE        => '序列',
 
    SCORE           => '得分=%s',
 
-   NOT_APPLICABLE => '无关 ',
+   NOT_APPLICABLE => '不适用',
 
    BP             => 'bp',
 
@@ -253,9 +256,9 @@ END
 
    SETTINGS => '%s 的设置',
 
-   UNDO     => '撤消更改',
+   UNDO     => '取消更改',
 
-   REVERT   => '回复到默认值',
+   REVERT   => '恢复到初始值',
 
    REFRESH  => '刷新',
 
@@ -266,11 +269,11 @@ END
    OPTIONS_TITLE => '数据通道选项',
 
    SETTINGS_INSTRUCTIONS => <<END,
-<i>显示</i> 复选框可以执行数据通道的打开和关闭。
-<i>紧缩</i> 选项强制紧缩数据通道，所以有些注释会重叠。<i>扩展</i> 和 <i>通过链接</i>
-选项利用快速或慢速规划算法开启碰控制。<i>扩展</i> 和 <i>标记</i> 以及 <i>通过链接的扩展和标记 </i> 选项强制注释被标记。
-如果选择了<i>自动</i> 选项, 空间允许的条件下碰撞控制和标记选项将会设置为自动。
-要改变数据通道的顺序可以使用 <i>更改数据通道顺序</i> 弹出菜单 并为数据通道分配一个注释. 要限制注释的数目, 更改
+<i>显示</i> 复选框可以打开或关闭数据通道。
+<i>简洁</i> 选项强制压缩数据通道，所以有些注释会重叠。<i>扩展</i> 和 <i>通过链接扩展</i>
+选用快速或慢速规划算法来控制界面相容性。<i>扩展</i> 和 <i>标记</i> 以及 <i>通过链接的扩展和标记 </i> 选项强制注释被标记。
+如果选择了<i>自动</i> 选项, 空间允许的条件下界面相容控制和标记选项将会设置为自动。
+要改变数据通道的顺序可以使用 <i>更改数据通道顺序</i> 弹出菜单 并为数据通道分配一个注释. 要限制注释的数目, 请更改
  <i>限制</i> 菜单的值。
 END
 
@@ -290,7 +293,7 @@ END
 
    AUTO => '自动',
 
-   COMPACT => '紧缩',
+   COMPACT => '简洁',#紧缩 / 压缩
 
    EXPAND => '扩展',
 
@@ -302,21 +305,21 @@ END
 
    NO_LIMIT    => '无限制',
 
-   OVERVIEW    => '概要',
+   OVERVIEW    => '概观',
 
    EXTERNAL    => '外部的',
 
    ANALYSIS    => '分析',
 
-   GENERAL     => '概要',
+   GENERAL     => '一般',
 
    DETAILS     => '细节',
 
    REGION      => '区域',
 
-   ALL_ON      => '全部打开',
+   ALL_ON      => '全开',
 
-   ALL_OFF     => '全部关闭',
+   ALL_OFF     => '全关',
 
    #--------------
    # HELP PAGES
@@ -344,9 +347,11 @@ END
 
  BACK_TO_BROWSER => '返回到浏览器',
 
- PLUGIN_SEARCH_1   => '%s (通过 %s 搜索)',
+ PLUGIN_SEARCH   => '%s (通过 %s 搜索)',
 
- PLUGIN_SEARCH_2   => '&lt;%s 查询&gt;',
+ #PLUGIN_SEARCH  => 'search via the %s plugin'
+ #PLUGIN_SEARCH_1   => '%s (通过 %s 搜索)',
+ #PLUGIN_SEARCH_2   => '&lt;%s 查询&gt;',
 
  CONFIGURE_PLUGIN   => '配置',
 
@@ -358,7 +363,7 @@ END
 
  NOT_FOUND => '无法识别名为 <i>%s</i> 的标志。 请查看帮助页面。',
 
- TOO_BIG   => '细节查看范围限制在 %s 碱基。  在概要中点击选择 %s 宽的区域.',
+ TOO_BIG   => '查看范围限制在 %s 碱基的细节。  在概览中点击选择 %s 宽的区域.',
 
  PURGED    => "找不到文件 %s 。  可能已被删除?",
 
@@ -366,7 +371,7 @@ END
 
  FETCH_FAILED  => "不能获取 %s: %s.",
 
- TOO_MANY_LANDMARKS => '%d 标志。 太多而列不出来。',
+ TOO_MANY_LANDMARKS => '%d 标志，标志太多未能全部显示。',
 
  SMALL_INTERVAL    => '将区域缩小到 %s bp',
 
@@ -374,25 +379,13 @@ END
 
 # Missed Terms
 
-ADD_YOUR_OWN_TRACKS => '添加您自己的数据通道',
-
-BACKGROUND_COLOR  => '背景填充颜色',
-
- FG_COLOR          => '前景线条颜色',
-
-CACHE_TRACKS      => '缓存数据通道',
-
-CHANGE_DEFAULT  => '更改默认值',
-
- DEFAULT          => '(默认)',
-
- DYNAMIC_VALUE    => '动态计算值',
-
- CHANGE           => '更改',
-
- DRAGGABLE_TRACKS  => '可拖曳数据通道',
+ ADD_YOUR_OWN_TRACKS => '添加您自己的通道数据',
 
  INVALID_SOURCE    => '来源 %s 不合理.',
+
+ BACKGROUND_COLOR  => '填充颜色',
+
+ FG_COLOR          => '线条颜色',
 
  HEIGHT           => '高度',
 
@@ -402,10 +395,56 @@ CHANGE_DEFAULT  => '更改默认值',
 
  LINEWIDTH        => '线条宽度',
 
+ DEFAULT          => '(启始状态)',
+
+ DYNAMIC_VALUE    => '动态计算值',
+
+ CHANGE           => '更改',
+
+ DRAGGABLE_TRACKS  => '可拖曳数据通道',
+
+ CACHE_TRACKS      => '数据通道缓存',
+
+ CHANGE_DEFAULT  => '更改初始值',
+
  SHOW_TOOLTIPS     => '显示工具提示',
 
- OPTIONS_RESET     => '所有页面设置恢复到默认值',
+ OPTIONS_RESET     => '所有页面设置恢复到初始值',
 
- OPTIONS_UPDATED   => '新的站点配置生效; 所有页面设置已恢复到默认值',
+ OPTIONS_UPDATED   => '新的站点配置生效; 所有页面设置已恢复到初始值',
  
+SEND_TO_GALAXY    => '传送此区域至Galaxy',
+#Galaxy http://main.g2.bx.psu.edu/
+
+ NO_DAS            => '安装错误: 必须先安装Bio::Das 模组才能执行DAS 网址。请通知本站管理员。',
+
+ SHOW_OR_HIDE_TRACK => '<b>显示或隐藏此数据通道</b>',
+
+ CONFIGURE_THIS_TRACK   => '<b>按此更改数据通道设定。</b>',
+
+ SHARE_THIS_TRACK   => '<b>分享此数据通道</b>',
+
+ SHARE_ALL          => '分享这些数据通道',
+
+ SHARE              => '分享 %s',
+
+ SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
+如欲分享此数据通道给其他通用基因组浏览器，先复制以下网址，然後前往另外的基因组浏览器并於页底之"输入远程注释"栏位贴上此网址。请注意：若此数据通道源自上载档案,分享以下网址给其他使用者可能让其他使用者观看上载档案之<b>全部</b>内容。
+END
+
+ SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
+如欲分享所有已选之数据通道给其他通用基因组浏览器，先复制以下网址，然後前往另外的基因组浏览器并於页底之"输入远程注释"栏位贴上此网址。请注意：若任何已选之数据通道源自上载档案,分享以下网址给其他使用者可能让其他使用者观看上载档案之<b>全部</b>内容。
+END
+
+ SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,
+如欲透过<a href="http://www.biodas.org" target="_new">分布式注释系统
+(Distributed Annotation System, DAS)</a> 分享此数据通道给其他通用基因组浏览器，先复制以下网址，然後前往另外的基因组浏览器并於输入为新的DAS来源。<i>定量数据通道 ("wiggle"档案)及上载档案不能以DAS分享。</i>
+END
+
+ SHARE_DAS_INSTRUCTIONS_ALL_TRACKS => <<END,
+如欲透过<a href="http://www.biodas.org" target="_new">分布式注释系统
+(Distributed Annotation System, DAS)</a> 分享所有已选之数据通道给其他通用基因组浏览器，先复制以下网址，然後前往另外的基因组浏览器并於输入为新的DAS来源。<i>定量数据通道 ("wiggle"档案)及上载档案不能以DAS分享。</i>
+END
+
 };
+

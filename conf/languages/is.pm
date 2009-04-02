@@ -3,7 +3,7 @@
 
 #Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
 
-#$Id: is.pm,v 1.4.6.3.6.2 2008-04-30 13:05:07 scottcain Exp $
+#$Id: is.pm,v 1.4.6.3.6.3 2009-04-02 15:55:17 scottcain Exp $
 
  CHARSET =>   'ISO-8859-1',
 
@@ -47,7 +47,9 @@ END
 
    IMAGE_LINK => 'Fá vefslóð á mynd',
 
-   SVG_LINK   => 'Mynd sem hentar til birtingar',
+   PDF_LINK   => 'Vista sem PDF',
+
+   SVG_LINK   => 'Mynd í hárri upplausn',
 
    SVG_DESCRIPTION => <<END,
 <p>
@@ -316,6 +318,8 @@ END
    # HELP PAGES
    #--------------
 
+   OK                 => 'Í lagi',
+
    CLOSE_WINDOW => 'Loka þessum glugga',
 
    TRACK_DESCRIPTIONS => 'Lýsingar og titlar á brautum',
@@ -338,9 +342,7 @@ END
 
  BACK_TO_BROWSER => 'Aftur til GBrowse',
 
- PLUGIN_SEARCH_1   => '%s (leit með %s)',
-
- PLUGIN_SEARCH_2   => '&lt;%s leit&gt;',
+ PLUGIN_SEARCH   => 'leita með %s',
 
  CONFIGURE_PLUGIN   => 'Stilla',
 
@@ -404,6 +406,58 @@ END
  OPTIONS_RESET     => 'Allar stillingar hafa verið settar aftur á sjálfgefin gildi (e. defaults)',
 
  OPTIONS_UPDATED   => 'Ný uppsetning er orðin virk; allar stillingar hafa verið settar aftur á sjálfgefin gildi (e. defaults)',
+
+ SEND_TO_GALAXY    => 'Senda svæði til Galaxy',
+
+ NO_DAS            => 'Villa í uppsetningu: vantar Bio::Das pakkann til að fá DAS slóðir til að virka. Vinsamlega látið vefumsjónarmann vita',
+
+ SHOW_OR_HIDE_TRACK => '<b>Sýna eða fela þessa braut</b>',
+
+ CONFIGURE_THIS_TRACK   => '<b>Smellið til að breyta stillingum fyrir braut</b>',
+
+ SHARE_THIS_TRACK   => '<b>Deila braut</b>',
+
+ SHARE_ALL          => 'Deila þessum brautum',
+
+ SHARE              => 'Deila %s',
+
+ SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
+Til að deila þessari braut með öðrum GBrowse vafra, afritaðu 
+fyrst slóðina fyrir neðan, farðu síðan í hinn GBrowse-inn 
+og límdu slóðina í "utanaðkomandi annoteringar" (e. Enter Remote Annotation) 
+reitinn neðarlega á síðunni. Ef þessi braut kemur frá skrá
+sem þú hlóðst inn, hafðu í huga að ef þú deilir þessari slóð með öðrum 
+notanda þá getur viðkomandi hugsanlega séð <b>öll</b> upphlöðnu
+gögnin þín.
+END
+
+ SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
+Til að deila öllum virkum brautum með öðrum GBrowse vafra, afritaðu
+fyrst slóðina fyrir neðan, farðu síðan í hinn GBrowse-inn 
+og límdu slóðina í "utanaðkomandi annoteringar" (e. Enter Remote Annotation) 
+reitinn neðarlega á síðunni. Ef einhverjar af þessum brautum
+koma frá skrá sem þú hlóðst inn, hafðu í huga að ef þú deilir þessari slóð með öðrum 
+notanda þá getur viðkomandi hugsanlega séð <b>öll</b> upphlöðnu
+gögnin þín.
+END
+
+ SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,
+Til að deila þessari braut með öðrum vafra gegnum <a href="http://www.biodas.org" target="_new">
+Distributed Annotation System (DAS)</a>, afritaðu fyrst slóðina fyrir neðan,
+farðu síðan í hinn vafrann og bættu henni við sem nýrri DAS gagnalind
+(e. source). <i>Það er hvorki hægt að deila magnbundnum brautum (e. quantitative tracks, s.k. "wiggle"
+skrám) né upphlöðnum skrám gegnum DAS</i>
+END
+
+ SHARE_DAS_INSTRUCTIONS_ALL_TRACKS => <<END,
+Til að deila öllum völdum brautum með öðrum vafra gegnum <a href="http://www.biodas.org" target="_new">
+Distributed Annotation System (DAS)</a>, afritaðu fyrst slóðina fyrir neðan,
+farðu síðan í hinn vafrann og bættu henni við sem nýrri DAS gagnalind
+(e. source). <i>Það er hvorki hægt að deila magnbundnum brautum (e. quantitative tracks, s.k. "wiggle"
+skrám) né upphlöðnum skrám gegnum DAS</i>
+n not be shared using DAS.</i>
+END
+
 
 };
 

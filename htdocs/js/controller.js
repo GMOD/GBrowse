@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.88 2009-03-27 02:10:09 lstein Exp $
+ $Id: controller.js,v 1.89 2009-04-03 22:21:06 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -887,6 +887,8 @@ function initialize_page() {
   Overview.prototype.initialize();
   Region.prototype.initialize();
   Details.prototype.initialize();
+  if ($('autocomplete_choices') != null) 
+       initAutocomplete();
 }
 
 // set the colors for the rubberband regions

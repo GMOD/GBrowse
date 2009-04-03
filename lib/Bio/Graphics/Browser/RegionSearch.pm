@@ -556,6 +556,7 @@ sub features_by_prefix {
     my $local_dbs = $self->local_dbs;
     my (@f,$count);
     for my $region (values %{$local_dbs}) {
+	next unless $region->searchopts->{autocomplete};
 	my $db = $region->db;
 	eval {
 	    my $i = $db->get_seq_stream(-name=>"${match}*",

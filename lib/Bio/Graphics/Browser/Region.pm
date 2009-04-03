@@ -14,13 +14,13 @@ sub new {
     my ($source,$db,$state,$searchopts) 
 	= @{$args}{'source','db','state','searchopts'};
 
-    $searchopts ||= 'name search, keyword search, chromosome heuristics';
+    $searchopts ||= 'default';
 
     return bless {
-	source => $source,
-	db     => $db,
-	state  => $state,
-	searchopts => $searchopts,
+	source     => $source,
+	db         => $db,
+	state      => $state,
+	searchopts => $self->parse_searchopts($searchopts),
     },ref($self) || $self;
 }
 
@@ -28,6 +28,40 @@ sub source     { shift->{source} }
 sub state      { shift->{state}  }
 sub db         { shift->{db}     }
 sub searchopts { shift->{searchopts}  }
+
+sub parse_searchopts {
+    my $self      = shift;
+    my $optstring = shift;
+    my @default   = qw(exact wildcard stem fulltext heuristic);
+    my %all       = map {$_=>1} qw(exact wildcard stem fulltext heuristic autocomplete);
+
+    my %opts;
+    my @tokens    = split /[\s,]+/,lc $optstring;
+    for my $t (@tokens) {
+	my ($sign,$token) = $t =~ /([+-]?)(\w+)/;
+
+	if ($token eq 'all') {
+	    $opts{$_}++ foreach keys %all;
+	    next;
+	}
+	
+	if ($token eq 'none') {
+	    %opts = ();
+	    next;
+	}
+
+	if ($token eq 'default') {
+	    $opts{$_}++ foreach @default;
+	    next;
+	}
+	
+	next unless $all{$token};
+	$opts{$token}++ if $sign eq '+' or !$sign;
+
+	delete $opts{$token} if $sign eq '-';
+    }
+    return \%opts;
+}
 
 sub feature_count { 
     my $self = shift;
@@ -191,24 +225,33 @@ sub lookup_features {
 
   my $features = [];
 
+  my $searchopts = $self->searchopts;
+
  SEARCHING:
   {
-      last SEARCHING unless $self->searchopts =~ /name search/;
+      last SEARCHING unless %$searchopts;
 
       for my $n ([$name,$class,$start,$stop],
 		 [$literal_name,$refclass,undef,undef]) {
 
 	  my ($name_to_try,$class_to_try,$start_to_try,$stop_to_try) = @$n;
 
-	  # first try the non-heuristic search
-	  $features  = $self->_feature_get($db,
-					   $name_to_try,$class_to_try,
-					   $start_to_try,$stop_to_try);
-	  last SEARCHING if @$features;
+	  $name_to_try =~ s/([*?])/\\$1/g 
+	      unless $searchopts->{wildcard};
+
+	  if ($searchopts->{exact}) {
+
+	      # first try the non-heuristic search
+	      $features  = $self->_feature_get($db,
+					       $name_to_try,$class_to_try,
+					       $start_to_try,$stop_to_try);
+	      last SEARCHING if @$features;
+	  }
 
 	  # heuristic fetch. Try various abbreviations and wildcards
-	  my @sloppy_names = $name_to_try;
-	  if ($self->searchopts =~ /chromosome heuristics/ &&
+	  my @sloppy_names = ();
+
+	  if ($searchopts->{heuristics} &&
 	      $name_to_try =~ /^([\dIVXA-F]+)$/) {
 	      my $id = $1;
 	      foreach (qw(CHROMOSOME_ Chr chr)) {
@@ -218,19 +261,15 @@ sub lookup_features {
 	  }
 
 	  # try to remove the chr CHROMOSOME_I
-	  if ($self->searchopts =~ /chromosome heuristics/ &&
-	      $name_to_try =~ /^(chromosome_?|chr)/i) {
-	      (my $chr = $name_to_try) =~ s/^(chromosome_?|chr)//i;
+	  if ($searchopts->{heuristics} &&
+	      (my $chr = $name_to_try) =~ s/^(chromosome_?|chr)//i) {
 	      push @sloppy_names,$chr;
 	  }
 
-	  # try the wildcard  version, but only if the name is of 
-	  # significant length;
-
-	  # IMPORTANT CHANGE: we used to put stars at the beginning 
-	  # and end, but this killed performance!
-	  push @sloppy_names,"$name_to_try*" 
-	      if length $name_to_try > 3 and $name_to_try !~ /\*$/;
+	  if ($searchopts->{stem}) {
+	      push @sloppy_names,"$name_to_try*" 
+		  if length $name_to_try >= 3 and $name_to_try !~ /\*$/;
+	  }
 
 	  for my $n (@sloppy_names) {
 	      for my $c ('',@classes) {
@@ -242,12 +281,11 @@ sub lookup_features {
       }
   }
 
-  if (!@$features && $self->searchopts =~ /keyword search/) {
-    # if we get here, try the keyword search
+  if (!@$features && $searchopts->{fulltext}) {
       warn "try a keyword search for $literal_name" if DEBUG;
       $features = $self->_feature_keyword_search($literal_name);
   }
-
+  
   return $features;
 }
 

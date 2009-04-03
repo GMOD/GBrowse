@@ -1,4 +1,4 @@
-stylesheet          = css/gbrowse.css
+stylesheet          = css/gbrowse_solid.css
 hilite fill         = #E0E6EE
 hilite outline      = blue
 overview bgcolor    = #F2F6FA

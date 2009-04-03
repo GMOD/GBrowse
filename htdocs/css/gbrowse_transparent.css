@@ -1,65 +1,10 @@
-A:link            { text-decoration: none; 
-                    color: #0000FF;
-                  }
-A:visited         { text-decoration: none; 
-                    color: #AA0088;
-                  }
-A:hover           { text-decoration: underline; 
-		    color: black;
-		    background:lightsteelblue;
-                  }
-A.banner          { color  : #FFFFFF;
-                    font-size : small;
-                    text-decoration : none;
-                  }
-A.bblue           { color: #FFFFFF;
-                    background-color: #9999FF;
-                    font-size : small;
-                    text-align: center;
-                  }
-A.bred            { color: #FFFFFF;
-                    background-color: #FF6666;
-                    font-size : small;
-                    text-align: center;
-                  }
+@import url('gbrowse.css');
+
+/* These declarations give gbrowse a funky transparent look */
+
 BODY              { background: url(../images/backgrounds/lrock005.jpg);
                     font-family: sans-serif;
 	            font-size: small;
-                  }
-DIV               { margin: 0 }
-H1                { color: navy;
-                    font-family: sans-serif; 
-                  }
-H2                { color: navy;
-                    font-family: sans-serif; 
-                  }
-H3                { color: navy;
-                    font-family: sans-serif; 
-                  }
-H4                { color: navy;
-                    font-family: sans-serif; 
-                  }
-INPUT             { background-color: white; }
-P                 { font-family: sans-serif; }
-SELECT            { background-color: white; }
-TABLE             { padding: 0;
-                    width: 100%;
-                  }
-TD                { font-family: sans-serif; 
-                    padding: 0; 
-	            font-size: small;
-		  }
-TH                { font-family: sans-serif; 
-                    padding: 0; 
-	            font-size: small;
-                  }
-TH.linkmenu       { 
-                    font-family: sans-serif;
-                    padding: 0;
-                    font-size: 9pt;
-                  }
-.reset_button     {background-color: red;
-	            color: yellow;           
                   }
 .datatitle        { background-color: rgba(224,224,224,0.4);
 		   }
@@ -110,44 +55,4 @@ TH.linkmenu       {
 		    margin-left:   1em;
 		    margin-right:  1em;
 	            font-size: small;
-}
-.technicalinfo    { background-color: #FFFFFF; }
-.toggle           { color: #E0E0E0; }
-.error            { color: red; }
-.errorpanel       { background-color: lightyellow;    
-		    margin:   -8px 8px  8px  -8px;
-		  }
-.note             { color: red; }
-.pre              { font-family: monospace; }
-.popup            { COLOR: #9F141A;
-                    CURSOR: help;
-                    TEXT-DECORATION: none
-                  }
-.ctl_visible,
-.ctl_hidden       { z-index:10; }
-
-div.autocomplete {
-  position:absolute;
-  width:250px;
-  background-color:wheat;
-  border:2px solid #888;
-  margin:0;
-  padding:0;
-  z-index:20;
-  left:-100px;
-  top:-100px;
-}
-div.autocomplete ul {
-  list-style-type:none;
-  margin:0;
-  padding:0;
-}
-div.autocomplete ul li.selected { background-color: #ffb;}
-div.autocomplete ul li {
-  list-style-type:none;
-  display:block;
-  margin:0;
-  padding:1px;
-  height:16px;
-  cursor:pointer;
 }

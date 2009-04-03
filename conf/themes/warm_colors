@@ -1,0 +1,8 @@
+stylesheet          = css/gbrowse_warm.css
+hilite fill         = beige
+hilite outline      = red
+overview bgcolor    = lightgrey
+region bgcolor      = lightgoldenrodyellow
+detail bgcolor      = white
+grid color          = paleturquoise
+grid major color    = skyblue

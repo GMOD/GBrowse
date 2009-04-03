@@ -19,6 +19,7 @@ check out the "stable" cvs branch:
 SYNOPSIS:
 
   perl Build.PL
+  ./Build distmeta
   ./Build test
   ./Build config
   ./Build demo    (optional)

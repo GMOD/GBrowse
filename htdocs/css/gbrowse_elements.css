@@ -1,6 +1,3 @@
-@import url('gbrowse_autocomplete.css');
-
-/* These are basic CSS rules shared by other stylesheets */
 A:link            { text-decoration: none; 
                     color: #0000FF;
                   }
@@ -63,18 +60,3 @@ TH.linkmenu       {
 .reset_button     {background-color: red;
 	            color: yellow;           
                   }
-.technicalinfo    { background-color: #FFFFFF; }
-.toggle           { color: #E0E0E0; }
-.error            { color: red; }
-.errorpanel       { background-color: lightyellow;    
-		    margin:   -8px 8px  8px  -8px;
-		  }
-.note             { color: red; }
-.pre              { font-family: monospace; }
-.popup            { COLOR: #9F141A;
-                    CURSOR: help;
-                    TEXT-DECORATION: none
-                  }
-.ctl_visible,
-.ctl_hidden       { z-index:10; }
-

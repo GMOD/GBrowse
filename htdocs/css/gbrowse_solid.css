@@ -1,21 +1,18 @@
-@import url('gbrowse.css')
+@import url('gbrowse.css');
 
-/* These declarations give gbrowse a warm look */
+/* These are frequently-changed options that provide a buttond-down
+   "gray" look */
 
-BODY              { background-color: #F7FBFF;
-                    font-family: sans-serif;
-	            font-size: small;
-                  }
 .datatitle        { background-color: khaki; }
 .databody         { background-color: lightgoldenrodyellow; }
 .multiplechoicetitle  { background-color: lightblue;
 		        font-size: small;
 }
-.searchtitle      { background-color: beige;
+.searchtitle      { background-color: #E6EBF0;
 	            font-size: small;
 		    margin-left: 1em;
 }
-.searchbody       { background-color: khaki;
+.searchbody       { background-color: #E6EBF0;
 	            font-size: small;
 		    margin-left: 1em;
 		    margin-bottom: 3px;

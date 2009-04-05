@@ -53,11 +53,13 @@ END
 
    HIDE_HEADER       => 'バナーを隠す',
 
-   LANDMARK	     => 'ランドマークまたは領域',
+   LANDMARK          => 'ランドマークまたは領域',
 
    BOOKMARK          => 'この表示をブックマーク',
 
    IMAGE_LINK        => 'この画像へのリンク',
+
+   PDF_LINK          => 'PDFをダウンロード',
 
    SVG_LINK          => '高品質SVG画像',
 
@@ -176,41 +178,41 @@ END
 
    DELETE            => 'ファイルを削除',
 
-   EDIT_TITLE  	     => 'アノテーションデータの入力/編集',
+   EDIT_TITLE        => 'アノテーションデータの入力/編集',
 
-   IMAGE_WIDTH 	     => '画像の横幅',
+   IMAGE_WIDTH       => '画像の横幅',
 
-   BETWEEN     	     => '項目の間',
+   BETWEEN           => '項目の間',
 
-   BENEATH     	     => '下端',
+   BENEATH           => '下端',
 
    LEFT              => '左端',
 
    RIGHT             => '右端',
 
-   TRACK_NAMES 	     => '項目名リスト',
+   TRACK_NAMES       => '項目名リスト',
 
-   ALPHABETIC  	     => '名前順',
+   ALPHABETIC        => '名前順',
 
-   VARYING     	     => '種類別',
+   VARYING           => '種類別',
 
    SHOW_GRID         => 'グリッドを表示',
 
-   SET_OPTIONS 	     => '項目毎の設定...',
+   SET_OPTIONS       => '項目毎の設定...',
 
    CLEAR_HIGHLIGHTING => '強調表示を解除',
 
-   UPDATE      	     => '画像を更新',
+   UPDATE            => '画像を更新',
 
-   DUMPS       	     => '出力や解析などの操作',
+   DUMPS             => '出力や解析などの操作',
 
-   DATA_SOURCE 	     => 'データソース',
+   DATA_SOURCE       => 'データソース',
 
    UPLOAD_TRACKS     => 'アノテーションの追加',
 
-   UPLOAD_TITLE	     => '独自アノテーションをアップロード',
+   UPLOAD_TITLE      => '独自アノテーションをアップロード',
 
-   UPLOAD_FILE 	     => 'アップロードするファイル',
+   UPLOAD_FILE       => 'アップロードするファイル',
 
    KEY_POSITION      => '項目の表示位置',
 
@@ -347,6 +349,8 @@ END
    # HELP PAGES
    #--------------
 
+   OK                => 'OK',
+
    CLOSE_WINDOW      => 'このウィンドウを閉じる',
 
    TRACK_DESCRIPTIONS => '項目の解説と引用',
@@ -369,9 +373,7 @@ END
 
    BACK_TO_BROWSER   => 'ブラウザに戻る',
 
-   PLUGIN_SEARCH_1   => '%s (%s による検索)',
-
-   PLUGIN_SEARCH_2   => '&lt;%s 検索&gt;',
+   PLUGIN_SEARCH     => '%s プラグインを使って検索',
 
    CONFIGURE_PLUGIN  => '設定',
 
@@ -434,5 +436,65 @@ END
    OPTIONS_RESET     => '全ての設定をデフォルト値にリセットしました。',
 
    OPTIONS_UPDATED   => 'サーバの設定が更新されました。このため、全ての設定がデフォルト値にリセットされました。'
+
+   SEND_TO_GALAXY    => 'この領域を Galaxy に送る',
+
+   NO_DAS            => 'Installation error: DAS URL を有効にするにはサーバに Bio::Das モジュールをインストールする必要があります。このサイトの管理者に連絡してください。',
+
+   SHOW_OR_HIDE_TRACK => '<b>この項目を表示/非表示</b>',
+
+   CONFIGURE_THIS_TRACK => '<b>クリックして項目の設定を変更</b>',
+
+   SHARE_THIS_TRACK  => '<b>この項目を共有</b>',
+
+   SHARE_ALL         => 'これらの項目を共有',
+
+   SHARE             => '%s を共有',
+
+   # REMOTE_URL => 'Enter Remote Annotation URL'
+   # REMOTE_URL => '外部アノテーションのURL',
+   SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
+この項目を他の GBrowse ゲノムブラウザと共有するには、
+まず下記の URL をコピーし、
+他の GBrowse を開いてページの下の方にある
+「外部アノテーションの URL」の欄にペーストします。
+この方法を使って URL を他のユーザと共有する場合に、
+この項目が自分でファイルからアップロードしたものであれば、
+あなたがアップロードしたデータに含まれる<b>全て</b>の情報が、
+そのユーザにも閲覧可能になる点にご注意ください。
+END
+
+   SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
+選択されている全ての項目を他の GBrowse ゲノムブラウザと共有するには、
+まず下記の URL をコピーし、
+他の GBrowse を開いてページの下の方にある
+「外部アノテーションの URL」の欄にペーストします。
+この方法を使って URL を他のユーザと共有する場合に、
+選択されている項目の中に自分でファイルからアップロードした項目があれば、
+あなたがアップロードしたデータに含まれる<b>全て</b>の情報が、
+そのユーザにも閲覧可能になる点にご注意ください。
+END
+
+   SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,
+この項目を他のゲノムブラウザと
+<a href="http://www.biodas.org" target="_new">
+Distributed Annotation System (DAS)</a>
+を使って共有するには、
+まず下記の URL をコピーし、
+他のゲノムブラウザを開いて DAS のデータ元としてペーストします。
+<i>定量的な項目 (quantitative tracks; "wiggle" files) と、
+アップロードされたファイルは DAS で共有することはできません。</i>
+END
+
+   SHARE_DAS_INSTRUCTIONS_ALL_TRACKS => <<END,
+選択されている全ての項目を他のゲノムブラウザと
+<a href="http://www.biodas.org" target="_new">
+Distributed Annotation System (DAS)</a>
+を使って共有するには、
+まず下記の URL をコピーし、
+他のゲノムブラウザを開いて DAS のデータ元としてペーストします。
+<i>定量的な項目 (quantitative tracks; "wiggle" files) と、
+アップロードされたファイルは DAS で共有することはできません。</i>
+END
 
 };

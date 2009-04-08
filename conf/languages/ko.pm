@@ -530,4 +530,32 @@ END
 
    VARYING => '다양한',
 
+  CONFIGURE_THIS_TRACK => '<b>트랙세팅 (Track settings) 을 변경하기위하여 Click함</b>',
+
+  NO_DAS  => 'Installation error (인스톨 에러):  DAS URL 작동하려면 Bio:DAS module을 반드시 인스톨해야 함.',
+
+  OK  => 'OK (오 케이)',
+
+  PDF_LINK => 'PDF 다운로드',
+
+  PLUGIN_SEARCH => '%s plugin (플러그인)을 통한 검색',
+
+  SEND_TO_GALAXY => '이 Region을 Galaxy에 보냄',
+
+  SHARE_THIS_TRACK => '<b>이 track을 공유</b>',
+
+  SHARE_ALL => '이 track들을 공유',
+
+  SHARE => '공유 %s',
+
+  SHOW_OR_HIDE_TRACK => '<b>이 track을 보이거나 숨김</b>',
+
+  SHARE_DAS_INSTRUCTIONS_ONE_TRACK => '이 track을 <a href="http://www.biodas.org" target="_new"> Distributed Annotation System (DAS)</a>를 이용한 다른 genome browser와 공유하려면, 첫째 아래 URL을 복사하고, 다른 browser에 가서 이것을 새 DAS Source로 Enter (입력)함. <i>Quantitative tracks과 업로드된 파일은 DAS를 이용하여 공유할수 없음.</i>',
+
+  SHARE_DAS_INSTRUCTIONS_ALL_TRACKS =>  '<a href="http://www.biodas.org" target="_new"> Distributed Annotation System (DAS)</a>를 이용하여 최근에 선택한 Track을 다른 genome browser와 공유하려면, 첫째 아래 URL을 복사하고 다른 browser에 가서 이것을 새 DAS Source로 Enter (입력)함. <i>Quantitative tracks과 업로드된 파일은 DAS를 이용하여 공유할수 없음.</i>',
+
+  SHARE_INSTRUCTIONS_ONE_TRACK =>  '이 track을 다른 GBrowser genome browser와 공유하려면, 첫째 아래 URL을 복사하고, 다른 GBrowser에 가서 그 페이지 하단에 있는 “Enter Remote Annotation” field에 Paste함 (?여넣음). 만일 이 track이 업로드된 파일인 경우에는 이 URL을 다른 사용자와 공유할때 다른 <b>모든</b> 업로드된 data도 노출될 수 있다는 점을 유의하기 바람.',
+
+  SHARE_INSTRUCTIONS_ALL_TRACKS => '최근에 선택한 track을 다른 GBrowser genome browser와 공유하려면, 첫째 아래 URL을 복사하고, 다른 GBrowser에 가서 그 페이지 하단에 있는 “Enter Remote Annotation” field에 Paste함 (?여넣음). 만일 이 선택한 track중 어느 하나가 업로드된 파일인 경우에는 이 URL을 다른 사용자와 공유할때 다른 <b>모든</b> 업로드된 data도 노출될 수 있다는 점을 유의하기 바람',
+
 };

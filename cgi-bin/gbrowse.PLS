@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.124 2009-03-31 04:41:24 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.125 2009-04-08 16:19:48 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1572,7 +1572,7 @@ sub track_config {
   my $override = $settings->{features}{$label}{override_settings};
 
 
-  print CGI::header,start_html();
+  print CGI::header( -charset=>$CONFIG->tr('CHARSET')),start_html();
 
   # truncate too-long citations
   my $cit_txt = $CONFIG->citation($label,$CONFIG->language) || $CONFIG->tr('NO_CITATION');  
@@ -1747,7 +1747,7 @@ sub track_share {
     $das        .=  "features";
     $das        .=  "?$das_types";
 
-    print CGI::header,
+    print CGI::header( -charset=>$CONFIG->tr('CHARSET')),
           start_html();
     print h1($CONFIG->tr('SHARE',$description)),
           p($CONFIG->tr($label eq 'all' ? 'SHARE_INSTRUCTIONS_ALL_TRACKS'

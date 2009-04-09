@@ -49,7 +49,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.12 2009-03-03 23:51:54 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.13 2009-04-09 17:11:10 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -59,20 +59,22 @@ use Carp;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
 use File::Spec;
+use Date::Parse;
+use Date::Format;
 use vars qw($DB $DSN $TRACK $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             $SO_FETCH %SO_HASH %TYPE2SUBTYPES
             %CACHED_TYPES %FORCED_GROUP %NO_PARENT);
 
-use constant SO => 'http://www.sequenceontology.org/release/2.3/so_2_3.obo';
+use constant SO => 'http://song.cvs.sourceforge.net/viewvc/*checkout*/song/ontology/so.obo';
 
-#$Id: das.PLS,v 1.6.8.1.2.12 2009-03-03 23:51:54 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.13 2009-04-09 17:11:10 lstein Exp $
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
 use constant CAPABILITIES => join '; ',qw(error-segment/1.0 unknown-segment/1.0 unknown-feature/1.0
 					  feature-by-id/1.0 group-by-id/1.0 sources/1.0
-                                          dna/1.0 features/1.0 stylesheet/1.0 types/1.0
+                                          dna/1.0 features/1.0 stylesheet/1.1 types/1.0
                                           entry_points/1.0 dsn/1.0 sequence/1.0
                                           );
 
@@ -179,14 +181,22 @@ END
   for my $dsn (sort $CONFIG->sources) {
       $CONFIG->source($dsn);
       my $sourceinfo = $CONFIG->setting('das source') or next;
-      my %a = $sourceinfo =~ /-(\w+)\s([^-]+)/g;
+      my %a = $sourceinfo =~ m/-(\w+)\s+([^-].+?(?=\s|$))/g;
       for (keys %a) { $a{$_} =~ s/\s+$// }; # trim
-      for (qw(maintainer version created coordinates authority source testrange)) {
+      for (qw(maintainer created coordinates authority source testrange)) {
 	  next if exists $a{$_};
 	  warn "'das source' option requires mandatory '$_' field; skipping\n";
 	  next SOURCE;
       }
-
+      
+      my $created;
+      {
+	  local $^W = 0;  # to quench uninit warnings from Date::Parser
+	  my @time    = strptime($a{created});
+	  @time       = localtime unless @time;
+	  $created = strftime("%Y-%m-%dT%T%z",@time) || '';
+      }
+      my $version = $a{version} || $a{coordinates_version} || '';
       for my $track ($CONFIG->labels) {
 	  next if $track =~ /:/;
 	  next unless $CONFIG->setting($track=>'das category');
@@ -196,13 +206,23 @@ END
 	  my $description = $CONFIG->description($dsn)."; $track track";
 	  $description   .= "; $key"      if $key;
 	  $description   .= "; $citation" if $citation;
+	  my $authority   = $a{authority};
+	  $authority     .= "_$version" if $version;
+	  my $base        = url();
 	  
 	  print <<END;
      <SOURCE uri="$dsn|$track" title="$key" description="$description">
         <MAINTAINER email="$a{maintainer}" />
-        <VERSION uri="$dsn|$track">
-  	  <COORDINATES uri="$a{coordinates}" authority="$a{authority}" test_range="$a{testrange}" taxid="$a{taxid}" species="$a{species}">$a{authority},$a{source}</COORDINATES>
-	  <CAPABILITY type="das1:command" query_uri="URL" />
+        <VERSION uri="$dsn|$track" created="$created">
+  	  <COORDINATES uri="$a{coordinates}" authority="$a{authority}" test_range="$a{testrange}" taxid="$a{taxid}" version="$version">$authority,$a{source},$a{species}</COORDINATES>
+END
+;
+	  for ('types','features','entry_points','stylesheet') {
+	      print <<END;
+          <CAPABILITY type="das1:$_" query_uri="$base/$dsn|$track/$_" />
+END
+	  }
+	  print  <<END;
         </VERSION>
      </SOURCE>
 END
@@ -254,7 +274,7 @@ sub entry_points {
       $CONFIG->labels;
 
   my ($category2type,$type2category) = categories($CONFIG);
-  my $refclass = $CONFIG->setting('reference class') || 'Sequence';
+  my $refclass = $CONFIG->setting('das entry point') || $CONFIG->setting('reference class') || 'Chromosome';
 
   if ($segments) {
     @parts = map { get_segment_obj(@$_) } @$segments;
@@ -290,7 +310,6 @@ END
     my $length = $part->length;
     my $orientation = $part->strand >= 0 ? '+' : '-';
     my $subparts    = $type2category->{__subparts__}{$part->type} ? 'yes' : 'no';
-    $name = "$class:$name" unless $class eq $refclass;
     print qq(<SEGMENT id="$name" size="$length" start="$st" stop="$en" class="$class" orientation="$orientation" subparts="$subparts">$name</SEGMENT>\n);
   }
   print "</ENTRY_POINTS>\n</DASEP>\n";
@@ -462,7 +481,6 @@ sub _print_feature {
   my $pid         = feature2id($parent) if $parent;
   my $id          = feature2id($f) || $pid;
   $id            .= ".$sequence" if $id eq $pid;
-  warn "sequence = $sequence, id =$id";
   my $counter     = 0;
   my @child_ids   = map {feature2id($_)||"$id.".$counter++} $f->get_SeqFeatures;
 
@@ -672,9 +690,14 @@ END
 sub types {
   return all_types() unless param('ref') or param('segment');
 
+  my ($category2type,$type2category,$types) = categories($CONFIG);
+
   my $summary = param('summary');
   my $url     = get_url();
   my @filter  = param('type');
+  unless (@filter) {
+      @filter = @$types;
+  }
 
   my @segments = get_segments() or return;
 
@@ -714,12 +737,14 @@ END
     foreach (keys %histogram) {
       my ($method,$source) = split ':';
       my $count = $histogram{$_};
-      my $category  = transmute($_);
+      my $category  = transmute($_,$type2category);
       $category ||= '';  #get rid of uninit variable warnings
       $method   ||= '';
       $source   ||= '';
       $count    ||= 0;
-      print qq(\t<TYPE id="$_" category="$category" method="$method" source="$source">$count</TYPE>\n);
+      (my $type  = $_) =~ s/:[^:]+$//;
+      my $id    = type2so($type);
+      print qq(\t<TYPE id="$id" category="$category" method="$method" source="$source">$count</TYPE>\n);
     }
     print qq(</SEGMENT>\n);
   }
@@ -727,6 +752,14 @@ print <<END;
 </GFF>
 </DASTYPES>
 END
+}
+
+sub type2so {
+    my $type    = shift;
+    my ($track) = $CONFIG->type2label($type);
+    return $type unless $CONFIG->fallback_setting($track=>'das use so');
+    my $hash = so_hash() or return $type;
+    return $hash->{lc $type} || $type;
 }
 
 # list of all the types
@@ -743,12 +776,16 @@ sub all_types {
 END
     ;
 
-
-  for my $id (@$types) {
-    my $category = transmute($id,$type2category);
-    my $typeobj  = Bio::DB::GFF::Typename->new($id);
+  for my $t (@$types) {
+    my $category = transmute($t,$type2category);
+    my $typeobj  = Bio::DB::GFF::Typename->new($t);
     my $method   = $typeobj->method;
     my $source   = $typeobj->source;
+    my $id = $t;
+
+
+    my ($track)  = $CONFIG->type2label($t);
+    $id          = type2so($id);
     print qq(\t<TYPE id="$id" category="$category" method="$method" source="$source" />\n);
   }
 
@@ -1114,9 +1151,12 @@ sub guess_type {
     my $type     = ref $feature ? $feature->method : $feature;
 
     my $track    = $TRACK || $CONFIG->feature2label($feature);
+
+    return $type unless $CONFIG->fallback_setting($track=>'das use so');
+
     my $glyph    = $CONFIG->fallback_setting($track=>'glyph');
-    my $hash     = so_hash() or return 'SO:0000001';
-    return $hash->{lc $type} || 'SO:0000001';
+    my $hash     = so_hash() or return $type;
+    return $hash->{lc $type} || $type;
 }
 
 sub so_hash {

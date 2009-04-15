@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.17 2009-03-20 17:45:14 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.18 2009-04-15 19:59:33 scottcain Exp $
 
 =head1 NAME
 
@@ -857,7 +857,12 @@ sub _by_alias_by_name {
       $where_part.= " AND f.type_id in ( $type ) ";
   }
 
-  if ($self->organism_id) {
+  if ($self->organism_id and $operation eq 'by_alias') {
+      $where_part.= $self->use_all_feature_names()
+                  ? " AND afn.organism_id =".$self->organism_id
+                  : " AND f.organism_id =".$self->organism_id;
+  }
+  elsif ($self->organism_id) {
       $where_part.= " AND f.organism_id =".$self->organism_id;
   }
 

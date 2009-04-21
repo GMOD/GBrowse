@@ -274,7 +274,7 @@ sub asynchronous_event {
 
     if ( my $action = param('first_render') ) {
 
-	return (204,'text/plain','no content') 
+	return (204,'text/plain','no content')
 	    unless $self->state->{valid_region};
 
         $self->init_database();

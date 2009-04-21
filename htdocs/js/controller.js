@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.89 2009-04-03 22:21:06 lstein Exp $
+ $Id: controller.js,v 1.90 2009-04-21 05:38:46 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -875,7 +875,7 @@ function initialize_page() {
     }
   });
   
-  Controller.first_render();
+  //  Controller.first_render(); // no longer because "left 0" will do the same
 
   // The next statement is to avoid the scalebars from being "out of sync"
   // when manually advancing the browser with its forward/backward buttons.

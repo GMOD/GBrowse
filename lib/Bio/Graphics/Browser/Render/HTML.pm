@@ -785,7 +785,7 @@ sub render_global_config {
     my $content
         = start_form( -name => 'display_settings', -id => 'display_settings' )
         . div( {-class=>'searchbody'},
-	       table ({-border => 0, -cellspacing=>0},
+	       table ({-border => 0, -cellspacing=>0, -width=>'100%'},
 		      TR( { -class => 'searchtitle' },
 			  td( b(  checkbox(
 				      -name     => 'grid',

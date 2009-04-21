@@ -119,7 +119,7 @@ sub request_panels {
   my ($local_labels,
       $remote_labels) = $self->sort_local_remote($data_destinations);
 
-  warn "request_panels(): section = $args->{section}; local labels = @$local_labels, remote labels = @$remote_labels" if DEBUG;
+  warn "[$$] request_panels(): section = $args->{section}; local labels = @$local_labels, remote labels = @$remote_labels" if DEBUG;
 
   # If we don't call clone_databases early, then we can have
   # a race condition where the parent hits the DB before the child
@@ -150,7 +150,7 @@ sub request_panels {
 
       if ( $do_local && $do_remote ) {
           if ( Bio::Graphics::Browser::Render->fork() ) {
-              $self->run_local_requests( $data_destinations, 
+              $self->run_local_requests( $data_destinations,
 					 $args,
 					 $local_labels );
           }
@@ -171,10 +171,11 @@ sub request_panels {
       CORE::exit 0;
   }
 
-  
-  $self->run_local_requests($data_destinations,$args,$local_labels);  
-  $self->run_remote_requests($data_destinations,$args,$remote_labels);
-  return $data_destinations;
+  else { # not deferred
+      $self->run_local_requests($data_destinations,$args,$local_labels);  
+      $self->run_remote_requests($data_destinations,$args,$remote_labels);
+      return $data_destinations;
+  }
 }
 
 sub render_panels {
@@ -1055,6 +1056,8 @@ sub run_local_requests {
     my $args     = shift;
     my $labels   = shift;
 
+    warn "[$$] run_local_requests" if DEBUG;
+
     $labels    ||= [keys %$requests];
 
     my $noscale        = $args->{noscale};
@@ -1147,17 +1150,17 @@ sub run_local_requests {
         }
         else {
 
-        my $track_args = $requests->{$label}->track_args;
-        my $track      = $panel->add_track(@$track_args);
-            # == populate the tracks with feature data ==
-            $self->add_features_to_track(
-                -labels    => [ $label, ],
-                -tracks    => { $label => $track },
-                -filters   => \%filters,
-                -segment   => $segment,
-                -fsettings => $settings->{features},
-            );
-	%trackmap = ($track=>$label);
+	    my $track_args = $requests->{$label}->track_args;
+	    my $track      = $panel->add_track(@$track_args);
+	    # == populate the tracks with feature data ==
+	    $self->add_features_to_track(
+		-labels    => [ $label, ],
+		-tracks    => { $label => $track },
+		-filters   => \%filters,
+		-segment   => $segment,
+		-fsettings => $settings->{features},
+		);
+	    %trackmap = ($track=>$label);
         }
 
         # == generate the maps ==
@@ -1183,6 +1186,8 @@ sub add_features_to_track {
   my $tracks          = $args{-tracks}    or die "programming error";
   my $filters         = $args{-filters}   or die "programming error";
   my $fsettings       = $args{-fsettings} or die "programming error";
+
+  warn "[$$] add_features_to_track @{$args{-labels}}" if DEBUG;
 
   my $max_labels      = $self->label_density;
   my $max_bump        = $self->bump_density;
@@ -1374,7 +1379,7 @@ sub get_iterator {
   # and then to query the segment! This is a problem, because it
   # means that the reference sequence (e.g. the chromosome) is
   # repeated in each database, even if it isn't the primary one :-(
-  if ($db->isa('Bio::DB::SeqFeature::Store')) {
+  if ($db->can('get_seq_stream')) {
       my @args = (-type   => $feature_types,
 		  -seq_id => $segment->seq_id,
 		  -start  => $segment->start,
@@ -1849,7 +1854,9 @@ sub make_title {
     } else {
       my ($start,$end) = ($feature->start,$feature->end);
       ($start,$end)    = ($end,$start) if $feature->strand < 0;
-      my $name         = $feature->can('display_name') ? $feature->display_name : $feature->info;
+      my $name         = $feature->can('info') 
+	                 ? $feature->info
+			 : $feature->display_name;
       my $result;
       $result .= "$key "  if defined $key;
       $result .= "$name " if defined $name;

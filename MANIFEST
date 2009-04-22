@@ -1,5 +1,4 @@
 bin/make_das_conf.PLS
-bin/process_gadfly.PLS
 bin/process_sgd.PLS
 bin/process_wormbase.PLS
 bin/register_moby_services.PLS
@@ -124,7 +123,6 @@ docs/pod/MAKE_IMAGES_HOWTO.pod
 docs/pod/ORACLE_AND_POSTGRESQL.pod
 docs/pod/PLUGINS_HOWTO.pod
 docs/pod/README-chado.pod
-docs/pod/README-gff-files.pod
 docs/pod/README-lucegene.pod
 docs/tutorial/bin/expression_levels.pl
 docs/tutorial/bin/make_exon.pl

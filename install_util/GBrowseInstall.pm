@@ -72,6 +72,7 @@ sub ACTION_demo {
     for my $f ('GBrowse.conf',
 	       'yeast_simple.conf',
 	       'yeast_chr1+2.conf',
+	       'pop_demo.conf',
 	       'yeast_renderfarm.conf') {
 	my $in  = IO::File->new("$dir/conf/$f")         or die $!;
 	my $out = IO::File->new("$dir/conf/$f.new",'>') or die $!;

@@ -15,22 +15,105 @@ This code was started as a modification of the gbrowse_details script.
 Template Toolkit is used to generate the html for the page.  The template is
 encased after the __DATA__ token.
 
-=head1 Usage
+=head1 Installation
 
-=head2 GMap API Key (Depricated)
+=head2 PhyloGeoViz
 
-Since this script is now using PhyloGeoViz for the GMap interactions, we no
-longer need the api key.  I'm keeping this section of comments in case we ever
-need it again.
+PhyloGeoViz is a Google Maps/Population data mashup.  It does the heavy lifting
+of displaying the diversity data on Google Maps.  This means that PhyloGeoViz
+(or something functionally equivalent) is required for the gbrowse_gmap script
+to work.
 
-To use this, a GMap API key must be supplied in the GBrowse configuration file.
-As of writing, keys are freely available from Google at
-http://code.google.com/apis/maps/.
+Fortunately, PhyloGeoViz is freely available and easy to install.
 
-The configuration option name is "gmap_api_key" and is specified like the
-following:
+=head3 PhyloGeoViz Web Sites
 
-  gmap_api_key = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+More detailed and up to date information on PhyloGeoViz is available at its web
+site, http://phylogeoviz.org/.   The code is available at
+http://code.google.com/p/phylogeoviz/ .
+
+=head3 PhyloGeoViz Installation
+
+=over 4
+
+=item * PHP
+
+PhyloGeoViz is a PHP application.  Make sure PHP is installed and working on your server.
+
+=item * Get PhyloGeoViz Code
+
+PhyloGeoViz is available through Google.  Simply download using Subversion
+(svn).  From the Linux command line it looks like this:
+
+  svn checkout http://phylogeoviz.googlecode.com/svn/trunk/ phylogeoviz-read-only
+
+=item * Make a directory in your web server's document tree
+
+Examples: 
+
+  mkdir /var/www/html/phylogeoviz
+    or
+  mkdir /usr/local/apache2/htdocs/phylogeoviz
+
+=item * Copy PhyloGeoViz
+
+Copy the contents of the phylogeoviz-read-only directory into the newly created directory:
+
+  cp phylogeoviz-read-only/* /var/www/html/phylogeoviz/
+
+=back
+
+=head3 PhyloGeoViz Configuration
+
+In the top directory of your new PhyloGeoViz installation is a file called
+config.php.  This is a php file where information is set to customize
+PhyloGeoViz.
+
+Open it with your favorite editor. 
+
+Example:
+
+  vim /var/www/html/phylogeoviz/config.php
+
+=over 4
+
+=item * $gmap_api_key
+
+To use Google Maps, a GMap API key must be supplied.  As of writing, keys are
+freely available from Google at http://code.google.com/apis/maps/.
+
+Set the $gmap_api_key to your new api key.  As follows:
+
+  gmap_api_key = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+
+Note: You must keep the quotes and the semicolon intact for it to work.
+
+=item * $popup_url
+
+Each PhyloGeoViz pie has a marker in the middle.  Clicking on that pops up a
+window with information.  If set $popup_url will be used as a base url to get
+html to fill the pop-up window.  We want that to point to this (the
+gbrowse_gmap) script.
+
+  $popup_url = "/cgi-bin/gb2/gbrowse_gmap/pop_demo?pop_name=";
+
+Note: You still must keep the quotes and the semicolon intact for it to work.
+
+=back
+
+=head3 Test PhyloGeoViz
+
+To check that the installation worked, go to your web site:
+
+http://localhost/phylo/
+
+This will give you a page that says "Input Your Data".  
+
+Click the "Autofill some example data" link to get some example data and click
+"Draw Map!".
+
+If a Google Map appears with several pie charts, then you have successfully
+installed Phylogeoviz.
 
 =head2 Configuration
 
@@ -94,27 +177,11 @@ this.  The feature searching is where I'm conserned about it.
   contig1	POPC	SNP	50	50	3	.	.	ID=snp.POPC.contig1.50.AA;Name=AA
   contig1	POPC	SNP	50	50	2	.	.	ID=snp.POPC.contig1.50.AG;Name=AG
 
-=head2 TODO
+=head2 GMap API Key (Depricated)
 
-This is currently a work in progress.
-
-=over 4
-
-=item * PhyloGeoViz location
-
-Add a config option for the where the PhyloGeoViz newviewer.php file is located.
-
-=item * Demo Data
-
-Need to create a dummy dataset and config file that can be shared as a demo.
-
-=item * Doesn't load correctly in balloon
-
-Currently the local phylogeoviz doesn't correctly load in the balloon.
-
-=item * Other Interesting Features
-
-=back
+Since this script is now using PhyloGeoViz for the GMap interactions, we no
+longer need the api key.  I'm keeping this section of comments in case we ever
+need it again.
 
 =head1 Interesting Methods
 
@@ -126,7 +193,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Template;
 use JSON;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.9 2009-03-22 21:36:18 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.10 2009-04-22 11:37:02 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';

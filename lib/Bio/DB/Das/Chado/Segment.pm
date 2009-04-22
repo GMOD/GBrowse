@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.96 2009-03-20 18:59:22 scottcain Exp $
+# $Id: Segment.pm,v 1.97 2009-04-22 16:08:33 scottcain Exp $
 
 =head1 NAME
 
@@ -98,7 +98,7 @@ use Bio::DB::GFF::Typename;
 use Data::Dumper;
 #dgg;not working# use Bio::Species;
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -231,7 +231,8 @@ sub new {
             $base_start = $base_start ? $base_start : $$hashref{fmin} + 1;
             $stop       = $stop       ? $stop       : $$hashref{fmax};
             $db_id      = $$hashref{uniquename};
-            $srcf_id = $$hashref{srcfeature_id};
+            $srcf_id    = $$hashref{srcfeature_id};
+            $name       = $$hashref{name};
 
             next if (!defined ($base_start) or !defined($stop) or !defined($db_id));
 
@@ -1834,7 +1835,7 @@ sub get_feature_stream {
     warn "feature array: $features\n" if DEBUG;
     warn "first feature: $$features[0]\n" if DEBUG;
   return Bio::DB::Das::ChadoIterator->new($features) if $features;
-  return;
+  return Bio::DB::Das::ChadoIterator->new([]); 
 }
 
 #dgg patch for DasI need

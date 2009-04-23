@@ -426,15 +426,6 @@ install_util/GuessDirectories.pm
 install_util/htdocs_install.PLS
 install_util/make_clean_add.pl
 install_util/pod2docs.pl
-lib/Bio/DB/Das/BioSQL.pm
-lib/Bio/DB/Das/BioSQL/BioDatabaseAdaptor.pm
-lib/Bio/DB/Das/BioSQL/DBAdaptor.pm
-lib/Bio/DB/Das/BioSQL/Iterator.pm
-lib/Bio/DB/Das/BioSQL/PartialSeqAdaptor.pm
-lib/Bio/DB/Das/BioSQL/Segment.pm
-lib/Bio/DB/Das/Chado.pm
-lib/Bio/DB/Das/Chado/Segment.pm
-lib/Bio/DB/Das/Chado/Segment/Feature.pm
 lib/Bio/DB/GFF/Aggregator/match_gap.pm
 lib/Bio/DB/GFF/Aggregator/orf.pm
 lib/Bio/DB/GFF/Aggregator/reftranscript.pm

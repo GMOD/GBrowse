@@ -202,7 +202,8 @@ sub render_track_images {
 	    next if $data->status eq 'PENDING';
 	    next if $data->status eq 'EMPTY';
 	    if ($data->status eq 'AVAILABLE') {
-		$results{$label} = eval{$data->gd};
+		my $gd = eval{$data->gd};
+		$results{$label} = $gd;
 	    }
 	    delete $still_pending{$label};
 	}
@@ -231,6 +232,7 @@ sub make_requests {
     my %d;
     foreach my $label ( @{ $labels || [] } ) {
         my @track_args = $self->create_track_args( $label, $args );
+
 	my @extra_args = ();
 	my $ff_error;
 

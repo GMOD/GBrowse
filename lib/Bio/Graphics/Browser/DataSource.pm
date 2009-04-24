@@ -727,6 +727,12 @@ sub generate_image {
   my $self   = shift;
   my $image  = shift;
 
+  if ($self->global_setting('truecolor') 
+      && $image->can('saveAlpha')) {
+      $image->trueColor(1);
+      $image->saveAlpha(1);
+  }
+
   my $extension = $image->can('png') ? 'png' : 'gif';
   my $data      = $image->can('png') ? $image->png : $image->gif;
   my $signature = md5_hex($data);

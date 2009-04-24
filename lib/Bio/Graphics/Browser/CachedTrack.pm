@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.7 2009-01-08 18:47:38 lstein Exp $
+# $Id: CachedTrack.pm,v 1.8 2009-04-24 21:01:25 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -169,11 +169,12 @@ sub gd {
     my $data = $self->get_data or return;
 
     # The ? statement here accomodates the storage of GD::SVG objects,
-    # which do not support the call to newFromGd2Data.
-    return (ref($data->{gd}) 
+    # which do not support the call to newFromPngData.
+    my $gd = (ref($data->{gd}) 
 	    && ref($data->{gd})=~/^GD/)
 	? $data->{gd}
         : GD::Image->newFromGd2Data($data->{gd});
+    return $gd;
 }
 
 sub map {

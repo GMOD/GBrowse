@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.126 2009-04-29 02:46:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.127 2009-04-29 09:30:59 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -695,12 +695,14 @@ sub detail_panel {
     my @cache_extra;
     {
 	local $^W = 0; # kill uninit warning from sort
-	@cache_extra       = (
-	                         sort(keys %{$page_settings->{h_feat}}),
-	                         sort(@{$page_settings->{h_region}}),
-	                         $page_settings->{show_tooltips},
-	                         map {$_->config_hash} $PLUGINS->plugins,
-	    );
+	@cache_extra = ($page_settings->{show_tooltips},
+			map {$_->config_hash} $PLUGINS->plugins);
+	push @cache_extra,sort map {"$_\@$page_settings->{h_feat}{$_}"}
+	                           keys %{$page_settings->{h_feat}} 
+                               if $page_settings->{h_feat};
+
+	push @cache_extra,sort @{$page_settings->{h_region}}
+	                       if $page_settings->{h_region};
     }
 
     $panels      = $CONFIG->render_panels({segment       => $segment,
@@ -925,7 +927,7 @@ sub auto_open {
       $tracks->{$desired_label}{visible} = 1;
       $settings->{track_collapsed}{$desired_label} = 0;
       $settings->{h_feat} = {};
-      $settings->{h_feat}{$feature->display_name} =  hilite_fill() || 'yellow'
+      $settings->{h_feat}{lc $feature->display_name} =  hilite_fill() || 'yellow'
 	  unless param('h_feat') && param('h_feat') eq '_clear_';
     }
   }
@@ -1037,7 +1039,7 @@ sub adjust_settings {
     for my $hilight (@features) {
       last if $hilight eq '_clear_';
       my ($featname,$color) = split '@',$hilight;
-      $settings->{h_feat}{$featname} = $color || hilite_fill() || 'yellow';
+      $settings->{h_feat}{lc $featname} = $color || hilite_fill() || 'yellow';
     }
   }
 
@@ -1250,8 +1252,14 @@ sub make_hilite_callback {
     return $color if $color;
 
     # if we get here, we select the search term for highlighting
+    my %names = map 
+                 {lc $_=> 1}
+                  $feature->display_name,
+                  eval{$feature->get_tag_values('Alias')};
+    return unless %names;
     return unless $feature->display_name;
-    return $settings->{h_feat}{$feature->display_name};
+    $color ||= $settings->{h_feat}{$_} foreach keys %names;
+    return $color;
   }
 }
 

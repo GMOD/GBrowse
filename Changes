@@ -1,7 +1,20 @@
-1.70    * Bug fixes for the Chado adapter, including improving wildcard
+1.70
+        * Bug fixes for the Chado adapter, including improving wildcard
           searching and fixing a bug that caused ALL features on a reference
           sequence to be returned when the segment was at the beginning of
           the reference sequence.
+	* Fixed Galaxy support bug which caused prevented features from multiple
+	  tracks being selected.
+	* Fixed problem with feature hilighting which caused hilighting to get "stuck"
+          on beige.
+	* Removed annoying debugging statements from log files
+	* Fixed character encoding issues for onClick popup balloons
+        * Killed annoying "missing path" warning on windows systems
+        * Fixed issue in which the selected region shown in the overview is offset
+          from true region.
+	* Silenced log file warnings when inkscape isn't present.
+        * Added "merge searches" option to turn merging of similarly-named features 
+	  on and off.
 
 1.69
 	* Draggable tracks; use "drag and drop" option to activate.
@@ -15,7 +28,7 @@
 	* Can change fill and outline color of selected regions on overview & regionview.
 	* Various bugs squashed -- see http://sourceforge.net/tracker/?group_id=27707&atid=391291.
 	* When updating settings or searching, the browser scrolls to the top of the overview 
-	section as a convenience.
+	  section as a convenience.
 	* Fixed cross-site scripting vulnerability.
 
 

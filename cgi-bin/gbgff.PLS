@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.14 2009-01-14 16:16:28 lstein Exp $
+# $Id: gbgff.PLS,v 1.1.2.15 2009-04-29 02:46:11 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -66,6 +66,8 @@ print OUT <<'!NO!SUBS!';
 # To share uploads, do this:
 #     http://my.host/cgi-bin/gbgff/volvox?q=ctgA:1..2000;\
 #           t=Genes+ExampleFeatures+file:my_upload.txt;id=session_id
+
+use lib '/home/lstein/projects/Generic-Genome-Browser/lib';
 
 use strict;
 use warnings;
@@ -212,7 +214,7 @@ sub get_labels {
     my $self   = shift;
     my @labels = (param('type'),param('t'));
     return unless @labels;
-    @labels    = shellwords(@labels);
+    @labels    = map {split('-')} @labels;
     return \@labels;
 }
 

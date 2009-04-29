@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.125 2009-04-08 16:19:48 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.126 2009-04-29 02:46:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -3166,7 +3166,7 @@ sub galaxy_form {
   # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
   # when Galaxy posts the URL.
   my $dbkey  = $CONFIG->setting('galaxy build name') || $CONFIG->source;
-  my $labels = join('+',map {escape($_)} 
+  my $labels = join('-',map {escape($_)} 
 		    grep {$settings->{features}{$_}{visible} && !/:(overview|region)$/} 
 		    $CONFIG->labels);
 

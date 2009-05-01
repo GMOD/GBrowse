@@ -1,3 +1,6 @@
+1.99    * Fixed bug in which the hilighting of features got "stuck" on beige.
+	* Fixed bug in which changing the chromosome of a region but leaving 
+	  the coordinates the same caused redisplay of the previous region.
 1.989   * Another attempted fix of Galaxy problems. The galaxy_incoming option was not handled correctly.
 	* Fix track dumping/sharing so that uploaded files are dumped/shared correctly.
 

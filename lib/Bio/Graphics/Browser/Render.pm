@@ -659,11 +659,18 @@ sub create_cache_extra {
     my $settings = $self->state();
     my @cache_extra = (
             $settings->{show_tooltips},
+	    $settings->{ref},
             $settings->{start},
             $settings->{stop},
         );
-    push @cache_extra,sort keys %{$settings->{h_feat}} if $settings->{h_feat};
-    push @cache_extra,sort @{$settings->{h_region}}    if $settings->{h_region};
+
+    push @cache_extra,sort map {"$_\@$settings->{h_feat}{$_}"}
+                               keys %{$settings->{h_feat}} 
+                      if $settings->{h_feat};
+
+    push @cache_extra,sort @{$settings->{h_region}}
+                      if $settings->{h_region};
+
     push @cache_extra, map { $_->config_hash() } $self->plugins->plugins;
     return \@cache_extra;
 }
@@ -1808,7 +1815,7 @@ sub auto_open {
 	    warn "auto_open(): add_track_to_state($desired_label)" if DEBUG;
 	    $self->add_track_to_state($desired_label);
 	    $state->{h_feat} = {};
-	    $state->{h_feat}{ $feature->display_name } = 'yellow'
+	    $state->{h_feat}{ lc $feature->display_name } = 'yellow'
 		unless param('h_feat') && param('h_feat') eq '_clear_';
 	}
     }
@@ -1930,7 +1937,7 @@ sub update_options {
       for my $hilight (@features) {
 	  last if $hilight eq '_clear_';
 	  my ($featname,$color) = split '@',$hilight;
-	  $state->{h_feat}{$featname} = $color || 'yellow';
+	  $state->{h_feat}{lc $featname} = $color || 'yellow';
       }
   }
 
@@ -3216,8 +3223,13 @@ sub make_hilite_callback {
     return $color if $color;
    
     # if we get here, we select the search term for highlighting
-    return unless $feature->display_name;
-    return $state->{h_feat}{$feature->display_name};
+    my %names = map 
+                 {lc $_=> 1}
+                  $feature->display_name,
+                  eval{$feature->get_tag_values('Alias')};
+    return unless %names;
+    $color ||= $state->{h_feat}{$_} foreach keys %names;
+    return $color;
   }
 }
 

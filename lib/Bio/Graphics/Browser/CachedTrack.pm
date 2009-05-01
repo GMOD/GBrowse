@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.8 2009-04-24 21:01:25 lstein Exp $
+# $Id: CachedTrack.pm,v 1.9 2009-05-01 12:12:57 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -215,7 +215,8 @@ sub status {
     # waiting forever.
     if (-e $dotfile) {
 	-s _ or return 'PENDING';  # size zero means that dotfile has been created but not locked
-	my $f = IO::File->new($dotfile) or die "Couldn't open $dotfile: $!";
+	my $f = IO::File->new($dotfile) 
+	    or return 'AVAILABLE'; # dotfile disappeared, so data has just become available
 	flock $f,LOCK_SH;
 	my $timestamp = $f->getline();
 	die "BAD TIMESTAMP" unless $timestamp;

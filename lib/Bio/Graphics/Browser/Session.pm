@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.12 2009-03-10 13:57:24 lstein Exp $
+# $Id: Session.pm,v 1.13 2009-05-01 12:12:57 lstein Exp $
 
 use strict;
 use warnings;
@@ -54,6 +54,7 @@ sub unlock {
     return unless $self->lockfh;
     close $self->lockfh;
     $self->lockfh(undef);
+    unlink File::Spec->catfile($self->lockfile($self->id));    
 }
 
 sub lockfile {

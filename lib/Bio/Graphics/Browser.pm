@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.230 2009-04-03 19:27:14 lstein Exp $
+# $Id: Browser.pm,v 1.231 2009-05-01 12:59:17 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -121,6 +121,7 @@ sub tmpdir {
     $self->make_path($path) unless -d $path;
     return $path;
 }
+
 sub tmpimage_dir {
     my $self  = shift;
     return $self->tmpdir('images',@_);
@@ -179,7 +180,8 @@ sub cache_time             { shift->setting(general=>'cache time')             }
 sub url_fetch_timeout      { shift->setting(general=>'url_fetch_timeout')      }
 sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')     }
 
-sub session_driver         { shift->setting(general=>'session driver') || 'driver:file;serializer:default' }
+sub session_driver         { shift->setting(general=>'session driver') 
+				 || 'driver:file;serializer:default' }
 sub session_args    {
   my $self = shift;
   my %args = shellwords($self->setting(general=>'session args')||'');

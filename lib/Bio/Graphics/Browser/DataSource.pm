@@ -95,6 +95,22 @@ sub clear_cached_dbids {
     delete $self->{feature2dbid};
 }
 
+=head2 userdata()
+
+  $path = $source->userdata(@path_components)
+
+  Returns a path to somewhere in the tmp file system for the 
+  indicated userdata.
+
+=cut
+
+sub userdata {
+    my $self = shift;
+    my @path = @_;
+    my $globals = $self->globals;
+    return $globals->tmpdir('userdata',$self->name,@path);
+}
+
 =head2 global_setting()
 
   $setting = $source->global_setting('option')

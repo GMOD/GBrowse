@@ -136,7 +136,7 @@ sub file2path {
     # keep last non-[\\\/:] part of name
     my ($name) = $strip ? $filename =~ /([^:\\\/]+)$/ : $filename;
     $name                  =~ tr!-/!__!; # get rid of hyphens and slashes
-    my $tmpdir    = $config->globals->tmpdir($config->name,'userdata',$id);
+    my $tmpdir    = $config->userdata('uploads',$id);
     my $path      = File::Spec->catfile($tmpdir,$name);
     my $url       = "file:$name";
     return wantarray ? ($url,$path) : $path;

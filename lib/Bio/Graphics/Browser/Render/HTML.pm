@@ -1179,7 +1179,7 @@ sub edit_uploaded_file {
             td( $self->tr('Edit_instructions') ),
         ),
         TR( { -class => 'searchbody' },
-            td( a(  { -href => "?help=annotation#format", -target => 'help' },
+            td( a(  { -href => $self->annotation_help().'#format', -target => 'help' },
                     b( '[' . $self->tr('Help_format') . ']' )
                 )
             ),

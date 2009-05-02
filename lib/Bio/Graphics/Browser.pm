@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.231 2009-05-01 12:59:17 lstein Exp $
+# $Id: Browser.pm,v 1.232 2009-05-02 03:50:53 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -120,6 +120,12 @@ sub tmpdir {
     my $path = File::Spec->catfile($self->tmp_base,@components);
     $self->make_path($path) unless -d $path;
     return $path;
+}
+
+sub user_dir {
+    my $self       = shift;
+    my @components = @_;
+    return $self->tmpdir('userdata',@components);
 }
 
 sub tmpimage_dir {
@@ -268,6 +274,27 @@ sub update_data_source {
   }
 
   return $source;
+}
+
+sub time2sec {
+    my $self = shift;
+    my $time  = shift;
+    $time =~ s/\s*#.*$//; # strip comments
+
+    my(%mult) = ('s'=>1,
+                 'm'=>60,
+                 'h'=>60*60,
+                 'd'=>60*60*24,
+                 'w'=>60*60*24*7,
+                 'M'=>60*60*24*30,
+                 'y'=>60*60*24*365);
+    my $offset = $time;
+    if (!$time || (lc($time) eq 'now')) {
+	$offset = 0;
+    } elsif ($time=~/^([+-]?(?:\d+|\d*\.\d*))([smhdwMy])/) {
+	$offset = ($mult{$2} || 1)*$1;
+    }
+    return $offset;
 }
 
 ## methods for dealing with the session

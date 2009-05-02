@@ -108,7 +108,7 @@ sub userdata {
     my $self = shift;
     my @path = @_;
     my $globals = $self->globals;
-    return $globals->tmpdir('userdata',$self->name,@path);
+    return $globals->user_dir($self->name,@path);
 }
 
 =head2 global_setting()
@@ -147,22 +147,7 @@ sub global_time {
 
     my $time = $self->global_setting($option);
     return unless defined($time);
-
-    $time =~ s/\s*#.*$//; # strip comments
-
-    my(%mult) = ('s'=>1,
-                 'm'=>60,
-                 'h'=>60*60,
-                 'd'=>60*60*24,
-                 'M'=>60*60*24*30,
-                 'y'=>60*60*24*365);
-    my $offset = $time;
-    if (!$time || (lc($time) eq 'now')) {
-	$offset = 0;
-    } elsif ($time=~/^([+-]?(?:\d+|\d*\.\d*))([smhdMy])/) {
-	$offset = ($mult{$2} || 1)*$1;
-    }
-    return $offset;
+    return $self->globals->time2sec($time);
 }
 
 sub cache_time {

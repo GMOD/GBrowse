@@ -262,7 +262,8 @@ sub apache_conf {
     my $docs    = basename($dir);
     my $perl5lib= $self->added_to_INC;
     my $inc     = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
-    my $fcgi_inc= $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
+    my $fcgi_inc = $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
+    my $fcgid_inc= $perl5lib ? "DefaultInitEnv PERL5LIB $perl5lib"        : '';
     my $modperl_switches = $perl5lib
 	? "PerlSwitches ".join ' ',map{"-I$_"} split ':',$perl5lib
         : '';
@@ -281,6 +282,15 @@ ScriptAlias  "/gb2"      "$cgibin/gb2"
   SetEnv GBROWSE_CONF   "$conf"
 </Directory>
 
+<IfModule mod_fcgid.c>
+  Alias /fgb2 "$cgibin/gb2"
+  <Location /fgb2>
+    SetHandler   fcgid-script
+    Options      ExecCGI
+  </Location>
+  DefaultInitEnv GBROWSE_CONF $conf
+  $fcgid_inc
+</IfModule>
 
 <IfModule mod_fastcgi.c>
   Alias /fgb2 "$cgibin/gb2"

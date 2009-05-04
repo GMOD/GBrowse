@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.40 2009-03-08 15:15:34 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.41 2009-05-04 17:58:43 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -776,10 +776,11 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
 
   var scrollTop  = 0;
   var scrollLeft = 0;
-  if (self.isIE()) {
-    var scrollTop  = window.pageYOffset || document.documentElement.scrollTop  || 0; 
-    var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || 0;
-  }
+//  Why?  I do not know. perhaps a vestigial patch?
+//  if (self.isIE()) {
+//    var scrollTop  = window.pageYOffset || document.documentElement.scrollTop  || 0; 
+//    var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || 0;
+//  }
 
   var XY = self.eventXY(evt);
   adjustment   = self.hOffset < 20 ? 10 : 0;

@@ -73,6 +73,7 @@ ok($globals);
 
 ok(my $session     = $globals->session());
 ok(my $id = $session->id);
+$session->flush;
 undef $session;
 ok($session  = $globals->session($id));
 ok($id,$session->id);
@@ -122,6 +123,7 @@ ok($render->state->{grid},0);
 
 # is session management working? 
 # (Need to undef the renderer in order to call session's destroy method)
+$session->flush;
 undef $session;
 undef $render;
 

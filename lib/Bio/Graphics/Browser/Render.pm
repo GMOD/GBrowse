@@ -114,6 +114,12 @@ sub plugins {
   $d;
 }
 
+sub debug {
+    my $self = shift;
+    return $self->{debug} if exists $self->{debug};
+    return $self->{debug} = DEBUG || $self->data_source->global_setting('debug');
+}
+
 
 ###################################################################################
 #
@@ -128,13 +134,14 @@ sub run {
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string() if DEBUG;
+       query_string() if $self->debug;
 
   $self->set_source();
   my $state = $self->state;
 
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if DEBUG;
+      $self->session->flush;
       return ;
   }
 
@@ -154,9 +161,8 @@ sub run {
   select($old_fh);
 
   warn "[$$] session flush" if DEBUG;
-
   $self->session->flush;
-  warn "[$$] synchronous exit" if DEBUG;
+  warn "[$$] synchronous exit" if $self->debug;
 }
 
 sub set_source {
@@ -578,7 +584,6 @@ sub asynchronous_event {
     return unless $events;
     warn "processing asynchronous event(s)" if DEBUG;
     return (204,'text/plain',undef);
-    $self->session->flush if $self->session;
     1;
 }
 
@@ -768,10 +773,12 @@ sub render_header {
 sub create_cookie {
   my $self    = shift;
   my $session = $self->session;
+  my $path   = url(-absolute => 1);
+  $path      =~ s!gbrowse/?$!!;
   my $cookie = CGI::Cookie->new(
     -name    => $CGI::Session::NAME,
     -value   => $session->id,
-    -path    => url(-absolute => 1),
+    -path    => $path,
     -expires => $self->globals->remember_settings_time
   );
   return $cookie;
@@ -1752,9 +1759,6 @@ sub update_state {
       $self->auto_open();
   }
 
-  $self->session->flush();
-  $self->session->unlock;
-
   warn "[$$] update_state() done" if DEBUG;
 }
 
@@ -1825,6 +1829,7 @@ sub auto_open {
 sub add_track_to_state {
   my $self  = shift;
   my $label = shift;
+  my $state = $self->state;
 
   return unless length $label; # refuse to add empty tracks!
 
@@ -1832,7 +1837,6 @@ sub add_track_to_state {
   my %potential_tracks = map {$_=>1} $self->potential_tracks;
   return unless $potential_tracks{$label};
 
-  my $state   = $self->state;
   my %current = map {$_=> 1} @{$state->{tracks}};
   push @{$state->{tracks}},$label unless $current{$label};
 
@@ -1853,9 +1857,7 @@ sub add_track_to_state {
 sub remove_track_from_state {
   my $self  = shift;
   my $label = shift;
-  my $state  = $self->state;
-  delete $state->{features}{$label};
-  $self->session->flush;
+  delete $self->state->{features}{$label};
 }
 
 sub track_visible {
@@ -2403,8 +2405,7 @@ sub asynchronous_update_coordinates {
 	$state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
     }
 
-    $self->session->unlock();
-
+    $self->session->flush();
     $position_updated;
 }
 
@@ -2514,8 +2515,10 @@ sub update_region {
   my $state = shift || $self->state;
 
   if ($self->setting('region segment')) {
-    $state->{region_size} = param('region_size') if defined param('region_size');
-    $state->{region_size} = $self->setting('region segment') unless defined $state->{region_size};
+    $state->{region_size} = param('region_size') 
+	if defined param('region_size');
+    $state->{region_size} = $self->setting('region segment') 
+	unless defined $state->{region_size};
   }
   else {
     delete $state->{region_size};
@@ -3457,10 +3460,6 @@ sub fork {
     else {
 	Bio::Graphics::Browser::DataBase->clone_databases();
 	Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
-
-        # prevent CGI::Session from autoflushing in children, which
-	# causes annoying race conditions
-	undef *CGI::Session::DESTROY;
     }
 
     return $child;
@@ -3501,9 +3500,5 @@ sub tr {
   $lang->tr(@_);
 }
 
-sub DESTROY {
-   my $self = shift;
-   if ($self->session) { $self->session->flush; }
-}
 1;
 

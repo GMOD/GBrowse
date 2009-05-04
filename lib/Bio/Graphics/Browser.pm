@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.232 2009-05-02 03:50:53 lstein Exp $
+# $Id: Browser.pm,v 1.233 2009-05-04 05:05:07 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -153,6 +153,15 @@ sub session_locks {
     return $path;
 }
 
+# return one of
+# 'flock'  -- standard flock locking
+# 'nfs'    -- use File::NFSLock
+# 'mysql'  -- use mysql advisory locks
+sub session_locktype {
+    my $self = shift;
+    return $self->setting(general=>'session lock type') || 'default';
+}
+
 sub session_dir {
     my $self = shift;
     my $path  = File::Spec->catfile($self->tmp_base,'sessions',@_);
@@ -301,11 +310,12 @@ sub time2sec {
 sub session {
   my $self = shift;
   my $id   = shift;
-  return Bio::Graphics::Browser::Session->new(driver  => $self->session_driver,
-					      id      => $id||undef,
-					      args    => $self->session_args,
-					      source  => $self->default_source,
-					      lockdir => $self->session_locks,
+  return Bio::Graphics::Browser::Session->new(driver   => $self->session_driver,
+					      id       => $id||undef,
+					      args     => $self->session_args,
+					      source   => $self->default_source,
+					      lockdir  => $self->session_locks,
+					      locktype => $self->session_locktype,
 					     );
 }
 

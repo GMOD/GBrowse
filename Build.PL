@@ -32,6 +32,7 @@ my $build = GBrowseInstall->new(
     },
     recommends  => { 
 	'DB_File::Lock'            => 0,
+	'File::NFSLock'            => 0,
 	'DBI'                      => 0,
 	'DBD::mysql'               => 0,
 	'DBD::Pg'                  => 0,

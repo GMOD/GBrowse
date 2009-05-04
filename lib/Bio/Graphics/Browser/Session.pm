@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.14 2009-05-04 05:05:07 lstein Exp $
+# $Id: Session.pm,v 1.15 2009-05-04 05:19:40 lstein Exp $
 
 use strict;
 use warnings;
@@ -59,8 +59,8 @@ sub locktype {
 	return 'nfs' if $HAS_NFSLOCK;
 	return 'flock';
     }
-    return 'nfs'   if $self->{locktype} eq 'nfs'     && $HAS_NFSLOCK;
-    return 'mysql' if $self->{locktype} =~ /^mysql:/ && $HAS_MYSQL;
+    return 'nfs'   if $self->{locktype} eq 'nfs'        && $HAS_NFSLOCK;
+    return 'mysql' if $self->{locktype} =~ /^(dbi:mysql:|mysql):/    && $HAS_MYSQL;
     return 'flock' if $self->{locktype} eq 'flock';
 }
 

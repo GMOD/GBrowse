@@ -1,4 +1,6 @@
-1.99    * Fixed bug in which the hilighting of features got "stuck" on beige.
+1.991   * Added a variety of different session locking mechanisms after I discovered.
+	  that flock doesn't always work across NFS-mounted file systems.
+1.990   * Fixed bug in which the hilighting of features got "stuck" on beige.
 	* Fixed bug in which changing the chromosome of a region but leaving 
 	  the coordinates the same caused redisplay of the previous region.
 1.989   * Another attempted fix of Galaxy problems. The galaxy_incoming option was not handled correctly.

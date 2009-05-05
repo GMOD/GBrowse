@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.15 2009-05-04 05:19:40 lstein Exp $
+# $Id: Session.pm,v 1.16 2009-05-05 23:14:41 lstein Exp $
 
 use strict;
 use warnings;
@@ -26,17 +26,23 @@ use constant DEBUG_LOCK => DEBUG || 0;
 sub new {
   my $class    = shift;
   my %args     = @_;
-  my ($driver,$id,$session_args,$default_source,$lockdir,$locktype) 
-      = @args{'driver','id','args','source','lockdir','locktype'};
+  my ($driver,$id,$session_args,$default_source,$lockdir,$locktype,$expire_time) 
+      = @args{'driver','id','args','source','lockdir','locktype','expires'};
 
-  $CGI::Session::NAME = 'gbrowse_sess';
+  $CGI::Session::NAME = 'gbrowse_sess';     # custom cookie
+  $CGI::Session::Driver::file::NoFlock = 1; # flocking unnecessary because we roll our own
+
   $id               ||= CGI->cookie($CGI::Session::NAME);
   my $self            = bless {
       lockdir  => $lockdir,
       locktype => $locktype,
   },$class;
   $self->lock_ex($id) if $id;
+
   $self->{session}    = CGI::Session->new($driver,$id,$session_args);
+  $self->{session}->expire($expire_time) 
+      if defined $expire_time;
+
   warn "[$$] session fetch for ",$self->id if DEBUG;
   $self->source($default_source) unless defined $self->source;
   $self->{pid} = $$;

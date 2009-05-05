@@ -1770,9 +1770,9 @@ sub default_state {
   @$state{'name','ref','start','stop','flip','version'} = ('','','','','',100);
   $state->{width}        = $self->setting('default width');
   $state->{source}       = $data_source->name;
-  $state->{cache}        = defined $data_source->cache_time    ? $data_source->cache_time : 1;
-  $state->{region_size}    = $self->setting('region segment');
-  $state->{'max segment'}  = $self->setting('max segment');
+  $state->{cache}        = $data_source->cache_time>0;
+  $state->{region_size}  = $self->setting('region segment');
+  $state->{'max segment'}= $self->setting('max segment');
   $state->{v}            = VERSION;
   $state->{stp}          = 1;
   $state->{ins}          = 1;
@@ -3131,8 +3131,10 @@ sub render_deferred_track {
     my $cache = Bio::Graphics::Browser::CachedTrack->new(
         -cache_base => $base,
         -key        => $cache_key,
+	-cache_time => ($self->state->{cache} 
+	                 ? $self->data_source->cache_time 
+	                 : 0),
     );
-    $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
 
     warn "render_deferred_track(): $track_id: status = $status_html" if DEBUG;

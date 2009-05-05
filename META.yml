@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 1.99
+version: 1.991
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -27,36 +27,10 @@ recommends:
   DBI: 0
   DB_File::Lock: 0
   FCGI: 0
+  File::NFSLock: 0
   GD::SVG: 0
   Safe::World: 0
 provides:
-  Bio::DB::Das::BioSQL:
-    file: lib/Bio/DB/Das/BioSQL.pm
-    version: 0.02
-  Bio::DB::Das::BioSQL::BioDatabaseAdaptor:
-    file: lib/Bio/DB/Das/BioSQL/BioDatabaseAdaptor.pm
-  Bio::DB::Das::BioSQL::DBAdaptor:
-    file: lib/Bio/DB/Das/BioSQL/DBAdaptor.pm
-  Bio::DB::Das::BioSQL::Feature:
-    file: lib/Bio/DB/Das/BioSQL/Segment.pm
-  Bio::DB::Das::BioSQL::Iterator:
-    file: lib/Bio/DB/Das/BioSQL/Iterator.pm
-  Bio::DB::Das::BioSQL::PartialSeqAdaptor:
-    file: lib/Bio/DB/Das/BioSQL/PartialSeqAdaptor.pm
-  Bio::DB::Das::BioSQL::Segment:
-    file: lib/Bio/DB/Das/BioSQL/Segment.pm
-    version: 0.02
-  Bio::DB::Das::Chado:
-    file: lib/Bio/DB/Das/Chado.pm
-    version: 0.11
-  Bio::DB::Das::Chado::Segment:
-    file: lib/Bio/DB/Das/Chado/Segment.pm
-    version: 0.11
-  Bio::DB::Das::Chado::Segment::Feature:
-    file: lib/Bio/DB/Das/Chado/Segment/Feature.pm
-    version: 0.12
-  Bio::DB::Das::ChadoIterator:
-    file: lib/Bio/DB/Das/Chado.pm
   Bio::DB::GFF::Aggregator::match_gap:
     file: lib/Bio/DB/GFF/Aggregator/match_gap.pm
   Bio::DB::GFF::Aggregator::reftranscript:
@@ -82,7 +56,7 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser:
     file: lib/Bio/Graphics/Browser.pm
-    version: 1.99
+    version: 1.991
   Bio::Graphics::Browser::AuthorizedFeatureFile:
     file: lib/Bio/Graphics/Browser/AuthorizedFeatureFile.pm
   Bio::Graphics::Browser::CachedTrack:

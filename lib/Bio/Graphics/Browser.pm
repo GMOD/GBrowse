@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.233 2009-05-04 05:05:07 lstein Exp $
+# $Id: Browser.pm,v 1.234 2009-05-05 23:14:40 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -18,7 +18,7 @@ use Carp 'croak','carp';
 use CGI 'redirect','url';
 
 my %CONFIG_CACHE;
-our $VERSION = 1.990;
+our $VERSION = 1.991;
 
 sub new {
   my $class            = shift;
@@ -188,10 +188,10 @@ sub language_path  { shift->config_path('language_path')   }
 sub templates_path { shift->config_path('templates_path')  }
 sub moby_path      { shift->config_path('moby_path')       }
 
-sub global_timeout         { shift->setting(general=>'global_timeout')         }
-sub remember_source_time   { shift->setting(general=>'remember_source_time')   }
-sub remember_settings_time { shift->setting(general=>'remember_settings_time') }
-sub cache_time             { shift->setting(general=>'cache time')             }
+sub global_timeout         { shift->setting(general=>'global_timeout') || 60   }
+sub remember_settings_time { shift->setting(general=>'expire session') || '1M' }
+sub cache_time             { shift->setting(general=>'expire cache')   || '2h' }
+sub upload_time            { shift->setting(general=>'expire uploads') || '6w' }
 sub url_fetch_timeout      { shift->setting(general=>'url_fetch_timeout')      }
 sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')     }
 
@@ -316,6 +316,7 @@ sub session {
 					      source   => $self->default_source,
 					      lockdir  => $self->session_locks,
 					      locktype => $self->session_locktype,
+					      expires  => $self->remember_settings_time,
 					     );
 }
 

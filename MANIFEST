@@ -2,6 +2,7 @@ bin/auto_install_databases.pl
 bin/bp_load_gff.pl
 bin/gbrowse_netinstall.pl
 bin/gbrowse_netinstall2.pl
+bin/gbrowse_clean.pl
 bin/gbrowse_slave
 bin/load_genbank.pl
 bin/make_das_conf.pl

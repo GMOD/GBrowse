@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.9 2009-05-01 12:12:57 lstein Exp $
+# $Id: CachedTrack.pm,v 1.10 2009-05-05 23:14:41 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -30,6 +30,7 @@ sub new {
     my $panel_args = $args{-panel_args};
     my $track_args = $args{-track_args};
     my $extra_args = $args{-extra_args};
+    my $cache_time = $args{-cache_time};
     my $key        = $args{-key};
 
     -d $cache_base && -w _ or croak "$cache_base is not writable";
@@ -46,6 +47,7 @@ sub new {
 	panel_args => $panel_args,
 	track_args => $track_args,
 	extra_args => $extra_args,
+	cache_time => defined $cache_time ? $cache_time : DEFAULT_CACHE_TIME,
     },ref $self || $self;
     return $obj;
 }
@@ -63,8 +65,9 @@ sub max_time {
 }
 sub cache_time {
     my $self = shift;
+    my $d    = $self->{cache_time};
     $self->{cache_time} = shift if @_;
-    return defined $self->{cache_time} ? $self->{cache_time} : DEFAULT_CACHE_TIME;
+    return $d;
 }
 sub cachedir {
     my $self = shift;
@@ -250,7 +253,6 @@ sub expired {
     my $mtime    = (stat($datafile))[9];
     my $elapsed  = $time-$mtime;
     return 0 if ( $mtime and not $cache_time);
-
     return $elapsed > $cache_time;
 }
 

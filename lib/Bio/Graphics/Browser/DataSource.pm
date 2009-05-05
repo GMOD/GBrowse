@@ -156,10 +156,8 @@ sub cache_time {
         $self->{cache_time} = shift;
     }
     return $self->{cache_time} if exists $self->{cache_time};
-    my ($ct) = $self->global_time('cache time');
-    $ct = 1 unless defined $ct;    # cache one hour by default
-    return $self->{cache_time}
-        = $ct / 3600;    # global times are in seconds, we want hours
+    my $ct = $self->global_time('expire cache');
+    return $self->{cache_time} = $ct;
 }
 
 # this method is for compatibility with some plugins

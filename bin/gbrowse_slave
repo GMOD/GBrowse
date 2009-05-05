@@ -15,22 +15,33 @@ Usage: $0 [options]
 
 Options:
 
-    --port    -p  <port>  Network port number to listen to (default 8101).
-    --verbose -v  <level> Verbosity level (0-3)
-    --user    -u  <name>  User to run under (same as current)
-    --log     -l  <path>  Log file path (default, use STDERR)
-    --pid         <path>  PID file path (default, none)
-    --kill    -k          Kill running server (use in conjunction with --pid).
-    --preload <path>      Path to a config file containing databases to preload
+    --port     -p  <port>  Network port number to listen to (default 8101).
+    --verbose  -v  <level> Verbosity level (0-3)
+    --user     -u  <name>  User to run under (same as current)
+    --log      -l  <path>  Log file path (default, use STDERR)
+    --pid          <path>  PID file path (default, none)
+    --kill     -k          Kill running server (use in conjunction with --pid).
+    --preload  <path>      Path to a config file containing override information
+                             and databases to preload
 
 Bare-naked Gbrowse render server.  Launch with the port number to
 listen on.
 
-No other configuration information is necessary. The
-needed configuration will be transmitted from the master
-server at run time.
+No other configuration information is necessary. The needed
+configuration will be transmitted from the master server at run
+time.
+
+If you need to override some configuration information (for example,
+to specify a different tmp_base directory for session information),
+you may place it in a configuration file in the [GENERAL] section. All
+options in the [GENERAL] section will override the transmitted
+information.
+
+Any [name:database] sections containing database information located
+in the preload config file will be preloaded to reduce execution
+latency.
 USAGE
-    ;
+;
 
 
 Getopt::Long::Configure('bundling');

@@ -43,6 +43,7 @@ my $build = GBrowseInstall->new(
     script_files => [
 	'bin/gbrowse_slave',
 	'bin/make_das_conf.pl',
+	'bin/gbrowse_clean.pl',
 # not sure if these still work
 #	'bin/register_moby_services.pl',
 #	'bin/process_wormbase.pl',

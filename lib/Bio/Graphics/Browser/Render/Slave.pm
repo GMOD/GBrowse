@@ -87,24 +87,28 @@ sub debug {
 sub preload_databases {
     my $self         = shift;
     my $d            = $self->{preload};
-    $self->{preload} = shift if @_;
+    if (@_) {
+	my $conf_file    = shift;
+	$self->{preload} = Bio::Graphics::FeatureFile->new(-file=>$conf_file);
+	$self->{preload}->name($conf_file);
+    }
     $d;
 }
 
 sub do_preload {
     my $self = shift;
-    my $conf_file = $self->{preload} or return;
+    my $conf = $self->preload_databases or return;
 
-    $self->Info("Preloading databases from $conf_file");
-
-    my $conf      = Bio::Graphics::FeatureFile->new(-file=>$conf_file)
-	or return;
+    $self->Info("Preloading databases from ",$conf->name);
 
     my @labels      = $conf->configured_types;
 
     for my $l (@labels) {
-	my $adaptor = $conf->setting($l=>'db_adaptor');
-	my $args    = $conf->setting($l=>'db_args');
+	uc $l eq 'GENERAL'                             or next;
+	my $adaptor = $conf->setting($l=>'db_adaptor') or next;
+	my $args    = $conf->setting($l=>'db_args')    or next;
+	(my $label = $l) =~ s/:database//;  # aesthetic
+
 	my @argv    = ref $args eq 'CODE'
 	    ? $args->()
 	    : shellwords($args||'');
@@ -114,9 +118,9 @@ sub do_preload {
 	}
 	my $db = Bio::Graphics::Browser::DataBase->open_database($adaptor,@argv);
 	if ($db) {
-	    $self->Info("Preloaded $adaptor database $l");
+	    $self->Info("Preloaded $adaptor database $label");
 	} else {
-	    $self->Warn("Failed to preload database $l");
+	    $self->Warn("Failed to preload database $label");
 	}
     }
 }
@@ -234,6 +238,7 @@ sub render_tracks {
     my $language	= thaw param('language');
     my $panel_args      = thaw param('panel_args');
 
+    $self->adjust_conf($datasource);
     $self->Debug("render_tracks(): Opening database...");
 
     # Find the segment - it may be hiding in any of the databases.
@@ -252,7 +257,6 @@ sub render_tracks {
 
     $self->Debug("render_tracks(): Got database handle $db");
     $self->Debug("rendering tracks @$tracks");
-
 
     # BUG: duplicated code from Render.pm -- move into a common place
     $panel_args->{section} ||= '';  # prevent uninit variable warnings
@@ -424,6 +428,22 @@ sub set_user {
     my $uid = getpwnam($u);
     defined $uid or $self->Fatal("Cannot change uid to $u: unknown user");
     setuid($uid) or $self->Fatal("Cannot change uid to $u: $!");
+}
+
+# adjust the passed config file by overriding any options specified in the
+# preload config file
+sub adjust_conf {
+    my $self       = shift;
+    my $datasource = shift;
+
+    my $preload    = $self->preload_databases     or return;
+    my @settings   = $preload->setting('general') or return;
+    my $globals    = $datasource->globals;
+    $self->Debug('Overriding passed settings with slave-specific settings from preload file');
+    for my $s (@settings) {
+	my $value = $preload->setting(general=>$s);
+	$globals->setting(general=>$s,$value);
+    }
 }
 
 sub Debug {

@@ -1060,7 +1060,7 @@ sub run_local_requests {
     my $args     = shift;
     my $labels   = shift;
 
-    warn "[$$] run_local_requests"; # if DEBUG;
+    warn "[$$] run_local_requests" if DEBUG;
 
     $labels    ||= [keys %$requests];
 

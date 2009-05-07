@@ -1749,7 +1749,7 @@ sub update_state {
       # one in whole_segment().
       my $whole_segment = $self->whole_segment;
       $state->{seg_min} = $whole_segment->start;
-      $state->{seg_max} = $whole_segment->stop;
+      $state->{seg_max} = $whole_segment->end;
 
       $state->{ref}     ||= $seg->seq_id;
       $state->{start}   ||= $seg->start;

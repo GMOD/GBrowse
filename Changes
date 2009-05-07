@@ -1,3 +1,7 @@
+1.993   * Fixed bug in the cache expiration code that caused cache time to be set
+	  abnormally low and prevented cached data from being cached.
+1.992   * Added the gbrowse_clean.pl script for cleaning up stale temp files
+        * Normalized expiration and caching arguments.
 1.991   * Added a variety of different session locking mechanisms after I discovered.
 	  that flock doesn't always work across NFS-mounted file systems.
 1.990   * Fixed bug in which the hilighting of features got "stuck" on beige.

@@ -156,7 +156,8 @@ sub cache_time {
         $self->{cache_time} = shift;
     }
     return $self->{cache_time} if exists $self->{cache_time};
-    my $ct = $self->global_time('expire cache');
+    my $globals = $self->globals;
+    my $ct = $globals->time2sec($globals->cache_time);
     return $self->{cache_time} = $ct;
 }
 

@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 1.991
+version: 1.992
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -56,7 +56,7 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser:
     file: lib/Bio/Graphics/Browser.pm
-    version: 1.991
+    version: 1.992
   Bio::Graphics::Browser::AuthorizedFeatureFile:
     file: lib/Bio/Graphics/Browser/AuthorizedFeatureFile.pm
   Bio::Graphics::Browser::CachedTrack:

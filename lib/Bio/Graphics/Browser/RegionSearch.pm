@@ -263,7 +263,7 @@ sub search_features {
     @found = grep {
 	defined $_ 
 	    && !$seenit{($_->name||''),
-			$_->type,
+			$_->primary_tag,
 			$_->seq_id,
 			$_->start,
 			$_->end,

@@ -159,9 +159,11 @@ sub features2segments {
       map {
 	  my $version = $_->can('version') ? $_->version : undef;
 	  $db->segment(-class    => $refclass,
-		       -name     => $_->ref,
+		       -seq_id   => $_->seq_id,
+		       -name     => $_->seq_id,  # to avoid breakage due to sloppy API
 		       -start    => $_->start,
-		       -stop     => $_->end,
+		       -end      => $_->end,
+		       -stop     => $_->end,     # to avoid breakage due to sloppy API
 		       -absolute => 1,
 		       defined $version ? (-version => $version) : ())
   } grep {
@@ -323,7 +325,7 @@ sub _feature_get {
   $class     ||= '';  # to get rid of uninit variable warnings
   my $types = $self->source->_all_types($db);
   my @filtered = grep {
-    my $type    = $_->type;
+    my $type    = $_->primary_tag;
     my $method  = eval {$_->method} || '';
     my $fclass  = eval {$_->class}  || '';
     $type eq 'Segment'      # ugly stuff accomodates loss of "class" concept in GFF3

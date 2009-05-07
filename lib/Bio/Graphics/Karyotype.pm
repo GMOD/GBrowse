@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.13 2009-03-17 12:43:36 lstein Exp $
+# $Id: Karyotype.pm,v 1.14 2009-05-07 14:07:41 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -151,7 +151,7 @@ sub image_map {
     my $divs = '';
 
     for (my $i=0; $i<@$boxes; $i++) {
-	next if $boxes->[$i][0]->type eq $chromosome;
+	next if $boxes->[$i][0]->primary_tag eq $chromosome;
 
 	my ($left,$top,$right,$bottom) =  @{$boxes->[$i]}[1,2,3,4];
 	$left     -= 2;

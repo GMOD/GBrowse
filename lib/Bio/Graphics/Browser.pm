@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.123 2009-03-08 15:20:45 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.124 2009-05-07 09:49:57 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2832,6 +2832,7 @@ sub map_html {
 
 sub map_css {
   my ($self,$data,$view) = @_;
+  $data && ref $data eq 'ARRAY' or return;
   my @data = @$data;
   chomp @data;
   my $name = shift @data or return '';

@@ -51,7 +51,7 @@ Save this to disk as "gbrowse_netinstall.pl" and run:
 
 use warnings;
 use strict;
-use CPAN;
+use CPAN '!get';
 use Config;
 use Getopt::Long;
 use Pod::Usage;
@@ -90,8 +90,6 @@ BEGIN {
   print STDERR "\naccept the default answer (with a notable exception of libgd on MacOSX;\n";
   print STDERR "see the documentation on the GMOD website for more information.)\n";
   print STDERR "The whole process will take several minutes and will generate lots of messages.\n";
-  print STDERR "\nNOTE: This installer will install bioperl-live, as the most recent GBrowse\n";
-  print STDERR "requires the many changes that have gone into BioPerl since its last release\n\n";
   print STDERR "\nPress return when you are ready to start!\n";
   my $h = <> unless $skip_start;
   print STDERR "*** Installing Perl files needed for a net-based install ***\n";
@@ -155,7 +153,7 @@ BEGIN {
 #print STDERR $@;
 
 use Archive::Tar;
-use CPAN '!get';
+#use CPAN '!get';
 
 $is_cygwin = 1 if ( $^O eq 'cygwin' );
 
@@ -171,8 +169,8 @@ if ($windows and !$wincvs and $get_gbrowse_cvs ) {
 $build_param_string ||="";
 $install_param_string ||="";
 
-use constant BIOPERL_VERSION      => 'bioperl-1.5.2_103';
-use constant BIOPERL_REQUIRES     => '1.005003';  # sorry for the redundancy
+use constant BIOPERL_VERSION      => 'BioPerl-1.6.0';
+use constant BIOPERL_REQUIRES     => '1.6';  # sorry for the redundancy
 use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
 use constant GBROWSE_DEFAULT      => '1.69';
 use constant SOURCEFORGE_MIRROR2  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
@@ -223,8 +221,6 @@ CPAN::Shell->install('Digest::MD5');
 CPAN::Shell->install('Statistics::Descriptive');
 
 unless ($skip_bioperl) {
-  $get_bioperl_svn = 1;
-  print STDERR "\n\nForce getting a BioPerl nightly build; the most recent release is too old\n";
   my $version = BIOPERL_REQUIRES;
   if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_svn or $bioperl_path) {
     print STDERR "\n*** Installing BioPerl ***\n";

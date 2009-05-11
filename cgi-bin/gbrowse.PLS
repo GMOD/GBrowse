@@ -41,7 +41,7 @@ $startperl -w
 \$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
 #
 ###################################################################
-\$VERSION   = $OPTIONS{VERSION};
+\$VERSION   = " $OPTIONS{VERSION}";
 \$BIOGRAPHICS_VERSION   = $OPTIONS{BIOGRAPHICS_VERSION};
 
 
@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.127 2009-04-29 09:30:59 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.128 2009-05-11 13:41:38 scottcain Exp $
 
 use strict;
 use Bio::Graphics;

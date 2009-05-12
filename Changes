@@ -15,6 +15,9 @@
 	* Silenced log file warnings when inkscape isn't present.
         * Added "merge searches" option to turn merging of similarly-named features 
 	  on and off.
+        * Moved Bio::DB::Das::Chado and BDD::BioSQL to their own packages and
+          out of the GBrowse distribution so they can be updated independently via CPAN
+        * Fixed encoding of version number at the bottom of the page.
 
 1.69
 	* Draggable tracks; use "drag and drop" option to activate.

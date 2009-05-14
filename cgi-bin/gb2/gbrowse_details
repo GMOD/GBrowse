@@ -6,7 +6,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.12 2009-05-07 14:07:41 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.13 2009-05-14 21:46:09 lstein Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 
@@ -218,22 +218,25 @@ sub print_features {
 				 "Length",
 				 $f->length);
 	
-	if ($f->can('target') && $f->target) {
+	if ($f->can('hit') && (my $hit = $f->hit)) {
 	    # try to correct for common GFF2 error of indicating a -/- alignment
-	    # using a (-) src strand and a target_start > target_end
-	    my $bug = $f->abs_strand < 0 && $f->target->abs_strand < 0;
+	    # using a (-) src strand and a hit_start > hit_end
+	    my $bug  = $f->strand < 0 && $f->hit->strand < 0;
 	    $string .= $self->print_multiple($f,
 				     $options,
-				     'Target',
-				     $f->target->seq_id);
-	    $string .= $self->print_multiple($f,
+				     'Query',
+				     $hit->seq_id);
+	    $string .= $self->print_multiple(
+		                     $f->hit,
 				     $options,
-				     "Matches",
-				     $f);
+				     'Matches',
+				     $hit->seq_id.':'.$hit->start.'..'.$hit->end.
+		                     ($hit->strand >= 0 ? ' (+)':' (-)')
+		);
 	    $string .= $self->print_multiple($f,
 				     $options,
 				     '',
-				     $self->print_matches($f,$f->target,$bug)) if $subf;
+				     $self->print_matches($f,$hit,$bug));# if $subf;
 	    
 	}
 	
@@ -244,7 +247,7 @@ sub print_features {
 	
 	my %attributes = $f->attributes if $f->can('attributes');
 
-	for my $a (sort grep {!/Target/} keys %attributes) {
+	for my $a (sort grep {!/Hit/} keys %attributes) {
 	    $string .= $self->print_multiple($f,
 				     $options,
 				     $a,
@@ -267,9 +270,9 @@ sub print_features {
 	    );
 	
 	my @subfeatures;
-	# sort features with targets so that target is in order
-	if ($f->can('target') && $f->target) {
-	    @subfeatures  = sort {$a->target->start <=> $b->target->start} $f->get_SeqFeatures;
+	# sort features with hits so that hit is in order
+	if ($f->can('hit') && $f->hit) {
+	    @subfeatures  = sort {$a->hit->start <=> $b->hit->start} $f->get_SeqFeatures;
 	} else {
 	    @subfeatures = sort {$a->start <=> $b->start} $f->get_SeqFeatures;
 	}
@@ -291,7 +294,7 @@ sub print_features {
 	      $dna    = $dna->seq if ref $dna;  # compensate for API changes
 	      $string .= $self->print_dna($f,
 	  				  $dna,
-					  $f->abs_start,
+					  $f->start,
 					  $f->strand,
 					  \@subfeatures,
 					  $subf+1) if $dna;
@@ -374,15 +377,17 @@ sub print_matches {
     my $sdna = $src->dna or return '';
     my $tdna = $tgt->dna or return '';
 
-    my $top_label = $src->abs_ref;
-    my $bot_label = $tgt->abs_ref;
+    my $top_label = $src->seq_id;
+    my $bot_label = $tgt->seq_id;
 
-    my $src_x = $src->abs_start;
-    my $src_y = $src->abs_end;
-    my $tgt_x = $tgt->abs_start;
-    my $tgt_y = $tgt->abs_end;
+    my $src_x = $src->start;
+    my $src_y = $src->end;
+    my $tgt_x = $tgt->start;
+    my $tgt_y = $tgt->end;
     my $tdir  = $tgt->strand || +1;
     my $sdir  = $src->strand || +1;
+
+    ($tgt_x,$tgt_y) = ($tgt_y,$tgt_x) if $tgt->strand < 0;
 
     if ($bug) { # correct for buggy data files that show -/- alignments; really -/+
 	$tdir = +1;
@@ -461,7 +466,9 @@ sub print_multiple {
 	}
 
 	# for EST alignment features, create a link to get the orignal EST sequence
-	if (($label eq 'Target') && ($self->{urls}{'alignment'}) && ($obj =~ /alignment/i)){
+	if (($label eq 'Query') 
+	    && ($self->{urls}{'alignment'}) 
+	    && ($obj =~ /alignment/i)){
 	    my $name = shift @a;
 	    $LINK = $self->{urls}{'alignment'};
 	    $LINK=~ s/\$value/$name/;
@@ -502,9 +509,9 @@ sub position {
     my $simple = shift;
     my $bug    = shift; # for (-) (-) alignments
 
-    my $ref   = $f->abs_ref;
-    my $start = $f->abs_start;
-    my $end   = $f->abs_end;
+    my $ref   = $f->seq_id;
+    my $start = $f->start;
+    my $end   = $f->end;
     if ($simple) {
 	($start,$end) = ($end,$start) if $f->strand < 0;
 	return "<b>$ref</b> $start..$end";
@@ -518,7 +525,8 @@ sub position {
 
     my $src = escape($self->source->name);
     my $url = "../gbrowse/$src?name=$ref:$start..$end";
-    return a({-href=>$url},$strand ? "$ref:$start..$end ($strand strand)" : "$ref:$start..$end");
+    return a({-href=>$url},$strand ? "$ref:$start..$end ($strand strand)" 
+	                           : "$ref:$start..$end");
 }
 
 sub get_link_urls {
@@ -603,7 +611,7 @@ sub get_formatter {
 
     unless (defined $s) {
 	$s = sub {$self->format_position(@_)} if $tag eq 'Position';
-	$s = sub {$self->format_position(@_)} if $tag eq 'Matches';
+	# $s = sub {$self->format_position(@_)} if $tag eq 'Matches';
 	$s = sub {$self->format_name(@_)    } if $tag eq 'Name';
     }
     return $self->{formatterCache}{$key} = $s;
@@ -619,9 +627,9 @@ sub format_matches {
     my $self = shift;
     my (undef,undef,$feature) = @_;
     # try to correct for common GFF2 error of indicating a -/- alignment
-    # using a (-) src strand and a target_start > target_end
-    my $bug = $feature->abs_strand < 0 && $feature->target->abs_strand < 0;
-    $self->position($feature->target,undef,$bug)
+    # using a (-) src strand and a hit_start > hit_end
+    my $bug = $feature->strand < 0 && $feature->hit->strand < 0;
+    $self->position($feature->hit,undef,$bug)
 }
 
 sub format_name {

@@ -490,7 +490,7 @@ sub wrap_rendered_track {
     # Add arrows for pannning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
-	$style      .= ';filter:alpha(opacity=35);moz-opacity:0.35';
+	$style      .= ';filter:alpha(opacity=70);moz-opacity:0.35';
         my $pan_left   =  img({
 	    -style   => $style . ';left:10px',
 	    -class   => 'panleft',
@@ -1822,7 +1822,7 @@ sub make_title {
   my ($title,$key) = ('','');
 
  TRY: {
-    if ($label && $label->isa('Bio::Graphics::FeatureFile')) {
+    if ($label && eval { $label->isa('Bio::Graphics::FeatureFile') }) {
       $key = $label->name;
       $title = $label->make_title($feature) or last TRY;
       return $title;

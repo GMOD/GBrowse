@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.21 2009-02-02 21:24:48 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.22 2009-05-14 21:43:47 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -80,8 +80,8 @@ use constant IMAGEWIDTH       => 800;
 use constant DEFAULT_SEG_SIZE => 10000;
 use constant ZOOM_INCREMENT   => 1000;
 use constant JS               => '/gbrowse/js';
-use constant IMAGES           => '/gbrowse/images';
-use constant CSS              => '/gbrowse';
+use constant IMAGES           => '/gbrowse/images/buttons';
+use constant CSS              => '/gbrowse/gbrowse.css';
 use constant MAX_SEGMENT      => 1_000_000;
 
 use vars '@ISA';
@@ -127,6 +127,7 @@ sub reconfigure {
   my $conf = $self->configuration;
 
   $conf->{width} = $self->browser_config->plugin_setting('image width') || IMAGEWIDTH;
+  $conf->{isPCR} = $self->browser_config->plugin_setting('ispcr');  
 
   $conf->{size_range} = undef;
   $conf->{target}     = undef;
@@ -318,7 +319,7 @@ sub dump {
 
   my $js            = $self->browser_config->relative_path_setting('js')     || JS;
   my $img           = $self->browser_config->relative_path_setting('images') || IMAGES;
-  my $css           = $self->browser_config->relative_path_setting('stylesheet') || CSS;
+  my $css           = $self->browser_config->setting('stylesheet')           || CSS;
   $css .= "/gbrowse.css" unless $css =~ /gbrowse.css/;
 
   # dumpers provide their own headers, so make sure boiler plate
@@ -336,7 +337,14 @@ var balloon = new Balloon;
 </script>
 END
 
-  print start_html( -style => $css, -title => 'PCR Primers', -onload => "Primers.prototype.initialize()", -head => $head );
+  print start_html( 
+		    -style  => $css, 
+		    -title  => 'PCR Primers', 
+		    -onload => "Primers.prototype.initialize()", 
+		    -head   => $head,
+		    -gbrowse_images => $img,
+		    -gbrowse_js     => $js);
+
   print $self->browser_config->header;
 
   my $target = $self->focus($segment);
@@ -418,6 +426,7 @@ sub design_primers {
 
   my $binpath = $self->browser_config->plugin_setting('binpath') || BINPATH;
   my $method  = $self->browser_config->plugin_setting('method')  || METHOD;
+
   $method  = 'remote' if $binpath =~ /http/i;
 
   my $pcr = Bio::PrimerDesigner->new( program => PROGRAM,
@@ -433,12 +442,13 @@ sub design_primers {
 
   my $res = $pcr->design(%atts) or fatal_error(pre($pcr->error));
 
-  $self->primer_results( $res, $segment, $lb, $rb );
+  $self->primer_results( $res, $segment, $lb, $rb);
 }
 
 sub primer_results {
-  my ( $self, $res, $segment, $lb, $rb ) = @_;
+  my ( $self, $res, $segment, $lb, $rb) = @_;
   my $conf = $self->configuration;
+  my $isPCR_url = $conf->{isPCR};
   my $target = $self->focus($segment);
   my $offset = $segment->start;
   my $ref    = $segment->ref;
@@ -488,43 +498,68 @@ sub primer_results {
       }
     }
 
+
+   
+
    
    push @feats, Bio::Graphics::Feature->new( -ref   => $segment->ref,
 					     -start => $r{startleft}-20,
 					     -end   => $r{startright}+20,
 					     -type  => 'primers',
                                              -name  => "set $n ");
-    push @rows,
-    Tr(
-      [ 
-	$spacer .
-	th(
-          { -class => 'searchtitle', -align => 'left' },
-          [ qw/Set Primer/, "Sequence (5'->3')", qw/Tm %GC Coord Quality Product/, $Primer_Pair_Quality ]
-        ),
-	$spacer .
-        td(
-          [ $n,         'left',        $r{left},  $r{tmleft},
-            $r{leftgc}, $r{startleft}, $r{lqual}, '&nbsp;',
-            '&nbsp;'
-          ]
-        ),
-	$spacer .
-        td(
-          [ '&nbsp;',    'right',        $r{right}, $r{tmright},
-            $r{rightgc}, $r{startright}, $r{rqual}, $r{prod},
-            $r{qual}
-          ]
-        ),
-	$spacer .
-        td(
-          { -colspan => 9 },
-          $self->toggle( {on => 0, override => 1},
-		  "PRIMER3-style report for set $n", 
-		  primer3_report( $self, $segment, $res, \%r )).br
-	   )
-	]
-       );
+
+    my $isPCR = '';
+    if ($isPCR_url) {
+      $isPCR = 
+        $spacer .
+	td( {-colspan => 9},
+	    $self->toggle( {on => 0, override => 1},
+                           "UCSC In-Silico PCR results for primer set $n",
+			   iframe( {
+			     -src => "$isPCR_url&wp_size=10000&wp_target=genome&wp_f=$r{left}&wp_r=$r{right}&Submit=submit",
+                             -width => 800,
+                             -height => 400,
+                             -border => 1
+                               },
+                                   "Iframes must not be supported in your browser.  Time to upgrade..."
+                                   )
+                           )
+            );
+    }
+
+    my $cols = 
+	[
+	 $spacer .
+	 th(
+	    { -class => 'searchtitle', -align => 'left' },
+	    [ qw/Set Primer/, "Sequence (5'->3')", qw/Tm %GC Coord Quality Product/, $Primer_Pair_Quality ]
+	    ),
+	 $spacer .
+	 td(
+	    [ $n,         'left',        $r{left},  $r{tmleft},
+	      $r{leftgc}, $r{startleft}, $r{lqual}, '&nbsp;',
+	      '&nbsp;'
+	      ]
+	    ),
+	 $spacer .
+	 td(
+	    [ '&nbsp;',    'right',        $r{right}, $r{tmright},
+	      $r{rightgc}, $r{startright}, $r{rqual}, $r{prod},
+	      $r{qual}
+	      ]
+	    ),
+	 $spacer.
+	 td(
+	    { -colspan => 9 },
+	    $self->toggle( {on => 0, override => 1},
+			   "PRIMER3-style report for set $n", 
+			   primer3_report( $self, $segment, $res, \%r ))
+	    ),
+	 $isPCR . br
+	 ];
+
+    push @rows, Tr($cols);
+
   }
 
   my $featurefile = Bio::Graphics::FeatureFile->new();
@@ -594,7 +629,7 @@ sub primer3_report {
   my $trunc = $sub_r{startleft} - $start - $offset;
 
   my $rs;
-  $rs = "<pre>";
+  $rs = "<pre style='background:whitesmoke;border:1px solid black;padding-left:25px'>";
   $rs .= "\n\n";
   $rs .= "No mispriming library specified\n";
   $rs .= "Using 1-based sequence positions\n\n";

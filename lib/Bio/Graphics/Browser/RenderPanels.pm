@@ -1247,7 +1247,7 @@ sub generate_filter {
     my $code;
     my @values = grep {$filter->{values}{$_}} keys %{$filter->{values}};
     my $regex  = join '|',@values;
-    $code .= "return 1 if \$f->$method =~ /^($regex)\$/;\n";
+    $code .= "return 1 if \$f->$method =~ /($regex)/i;\n";
     return unless $code;
     my $sub = <<END;
 sub {
@@ -1256,7 +1256,6 @@ sub {
     return;
 }
 END
-    warn $sub;
     my $cref = eval $sub;
     warn "failed compiling $sub: ",$@ if $@;
     return ($label => $cref);

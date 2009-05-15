@@ -134,7 +134,7 @@ sub run {
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string() if $self->debug;
+       query_string(); # if $self->debug;
 
   $self->set_source();
   my $state = $self->state;
@@ -318,6 +318,16 @@ sub asynchronous_event {
     if ( my $track_name = param('configure_track') ) {
         my $html = $self->track_config($track_name);
         return ( 200, 'text/html', $html );
+    }
+
+    if ( my $track_name = param('select_track_features') ) {
+        my $html = $self->select_track_features($track_name);
+        return ( 200, 'text/html', $html );
+    }
+
+    if ( my $track_name = param('filter_track') ) {
+        my $html = $self->filter_track_features($track_name);
+        return ( 200, 'application/json', {} );
     }
 
     if ( my $track_name = param('reconfigure_track') ) {
@@ -677,6 +687,7 @@ sub create_cache_extra {
                       if $settings->{h_region};
 
     push @cache_extra, map { $_->config_hash() } $self->plugins->plugins;
+
     return \@cache_extra;
 }
 
@@ -1887,6 +1898,16 @@ sub update_state_from_cgi {
   $self->update_galaxy_url($state);
 }
 
+sub filter_track_features {
+    my $self        = shift;
+    my $label       = shift;
+    my %filters     = map {$_=>1} param('select');
+    my $state       = $self->state;
+    my ($method,@values) = shellwords $self->data_source->setting($label=>'select');
+    $state->{features}{$label}{filter}{values} = {map {$_=>$filters{$_}} @values};
+    $state->{features}{$label}{filter}{method} = $method;
+}
+
 # Handle returns from the track configuration form
 sub reconfigure_track {
     my $self  = shift;
@@ -1909,6 +1930,12 @@ sub track_config {
   my $self     = shift;
   my $track_name    = shift;
   croak "track_config() should not be called in parent class";
+}
+
+sub select_track_features {
+  my $self       = shift;
+  my $track_name = shift;
+  croak "select_track_features() should not be called in parent class";
 }
 
 sub share_track {

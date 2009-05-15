@@ -316,12 +316,16 @@ var GBubble = new Balloon;
 BalloonConfig(GBubble,'GBubble');
 GBubble.images = "$balloon_images/GBubble";
 GBubble.allowEventHandlers = true;
+GBubble.opacity = 1;
+GBubble.fontFamily = 'sans-serif';
 
 // A simpler popup balloon style
 var GPlain = new Balloon;
 BalloonConfig(GPlain,'GPlain');
 GPlain.images = "$balloon_images/GPlain";
 GPlain.allowEventHandlers = true;
+GPlain.opacity = 1;
+GPlain.fontFamily = 'sans-serif';
 
 // Like GBubble but fades in
 var GFade = new Balloon;
@@ -329,6 +333,7 @@ BalloonConfig(GFade,'GFade');
 GFade.images = "$balloon_images/GBubble";
 GFade.opacity = 1;
 GFade.allowEventHandlers = true;
+GFade.fontFamily = 'sans-serif';
 
 // A formatted box
 // Note: Box is a subclass of Balloon
@@ -336,6 +341,8 @@ var GBox = new Box;
 BalloonConfig(GBox,'GBox');
 GBox.images = "$balloon_images/GBubble";
 GBox.allowEventHandlers = true;
+GBox.opacity = 1;
+GBox.fontFamily = 'sans-serif';
 END
 ;
     							   
@@ -1725,6 +1732,46 @@ END
 
     $return_html
         .= table( TR( td( { -valign => 'top' }, [ $citation, $form ] ) ) );
+    $return_html .= end_html();
+    return $return_html;
+}
+
+# this is the content of the popup balloon that allows the user to select
+# individual features by source or name
+sub select_track_features {
+    my $self  = shift;
+    my $label = shift;
+
+    my $state       = $self->state();
+    my $data_source = $self->data_source();
+
+    my $select_options = $data_source->setting($label=>'select');
+    my ($method,@values) = shellwords($select_options);
+
+    my $filter = $state->{features}{$label}{filter};
+
+    unless (exists $filter->{method} && $filter->{method} eq $method) {
+	$filter->{method} = $method;
+	$filter->{values} = { map {$_=>1} @values }; # all on
+    }
+
+    my @turned_on = grep {$filter->{values}{$_}} @values;
+
+    my $return_html = start_html();
+    $return_html   .= start_form(-name => 'feature_select_form',
+				 -id   => 'feature_select_form');
+    $return_html   .= p($self->language->tr('SHOW_SUBTRACKS')
+			||'Show subtracks');
+    $return_html   .= checkbox_group(-name      => "select",
+				     -values    => \@values,
+				     -linebreak => 1,
+				     -defaults  => \@turned_on);
+    $return_html .= button(-name    => 
+			      $self->tr('Change'),
+			   -onClick => 
+			      "Controller.filter_track('$label',\$('feature_select_form'))"
+	);
+    $return_html .= end_form();
     $return_html .= end_html();
     return $return_html;
 }

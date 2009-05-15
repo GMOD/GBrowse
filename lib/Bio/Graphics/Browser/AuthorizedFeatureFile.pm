@@ -34,6 +34,12 @@ sub setting {
   $self->SUPER::setting($label,$option,@rest);
 }
 
+sub label_options {
+    my $self  = shift;
+    my $label = shift;
+    return $self->SUPER::_setting($label);
+}
+
 # implement the "restrict" option
 sub authorized {
   my $self  = shift;

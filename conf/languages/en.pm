@@ -442,7 +442,11 @@ END
 
  SHOW_OR_HIDE_TRACK => '<b>Show or hide this track</b>',
 
- CONFIGURE_THIS_TRACK   => '<b>Click to change track settings.</b>',
+ CONFIGURE_THIS_TRACK   => '<b class="error">Click to configure.</b>',
+
+ SUBTRACKS_SHOWN    => '<b>Showing:</b> %s<br><b>Hidden:</b> %s',
+
+ SHOW_SUBTRACKS     => '<b>Show subtracks</b>',
 
  SHARE_THIS_TRACK   => '<b>Share this track</b>',
 

@@ -220,6 +220,7 @@ sub make_requests {
     my $self   = shift;
     my $args   = shift;
     my $source = $self->source;
+    my $settings=$self->settings;
 
     my $feature_files  = $args->{external_features};
     my $labels         = $args->{labels};
@@ -233,7 +234,9 @@ sub make_requests {
     foreach my $label ( @{ $labels || [] } ) {
         my @track_args = $self->create_track_args( $label, $args );
 
-	my @extra_args = ();
+	my $filter     =  $settings->{features}{$label}{filter};
+	my @extra_args = grep {$filter->{values}{$_}}
+	                     keys %{$filter->{values}};
 	my $ff_error;
 
         # get config data from the feature files
@@ -264,7 +267,7 @@ sub make_requests {
             -panel_args => \@panel_args,
             -track_args => \@track_args,
             -extra_args => [ @cache_extra, @extra_args, $label ],
-	    -cache_time => $self->settings->{cache} 
+	    -cache_time => $settings->{cache} 
 			    ? $source->cache_time 
 			    : 0
         );
@@ -430,11 +433,8 @@ sub wrap_rendered_track {
     $title =~ s/:(overview|region|detail)$//;
 
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
-    my $titlebar = span(
-        {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
-            -id => "${label}_title"
-        },
-        img({   -src         => $icon,
+    my @images = (
+	img({   -src         => $icon,
                 -id          => "${label}_icon",
                 -onClick     => "collapse('$label')",
                 -style       => 'cursor:pointer',
@@ -445,19 +445,28 @@ sub wrap_rendered_track {
                 -style => 'cursor:pointer',
                 -onMouseOver =>
                     "$balloon_style.showTooltip(event,'$share_this_track')",
-                -onMousedown =>
+		    -onMousedown =>
                     "GBox.showTooltip(event,'url:?share_track=$escaped_label',1,500,500)",
             }
         ),
 
         img({   -src         => $help,
                 -style       => 'cursor:pointer',
-                -onmousedown => "$config_click",
+                -onmousedown => $config_click,
                 -onMouseOver =>
-                    "$balloon_style.showTooltip(event,'$configure_this_track')",
+	    "$balloon_style.showTooltip(event,'$configure_this_track')",
 		    
             }
-        ),
+        )
+	);
+
+    push @images,$self->select_features_menu($label);
+
+    my $titlebar = span(
+        {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
+            -id => "${label}_title"
+        },
+	@images,
 	$title
     );
 
@@ -1105,7 +1114,7 @@ sub run_local_requests {
     my %filters = map {
 	my %conf =  $source->style($_);
 	$conf{'-filter'} ? ($_ => $conf{'-filter'})
-	               : ()
+	               : $self->generate_filter($settings,$_)
     } @labels_to_generate;
 
 
@@ -1179,6 +1188,78 @@ sub run_local_requests {
             \%trackmap, 0 );
         $requests->{$label}->put_data($gd, $map );
     }
+}
+
+sub select_features_menu {
+    my $self  = shift;
+    my $label = shift;
+    my $source = $self->source;
+    my $settings=$self->settings;
+
+    my ($method,@values) = shellwords $source->setting($label=>'select');
+    return unless @values;
+
+    my $buttons = $self->source->globals->button_url;
+    my $escaped_label = CGI::escape($label);
+
+    my $filter = $settings->{features}{$label}{filter}{values};
+    $filter->{values} ||= {map {$_=>1} @values};
+    $filter->{method} ||= $method;
+
+    my @showing = grep {
+ 	$filter->{$_}
+    } @values;
+
+    my @hidden = grep {
+	!$filter->{$_}
+    } @values;
+
+    @showing = $self->language->tr('NO_TRACKS') unless @showing;
+    @hidden  = $self->language->tr('NO_TRACKS') unless @hidden;
+
+    my $select_features = $self->language->tr('SUBTRACKS_SHOWN',
+					      "@showing","@hidden");
+    $select_features   .= '<br>'.$self->language->tr('CONFIGURE_THIS_TRACK');
+
+    my $select_features_click
+	= "GBox.showTooltip(event,'url:?select_track_features=$escaped_label',1,500,500)";
+
+    my $menu    = "$buttons/menu.png";
+    my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
+
+    return img({
+	-src         => $menu,
+	-style       => 'cursor:pointer',
+	-onmousedown => $select_features_click,
+	-onMouseOver =>
+                    "$balloon_style.showTooltip(event,'$select_features')",
+		}
+        );
+}
+
+sub generate_filter {
+    my $self     = shift;
+    my $settings = shift;
+    my $label    = shift;
+    my $filter = $settings->{features}{$label}{filter} or return;
+    my $method = $filter->{method};
+
+    my $code;
+    my @values = grep {$filter->{values}{$_}} keys %{$filter->{values}};
+    my $regex  = join '|',@values;
+    $code .= "return 1 if \$f->$method =~ /^($regex)\$/;\n";
+    return unless $code;
+    my $sub = <<END;
+sub {
+    my \$f = shift;
+    $code;
+    return;
+}
+END
+    warn $sub;
+    my $cref = eval $sub;
+    warn "failed compiling $sub: ",$@ if $@;
+    return ($label => $cref);
 }
 
 sub add_features_to_track {
@@ -1948,8 +2029,7 @@ sub make_postgrid_callback {
 
 sub plain_citation {
     my ( $self, $label, $truncate ) = @_;
-    my $text = citation( $self->source(), $label, $self->language )
-        || $self->language->tr('NO_CITATION');
+    my $text = citation( $self->source(), $label, $self->language ) || '';
     $text =~ s/\<a/<span/gi;
     $text =~ s/\<\/a/\<\/span/gi;
     if ($truncate) {

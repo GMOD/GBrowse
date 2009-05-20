@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::SourceTrackFinder;
-# $Id: SourceTrackFinder.pm,v 1.1 2009-05-20 20:36:20 lstein Exp $
+# $Id: SourceTrackFinder.pm,v 1.2 2009-05-20 21:29:40 lstein Exp $
 use strict;
 use CGI qw(:standard *table);
 use base 'Bio::Graphics::Browser::Plugin';
@@ -103,18 +103,53 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::SimpleTrackFinder - Limit list of tracks to those that match a name pattern
+Bio::Graphics::Browser::Plugin::SourceTrackFinder - Limit list of tracks to those that contain arbitrary fields
 
 =head1 SYNOPSIS
 
 In the appropriate gbrowse configuration file:
 
- track filter = SimpleTrackFinder
+ plugin = SourceTrackFinder
+
+ [SourceTrackFinder:plugin]
+ tissue source = brain pancreas kidney
+ gender        = male female
+
+ [track1]
+ (usual config options)
+ tissue source = brain
+ gender        = male
+
+ [track2]
+ (usual config options)
+ tissue source = pancreas
+ gender        = female
 
 =head1 DESCRIPTION
 
+This plugin activates a panel above the tracks table that allows the
+user to filter the tracks according to combinations of fields that you
+define. The fields are defined in the [SourceTrackFinder:plugin]
+stanza of the configuration file and consist of one or more field
+names followed by their allowable values, separated by spaces using
+the usual GBrowse config rules. For filtering to work, each track must
+also have a similarly-named set of fields, each with one or more
+values.
+
+GBrowse will prompt the user to select field values using a series of
+popup menus located above the tracks table. When the user changes the
+popups, the tracks table will be filtered to show only the tracks that
+match the selected field values. The user can press the "clear" button
+to turn off filtering.
+
+Note that this only affects the display of track names. Tracks that
+were previously turned on will stay on, but their entries will be
+invisible in the tracks table. The user can still turn them off by
+clicking on the individual track's configure or (-) buttons.
+
 =head1 OPTIONS
 
+None
 
 =head1 BUGS
 

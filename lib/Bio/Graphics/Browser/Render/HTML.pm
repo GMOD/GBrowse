@@ -683,11 +683,14 @@ sub render_track_table {
       @track_labels = sort {lc ($labels{$a}) cmp lc ($labels{$b})} @track_labels
         if ($settings->{sk} eq "sorted");
 
+      my %ids        = map {$_=>{id=>"${_}_check"}} @track_labels;
+
       my @checkboxes = checkbox_group(-name       => 'label',
 				      -values     => \@track_labels,
 				      -labels     => \%labels,
 				      -defaults   => \@defaults,
 				      -onClick    => "gbTurnOff('$id');gbToggleTrack(this)",
+				      -attributes => \%ids,
 				      -override   => 1,
 				     );
       $table = $self->tableize(\@checkboxes);

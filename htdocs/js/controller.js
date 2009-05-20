@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.92 2009-05-20 20:36:20 lstein Exp $
+ $Id: controller.js,v 1.93 2009-05-20 21:29:40 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -641,19 +641,6 @@ var GBrowseController = Class.create({
         Controller.rerender_track(track_id,true);
       } // end onSuccess
     });
-  },
-
-  restrict_tracks:
-  function(restriction_data) {
-     new Ajax.Request(document.URL,{
-        method: 'post',
-	parameters:
-            restriction_data + '&' + 
-        $H({restrict_tracks: 1}).toQueryString(),
-      onSuccess: function(transport) {
-        Controller.update_sections(new Array(track_listing_id),'',1);
-      }
-     });
   },
 
   // Plugin Methods *************************************************

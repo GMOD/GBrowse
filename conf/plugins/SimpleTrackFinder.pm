@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::SimpleTrackFinder;
-# $Id: SimpleTrackFinder.pm,v 1.1 2009-05-20 20:36:20 lstein Exp $
+# $Id: SimpleTrackFinder.pm,v 1.2 2009-05-20 21:29:40 lstein Exp $
 use strict;
 use CGI qw(:standard *table);
 use base 'Bio::Graphics::Browser::Plugin';
@@ -72,12 +72,20 @@ Bio::Graphics::Browser::Plugin::SimpleTrackFinder - Limit list of tracks to thos
 
 In the appropriate gbrowse configuration file:
 
- track filter = SimpleTrackFinder
+ plugin = SimpleTrackFinder
 
 =head1 DESCRIPTION
 
-=head1 OPTIONS
+This plugin activates a panel above the tracks table that allows the
+user to filter the tracks according to a name or part of a name. The
+user is shown a textfield in which he or she can type a search
+string. When the user presses the "Configure" button, the tracks table
+is filtered to show only tracks that match the search string.
 
+Note that this only affects the display of track names. Tracks that
+were previously turned on will stay on, but their entries will be
+invisible in the tracks table. The user can still turn them off by
+clicking on the individual track's configure or (-) buttons.
 
 =head1 BUGS
 

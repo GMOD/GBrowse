@@ -353,6 +353,7 @@ sub wrap_rendered_track {
     my $buttons = $self->source->globals->button_url;
     my $plus    = "$buttons/plus.png";
     my $minus   = "$buttons/minus.png";
+    my $kill    = "$buttons/ex.png";
     my $share   = "$buttons/share.png";
     my $help    = "$buttons/query.png";
 
@@ -385,6 +386,8 @@ sub wrap_rendered_track {
     my $icon = $collapsed ? $plus : $minus;
     my $show_or_hide = $self->language->tr('SHOW_OR_HIDE_TRACK')
         || "Show or Hide";
+    my $kill_this_track = $self->language->tr('KILL_THIS_TRACK')
+	|| "Turn off this track.";
     my $share_this_track = $self->language->tr('SHARE_THIS_TRACK')
         || "Share This Track";
     my $citation = $self->plain_citation( $label, 512 );
@@ -439,6 +442,13 @@ sub wrap_rendered_track {
                 -onClick     => "collapse('$label')",
                 -style       => 'cursor:pointer',
                 -onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')",
+            }
+        ),
+	img({   -src         => $kill,
+                -id          => "${label}_kill",
+		-onClick     => "ShowHideTrack('$label',false)",
+                -style       => 'cursor:pointer',
+                -onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')",
             }
         ),
         img({   -src   => $share,

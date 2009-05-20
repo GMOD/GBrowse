@@ -342,7 +342,8 @@ sub plugin_setting {
   my $caller_package = caller();
   my ($last_name)    = $caller_package =~ /(\w+)$/;
   my $option_name    = "${last_name}:plugin";
-  $self->setting($option_name => @_);
+  return $self->label_options($option_name) unless @_;
+  return $self->setting($option_name => @_);
 }
 
 sub karyotype_setting {
@@ -791,6 +792,63 @@ sub add_dbid_to_feature {
     }
 }
 
+
+=head2 @labels = $source->data_source_to_label(@data_sources)
+
+Search through all stanzas for those with a matching "data source"
+option. Data sources look like this:
+
+ [stanzaLabel1]
+ data source = FlyBase
+
+ [stanzaLabel2]
+ data source = FlyBase
+
+Now searching for $source->data_source_to_label('FlyBase') will return
+"stanzaLabel1" and "stanzaLabel2" along with others that match. A
+track may have several data sources, separated by spaces.
+
+=cut
+
+
+sub data_source_to_label {
+    my $self = shift;
+    return $self->_secondary_key_to_label('data source',@_);
+}
+
+=head2 @labels = $source->track_source_to_label(@track_sources)
+
+Search through all stanzas for those with a matching "track source"
+option. Track sources look like this:
+
+ [stanzaLabel]
+ track source = UCSC EBI NCBI
+
+Now searching for $source->track_source_to_label('UCSC','EBI') will
+return "stanzaLabel" along with others that match. A track may have
+several space-delimited track sources.
+
+=cut
+sub track_source_to_label {
+    my $self = shift;
+    return $self->_secondary_key_to_label('track source',@_);
+}
+
+sub _secondary_key_to_label {
+    my $self   = shift;
+    my $field  = shift;
+    my $index  = $self->{'.secondary_key'};
+    if (!exists $index->{$field}) {
+	for my $label ($self->labels) {
+	    my @sources = shellwords $self->setting($label=>$field) or next;
+	    push @{$index->{$field}{lc $_}},$label foreach @sources;
+	}
+    }
+
+    my %seenit;
+    return grep {!$seenit{$_}++} 
+           map  {exists $index->{$field}{lc $_} ? @{$index->{$field}{lc $_}} : () } @_;
+}
 
 1;
 

@@ -15,7 +15,7 @@ use FindBin '$Bin';
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
-use constant TEST_COUNT => 78;
+use constant TEST_COUNT => 83;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {
@@ -155,7 +155,7 @@ ok($source->html1,'This is inherited');
 ok($source->html2,'This is overridden');
 
 # does the timeout calculation work?
-ok($source->global_time('cache time'),3600);
+ok($source->global_time('expire cache'),7200);
 
 # Do semantic settings work?
 ok($source->safe,1,'source should be safe');
@@ -239,6 +239,18 @@ ok($args[3]=~m!^/foo/bar!);  # old value cached
 $source->clear_cache;
 (undef,$adapter,@args) = $source->db_settings;
 ok($args[3]=~m!^/buzz/buzz!);  # old value cached
+
+# Test the data_source_to_label() and track_source_to_label() functions
+my @labels = sort $source->track_source_to_label('foobar');
+ok(scalar @labels, 0);
+@labels = sort $source->track_source_to_label('modENCODE');
+ok("@labels","CDS Genes ORFs");
+@labels    = sort $source->track_source_to_label('marc perry','nicole washington');
+ok("@labels","CDS ORFs");
+@labels    = sort $source->data_source_to_label('SGD');
+ok("@labels","CDS Genes ORFs");
+@labels    = sort $source->data_source_to_label('flybase');
+ok("@labels","CDS");
 
 exit 0;
 

@@ -565,20 +565,47 @@ sub galaxy_form {
     $html .= hidden(-name=>'m',-value=>'application/x-gff3');
     $html .= endform();
 
-# Copied from gbrowse 1.69 -- not sure if still appropriate
-#   my $plugin_action = param('plugin_action');
-#   if ($plugin_action eq $CONFIG->tr('Go') && param('plugin') eq 'invoke_galaxy') {
-#     $html .= script('document.galaxyform.submit()');
-#   }
-
   return $html;
 }
 
+sub render_track_filter {
+    my $self   = shift;
+    my $plugin = shift;
+
+    my $form         = $plugin->configure_form();
+    my $plugin_type  = $plugin->type;
+    my $action       = $self->tr('Configure_plugin');
+    my $name         = 'plugin:'.$plugin->name;
+
+    return
+ 	p({-id=>'track select'},
+	  start_form({-id      => 'track_filterform',
+		      -name    => 'configure_plugin',
+		      -onSubmit=> 'return false'}),
+	  $form,
+	  button(
+	      -name    => 'plugin_button',
+	      -value   => $self->tr('Configure_plugin'),
+	      -onClick => 'doPluginUpdate()',
+	  ),
+	  end_form(),
+	  script({-type=>'text/javascript'},
+		 "function doPluginUpdate() { Controller.reconfigure_plugin('$action',null,null,'$plugin_type',\$('track_filterform')) }")
+	);
+}
 
 # This surrounds the track table with a toggle
 sub render_toggle_track_table {
   my $self     = shift;
-  return $self->toggle('Tracks', $self->render_track_table());
+  my $html;
+
+  if (my $filter = $self->track_filter_plugin) {
+      $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
+							    style=>"text-indent:2em"},$self->render_track_filter($filter)));
+  }
+  $html .= $self->toggle('Tracks',$self->render_track_table);
+
+  return $html;
 }
 
 # this draws the various config options
@@ -596,6 +623,11 @@ sub render_track_table {
   warn "potential tracks = @labels" if DEBUG;
   my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
+
+  if (my $filter = $self->track_filter_plugin) {
+      eval {@labels    = $filter->filter_tracks(\@labels,$source)};
+      warn $@ if $@;
+  }
 
   # Sort the tracks into categories:
   # Overview tracks
@@ -1230,9 +1262,10 @@ sub plugin_menu {
   my $settings = $self->state;
   my $plugins  = $self->plugins;
 
-  my $labels = $plugins->menu_labels;
+  my $labels   = $plugins->menu_labels;
 
-  my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
+  my @plugins  = grep {$plugins->plugin($_)->type ne 'trackfilter'}  # track filter gets its own special position
+                 sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
 
   # Add plugin types as attribute so the javascript controller knows what to do
   # with each plug-in

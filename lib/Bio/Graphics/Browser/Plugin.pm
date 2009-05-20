@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.19 2009-01-30 22:06:19 lstein Exp $
+# $Id: Plugin.pm,v 1.20 2009-05-20 20:36:20 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -269,9 +269,10 @@ values.
 
 =item $browser_config = $self->browser_config
 
-This method returns a copy of the Bio::Graphics::Browser object that
-drives gbrowse.  This object allows you to interrogate (and change!)
-the values set in the current gbrowse configuration file.
+This method returns a copy of the Bio::Graphics::Browser::DataSource
+object that drives gbrowse.  This object allows you to interrogate
+(and change!)  the values set in the current gbrowse configuration
+file.
 
 The recommended use for this object is to recover plugin-specific
 settings from the gbrowse configuration file.  These can be defined by
@@ -290,8 +291,8 @@ You can now access these settings from within the plugin by using the
 following idiom:
 
    my $browser_config = $self->browser_config; 
-   my $traverse_isa = $browser_config->plugin_setting('traverse_isa');
-   my $server       = $browser_config->plugin_setting('use_server');
+   my $traverse_isa   = $browser_config->plugin_setting('traverse_isa');
+   my $server         = $browser_config->plugin_setting('use_server');
 
 This facility is intended to be used for any settings that should not
 be changed by the end user.  Persistent user preferences should be

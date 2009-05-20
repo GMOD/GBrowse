@@ -141,6 +141,10 @@ END
 
    TRACKS   => 'Tracks',
 
+   TRACK_SELECT   => 'Search for Specific Tracks',
+
+   TRACK_NAME     => 'Track name',
+
    EXTERNAL_TRACKS => '<i>External tracks italicized</i>',
 
    OVERVIEW_TRACKS => '<sup>*</sup>Overview track',
@@ -192,6 +196,8 @@ END
    SET_OPTIONS => 'Configure tracks...',
 
    CLEAR_HIGHLIGHTING => 'Clear highlighting',
+
+   CLEAR       => 'Clear',
 
    UPDATE      => 'Update',
 

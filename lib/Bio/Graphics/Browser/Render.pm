@@ -583,6 +583,14 @@ sub asynchronous_event {
 	return (302,undef,$self->image_link($self->state,$format));
     }
 
+# obsolete
+#     # update the track restriction policy
+#     if (param('restrict_tracks')) {
+# 	$settings->{restrict_tracks} = param('track_name_filter');
+# 	warn "restricting tracks to $settings->{restrict_tracks}";
+#         return (204,'text/plain',undef);
+#     }
+
     # autocomplete support
     if (my $match  = param('autocomplete')) {
 	my $search = $self->get_search_object;
@@ -762,9 +770,10 @@ sub render {
 
   # NOTE: these handle_* methods will return true
   # if they want us to exit before printing the header
-  $self->handle_gff_dump()  && return;
-  $self->handle_plugins()   && return;
-  $self->handle_downloads() && return;
+  $self->handle_track_dump() && return;
+  $self->handle_gff_dump()   && return;
+  $self->handle_plugins()    && return;
+  $self->handle_downloads()  && return;
 
   $self->render_header();
   $self->render_body();
@@ -1237,8 +1246,8 @@ sub init_plugins {
 		      $self->language,
 		      $self->session);
   $self->plugins($plugins);
-
   $self->load_plugin_annotators();
+
   $plugins;
 }
 
@@ -1311,6 +1320,49 @@ sub handle_gff_dump {
 	$dumper->print_gff3();
     }
 
+    return 1;
+}
+
+sub track_filter_plugin {
+    my $self = shift;
+    my $plugins  = $self->plugins;
+    my ($filter) = grep {$_->type eq 'trackfilter'} $plugins->plugins;
+    return $filter;
+}
+
+# track dumper
+sub handle_track_dump {
+    my $self   = shift;
+    my $source = $self->data_source;
+
+    param('show_tracks') or return;
+    print header('text/plain');
+    
+    my (%ts,%ds,@labels_to_dump);
+    if (my @labels = $source->track_source_to_label(shellwords param('ts'))) {
+	%ts     = map {$_=>1} @labels;
+    }
+    if (my @labels = $source->data_source_to_label(shellwords param('ds'))) {
+	%ds     = map {$_=>1} @labels;
+    }
+    if (param('ts') && param('ds')) { # intersect
+	@labels_to_dump = grep {$ts{$_}} keys %ds;
+    } elsif (param('ts') or param('ds')) { #union
+	@labels_to_dump = (keys %ts,keys %ds);
+    } else {
+	@labels_to_dump = $source->labels;
+    }
+
+    print '#',join("\t",qw(TrackLabel DataSource TrackSource Description)),"\n";
+    for my $l (@labels_to_dump) {
+	next if $l =~ /_scale/;
+	next if $l =~ /(plugin|file):/;
+	print join("\t",
+		   $l,
+		   $source->setting($l=>'data source'),
+		   $source->setting($l=>'track source'),
+		   $source->setting($l=>'key')),"\n";
+    }
     return 1;
 }
 
@@ -1997,8 +2049,19 @@ sub update_tracks {
   my $self  = shift;
   my $state = shift;
 
-  $self->set_tracks($self->split_labels(param('label'))) if param('label');
-  $self->set_tracks($self->split_labels(param('t')))     if param('t');
+  # selected tracks can be set by the 'label' parameter
+  if (my @l = param('label')) {
+      $self->set_tracks($self->split_labels(@l));
+  } #... the 't' parameter
+  elsif (my @t = param('t')) {
+      $self->set_tracks($self->split_labels(@t));
+  } #... the 'ds' (data source) parameter
+  elsif (my @ds = shellwords param('ds')) {
+      $self->set_tracks($self->data_source->data_source_to_label(@ds));
+  } #... or the 'ts' (track source) parameter
+  elsif (my @ts = shellwords param('ts')) {
+      $self->set_tracks($self->data_source->track_source_to_label(@ts));
+  }
 
   if (my @selected = $self->split_labels(param('enable'))) {
     $state->{features}{$_}{visible} = 1 foreach @selected;

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Synteny;
 
-# $Id: Synteny.pm,v 1.1.2.7 2009-05-21 00:54:33 sheldon_mckay Exp $
+# $Id: Synteny.pm,v 1.1.2.8 2009-05-21 01:00:31 sheldon_mckay Exp $
 
 use strict;
 
@@ -381,6 +381,7 @@ sub whole_segment {
   else {
     my $segments = $self->features2segments([$segment]);
     $segment  = $segments->[0];  
+    $factory  = $segment->factory;
   }
 
       

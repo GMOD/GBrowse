@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Synteny;
 
-# $Id: Synteny.pm,v 1.1.2.6 2009-03-09 10:17:17 sheldon_mckay Exp $
+# $Id: Synteny.pm,v 1.1.2.7 2009-05-21 00:54:33 sheldon_mckay Exp $
 
 use strict;
 
@@ -374,8 +374,16 @@ sub whole_segment {
   die ('No Segment') unless $self->current_segment;
   return $self->{whole_segment} if $self->{whole_segment};
   my $segment = $self->current_segment;
-  my $factory = $segment->factory;
+  my $factory;
+  unless ($segment->can('factory')) {
+    $factory = $segment->factory;
+  }
+  else {
+    my $segments = $self->features2segments([$segment]);
+    $segment  = $segments->[0];  
+  }
 
+      
   # the segment class has been deprecated, but we still must support it
   my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
   ( $self->{whole_segment} ) = $factory->segment(

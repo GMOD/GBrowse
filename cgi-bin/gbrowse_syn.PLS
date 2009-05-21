@@ -41,7 +41,7 @@ $startperl -w
 \$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
 #
 ###################################################################
-\$VERSION   = 0.01;
+\$VERSION   = $OPTIONS{VERSION};
 \$BIOGRAPHICS_VERSION   = $OPTIONS{BIOGRAPHICS_VERSION};
 
 
@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.17 2009-03-09 10:17:17 sheldon_mckay Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.18 2009-05-21 15:14:20 sheldon_mckay Exp $ 
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -65,10 +65,9 @@ use Bio::Graphics::Browser::Synteny;
 use Bio::Graphics::Browser::PageSettings;
 use Bio::DB::GFF::SyntenyIO;
 use Bio::DB::GFF::SyntenyBlock;
+use Text::Shellwords 'shellwords';
 use List::Util qw/min max sum/;
 use Digest::MD5 'md5_hex';
-
-use CGI::Pretty 'html3';
 
 use Data::Dumper;
 
@@ -636,17 +635,17 @@ sub draw_image {
       my ($feature,$fname) = _type_from_box($box);
       #next unless $feature =~ /^match(_part)?$/;
       my @rect = ($left+$box->[1],$top+$box->[2],$left+$box->[3],$top+$box->[4]);
-      if ($feature =~ /^match(_part)?$/) {                                                                                                                                                                         
-        $panel_boxes{$fname} = \@rect;                                                                                                                                                                               
-      }                                                                                                                                                                                                            
-      else {                                                                                                                                                                                                       
+      if ($feature =~ /^match(_part)?$/) {
+        $panel_boxes{$fname} = \@rect;
+      }
+      else {
         push @map_items, Area( {
 	  shape  => 'rect',
 	  coords => join(',',@rect),
 	  %{$box->[5]}});
       }
       $tcolors{$fname} = $span{$key}{tcolor};
-      # for debugging
+
       $gd->rectangle(@rect,$black) if DEBUG;
     }
   }
@@ -657,6 +656,7 @@ sub draw_image {
   $gc{3} = $gd->colorResolveAlpha(10,10,255,100);
   my $thickness = 3;
 
+  my $grid_upper;
   for my $feature (keys %ref_boxes) { 
     next unless defined $ref_boxes{$feature} && defined $panel_boxes{$feature};
     my $hit = $CONF->name2hit($feature);
@@ -674,7 +674,8 @@ sub draw_image {
       $upper = $py2 < $ry1;
       ($rx1,$rx2) = ($rx2,$rx1) if $flip;
 
-      if ($upper) { 
+      if ($upper) {
+	$grid_upper ||= $ry2;
 	$poly->addPt($px1,$py2);
 	$poly->addPt($px2,$py2);
 	$poly->addPt($rx2,$ry1);
@@ -691,11 +692,14 @@ sub draw_image {
     }
   }
 
+  my %within_a_pixel;
   # reloop to avoid mysterious alpha-channel interaction
   # between shading and grid-lines
   for my $feature (keys %ref_boxes) {
     next unless defined $ref_boxes{$feature} && defined $panel_boxes{$feature};
     next if $feature =~ /aggregate/;
+    my $exact = $CONF->setting('grid coordinates');    
+    $exact = $exact && $exact eq 'exact';
 
     next unless my $hit = $CONF->name2hit($feature);
 
@@ -723,6 +727,7 @@ sub draw_image {
     my $tidx = 0;
     for my $pair (@grid_coords) {
       my ($x1,$x2) = @$pair;
+      $grid_line{$x1}{thickness} = 1 if $exact;
       unless ($grid_line{$x1}{thickness}) {
 	$thickness = ++$tidx == 5 ? 3 : 1;
 	$tidx = 0 if $tidx == 5;
@@ -748,13 +753,16 @@ sub draw_image {
   
   
   for my $g (keys %grid_line) {
+    # skip the line if there is one already drawn
+    # a pixel to the left or right;
+    next if $within_a_pixel{$g-1} || $within_a_pixel{$g+1} || $within_a_pixel{$g};
+    $within_a_pixel{$g} = 1;
     my $thickness = $grid_line{$g}{thickness};
     $gd->setThickness($thickness);
-    $grid_line{$g}{top}    ||= $ref_top;
+    $grid_line{$g}{top}    ||= $grid_upper;#$ref_top;
     $grid_line{$g}{bottom} ||= $ref_bottom;
     $gd->line($g,$grid_line{$g}{top},$g,$grid_line{$g}{bottom},$gc{$thickness});
   }
-
   
   my $url = $SCONF->generate_image($gd);
   
@@ -903,7 +911,7 @@ sub landmark2segment {
 
   # Did not find our segment?  Try the other species
   if (!$segment) {
-    for my $src (@{$settings->{species}}) {
+    for my $src (grep {defined $_} @{$settings->{species}}) {
       next if $src eq $source;
       $segment = _do_search($name,$src) if $name;
       if ($segment) {
@@ -927,7 +935,7 @@ sub landmark2segment {
 
 sub _do_search {
   my ($landmark,$src) = @_;
-  my $dsn = $MAP->{$src}{db} or die "no database found for $src\n".Dumper($MAP);
+  my $dsn = $MAP->{$src}{db} or return undef;
   $SCONF->source($dsn);
   my $db = open_database();
   my ($segment) = grep {$_} $SCONF->name2segments($landmark,$db);
@@ -969,8 +977,6 @@ sub add_hit_to_ff {
 					    -type     => 'match',
 					    -name     => $hit->name,
 					    -seq_id   => $seqid,
-					    #-start    => $start,
-					    #-end      => $end,
 					    -strand   => $strand eq '-' ? -1 : 1,
 					    -configurator => $ff
 					    );
@@ -1365,7 +1371,10 @@ sub remap_coordinates {
   return unless $hit->start < $segment->start || $hit->end > $segment->end;
 
   if ($hit->start < $segment->start) {
-    my ($new_start,$new_tstart) = $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$segment->start);
+    my ($new_start,$new_tstart) = $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$segment->start,1000);
+    unless ($new_start) {
+      ($new_start,$new_tstart) = guess_nearest_position_match($hit,$segment->start,$flip);
+    }
     if ($new_start) {
       my $hsp = $hit->parts->[0];
       $hsp->start($new_start);
@@ -1373,7 +1382,10 @@ sub remap_coordinates {
     }
   }
   if ($hit->end > $segment->end) {
-    my ($new_end,$new_tend) = $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$segment->end);
+    my ($new_end,$new_tend) = $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$segment->end,1000);
+    unless ($new_end) {
+      ($new_end,$new_tend) = guess_nearest_position_match($hit,$segment->end,$flip);
+    }
     if ($new_end) {
       my $hsp = $hit->parts->[-1];
       $hsp->end($new_end);
@@ -1382,6 +1394,22 @@ sub remap_coordinates {
   }
   $hit = adjust_container($hit);
 }
+
+# If we can't get a mapped coordinate, interpolate based
+# on relative hit lengths
+sub guess_nearest_position_match { 
+  my $hit   = shift;
+  my $coord = shift;
+  my $flip  = shift;
+  my $hlen = $hit->end - $hit->start;
+  my $tlen = $hit->tend - $hit->tstart;
+  my $lratio = $tlen/$hlen;
+  my $hoffset = $coord - $hit->start;
+  my $toffset = $lratio * $hoffset;
+  my $WAG = int($flip ? $hit->tend - $toffset : $hit->tstart + $toffset);
+  return ($coord,$WAG);
+}
+
 
 # take a vote to flip the panel: the majority strand wins
 sub panel_is_flipped { 
@@ -1396,18 +1424,18 @@ sub panel_is_flipped {
 # map the reference and target coordinates to pixel locations
 # to draw gridlines
 sub locations2pixels {
-  my ($loc,$hit,$refbox,$hitbox,$flip) = @_;
+  my ($loc,$hit,$refbox,$hitbox,$flip,$loc2) = @_;
+  #my $reversed = $hit->strand ne $hit->tstrand;
 
-  my $reversed = $hit->start ne $hit->tstrand;
-
-  # round to the nearest 100
-  $loc = nearest(100,$loc);
-
-  my ($ref_location,$hit_location) = $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$loc);
+  my ($ref_location,$hit_location) = $loc && $loc2 ? ($loc,$loc2) : $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$loc);
+  unless ($ref_location && $hit_location) {
+    ($ref_location,$hit_location) = guess_nearest_position_match($hit,$loc,$flip);
+  }
   $ref_location && $hit_location || return 0;
 
   $ref_location -= $hit->start if $ref_location;
   $hit_location -= $hit->tstart if $hit_location;
+
   my $ref_length = $hit->end - $hit->start;
   my $hit_length = $hit->tend - $hit->tstart;
   my $ref_pixels = $refbox->[2] - $refbox->[0];
@@ -1417,7 +1445,7 @@ sub locations2pixels {
   my $ref_pixel = $refbox->[0] + int($ref_location/$ref_conversion + 0.5);
   my $hit_pixel;
 
-  if ($flip && $reversed) {
+  if ($flip) {# && $reversed) {
     $hit_pixel = $hitbox->[2] - int($hit_location/$hit_conversion + 0.5);
   }
   else {
@@ -1428,11 +1456,19 @@ sub locations2pixels {
   $hit_pixel = 0 if $hit_pixel < 0;
   $hit_pixel = $hitbox->[0] if $hit_pixel < $hitbox->[0];
   $hit_pixel = $hitbox->[2] if $hit_pixel > $hitbox->[2];
+
   return [$ref_pixel,$hit_pixel];
 }
 
 sub grid_coords {
   my ($hit,$refbox,$hitbox,$flip,$segment) = @_;
+
+  # exact coordinates if configured
+  my $gcoords = $CONF->setting('grid coordinates') || 'AUTO';
+  if ($gcoords eq 'exact') {
+    return exact_grid_coords(@_);
+  } 
+
   my $step = grid_step($segment) or return;
   my $start = nearest(100,$hit->start);
   $start += $CONF->page_settings("edge") ? $step : 100;
@@ -1448,14 +1484,60 @@ sub grid_coords {
   return @pairs;
 }
 
+# Do not round off or scale, use the grid as provided
+sub exact_grid_coords {
+  my ($hit,$refbox,$hitbox,$flip,$segment) = @_;
+
+  my $seq_pairs = [$SYNTENY_IO->grid_coords_by_range($hit,$page_settings->{search_src})];
+  $seq_pairs = reorder_pairs($flip,$seq_pairs,1);
+
+  my @pairs;
+  for my $s (@$seq_pairs) {
+    my $pair = locations2pixels($s->[0],$hit,$refbox,$hitbox,$flip,$s->[1]);
+    push @pairs, $pair if $pair;
+  }
+
+  return @pairs;
+}
+
+# unflip grid-lines for flipped opposite strand panels
+sub reorder_pairs {
+  my $flip  = shift;
+  my $pairs = shift;
+  my $force_even = shift;
+  
+  return $pairs if @$pairs > 1 && @$pairs % 2 && !$force_even;
+  return [] if @$pairs == 1;
+  return $pairs if !$flip;
+
+  if (@$pairs % 2) {
+    shift @$pairs;
+  }
+
+  my $new_pairs = [];
+  while (my $p1 = shift @$pairs) {
+    my $p2 = shift @$pairs;
+    push @$new_pairs, [$p1->[0],$p2->[1]];
+    push @$new_pairs, [$p2->[0],$p1->[1]];
+  }
+  return $new_pairs;
+}
+
+
 # will become more sophisticated ?
 sub grid_step {
   my $segment = shift;
   return nearest(100,int($segment->length/75)) || 100;
 }
 
+sub my_path_info {
+  my (undef,$path) = Bio::Graphics::Browser::Util::_broken_apache_hack();
+  my ($src) = $path =~ /([^\/]+)/;
+  return $src;
+}
+
 sub page_settings {
-  my $source = $CONF->source;
+  my $source = param('src') || param('source') || my_path_info();
   if (!$source) {
     ($source) = $CONF->sources;
   }
@@ -1612,7 +1694,3 @@ sub wiki_help {
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
-
-
-
-

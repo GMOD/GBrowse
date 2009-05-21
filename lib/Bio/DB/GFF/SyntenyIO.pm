@@ -35,6 +35,7 @@ sub dbh { shift->{dbh} }
 sub get_nearest_position_match {
   my $self  = shift;
   my ($hit,$src,$pos,$range) = @_;
+
   my @hits = ref $hit && $hit->parts > 1 ? @{$hit->parts} : ($hit);
   $range ||= POSRANGE;
   
@@ -56,6 +57,30 @@ sub get_nearest_position_match {
   }
 }
 
+# a method to get a range of exact grid coordinates
+# for synteny data with sparse gridlines that are
+# not suitable for rounding off to the nearest multiple of 10
+sub grid_coords_by_range {
+  my $self  = shift;
+  my ($hit,$src) = @_;
+
+  my @hits = ref $hit && $hit->parts > 1 ? @{$hit->parts} : ($hit);
+  my @pairs;
+  my $sth = $self->position_handle;
+
+  for my $h (@hits) {
+    my $hname = ref $h ? $h->name : $h;
+    $hname =~ s/r|\.\d+//g;
+    $sth->execute($hname,$src,$hit->start,$hit->end);
+    my $pairs = $sth->fetchall_arrayref;
+    push @pairs, @$pairs;
+  }
+  
+  return @pairs;
+}
+
+
+
 sub position_handle {
   my $self = shift;
 
@@ -64,8 +89,8 @@ sub position_handle {
 select pos1,pos2 from map
 WHERE hit_name = ?
 AND src1 = ?
-AND pos1 > ?
-AND pos1 < ?
+AND pos1 >= ?
+AND pos1 <= ?
 END
 ;
     $self->{position_query} = $self->dbh->prepare_cached($query) or die $self->dbh->errstr;

@@ -320,13 +320,13 @@ sub asynchronous_event {
         return ( 200, 'text/html', $html );
     }
 
-    if ( my $track_name = param('select_track_features') ) {
-        my $html = $self->select_track_features($track_name);
+    if ( my $track_name = param('select_subtracks') ) {
+        my $html = $self->select_subtracks($track_name);
         return ( 200, 'text/html', $html );
     }
 
-    if ( my $track_name = param('filter_track') ) {
-        my $html = $self->filter_track_features($track_name);
+    if ( my $track_name = param('filter_subtrack') ) {
+        my $html = $self->filter_subtrack($track_name);
         return ( 200, 'application/json', {} );
     }
 
@@ -582,14 +582,6 @@ sub asynchronous_event {
     if (my $format = param('make_image')) {
 	return (302,undef,$self->image_link($self->state,$format));
     }
-
-# obsolete
-#     # update the track restriction policy
-#     if (param('restrict_tracks')) {
-# 	$settings->{restrict_tracks} = param('track_name_filter');
-# 	warn "restricting tracks to $settings->{restrict_tracks}";
-#         return (204,'text/plain',undef);
-#     }
 
     # autocomplete support
     if (my $match  = param('autocomplete')) {
@@ -1233,6 +1225,7 @@ sub get_search_object {
 # ========================= plugins =======================
 sub init_plugins {
   my $self        = shift;
+
   my $source      = $self->data_source->name;
   my @plugin_path = shellwords($self->data_source->globals->plugin_path);
 
@@ -1951,9 +1944,10 @@ sub update_state_from_cgi {
   $self->update_galaxy_url($state);
 }
 
-sub filter_track_features {
+sub filter_subtrack {
     my $self        = shift;
     my $label       = shift;
+
     my %filters     = map {$_=>1} param('select');
     my $state       = $self->state;
     my ($method,@values) = shellwords $self->data_source->setting($label=>'select');
@@ -1985,10 +1979,10 @@ sub track_config {
   croak "track_config() should not be called in parent class";
 }
 
-sub select_track_features {
+sub select_subtracks {
   my $self       = shift;
   my $track_name = shift;
-  croak "select_track_features() should not be called in parent class";
+  croak "select_subtracks() should not be called in parent class";
 }
 
 sub share_track {

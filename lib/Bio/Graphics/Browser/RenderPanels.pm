@@ -233,10 +233,10 @@ sub make_requests {
     my %d;
     foreach my $label ( @{ $labels || [] } ) {
         my @track_args = $self->create_track_args( $label, $args );
+	my (@filter_args,@featurefile_args);
 
-	my $filter     =  $settings->{features}{$label}{filter};
-	my @extra_args = grep {$filter->{values}{$_}}
-	                     keys %{$filter->{values}};
+	my $filter     = $settings->{features}{$label}{filter};
+	@filter_args   = %{$filter->{values}} if $filter->{values};
 	my $ff_error;
 
         # get config data from the feature files
@@ -250,6 +250,7 @@ sub make_requests {
 		    -cache_base => $base,
 		    -panel_args => \@panel_args,
 		    -track_args => \@track_args,
+		    -extra_args => [ @cache_extra, @filter_args, @featurefile_args, $label ],
 		    );
 		$cache_object->flag_error("Could not fetch data for $track");
 		$d{$track} = $cache_object;
@@ -257,16 +258,17 @@ sub make_requests {
 	    }
 
 	    next unless $label =~ /:$args->{section}$/;
-	    @extra_args =  eval {
+	    @featurefile_args =  eval {
 		$feature_file->types, $feature_file->mtime;
 	    };
 	}
+
 	warn "[$$] creating CachedTrack for $label" if DEBUG;
         my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
             -cache_base => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
-            -extra_args => [ @cache_extra, @extra_args, $label ],
+            -extra_args => [ @cache_extra, @filter_args, @featurefile_args, $label ],
 	    -cache_time => $settings->{cache} 
 			    ? $source->cache_time 
 			    : 0
@@ -470,7 +472,7 @@ sub wrap_rendered_track {
         )
 	);
 
-    push @images,$self->select_features_menu($label);
+    push @images,$self->select_features_menu($label,\$title);
 
     my $titlebar = span(
         {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
@@ -1120,14 +1122,10 @@ sub run_local_requests {
     my @ordinary_tracks    = grep {!$feature_files->{$_}} @labels_to_generate;
     my @feature_tracks     = grep {$feature_files->{$_} } @labels_to_generate;
 
+    # create all the feature filters for each track
+    my $filters = $self->generate_filters($settings,$source,\@labels_to_generate);
+
     # == create whichever panels are not already cached ==
-    my %filters = map {
-	my %conf =  $source->style($_);
-	$conf{'-filter'} ? ($_ => $conf{'-filter'})
-	               : $self->generate_filter($settings,$_)
-    } @labels_to_generate;
-
-
     for my $label (@labels_to_generate) {
 
         # this shouldn't happen, but let's be paranoid
@@ -1179,7 +1177,7 @@ sub run_local_requests {
 	    $self->add_features_to_track(
 		-labels    => [ $label, ],
 		-tracks    => { $label => $track },
-		-filters   => \%filters,
+		-filters   => $filters,
 		-segment   => $segment,
 		-fsettings => $settings->{features},
 		);
@@ -1201,8 +1199,10 @@ sub run_local_requests {
 }
 
 sub select_features_menu {
-    my $self  = shift;
-    my $label = shift;
+    my $self     = shift;
+    my $label    = shift;
+    my $titleref = shift;
+
     my $source = $self->source;
     my $settings=$self->settings;
 
@@ -1212,27 +1212,34 @@ sub select_features_menu {
     my $buttons = $self->source->globals->button_url;
     my $escaped_label = CGI::escape($label);
 
-    my $filter = $settings->{features}{$label}{filter}{values};
+    my $filter = $settings->{features}{$label}{filter};
+
     $filter->{values} ||= {map {$_=>1} @values};
     $filter->{method} ||= $method;
 
+
     my @showing = grep {
- 	$filter->{$_}
+ 	$filter->{values}{$_}
     } @values;
 
     my @hidden = grep {
-	!$filter->{$_}
+	!$filter->{values}{$_}
     } @values;
+
+    # modify the title to show that some subtracks are hidden
+    $$titleref .= " ".$self->language->tr('SHOWING_SUBTRACKS',
+					  scalar(@showing),
+					  @showing+@hidden);
 
     @showing = $self->language->tr('NO_TRACKS') unless @showing;
     @hidden  = $self->language->tr('NO_TRACKS') unless @hidden;
 
     my $select_features = $self->language->tr('SUBTRACKS_SHOWN',
 					      "@showing","@hidden");
-    $select_features   .= '<br>'.$self->language->tr('CONFIGURE_THIS_TRACK');
+    $select_features   .= '<br>'.$self->language->tr('SELECT_SUBTRACKS');
 
     my $select_features_click
-	= "GBox.showTooltip(event,'url:?select_track_features=$escaped_label',1,500,500)";
+	= "GBox.showTooltip(event,'url:?select_subtracks=$escaped_label',1,500,500)";
 
     my $menu    = "$buttons/menu.png";
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
@@ -1247,18 +1254,40 @@ sub select_features_menu {
         );
 }
 
-sub generate_filter {
+sub generate_filters {
     my $self     = shift;
-    my $settings = shift;
-    my $label    = shift;
-    my $filter = $settings->{features}{$label}{filter} or return;
-    my $method = $filter->{method};
+    my ($settings,$source,$label_list) = @_;
+    my %filters;
+    for my $l (@$label_list) {
+	my %conf =  $source->style($l);
+
+	if (my $filter = $conf{'-filter'}) {
+	    $filters{$l} = $filter;
+	}
+
+	else {
+	    $filters{$l} = $self->subtrack_select_filter($settings,$l);
+	}
+    }
+    return \%filters;
+}
+
+sub subtrack_select_filter {
+    my $self     = shift;
+    my ($settings,$label) = @_;
+
+    my $filter   = $settings->{features}{$label}{filter} or return;
+    my $method   = $filter->{method};
     return unless $method;
 
     my $code;
     my @values = grep {$filter->{values}{$_}} keys %{$filter->{values}};
-    my $regex  = join '|',@values;
-    $code .= "return 1 if \$f->$method =~ /($regex)/i;\n";
+    if (@values) {
+	my $regex  = join '|',@values;
+	$code .= "return 1 if \$f->$method =~ /($regex)/i;\n";
+    } else {
+	$code .= "return;\n";
+    }
     return unless $code;
     my $sub = <<END;
 sub {
@@ -1267,9 +1296,10 @@ sub {
     return;
 }
 END
+
     my $cref = eval $sub;
     warn "failed compiling $sub: ",$@ if $@;
-    return ($label => $cref);
+    return $cref;
 }
 
 sub add_features_to_track {

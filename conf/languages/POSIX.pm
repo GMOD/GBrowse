@@ -169,6 +169,8 @@ END
 
    CONFIGURE_TRACKS   => 'Configure tracks...',
 
+   SELECT_SUBTRACKS   => 'Click to select subtracks...',
+
    EDIT       => 'Edit File...',
 
    DELETE     => 'Delete File',
@@ -452,7 +454,9 @@ END
 
  SUBTRACKS_SHOWN    => '<b>Showing:</b> %s<br><b>Hidden:</b> %s',
 
- SHOW_SUBTRACKS     => '<b>Show subtracks</b>',
+ SHOW_SUBTRACKS     => '<b>Select subtracks</b>',
+
+ SHOWING_SUBTRACKS  => '(<i>Showing %d of %d subtracks</i>)',
 
  SHARE_THIS_TRACK   => '<b>Share this track</b>',
 

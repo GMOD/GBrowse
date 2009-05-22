@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Plugin::FilterTest;
 
-# $Id: FilterTest.pm,v 1.2 2004-02-03 22:40:35 marclogghe Exp $
+# $Id: FilterTest.pm,v 1.3 2009-05-22 21:37:09 lstein Exp $
 # Filter plugin to filter features from the ORFs track
 
 use strict;
@@ -54,45 +54,30 @@ sub description
       . p("This plugin was written by Marc Logghe.");
 }
 
-sub filter
-{
-    my $self    = shift;
-    my $config  = $self->configuration;
-    my $browser = $self->browser_config
-      or return;    # need a browser object for filtering !
+sub filter {
+    my $self  = shift;
+    my $track = shift;  # track label
+    my $key   = shift;
 
-    my $feature_file = $browser->config;
-    my $name         = $self->name;
+    my $config  = $self->configuration;
+    my $source  = $self->browser_config;
+
+    return unless $source;
+    return unless $track eq $self->name;
+    return unless $config->{filter_on} eq 'yes';
     my $value        = $config->{filter_value};
 
-    # save the orignal key
-    my $key = $browser->setting( $name => 'key' );
-    $self->{original_key} ||= $key;
+    # pass closure to browser object for filtering
+    my $filter = eval "sub { $FILTERS[$config->{filter}][1] }";
 
-    if ( $config->{filter_on} eq 'yes' )
-    {
-        # pass closure to browser object for filtering
-        my $filter = eval "sub { $FILTERS[$config->{filter}][1] }";
-        $feature_file->set( $name, filter => $filter );
-
-        # change key so that filtering (or failing) is clearly indicated
-        # also remove value in key when it is not needed for filtering
-        my $new_key =
-          $@ ? "$self->{original_key} (filter incorrect)"
-          : ( $FILTERS[ $config->{filter} ][1] =~ m/\$value/
-            ? "$self->{original_key} ($FILTERS[$config->{filter}][0] $value)"
-            : "$self->{original_key} ($FILTERS[$config->{filter}][0])" );
-        $feature_file->set( $name, key => $new_key );
-    }
-    else
-    {
-        # put original key back if changed
-        $feature_file->set( $name, key => $self->{original_key} )
-          if ( $self->{original_key} ne $key );
-
-        # set filtering off
-        $feature_file->set( $name, filter => undef );
-    }
+    warn $@ if $@;
+    return $filter,"$key (filter incorrect)" if $@;  # error occurred
+    
+    my $value   = $config->{filter_value};
+    my $new_key = $FILTERS[ $config->{filter} ][1] =~ m/\$value/
+	          ? "$key ($FILTERS[$config->{filter}][0] $value)"
+                  : "$key ($FILTERS[$config->{filter}][0])" ;
+    return $filter,$new_key;
 }
 
 sub config_defaults

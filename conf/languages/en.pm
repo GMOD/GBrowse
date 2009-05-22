@@ -446,7 +446,7 @@ END
 
  SUBTRACKS_SHOWN    => '<b>Showing:</b> %s<br><b>Hidden:</b> %s',
 
- SHOW_SUBTRACKS     => '<b>Show subtracks</b>',
+ SHOW_SUBTRACKS     => '<b>Select subtracks</b>',
 
  SHARE_THIS_TRACK   => '<b>Share this track</b>',
 

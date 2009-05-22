@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.12 2009-05-20 20:36:20 lstein Exp $
+#  $Id: PluginSet.pm,v 1.13 2009-05-22 21:37:09 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -93,13 +93,11 @@ sub configure {
 
       # and tell the plugin about it
       $p->configuration($config);
-      $p->filter if ($p->type eq 'filter');
 
       # if there are any CGI parameters from the
       # plugin's configuration screen, set it here
       if (my @params = grep {/^$name\./} param()) {
 	  $p->reconfigure unless param('plugin_action') eq $language->tr('Cancel');
-	  $p->filter if ($p->type eq 'filter');
 
 	  # turn the plugin on
 	  my $setting_name = 'plugin:'.$p->name;
@@ -109,6 +107,32 @@ sub configure {
 
     warn "$name: $@" if $@;
   }
+
+
+  $self->set_filters();  # allow filter plugins to adjust the data source
+}
+
+sub set_filters {
+    my $self   = shift;
+    my $source = $self->config;
+
+    my @labels = grep {!/^_/} $source->labels;
+    for my $p ($self->plugins) {
+	next unless $p->type eq 'filter';
+	for my $l (@labels) {
+	    $self->{'.ok'}{$l}    ||= $source->setting($l,'key');    # remember this!
+	    $self->{'.of'}{$l}    ||= $source->setting($l,'filter'); # remember this!
+	    
+	    if (my ($filter,$new_key) = $p->filter($l,$self->{'.ok'}{$l})) {
+		$source->set($l, filter => $filter);
+		$source->set($l, key    => $new_key);
+	    }
+	    else {
+		$source->set($l, key    => $self->{'.ok'}{$l}) if exists $self->{'.ok'}{$l};
+		$source->set($l, filter => $self->{'.of'}{$l}) if exists $self->{'.of'}{$l};
+	    }
+	}
+    }
 }
 
 sub annotate {
@@ -173,7 +197,9 @@ sub menu_labels {
   my %verbs = (dumper       => $lang->tr('Dump'),
 	       finder       => $lang->tr('Find'),
 	       highlighter  => $lang->tr('Highlight'),
-	       annotator    => $lang->tr('Annotate'));
+	       annotator    => $lang->tr('Annotate'),
+	       filter       => $lang->tr('Filter'),
+      );
   my %labels = ();
 
   # Adjust plugin menu labels
@@ -189,9 +215,7 @@ sub menu_labels {
       $labels{$_} = $verbs{$plugins->{$_}->type} ||
         ucfirst $plugins->{$_}->type;
     }
-    my $name = $plugins->{$_}->type eq 'filter' ?  
-               $config->setting($plugins->{$_}->name => 'key') : 
-               $plugins->{$_}->name;
+    my $name = $plugins->{$_}->name;
     $labels{$_} .= " $name";
     $labels{$_} =~ s/^\s+//;
   }

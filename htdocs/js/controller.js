@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.94 2009-05-22 14:33:38 lstein Exp $
+ $Id: controller.js,v 1.95 2009-05-22 21:37:09 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -628,13 +628,13 @@ var GBrowseController = Class.create({
 
   },
 
-  filter_track:
+  filter_subtrack:
   function(track_id, form_element) {
 
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
-            filter_track:  track_id,
+            filter_subtrack:  track_id,
           }).toQueryString(),
       onSuccess: function(transport) {
         Balloon.prototype.hideTooltip(1);
@@ -674,7 +674,11 @@ var GBrowseController = Class.create({
               Controller.rerender_track(gbtrack.track_id,true);
             });
         }
-        else if (plugin_type == 'filter' || plugin_type == 'highlighter'){
+        else if (plugin_type == 'filter') {
+          Controller.update_coordinates("reload segment");
+	  Controller.update_sections(new Array(track_listing_id),'',1);
+	}
+        else if (plugin_type == 'highlighter') {
           Controller.update_coordinates("reload segment");
         }
 	else if (plugin_type == 'trackfilter') {

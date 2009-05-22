@@ -1774,7 +1774,7 @@ END
 
 # this is the content of the popup balloon that allows the user to select
 # individual features by source or name
-sub select_track_features {
+sub select_subtracks {
     my $self  = shift;
     my $label = shift;
 
@@ -1794,8 +1794,8 @@ sub select_track_features {
     my @turned_on = grep {$filter->{values}{$_}} @values;
 
     my $return_html = start_html();
-    $return_html   .= start_form(-name => 'feature_select_form',
-				 -id   => 'feature_select_form');
+    $return_html   .= start_form(-name => 'subtrack_select_form',
+				 -id   => 'subtrack_select_form');
     $return_html   .= p($self->language->tr('SHOW_SUBTRACKS')
 			||'Show subtracks');
     $return_html   .= checkbox_group(-name      => "select",
@@ -1805,7 +1805,7 @@ sub select_track_features {
     $return_html .= button(-name    => 
 			      $self->tr('Change'),
 			   -onClick => 
-			      "Controller.filter_track('$label',\$('feature_select_form'))"
+			      "Controller.filter_subtrack('$label',\$('subtrack_select_form'))"
 	);
     $return_html .= end_form();
     $return_html .= end_html();

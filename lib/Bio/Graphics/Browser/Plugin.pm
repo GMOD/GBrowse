@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.21 2009-05-22 14:33:38 lstein Exp $
+# $Id: Plugin.pm,v 1.22 2009-05-22 21:37:09 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -189,6 +189,11 @@ An example feature filter that filters based on strand of the feature.
 =item SimpleTrackFinder.pm
 
 An example track filter that filters tracks based on their name.
+
+=item SourceTrackFinder.pm
+
+Another example track filter that filters tracks based on the contents
+of their "track source" and "data source" options.
 
 =back
 
@@ -569,6 +574,47 @@ To make the form interactive, you may wish to pepper the plugin's
 configuration form methods with calls to the javascript routine
 doPluginUpdate(). This causes GBrowse to update the plugin's
 configuration and refresh the tracks table as a side effect.
+
+=back
+
+=head2 METHODS TO BE IMPLEMENTED IN FEATURE HILITERS
+
+=over 4
+
+=item $color = $self->highlight($feature)
+
+This method is passed a feature. It returns a color name (or any
+Bio::Graphics color string) to highlight the feature with that color,
+or undef if the feature should not be highlighted at all.
+
+=back
+
+=head2 METHODS TO BE IMPLEMENTED IN FEATURE FILTERS
+
+=over 4
+
+=item ($filter,$newkey) = $self->filter($track_label,$key)
+
+This method is passed a track label and the original key of the
+label. It is expected to return a two-element list consisting of a
+coderef and a new key for the track. The coderef should be a
+subroutine that takes a feature as its single argument and returns
+true to include the feature in the track and false to exclude the
+feature from the track.
+
+  sub {
+      my $feature = shift;
+      return do_something() ? 1 : 0;
+  }
+
+The filter() method should return an updated string for the track key
+to indicate that the track is being filtered. This is to inform the
+user that the track is not showing all possible features.
+
+The filter() method should return an empty list if it does not wish to
+install or filter, or to remove a filter that was previously
+installed.
+
 
 =back
 

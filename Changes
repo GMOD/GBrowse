@@ -3,6 +3,9 @@
         * Added abiity to tag tracks by their "track source" and "data source" and to turn them
           on and off using this information.
         * Added a track filtering ability via plugins.
+	* Fixed FastCGI support so that changes to GBROWSE_CONF are recognized each time
+	  the FastCGI server runs. This allows you to change GBROWSE_CONF on a per-directory
+          basis using <Location> and SetEnv.
 1.993   * Fixed bug in the cache expiration code that caused cache time to be set
 	  abnormally low and prevented cached data from being cached.
 1.992   * Added the gbrowse_clean.pl script for cleaning up stale temp files

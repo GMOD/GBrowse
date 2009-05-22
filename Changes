@@ -1,3 +1,8 @@
+1.994   * Fixed another bug in the cache expiration code that was causing session information
+	  to expire at end of user's browser session.
+        * Added abiity to tag tracks by their "track source" and "data source" and to turn them
+          on and off using this information.
+        * Added a track filtering ability via plugins.
 1.993   * Fixed bug in the cache expiration code that caused cache time to be set
 	  abnormally low and prevented cached data from being cached.
 1.992   * Added the gbrowse_clean.pl script for cleaning up stale temp files

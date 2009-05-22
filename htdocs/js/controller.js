@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.93 2009-05-20 21:29:40 lstein Exp $
+ $Id: controller.js,v 1.94 2009-05-22 14:33:38 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -674,7 +674,7 @@ var GBrowseController = Class.create({
               Controller.rerender_track(gbtrack.track_id,true);
             });
         }
-        else if (plugin_type == 'filter'){
+        else if (plugin_type == 'filter' || plugin_type == 'highlighter'){
           Controller.update_coordinates("reload segment");
         }
 	else if (plugin_type == 'trackfilter') {

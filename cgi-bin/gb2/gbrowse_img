@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbrowse_img,v 1.9 2009-03-23 17:42:26 lstein Exp $
+# $Id: gbrowse_img,v 1.10 2009-05-22 14:33:38 lstein Exp $
 
 use strict;
 
@@ -8,9 +8,6 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render;
 use Bio::Graphics::Browser::Util;
 use Digest::MD5 'md5_hex';
-
-use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
-use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 
 # call with following arguments:
@@ -28,15 +25,11 @@ use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 umask 022;
 
-my $conf_dir  = Bio::Graphics::Browser->config_base;
-my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
-my $globals = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
-    or die "Couldn't read globals";
-
 my $fcgi = Bio::Graphics::Browser::Render->fcgi_request;
 if ($fcgi) {
 
     while ($fcgi->Accept >= 0) {
+	my $globals = Bio::Graphics::Browser->open_globals;
 	CGI->initialize_globals();
 	GBrowse_img->new($globals)->run();
 	$fcgi->Finish();
@@ -45,6 +38,7 @@ if ($fcgi) {
 }
 
 else {
+    my $globals = Bio::Graphics::Browser->open_globals;
     GBrowse_img->new($globals)->run();    
 }
 

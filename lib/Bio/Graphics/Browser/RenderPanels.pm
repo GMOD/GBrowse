@@ -1253,6 +1253,7 @@ sub generate_filter {
     my $label    = shift;
     my $filter = $settings->{features}{$label}{filter} or return;
     my $method = $filter->{method};
+    return unless $method;
 
     my $code;
     my @values = grep {$filter->{values}{$_}} keys %{$filter->{values}};

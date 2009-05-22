@@ -1,8 +1,8 @@
 package Bio::Graphics::Browser::Plugin::AttributeHiliter;
-# $Id: AttributeHiliter.pm,v 1.2 2003-09-18 19:51:33 scottcain Exp $
+# $Id: AttributeHiliter.pm,v 1.3 2009-05-22 14:33:38 lstein Exp $
 use strict;
 use Bio::Graphics::Browser::Plugin;
-
+use Bio::Graphics::Browser::Util 'shellwords';
 use CGI qw(:standard);
 
 use constant DEBUG => 0;
@@ -22,8 +22,7 @@ $VERSION = '0.01';
 sub name { "Selected Properties" }
 sub description {
   p("This plugin highlights features whose properties match certain criteria.",
-    "It only works with Bio::DB::GFF databases currently."),
-  p("This plugin was written by Lincoln Stein.");
+    "It was written by Lincoln Stein.");
 }
 
 sub type { 'highlighter' }
@@ -33,9 +32,7 @@ sub type { 'highlighter' }
 # by the current configuration into a subroutine called "memoized_sub" and then
 # invoke it.  On subsequent invocations if the config hasn't changed, the
 # compiled subroutine is reinvoked.  Otherwise a new sub is compiled.  The compiled
-# sub can be seen by setting the DEBUG constant at the top of this file to true.  An
-# example is also here:
-# 
+# sub can be seen by setting the DEBUG constant at the top of this file to true.
 
 sub highlight {
   my $self = shift;
@@ -62,6 +59,7 @@ sub highlight {
     } elsif ($attribute eq 'Feature Type') {
       $sub .= "  return '$color' if \$feature->type =~ /$regexp/i;\n";
     } elsif (defined $attribute) {
+      $sub .= "  return unless \$feature->can('attributes');\n";
       $sub .= "  foreach (\$feature->attributes('$attribute')) { return '$color' if /$regexp/i }\n";
     }
   }
@@ -100,8 +98,7 @@ sub reconfigure {
 sub configure_form {
     my $self = shift;
     my $current_config = $self->configuration;
-    my $db             = $self->database;
-    my @attributes     = sort {lc $a cmp lc $b} $db->attributes;
+    my @attributes     = shellwords $self->browser_config->plugin_setting('attributes');
     unshift @attributes,'Feature Name','Feature Type';
 
     my @rows;
@@ -126,3 +123,54 @@ sub configure_form {
 
 
 1;
+
+
+__END__
+
+=head1 NAME
+
+Bio::Graphics::Browser::Plugin::AttributeHiliter -- hilite features based on attributes
+
+=head1 SYNOPSIS
+
+In the appropriate gbrowse configuration file:
+
+ plugin = AttributeHiliter
+
+ [AttributeHiliter:plugin]
+ attributes    = Note prediction_status tissue_source
+
+=head1 DESCRIPTION
+
+This plugin creates a configuration page that prompts the user to
+select features to hilite based on their attributes (also known as
+feature tags in BioPerl parlance). You specify which attributes to
+present in a [AttributeHiliter:plugin] configuration track with a
+single "attributes" option. The value of this option is a
+space-delimited list of attributes to present to the user.
+
+A more sophisticated example using popup menus to select particular
+attributes from a controlled vocabulary would be easy to write.
+
+=head1 OPTIONS
+
+None
+
+=head1 BUGS
+
+None known yet.
+
+=head1 SEE ALSO
+
+L<Bio::Graphics::Browser::Plugin>
+
+=head1 AUTHOR
+
+Lincoln Stein E<lt>lincoln.stein@gmail.comE<gt>.
+
+Copyright (c) 2009 Ontario Institute for Cancer Research
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

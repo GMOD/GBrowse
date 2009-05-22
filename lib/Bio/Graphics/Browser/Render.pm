@@ -795,11 +795,12 @@ sub create_cookie {
   my $session = $self->session;
   my $path   = url(-absolute => 1);
   $path      =~ s!gbrowse/?$!!;
+  my $globals = $self->globals;
   my $cookie = CGI::Cookie->new(
     -name    => $CGI::Session::NAME,
     -value   => $session->id,
     -path    => $path,
-    -expires => $self->globals->remember_settings_time
+    -expires => '+'.$globals->time2sec($globals->remember_settings_time).'s',
   );
   return $cookie;
 }

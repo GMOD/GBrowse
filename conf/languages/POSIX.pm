@@ -452,7 +452,7 @@ END
 
  CONFIGURE_THIS_TRACK   => '<b class="error">Configure this track.</b>',
 
- SUBTRACKS_SHOWN    => '<b>Showing:</b> %s<br><b>Hidden:</b> %s',
+ SUBTRACKS_SHOWN    => 'This track contains selectable subtracks:',
 
  SHOW_SUBTRACKS     => '<b>Select subtracks</b>',
 

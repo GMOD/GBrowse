@@ -472,7 +472,8 @@ sub wrap_rendered_track {
         )
 	);
 
-    push @images,$self->select_features_menu($label,\$title);
+    # modify the title if it is a track with subtracks
+    $self->select_features_menu($label,\$title);
 
     my $titlebar = span(
         {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
@@ -1198,6 +1199,7 @@ sub run_local_requests {
     }
 }
 
+# this method is a little unconventional; it modifies the title in-place
 sub select_features_menu {
     my $self     = shift;
     my $label    = shift;
@@ -1226,32 +1228,31 @@ sub select_features_menu {
 	!$filter->{values}{$_}
     } @values;
 
-    # modify the title to show that some subtracks are hidden
-    $$titleref .= " ".$self->language->tr('SHOWING_SUBTRACKS',
-					  scalar(@showing),
-					  @showing+@hidden);
+    my $showing = @showing;
+    my $total   = @showing+@hidden;
 
-    @showing = $self->language->tr('NO_TRACKS') unless @showing;
-    @hidden  = $self->language->tr('NO_TRACKS') unless @hidden;
+    my $select_features = $self->language->tr('SUBTRACKS_SHOWN');
+    $select_features   .= ul({-style=>'list-style: none;margin:0,0,0,0'},
+			      map {$filter->{values}{$_} ? li($_)
+				                         : li({-style=>'color: gray'},$_)
+			      } @values);
+				 
 
-    my $select_features = $self->language->tr('SUBTRACKS_SHOWN',
-					      "@showing","@hidden");
-    $select_features   .= '<br>'.$self->language->tr('SELECT_SUBTRACKS');
+    $select_features   .= $self->language->tr('SELECT_SUBTRACKS');
+
+    my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
 
     my $select_features_click
 	= "GBox.showTooltip(event,'url:?select_subtracks=$escaped_label',1,500,500)";
+    my $select_features_over = "$balloon_style.showTooltip(event,'$select_features')";
 
-    my $menu    = "$buttons/menu.png";
-    my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
-
-    return img({
-	-src         => $menu,
-	-style       => 'cursor:pointer',
-	-onmousedown => $select_features_click,
-	-onMouseOver =>
-                    "$balloon_style.showTooltip(event,'$select_features')",
-		}
-        );
+    # modify the title to show that some subtracks are hidden
+    $$titleref .= " ".a({-href       => 'javascript:void(0)',
+			 -onClick    => $select_features_click,
+			 -onMouseOver=> $select_features_over
+			},
+			$self->language->tr('SHOWING_SUBTRACKS',$showing,$total)
+    );
 }
 
 sub generate_filters {

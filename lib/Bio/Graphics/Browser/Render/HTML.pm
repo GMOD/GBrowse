@@ -69,13 +69,18 @@ sub render_error_div {
 sub render_user_header {
     my $self = shift;
     my $settings = $self->state;
-    return $settings->{head} ? $self->data_source->global_setting('header') : '';
+    return '' unless $settings->{head};
+    my $a = $self->data_source->global_setting('header');
+    return $a->(@_) if ref $a eq 'CODE';
+    return $a || '';
 }
 
 sub render_bottom {
   my $self = shift;
   my $features = shift; # not used
-  return $self->data_source->global_setting('footer').end_html();
+  my $a   = $self->data_source->global_setting('footer');
+  my $val = (ref $a eq 'CODE' ? $a->(@_) : $a) || '';
+  return $a.end_html();
 }
 
 sub render_navbar {

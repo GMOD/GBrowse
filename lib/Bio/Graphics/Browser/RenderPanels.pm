@@ -1546,6 +1546,8 @@ sub add_feature_file {
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
 
+  warn "render $file" if DEBUG;
+  
   eval {
     $file->render(
 		  $args{panel},

@@ -240,8 +240,8 @@ sub get_das_segment {
   $das->proxy($http_proxy) if $http_proxy && $http_proxy ne 'none';
 
   my $seg = $das->segment($segment->abs_ref,
-			  $segment->abs_start,$segment->abs_end);
-
+			  $segment->abs_start,
+			  $segment->abs_end);
   return $seg;
 }
 

@@ -42,7 +42,7 @@ function gbToggleTrack (button) {
 }
 
 function ShowHideTrack(track_name,visible) {
-
+  
   if (visible && !Controller.track_exists(track_name)) {
       Controller.add_track(track_name);
       return false;
@@ -66,6 +66,8 @@ function ShowHideTrack(track_name,visible) {
        }
      });
 
+     if ($(track_name+'_check') == null)
+         track_name = track_name.sub(/:(overview|region|detail)$/,'');
      $(track_name + '_check').checked = visible ? true : false;
 }
 

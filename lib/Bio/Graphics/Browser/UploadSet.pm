@@ -33,7 +33,7 @@ sub add_files_from_state {
     my @urls  = grep {/^file:/ && $state->{features}{$_}} @{$state->{tracks}};
     warn "add_files_from_state(@urls)" if DEBUG;
     foreach (@urls) {
-	warn "adding $_" if DEBUG;
+	warn "adding file $_" if DEBUG;
 	$self->add_file($self->name_file($_));
     }
 }

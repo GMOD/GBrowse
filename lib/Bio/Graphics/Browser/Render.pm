@@ -449,6 +449,8 @@ sub asynchronous_event {
 	param('track_name'),'=>',param('visible') if DEBUG;
 
         if ($visible) {
+	    $self->init_plugins();
+	    $self->init_remote_sources();
             $self->add_track_to_state($track_name);
         }
         else {
@@ -1888,6 +1890,8 @@ sub add_track_to_state {
   my $label = shift;
   my $state = $self->state;
 
+  warn "add_track_to_state($label)" if DEBUG;
+
   return unless length $label; # refuse to add empty tracks!
 
   # don't add invalid track
@@ -2811,6 +2815,7 @@ sub split_labels {
 sub remove_invalid_tracks {
     my $self = shift;
     my $state = shift;
+
     my %potential = map {$_=>1} $self->potential_tracks;
     my @defunct   = grep {!$potential{$_}} keys %{$state->{features}};
     delete $state->{features}{$_} foreach @defunct;
@@ -3365,7 +3370,9 @@ sub external_data {
 	my $search       = $self->get_search_object;
 	my $rel2abs      = $search->coordinate_mapper($segment,1);
 	my $rel2abs_slow = $search->coordinate_mapper($segment,0);
-	for my $featureset ($self->plugins,$self->uploaded_sources,$self->remote_sources) {
+	for my $featureset ($self->plugins,
+			    $self->uploaded_sources,
+			    $self->remote_sources) {
 	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} if DEBUG;
 	    next unless $featureset;
 

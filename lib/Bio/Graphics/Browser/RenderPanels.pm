@@ -1363,6 +1363,8 @@ sub add_features_to_track {
 
       for my $l (@labels) {
 
+	$l =~ s/:\d+//;  # get rid of semantic zooming tag
+
 	my $track = $tracks->{$l}  or next;
 
 	$filters->{$l}->($feature) or next if $filters->{$l};

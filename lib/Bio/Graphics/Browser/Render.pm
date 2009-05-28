@@ -1299,7 +1299,7 @@ sub handle_gff_dump {
 
     my $dumper = Bio::Graphics::Browser::GFFPrinter->new(
         -data_source => $self->data_source(),
-        -stylesheet  => param('stylesheet') || param('s')       || undef,
+        -stylesheet  => param('stylesheet') || param('s')  ||  'no',
         -id          => param('id')         || undef,         
         '-dump'      => param('d')          || undef,
         -labels      => [ param('type'), param('t') ],

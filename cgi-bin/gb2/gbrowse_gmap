@@ -193,7 +193,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Template;
 use JSON;
 
-our $VERSION = '$Id: gbrowse_gmap,v 1.10 2009-04-22 11:37:02 mwz444 Exp $';
+our $VERSION = '$Id: gbrowse_gmap,v 1.11 2009-05-29 18:49:29 mwz444 Exp $';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
@@ -593,6 +593,7 @@ sub run {
         phylo_url     => $phylo_url,
         iframe_width  => $iframe_width,
         iframe_height => $iframe_height,
+        balloon        => $balloon,
     );
     $template->process( \*DATA, \%options, \$html )
         or die $template->error();
@@ -655,8 +656,14 @@ sub print_pop_details {
 }
 
 __DATA__
-<iframe frameborder=1 scrolling=auto height=[% iframe_height %] width=[% iframe_width %] src="[% phylo_url %]?[% request_str %]">ALT</iframe>
-<BR>
-<a href="[% phylo_url %]?[% request_str %]">Local PhyloGeoViz</a>
-<BR>
+[% IF not balloon %]
+    <body onLoad="window.location='[% phylo_url %]?[% request_str %]';">  
+</body>
+[% ELSE %]
+    <iframe frameborder=1 scrolling=auto height=[% iframe_height %] width=[% iframe_width %] src="[% phylo_url %]?[% request_str %]">ALT</iframe>
+    <BR>
+    <a href="[% phylo_url %]?[% request_str %]">Local PhyloGeoViz</a>
+    <BR>
+    <a href="http://phylogeoviz.org/latest/newviewer.php?[% request_str %]">Official PhyloGeoViz</a>
+[% END %]
 <a href="http://phylogeoviz.org/latest/newviewer.php?[% request_str %]">Official PhyloGeoViz</a>

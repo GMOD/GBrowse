@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.14 2009-05-07 14:07:41 lstein Exp $
+# $Id: Karyotype.pm,v 1.15 2009-05-29 18:57:29 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -204,7 +204,10 @@ sub by_chromosome_name ($$){
   my $n1     = $a->seq_id;
   my $n2     = $b->seq_id;
 
-  if ($n1 =~ /^\w+\d+/ && $n2 =~ /^\w+\d+/) {
+  if ($n1 =~ /^\d+$/    && $n2 =~ /^\d+$/) {
+      return $n1 <=> $n2;
+  }
+  elsif ($n1 =~ /^\w+\d+$/ && $n2 =~ /^\w+\d+$/) {
     $n1 =~ s/^\w+//;
     $n2 =~ s/^\w+//;
     return $n1 <=> $n2;
@@ -239,20 +242,20 @@ sub generate_panels {
   my $chrom_type  = $self->chrom_type;
   my $chrom_width = $self->chrom_width;
 
-  my @features    = $self->chromosomes;
+  my @features    = grep {$self->hits($_->seq_id)} $self->chromosomes;
   return unless @features;
 
   my $minimal_width  = 0;
   my $maximal_length = 0;
 
   for my $f (@features) {
-    my $name  = $f->seq_id;
-    my $width = length($name) * gdSmallFont->width;
-    $minimal_width  = $width if $chrom_width < $width;
-    $maximal_length = $f->length if $maximal_length < $f->length;
+      my $name  = $f->seq_id;
+      my $width = length($name) * gdSmallFont->width;
+      $minimal_width  = $width if $chrom_width < $width;
+      $maximal_length = $f->length if $maximal_length < $f->length;
   }
   $chrom_width = $minimal_width 
-    if $chrom_width eq 'auto';
+      if $chrom_width eq 'auto';
   my $pixels_per_base = $self->chrom_height / $maximal_length;
   my $band_colors     = $self->chrom_background;
   my $fallback_color  = $self->chrom_background_fallback;
@@ -261,6 +264,7 @@ sub generate_panels {
   my %results;
   for my $chrom (@features) {
     my $height = int($chrom->length * $pixels_per_base);
+    $height    = 20 if $height < 20;  # prevent tiny tiny chromosomes
     my $panel  = Bio::Graphics::Panel->new(-width => $height,  # not an error, will rotate image later
 					   -length=> $chrom->length,
 					   -pad_top   =>10,
@@ -270,22 +274,21 @@ sub generate_panels {
 					    || 'wheat:0.5'
 	);
 
-    if (my @hits  = $self->hits($chrom->seq_id)) {
-      $panel->add_track(\@hits,
-			-glyph   => sub {
-			    my $feature = shift;
-			    return $feature->length/$chrom->length > 0.05
-				? 'generic'
-				: 'diamond';
-			},
-			-glyph => 'generic',
-			-maxdepth => 0,
-			-height  => 6,
-			-bgcolor => 'red',
-			-fgcolor => 'red',
-			-bump    => -1,
-	  );
-    }
+    my @hits  = $self->hits($chrom->seq_id);
+    $panel->add_track(\@hits,
+		      -glyph   => sub {
+			  my $feature = shift;
+			  return $feature->length/$chrom->length > 0.05
+			      ? 'generic'
+			      : 'diamond';
+		      },
+		      -glyph => 'generic',
+		      -maxdepth => 0,
+		      -height  => 6,
+		      -bgcolor => 'red',
+		      -fgcolor => 'red',
+		      -bump    => -1,
+	);
 
     my $method = $panel->can('rotate') ? 'add_track' : 'unshift_track';
 

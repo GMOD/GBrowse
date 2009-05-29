@@ -54,8 +54,6 @@ sub new {
 
   my $self = $class->SUPER::new(-file=>$config_file_path,
 				-safe=>1);
-  warn "creating new config for $config_file_path";
-
   $self->name($name);
   $self->description($description);
   $self->globals($globals);
@@ -604,6 +602,8 @@ sub db_settings {
 
   if ($track =~ /:database$/) {
       $section = $symbolic_db_name = $track;
+  } elsif ($self->setting($track=>'db_adaptor')) {
+      $section = $track;
   } else {
       $symbolic_db_name   = $self->setting($track => 'database');
       $symbolic_db_name ||= $self->fallback_setting('TRACK DEFAULTS' => 'database');

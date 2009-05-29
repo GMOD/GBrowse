@@ -593,6 +593,12 @@ sub asynchronous_event {
 	return (200,'text/html',$autocomplete);
     }
 
+    # clear a cached data source
+    if (param('clear_dsn')) {
+	$self->data_source->clear_cached_config();
+	return (204,'text/plain',undef);
+    }
+
     return unless $events;
     warn "processing asynchronous event(s)" if DEBUG;
     return (204,'text/plain',undef);

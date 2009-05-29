@@ -52,11 +52,15 @@ sub new {
     return $CONFIG_CACHE{$config_file_path}{object};
   }
 
-  my $self = $class->SUPER::new(-file=>$config_file_path,-safe=>1);
+  my $self = $class->SUPER::new(-file=>$config_file_path,
+				-safe=>1);
+  warn "creating new config for $config_file_path";
+
   $self->name($name);
   $self->description($description);
   $self->globals($globals);
   $self->dir(dirname($config_file_path));
+  $self->config_file($config_file_path);
   $self->add_scale_tracks();
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
@@ -69,6 +73,7 @@ sub name {
   $self->{name} = shift if @_;
   $d;
 }
+
 sub description {
   my $self = shift;
   my $d    = $self->{description};
@@ -83,6 +88,13 @@ sub dir {
   $d;
 }
 
+sub config_file {
+  my $self = shift;
+  my $d    = $self->{config_file};
+  $self->{config_file} = shift if @_;
+  $d;
+}
+
 sub globals {
   my $self = shift;
   my $d    = $self->{globals};
@@ -93,6 +105,11 @@ sub globals {
 sub clear_cached_dbids {
     my $self = shift;
     delete $self->{feature2dbid};
+}
+
+sub clear_cached_config {
+    my $self             = shift;
+    delete $CONFIG_CACHE{$self->config_file};
 }
 
 =head2 userdata()

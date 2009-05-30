@@ -1,8 +1,8 @@
 bin/auto_install_databases.pl
 bin/bp_load_gff.pl
+bin/gbrowse_clean.pl
 bin/gbrowse_netinstall.pl
 bin/gbrowse_netinstall2.pl
-bin/gbrowse_clean.pl
 bin/gbrowse_slave
 bin/load_genbank.pl
 bin/make_das_conf.pl
@@ -68,7 +68,9 @@ conf/plugins/ProteinDumper.pm
 conf/plugins/RandomGene.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/SequenceDumper.pm
+conf/plugins/SimpleTrackFinder.pm
 conf/plugins/SinWave.pm
+conf/plugins/SourceTrackFinder.pm
 conf/plugins/Spectrogram.pm
 conf/plugins/Submitter.pm
 conf/plugins/test.pm
@@ -193,6 +195,7 @@ htdocs/images/balloons/GPlain/up_left.png
 htdocs/images/balloons/GPlain/up_right.png
 htdocs/images/buttons/ajax-loader.gif
 htdocs/images/buttons/dark_0.4_pixel.png
+htdocs/images/buttons/ex.png
 htdocs/images/buttons/green.gif
 htdocs/images/buttons/green1.gif
 htdocs/images/buttons/green2.gif
@@ -208,6 +211,7 @@ htdocs/images/buttons/green_r1.gif
 htdocs/images/buttons/green_r2.gif
 htdocs/images/buttons/grey.png
 htdocs/images/buttons/grey_0.4_pixel.png
+htdocs/images/buttons/menu.png
 htdocs/images/buttons/minus.gif
 htdocs/images/buttons/minus.png
 htdocs/images/buttons/minus12.png
@@ -451,6 +455,7 @@ lib/Bio/DB/Tagger.pm
 lib/Bio/DB/Tagger/mysql.pm
 lib/Bio/DB/Tagger/Tag.pm
 lib/Bio/Graphics/Browser.pm
+lib/Bio/Graphics/Browser/Admin.pm
 lib/Bio/Graphics/Browser/AuthorizedFeatureFile.pm
 lib/Bio/Graphics/Browser/CachedTrack.pm
 lib/Bio/Graphics/Browser/DataBase.pm

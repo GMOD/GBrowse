@@ -124,6 +124,8 @@ provides:
     file: lib/CGI/Toggle.pm
   FakeHomol:
     file: lib/Bio/Graphics/Browser/GFFhelper.pm
+  LRUCache:
+    file: lib/Bio/Graphics/Browser/DataBase.pm
 generated_by: Module::Build version 0.3
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

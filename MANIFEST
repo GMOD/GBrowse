@@ -6,6 +6,7 @@ bin/gbrowse_netinstall2.pl
 bin/gbrowse_slave
 bin/load_genbank.pl
 bin/make_das_conf.pl
+bin/process_bamfiles.pl
 bin/process_gadfly.pl
 bin/process_ncbi_human.pl
 bin/process_sgd.pl

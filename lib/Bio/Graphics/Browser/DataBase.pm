@@ -27,7 +27,7 @@ use constant DEBUG=>0;
 # Cache this many databases in a LRU cache.
 # If you are getting too many open files errors, then set this
 # lower.
-use constant CACHE_SIZE => 50;  
+use constant CACHE_SIZE => 100;  
 
 my $CACHE = LRUCache->new(CACHE_SIZE);
 
@@ -103,7 +103,6 @@ sub set {
     }
 
     if ($self->{curopen} >= $self->{maxopen}) {
-	warn "garbage collecting, values = ",join ' ',$self->values;
 	my @lru = sort {$self->{cacheseq}{$a} <=> $self->{cacheseq}{$b}} 
 	     keys %{$self->{cachedata}};
 	splice(@lru, $self->{maxopen} / 3);

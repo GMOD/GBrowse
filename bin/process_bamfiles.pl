@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#$Id: process_bamfiles.pl,v 1.1 2009-06-02 08:19:14 lstein Exp $
+#$Id: process_bamfiles.pl,v 1.2 2009-06-02 21:01:04 lstein Exp $
 
 # The purpose of this module is to process a hierarchy of directories containing  sam/bam 
 # files and generate automatic GBrowse for them. Ultimately this will be integrated into
@@ -242,6 +242,7 @@ sub build_conf {
 db_adaptor  = Bio::DB::Sam
 db_args     = -fasta "$fa_path"
               -bam   "$bam_path"
+search options = none
 
 [$name]
 database      = $name
@@ -294,8 +295,10 @@ sub status {
     my $track   = shift;
     my $message = shift;
 
+    my $name    = $track->name;
+
     $track or croak "Usage: \$self->status(\$track,\$message)";
-    my $file    = File::Spec->catfile($track->path,"$track STATUS");
+    my $file    = File::Spec->catfile($track->path,"$name.STATUS");
     unless (defined $message) {
 	unlink $file;
 	return;

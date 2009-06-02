@@ -3,7 +3,7 @@
 # A script to prepare alignments for loading into a GBrowse_syn database and 
 # map actual sequence coordinates from a clustal alignment
 # so that indels are taken into account.
-# $Id: aln2hit.pl,v 1.1.2.1 2009-06-02 19:16:15 sheldon_mckay Exp $
+# $Id: aln2hit.pl,v 1.1.2.2 2009-06-02 19:17:56 sheldon_mckay Exp $
 use strict;
 use lib "$ENV{HOME}/lib";;
 use Bio::AlignIO;
@@ -44,7 +44,6 @@ while (my $aln = $str->next_aln) {
   for my $seq ($aln->each_seq) {
     my $seqid = $seq->display_name;
     my ($species,$ref,$strand) = $seqid =~ /(\S+)-(\S+)\(([+-])\)/;
-    print "$species,$ref,$strand\n";
     next if $seq->seq =~ /^-+$/;
     $seq{$species} = [$ref, $seq->display_name, $seq->start, $seq->end, $strand, $seq->seq, $seq]; 
   }
@@ -53,7 +52,7 @@ while (my $aln = $str->next_aln) {
   
   # make all pairwise hits and grid coordinates
   my @species = keys %seq;
-  print Dumper \@species;
+
   for my $p (map_pairwise(@species)) {
     my ($s1,$s2) = @$p;
     my $array1 = $seq{$s1};
@@ -66,7 +65,6 @@ while (my $aln = $str->next_aln) {
 
 sub make_map {
   my ($s1,$s2,$map) = @_;
-  print qq($s1,$s2,$map \n);
   $s1 && $s2 || return [];
   my $seq1 = $s1->[1];
   my $seq2 = $s2->[1];
@@ -146,7 +144,6 @@ sub make_hit {
   # not using these yet
   my ($cigar1,$cigar2) = qw/. ./;
   print join("\t",$s1,@{$aln1}[0,2..4],$cigar1,$s2,@{$aln2}[0,2..4],$cigar2,@$map1,'|',@$map2), "\n";
-  #print STDERR "Finished pairwise alignment $s1 $s2\n";
 }
 
 sub map_pairwise {

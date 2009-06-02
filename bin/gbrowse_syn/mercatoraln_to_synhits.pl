@@ -4,9 +4,7 @@
 # map actual sequence coordinates from a clustal alignment
 # so that indels are taken into account.
 
-# Please NOTE: This script is specific to the alignments provided for WormBase
-# species.  It will need to be modified to suit other alignments.
-
+# $Id: mercatoraln_to_synhits.pl,v 1.1.2.3 2009-06-02 19:16:15 sheldon_mckay Exp $
 use strict;
 use Bio::AlignIO;
 use List::Util qw/min max/;

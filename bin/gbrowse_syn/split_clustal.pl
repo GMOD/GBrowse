@@ -5,6 +5,8 @@
 # Usage: 
 #  gzip -c clustal_file.gz |./split_clustal.pl [destination_dir]
 #  cat clustal_file.gz |./split_clustal.pl [destination_dir] 
+
+# $Id: split_clustal.pl,v 1.1.2.2 2009-06-02 19:16:15 sheldon_mckay Exp $
 use strict;
 
 my $dir = shift || '.';

@@ -3,60 +3,70 @@
 # A script to prepare alignments for loading into a GBrowse_syn database and 
 # map actual sequence coordinates from a clustal alignment
 # so that indels are taken into account.
-
-#$Id: clustal2hit.pl,v 1.1.2.2 2009-06-02 19:16:15 sheldon_mckay Exp $
-
+# $Id: aln2hit.pl,v 1.1.2.1 2009-06-02 19:16:15 sheldon_mckay Exp $
 use strict;
+use lib "$ENV{HOME}/lib";;
 use Bio::AlignIO;
-use List::Util qw/min max/;
+use List::Util 'sum';
+use Getopt::Long;
+use Data::Dumper;
 
-# The naming convention used here is as follows:
+# The sequence naming convention used here is as follows:
 # species-seqname(strand)/start-end
 # The species, strand and coordinates of each sequence in the alignment
 # must be provided for the database to be loaded properly.
 
 # The format used in this example is 'clustalw'
-# adjust if necessary or use aln2hit.pl for other formats
-use constant FORMAT => 'clustalw';
+# adjust if necessary
+use constant FORMAT => 'clustal2';
+use constant DEBUG  => 0;
 
-my $idx;
-while (my $file = shift) {
-  my $str = Bio::AlignIO->new(-file => $file, -format => FORMAT);
+use vars qw/$format $infile $outfile/;
 
-  while (my $aln = $str->next_aln) {
-    $idx++;
-    next if $aln->no_sequences < 2;
-    my %seq;
-    my $map = {};
-    my $seq_idx;
-    for my $seq ($aln->each_seq) {
-      my $seqid = $seq->display_name;
-      my ($species,$ref,$strand) = $seqid =~ /(\S+)-(\S+)\(([+-])\)/;
-      $seq{$species} = [$ref, $seq->display_name, $seq->start, $seq->end, $strand, $seq->seq]; 
-      $seq_idx++;
-    }
+GetOptions(
+	   'format=s'    => \$format,
+	   'infile=s'    => \$infile
+	   );
 
-    map_coords($seq{$_},$map) for keys %seq;
-    
-    # make all pairwise hits and grid coordinates
-    my @species = keys %seq;
-    for my $p (map_pairwise(@species)) {
-      my ($s1,$s2) = @$p;
-      my $array1 = $seq{$s1};
-      my $array2 = $seq{$s2};
-      $array1->[6] = make_map($array1,$array2,$map);
-      $array2->[6] = make_map($array2,$array1,$map);
-      make_hit($s1 => $array1, $s2 => $array2);
-    }
-    
-    # progress reporting
-    my $len = $aln->length;
-    print STDERR " Finished alignment $idx; length: $len; species: $seq_idx                   \r"; 
+$infile or die "Usage: aln2hit.pl -i infile [-f format]\n\n";
+
+my $verbose = DEBUG;
+$format ||= FORMAT;
+
+
+my $str = Bio::AlignIO->new( -file   => $infile, 
+			     -format => $format);
+
+while (my $aln = $str->next_aln) {
+  next if $aln->no_sequences < 2;
+  my %seq;
+  my $map = {};
+  for my $seq ($aln->each_seq) {
+    my $seqid = $seq->display_name;
+    my ($species,$ref,$strand) = $seqid =~ /(\S+)-(\S+)\(([+-])\)/;
+    print "$species,$ref,$strand\n";
+    next if $seq->seq =~ /^-+$/;
+    $seq{$species} = [$ref, $seq->display_name, $seq->start, $seq->end, $strand, $seq->seq, $seq]; 
+  }
+  
+  map_coords($seq{$_},$map) for keys %seq;
+  
+  # make all pairwise hits and grid coordinates
+  my @species = keys %seq;
+  print Dumper \@species;
+  for my $p (map_pairwise(@species)) {
+    my ($s1,$s2) = @$p;
+    my $array1 = $seq{$s1};
+    my $array2 = $seq{$s2};
+    $array1->[6] = make_map($array1,$array2,$map);
+    $array2->[6] = make_map($array2,$array1,$map);
+    make_hit($s1 => $array1, $s2 => $array2);
   }
 }
 
 sub make_map {
   my ($s1,$s2,$map) = @_;
+  print qq($s1,$s2,$map \n);
   $s1 && $s2 || return [];
   my $seq1 = $s1->[1];
   my $seq2 = $s2->[1];
@@ -69,18 +79,13 @@ sub make_map {
   
   while(1) {
     last if $coord >= $s1->[3];
-    my $cols = $map->{$seq1}{pmap}{plus}{$coord};
-    my $start = min @$cols;
-    my $end   = max @$cols;
-    $start && $end || die $coord;
-    my $coord2 = $start == $end ? int($map->{$seq2}{cmap}{$start}{$strand2}) : int(($map->{$seq2}{cmap}{$start}{$strand2} + $map->{$seq2}{cmap}{$end}{$strand2})/2);
-    push @map, ($coord,$coord2);
+    my $col = $map->{$seq1}{pmap}{plus}{$coord};
+    my $coord2  = $map->{$seq2}{cmap}{$col}{$strand2};
+    push @map, ($coord,$coord2) if $coord2;
     $coord += 100;
   }
-  
   return \@map;
 }
-
 
 sub map_coords {
   my ($s,$map) = @_;
@@ -102,9 +107,33 @@ sub map_coords {
     push @{$pmap->{minus}->{$reverse_offset}}, $col;
   }
   
+  # position maps to middle of gap if gaps are present
+  for my $coord (keys %{$pmap->{minus}}) {
+      my $ary = $pmap->{minus}->{$coord};
+      if (@$ary == 1) {
+	  $ary = @$ary[0];
+      }
+      else {
+	  # round down mean
+	  $ary = int((sum(@$ary)/@$ary));
+      }
+      $pmap->{minus}->{$coord} = $ary;
+  }
+  for my $coord (keys %{$pmap->{plus}}) {
+      my $ary = $pmap->{plus}->{$coord};
+      if (@$ary == 1) {
+          $ary = @$ary[0];
+      }
+      else {
+          # round up mean
+          $ary = int((sum(@$ary)/@$ary)+0.5);
+      }
+      $pmap->{plus}->{$coord} = $ary;
+  }
   $map->{$s->[1]}{cmap} = $cmap;    
   $map->{$s->[1]}{pmap} = $pmap;
 }
+
 
 
 sub make_hit {
@@ -117,6 +146,7 @@ sub make_hit {
   # not using these yet
   my ($cigar1,$cigar2) = qw/. ./;
   print join("\t",$s1,@{$aln1}[0,2..4],$cigar1,$s2,@{$aln2}[0,2..4],$cigar2,@$map1,'|',@$map2), "\n";
+  #print STDERR "Finished pairwise alignment $s1 $s2\n";
 }
 
 sub map_pairwise {

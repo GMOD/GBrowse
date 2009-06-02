@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w 
+# $Id: load_alignment_database.pl,v 1.1.2.3 2009-06-02 19:16:15 sheldon_mckay Exp $
 use strict;
 
 # load_alignment_database.pl  -- a script to load the database for gbrowse_syn.
@@ -8,7 +9,8 @@ use strict;
 # the coordinate format: pos1_species1 pos1_species2 ... posn_species1 posn_species2 | pos1_species2 pos1_species1 ... posn_species2 posn_species1, 
 # where pos is the matching sequence coordinate (ungapped) in each species.
 #
-# See clustal2hits.pl for info on how this format can be created from clustalw alignments.
+# See clustal2hits.pl or aln2hit.pl for info on how this format can be created from
+# multiple sequence anlignment formats
 
 use strict;
 use DBI;

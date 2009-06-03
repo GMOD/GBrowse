@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w 
-# $Id: load_alignment_database.pl,v 1.1.2.3 2009-06-02 19:16:15 sheldon_mckay Exp $
+# $Id: load_alignment_database.pl,v 1.1.2.4 2009-06-03 08:09:26 sheldon_mckay Exp $
 use strict;
 
 # load_alignment_database.pl  -- a script to load the database for gbrowse_syn.
@@ -18,8 +18,8 @@ use Bio::DB::GFF::Util::Binning 'bin';
 use constant MINBIN=>1000;
 
 # Edit these constants as required
-use constant USERNAME => 'gbAdmin';
-use constant PASSWORD => 'admin8pmb';
+use constant USERNAME => 'root';
+use constant PASSWORD => undef;
 
 
 my $dsn = shift or die <<END;

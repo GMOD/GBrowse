@@ -4,11 +4,11 @@
 # map actual sequence coordinates from a clustal alignment
 # so that indels are taken into account.
 
-#$Id: clustal2hit.pl,v 1.1.2.2 2009-06-02 19:16:15 sheldon_mckay Exp $
+#$Id: clustal2hit.pl,v 1.1.2.3 2009-06-03 21:05:12 sheldon_mckay Exp $
 
 use strict;
 use Bio::AlignIO;
-use List::Util qw/min max/;
+use List::Util 'sum';
 
 # The naming convention used here is as follows:
 # species-seqname(strand)/start-end
@@ -17,7 +17,7 @@ use List::Util qw/min max/;
 
 # The format used in this example is 'clustalw'
 # adjust if necessary or use aln2hit.pl for other formats
-use constant FORMAT => 'clustalw';
+use constant FORMAT => 'fasta';
 
 my $idx;
 while (my $file = shift) {
@@ -63,24 +63,19 @@ sub make_map {
   my $coord = nearest(100,$s1->[2]);
   $coord += 100 if $coord < $s1->[2];
   my @map;
-  
+
   my $reverse = $s2->[4] ne $s1->[4];
   my $strand2 = $reverse ? 'minus' : 'plus';
-  
+
   while(1) {
     last if $coord >= $s1->[3];
-    my $cols = $map->{$seq1}{pmap}{plus}{$coord};
-    my $start = min @$cols;
-    my $end   = max @$cols;
-    $start && $end || die $coord;
-    my $coord2 = $start == $end ? int($map->{$seq2}{cmap}{$start}{$strand2}) : int(($map->{$seq2}{cmap}{$start}{$strand2} + $map->{$seq2}{cmap}{$end}{$strand2})/2);
-    push @map, ($coord,$coord2);
+    my $col = $map->{$seq1}{pmap}{plus}{$coord};
+    my $coord2  = $map->{$seq2}{cmap}{$col}{$strand2};
+    push @map, ($coord,$coord2) if $coord2;
     $coord += 100;
   }
-  
   return \@map;
 }
-
 
 sub map_coords {
   my ($s,$map) = @_;
@@ -89,23 +84,45 @@ sub map_coords {
   my @chars = split '', $s->[5];
   my $cmap  = {};
   my $pmap = {};
-  
+
   for my $col (1..@chars) {
-    # forward strand map
+    # forward strand map                                                                                                                                                                                         
     my $gap = $chars[$col-1] eq '-';
     $forward_offset++ unless $gap;
     $cmap->{$col}->{plus} = $forward_offset;
     push @{$pmap->{plus}->{$forward_offset}}, $col;
-    # reverse strand map
+    # reverse strand map                                                                                                                                                                                         
     $reverse_offset-- unless $gap;
     $cmap->{$col}->{minus} = $reverse_offset;
     push @{$pmap->{minus}->{$reverse_offset}}, $col;
   }
-  
-  $map->{$s->[1]}{cmap} = $cmap;    
+
+  # position maps to middle of gap if gaps are present
+  for my $coord (keys %{$pmap->{minus}}) {
+    my $ary = $pmap->{minus}->{$coord};
+    if (@$ary == 1) {
+      $ary = @$ary[0];
+    }
+    else {
+      # round down mean
+      $ary = int((sum(@$ary)/@$ary));
+    }
+    $pmap->{minus}->{$coord} = $ary;
+  }
+  for my $coord (keys %{$pmap->{plus}}) {
+    my $ary = $pmap->{plus}->{$coord};
+    if (@$ary == 1) {
+      $ary = @$ary[0];
+    }
+    else {
+      # round up mean
+      $ary = int((sum(@$ary)/@$ary)+0.5);
+    }
+    $pmap->{plus}->{$coord} = $ary;
+  }
+  $map->{$s->[1]}{cmap} = $cmap;
   $map->{$s->[1]}{pmap} = $pmap;
 }
-
 
 sub make_hit {
   my ($s1,$aln1,$s2,$aln2) = @_;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#$Id: process_bamfiles.pl,v 1.2 2009-06-02 21:01:04 lstein Exp $
+#$Id: process_bamfiles.pl,v 1.3 2009-06-03 18:24:38 lstein Exp $
 
 # The purpose of this module is to process a hierarchy of directories containing  sam/bam 
 # files and generate automatic GBrowse for them. Ultimately this will be integrated into
@@ -44,13 +44,30 @@
 
 use strict;
 use warnings;
+use Getopt::Long;
 
-my $root = shift or die <<USAGE;
-Usage: $0 process_bamfiles.pl <root directory>
+my $www_root;
+my $result = GetOptions('www_root:s' => \$www_root);
+my $usage =<<USAGE;
+Usage: $0 process_bamfiles.pl [options] /path/to/root/directory
+
+Options:
+ 
+  --www_root  <path>    Specify root path as seen by web server.
+  -w
+
+If the web server will see the database files on a different path,
+as might happen on an NFS-mounted filesystem, you may specify the
+path that the web server sees using -w.
 USAGE
     ;
 
-my $bamfile_processor = BamFileTree->new($root);
+my $root = shift;
+$root && $result or die $usage;
+
+$www_root ||= $root;
+
+my $bamfile_processor = BamFileTree->new($root,$www_root);
 $bamfile_processor->process();
 
 exit 0;
@@ -66,11 +83,15 @@ use Carp;
 
 sub new {
     my $class = shift;
-    my $root  = shift;
-    return bless { root=>$root},ref $class || $class;
+    my $root     = shift;
+    my $www_root = shift;
+    return bless { root     => $root,
+		   www_root => $www_root,
+    },ref $class || $class;
 }
 
-sub root      { shift->{root} }
+sub root      { shift->{root}     }
+sub www_root  { shift->{www_root} }
 sub data_root { 
     return File::Spec->catfile(shift->root,'bam_db');
 }
@@ -235,6 +256,13 @@ sub build_conf {
 
     warn "building configuration file for $bam_path\n";
     $self->status($track,'building config');
+
+    my $www_root = $self->www_root;
+    my $root     = $self->root;
+    unless ($www_root eq $root) {
+	$www_root .= '/' unless $www_root =~ m!/$!;
+	foreach ($fa_path,$bam_path) { s/$root/$www_root/ };
+    }
     
     open my $cf,'>',$conf_file or die "Couldn't open $conf_file: $!";
     print $cf <<END;

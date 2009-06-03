@@ -281,7 +281,7 @@ sub render_html_head {
       $fill =~ s/^(\d+,\d+,\d+)$/rgb($1)/;
       $fill =~ s/^(#[0-9A-F]{2}[0-9A-F]{2}[0-9A-F]{2})[0-9A-F]{2}$/$1/;
       $fill =~ s/^(\w+):[\d.]+$/$1/;
-      $set_dragcolors = "set_dragcolors('$fill');";
+      $set_dragcolors = "set_dragcolors('$fill')";
   }
 
   push @extra_headers,$self->setting('head')  if $self->setting('head');
@@ -1849,7 +1849,7 @@ sub share_track {
     }
     else {
         $gbgff = url( -full => 1, -path_info => 1 );
-        $gbgff .= "?gbgff=1;q=$segment;t=$labels";
+        $gbgff .= "?gbgff=1;q=$segment;t=$labels;s=1";
         $gbgff .= ";id=$upload_id" if $labels =~ /file(:|%3A)/;
     }
 

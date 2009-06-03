@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.95 2009-05-22 21:37:09 lstein Exp $
+ $Id: controller.js,v 1.96 2009-06-03 18:24:39 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -634,7 +634,7 @@ var GBrowseController = Class.create({
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
-            filter_subtrack:  track_id,
+            filter_subtrack:  track_id
           }).toQueryString(),
       onSuccess: function(transport) {
         Balloon.prototype.hideTooltip(1);

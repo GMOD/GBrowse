@@ -284,7 +284,7 @@ sub render_tracks {
 	        my $feature = shift;
 		# if we get here, we select the search term for highlighting
 		return unless $feature->display_name;
-		return $settings->{h_feat}{$feature->display_name};
+		return $settings->{h_feat}{lc $feature->display_name};
 	    };
     }
 

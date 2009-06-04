@@ -259,7 +259,8 @@ sub make_requests {
 
 	    next unless $label =~ /:$args->{section}$/;
 	    @featurefile_args =  eval {
-		$feature_file->types, $feature_file->mtime;
+		$feature_file->isa('Bio::Das::Segment')||$feature_file->types, 
+		$feature_file->mtime;
 	    };
 	}
 
@@ -1554,7 +1555,7 @@ sub add_feature_file {
     $file->render(
 		  $args{panel},
 		  $args{position},
-	          $options,
+	          $options->{$name},
 		  $self->bump_density,
 		  $self->label_density,
 		  $select,

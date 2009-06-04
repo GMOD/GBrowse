@@ -2955,6 +2955,7 @@ sub featurefile_sections {
 sub _featurefile_sections {
     my $self = shift;
     my $ff   = shift;
+    return 'detail' if $ff->isa('Bio::Das::Segment');
 
     my %sections;
 

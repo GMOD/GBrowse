@@ -49,7 +49,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.13 2009-04-09 17:11:10 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.14 2009-06-04 21:52:11 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -67,8 +67,9 @@ use vars qw($DB $DSN $TRACK $HEADER %ERRCODES $CONFIG
             %CACHED_TYPES %FORCED_GROUP %NO_PARENT);
 
 use constant SO => 'http://song.cvs.sourceforge.net/viewvc/*checkout*/song/ontology/so.obo';
+use constant DEBUG => 0;
 
-#$Id: das.PLS,v 1.6.8.1.2.13 2009-04-09 17:11:10 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.14 2009-06-04 21:52:11 lstein Exp $
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -94,6 +95,12 @@ $CONFIG = open_config($CONF_DIR) or error_header('Could not read config files'=>
 $HEADER = 0;
 %FORCED_GROUP = ();
 %NO_PARENT    = ();
+
+warn "[$$] RUN(): ",
+    CGI::request_method(),': ',
+    CGI::url(-path=>1),' ',
+    CGI::query_string() if DEBUG;
+
 
 my ($junk,$dsn,$operation) = split '/',path_info();
 
@@ -209,9 +216,11 @@ END
 	  my $authority   = $a{authority};
 	  $authority     .= "_$version" if $version;
 	  my $base        = url();
+
+	  my $uri = CGI::escape($dsn).'|'.CGI::escape($track);
 	  
 	  print <<END;
-     <SOURCE uri="$dsn|$track" title="$key" description="$description">
+     <SOURCE uri="$uri" title="$key" description="$description">
         <MAINTAINER email="$a{maintainer}" />
         <VERSION uri="$dsn|$track" created="$created">
   	  <COORDINATES uri="$a{coordinates}" authority="$a{authority}" test_range="$a{testrange}" taxid="$a{taxid}" version="$version">$authority,$a{source},$a{species}</COORDINATES>
@@ -911,6 +920,7 @@ sub guess_glyph {
 	    :$class->isa('Bio::Graphics::Glyph::crossbox')       ? 'CROSS'
 	    :$class->isa('Bio::Graphics::Glyph::ex')             ? 'EX'
 	    :$class->isa('Bio::Graphics::Glyph::line')           ? 'LINE'
+	    :$class->isa('Bio::Graphics::Glyph::segments')       ? 'LINE'
 	    :$class->isa('Bio::Graphics::Glyph::span')           ? 'SPAN'
 	    :$class->isa('Bio::Graphics::Glyph::text_in_box')    ? 'TEXT'
 	    :$class->isa('Bio::Graphics::Glyph::toomany')        ? 'TOOMANY'
@@ -1000,7 +1010,7 @@ sub error_header {
 
 sub ok_header {
   print header(-type          =>'text/xml',
-	       -X_DAS_Version => $VERSION,
+	       -X_DAS_Version => $DAS_VERSION,
 	       -X_DAS_Status  => "200",
 	       -X_DAS_Capabilities => CAPABILITIES,
 	      ) unless $HEADER++;

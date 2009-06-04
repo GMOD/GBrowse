@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.18 2009-05-21 15:14:20 sheldon_mckay Exp $ 
+#$Id: gbrowse_syn.PLS,v 1.9.2.19 2009-06-04 21:37:33 stajich Exp $ 
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -543,9 +543,10 @@ sub draw_image {
 
   for my $key (keys %span) {
     my $color            = $CONF->setting($MAP->{$span{$key}{src}}{db}=>'color');
-    $span{$key}{tcolor}  = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),110);
-    $span{$key}{bgcolor} = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),115);
-    $span{$key}{border}  = $gd->colorResolve(Bio::Graphics::Panel->color_name_to_rgb($color));
+    my @colrgb = Bio::Graphics::Panel->color_name_to_rgb($color);
+    $span{$key}{tcolor}  = $gd->colorAllocateAlpha(@colrgb,110);
+    $span{$key}{bgcolor} = $gd->colorAllocateAlpha(@colrgb,115);
+    $span{$key}{border}  = $gd->colorResolve(@colrgb);
   }
 
   my $ref_top    = $panels_above ? $pad_top + $vertical_pad  : $im_pad;

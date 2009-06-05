@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.97 2009-06-05 17:33:33 lstein Exp $
+ $Id: controller.js,v 1.98 2009-06-05 18:55:11 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -680,13 +680,13 @@ var GBrowseController = Class.create({
         }
         else if (plugin_type == 'filter') {
           Controller.update_coordinates("reload segment");
-	  Controller.update_sections(new Array(track_listing_id),'',1,true);
+	  Controller.update_sections(new Array(track_listing_id),'',1,false);
 	}
         else if (plugin_type == 'highlighter') {
           Controller.update_coordinates("reload segment");
         }
 	else if (plugin_type == 'trackfilter') {
-	  Controller.update_sections(new Array(track_listing_id),'',1,true);
+	  Controller.update_sections(new Array(track_listing_id),'',1,false);
 	}
       } // end onSuccess
     });
@@ -699,7 +699,7 @@ var GBrowseController = Class.create({
       var track_name = select_box.options[select_box.selectedIndex].attributes.getNamedItem('track_name').value;
 
       this.add_track(track_name);
-      Controller.update_sections(new Array(track_listing_id),null,null,true);
+      Controller.update_sections(new Array(track_listing_id),null,null,false);
     }
     else if (plugin_type == 'dumper'){
       var loc_str = "?plugin="+plugin_base+";plugin_action="+encodeURI(plugin_action);
@@ -781,12 +781,12 @@ var GBrowseController = Class.create({
 	   var gbtrack = current_tracks.get(id);
 	   actually_remove(gbtrack.track_div_id);
 	   Controller.unregister_gbtrack(gbtrack);
-	   Controller.update_sections(new Array(track_listing_id,external_listing_id),null,null,true);
+	   Controller.update_sections(new Array(track_listing_id,external_listing_id),null,null,false);
 	});
 
 	if (tracks_to_add.length > 0)
           Controller.add_track(edited_file, function(){
-            Controller.update_sections(new Array(track_listing_id,external_listing_id),null,null,true);
+            Controller.update_sections(new Array(track_listing_id,external_listing_id),null,null,false);
         },true);	
 
       } // end onSuccess

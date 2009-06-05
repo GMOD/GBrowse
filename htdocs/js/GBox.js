@@ -92,7 +92,7 @@ Box.prototype.setBalloonStyle = function(vOrient,hOrient) {
     self.setStyle('contents','width',newWidth);
   }
   if (self.height) {
-    var heightUsed = YAHOO.util.Dom.getStyle('contents','height');
+    var heightUsed = self.getLoc('contents','height');
     var newHeight = heightUsed > self.height ? self.height : heightUsed;
     self.setStyle('contents','height',newHeight+(2*self.padding));
   }

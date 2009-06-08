@@ -138,6 +138,11 @@ sub installconf {
     return   'y';
 }
 
+sub installetc {
+    my $self = shift;
+    return   'y';
+}
+
 sub apachemodules {
     my $self = shift;
     my $root = $self->apache_root;

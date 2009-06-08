@@ -70,6 +70,10 @@ that. What follows here is a brief synopsis.
 
      perl -I /home/fred/build/bioperl-live Build.PL
 
+   To install in a custom location, pass the --install_base argument:
+
+     perl Build.PL --install_base=/home/fred/software
+
 3) Run the command:
 
      ./Build test

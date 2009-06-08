@@ -11,6 +11,7 @@ use File::Path 'rmtree','mkpath';
 use File::Temp 'tempdir';
 use File::Spec;
 use IO::File;
+use IO::Dir;
 use GBrowseGuessDirectories;
 
 my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
@@ -22,6 +23,7 @@ my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support fi
 		apachemodules => 'Apache loadable module directory (for demo)?',
 		wwwuser       => 'User account under which Apache daemon runs?',
 		installconf   => 'Automatically update Apache config files to run GBrowse?',
+		installetc    => 'Automatically update system config files to run gbrowse-slave?',
     );
 my %OK_PROPS = @OK_PROPS;
 
@@ -189,6 +191,8 @@ sub ACTION_config {
     my $self  = shift;
     local $^W = 0;
 
+    my $prefix = $self->prefix || $self->install_base || '/';
+
     # $self->depends_on('build');
     return if $self->config_done;
 
@@ -205,10 +209,15 @@ sub ACTION_config {
 	my $val = shift @keys; # not used
 
 	# next if $self->config_data($key);
+	my $conf_dir = $props->{$key} =~ /directory/i;
+	
 	$opts{$key} = prompt($props->{$key},
 			     $opts{$key} ||
-			     GBrowseGuessDirectories->$key($opts{apache}));
-	if ($props->{$key} =~ /directory/i) {
+			     ($conf_dir 
+			     ? File::Spec->canonpath(
+				 File::Spec->catfile($prefix,GBrowseGuessDirectories->$key($opts{apache})))
+			     : GBrowseGuessDirectories->$key($opts{apache})));
+	if ($conf_dir) {
 	    my ($volume,$dir) = File::Spec->splitdir($opts{$key});
 	    my $top_level     = File::Spec->catfile($volume,$dir);
 	    unless (-d $top_level) {
@@ -314,38 +323,41 @@ END
 
 sub ACTION_install {
     my $self = shift;
+    my $prefix = $self->prefix || $self->install_base || '';
+
     $self->depends_on('config_data');
     $self->install_path->{conf} 
         ||= $self->config_data('conf')
-	    || GBrowseGuessDirectories->conf;
+	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->conf);
     $self->install_path->{htdocs}
         ||= $self->config_data('htdocs')
-	    || GBrowseGuessDirectories->htdocs;
+	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->htdocs);
     $self->install_path->{'cgi-bin'} 
         ||= $self->config_data('cgibin')
-	    || GBrowseGuessDirectories->cgibin;
+	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->cgibin);
     $self->install_path->{'etc'} 
-        ||= File::Spec->catfile($self->prefix||'',GBrowseGuessDirectories->etc);
+        ||= File::Spec->catfile($prefix,GBrowseGuessDirectories->etc);
     $self->install_path->{'database'} 
         ||= $self->config_data('database')
-	    || GBrowseGuessDirectories->databases;
+	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->databases);
     
-    # there's got to be a better way to avoid overwriting the config file
-    my $old_conf = File::Spec->catfile($self->install_path->{conf},'GBrowse.conf');
-    my $rename_conf;
+    # don't overwrite existing config files
+    my $old_conf = $self->install_path->{conf};
     if (-e $old_conf) {
-	warn "Detected existing GBrowse config file in ",
-	      $self->install_path->{conf},'. ',
-	      "New version will be installed as GBrowse.conf.new.\n";
-	$rename_conf = rename $old_conf,"$old_conf.orig";
+	my $d = IO::Dir->new('./blib/conf');
+	while (my $f = $d->read) {
+	    my $new = File::Spec->catfile('./blib/conf',$f);
+	    my $old = File::Spec->catfile($old_conf,$f);
+	    if ($new =~ /\.conf$/ && -e $old) {
+		warn "Found $new in $old_conf. Not installing...\n";
+		unlink $new;
+	    }
+	}
+	
+	$d->close;
     }
 
     $self->SUPER::ACTION_install();
-
-    if ($rename_conf) {
-	rename $old_conf,"$old_conf.new";
-	rename "$old_conf.orig",$old_conf;
-    }
 
     my $user = $self->config_data('wwwuser') || GBrowseGuessDirectories->wwwuser;
 
@@ -451,15 +463,19 @@ sub process_cgibin_files {
 
 sub process_etc_files {
     my $self = shift;
-    my $f    = IO::File->new('MANIFEST');
-    while (<$f>) {
-	next unless m!^etc/!;
-	chomp;
-	my $copied = $self->copy_if_modified($_=>'blib');
-	$self->substitute_in_place("blib/$_")
-	    if $copied
-	    or !$self->up_to_date('_build/config_data',"blib/$_");
+
+    if ($self->config_data('installetc') =~ /^[yY]/) {
+	my $f    = IO::File->new('MANIFEST');
+	while (<$f>) {
+	    next unless m!^etc/!;
+	    chomp;
+	    my $copied = $self->copy_if_modified($_=>'blib');
+	    $self->substitute_in_place("blib/$_")
+		if $copied
+		or !$self->up_to_date('_build/config_data',"blib/$_");
+	}
     }
+
     # generate the apache config data
     my $includes = GBrowseGuessDirectories->apache_includes || '';
     my $target   = "blib${includes}/gbrowse2.conf";
@@ -476,6 +492,9 @@ sub process_etc_files {
 	    warn "Not updating Apache config automatically. Please run ./Build apache_conf to see the recommended directives.\n";
 	}
 
+    }
+    if (!$self->config_data('installetc') =~ /^[yY]/) {
+	warn "Not configuring your system to run gbrowse-slave automatically. Please reconfigure with this option enabled if you wish to do this.";
     }
 }
 

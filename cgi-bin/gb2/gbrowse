@@ -7,11 +7,17 @@ use Bio::Graphics::Browser::Render::HTML;
 
 umask 022;
 
-my $fcgi = Bio::Graphics::Browser::Render->fcgi_request;
+my $fcgi   = Bio::Graphics::Browser::Render->fcgi_request;
 
 if ($fcgi) {
 
-    while ($fcgi->Accept >= 0) {
+    my $FCGI_DONE = 0;
+    $SIG{TERM} = sub {
+	print STDERR "[$$] FastCGI termination signalled. Will exit.\n";
+	$FCGI_DONE = 1;
+    };
+
+    while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
 	my $globals = Bio::Graphics::Browser->open_globals;
 	CGI->initialize_globals();
 	Bio::Graphics::Browser::Render::HTML->new($globals)->run();

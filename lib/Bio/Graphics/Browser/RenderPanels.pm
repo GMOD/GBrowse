@@ -1926,8 +1926,8 @@ sub make_link {
     my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape(eval{$feature->source} || '');
     my $url   = CGI->request_uri || '../..';
-    my $id    = eval {$feature->primary_id};
-    my $dbid  = eval {$feature->gbrowse_dbid};
+    my $dbid  = eval {CGI::escape($feature->gbrowse_dbid)};
+    my $id    = eval {CGI::escape($feature->primary_id)};
     $url      =~ s!/gbrowse.*!!;
     $url      .= "/gbrowse_details/$ds_name?ref=$ref;start=$start;end=$end";
     $url      .= ";name=$name"     if defined $name;

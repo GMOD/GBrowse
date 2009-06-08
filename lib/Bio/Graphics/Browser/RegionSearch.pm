@@ -116,7 +116,9 @@ sub init_databases {
 	next if $state->{dbid} && $state->{dbid} ne $dbid;
 	my $search_options = $source->setting($dbid => 'search options') || '';
 
-	next if $search_options eq 'none';  # ignore this in the search
+	# this can't be right - we need to do id searches
+	# next if $search_options eq 'none';  
+
 	$dbs{$dbid}{options} ||= $search_options;
 	$dbs{$dbid}{remotes}{$remote}++ if $remote;
     }

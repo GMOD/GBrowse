@@ -1,3 +1,6 @@
+1.995	* Install to an alternate location (e.g. home directory) by using --install_base argument when
+	  calling perl Build.PL.
+	* Don't overwrite user's configuration files when doing an upgrade install!
 1.994   * Fixed another bug in the cache expiration code that was causing session information
 	  to expire at end of user's browser session.
         * Added abiity to tag tracks by their "track source" and "data source" and to turn them

@@ -115,6 +115,7 @@ BEGIN {
   $make     = $Config{'make'};
 
   if ($windows) {
+    system("ppm install Win32");
     system("ppm install YAML");
   }
   else {

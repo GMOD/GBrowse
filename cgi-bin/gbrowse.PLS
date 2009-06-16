@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.128 2009-05-11 13:41:38 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.129 2009-06-16 16:40:54 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -807,11 +807,19 @@ sub page_settings {
 	$config->source($source);
     } else {
 	error($CONFIG->tr('INVALID_SOURCE',$source));
-	my $url          = url();
-	$url             =~ s/gbrowse\/.+/gbrowse/;  # be 100% certain of stripping path info
-	my %descriptions = map {$_ => ($CONFIG->description($_)||'')}    @sources;
-	my @links        = map {a({-href=>"$url/$_"},$descriptions{$_})} sort @sources;
-	print ul(li(\@links));
+	my $show_sources = 1;
+	for my $s (@sources) {
+	    my $c = $CONFIG->{conf}{$s}{data} or next;
+	    my $s = $c->setting(general=>'show sources');
+	    $show_sources &&= 0 if defined $s && !$s;
+	}
+	if ($show_sources) {
+	    my $url          = url();
+	    $url             =~ s/gbrowse\/.+/gbrowse/;  # be 100% certain of stripping path info
+	    my %descriptions = map {$_ => ($CONFIG->description($_)||'')}    @sources;
+	    my @links        = map {a({-href=>"$url/$_"},$descriptions{$_})} sort @sources;
+	    print ul(li(\@links));
+	}
 	print_bottom($VERSION);
 	exit 0;
     }

@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.99 2009-06-16 14:08:24 lstein Exp $
+ $Id: controller.js,v 1.98 2009-06-05 18:55:11 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -259,8 +259,6 @@ var GBrowseController = Class.create({
 	      && ($('autocomplete_choices') != null)) {
 	    	initAutocomplete();
 	    }
-	  if (section_name == page_title_id)
-	     document.title = $(section_name).innerHTML;
         }
       }
     });
@@ -376,6 +374,7 @@ var GBrowseController = Class.create({
     
         // Update the segment sections
         Controller.update_sections( Controller.segment_observers.keys());
+
         $('details_msg').innerHTML = results.details_msg;
         Controller.get_multiple_tracks(track_keys);
         if (results.display_details == 0){

@@ -35,7 +35,6 @@ sub render_top {
     my ($title,$features) = @_;
     my $err  =  $self->render_error_div;
     my $html = '';
-    $html   .=  div({-style=>'float:right'},'Hello world!');
     $html   .=  $self->render_user_header;
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);

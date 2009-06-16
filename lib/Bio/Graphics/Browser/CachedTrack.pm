@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.10 2009-05-05 23:14:41 lstein Exp $
+# $Id: CachedTrack.pm,v 1.11 2009-06-16 14:08:24 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -222,8 +222,8 @@ sub status {
 	    or return 'AVAILABLE'; # dotfile disappeared, so data has just become available
 	flock $f,LOCK_SH;
 	my $timestamp = $f->getline();
-	die "BAD TIMESTAMP" unless $timestamp;
 	$f->close;
+	return 'DEFUNCT' unless $timestamp;
 	return 'PENDING' if time()-$timestamp < $self->max_time;
 	return 'DEFUNCT';
     } elsif (-e $datafile) {

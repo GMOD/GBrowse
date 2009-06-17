@@ -1,3 +1,5 @@
+GBROWSE README
+
 The Generic Genome Browser (GBrowse) is a simple but highly
 configurable web-based genome browser.  It is a component of the
 Generic Model Organism Systems Database project (GMOD).
@@ -138,12 +140,14 @@ October 2008
 This project has had many authors.  Some of the most prominent are:
 
 Scott Cain <cain@cshl.edu>
+Ben Faga <benfaga@gmail.com> 
 Vsevolod (Simon) Ilyushchenko <simonf@cshl.edu>
 Marc Logghe <Marc.Logghe@devgen.com>
 Aaron Mackey <amackey@pcbi.upenn.edu>
 Sheldon McKay <mckays@cshl.edu>
 Nathan O. Siemers <Nathan.Siemers@bms.com>
-Lincoln Stein <lstein@cshl.edu>
+Ian Davies <i.davies2@rogers.com>
+Lincoln Stein <lincoln.stein@gmail.com>
 
 Special thanks go to the authors of the translations, who include:
 

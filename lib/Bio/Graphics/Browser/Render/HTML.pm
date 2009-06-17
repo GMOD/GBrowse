@@ -66,6 +66,15 @@ sub render_error_div {
 	);
 }
 
+sub render_user_head {
+    my $self = shift;
+    my $settings = $self->state;
+    return '' unless $settings->{head};
+    my $a = $self->data_source->global_setting('head');
+    return $a->(@_) if ref $a eq 'CODE';
+    return $a || '';
+}
+
 sub render_user_header {
     my $self = shift;
     my $settings = $self->state;
@@ -284,7 +293,8 @@ sub render_html_head {
       $set_dragcolors = "set_dragcolors('$fill')";
   }
 
-  push @extra_headers,$self->setting('head')  if $self->setting('head');
+  my $extra_headers = $self->render_user_head;
+  push @extra_headers,$extra_headers if $extra_headers;
 
   # put them all together
   my @args = (-title    => $title,

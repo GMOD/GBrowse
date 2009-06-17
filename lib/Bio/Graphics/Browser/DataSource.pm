@@ -444,7 +444,7 @@ sub type2label {
     my @array  = $self->SUPER::type2label(lc $type) or return;
     my %label_groups;
     for my $label (@array) {
-      my ($label_base,$minlength) = $label =~ /(.+)(?::(\d+))?/;
+      my ($label_base,$minlength) = $label =~ /([^:]+)(?::(\d+))?/;
       $minlength ||= 0;
       next if defined $length && $minlength > $length;
       $label_groups{$label_base}++;

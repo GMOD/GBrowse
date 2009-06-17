@@ -1,11 +1,13 @@
 package Bio::DB::Tagger;
-# $Id: Tagger.pm,v 1.5 2009-02-28 00:05:44 lstein Exp $
+# $Id: Tagger.pm,v 1.5.4.1 2009-06-17 18:20:55 idavies Exp $
 
 use strict;
 use warnings;
 use Carp 'croak';
 use DBI;
 use Bio::DB::Tagger::Tag;
+
+our $VERSION = '1.00';
 
 =head1 NAME
 
@@ -21,6 +23,7 @@ Bio::DB::Tagger -- Simple object tagging system
                    -tags   => \@tags);
 
  $tagger->set_tags(-object => $object_name,
+                   -key    => $object_key,
                    -tags   => \@tags);
 
  $tagger->add_tag(-object  => $object_name,
@@ -113,8 +116,8 @@ sub new {
 
 =item $object_arrayref = $tagger->search_tag($tag [,$value])
 
-Return all object names that are tagged with "$tag", optionally
-qualified by tag value $value.
+Return all object names and keys that are tagged with "$tag",
+optionally qualified by tag value $value.
 
 =cut
 
@@ -122,7 +125,7 @@ sub search_tag {
     my $self         = shift;
     my ($tag,$value) = @_;
     my $query = <<END;
-SELECT distinct oname
+SELECT distinct oname, okey
   FROM tag
    NATURAL JOIN tagname
    NATURAL JOIN object
@@ -134,10 +137,19 @@ END
 	$query .= 'AND tvalue=?';
 	push @bind,$value;
     }
-    my $arrayref = $self->dbh->selectcol_arrayref($query,{},@bind)
+
+    my $arrayref = $self->dbh->prepare($query)
 	or croak $self->dbh->errstr;
-    return unless $arrayref;
-    return wantarray ? @$arrayref : $arrayref;
+    $arrayref->execute(@bind)
+	or croak $self->dbh->errstr;
+
+    my @result;
+    while (my ($object,$key) = $arrayref->fetchrow_array) {
+	push @result,
+	Bio::DB::Tagger::Tag->new(-name=>$object,
+				  -value=>$key);
+    }
+    return @result;
 }
 
 =item $boolean = $tagger->has_tag($object,$tag [,$value])
@@ -363,10 +375,11 @@ sub set_tags {
     my $self = shift;
     my %args = @_;
     my $object = $args{-object};
+    my $key    = $args{-key};
     my $tags   = $args{-tags};
-    defined $object && $tags && ref $tags eq 'ARRAY'
-	or croak 'Usage: $tagger->set_tags(-object=>$object_name,-tags=>[$tag1,$tag2...])';
-    $self->_set_tags($object,$tags,1);
+    defined $object && $key && $tags && ref $tags eq 'ARRAY'
+	or croak 'Usage: $tagger->set_tags(-object=>$object_name,-key=>$object_key,-tags=>[$tag1,$tag2...])';
+    $self->_set_tags($object,$tags,1,$key);
 }
 
 =item $result = $tagger->set_tag(@args);
@@ -546,14 +559,14 @@ END
 
 sub _set_tags {
     my $self = shift;
-    my ($objectname,$tags,$replace) = @_;
+    my ($objectname,$tags,$replace,$key) = @_;
 
     my $dbh = $self->dbh;
     $dbh->begin_work;
     eval {
 	local $dbh->{RaiseError}=1;
 	# create/get object id
-	my $oid = $self->object_to_id($objectname,1);
+	my $oid = $self->object_to_id($objectname,1,$key);
 	$dbh->do("DELETE FROM tag WHERE oid=$oid")
 	    if $replace;
 	for my $tag (@$tags) {
@@ -613,7 +626,7 @@ END
     return @result;
 }
 
-=item $oid = $tagger->object_to_id($objectname [,$create])
+=item $oid = $tagger->object_to_id($objectname [,$create] [,$key])
 
 Fetch the object id (oid) of the object named "$objectname". If the
 object doesn't exist, and $create is true, will create a new entry for
@@ -654,7 +667,7 @@ sub author_to_id {
 
 sub _name_to_id {
     my $self = shift;
-    my ($table,$index_col,$name_col,$name,$create) = @_;
+    my ($table,$index_col,$name_col,$name,$create,$key) = @_;
     my ($id) = $self->dbh->selectrow_array(
 	"SELECT $index_col FROM $table WHERE $name_col=?",
 	{},
@@ -664,9 +677,11 @@ sub _name_to_id {
 
     # we get here if oid is undef
     local $self->dbh->{RaiseError}=1;
-    my $sth = $self->dbh->prepare(
-	"INSERT INTO $table ($name_col) VALUES (?)"
-	);
+
+    my $sth = $self->dbh->prepare("INSERT INTO $table ($name_col) VALUES (?)");
+    $sth    = $self->dbh->prepare("INSERT INTO $table ($name_col, okey) VALUES (?, $key)")
+        if ($table eq 'object') && (defined $key);
+
     $sth->execute($name);
     # in case someone else got there before us!
     ($id) = $self->dbh->selectrow_array(

@@ -4,7 +4,7 @@
                       This class handles primers-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: primerSelect.js,v 1.1.2.4 2009-01-31 00:43:46 sheldon_mckay Exp $
+ $Id: primerSelect.js,v 1.1.2.5 2009-06-18 11:22:25 sheldon_mckay Exp $
 
 */
 
@@ -28,7 +28,7 @@ Primers.prototype.initialize = function() {
   var self = new Primers;
 
   // If the primers have been designed, we are not needed
-  if (document.mainform.configured.value) return false;
+  if (document.mainform.configured && document.mainform.configured.value) return false;
   
   var i = document.getElementById(self.imageId);
   if (!i) return false;
@@ -57,7 +57,7 @@ Primers.prototype.initialize = function() {
   // the bottom buttons are visible without scrolling down
   if (self.height < 600) {
     var buttons = document.getElementById('topButtons');
-    buttons.innerHTML = '';
+    if (buttons) {buttons.innerHTML = '';}	
   } 
 
   primersObject = self;

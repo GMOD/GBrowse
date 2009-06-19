@@ -36,6 +36,11 @@ sub render_top {
     my $err  =  $self->render_error_div;
     my $html = '';
     $html   .=  $self->render_user_header;
+
+    if ($self->setting('login script')) {
+      $html   .=  $self->render_login;
+    }
+
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
     $html   .=  $self->html_frag('html1',$self->state);
@@ -64,15 +69,6 @@ sub render_error_div {
 		   'no details'
 	       )
 	);
-}
-
-sub render_user_head {
-    my $self = shift;
-    my $settings = $self->state;
-    return '' unless $settings->{head};
-    my $a = $self->data_source->global_setting('head');
-    return $a->(@_) if ref $a eq 'CODE';
-    return $a || '';
 }
 
 sub render_user_header {
@@ -242,9 +238,14 @@ sub render_html_head {
         yahoo-dom-event.js 
     );
 
- if ($self->setting('autocomplete')) {
+  if ($self->setting('autocomplete')) {
     push @scripts,{src=>"$js/$_"}
       foreach qw(controls.js autocomplete.js);
+  }
+
+  if ($self->setting('login script')) {
+    push @scripts,{src=>"$js/$_"}
+      foreach qw(login.js);
   }
 
   # our own javascript
@@ -260,7 +261,7 @@ sub render_html_head {
                track.js
                balloon.js
                balloon.config.js
-	       GBox.js
+               GBox.js
                controller.js
     );
 
@@ -293,8 +294,7 @@ sub render_html_head {
       $set_dragcolors = "set_dragcolors('$fill')";
   }
 
-  my $extra_headers = $self->render_user_head;
-  push @extra_headers,$extra_headers if $extra_headers;
+  push @extra_headers,$self->setting('head')  if $self->setting('head');
 
   # put them all together
   my @args = (-title    => $title,
@@ -433,6 +433,21 @@ sub _render_select_menu {
     return div( { -style => $style, 
 		  -id    => lc($view).'SelectMenu' }, 
 		$menu_html );
+}
+
+sub render_login {
+    my $self     = shift;
+    my $settings = $self->state;
+
+    return $settings->{head}
+    ? div({-style   => 'float:right;font-weight:bold;color:blue;cursor:pointer;',
+           -id      => 'loginLink',
+           -title   => 'Click here to log in or create a new gbrowse account',
+           -onClick => 'load_login_balloon(event)',
+           -onMouseOver => 'this.style.textDecoration=\'underline\'',
+           -onMouseOut  => 'this.style.textDecoration=\'none\''},
+           'Log in / create account')
+	: '';
 }
 
 sub render_title {

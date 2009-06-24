@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Synteny;
 
-# $Id: Synteny.pm,v 1.1.2.8 2009-05-21 01:00:31 sheldon_mckay Exp $
+# $Id: Synteny.pm,v 1.1.2.9 2009-06-24 13:40:49 sheldon_mckay Exp $
 
 use strict;
 
@@ -8,6 +8,7 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
 use Bio::Root::RootI;
 use CGI qw/:standard escape/;
+use Text::Shellwords 'shellwords';
 use CGI::Toggle;
 use CGI::Carp 'fatalsToBrowser';
 use GD;
@@ -375,7 +376,7 @@ sub whole_segment {
   return $self->{whole_segment} if $self->{whole_segment};
   my $segment = $self->current_segment;
   my $factory;
-  unless ($segment->can('factory')) {
+  if ($segment->can('factory')) {
     $factory = $segment->factory;
   }
   else {

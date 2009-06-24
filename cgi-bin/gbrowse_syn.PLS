@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.19 2009-06-04 21:37:33 stajich Exp $ 
+#$Id: gbrowse_syn.PLS,v 1.9.2.20 2009-06-24 13:40:50 sheldon_mckay Exp $ 
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -235,13 +235,15 @@ sub expand_notice {
   my $state = param('display') || $CONF->page_settings->{display};
   my $ref = $CONF->search_src; 
   my $title = b(wiki_help("Display_Mode",$CONF->tr("Display Mode")), ':');
+
+  my $url = url . "/" . $CONF->source;
   if ($state eq 'expanded') {
     return br, $title, br,  "Three species/panel ",
-	a( {-href => url.'?display=compact'}, 'Click to show all species in one panel');
+	a( {-href => $url.'?display=compact'}, 'Click to show all species in one panel');
   } 
   else {
     return br, $title, br, 'All species in one panel ',
-    a( {-href => url.'?display=expanded'}, 'Click to show reference plus two species/panel');
+    a( {-href => $url.'?display=expanded'}, 'Click to show reference plus two species/panel');
   }
 }
 
@@ -1489,7 +1491,7 @@ sub grid_coords {
 sub exact_grid_coords {
   my ($hit,$refbox,$hitbox,$flip,$segment) = @_;
 
-  my $seq_pairs = [$SYNTENY_IO->grid_coords_by_range($hit,$page_settings->{search_src})];
+  my $seq_pairs = [$SYNTENY_IO->grid_coords_by_range($hit,$CONF->page_settings->{search_src})];
   $seq_pairs = reorder_pairs($flip,$seq_pairs,1);
 
   my @pairs;
@@ -1538,13 +1540,13 @@ sub my_path_info {
 }
 
 sub page_settings {
-  my $source = param('src') || param('source') || my_path_info();
+  my $session
+      = Bio::Graphics::Browser::PageSettings->new( $CONF, param('id') );
+  my $source = param('src') || param('source') || my_path_info() || $session->source;
   if (!$source) {
     ($source) = $CONF->sources;
   }
-  my $session
-      = Bio::Graphics::Browser::PageSettings->new( $CONF, param('id') );
-  $source ||= $session->source;
+
   redirect_legacy_url($source);
   my $old_source    = $session->source($source);
   $CONF->source($source);
@@ -1690,6 +1692,7 @@ sub wiki_help {
 	-onmouseover => "balloon.showTooltip(event,'Click for more information about <b><i>$blabel</i></b>')"},
 	@body);
 }
+
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

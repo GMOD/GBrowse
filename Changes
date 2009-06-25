@@ -5,7 +5,7 @@
           the reference sequence.
 	* Fixed Galaxy support bug which caused prevented features from multiple
 	  tracks being selected.
-	* Fixed problem with feature hilighting which caused hilighting to get "stuck"
+	* Fixed problem with feature highlighting which caused highlighting to get "stuck"
           on beige.
 	* Removed annoying debugging statements from log files
 	* Fixed character encoding issues for onClick popup balloons

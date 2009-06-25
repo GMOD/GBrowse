@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.129 2009-06-16 16:40:54 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.130 2009-06-25 21:20:15 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1157,7 +1157,7 @@ sub navigation_table {
   my $rand         = substr(md5_hex(rand),0,5);
   my $bookmark     = bookmark_link($settings);
   my $galaxy_link  = galaxy_link($settings);
-  my $description  = $CONFIG->setting('description') || $CONFIG->source;
+  my $description  = escapeHTML($CONFIG->setting('description') || $CONFIG->source);
 
   $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		  TR(

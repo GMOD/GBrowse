@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.20 2009-06-24 13:40:50 sheldon_mckay Exp $ 
+#$Id: gbrowse_syn.PLS,v 1.9.2.21 2009-06-30 22:19:40 sheldon_mckay Exp $ 
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -262,7 +262,7 @@ sub species_search {
   unshift @$values, '';
 
   my $onchange = "document.mainform.submit()";
-  return b(wiki_help('Reference_Species',$CONF->tr('Reference Species'))) . ':' . br .
+  return b(wiki_help('Reference_Species',$CONF->tr('Genome to Search'))) . ':' . br .
       popup_menu(
 		 -onchange => $onchange,
 		 -name     =>'search_src',

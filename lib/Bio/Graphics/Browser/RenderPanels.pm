@@ -1369,7 +1369,7 @@ sub add_features_to_track {
 	  my $track = $tracks->{$l}  or next;
 
 
-	  $max_features{$l} = $source->code_setting($l => 'feature limit') || 0
+	  $max_features{$l} = $source->fallback_setting($l => 'feature limit') || 0
 	      unless exists $max_features{$l};
 
 	  $filters->{$l}->($feature) or next if $filters->{$l};

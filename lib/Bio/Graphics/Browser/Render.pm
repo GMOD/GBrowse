@@ -3540,8 +3540,13 @@ sub svg_link {
 sub fcgi_request {
     my $self = shift;
     return $FCGI_REQUEST if defined $FCGI_REQUEST;
-    my $request   = eval "require FCGI; FCGI::Request()";
-    $FCGI_REQUEST = $request && $request->IsFastCGI ? $request : 0;
+
+    unless (eval 'require FCGI;1') {
+	return $FCGI_REQUEST = 0;
+    }
+
+    my $request  = FCGI::Request(\*STDIN,\*STDOUT,\*STDERR,\%ENV,0,FCGI::FAIL_ACCEPT_ON_INTR());
+    return $FCGI_REQUEST = ($request && $request->IsFastCGI ? $request : 0);
 }
 
 sub fork {

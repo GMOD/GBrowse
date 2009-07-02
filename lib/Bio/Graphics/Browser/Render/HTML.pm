@@ -1620,7 +1620,6 @@ sub track_config {
 
     if ( param('track_defaults') ) {
         $state->{features}{$label}{override_settings} = {};
-	$state->{features}{$label}{limit} = $data_source->fallback_setting( $label => 'feature_limit');
     }
 
     my $override = $state->{features}{$label}{override_settings}||{};
@@ -1635,6 +1634,7 @@ sub track_config {
     my $width    = $data_source->fallback_setting( $label => 'linewidth' ) || 1;
     my $glyph    = $data_source->fallback_setting( $label => 'glyph' )     || 'box';
     my $stranded = $data_source->fallback_setting( $label => 'stranded');
+    my $limit    = $data_source->fallback_setting( $label => 'feature_limit' )|| 0;
     my $dynamic = $self->tr('DYNAMIC_VALUE');
 
     my @glyph_select = shellwords(
@@ -1743,8 +1743,9 @@ END
                     -name     => 'limit',
                     -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
                     -labels   => { 0 => $self->tr('No_limit') },
+		    -current  => $override->{limit},
                     -override => 1,
-                    -default  => $state->{features}{$label}{limit},
+                    -default  => $limit,
                 )
             )
         ),

@@ -97,18 +97,20 @@ sub popup_menu {
   my $current = $args{-current};
   my $default = $args{-default};
   my $values  = $args{-values};
+  my $labels  = $args{-labels} || {};
 
   my $dynamic =  $self->translate('DYNAMIC_VALUE');
   my %seen;
   my @values = grep {!$seen{$_}++} map { ref($_) || /^CODE\(/ ? $dynamic : $_ } @$values;
 
   $current ||= $default;
-  my $def = $self->translate('DEFAULT');
+  my $def    = $self->translate('DEFAULT');
+  my $def_label = $labels->{$default} || $default;
 
   return CGI::popup_menu(-name    => $name,
 			 -values  => \@values,
 			 -default => $current,
-			 -labels  => {$default => "$default $def"},
+			 -labels  => {$default => "$def_label $def"},
 			 -override=>1);
 }
 

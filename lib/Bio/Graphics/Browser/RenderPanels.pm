@@ -1466,8 +1466,7 @@ sub add_features_to_track {
 			     -description => $do_description,
 			      );
     $tracks->{$l}->configure(-connector  => 'none') if !$do_bump;
-    $tracks->{$l}->configure(-bump_limit    => $limit,
-			     -feature_limit => $limit)
+    $tracks->{$l}->configure(-bump_limit    => $limit)
       if $limit && $limit > 0;
 
     if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
@@ -1718,7 +1717,7 @@ sub create_track_args {
   my $override        = $self->settings->{features}{$label}{override_settings} || {};   # user-set override settings for tracks
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
-  push @override,(-feature_limit => $self->settings->{features}{$label}{limit}||0);
+  push @override,(-feature_limit => $override->{limit}) if $override->{limit};
 
   my $hilite_callback = $args->{hilite_callback};
 

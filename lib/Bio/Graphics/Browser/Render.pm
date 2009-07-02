@@ -1972,9 +1972,8 @@ sub reconfigure_track {
     my $state = $self->state();
     $state->{features}{$label}{visible}          = param('show_track') ? 1 : 0;
     $state->{features}{$label}{options}          = param('format_option');
-    $state->{features}{$label}{limit}            = param('limit');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
-    for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 'linewidth' ) {
+    for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 'linewidth', 'limit' ) {
         my $value = param($s);
 	if ($value eq $dynamic) {
 	    delete $state->{features}{$label}{override_settings}{$s};

@@ -12,6 +12,8 @@ use File::Temp 'tempdir';
 use File::Spec;
 use IO::File;
 use IO::Dir;
+use File::Compare 'compare';
+use File::Copy    'copy';
 use GBrowseGuessDirectories;
 
 my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
@@ -146,6 +148,12 @@ sub ACTION_demostop {
     rmtree([$dir,"$home/htdocs/tmp"]);
     $self->config_data('demodir'=>undef);
     print STDERR "Demo stopped.\n";
+}
+
+sub ACTION_clean {
+    my $self = shift;
+    $self->SUPER::ACTION_clean;
+    unlink 'INSTALL.SKIP';
 }
 
 sub ACTION_realclean {
@@ -341,7 +349,9 @@ sub ACTION_install {
         ||= $self->config_data('database')
 	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->databases);
     
-    # don't overwrite existing config files
+    if (0) {
+    # don't overwrite existing config files -- write them install INSTALL.SKIP
+    my $skip = IO::File->new('>INSTALL.SKIP');
     my $old_conf = $self->install_path->{conf};
     if (-e $old_conf) {
 	my $d = IO::Dir->new('./blib/conf');
@@ -350,11 +360,13 @@ sub ACTION_install {
 	    my $old = File::Spec->catfile($old_conf,$f);
 	    if ($new =~ /\.conf$/ && -e $old) {
 		warn "Found $new in $old_conf. Not installing...\n";
-		unlink $new;
+		print $skip '^',quotemeta($new),'$',"\n";
 	    }
 	}
 	
 	$d->close;
+    }
+    $skip->close;
     }
 
     $self->SUPER::ACTION_install();
@@ -428,14 +440,35 @@ sub fix_selinux {
 sub process_conf_files {
     my $self = shift;
     my $f    = IO::File->new('MANIFEST');
+
+    my $prefix = $self->prefix || $self->install_base || '';
+    my $install_path = $self->config_data('conf')
+	|| File::Spec->catfile($prefix,GBrowseGuessDirectories->conf);
+    my $skip;
+
     while (<$f>) {
 	next unless m!^conf/!;
 	chomp;
+	my $base = $_;
+
 	my $copied = $self->copy_if_modified($_=>'blib');
 	$self->substitute_in_place("blib/$_")
 	    if $copied
 	    or !$self->up_to_date('_build/config_data',"blib/$_");
+	
+	if ($copied) {
+	    $skip ||= IO::File->new('>>INSTALL.SKIP');
+	    (my $new = $base) =~ s/^conf\///;
+	    my $installed = File::Spec->catfile($install_path,$new);
+	    if (-e $installed && compare($base,$installed) != 0) {
+		warn "$installed is already installed. New version will be installed as $installed.new\n";
+		copy ("blib/$base","blib/$base.new");
+		print $skip '^',"blib/",quotemeta($base),'$',"\n";
+	    }
+	}
     }
+
+    $skip->close if $skip;
 }
 
 sub process_htdocs_files {
@@ -464,23 +497,42 @@ sub process_cgibin_files {
 sub process_etc_files {
     my $self = shift;
 
+    my $prefix = $self->prefix || $self->install_base || '';
+    my $install_path = File::Spec->catfile($prefix,GBrowseGuessDirectories->etc);
+
+    my $skip;
+
     if ($self->config_data('installetc') =~ /^[yY]/) {
 	my $f    = IO::File->new('MANIFEST');
 	while (<$f>) {
 	    next unless m!^etc/!;
 	    chomp;
+
+	    my $base = $_;
+
 	    my $copied = $self->copy_if_modified($_=>'blib');
 	    $self->substitute_in_place("blib/$_")
 		if $copied
 		or !$self->up_to_date('_build/config_data',"blib/$_");
+
+	    if ($copied) {
+		$skip ||= IO::File->new('>>INSTALL.SKIP');
+		(my $new = $base) =~ s/^etc\///;
+		my $installed = File::Spec->catfile($install_path,$new);
+		warn "$installed is already installed. New version will be installed as $installed.new\n";
+		copy ("blib/$base","blib/$base.new");
+		print $skip '^',"blib/",quotemeta($base),'$',"\n";
+	    }
 	}
     }
+
+    $skip->close if $skip;
 
     # generate the apache config data
     my $includes = GBrowseGuessDirectories->apache_includes || '';
     my $target   = "blib${includes}/gbrowse2.conf";
     if ($includes && !$self->up_to_date('_build/config_data',$target)) {
-	if ($self->config_data('installconf') =~ /^[yY]/) {
+	if ($self->config_data('installconf') =~ /^[yY]/ && !-e "${includes}/gbrowse2.conf") {
 	    warn "Creating include file for Apache config: $target\n";
 	    my $dir = dirname($target);
 	    mkpath([$dir]);
@@ -489,7 +541,11 @@ sub process_etc_files {
 		$f->close;
 	    }
 	} else {
-	    warn "Not updating Apache config automatically. Please run ./Build apache_conf to see the recommended directives.\n";
+	    print STDERR 
+		-e "${includes}/gbrowse2.conf"
+		? "${includes}/gbrowse2.conf is already installed. " 
+		: "Automatic Apache config disabled. ";
+	    print STDERR "Please run ./Build apache_conf to see this file's recommended contents.\n";
 	}
 
     }

@@ -1620,6 +1620,7 @@ sub track_config {
 
     if ( param('track_defaults') ) {
         $state->{features}{$label}{override_settings} = {};
+	$state->{features}{$label}{limit} = $data_source->fallback_setting( $label => 'feature_limit');
     }
 
     my $override = $state->{features}{$label}{override_settings}||{};
@@ -1634,12 +1635,14 @@ sub track_config {
     my $width    = $data_source->fallback_setting( $label => 'linewidth' ) || 1;
     my $glyph    = $data_source->fallback_setting( $label => 'glyph' )     || 'box';
     my $stranded = $data_source->fallback_setting( $label => 'stranded');
+    my $dynamic = $self->tr('DYNAMIC_VALUE');
+
     my @glyph_select = shellwords(
         $data_source->fallback_setting( $label => 'glyph select' ) );
     @glyph_select
-        = qw(arrow anchored_arrow box crossbox dashed_line diamond dna dot dumbbell ellipse
+        = ($dynamic,qw(arrow anchored_arrow box crossbox dashed_line diamond dna dot dumbbell ellipse
         ex line primers saw_teeth segments span splice_site translation triangle
-        two_bolts wave) unless @glyph_select;
+        two_bolts wave)) unless @glyph_select;
     my %glyphs = map { $_ => 1 } ( $glyph, @glyph_select );
 
     my $url = url( -absolute => 1, -path => 1 );
@@ -1736,12 +1739,12 @@ END
             )
         ),
         TR( th( { -align => 'right' }, $self->tr('Limit') ),
-            td( popup_menu(
-                    -name   => 'limit',
-                    -values => [ 0, 5, 10, 25, 100 ],
+            td( $picker->popup_menu(
+                    -name     => 'limit',
+                    -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
                     -labels   => { 0 => $self->tr('No_limit') },
                     -override => 1,
-                    -default => $state->{features}{$label}{limit}
+                    -default  => $state->{features}{$label}{limit},
                 )
             )
         ),

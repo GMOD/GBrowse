@@ -1,4 +1,5 @@
 1.996   * Add "feature limit" option to keep very populous tracks under control.
+	* Attempt to fix problem of FastCGI processes hanging around even after apache restarted.
 1.995	* Install to an alternate location (e.g. home directory) by using --install_base argument when
 	  calling perl Build.PL.
 	* Don't overwrite user's configuration files when doing an upgrade install!

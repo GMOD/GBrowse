@@ -20,7 +20,6 @@ if ($fcgi) {
     };
 
     while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
-	print STDERR "accepted request\n";
 	my $globals = Bio::Graphics::Browser->open_globals;
 	CGI->initialize_globals();
 	Bio::Graphics::Browser::Render::HTML->new($globals)->run();

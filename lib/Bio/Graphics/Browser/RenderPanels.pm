@@ -1333,10 +1333,15 @@ sub add_features_to_track {
 
   my (%iterators,%iterator2dbid);
   for my $db (keys %db2db) {
-      my @types_in_this_db = map { $source->label2type($_,$length) } keys %{$db2label{$db}};
+      my @labels           = keys %{$db2label{$db}};
+      my @types_in_this_db = map { $source->label2type($_,$length) } @labels;
       next unless @types_in_this_db;
-      my $iterator  = $self->get_iterator($db2db{$db},$segment,\@types_in_this_db)
+
+      my $iterator  = $self->get_iterator($db2db{$db},
+					  $segment,
+					  \@types_in_this_db)
 	  or next;
+
       $iterators{$iterator}     = $iterator;
       $iterator2dbid{$iterator} = $source->db2id($db);
   }
@@ -1346,7 +1351,7 @@ sub add_features_to_track {
   # The effect of this loop is to fetch a feature from each iterator in turn
   # using a queueing scheme. This allows streaming iterators to parallelize a
   # bit. This may not be worth the effort.
-  my (%feature2dbid,%classes,%max_features,%limit_hit);
+  my (%feature2dbid,%classes);
 
   while (keys %iterators) {
     for my $iterator (values %iterators) {
@@ -1368,19 +1373,8 @@ sub add_features_to_track {
 
 	  my $track = $tracks->{$l}  or next;
 
-
-	  $max_features{$l} = $source->fallback_setting($l => 'feature limit') || 0
-	      unless exists $max_features{$l};
-
 	  $filters->{$l}->($feature) or next if $filters->{$l};
 	  $feature_count{$l}++;
-	
-	  if ($max_features{$l}
-	      && $feature_count{$l} 
-	      && $feature_count{$l} >= $max_features{$l}) {
-	      $limit_hit{$l}++;
-	      next;
-	  }
 
 	  # -----------------------------------------------------------------------------
 	  # GROUP CODE
@@ -1472,12 +1466,15 @@ sub add_features_to_track {
 			     -description => $do_description,
 			      );
     $tracks->{$l}->configure(-connector  => 'none') if !$do_bump;
-    $tracks->{$l}->configure(-bump_limit => $limit)
+    $tracks->{$l}->configure(-bump_limit    => $limit,
+			     -feature_limit => $limit)
       if $limit && $limit > 0;
 
-    if ($limit_hit{$l}) {
+    if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
+	my $max   = $tracks->{$l}->feature_limit;
+	my $count = $tracks->{$l}->feature_count;
 	$tracks->{$l}->panel->key_style('between');
-	$tracks->{$l}->configure(-key => "Showing $max_features{$l} of $feature_count{$l} features");
+	$tracks->{$l}->configure(-key => $self->language->tr('FEATURES_CLIPPED',$max,$count));
     }
   }
 }
@@ -1516,7 +1513,7 @@ sub load_external_sources {
 
 sub get_iterator {
   my $self = shift;
-  my ($db,$segment,$feature_types) = @_;
+  my ($db,$segment,$feature_types,$max) = @_;
 
   # The Bio::DB::SeqFeature::Store database supports correct
   # semantics for directly retrieving features that overlap
@@ -1528,7 +1525,9 @@ sub get_iterator {
       my @args = (-type   => $feature_types,
 		  -seq_id => $segment->seq_id,
 		  -start  => $segment->start,
-		  -end    => $segment->end);
+		  -end    => $segment->end,
+		  -max_features => $max,  # some adaptors allow this
+	  );
       return $db->get_seq_stream(@args);
   }
 
@@ -1719,6 +1718,8 @@ sub create_track_args {
   my $override        = $self->settings->{features}{$label}{override_settings} || {};   # user-set override settings for tracks
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
+  push @override,(-feature_limit => $self->settings->{features}{$label}{limit}||0);
+
   my $hilite_callback = $args->{hilite_callback};
 
   my $length = $segment->length;
@@ -1755,6 +1756,7 @@ sub create_track_args {
 	     @override,
 	    );
   }
+
   return @args;
 }
 

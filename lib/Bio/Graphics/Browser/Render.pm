@@ -1970,15 +1970,17 @@ sub reconfigure_track {
     my $self  = shift;
     my $label = shift;
     my $state = $self->state();
-    $state->{features}{$label}{visible}  = param('show_track') ? 1 : 0;
-    $state->{features}{$label}{options}  = param('format_option');
-    $state->{features}{$label}{limit}    = param('limit');
+    $state->{features}{$label}{visible}          = param('show_track') ? 1 : 0;
+    $state->{features}{$label}{options}          = param('format_option');
+    $state->{features}{$label}{limit}            = param('limit');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
     for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 'linewidth' ) {
         my $value = param($s);
-        delete $state->{features}{$label}{override_settings}{$s}, next
-            if $value eq $dynamic;
-        $state->{features}{$label}{override_settings}{$s} = $value;
+	if ($value eq $dynamic) {
+	    delete $state->{features}{$label}{override_settings}{$s};
+	} else {
+	    $state->{features}{$label}{override_settings}{$s} = $value;
+	}
     }
     $state->{features}{$label}{override_settings}{stranded} = param('stranded') || 0;
 }

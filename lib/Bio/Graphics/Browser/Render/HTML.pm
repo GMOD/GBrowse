@@ -71,6 +71,15 @@ sub render_error_div {
 	);
 }
 
+sub render_user_head {
+    my $self = shift;
+    my $settings = $self->state;
+    return '' unless $settings->{head};
+    my $a = $self->data_source->global_setting('head');
+    return $a->(@_) if ref $a eq 'CODE';
+    return $a || '';
+}
+
 sub render_user_header {
     my $self = shift;
     my $settings = $self->state;

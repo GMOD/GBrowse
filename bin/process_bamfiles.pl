@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#$Id: process_bamfiles.pl,v 1.3 2009-06-03 18:24:38 lstein Exp $
+#$Id: process_bamfiles.pl,v 1.3.4.1 2009-07-02 18:03:33 idavies Exp $
 
 # The purpose of this module is to process a hierarchy of directories containing  sam/bam 
 # files and generate automatic GBrowse for them. Ultimately this will be integrated into
@@ -178,7 +178,7 @@ sub get_data_tracks {
 	    my @categories = File::Spec->splitdir($path);
 	    push @result,Track->new(-categories=>\@categories,
 				    -path      => $File::Find::dir,
-				    -name      => basename($_,'.bam','.sam','.sam.gz'),
+				    -name      => basename($_,'.sam.gz','.sam','.bam'),
 				    -dsn       => $dsn,
 		);
 	}

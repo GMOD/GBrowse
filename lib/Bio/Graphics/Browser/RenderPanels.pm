@@ -1346,7 +1346,7 @@ sub add_features_to_track {
   # The effect of this loop is to fetch a feature from each iterator in turn
   # using a queueing scheme. This allows streaming iterators to parallelize a
   # bit. This may not be worth the effort.
-  my (%feature2dbid,%classes);
+  my (%feature2dbid,%classes,%max_features,%limit_hit);
 
   while (keys %iterators) {
     for my $iterator (values %iterators) {
@@ -1364,51 +1364,62 @@ sub add_features_to_track {
 
       for my $l (@labels) {
 
-	$l =~ s/:\d+//;  # get rid of semantic zooming tag
+          $l =~ s/:\d+//;  # get rid of semantic zooming tag
 
-	my $track = $tracks->{$l}  or next;
+	  my $track = $tracks->{$l}  or next;
 
-	$filters->{$l}->($feature) or next if $filters->{$l};
-	$feature_count{$l}++;
-	
-	# ------------------------------------------------------------------------------------------
-	# GROUP CODE
-	# Handle name-based groupings.
-	unless (exists $group_pattern{$l}) {
-	  $group_pattern{$l} =  $source->code_setting($l => 'group_pattern');
-	  $group_pattern{$l} =~ s!^/(.+)/$!$1! 
-	    if $group_pattern{$l}; # clean up regexp delimiters
-	}
 
-	# Handle generic grouping (needed for GFF3 database)
- 	$group_field{$l} = $source->code_setting($l => 'group_on') 
-	    unless exists $group_field{$l};
+	  $max_features{$l} = $source->fallback_setting($l => 'feature limit') || 0
+	      unless exists $max_features{$l};
+
+	  $filters->{$l}->($feature) or next if $filters->{$l};
+	  $feature_count{$l}++;
 	
-	if (my $pattern = $group_pattern{$l}) {
-	  my $name = $feature->name or next;
-	  (my $base = $name) =~ s/$pattern//i;
-	  $groups{$l}{$base} 
-	    ||= Bio::Graphics::Feature->new(-type   => 'group',
-					    -name   => $feature->display_name,
-					    -strand => $feature->strand,
-	      );
-	  $groups{$l}{$base}->add_segment($feature);
-	  next;
-	}
-	
-	if (my $field = $group_field{$l}) {
-	  my $base = eval{$feature->$field};
-	  if (defined $base) {
-	    $groups{$l}{$base} ||= Bio::Graphics::Feature->new(-name   => $feature->display_name,
-							       -start  => $feature->start,
-							       -end    => $feature->end,
-							       -strand => $feature->strand,
-							       -type   => $feature->primary_tag);
-	    $groups{$l}{$base}->add_SeqFeature($feature);
-	    next;
+	  if ($max_features{$l}
+	      && $feature_count{$l} 
+	      && $feature_count{$l} >= $max_features{$l}) {
+	      $limit_hit{$l}++;
+	      next;
 	  }
-	}
-	$track->add_feature($feature);
+
+	  # -----------------------------------------------------------------------------
+	  # GROUP CODE
+	  # Handle name-based groupings.
+	  unless (exists $group_pattern{$l}) {
+	      $group_pattern{$l} =  $source->code_setting($l => 'group_pattern');
+	      $group_pattern{$l} =~ s!^/(.+)/$!$1! 
+		  if $group_pattern{$l}; # clean up regexp delimiters
+	  }
+	  
+	  # Handle generic grouping (needed for GFF3 database)
+	  $group_field{$l} = $source->code_setting($l => 'group_on') 
+	      unless exists $group_field{$l};
+	  
+	  if (my $pattern = $group_pattern{$l}) {
+	      my $name = $feature->name or next;
+	      (my $base = $name) =~ s/$pattern//i;
+	      $groups{$l}{$base} 
+	      ||= Bio::Graphics::Feature->new(-type   => 'group',
+					      -name   => $feature->display_name,
+					      -strand => $feature->strand,
+		  );
+	      $groups{$l}{$base}->add_segment($feature);
+	      next;
+	  }
+	
+	  if (my $field = $group_field{$l}) {
+	      my $base = eval{$feature->$field};
+	      if (defined $base) {
+		  $groups{$l}{$base} ||= Bio::Graphics::Feature->new(-name   => $feature->display_name,
+								     -start  => $feature->start,
+								     -end    => $feature->end,
+								     -strand => $feature->strand,
+								     -type   => $feature->primary_tag);
+		  $groups{$l}{$base}->add_SeqFeature($feature);
+		  next;
+	      }
+	  }
+	  $track->add_feature($feature);
       }
     }
   }
@@ -1463,6 +1474,11 @@ sub add_features_to_track {
     $tracks->{$l}->configure(-connector  => 'none') if !$do_bump;
     $tracks->{$l}->configure(-bump_limit => $limit)
       if $limit && $limit > 0;
+
+    if ($limit_hit{$l}) {
+	$tracks->{$l}->panel->key_style('between');
+	$tracks->{$l}->configure(-key => "Showing $max_features{$l} of $feature_count{$l} features");
+    }
   }
 }
 
@@ -1928,6 +1944,7 @@ sub make_link {
     my $url   = CGI->request_uri || '../..';
     my $dbid  = eval {CGI::escape($feature->gbrowse_dbid)};
     my $id    = eval {CGI::escape($feature->primary_id)};
+    warn $@ if $@;
     $url      =~ s!/gbrowse.*!!;
     $url      .= "/gbrowse_details/$ds_name?ref=$ref;start=$start;end=$end";
     $url      .= ";name=$name"     if defined $name;

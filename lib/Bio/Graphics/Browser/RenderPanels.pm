@@ -1713,16 +1713,18 @@ sub create_track_args {
   my ($label,$args) = @_;
 
   my $segment         = $self->segment;
+  my $length          = $segment->length;
+  my $source          = $self->source;
   my $lang            = $self->language;
-  my $override        = $self->settings->{features}{$label}{override_settings} || {};   # user-set override settings for tracks
+
+  my $slabel          = $source->semantic_label($label,$length);
+
+  my $override        = $self->settings->{features}{$slabel}{override_settings}
+                        || {};   # user-set override settings for tracks
+
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
-  push @override,(-feature_limit => $override->{limit}) if $override->{limit};
-
   my $hilite_callback = $args->{hilite_callback};
-
-  my $length = $segment->length;
-  my $source = $self->source;
 
   my @default_args = (-glyph => 'generic');
   push @default_args,(-key   => $label)        unless $label =~ /^\w+:/;

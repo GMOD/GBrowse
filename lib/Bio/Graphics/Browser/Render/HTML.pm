@@ -1611,34 +1611,44 @@ sub track_config {
     my $state       = $self->state();
     my $data_source = $self->data_source();
 
+    my $length      = $self->thin_segment->length;
+    my $slabel      = $data_source->semantic_label($label,$length);
+
     eval 'require Bio::Graphics::Browser::OptionPick; 1'
         unless Bio::Graphics::Browser::OptionPick->can('new');
 
     my $picker = Bio::Graphics::Browser::OptionPick->new($self);
 
-    my $key = $self->label2key($label);
+    my $key = $self->label2key($slabel);
 
     if ( param('track_defaults') ) {
-        $state->{features}{$label}{override_settings} = {};
+        $state->{features}{$slabel}{override_settings} = {};
     }
 
-    my $override = $state->{features}{$label}{override_settings}||{};
+    my $override = $state->{features}{$slabel}{override_settings}||{};
     my $return_html = start_html();
 
     # truncate too-long citations
-    my $cit_txt = citation( $data_source, $label, $self->language ) || ''; #$self->tr('NO_CITATION');
+    my $cit_txt = citation( $data_source, $slabel, $self->language ) || ''; #$self->tr('NO_CITATION');
+
+    if (my ($lim) = $slabel =~ /\:(\d+)$/) {
+	$key .= " (at >$lim bp)";
+    }
 
     $cit_txt =~ s/(.{512}).+/$1\.\.\./;
     my $citation = h4($key) . p($cit_txt);
-    my $height   = $data_source->fallback_setting( $label => 'height' )    || 5;
-    my $width    = $data_source->fallback_setting( $label => 'linewidth' ) || 1;
-    my $glyph    = $data_source->fallback_setting( $label => 'glyph' )     || 'box';
-    my $stranded = $data_source->fallback_setting( $label => 'stranded');
-    my $limit    = $data_source->fallback_setting( $label => 'feature_limit' )|| 0;
+
+    my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 5;
+    my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
+    my $glyph    = $data_source->semantic_fallback_setting( $label => 'glyph',          $length )   || 'box';
+    my $stranded = $data_source->semantic_fallback_setting( $label => 'stranded',       $length);
+    my $limit    = $data_source->semantic_fallback_setting( $label => 'feature_limit' , $length)    || 0;
     my $dynamic = $self->tr('DYNAMIC_VALUE');
 
     my @glyph_select = shellwords(
-        $data_source->fallback_setting( $label => 'glyph select' ) );
+        $data_source->semantic_fallback_setting( $label => 'glyph select', $length )
+	);
+
     @glyph_select
         = ($dynamic,qw(arrow anchored_arrow box crossbox dashed_line diamond dna dot dumbbell ellipse
         ex line primers saw_teeth segments span splice_site translation triangle
@@ -1704,7 +1714,7 @@ END
         TR( th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
             td( $picker->color_pick(
                     'bgcolor',
-                    $data_source->fallback_setting( $label => 'bgcolor' ),
+                    $data_source->semantic_fallback_setting( $slabel => 'bgcolor', $length ),
                     $override->{'bgcolor'}
                 )
             )
@@ -1712,7 +1722,7 @@ END
         TR( th( { -align => 'right' }, $self->tr('FG_COLOR') ),
             td( $picker->color_pick(
                     'fgcolor',
-                    $data_source->fallback_setting( $label => 'fgcolor' ),
+                    $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
                     $override->{'fgcolor'}
                 )
             )
@@ -1740,10 +1750,10 @@ END
         ),
         TR( th( { -align => 'right' }, $self->tr('Limit') ),
             td( $picker->popup_menu(
-                    -name     => 'limit',
+                    -name     => 'feature_limit',
                     -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
-                    -labels   => { 0 => $self->tr('No_limit') },
-		    -current  => $override->{limit},
+                    -labels   => { 0 => $self->tr('NO_LIMIT') },
+		    -current  => $override->{feature_limit},
                     -override => 1,
                     -default  => $limit,
                 )
@@ -1777,7 +1787,7 @@ END
 	    Element.extend(this);
 	    var ancestors    = this.ancestors();
 	    var form_element = ancestors.find(function(el) {return el.nodeName=='FORM'; });
-	    Controller.reconfigure_track('$label',form_element)
+	    Controller.reconfigure_track('$label',form_element,'$slabel')
 END
 	      )
 	   )

@@ -106,11 +106,12 @@ sub popup_menu {
   $current ||= $default;
   my $def    = $self->translate('DEFAULT');
   my $def_label = $labels->{$default} || $default;
+  my %labels    = (%$labels,$default => "$def_label $def");
 
   return CGI::popup_menu(-name    => $name,
 			 -values  => \@values,
 			 -default => $current,
-			 -labels  => {$default => "$def_label $def"},
+			 -labels  => \%labels,
 			 -override=>1);
 }
 

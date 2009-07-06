@@ -12,8 +12,10 @@ my $fcgi   = Bio::Graphics::Browser::Render->fcgi_request;
 if ($fcgi) {
 
     my $FCGI_DONE = 0;
-    $SIG{TERM} = sub {
-	print STDERR "[$$] FastCGI termination signalled. Will exit.\n";
+    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+	my $sig  = shift;
+	my $time = localtime;
+	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
 	$FCGI_DONE = 1;
     };
 

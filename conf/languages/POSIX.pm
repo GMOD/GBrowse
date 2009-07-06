@@ -245,6 +245,8 @@ END
 
    NO_TRACKS    => '*none*',
 
+   FEATURES_CLIPPED => 'Showing %s of %s features',
+
    FILE_INFO    => 'Last modified %s.  Annotated landmarks: %s',
 
    FOOTER_1     => <<END,
@@ -318,7 +320,7 @@ END
 
    FORMAT => 'Format',
 
-   LIMIT  => 'Limit',
+   LIMIT  => 'Max. features to show',
 
    ADJUST_ORDER => 'Adjust Order',
 
@@ -425,6 +427,8 @@ END
  GLYPH            => 'Shape',
 
  LINEWIDTH        => 'Line width',
+
+ STRANDED         => 'Show strand',
 
  DEFAULT          => '(default)',
 

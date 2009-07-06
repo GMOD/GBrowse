@@ -1333,10 +1333,15 @@ sub add_features_to_track {
 
   my (%iterators,%iterator2dbid);
   for my $db (keys %db2db) {
-      my @types_in_this_db = map { $source->label2type($_,$length) } keys %{$db2label{$db}};
+      my @labels           = keys %{$db2label{$db}};
+      my @types_in_this_db = map { $source->label2type($_,$length) } @labels;
       next unless @types_in_this_db;
-      my $iterator  = $self->get_iterator($db2db{$db},$segment,\@types_in_this_db)
+
+      my $iterator  = $self->get_iterator($db2db{$db},
+					  $segment,
+					  \@types_in_this_db)
 	  or next;
+
       $iterators{$iterator}     = $iterator;
       $iterator2dbid{$iterator} = $source->db2id($db);
   }
@@ -1364,51 +1369,51 @@ sub add_features_to_track {
 
       for my $l (@labels) {
 
-	$l =~ s/:\d+//;  # get rid of semantic zooming tag
+          $l =~ s/:\d+//;  # get rid of semantic zooming tag
 
-	my $track = $tracks->{$l}  or next;
+	  my $track = $tracks->{$l}  or next;
 
-	$filters->{$l}->($feature) or next if $filters->{$l};
-	$feature_count{$l}++;
-	
-	# ------------------------------------------------------------------------------------------
-	# GROUP CODE
-	# Handle name-based groupings.
-	unless (exists $group_pattern{$l}) {
-	  $group_pattern{$l} =  $source->code_setting($l => 'group_pattern');
-	  $group_pattern{$l} =~ s!^/(.+)/$!$1! 
-	    if $group_pattern{$l}; # clean up regexp delimiters
-	}
+	  $filters->{$l}->($feature) or next if $filters->{$l};
+	  $feature_count{$l}++;
 
-	# Handle generic grouping (needed for GFF3 database)
- 	$group_field{$l} = $source->code_setting($l => 'group_on') 
-	    unless exists $group_field{$l};
-	
-	if (my $pattern = $group_pattern{$l}) {
-	  my $name = $feature->name or next;
-	  (my $base = $name) =~ s/$pattern//i;
-	  $groups{$l}{$base} 
-	    ||= Bio::Graphics::Feature->new(-type   => 'group',
-					    -name   => $feature->display_name,
-					    -strand => $feature->strand,
-	      );
-	  $groups{$l}{$base}->add_segment($feature);
-	  next;
-	}
-	
-	if (my $field = $group_field{$l}) {
-	  my $base = eval{$feature->$field};
-	  if (defined $base) {
-	    $groups{$l}{$base} ||= Bio::Graphics::Feature->new(-name   => $feature->display_name,
-							       -start  => $feature->start,
-							       -end    => $feature->end,
-							       -strand => $feature->strand,
-							       -type   => $feature->primary_tag);
-	    $groups{$l}{$base}->add_SeqFeature($feature);
-	    next;
+	  # -----------------------------------------------------------------------------
+	  # GROUP CODE
+	  # Handle name-based groupings.
+	  unless (exists $group_pattern{$l}) {
+	      $group_pattern{$l} =  $source->code_setting($l => 'group_pattern');
+	      $group_pattern{$l} =~ s!^/(.+)/$!$1! 
+		  if $group_pattern{$l}; # clean up regexp delimiters
 	  }
-	}
-	$track->add_feature($feature);
+	  
+	  # Handle generic grouping (needed for GFF3 database)
+	  $group_field{$l} = $source->code_setting($l => 'group_on') 
+	      unless exists $group_field{$l};
+	  
+	  if (my $pattern = $group_pattern{$l}) {
+	      my $name = $feature->name or next;
+	      (my $base = $name) =~ s/$pattern//i;
+	      $groups{$l}{$base} 
+	      ||= Bio::Graphics::Feature->new(-type   => 'group',
+					      -name   => $feature->display_name,
+					      -strand => $feature->strand,
+		  );
+	      $groups{$l}{$base}->add_segment($feature);
+	      next;
+	  }
+	
+	  if (my $field = $group_field{$l}) {
+	      my $base = eval{$feature->$field};
+	      if (defined $base) {
+		  $groups{$l}{$base} ||= Bio::Graphics::Feature->new(-name   => $feature->display_name,
+								     -start  => $feature->start,
+								     -end    => $feature->end,
+								     -strand => $feature->strand,
+								     -type   => $feature->primary_tag);
+		  $groups{$l}{$base}->add_SeqFeature($feature);
+		  next;
+	      }
+	  }
+	  $track->add_feature($feature);
       }
     }
   }
@@ -1461,8 +1466,15 @@ sub add_features_to_track {
 			     -description => $do_description,
 			      );
     $tracks->{$l}->configure(-connector  => 'none') if !$do_bump;
-    $tracks->{$l}->configure(-bump_limit => $limit)
+    $tracks->{$l}->configure(-bump_limit    => $limit)
       if $limit && $limit > 0;
+
+    if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
+	my $max   = $tracks->{$l}->feature_limit;
+	my $count = $tracks->{$l}->feature_count;
+	$tracks->{$l}->panel->key_style('between');
+	$tracks->{$l}->configure(-key => $self->language->tr('FEATURES_CLIPPED',$max,$count));
+    }
   }
 }
 
@@ -1500,7 +1512,7 @@ sub load_external_sources {
 
 sub get_iterator {
   my $self = shift;
-  my ($db,$segment,$feature_types) = @_;
+  my ($db,$segment,$feature_types,$max) = @_;
 
   # The Bio::DB::SeqFeature::Store database supports correct
   # semantics for directly retrieving features that overlap
@@ -1512,7 +1524,9 @@ sub get_iterator {
       my @args = (-type   => $feature_types,
 		  -seq_id => $segment->seq_id,
 		  -start  => $segment->start,
-		  -end    => $segment->end);
+		  -end    => $segment->end,
+		  -max_features => $max,  # some adaptors allow this
+	  );
       return $db->get_seq_stream(@args);
   }
 
@@ -1699,14 +1713,18 @@ sub create_track_args {
   my ($label,$args) = @_;
 
   my $segment         = $self->segment;
+  my $length          = $segment->length;
+  my $source          = $self->source;
   my $lang            = $self->language;
-  my $override        = $self->settings->{features}{$label}{override_settings} || {};   # user-set override settings for tracks
+
+  my $slabel          = $source->semantic_label($label,$length);
+
+  my $override        = $self->settings->{features}{$slabel}{override_settings}
+                        || {};   # user-set override settings for tracks
+
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
   my $hilite_callback = $args->{hilite_callback};
-
-  my $length = $segment->length;
-  my $source = $self->source;
 
   my @default_args = (-glyph => 'generic');
   push @default_args,(-key   => $label)        unless $label =~ /^\w+:/;
@@ -1739,6 +1757,7 @@ sub create_track_args {
 	     @override,
 	    );
   }
+
   return @args;
 }
 
@@ -1928,6 +1947,7 @@ sub make_link {
     my $url   = CGI->request_uri || '../..';
     my $dbid  = eval {CGI::escape($feature->gbrowse_dbid)};
     my $id    = eval {CGI::escape($feature->primary_id)};
+    warn $@ if $@;
     $url      =~ s!/gbrowse.*!!;
     $url      .= "/gbrowse_details/$ds_name?ref=$ref;start=$start;end=$end";
     $url      .= ";name=$name"     if defined $name;

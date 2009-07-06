@@ -49,7 +49,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.16 2009-07-06 15:46:17 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.17 2009-07-06 16:18:29 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -69,7 +69,7 @@ use vars qw($DB $DSN $TRACK $HEADER %ERRCODES $CONFIG
 use constant SO => 'http://song.cvs.sourceforge.net/viewvc/*checkout*/song/ontology/so.obo';
 use constant DEBUG => 0;
 
-#$Id: das.PLS,v 1.6.8.1.2.16 2009-07-06 15:46:17 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.17 2009-07-06 16:18:29 lstein Exp $
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -224,7 +224,7 @@ END
      <SOURCE uri="$uri" title="$key" description="$description">
         <MAINTAINER email="$a{maintainer}" />
         <VERSION uri="$dsn|$track" created="$created">
-  	  <COORDINATES uri="$a{coordinates}" authority="$a{authority}" test_range="$a{testrange}" taxid="$a{taxid}" version="$version" SOURCE="$a{source}">$authority,$a{source},$a{species}</COORDINATES>
+  	  <COORDINATES uri="$a{coordinates}" authority="$a{authority}" test_range="$a{testrange}" taxid="$a{taxid}" version="$version" source="$a{source}">$authority,$a{source},$a{species}</COORDINATES>
 END
 ;
 

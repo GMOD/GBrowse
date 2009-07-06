@@ -13,3 +13,13 @@ Build
 Makefile
 okada*
 META.yml
+old_tar_files
+*.tar
+INSTALL.SKIP
+NFS_bechmark_results.ods
+*-stamp
+foo*
+.cvsignore
+*.index
+
+

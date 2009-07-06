@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.124 2009-05-07 09:49:57 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.125 2009-07-06 15:46:17 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -3044,6 +3044,7 @@ sub coordinate_mapper {
     my ($ref,$start,$stop) = ($current_segment->seq_id,
 			      $current_segment->start,
 			      $current_segment->end);
+
     my %segments;
     
     my $closure = sub {

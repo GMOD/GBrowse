@@ -18,6 +18,7 @@
         * Moved Bio::DB::Das::Chado and BDD::BioSQL to their own packages and
           out of the GBrowse distribution so they can be updated independently via CPAN
         * Fixed encoding of version number at the bottom of the page.
+	* Made the DAS script compatible with DAS Registry
 
 1.69
 	* Draggable tracks; use "drag and drop" option to activate.

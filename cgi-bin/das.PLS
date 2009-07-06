@@ -49,7 +49,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.15 2009-06-04 22:04:23 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.16 2009-07-06 15:46:17 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -69,10 +69,10 @@ use vars qw($DB $DSN $TRACK $HEADER %ERRCODES $CONFIG
 use constant SO => 'http://song.cvs.sourceforge.net/viewvc/*checkout*/song/ontology/so.obo';
 use constant DEBUG => 0;
 
-#$Id: das.PLS,v 1.6.8.1.2.15 2009-06-04 22:04:23 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.16 2009-07-06 15:46:17 lstein Exp $
 
 # minimal DAS annotation/reference server
-$DAS_VERSION = 'DAS/1.60';
+$DAS_VERSION = 'DAS/1.50';
 use constant CAPABILITIES => join '; ',qw(error-segment/1.0 unknown-segment/1.0 unknown-feature/1.0
 					  feature-by-id/1.0 group-by-id/1.0 sources/1.0
                                           dna/1.0 features/1.0 stylesheet/1.1 types/1.0
@@ -188,7 +188,7 @@ END
   for my $dsn (sort $CONFIG->sources) {
       $CONFIG->source($dsn);
       my $sourceinfo = $CONFIG->setting('das source') or next;
-      my %a = $sourceinfo =~ m/-(\w+)\s+([^-].+?(?=\s|$))/g;
+      my %a = $sourceinfo =~ m/-(\w+)\s+([^-].+?(?= -[a-z]|$))/g;
       for (keys %a) { $a{$_} =~ s/\s+$// }; # trim
       for (qw(maintainer created coordinates authority source testrange)) {
 	  next if exists $a{$_};
@@ -216,6 +216,7 @@ END
 	  my $authority   = $a{authority};
 	  $authority     .= "_$version" if $version;
 	  my $base        = url();
+	  $base           =~ s/\?$//;
 
 	  my $uri = CGI::escape($dsn).'|'.CGI::escape($track);
 	  
@@ -223,9 +224,10 @@ END
      <SOURCE uri="$uri" title="$key" description="$description">
         <MAINTAINER email="$a{maintainer}" />
         <VERSION uri="$dsn|$track" created="$created">
-  	  <COORDINATES uri="$a{coordinates}" authority="$a{authority}" test_range="$a{testrange}" taxid="$a{taxid}" version="$version">$authority,$a{source},$a{species}</COORDINATES>
+  	  <COORDINATES uri="$a{coordinates}" authority="$a{authority}" test_range="$a{testrange}" taxid="$a{taxid}" version="$version" SOURCE="$a{source}">$authority,$a{source},$a{species}</COORDINATES>
 END
 ;
+
 	  for ('types','features','entry_points','stylesheet') {
 	      print <<END;
           <CAPABILITY type="das1:$_" query_uri="$base/$dsn|$track/$_" />

@@ -109,9 +109,9 @@ sub cgibin {
 	'/Library/Webserver/CGI-Executables',  # MacOSX
 	'/usr/lib/cgi-bin',               # Ubuntu
 	) {
-	return $_ if -d $_;
+	return "$_/gb2" if -d $_;
     }
-    return '/usr/local/apache/cgi-bin'; #fallback
+    return '/usr/local/apache/cgi-bin/gb2'; #fallback
 }
 
 # try a few ports until we find an open one

@@ -20,7 +20,7 @@ my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support fi
 		htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
 		tmp           => 'Directory for GBrowse\'s temporary data',
 		databases     => 'Directory for GBrowse\'s example databases',
-		cgibin        => 'Apache CGI scripts directory?',
+		cgibin        => 'Directory for GBrowse\'s CGI script executables?',
 		portdemo      => 'Internet port to run demo web site on (for demo)?',
 		apachemodules => 'Apache loadable module directory (for demo)?',
 		wwwuser       => 'User account under which Apache daemon runs?',
@@ -278,7 +278,7 @@ sub apache_conf {
     my $cgiroot = basename($cgibin);
     my $docs    = basename($dir);
     my $perl5lib= $self->added_to_INC;
-    my $inc     = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
+    my $inc      = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
     my $fcgi_inc = $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
     my $fcgid_inc= $perl5lib ? "DefaultInitEnv PERL5LIB $perl5lib"        : '';
     my $modperl_switches = $perl5lib
@@ -288,19 +288,19 @@ sub apache_conf {
     return <<END;
 Alias        "/$docs/i/" "$tmp/images/"
 Alias        "/$docs"    "$dir"
-ScriptAlias  "/gb2"      "$cgibin/gb2"
+ScriptAlias  "/gb2"      "$cgibin"
 
 <Directory "$dir">
   Options -Indexes -MultiViews +FollowSymLinks
 </Directory>
 
-<Directory "$cgibin/gb2">
+<Directory "$cgibin">
   ${inc}
   SetEnv GBROWSE_CONF   "$conf"
 </Directory>
 
 <IfModule mod_fcgid.c>
-  Alias /fgb2 "$cgibin/gb2"
+  Alias /fgb2 "$cgibin"
   <Location /fgb2>
     SetHandler   fcgid-script
     Options      ExecCGI
@@ -310,7 +310,7 @@ ScriptAlias  "/gb2"      "$cgibin/gb2"
 </IfModule>
 
 <IfModule mod_fastcgi.c>
-  Alias /fgb2 "$cgibin/gb2"
+  Alias /fgb2 "$cgibin"
   <Location /fgb2>
     SetHandler   fastcgi-script
   </Location>
@@ -318,7 +318,7 @@ ScriptAlias  "/gb2"      "$cgibin/gb2"
 </IfModule>
 
 <IfModule mod_perl.c>
-   Alias /mgb2 "$cgibin/gb2"
+   Alias /mgb2 "$cgibin"
    $modperl_switches
    <Location /mgb2>
      SetHandler perl-script
@@ -349,26 +349,6 @@ sub ACTION_install {
         ||= $self->config_data('database')
 	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->databases);
     
-    if (0) {
-    # don't overwrite existing config files -- write them install INSTALL.SKIP
-    my $skip = IO::File->new('>INSTALL.SKIP');
-    my $old_conf = $self->install_path->{conf};
-    if (-e $old_conf) {
-	my $d = IO::Dir->new('./blib/conf');
-	while (my $f = $d->read) {
-	    my $new = File::Spec->catfile('./blib/conf',$f);
-	    my $old = File::Spec->catfile($old_conf,$f);
-	    if ($new =~ /\.conf$/ && -e $old) {
-		warn "Found $new in $old_conf. Not installing...\n";
-		print $skip '^',quotemeta($new),'$',"\n";
-	    }
-	}
-	
-	$d->close;
-    }
-    $skip->close;
-    }
-
     $self->SUPER::ACTION_install();
 
     my $user = $self->config_data('wwwuser') || GBrowseGuessDirectories->wwwuser;
@@ -490,7 +470,8 @@ sub process_cgibin_files {
     while (<$f>) {
 	next unless m!^cgi-bin/!;
 	chomp;
-	$self->copy_if_modified($_=>'blib');
+	$self->copy_if_modified($_=>'blib') &&
+	    $self->fix_shebang_line(File::Spec->catfile('blib',$_));
     }
 }
 
@@ -585,6 +566,7 @@ sub substitute_in_place {
     my $wwwuser  = $self->config_data('wwwuser');
     my $perl5lib = $self->perl5lib || '';
     my $installscript = $self->scriptdir;
+    (my $cgiurl = $cgibin) =~ s!^.+/cgi-bin!/cgi-bin!;
 
     while (<$in>) {
 	s/\$INSTALLSCRIPT/$installscript/g;
@@ -592,6 +574,7 @@ sub substitute_in_place {
 	s/\$HTDOCS/$htdocs/g;
 	s/\$CONF/$conf/g;
 	s/\$CGIBIN/$cgibin/g;
+	s/\$CGIURL/$cgiurl/g;
 	s/\$WWWUSER/$wwwuser/g;
 	s/\$DATABASES/$databases/g;
 	s/\$VERSION/$self->dist_version/eg;
@@ -781,11 +764,11 @@ configuration files, and static image/support files will be installed.
 One or more of the config options can be set on the command 
 line when first running perl Build.PL:
 
-  perl Build.PL --conf=/etc/growse2 \         # config files
-                --htdocs=/var/www/gbrowse2 \   # static files
-                --cgibin=/usr/lib/cgi-bin \    # CGI directory
-                --wwwuser=www-data \           # apache user
-                --portdemo=8000 \              # demo web site port
+  perl Build.PL --conf=/etc/growse2 \            # config files
+                --htdocs=/var/www/gbrowse2   \   # static files
+                --cgibin=/usr/lib/cgi-bin/gb2 \  # CGI directory
+                --wwwuser=www-data \             # apache user
+                --portdemo=8000 \                # demo web site port
                 --apachemodules=/usr/lib/apache2/modules  # apache loadable modules
 
 =item reconfig

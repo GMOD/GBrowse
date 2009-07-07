@@ -393,6 +393,14 @@ sub semantic_label {
   $label
 }
 
+sub semantic_fallback_setting {
+    my $self = shift;
+    my ($label,$option,$length) = @_;
+    my $setting = $self->semantic_setting($label,$option,$length);
+    return $setting if defined $setting;
+    return $self->fallback_setting($label,$option);
+}
+
 =head2 $section_setting = $data_source->section_setting($section_name)
 
 Returns "open" "closed" or "off" for the named section. Named sections are:

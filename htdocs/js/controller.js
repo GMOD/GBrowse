@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.99 2009-06-16 14:08:24 lstein Exp $
+ $Id: controller.js,v 1.99.4.1 2009-07-07 20:36:33 idavies Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -601,7 +601,7 @@ var GBrowseController = Class.create({
   // Track Configure Methods ****************************************
 
   reconfigure_track:
-  function(track_id, form_element) {
+  function(track_id, form_element, semantic_label) {
 
     if (form_element==null)
        form_element = $("track_config_form");
@@ -614,7 +614,8 @@ var GBrowseController = Class.create({
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
-            reconfigure_track: track_id
+            reconfigure_track: track_id,
+	    semantic_label: semantic_label
           }).toQueryString(),
       onSuccess: function(transport) {
         var track_div_id = Controller.gbtracks.get(track_id).track_div_id;

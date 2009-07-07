@@ -19,11 +19,11 @@ bin/ucsc_genes2gff.pl
 bin/wiggle2gff3.pl
 bin/windows_install.pl
 Build.PL
-cgi-bin/gb2/gbgff
-cgi-bin/gb2/gbrowse
-cgi-bin/gb2/gbrowse_details
-cgi-bin/gb2/gbrowse_gmap
-cgi-bin/gb2/gbrowse_img
+cgi-bin/gbgff
+cgi-bin/gbrowse
+cgi-bin/gbrowse_details
+cgi-bin/gbrowse_gmap
+cgi-bin/gbrowse_img
 cgi-bin/README
 Changes
 conf/detail_select_menu.conf

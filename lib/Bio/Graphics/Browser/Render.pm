@@ -331,7 +331,8 @@ sub asynchronous_event {
     }
 
     if ( my $track_name = param('reconfigure_track') ) {
-        $self->reconfigure_track($track_name);
+	my $semantic_label = param('semantic_label');
+        $self->reconfigure_track($track_name,$semantic_label);
         return ( 200, 'application/json', {} );
     }
 
@@ -1969,18 +1970,23 @@ sub filter_subtrack {
 sub reconfigure_track {
     my $self  = shift;
     my $label = shift;
+    my $semantic_label = shift;
+
     my $state = $self->state();
-    $state->{features}{$label}{visible}  = param('show_track') ? 1 : 0;
-    $state->{features}{$label}{options}  = param('format_option');
-    $state->{features}{$label}{limit}    = param('limit');
+    $state->{features}{$label}{visible}          = param('show_track') ? 1 : 0;
+    $state->{features}{$label}{options}          = param('format_option');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
-    for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 'linewidth' ) {
+
+    for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 'linewidth', 'feature_limit' ) {
         my $value = param($s);
-        delete $state->{features}{$label}{override_settings}{$s}, next
-            if $value eq $dynamic;
-        $state->{features}{$label}{override_settings}{$s} = $value;
+	if ($value eq $dynamic) {
+	    delete $state->{features}{$semantic_label}{override_settings}{$s};
+	} else {
+	    $state->{features}{$semantic_label}{override_settings}{$s} = $value;
+	}
     }
-    $state->{features}{$label}{override_settings}{stranded} = param('stranded') || 0;
+
+    $state->{features}{$semantic_label}{override_settings}{stranded}   = param('stranded') || 0;
 }
 
 sub track_config {

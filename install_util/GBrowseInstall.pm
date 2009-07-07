@@ -12,13 +12,15 @@ use File::Temp 'tempdir';
 use File::Spec;
 use IO::File;
 use IO::Dir;
+use File::Compare 'compare';
+use File::Copy    'copy';
 use GBrowseGuessDirectories;
 
 my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
 		htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
 		tmp           => 'Directory for GBrowse\'s temporary data',
 		databases     => 'Directory for GBrowse\'s example databases',
-		cgibin        => 'Apache CGI scripts directory?',
+		cgibin        => 'Directory for GBrowse\'s CGI script executables?',
 		portdemo      => 'Internet port to run demo web site on (for demo)?',
 		apachemodules => 'Apache loadable module directory (for demo)?',
 		wwwuser       => 'User account under which Apache daemon runs?',
@@ -148,6 +150,12 @@ sub ACTION_demostop {
     print STDERR "Demo stopped.\n";
 }
 
+sub ACTION_clean {
+    my $self = shift;
+    $self->SUPER::ACTION_clean;
+    unlink 'INSTALL.SKIP';
+}
+
 sub ACTION_realclean {
     my $self = shift;
     $self->SUPER::ACTION_realclean;
@@ -270,7 +278,7 @@ sub apache_conf {
     my $cgiroot = basename($cgibin);
     my $docs    = basename($dir);
     my $perl5lib= $self->added_to_INC;
-    my $inc     = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
+    my $inc      = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
     my $fcgi_inc = $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
     my $fcgid_inc= $perl5lib ? "DefaultInitEnv PERL5LIB $perl5lib"        : '';
     my $modperl_switches = $perl5lib
@@ -280,19 +288,19 @@ sub apache_conf {
     return <<END;
 Alias        "/$docs/i/" "$tmp/images/"
 Alias        "/$docs"    "$dir"
-ScriptAlias  "/gb2"      "$cgibin/gb2"
+ScriptAlias  "/gb2"      "$cgibin"
 
 <Directory "$dir">
   Options -Indexes -MultiViews +FollowSymLinks
 </Directory>
 
-<Directory "$cgibin/gb2">
+<Directory "$cgibin">
   ${inc}
   SetEnv GBROWSE_CONF   "$conf"
 </Directory>
 
 <IfModule mod_fcgid.c>
-  Alias /fgb2 "$cgibin/gb2"
+  Alias /fgb2 "$cgibin"
   <Location /fgb2>
     SetHandler   fcgid-script
     Options      ExecCGI
@@ -302,7 +310,7 @@ ScriptAlias  "/gb2"      "$cgibin/gb2"
 </IfModule>
 
 <IfModule mod_fastcgi.c>
-  Alias /fgb2 "$cgibin/gb2"
+  Alias /fgb2 "$cgibin"
   <Location /fgb2>
     SetHandler   fastcgi-script
   </Location>
@@ -310,7 +318,7 @@ ScriptAlias  "/gb2"      "$cgibin/gb2"
 </IfModule>
 
 <IfModule mod_perl.c>
-   Alias /mgb2 "$cgibin/gb2"
+   Alias /mgb2 "$cgibin"
    $modperl_switches
    <Location /mgb2>
      SetHandler perl-script
@@ -341,22 +349,6 @@ sub ACTION_install {
         ||= $self->config_data('database')
 	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->databases);
     
-    # don't overwrite existing config files
-    my $old_conf = $self->install_path->{conf};
-    if (-e $old_conf) {
-	my $d = IO::Dir->new('./blib/conf');
-	while (my $f = $d->read) {
-	    my $new = File::Spec->catfile('./blib/conf',$f);
-	    my $old = File::Spec->catfile($old_conf,$f);
-	    if ($new =~ /\.conf$/ && -e $old) {
-		warn "Found $new in $old_conf. Not installing...\n";
-		unlink $new;
-	    }
-	}
-	
-	$d->close;
-    }
-
     $self->SUPER::ACTION_install();
 
     my $user = $self->config_data('wwwuser') || GBrowseGuessDirectories->wwwuser;
@@ -428,14 +420,35 @@ sub fix_selinux {
 sub process_conf_files {
     my $self = shift;
     my $f    = IO::File->new('MANIFEST');
+
+    my $prefix = $self->prefix || $self->install_base || '';
+    my $install_path = $self->config_data('conf')
+	|| File::Spec->catfile($prefix,GBrowseGuessDirectories->conf);
+    my $skip;
+
     while (<$f>) {
 	next unless m!^conf/!;
 	chomp;
+	my $base = $_;
+
 	my $copied = $self->copy_if_modified($_=>'blib');
 	$self->substitute_in_place("blib/$_")
 	    if $copied
 	    or !$self->up_to_date('_build/config_data',"blib/$_");
+	
+	if ($copied) {
+	    $skip ||= IO::File->new('>>INSTALL.SKIP');
+	    (my $new = $base) =~ s/^conf\///;
+	    my $installed = File::Spec->catfile($install_path,$new);
+	    if (-e $installed && compare($base,$installed) != 0) {
+		warn "$installed is already installed. New version will be installed as $installed.new\n";
+		copy ("blib/$base","blib/$base.new");
+		print $skip '^',"blib/",quotemeta($base),'$',"\n";
+	    }
+	}
     }
+
+    $skip->close if $skip;
 }
 
 sub process_htdocs_files {
@@ -457,30 +470,50 @@ sub process_cgibin_files {
     while (<$f>) {
 	next unless m!^cgi-bin/!;
 	chomp;
-	$self->copy_if_modified($_=>'blib');
+	$self->copy_if_modified($_=>'blib') &&
+	    $self->fix_shebang_line(File::Spec->catfile('blib',$_));
     }
 }
 
 sub process_etc_files {
     my $self = shift;
 
+    my $prefix = $self->prefix || $self->install_base || '';
+    my $install_path = File::Spec->catfile($prefix,GBrowseGuessDirectories->etc);
+
+    my $skip;
+
     if ($self->config_data('installetc') =~ /^[yY]/) {
 	my $f    = IO::File->new('MANIFEST');
 	while (<$f>) {
 	    next unless m!^etc/!;
 	    chomp;
+
+	    my $base = $_;
+
 	    my $copied = $self->copy_if_modified($_=>'blib');
 	    $self->substitute_in_place("blib/$_")
 		if $copied
 		or !$self->up_to_date('_build/config_data',"blib/$_");
+
+	    if ($copied) {
+		$skip ||= IO::File->new('>>INSTALL.SKIP');
+		(my $new = $base) =~ s/^etc\///;
+		my $installed = File::Spec->catfile($install_path,$new);
+		warn "$installed is already installed. New version will be installed as $installed.new\n";
+		copy ("blib/$base","blib/$base.new");
+		print $skip '^',"blib/",quotemeta($base),'$',"\n";
+	    }
 	}
     }
+
+    $skip->close if $skip;
 
     # generate the apache config data
     my $includes = GBrowseGuessDirectories->apache_includes || '';
     my $target   = "blib${includes}/gbrowse2.conf";
     if ($includes && !$self->up_to_date('_build/config_data',$target)) {
-	if ($self->config_data('installconf') =~ /^[yY]/) {
+	if ($self->config_data('installconf') =~ /^[yY]/ && !-e "${includes}/gbrowse2.conf") {
 	    warn "Creating include file for Apache config: $target\n";
 	    my $dir = dirname($target);
 	    mkpath([$dir]);
@@ -489,7 +522,11 @@ sub process_etc_files {
 		$f->close;
 	    }
 	} else {
-	    warn "Not updating Apache config automatically. Please run ./Build apache_conf to see the recommended directives.\n";
+	    print STDERR 
+		-e "${includes}/gbrowse2.conf"
+		? "${includes}/gbrowse2.conf is already installed. " 
+		: "Automatic Apache config disabled. ";
+	    print STDERR "Please run ./Build apache_conf to see this file's recommended contents.\n";
 	}
 
     }
@@ -529,6 +566,7 @@ sub substitute_in_place {
     my $wwwuser  = $self->config_data('wwwuser');
     my $perl5lib = $self->perl5lib || '';
     my $installscript = $self->scriptdir;
+    (my $cgiurl = $cgibin) =~ s!^.+/cgi-bin!/cgi-bin!;
 
     while (<$in>) {
 	s/\$INSTALLSCRIPT/$installscript/g;
@@ -536,6 +574,7 @@ sub substitute_in_place {
 	s/\$HTDOCS/$htdocs/g;
 	s/\$CONF/$conf/g;
 	s/\$CGIBIN/$cgibin/g;
+	s/\$CGIURL/$cgiurl/g;
 	s/\$WWWUSER/$wwwuser/g;
 	s/\$DATABASES/$databases/g;
 	s/\$VERSION/$self->dist_version/eg;
@@ -725,11 +764,11 @@ configuration files, and static image/support files will be installed.
 One or more of the config options can be set on the command 
 line when first running perl Build.PL:
 
-  perl Build.PL --conf=/etc/growse2 \         # config files
-                --htdocs=/var/www/gbrowse2 \   # static files
-                --cgibin=/usr/lib/cgi-bin \    # CGI directory
-                --wwwuser=www-data \           # apache user
-                --portdemo=8000 \              # demo web site port
+  perl Build.PL --conf=/etc/growse2 \            # config files
+                --htdocs=/var/www/gbrowse2   \   # static files
+                --cgibin=/usr/lib/cgi-bin/gb2 \  # CGI directory
+                --wwwuser=www-data \             # apache user
+                --portdemo=8000 \                # demo web site port
                 --apachemodules=/usr/lib/apache2/modules  # apache loadable modules
 
 =item reconfig

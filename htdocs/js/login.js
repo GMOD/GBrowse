@@ -1,7 +1,7 @@
 var LoginScript = "/cgi-bin/gb2/gbrowse_login"
 var LoginPage   = "main";
 
-var CurrentUser, CurrentPass;
+//var CurrentUser, CurrentPass;  Remove these
 var EditDetails;
 
 function load_login_balloon(event) {
@@ -11,102 +11,94 @@ function load_login_balloon(event) {
                '<div style=border-bottom-style:solid;border-width:1px;padding-left:3px>' +
                  '<b id=loginTitle>Log in</b></div>' +
 
+               '<font face=Arial size=2>' +
                //Table containing login form
-               '<table id=loginTable align=center style=font-size:small;padding-top:3px>' +
+               '<table id=loginTable cellspacing=0 cellpadding=3 align=center width=100% style=padding-top:3px>' +
                  //Warning message
                  '<tbody><tr><td id=loginWarning colspan=2 align=center style=display:none;' +
                    'color:red;padding-bottom:3px>All fields are required.</td></tr></tbody>' +
-                 //Click here to create a new account
-                 '<tbody>' +
-                   '<tr><td id=loginCreate colspan=2 align=center style=padding-bottom:3px>' +
-                     'Don\'t have an account? <a href=# onClick=login_page_change(\'create\');' +
-                       'return false;>Create one</a>.</td></tr>' +
 
                    //"Edit Details" selection buttons
+                 '<tbody>' +
                    '<tr id=loginDSelect style=display:none;><td colspan=2 align=center ' +
                      'style=padding-bottom:3px;padding-top:3px>' +
-                     '<input id=loginChgEmail type=button value=\'Change my E-mail\'' +
+                     '<input id=loginChgEmail style=font-size:90% type=button value=\'Change my E-mail\'' +
                        'onClick=edit_details(\'email\') /><br>' +
-                     '<input id=loginChgPass type=button value=\'Change my Password\'' +
+                     '<input id=loginChgPass style=font-size:90% type=button value=\'Change my Password\'' +
                        'onClick=edit_details(\'password\') /></td></tr>' +
 
                    //Input text boxes
-                   '<tr id=loginURow><td align=right>Username:</td>' +
+                   '<tr id=loginURow><td>Username:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){validate_info();} ' +
-                     'id=loginUser type=text size=15></td></tr>' +
-                   '<tr id=loginERow style=display:none><td align=right>E-mail:</td>' +
+                       'id=loginUser type=text style=font-size:9pt size=20></td></tr>' +
+                   '<tr id=loginERow style=display:none><td>E-mail:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){validate_info();} ' +
-                     'id=loginEmail type=text size=15></td></tr>' +
-                   '<tr id=loginPRow><td align=right>Password:</td>' +
+                       'id=loginEmail type=text style=font-size:9pt size=20></td></tr>' +
+                   '<tr id=loginPRow><td>Password:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){validate_info();} ' +
-                     'id=loginPass type=password size=15></td></tr>' +
-                   '<tr id=loginP2Row style=display:none><td align=right>Retype Password:</td>' +
+                       'id=loginPass type=password style=font-size:9pt size=20></td></tr>' +
+                   '<tr id=loginP2Row style=display:none><td>Retype Password:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){validate_info();} ' +
-                     'id=loginPass2 type=password size=15></td></tr>' +
+                       'id=loginPass2 type=password style=font-size:9pt size=20></td></tr>' +
                  '</tbody>' +
 
                    //"Edit Details" input text boxes
                  '<tbody id=loginDEmail style=display:none;>' +
-                   '<tr><td align=right>Current E-mail:</td>' +
+                   '<tr><td width=40%>Current E-mail:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){edit_details_verify();} ' +
-                     'id=loginDEOrig type=text size=15></td></tr>' +
-                   '<tr><td align=right>New E-mail:</td>' +
+                     'id=loginDEOrig type=text style=font-size:9pt size=18></td></tr>' +
+                   '<tr><td width=40%>New E-mail:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){edit_details_verify();} ' +
-                     'id=loginDENew type=text size=15></td></tr>' +
-                   '<tr><td align=right>Retype New E-mail:</td>' +
+                     'id=loginDENew type=text style=font-size:9pt size=18></td></tr>' +
+                   '<tr><td width=40%>Retype New E-mail:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){edit_details_verify();} ' +
-                     'id=loginDENew2 type=text size=15></td></tr>' +
+                     'id=loginDENew2 type=text style=font-size:9pt size=18></td></tr>' +
                  '</tbody>' +
                  '<tbody id=loginDPass style=display:none;>' +
-                   '<tr><td align=right>Current Password:</td>' +
+                   '<tr><td>Current Password:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){edit_details_verify();} ' +
-                     'id=loginDPOrig type=password size=15></td></tr>' +
-                   '<tr><td align=right>New Password:</td>' +
+                       'id=loginDPOrig type=password style=font-size:9pt size=18></td></tr>' +
+                   '<tr><td>New Password:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){edit_details_verify();} ' +
-                     'id=loginDPNew type=password size=15></td></tr>' +
-                   '<tr><td align=right>Retype New Password:</td>' +
+                       'id=loginDPNew type=password style=font-size:9pt size=18></td></tr>' +
+                   '<tr><td>Retype New Password:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){edit_details_verify();} ' +
-                     'id=loginDPNew2 type=password size=15></td></tr>' +
+                       'id=loginDPNew2 type=password style=font-size:9pt size=18></td></tr>' +
                  '</tbody>' +
 
-                   //Remember me button
+                   //Submit, remember me and cancel buttons
                  '<tbody>' +
-                   '<tr><td/><td id=loginRemember align=left><input type=checkbox checked ' +
-                     'style=padding-bottom:3px>Remember me</input></td></tr>' +
-
-                   //Submit and cancel buttons
-                   '<tr><td id=loginButtons colspan=2 align=center style=padding-bottom:3px;padding-top:3px>' +
-                     '<input id=loginSubmit type=button value=\'Log in\'' +
+                   '<tr><td id=loginButtons colspan=2 align=center style=padding-bottom:3px;padding-top:6px>' +
+                     '<input id=loginSubmit style=font-size:90% type=button value=\'Log in\'' +
                        'onClick=validate_info() />' +
-                     '<b id=loginBreak style=display:none>&nbsp; &nbsp;</b>' +
-                     '<input id=loginCancel type=button value=\'Cancel\'' +
-                       'onClick=login_page_change(\'main\') style=display:none /></td></tr>' +
+                     '<b id=loginBreak>&nbsp; &nbsp;</b>' +
+                     '<input id=loginRemember type=checkbox checked>' +
+                       '<font id=loginRememberTxt>Remember me</font></input>' +
+                     '<input id=loginCancel style=font-size:90%;display:none type=button value=\'Cancel\'' +
+                       'onClick=login_page_change(\'main\') /></td></tr>' +
 
                    //"Edit Details" submit and cancel buttons
                    '<tr><td id=loginDButtons colspan=2 align=center style=display:none;' +
                      'padding-bottom:3px;padding-top:3px>' +
-                     '<input id=loginDSubmit type=button value=\'Submit\'' +
+                     '<input id=loginDSubmit style=font-size:90% type=button value=\'Submit\'' +
                        'onClick=edit_details_verify() />&nbsp; &nbsp;' +
-                     '<input id=loginDCancel type=button value=\'Cancel\'' +
+                     '<input id=loginDCancel style=font-size:90% type=button value=\'Cancel\'' +
                        'onClick=edit_details(\'home\') /></td></tr>' +
 
                    //Click here to Edit Details
-                   '<tr id=loginEdit><td colspan=2 align=center><a href=# ' +
-                     'onClick=login_page_change(\'edit\');' +
-                       'return false;>Edit account details</a></td></tr>' +
-
-                   //Click here to retrive your password
-                   '<tr id=loginForgot><td colspan=2 align=center><a href=# ' +
-                     'onClick=login_page_change(\'forgot\');' +
-                       'return false;>Forgot my password</a></td></tr>' +
+                   '<tr id=loginOpts align=center><td colspan=2><font size=1>' +
+                     '<a href=# onClick=login_page_change(\'create\');return false;>Register</a> / ' +
+                     '<a href=# onClick=login_page_change(\'edit\');return false;>My Account</a> / ' +
+                     '<a href=# onClick=login_page_change(\'forgot\');return false;>Forgotten Password?</a>' +
+                   '</font></td></tr>' +
 
                    '<tr><td id=loginOpenID colspan=2 align=center style=padding-top:12px>' +
                      'Have an OpenID? <a href=# onClick=login_page_change(\'create\');' +
                        'return false;>Sign in</a>.</td></tr>' +
                  '</tbody>' +
-               '</table></form>';
+               '</table></font></form>';
 
-    GBox.showTooltip(event,html,1,250);
+    GBox.showTooltip(event,html,1,320);
 }
 
 
@@ -119,10 +111,10 @@ function login_page_change(page) {
         $('loginWarning').style.color = 'red';
         $('loginTitle').innerHTML     = 'Log in';
         $('loginSubmit').value        = 'Log in';
+        $('loginCancel').value        = 'Cancel';
         $('loginSubmit').show();
         $('loginERow').hide();
         $('loginP2Row').hide();
-        $('loginBreak').hide();
         $('loginDSelect').hide();
         break;
     case 'create':
@@ -130,39 +122,35 @@ function login_page_change(page) {
         $('loginSubmit').value    = 'Sign up';
         $('loginERow').show();
         $('loginP2Row').show();
-        $('loginBreak').show();
-        $('loginEmail').size = '15';
         break;
     case 'forgot':
         $('loginTitle').innerHTML = 'Forgot my password';
         $('loginSubmit').value    = 'E-mail my password';
         $('loginERow').show();
-        $('loginEmail').size = '18';
         break;
     case 'edit':
         $('loginTitle').innerHTML = 'Edit account details';
         $('loginSubmit').value    = 'Continue';
-        $('loginBreak').show();
         break;
     default:
         return;
     }
 
     if(page == 'main') {
-        $('loginEdit').show();   $('loginCancel').hide();
-        $('loginCreate').show(); $('loginForgot').show();
+        $('loginOpts').show(); $('loginCancel').hide();
         $('loginOpenID').show(); $('loginRemember').show();
+        $('loginRememberTxt').show();
     } else {
-        $('loginEdit').hide();   $('loginCancel').show();
-        $('loginCreate').hide(); $('loginForgot').hide();
+        $('loginOpts').hide(); $('loginCancel').show();
         $('loginOpenID').hide(); $('loginRemember').hide();
+        $('loginRememberTxt').hide();
     }
 
     if(page =='forgot') {
-        $('loginEmail').focus();
+        $('loginEmail').focus(); $('loginBreak').hide();
         $('loginURow').hide(); $('loginPRow').hide();
     } else {
-        $('loginUser').focus();
+        $('loginUser').focus(); $('loginBreak').show();
         $('loginURow').show(); $('loginPRow').show();
     }
 
@@ -214,15 +202,41 @@ function validate_info() {
 }
 
 
+function add_user() {
+    var username = $('loginUser').getValue();
+    var password = $('loginPass').getValue();
+    var email    = $('loginEmail').getValue();
+
+    new Ajax.Request(LoginScript,{
+        method:      'post',
+        parameters:  {action: ['add_user'],
+                      user:     username,
+                      email:    email,
+                      pass:     password,
+                      remember: 1
+                     },
+        onSuccess: function (transport) {
+            $('loginWarning').innerHTML = transport.responseText;
+            login_user(username,password);
+        }
+    });
+}
+
+
 function login_validation() {
     var username = $('loginUser').getValue();
     var password = $('loginPass').getValue();
+    var remember;
+
+    if($('loginRemember').checked) {remember=1;}
+    else {remember=0;}
 
     new Ajax.Request(LoginScript,{
         method:      'post',
         parameters:  {action: ['validate'],
-                      user:  username,
-                      pass:  password
+                      user:     username,
+                      pass:     password,
+                      remember: remember
                      },
         onSuccess: function (transport) {
             $('loginWarning').innerHTML = transport.responseText;
@@ -245,33 +259,20 @@ function login_user(username,password) {
             return;
         }
 
-        $('loginWarning').innerHTML = "Gooood";
-        $('loginWarning').show();
+        if(LoginPage == 'create') {
+            $('loginCancel').value        = 'Back';
+            $('loginWarning').style.color = 'blue';
+            $('loginWarning').innerHTML   = "A confirmation e-mail has been sent, please " +
+                "follow the attached link to complete the registration process.";
 
-        //do_login_script();
+            $('loginURow').hide(); $('loginERow').hide(); $('loginBreak').hide(); 
+            $('loginPRow').hide(); $('loginP2Row').hide(); $('loginSubmit').hide();
+            $('loginWarning').show();            
+        } else {
+            $('loginMain').submit();
+        }
     }
 }
-
-
-function add_user() {
-    var username = $('loginUser').getValue();
-    var password = $('loginPass').getValue();
-    var email    = $('loginEmail').getValue();
-
-    new Ajax.Request(LoginScript,{
-        method:      'post',
-        parameters:  {action: ['add_user'],
-                      user:  username,
-                      email: email,
-                      pass:  password
-                     },
-        onSuccess: function (transport) {
-            $('loginWarning').innerHTML = transport.responseText;
-            login_user(username,password);
-        }
-    });
-}
-
 
 
 function email_user_info() {
@@ -288,9 +289,12 @@ function email_user_info() {
                 $('loginWarning').innerHTML = result;
                 $('loginWarning').show();
             } else {
+                $('loginCancel').value        = 'Back';
                 $('loginWarning').style.color = 'blue';
                 $('loginWarning').innerHTML = "A message has been sent to your" +
-                    " e-mail address with your profile information.";
+                    " e-mail address with your profile information.<br><br>" +
+                    "Please follow the instructions provided to retrieve" +
+                    " your account.";
 
                 $('loginERow').hide();  $('loginSubmit').hide();
                 $('loginBreak').hide(); $('loginWarning').show();
@@ -306,6 +310,7 @@ function edit_details(details) {
     if(details == 'home') {
         $('loginMain').reset();
         $('loginTitle').innerHTML = 'Edit account details';
+        $('loginCancel').value = 'Go Back';
         $('loginTable').style.paddingTop = '18px';
 
         $('loginDButtons').hide();
@@ -318,6 +323,7 @@ function edit_details(details) {
     } else {
         $('loginTable').style.paddingTop = '3px';
         $('loginWarning').style.color = 'red';
+        $('loginCancel').value = 'Cancel';
         $('loginDSelect').hide(); $('loginButtons').hide(); $('loginDButtons').show();
     }  
 

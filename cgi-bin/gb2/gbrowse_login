@@ -1,0 +1,216 @@
+#!/usr/bin/perl -w
+
+use strict;
+use lib '~/Generic-Genome-Browser/lib';
+use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::Render;
+use CGI qw(:standard);
+use DBI;
+use Digest::SHA qw(sha1);
+use Mail::Mailer;
+use Text::ParseWords 'quotewords';
+
+our $VERSION = '$Id: gbrowse_login,v 1.1.2.1 2009-07-07 20:36:33 idavies Exp $';
+
+umask 022;
+
+my $login = DBI->connect("DBI:mysql:gbrowse_login", 'idavies')
+    or die "Could not open gbrowse login database";
+
+my $globals       = Bio::Graphics::Browser->open_globals;
+my $render_object = Bio::Graphics::Browser::Render->new($globals);
+
+my %actions  = map {$_=>1} param('action');
+my $user     = param('user');
+my $pass     = sha1(param('pass'));
+my $remember = param('remember');
+my $email    = param('email');
+my $new      = param('new_val');
+my $column   = param('column');
+
+print header();
+
+do_validate       ($login,$user,$pass,$remember)        if $actions{validate};
+do_add_user       ($login,$user,$email,$pass,$remember) if $actions{add_user};
+do_edit_details   ($login,$user,$pass,$new,$column)     if $actions{edit_details};
+do_email_info     ($login,$email)                       if $actions{email_info};
+
+do_retrieve_user  ($login,$email)      if $actions{retrieve_user};
+do_retrieve_email ($login,$user,$pass) if $actions{retrieve_email};
+
+exit 0;
+
+sub do_get_session {
+    use vars qw($render_object);
+    my $userid   = Bio::Graphics::Browser::Util->generate_id;
+    my $uploadid = Bio::Graphics::Browser::Util->generate_id;
+    return ($userid,$uploadid);
+}
+
+sub do_set_session {
+    use vars qw($render_object);
+    use vars qw($globals);
+    my ($userid,$uploadid) = @_;
+    my $state          = $render_object->state or die "1";
+    $state->{userid}   = $userid or die "2";
+    $state->{uploadid} = $uploadid or die "3";
+    #my $forced_session = $globals->session($userid);
+    #$render_object->state($forced_session);
+    #print $render_object->state->{userid},"\n",$render_object->state->{uploadid},"\n";
+    print "Success";
+}
+
+sub do_validate {
+    my ($login,$user,$pass,$remember) = @_;
+
+    my $query = $login->prepare(
+        "SELECT userid,uploadid FROM users WHERE username=? AND pass=?");
+    $query->execute($user,$pass)
+        or die "Error: ",DBI->errstr;
+
+    my $rows = $query->rows;
+    if($rows == 1) {
+        my $update = $login->prepare(
+            "UPDATE users SET last_login=now(),remember=$remember WHERE username=? AND pass=?");
+        $update->execute($user,$pass)
+            or die "Error: ",DBI->errstr;
+
+        do_set_session($query->fetchrow_array);
+    } elsif($rows == 0) {
+        print "Invalid username or password provided. Please try again.";
+    } else {
+        print "Error: $rows rows returned, please consult your service host.";
+    }
+}
+
+sub do_add_user {
+    my ($login,$user,$email,$pass,$remember) = @_;
+    my ($userid,$uploadid) = do_get_session();
+
+    my $query = $login->prepare(
+        "INSERT INTO users VALUES (?,?,?,?,?,$remember,now(),now())"
+    );
+
+    if ($query->execute($userid,$uploadid,$user,$email,$pass)) {
+        print "Success";
+    } else {
+        if(DBI->errstr =~ m/for key 3$/) {
+            print "Username already in use. Please try another.";
+        } elsif(DBI->errstr =~ m/for key 4$/) {
+            print "E-mail address already in use. Please provide another.";
+        } else {
+            print "Error: ",DBI->errstr;
+        }
+    }
+}
+
+sub do_edit_details {
+    my ($login,$user,$pass,$new,$column) = @_;
+    $new = sha1($new) if($column eq 'pass');
+
+    my $querystring  = "UPDATE users       ";
+       $querystring .= "   SET $column  = ?";
+       $querystring .= " WHERE username = ?";
+       $querystring .= "   AND pass     = ?";
+
+    my $query = $login->prepare($querystring);
+    $query->execute($new,$user,$pass);
+
+    my $rows = $query->rows;
+    if($rows == 1) {
+        print "Success";
+    } elsif($rows == 0) {
+        print "An error occurred, your profile has not been changed.";
+    } else {
+        if(($column eq 'email') and ($rows == -1)) {
+            print "New e-mail already in use, please try another.";
+        } else {
+            print "Error: $rows rows returned, please consult your service host.";
+        }
+    }
+}
+
+sub do_email_info {
+use vars qw($render_object);
+    my ($login,$email)  = @_;
+    #print $render_object->state->{userid},"\n",$render_object->state->{uploadid},"\n";
+    my ($user,$rows) = do_retrieve_user($login,$email);
+    
+    if ($rows != 1) {print $user;return;}
+
+    my $pass;
+    my @char=('a'..'z','A'..'Z','0'..'9','_');
+    foreach (1..23) {$pass.=$char[rand @char];}
+
+    my $secret = sha1($pass);
+    my $query = $login->prepare(
+        "UPDATE users SET pass=? WHERE username=? AND email=?");
+    $query->execute($secret,$user,$email)
+        or die "Error: ",DBI->errstr;
+
+    my $message  = "Your password has been reset to the one seen below. To fix this,";
+       $message .= " select \"My Account\" from the log in menu and log in with the";
+       $message .= " credentials found below.\n\n    Username: $user\n    ";
+       $message .= "Password: $pass\n\n    OpenIDs: None\n";
+
+       $message .= "\n\n\nCourtesy of GBrowse Administration\n\n";
+       $message .= "This message and any attachments may contain confidential and/or ";
+       $message .= "privileged information for the sole use of the intended recipient. ";
+       $message .= "Any review or distribution by anyone other than the person for whom ";
+       $message .= "it was originally intended is strictly prohibited. If you have ";
+       $message .= "received this message in error, please contact the sender and delete ";
+       $message .= "all copies. Opinions, conclusions or other information contained in ";
+       $message .= "this message may not be that of the organization.";
+
+    $email      = "Ian.Davies\@oicr.on.ca";
+    my $mailer  = Mail::Mailer->new('smtp', Server=>'mx.oicr.on.ca');
+
+    $mailer->open({ From    => "noreply\@gbrowse.com",
+                    To      => $email,
+                    Subject => "GBrowse Account Information",})
+        or die "Can't open: $!\n";
+
+    print $mailer $message;
+    $mailer->close()
+        or die "Failed to send message: $!";
+
+    print "Success";
+}
+
+sub do_retrieve_user {
+    my ($login,$email) = @_;
+
+    my $query = $login->prepare(
+        "SELECT username FROM users WHERE email=?");
+    $query->execute($email)
+        or die "Error: ",DBI->errstr;
+
+    my $rows = $query->rows;
+    if($rows == 1) {
+        return ($query->fetchrow_array(),$rows);
+    } elsif($rows == 0) {
+        return ("Sorry, an account does not exist for the e-mail provided.",$rows);
+    } else {
+        return ("Error: $rows accounts match your e-mail, please consult your service host.",$rows);
+    }
+}
+
+sub do_retrieve_email {
+    my ($login,$user,$pass) = @_;
+
+    my $query = $login->prepare(
+        "SELECT email FROM users WHERE username=? AND pass=?");
+    $query->execute($user,$pass)
+        or die "Error: ",DBI->errstr;
+
+    my $rows = $query->rows;
+    if($rows == 1) {
+        print $query->fetchrow_array();
+    } elsif($rows == 0) {
+        print "An error occurred, your profile has not been changed.";
+    } else {
+        print "Error: $rows rows returned, please consult your service host.";
+    }
+}
+
+__END__

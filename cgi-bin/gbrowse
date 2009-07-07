@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+
+use strict;
+use CGI;
+use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::Render::HTML;
+
+umask 022;
+
+my $fcgi   = Bio::Graphics::Browser::Render->fcgi_request;
+
+if ($fcgi) {
+
+    my $FCGI_DONE = 0;
+    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+	my $sig  = shift;
+	my $time = localtime;
+	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+	$FCGI_DONE = 1;
+    };
+
+    while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
+	my $globals = Bio::Graphics::Browser->open_globals;
+	CGI->initialize_globals();
+	Bio::Graphics::Browser::Render::HTML->new($globals)->run();
+    }
+
+} else {
+    my $globals = Bio::Graphics::Browser->open_globals;
+    Bio::Graphics::Browser::Render::HTML->new($globals)->run();
+}
+
+exit 0;

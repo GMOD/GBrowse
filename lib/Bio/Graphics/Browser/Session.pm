@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.16.2.1 2009-07-08 05:21:33 lstein Exp $
+# $Id: Session.pm,v 1.16.2.2 2009-07-08 06:26:40 lstein Exp $
 
 use strict;
 use warnings;
@@ -248,6 +248,7 @@ sub set_nonce {
     my ($nonce,$salt) = @_;
     warn "id=",$self->id," writing nonce = ",md5_hex($nonce,$salt);
     $self->{session}->param('.nonce' => md5_hex($nonce,$salt));
+    $self->{session}->expire('.nonce' => '1d');
     $self->private(1);
 }
 

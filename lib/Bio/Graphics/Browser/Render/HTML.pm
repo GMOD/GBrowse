@@ -53,8 +53,8 @@ sub render_login_button {
     my $session = $self->session;
 
     if ($session->private) {
-	return "You are logged in as userid ".$session->id. " name = ".$session->username.' '.
-	   a({-href=>'?id=logout'},'Log Out');
+	return b("You are logged in as user ".$session->username." (session ".$session->id. ') ')
+	    . a({-href=>'?id=logout'},'Log Out');
     }
 
 
@@ -95,7 +95,8 @@ sub render_login_button {
     );
 END
 
-    return b('ID',$self->session->id).br().b('Name: ').textfield({-id=>'username',-name=>'username'}).
+    return b("You are logged in as anonymous user "."(session ".$session->id. ') ').
+        br().b('Name: ').textfield({-id=>'username',-name=>'username'}).
 	button({-onClick=> $jscript,
 		-name   => 'Try to log in'});
 }

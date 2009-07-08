@@ -619,21 +619,23 @@ sub authorize_user {
     my $username = shift;
 
     warn "asked to authorize $username";
-    my $id;
-    if ($username eq 'fred') {
-	$id = '6394266447ba87f5fc7806acfc1db5c6';
-    } elsif ($username eq 'george') {
-	$id = '468b3dfa9ecf3d6fbb11158e11d050fb';
+    my $id = $self->globals->sessionid_by_username($username);
+
+    my $session;
+    if ($id) {
+	warn "retrieving old session";
+	$session = $self->globals->session($id);  # create/retrieve session
     } else {
-	return;
+	warn "using current session";
+	$session = $self->session;
+	$id      = $session->id;
     }
+
     my $nonce    = Bio::Graphics::Browser::Util->generate_id;
     my $ip       = CGI::remote_addr();
-    my $session  = $self->globals->session($id);  # create/retrieve session
+
     $session->set_nonce($nonce,$ip);
     $session->username($username);
-
-    warn "private = ",$session->private;
 
     $session->flush();
     return ($id,$nonce);

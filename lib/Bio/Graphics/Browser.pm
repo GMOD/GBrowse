@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.239.2.1 2009-07-08 05:21:32 lstein Exp $
+# $Id: Browser.pm,v 1.239.2.2 2009-07-08 05:56:23 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -336,9 +336,7 @@ sub authorized_session {
   my $self                     = shift;
   my ($id,$authority) = @_;
 
-  warn "id=$id, authority=$authority";
-
-  $id ||= undef;
+  $id       ||= undef;
   my $session = $self->session($id);
   return $session unless $session->private;
 
@@ -348,6 +346,22 @@ sub authorized_session {
       warn "UNAUTHORIZED ATTEMPT";
       return $self->session(undef);
   }
+}
+
+sub sessionid_by_username {
+    my $self     = shift;
+    my $username = shift;
+    my $id;
+
+    local $^W = 0;
+    CGI::Session->find($self->session_driver,
+		       sub { 
+			   my $session = shift;
+			   return if $id;
+			   $id = $session->id if $session->param('.username') eq $username;
+		       },
+		       $self->session_args);
+    return $id;
 }
 
 1;

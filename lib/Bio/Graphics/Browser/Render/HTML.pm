@@ -35,6 +35,8 @@ sub render_top {
     my ($title,$features) = @_;
     my $err  =  $self->render_error_div;
     my $html = '';
+    $html   .=  $self->render_login_button;
+
     $html   .=  $self->render_user_header;
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
@@ -44,6 +46,60 @@ sub render_top {
 	  . $self->toggle({nodiv=>1},'banner','',$html)
 	  . $self->render_links;
 }
+
+
+sub render_login_button {
+    my $self    = shift;
+    my $session = $self->session;
+
+    if ($session->private) {
+	return "You are logged in as userid ".$session->id. " name = ".$session->username.' '.
+	   a({-href=>'?id=logout'},'Log Out');
+    }
+
+
+# what happens here is:
+# 1. Generate an asynchronous javascript request to "?authorize_login=1;username=name"
+# 2. If login successful, the asynchronous request generates an authorizaton key and
+#    writes it into the session.
+# 3. The javascript should set a cookie named "id_authorization=key" and then force a reload
+
+    my $jscript = <<'END';
+     function postwith (to,p) {
+       var myForm = document.createElement("form");
+       myForm.method="post" ;
+       myForm.action = to ;
+       for (var k in p) {
+         var myInput = document.createElement("input") ;
+         myInput.setAttribute("name", k) ;
+         myInput.setAttribute("value", p[k]);
+         myForm.appendChild(myInput) ;
+       }
+       document.body.appendChild(myForm) ;
+       myForm.submit() ;
+       document.body.removeChild(myForm) ;
+    }
+
+    new Ajax.Request(document.URL,{
+      method:     'post',
+      parameters:  { authorize_login: 1,
+                     username:        $F($('username'))
+	           },
+      onSuccess: function(transport) {
+	      var results = transport.responseJSON;
+	      if (results.id != null) {
+		  postwith(location.href,results);
+	      }
+	  }
+     }
+    );
+END
+
+    return b('ID',$self->session->id).br().b('Name: ').textfield({-id=>'username',-name=>'username'}).
+	button({-onClick=> $jscript,
+		-name   => 'Try to log in'});
+}
+
 
 sub render_error_div {
     my $self   = shift;

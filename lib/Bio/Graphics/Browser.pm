@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.239 2009-06-08 21:21:54 lstein Exp $
+# $Id: Browser.pm,v 1.239.2.1 2009-07-08 05:21:32 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -318,16 +318,36 @@ sub time2sec {
 
 ## methods for dealing with the session
 sub session {
-  my $self = shift;
-  my $id   = shift;
-  return Bio::Graphics::Browser::Session->new(driver   => $self->session_driver,
-					      id       => $id||undef,
-					      args     => $self->session_args,
-					      source   => $self->default_source,
-					      lockdir  => $self->session_locks,
-					      locktype => $self->session_locktype,
-					      expires  => $self->remember_settings_time,
-					     );
+  my $self  = shift;
+  my $id    = shift;
+
+  $id ||= undef;
+  my @args       = (driver   => $self->session_driver,
+		    args     => $self->session_args,
+		    source   => $self->default_source,
+		    lockdir  => $self->session_locks,
+		    locktype => $self->session_locktype,
+		    expires  => $self->remember_settings_time);
+
+  return Bio::Graphics::Browser::Session->new(@args,id => $id);
+}
+
+sub authorized_session {
+  my $self                     = shift;
+  my ($id,$authority) = @_;
+
+  warn "id=$id, authority=$authority";
+
+  $id ||= undef;
+  my $session = $self->session($id);
+  return $session unless $session->private;
+
+  if ($session->match_nonce($authority,CGI::remote_addr())) {
+      return $session;
+  } else {
+      warn "UNAUTHORIZED ATTEMPT";
+      return $self->session(undef);
+  }
 }
 
 1;

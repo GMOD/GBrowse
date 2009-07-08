@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.16 2009-05-05 23:14:41 lstein Exp $
+# $Id: Session.pm,v 1.16.2.1 2009-07-08 05:21:33 lstein Exp $
 
 use strict;
 use warnings;
@@ -9,6 +9,7 @@ use CGI::Session;
 use Fcntl 'LOCK_EX','LOCK_SH';
 use File::Spec;
 use File::Path 'mkpath';
+use Digest::MD5 'md5_hex';
 
 my $HAS_NFSLOCK;
 my $HAS_MYSQL;
@@ -226,6 +227,38 @@ sub source {
     $self->{session}->param('.source' => shift());
   }
   return $source;
+}
+
+sub private {
+    my $self = shift;
+    my $private = $self->{session}->param('.private');
+    $self->{session}->param('.private' => shift()) if @_;
+    return $private;
+}
+
+sub username {
+    my $self = shift;
+    my $d = $self->{session}->param('.username');
+    $self->{session}->param('.username' => shift()) if @_;
+    return $d;
+}
+
+sub set_nonce {
+    my $self = shift;
+    my ($nonce,$salt) = @_;
+    warn "id=",$self->id," writing nonce = ",md5_hex($nonce,$salt);
+    $self->{session}->param('.nonce' => md5_hex($nonce,$salt));
+    $self->private(1);
+}
+
+sub match_nonce {
+    my $self  = shift;
+    my ($new_nonce,$salt) = @_;
+    $self->private || return;
+    my $nonce = $self->{session}->param('.nonce');
+    warn "id=",$self->id," matching $nonce against ",$new_nonce,"|",$salt;
+    warn "$nonce eq ",md5_hex($new_nonce,$salt);
+    return $nonce eq md5_hex($new_nonce,$salt);
 }
 
 sub config_hash {

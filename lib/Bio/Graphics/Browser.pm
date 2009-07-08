@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.239.2.2 2009-07-08 05:56:23 lstein Exp $
+# $Id: Browser.pm,v 1.239.2.3 2009-07-08 06:20:47 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -344,7 +344,7 @@ sub authorized_session {
       return $session;
   } else {
       warn "UNAUTHORIZED ATTEMPT";
-      return $self->session(undef);
+      return $self->session('xyzzy');
   }
 }
 

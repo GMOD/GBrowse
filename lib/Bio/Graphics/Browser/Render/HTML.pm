@@ -57,12 +57,11 @@ sub render_login_button {
 	    . a({-href=>'?id=logout'},'Log Out');
     }
 
-
 # what happens here is:
 # 1. Generate an asynchronous javascript request to "?authorize_login=1;username=name"
 # 2. If login successful, the asynchronous request generates an authorizaton key and
-#    writes it into the session.
-# 3. The javascript should set a cookie named "id_authorization=key" and then force a reload
+#    writes it into the session (see Render.pm)
+# 3. On success, we POST to refresh the whole page and set the session ID
 
     my $jscript = <<'END';
      function postwith (to,p) {

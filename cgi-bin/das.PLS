@@ -49,8 +49,6 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.17 2009-07-06 16:18:29 lstein Exp $
-
 use strict;
 use Bio::DB::GFF;
 use File::Basename 'basename';
@@ -69,7 +67,7 @@ use vars qw($DB $DSN $TRACK $HEADER %ERRCODES $CONFIG
 use constant SO => 'http://song.cvs.sourceforge.net/viewvc/*checkout*/song/ontology/so.obo';
 use constant DEBUG => 0;
 
-#$Id: das.PLS,v 1.6.8.1.2.17 2009-07-06 16:18:29 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.18 2009-07-09 19:19:07 lstein Exp $
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -207,22 +205,24 @@ END
       for my $track ($CONFIG->labels) {
 	  next if $track =~ /:/;
 	  next unless $CONFIG->setting($track=>'das category');
-	  my $citation    = $CONFIG->citation($track);
-	  my $key         = $CONFIG->setting($track=>'key');
-	  my $title       = $CONFIG->description($dsn);
+	  my $citation    = CGI::escapeHTML($CONFIG->citation($track));
+	  my $key         = CGI::escapeHTML($CONFIG->setting($track=>'key'));
+	  my $title       = CGI::escapeHTML($CONFIG->description($dsn));
 	  my $description = $CONFIG->description($dsn)."; $track track";
 	  $description   .= "; $key"      if $key;
 	  $description   .= "; $citation" if $citation;
-	  my $authority   = $a{authority};
+	  $description    = CGI::escapeHTML(CGI::unescapeHTML($description));
+	  my $authority   = CGI::escapeHTML($a{authority});
 	  $authority     .= "_$version" if $version;
 	  my $base        = url();
 	  $base           =~ s/\?$//;
+	  my $maintainer  = CGI::escapeHTML($a{maintainer});
 
 	  my $uri = CGI::escape($dsn).'|'.CGI::escape($track);
 	  
 	  print <<END;
      <SOURCE uri="$uri" title="$key" description="$description">
-        <MAINTAINER email="$a{maintainer}" />
+        <MAINTAINER email="$maintainer" />
         <VERSION uri="$dsn|$track" created="$created">
   	  <COORDINATES uri="$a{coordinates}" authority="$a{authority}" test_range="$a{testrange}" taxid="$a{taxid}" version="$version" source="$a{source}">$authority,$a{source},$a{species}</COORDINATES>
 END

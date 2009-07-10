@@ -1412,7 +1412,6 @@ sub add_features_to_track {
 		  $groups{$l}{$base}->add_SeqFeature($feature);
 		  next;
 	      }
->>>>>>> 1.97
 	  }
 	  $track->add_feature($feature);
       }

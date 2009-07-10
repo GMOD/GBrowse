@@ -447,16 +447,35 @@ sub _render_select_menu {
 sub render_login {
     my $self     = shift;
     my $settings = $self->state;
+    my $session  = $self->session;
+    my $style    = 'float:right;font-weight:bold;color:blue;cursor:pointer;';
+    my ($html,$title,$text,$click);
+    $html = '';
 
-    return $settings->{head}
-    ? div({-style   => 'float:right;font-weight:bold;color:blue;cursor:pointer;',
-           -id      => 'loginLink',
-           -title   => 'Click here to log in or create a new gbrowse account',
-           -onClick => 'load_login_balloon(event)',
-           -onMouseOver => 'this.style.textDecoration=\'underline\'',
-           -onMouseOut  => 'this.style.textDecoration=\'none\''},
-           'Log in / create account')
-	: '';
+    if ($session->private) {
+        $html .= div({-style=>'float:right;font-weight:bold;color:black;'},
+                      'Welcome, '.$session->username.'.') . br() .
+                 div({-style       => $style,
+                      -title       => 'Click here to log out from '.$session->username.'.',
+                      -onClick     => "location.href='?id=logout';",
+                      -onMouseOver => 'this.style.textDecoration=\'underline\'',
+                      -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out') .
+                 div({-style => $style}, '&nbsp; &nbsp;');
+
+        $title = 'Click here to change your account settings';
+        $text  = 'My Account';
+        $click = 'load_login_balloon(event)';
+    } else {
+        $title = 'Click here to log in or create a new gbrowse account';
+        $text  = 'Log in / create account';
+        $click = 'load_login_balloon(event)';
+    }
+
+    $html .= div({-style => $style, -title => $title, -onClick => $click,
+                  -onMouseOver => 'this.style.textDecoration=\'underline\'',
+                  -onMouseOut  => 'this.style.textDecoration=\'none\''}, $text);
+
+    return $settings->{head} ? $html : '';
 }
 
 sub render_title {

@@ -3,11 +3,11 @@ configurable web-based genome browser.  It is a component of the
 Generic Model Organism Systems Database project (GMOD).
 
  - For a description of features and a demo, go to 
-   http://www.gmod.org/wiki/index.php/GBrowse
+   http://gmod.org/wiki/index.php/GBrowse
 
  - To install on your own system, please see the INSTALL file, or see
    the nice online documentation at
-   http://www.gmod.org/wiki/index.php/GBrowse
+   http://gmod.org/wiki/index.php/GBrowse
 
  - To learn how to use the system, please see docs/tutorial.  After
    installing on your system, the tutorial will also be available at
@@ -33,7 +33,7 @@ gmod-gbrowse@lists.sourceforge.net.
 
 
 Lincoln Stein & the GMOD team
-lstein@cshl.org
+lstein@cshl.edu
 April 18, 2007
 
 
@@ -41,7 +41,7 @@ April 18, 2007
 
 This project has had many authors.  Some of the most prominent are:
 
-Scott Cain <cain@cshl.edu>
+Scott Cain <scain@cpan.org>
 Vsevolod (Simon) Ilyushchenko <simonf@cshl.edu>
 Marc Logghe <Marc.Logghe@devgen.com>
 Aaron Mackey <amackey@pcbi.upenn.edu>

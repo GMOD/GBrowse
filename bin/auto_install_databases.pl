@@ -56,7 +56,7 @@ L<Bio::DB::GFF>, L<bp_bulk_load_gff.pl>, L<bp_pg_bulk_load_gff.pl>
 
 =head1 AUTHOR
 
-Scott Cain, cain@cshl.org
+Scott Cain, scain@cpan.org 
 
 Copyright (c) 2003 Cold Spring Harbor Laboratory
                                                                                 

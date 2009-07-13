@@ -1,10 +1,12 @@
 Generic Genome Browser Installation
     GBrowse is distributed as binary packages for Windows and Macintosh OS
-    X, and as source code for Unix systems. These installation instructions
-    are for a source code (manual) build. For binary installations, please
+    X, and as source code for Unix systems. For binary installations, please
     see the online instructions located at
 
     <http://www.gmod.org/wiki/index.php/GBrowse#Installation>
+
+    The remainder of this documentation contains instructions are for a
+    source code (manual) build.
 
 Source Code (Manual) Build
     GBrowse runs on top of several software packages. These must be
@@ -38,8 +40,12 @@ Source Code (Manual) Build
            Text::Shellwords     (any version)
            Class::Base          (any version)
 
-    E) BioPerl version 1.5.2 or higher -- <http://www.bioperl.org>
+    E) BioPerl version 1.6 or higher -- <http://www.bioperl.org>
         Or 'bioperl-live'.
+
+    F) Bio::Graphics 1.97 or higher
+        Bio::Graphics used to be part of BioPerl but has been broken out as
+        a separate package that can be installed from CPAN.
 
     Optional modules:
 
@@ -94,8 +100,7 @@ Source Code (Manual) Build
 
     To further configure GBrowse, see CONFIGURE_HOWTO. To run GBrowse on top
     of Oracle and PostgreSQL databases see ORACLE_AND_POSTGRESQL. To run on
-    top of a BioSQL database, see BIOSQL_ADAPTER_HOWTO. To run GBrowse on
-    top of Gadfly, see README-berkeley-gadfly.
+    top of a BioSQL database, see BIOSQL_ADAPTER_HOWTO.
 
     Details:
 
@@ -222,7 +227,7 @@ Source Code (Manual) Build
       Listen       8000
       ServerRoot   $HOME/apache
       DocumentRoot $HOME/apache/htdocs
-      SetEnv       PERL5LIB $HOME/lib  
+      SetEnv       PERL5LIB $HOME/lib
 
     You should search the httpd.conf file for older versions of these
     directives, and delete them if they are there. If you see a Port
@@ -438,220 +443,236 @@ Source Code (Manual) Build
     few notable sites are:
 
     WormBase (C. elegans)
-        "/ftp.wormbase.org/pub/wormbase/genomes/elegans/genome_feature_table
-        s/" in ftp:
+        <ftp://ftp.wormbase.org/pub/wormbase/genomes/elegans/genome_feature_
+        tables/ >
 
     SGD (S. cerevisiae)
         <ftp://genome-ftp.stanford.edu/pub/yeast/chromosomal_feature/>
 
     FlyBase (D. melanogaster)
-        "/ftp.flybase.net/genomes/Drosophila_melanogaster/current/gff/" in
-        ftp: =back
+        <ftp://ftp.flybase.net/genomes/Drosophila_melanogaster/current/gff/
+        >
 
-        In addition, the bin/ subdirectory of the GBrowse distribution
-        contains a series of scripts to convert annotation files in various
-        formats into GFF2 or GFF3 format. For example, the ucsc_genes2gff.pl
-        script will convert gene models in Table Browser format files from
-        <http://www.genome.ucsc.edu> into GFF3 format.
+    In addition, the bin/ subdirectory of the GBrowse distribution contains
+    a series of scripts to convert annotation files in various formats into
+    GFF2 or GFF3 format. For example, the ucsc_genes2gff.pl script will
+    convert gene models in Table Browser format files from
+    <http://www.genome.ucsc.edu> into GFF3 format.
 
-        load_genbank.pl will download and load sequence annotation files in
-        GenBank format from NCBI. The sample configuration file
-        08.genbank.conf (located in contrib/conf_files) is appropriate for
-        data loaded with load_genbank.pl.
+    load_genbank.pl will download and load sequence annotation files in
+    GenBank format from NCBI. The sample configuration file 08.genbank.conf
+    (located in contrib/conf_files) is appropriate for data loaded with
+    load_genbank.pl.
 
   9. LOADING DNA
-        To display the DNA sequence and to run sequence-dependent glyphs
-        such as the three-frame translation, you will need to load the DNA
-        as well as the annotations. The DNA must be formatted as a series of
-        one or more FASTA-format files in which each entry in the file
-        corresponds to a top-level sequence such as a chromosome
-        pseudomolecule. You can then run the bp_load_gff.pl or
-        bp_bulk_load_gff.pl script using the -fasta argument. For example,
-        if the yeast genome is contained in a FASTA file named yeast.fa, you
-        would run the command:
+    To display the DNA sequence and to run sequence-dependent glyphs such as
+    the three-frame translation, you will need to load the DNA as well as
+    the annotations. The DNA must be formatted as a series of one or more
+    FASTA-format files in which each entry in the file corresponds to a
+    top-level sequence such as a chromosome pseudomolecule. You can then run
+    the bp_load_gff.pl or bp_bulk_load_gff.pl script using the -fasta
+    argument. For example, if the yeast genome is contained in a FASTA file
+    named yeast.fa, you would run the command:
 
-          bp_bulk_load_gff.pl -d yeast -fasta yeast.fa sample/yeast_data.gff
+      bp_bulk_load_gff.pl -d yeast -fasta yeast.fa sample/yeast_data.gff
 
-        Alternatively, you may put several FASTA files into a directory, and
-        provide the directory name as the argument to -fasta.
+    Alternatively, you may put several FASTA files into a directory, and
+    provide the directory name as the argument to -fasta.
 
-        (The yeast DNA is too large to be included in this distribution, but
-        you can get a copy of it from
-        <ftp://genome-ftp.stanford.edu/pub/yeast/>)
+    (The yeast DNA is too large to be included in this distribution, but you
+    can get a copy of it from <ftp://genome-ftp.stanford.edu/pub/yeast/>)
 
-        Run "bp_bulk_load_gff.pl -h" to see usage instructions.
+    Run "bp_bulk_load_gff.pl -h" to see usage instructions.
 
-        Newer versions of GFF (the so-called "GFF2.5" and "GFF3" formats)
-        include the DNA at the bottom of the file, following the sequence
-        annotations. If you are loading one of these GFF files, the DNA will
-        be recognized automatically and loaded by any of the loaders.
+    Newer versions of GFF (the so-called "GFF2.5" and "GFF3" formats)
+    include the DNA at the bottom of the file, following the sequence
+    annotations. If you are loading one of these GFF files, the DNA will be
+    recognized automatically and loaded by any of the loaders.
 
   10. CREATING YOUR OWN GENOME DATABASE
-        See the file doc/pod/CONFIGURE_HOWTO.pod for information on how to
-        create new databases from scratch, add new browser tracks, and how
-        to get the browser to dump the DNA from the region currently under
-        display.
+    See the file doc/pod/CONFIGURE_HOWTO.pod for information on how to
+    create new databases from scratch, add new browser tracks, and how to
+    get the browser to dump the DNA from the region currently under display.
 
   11. MAKING THE BROWSER RUN FASTER
-        Three factors are major contributors to the length of time it takes
-        to load a gbrowse page:
+    Three factors are major contributors to the length of time it takes to
+    load a gbrowse page:
 
-        1   Loading the Perl interpreter and parsing BioPerl and all the
-            other Perl libraries that gbrowse uses.
+    1   Loading the Perl interpreter and parsing BioPerl and all the other
+        Perl libraries that gbrowse uses.
 
-        2   Query speed on the database
+    2   Query speed on the database
 
-        3   The conversion at the Perl layer of database data into BioPerl
-            objects for rendering.
+    3   The conversion at the Perl layer of database data into BioPerl
+        objects for rendering.
 
-        To improve (1), we recommend that you install the mod_perl module
-        for Apache. (<http://perl.apache.org>). By configuring an
-        Apache::Registry directory and placing gbrowse inside it (rather
-        than in the default cgi-bin directory). The overhead for loading
-        Perl and its libraries are eliminated, thereby increasing the
-        performance of the script noticeably.
+    To improve (1), we recommend that you install the mod_perl module for
+    Apache. (<http://perl.apache.org>). By configuring an Apache::Registry
+    directory and placing gbrowse inside it (rather than in the default
+    cgi-bin directory). The overhead for loading Perl and its libraries are
+    eliminated, thereby increasing the performance of the script noticeably.
 
-        Be aware that there is a bad interaction between the Apache::DBI
-        module (often used to speed up database accesses) and Bio::DB::GFF.
-        This will cause the GFF dumper plugin to fail intermittently.
-        GBrowse does not need Apache::DBI to achieve performance increases
-        under mod_perl and it is suggested that you disable Apache::DBI. If
-        you cannot do this, then you should remove the file GFFDumper.pm
-        from the gbrowse.conf/plugins directory.
+    Be aware that there is a bad interaction between the Apache::DBI module
+    (often used to speed up database accesses) and Bio::DB::GFF. This will
+    cause the GFF dumper plugin to fail intermittently. GBrowse does not
+    need Apache::DBI to achieve performance increases under mod_perl and it
+    is suggested that you disable Apache::DBI. If you cannot do this, then
+    you should remove the file GFFDumper.pm from the gbrowse.conf/plugins
+    directory.
 
-        Database query performance (2) is also a major factor. If you are
-        using MySQL as the backend, you will see dramatic performance
-        increases by increasing the amount of memory available to the key
-        buffer, sort buffer, table cache and other in-memory data
-        structures. we suggest that you replace the default MySQL
-        configuration file (usually stored in /etc/my.cnf) with one of the
-        large-memory sample configuration files provided in the
-        support-files subdirectory of the MySQL distribution. Of course, if
-        you tell MySQL to use more memory than you have, then performance
-        will degrade again.
+    Database query performance (2) is also a major factor. If you are using
+    MySQL as the backend, you will see dramatic performance increases by
+    increasing the amount of memory available to the key buffer, sort
+    buffer, table cache and other in-memory data structures. we suggest that
+    you replace the default MySQL configuration file (usually stored in
+    /etc/my.cnf) with one of the large-memory sample configuration files
+    provided in the support-files subdirectory of the MySQL distribution. Of
+    course, if you tell MySQL to use more memory than you have, then
+    performance will degrade again.
 
-        Finally, there is a slowdown when gbrowse converts the results of
-        database SQL queries into renderable biological objects. This
-        becomes particularly noticeable when there are lots of multi-segment
-        objects to be displayed. You can work around this slowdown by using
-        semantic zooming (see CONFIGURE_HOWTO). Otherwise, there's not much
-        that can be done about this short of buying a faster machine. The
-        GMOD team is working hard to reduce this performance hit.
+    Finally, there is a slowdown when gbrowse converts the results of
+    database SQL queries into renderable biological objects. This becomes
+    particularly noticeable when there are lots of multi-segment objects to
+    be displayed. You can work around this slowdown by using semantic
+    zooming (see CONFIGURE_HOWTO). Otherwise, there's not much that can be
+    done about this short of buying a faster machine. The GMOD team is
+    working hard to reduce this performance hit.
 
   12. MAKING THE SERVER RUN SAFER
-        Whenever you are running a server-side Web script using information
-        provided by a web client, there is a risk that maliciously-formatted
-        data provided by the use will trick the server-side script into
-        performing some unintentional action, such as modifying a file on
-        the server. Perl's "taint" checks are designed to catch places in
-        the code where such malicious data could cause harm, and GBrowse has
-        been tested extensively with these taint checks activated.
+    Whenever you are running a server-side Web script using information
+    provided by a web client, there is a risk that maliciously-formatted
+    data provided by the use will trick the server-side script into
+    performing some unintentional action, such as modifying a file on the
+    server. Perl's "taint" checks are designed to catch places in the code
+    where such malicious data could cause harm, and GBrowse has been tested
+    extensively with these taint checks activated.
 
-        Because of taint checks' noticeable impact on performance, they have
-        been turned off in the distributed version of gbrowse. If you wish
-        to reactivate the extra checking (at the expense of a performance
-        hit), go to the file "gbrowse" located in the Web scripts directory
-        and edit the top line of the file to read:
+    Because of taint checks' noticeable impact on performance, they have
+    been turned off in the distributed version of gbrowse. If you wish to
+    reactivate the extra checking (at the expense of a performance hit), go
+    to the file "gbrowse" located in the Web scripts directory and edit the
+    top line of the file to read:
 
-          #!/usr/bin/perl -w -T
+      #!/usr/bin/perl -w -T
 
-        The -T switch turns on taint checks.
+    The -T switch turns on taint checks.
 
-        If you are running GBrowse under mod_perl, add the following line to
-        the httpd.conf configuration file:
+    If you are running GBrowse under mod_perl, add the following line to the
+    httpd.conf configuration file:
 
-          PerlTaintCheck  On
+      PerlTaintCheck  On
 
-        This will affect all mod_perl scripts globally.
+    This will affect all mod_perl scripts globally.
 
   13. THE GBROWSE_IMG SCRIPT
-        The gbrowse_img CGI script is a stripped-down version of gbrowse
-        which just generates images. It is suitable for incorporating into
-        <img> tags in order to make a thumbnail of a region of interest. The
-        thumbnail can then be linked to the full-featured gbrowse. Here is
-        an example of how this works using the WormBase site:
+    The gbrowse_img CGI script is a stripped-down version of gbrowse which
+    just generates images. It is suitable for incorporating into <img> tags
+    in order to make a thumbnail of a region of interest. The thumbnail can
+    then be linked to the full-featured gbrowse. Here is an example of how
+    this works using the WormBase site:
 
-          <a href="http://www.wormbase.org/db/seq/gbrowse/wormbase?name=mec-3">
-            <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=200">
-          </a>
+      <a href="http://www.wormbase.org/db/seq/gbrowse/wormbase?name=mec-3">
+        <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=200">
+      </a>
 
-        This will generate a 200-pixel inline image of the region. Clicking
-        on the image will link to the fully-navigable gbrowse script.
+    This will generate a 200-pixel inline image of the region. Clicking on
+    the image will link to the fully-navigable gbrowse script.
 
-        You can also use gbrowse_img to superimpose temporary features (like
-        BLAST hits) on the existing genome features.
+    You can also use gbrowse_img to superimpose temporary features (like
+    BLAST hits) on the existing genome features.
 
-        If the script is called without CGI arguments, it will generate
-        usage instructions. Select <http://your.host/cgi-bin/gbrowse_img> to
-        see this internal documentation.
+    If the script is called without CGI arguments, it will generate usage
+    instructions. Select <http://your.host/cgi-bin/gbrowse_img> to see this
+    internal documentation.
 
   14. PLUGINS
-        Gbrowse has a plugin architecture which makes it easy for
-        third-party developers to expand its functionality. The plugins are
-        Perl .pm files located in the directory gbrowse.conf/plugins/. To
-        install plugins, simply copy them into this directory. To uninstall,
-        remove them.
+    Gbrowse has a plugin architecture which makes it easy for third-party
+    developers to expand its functionality. The plugins are Perl .pm files
+    located in the directory gbrowse.conf/plugins/. To install plugins,
+    simply copy them into this directory. To uninstall, remove them.
 
-        If you wish to install your own or third party plugins, it is
-        suggested that you create a separate directory outside the
-        gbrowse.conf/ hierarchy in which to store them and then to indicate
-        the location of these plugins using the plugin_path setting:
+    If you wish to install your own or third party plugins, it is suggested
+    that you create a separate directory outside the gbrowse.conf/ hierarchy
+    in which to store them and then to indicate the location of these
+    plugins using the plugin_path setting:
 
-          plugin_path = /usr/local/gbrowse_plugins
+      plugin_path = /usr/local/gbrowse_plugins
 
-        This setting should be somewhere in the [GENERAL] section of the
-        relevant gbrowse configuration file.
+    This setting should be somewhere in the [GENERAL] section of the
+    relevant gbrowse configuration file.
 
   15. THE GENBANK/EMBL PROXY
-        Sample configuration number 5 ("05.embl.conf") corresponds to a
-        pass-through proxy for Genbank. At least in theory, if you enter a
-        landmark that isn't recognized, gbrowse will go to EMBL using the
-        bioperl BioFetch facility, parse the record, and enter it into the
-        local database. This allows you to browse arbitrary
-        Genbank/EMBL/Refseq entries.
+    Sample configuration number 5 ("05.embl.conf") corresponds to a
+    pass-through proxy for Genbank. At least in theory, if you enter a
+    landmark that isn't recognized, gbrowse will go to EMBL using the
+    bioperl BioFetch facility, parse the record, and enter it into the local
+    database. This allows you to browse arbitrary Genbank/EMBL/Refseq
+    entries.
 
-        This functionality is not well supported, but here is a recipe for
-        giving it a try:
+    This functionality is not well supported, but here is a recipe for
+    giving it a try:
 
-        Create a local database named "embl" and initialize it this way:
+    Create a local database named "embl" and initialize it this way:
 
-        Set up permissions for this database so that "nobody@localhost" has
-        SELECT, INSERT, UPDATE and DELETE privileges
+    Set up permissions for this database so that "nobody@localhost" has
+    SELECT, INSERT, UPDATE and DELETE privileges
 
-        Initialize the database for use with this command:
+    Initialize the database for use with this command:
 
-         % bp_load_gff.pl -c -d embl
+     % bp_load_gff.pl -c -d embl
 
-        If you need to use a proxy to access remote web sites, uncomment the
-        -proxy line in the conf file, and adjust the URL of the proxy as
-        appropriate.
+    If you need to use a proxy to access remote web sites, uncomment the
+    -proxy line in the conf file, and adjust the URL of the proxy as
+    appropriate.
 
-        Go to <http://localhost/cgi-bin/gbrowse/embl>. Search for a Genbank
-        or embl accession number, such as CEF58D5
+    Go to <http://localhost/cgi-bin/gbrowse/embl>. Search for a Genbank or
+    embl accession number, such as CEF58D5
 
   16. REMOVING OUT-OF-DATE IMAGE FILES
-        As GBrowse runs, it creates temporary image files in the gbrowse tmp
-        directory (typically HTDOCS/gbrowse/tmp). These image files are
-        relatively small, but if you run GBrowse for a long time they may
-        begin consuming significant amounts of disk space. The following
-        Unix shell commands will remove old image files:
+    As GBrowse runs, it creates temporary image files in the gbrowse tmp
+    directory (typically HTDOCS/gbrowse/tmp). These image files are
+    relatively small, but if you run GBrowse for a long time they may begin
+    consuming significant amounts of disk space. The following Unix shell
+    commands will remove old image files and unused directories:
 
-           cd HTDOCS/gbrowse/tmp
-           find . -type f -atime +20 -print -exec rm {} \;
+       cd HTDOCS/gbrowse/tmp
+       find . -type f -atime +20 -print -exec rm {} \;
+       find . -type d -empty -depth -exec rmdir {} \;
 
-        Be sure to replace HTDOCS with the path to your web server HTML
-        document root directory. You might want to run this command under
-        cron, but be sure that the user that the cron job runs under has the
-        proper permissions. You may need to install it in root's cron
-        script.
+    Be sure to replace HTDOCS with the path to your web server HTML document
+    root directory. You might want to run this command under cron, but be
+    sure that the user that the cron job runs under has the proper
+    permissions. You may need to install it in root's cron script.
 
-  17. BUG REPORTS AND SUPPORT REQUESTS
-        Please report bugs to the GMOD project bug tracking system at
-        <http://sourceforge.net/tracker/?group_id=27707&atid=391291>. EMail
-        support is available by sending requests for help to
-        <mailto:gmod-gbrowse@lists.sourceforge.net>.
+  17. THE BALLOON TOOLTIPS
+    The balloon tooltip effect requires the balloon javascript files and the
+    background balloon images files. You can download them from:
 
-        Have fun!
+    http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
 
-        Lincoln Stein & the GMOD team
+    Copy balloon.js, yahoo-dom-event.js and prototype.js into the folder:
+
+      $HTDOCS/gbrowse/js
+
+    where $HTDOCS is the path to your apache HTML files. For example, if
+    your apache installation path is D:/apache, copy those js files into:
+
+    D:/apache/htdocs/gbrowse/js
+
+    And then copy all balloon image files into the folder:
+
+      $HTDOCS/images/balloons
+
+    Please read CONFIGURE BALLOON TOOLTIPS in CONFIGURE_HOWTO.pod for
+    information on how to use this feature.
+
+  18. BUG REPORTS AND SUPPORT REQUESTS
+    Please report bugs to the GMOD project bug tracking system at
+    <http://sourceforge.net/tracker/?group_id=27707&atid=391291>. EMail
+    support is available by sending requests for help to
+    gmod-gbrowse@lists.sourceforge.net.
+
+    Have fun!
+
+    Lincoln Stein & the GMOD team
 

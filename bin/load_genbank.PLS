@@ -19,7 +19,7 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: load_genbank.PLS,v 1.5 2004-11-23 20:33:08 scottcain Exp $
+# $Id: load_genbank.PLS,v 1.5.12.1 2009-07-13 19:23:45 scottcain Exp $
 use strict;
 use Bio::DB::GFF;
 use Getopt::Long;
@@ -68,9 +68,9 @@ L<Bio::DB::GFF>, L<bulk_load_gff.pl>, L<load_gff.pl>
 
 =head1 AUTHOR
 
-Scott Cain, cain@cshl.org
+Scott Cain, scain@cpan.org
 
-Lincoln Stein, lstein@cshl.org
+Lincoln Stein, lstein@cshl.edu
 
 Copyright (c) 2003 Cold Spring Harbor Laboratory
 

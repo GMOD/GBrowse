@@ -50,9 +50,14 @@ They can be found on the Comprehensive Perl Archive Network
    Text::Shellwords     (any version)
    Class::Base          (any version)
 
-=item E) BioPerl version 1.5.2 or higher -- L<http://www.bioperl.org>
+=item E) BioPerl version 1.6 or higher -- L<http://www.bioperl.org>
 
 Or 'bioperl-live'.
+
+=item F) Bio::Graphics 1.97 or higher
+
+Bio::Graphics used to be part of BioPerl but has been broken out as a 
+separate package that can be installed from CPAN.
 
 =back
 

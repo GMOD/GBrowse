@@ -286,7 +286,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl         => 1.0050021,
+				 Bio::Perl         => 1.006,
 				 GD                => 2.07,
 				 IO::String        => 0,
                                  IO::File          => 1.0,
@@ -295,7 +295,7 @@ WriteMakefile(
 				 File::Temp        => 0,
 				 Digest::MD5       => 0,
                                  Statistics::Descriptive => 0,
-                                 Bio::Graphics     => 1.92,
+                                 Bio::Graphics     => 1.97,
 				},
 	      PL_FILES       => {
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',

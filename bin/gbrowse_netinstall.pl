@@ -225,10 +225,12 @@ unless ($skip_bioperl) {
   my $version = BIOPERL_REQUIRES;
   if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_svn or $bioperl_path) {
     print STDERR "\n*** Installing BioPerl ***\n";
-    if ($windows and !$get_bioperl_svn and !$bioperl_path) {
-      my $bioperl_index = find_bioperl_ppm();
-      system("ppm install --force $bioperl_index");
-    } else {
+
+    #would like to use ppm, but ppm won't install 1.6
+    #if ($windows and !$get_bioperl_svn and !$bioperl_path) {
+    #  my $bioperl_index = find_bioperl_ppm();
+    #  system("ppm install --force $bioperl_index");
+    #} else {
         # recent versions of Module::Build fail to install without force!
         CPAN::Shell->force('Module::Build') unless eval "require Module::Build; 1";
         do_install(BIOPERL,
@@ -238,7 +240,7 @@ unless ($skip_bioperl) {
                    $get_bioperl_svn ? 'svn' : '',
                    '',
                    $bioperl_path);
-    }
+    #}
   }
   else {
     print STDERR "BioPerl is up to date.\n";

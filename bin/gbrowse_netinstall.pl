@@ -178,7 +178,8 @@ use constant SOURCEFORGE_MIRROR1  => 'http://easynews.dl.sourceforge.net/sourcef
 use constant SOURCEFORGE_GBROWSE  => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';
 use constant BIOPERL              => 'http://bioperl.org/DIST/'.BIOPERL_VERSION.'.tar.gz';
 
-my %REPOSITORIES = ('BioPerl-Release-Candidates' => 'http://bioperl.org/DIST/RC',
+my %REPOSITORIES = (
+                    #'BioPerl-Release-Candidates' => 'http://bioperl.org/DIST/RC',
 		    'BioPerl-Regular-Releases'   => 'http://bioperl.org/DIST',
 	            'Kobes'                      => 'http://theoryx5.uwinnipeg.ca/ppms',
                     'Bribes'                     => 'http://www.Bribes.org/perl/ppm',

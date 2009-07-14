@@ -268,7 +268,7 @@ END
 
 
 if ($bioperl_needs_patching) {
-  print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.\nYou need to update your BioPerl installation to greater than version 1.5.2.\nAt the time of this GBrowse release, there is no BioPerl release greater than\n1.5.2 so you may need to get a nightly snapshot of bioperl-live.  Please see\n\n  http://bioperl.org/DIST/nightly_builds/\n\nfor downloads.\n\n";
+  print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.\nYou probably need to update your BioPerl to version 1.6 or better and\ninstall Bio::Graphics separately from CPAN.\n\n";
   die;
 }
 

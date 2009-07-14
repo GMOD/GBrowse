@@ -94,14 +94,6 @@ BEGIN {
   my $h = <> unless $skip_start;
   print STDERR "*** Installing Perl files needed for a net-based install ***\n";
 
-  eval "CPAN::Config->load";
-  eval "CPAN::Config->commit";
-
-  $working_dir = getcwd;
-
-  $tmpdir = tempdir(CLEANUP=>1) 
-    or die "Could not create temporary directory: $!";
-
   $windows = $Config{osname} =~ /mswin/i;
 
   if ($windows and $] == 5.010) {
@@ -110,6 +102,18 @@ BEGIN {
      exit(0);
   }
 
+  if ($windows) {
+     print STDERR "\n\nInstalling Win32 perl module\n\n";
+     system("ppm install Win32");
+  }
+
+  eval "CPAN::Config->load";
+  eval "CPAN::Config->commit";
+
+  $working_dir = getcwd;
+
+  $tmpdir = tempdir(CLEANUP=>1) 
+    or die "Could not create temporary directory: $!";
 
   $binaries = $Config{'binexp'};
   $make     = $Config{'make'};

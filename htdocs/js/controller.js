@@ -3,7 +3,7 @@
 
  Lincoln Stein <lincoln.stein@gmail.com>
  Ben Faga <ben.faga@gmail.com>
- $Id: controller.js,v 1.99.4.2 2009-07-10 20:07:44 idavies Exp $
+ $Id: controller.js,v 1.99.4.3 2009-07-17 15:32:54 idavies Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)

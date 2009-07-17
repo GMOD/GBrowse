@@ -1,10 +1,11 @@
 var LoginScript = "/cgi-bin/gb2/gbrowse_login"
 var LoginPage   = "main";
+var Logged      = false;
 
-//var CurrentUser, CurrentPass;  Remove these
-var EditDetails;
+var SessionID, CurrentUser, EditDetails;
 
-function load_login_balloon(event) {
+function load_login_balloon(event, session, username) {
+    SessionID = session;
     var html = '<form id=loginMain method=post action=\'return false;\'>' +
 
                //Title at top of GBox
@@ -77,6 +78,9 @@ function load_login_balloon(event) {
                      '<input id=loginCancel style=font-size:90%;display:none type=button value=\'Cancel\'' +
                        'onClick=login_page_change(\'main\') /></td></tr>' +
 
+                   '<tr><td id=loginSpacing colspan=2 align=center style=display:none;' +
+                     'padding-bottom:3px;padding-top:6px><b>&nbsp; &nbsp;</b></td></tr>' +
+
                    //"Edit Details" submit and cancel buttons
                    '<tr><td id=loginDButtons colspan=2 align=center style=display:none;' +
                      'padding-bottom:3px;padding-top:3px>' +
@@ -93,17 +97,29 @@ function load_login_balloon(event) {
                    '</font></td></tr>' +
 
                    '<tr><td id=loginOpenID colspan=2 align=center style=padding-top:12px>' +
-                     'Have an OpenID? <a href=# onClick=login_page_change(\'create\');' +
-                       'return false;>Sign in</a>.</td></tr>' +
+                     'Have an OpenID? <a href=?id=logout>Sign in</a>.</td></tr>' +
                  '</tbody>' +
                '</table></font></form>';
 
     GBox.showTooltip(event,html,1,320);
-}
 
+    if(username != false) {
+        Logged = true;
+        CurrentUser = username;
+        login_page_change('edit');
+        edit_details('home');
+        $('loginMain').style.width = '260px'
+    }
+//Remove these lines
+$('loginWarning').innerHTML = SessionID;
+$('loginWarning').show();
+//Remove these lines
+}
 
 function login_page_change(page) {
     LoginPage = page;
+    $('loginPass').value = '';
+    $('loginPass2').value = '';
     $('loginWarning').hide();
 
     switch(page) {
@@ -163,7 +179,6 @@ function login_page_change(page) {
     }
 }
 
-
 function validate_info() {
     var user  = $('loginUser').getValue().length;
     var email = $('loginEmail').getValue().length;
@@ -202,6 +217,10 @@ function validate_info() {
 }
 
 
+//******************************************************************
+// Create New User Code:
+//******************************************************************
+
 function add_user() {
     var username = $('loginUser').getValue();
     var password = $('loginPass').getValue();
@@ -213,23 +232,51 @@ function add_user() {
                       user:     username,
                       email:    email,
                       pass:     password,
-                      remember: 1
+                      session:  SessionID
                      },
         onSuccess: function (transport) {
             $('loginWarning').innerHTML = transport.responseText;
-            login_user(username,password);
+
+            if($('loginWarning').innerHTML == '') {
+                $('loginWarning').innerHTML = "Error: Cannot connect to mail " +
+                    "server, an account has not been created.";
+            }
+
+            if($('loginWarning').innerHTML == "Session Error") {
+                $('loginCancel').value        = 'Back';
+                $('loginWarning').innerHTML = "Sorry, a user has already been created " +
+                    "for the current session.<br><br>Please log in with that account or<br>" +
+                    "<a href=# onClick=" +
+                        "$('balloon').hide();$('closeButton').hide();LoginPage=\'main\';" +
+                        "$(\'loginWarning\').innerHTML=\'Success\';" +
+                        "login_user(\'none\',\'gbrowse_reset\');return false;>" +
+                    "click here</a> to create a new session.";
+
+                $('loginURow').hide(); $('loginERow').hide();  $('loginSubmit').hide();
+                $('loginPRow').hide(); $('loginP2Row').hide(); $('loginWarning').show();
+            } else {
+                login_user(username);
+            }
         }
     });
 }
 
 
+//******************************************************************
+// Log In Validation Code:
+//******************************************************************
+
 function login_validation() {
     var username = $('loginUser').getValue();
     var password = $('loginPass').getValue();
+    var session  = '';
     var remember;
 
-    if($('loginRemember').checked) {remember=1;}
-    else {remember=0;}
+    if(LoginPage=='edit') {remember=2;}
+    else {
+		if($('loginRemember').checked) {remember=1;}
+		else {remember=0;}
+    }
 
     new Ajax.Request(LoginScript,{
         method:      'post',
@@ -239,27 +286,29 @@ function login_validation() {
                       remember: remember
                      },
         onSuccess: function (transport) {
-            $('loginWarning').innerHTML = transport.responseText;
-            login_user(username,password);
+            var results = transport.responseText;
+            if(results.indexOf("session")!=-1) {
+                session = results.slice(7);
+                $('loginWarning').innerHTML = "Success";
+            } else {
+                $('loginWarning').innerHTML = results;
+            }
+            login_user(username,session);
         }
     });
 }
 
-
-function login_user(username,password) {
+function login_user(username,session) {
     if ($('loginWarning').innerHTML != "Success") {
         $('loginWarning').show();
         return;
     } else {
-        CurrentUser = username;
-        CurrentPass = password;
-
-        if(LoginPage == 'edit') {
+        switch(LoginPage) {
+        case 'edit':
+            CurrentUser = username;
             edit_details('home');
             return;
-        }
-
-        if(LoginPage == 'create') {
+        case 'create':
             $('loginCancel').value        = 'Back';
             $('loginWarning').style.color = 'blue';
             $('loginWarning').innerHTML   = "A confirmation e-mail has been sent, please " +
@@ -267,13 +316,43 @@ function login_user(username,password) {
 
             $('loginURow').hide(); $('loginERow').hide(); $('loginBreak').hide(); 
             $('loginPRow').hide(); $('loginP2Row').hide(); $('loginSubmit').hide();
-            $('loginWarning').show();            
-        } else {
-            $('loginMain').submit();
+            $('loginWarning').show();
+            return;
+        case 'main':
+            new Ajax.Request(document.URL,{
+                method:      'post',
+                parameters: {authorize_login: 1,
+                             username: username,
+                             id:       session,
+                             old_id:   SessionID
+                            },
+                onSuccess: function(transport) {
+                    var results = transport.responseJSON;
+                    if (results.id != null) {
+                        login_load_account(location.href,results);
+                    }
+                }
+            });
         }
     }
 }
 
+function login_load_account(to,p) {
+    for (var k in p) {
+    var myInput = document.createElement("input");
+        myInput.setAttribute("name", k);
+        myInput.setAttribute("value", p[k]);
+        myInput.style.display = 'none';
+        $('loginMain').appendChild(myInput);
+    }
+    $('loginMain').action = to;
+    $('loginMain').submit();
+}
+
+
+//******************************************************************
+// Forgot Password Code:
+//******************************************************************
 
 function email_user_info() {
     var email = $('loginEmail').getValue();
@@ -286,7 +365,12 @@ function email_user_info() {
         onSuccess: function (transport) {
             var result = transport.responseText
             if(result != "Success") {
-                $('loginWarning').innerHTML = result;
+                if(result == '') {
+                    $('loginWarning').innerHTML = "Error: Cannot connect to mail " +
+                        "server, your information has not been sent.";
+                } else {
+                    $('loginWarning').innerHTML = result;
+                }
                 $('loginWarning').show();
             } else {
                 $('loginCancel').value        = 'Back';
@@ -304,6 +388,10 @@ function email_user_info() {
 }
 
 
+//******************************************************************
+// Change Account E-mail/Password Code:
+//******************************************************************
+
 function edit_details(details) {
     $('loginWarning').hide();
 
@@ -313,18 +401,20 @@ function edit_details(details) {
         $('loginCancel').value = 'Go Back';
         $('loginTable').style.paddingTop = '18px';
 
-        $('loginDButtons').hide();
+        $('loginDButtons').hide(); $('loginDSelect').show(); 
         $('loginDEmail').hide();   $('loginSubmit').hide();
         $('loginBreak').hide();    $('loginDPass').hide();
         $('loginURow').hide();     $('loginPRow').hide();
         
-        $('loginDSelect').show();  $('loginButtons').show(); 
+        if(Logged == false) {$('loginButtons').show(); $('loginSpacing').hide();}
+        else {$('loginButtons').hide(); $('loginSpacing').show();}
         return;
     } else {
         $('loginTable').style.paddingTop = '3px';
         $('loginWarning').style.color = 'red';
         $('loginCancel').value = 'Cancel';
-        $('loginDSelect').hide(); $('loginButtons').hide(); $('loginDButtons').show();
+        $('loginDSelect').hide();  $('loginButtons').hide();
+        $('loginDButtons').show(); $('loginSpacing').hide();
     }  
 
     switch(details) {
@@ -345,7 +435,6 @@ function edit_details(details) {
     }
 }
 
-
 function edit_details_verify() {
     var old_email  = $('loginDEOrig').getValue();
     var new_email  = $('loginDENew').getValue();
@@ -363,72 +452,42 @@ function edit_details_verify() {
             $('loginWarning').innerHTML = 'New e-mails do not match. Please check your spelling.';
             $('loginWarning').show();
         } else {
-            retrieve_email(CurrentUser,CurrentPass,new_email,'email',old_email);
+            edit_details_submit(CurrentUser,'email',old_email,new_email);
         }
     } else {
         if(old_pass.length==0  || new_pass.length==0  || new_pass2.length==0) {
             $('loginWarning').innerHTML = 'All fields are required.';
             $('loginWarning').show();
-        } else if(old_pass != CurrentPass) {
-            $('loginWarning').innerHTML = 'Incorrect password provided. Please check your spelling.';
-            $('loginWarning').show();
         } else if(new_pass != new_pass2) {
             $('loginWarning').innerHTML = 'New passwords do not match. Please check your spelling.';
             $('loginWarning').show();
         } else {
-            edit_details_submit(CurrentUser,CurrentPass,new_pass,'pass');
+            edit_details_submit(CurrentUser,'pass',old_pass,new_pass);
         }
     }
     return;
 }
 
-
-function retrieve_email(username,password,new_val,column,old_email) {
-    var email;
-    new Ajax.Request(LoginScript,{
-        method:      'post',
-        parameters:  {action: ['retrieve_email'],
-                      user:    username,
-                      pass:    password
-                     },
-        onSuccess: function (transport) {
-            email = transport.responseText;
-            if(old_email != email) {
-                $('loginWarning').innerHTML = 'Incorrect e-mail provided. Please check your spelling.';
-                $('loginWarning').show();
-                return;
-            } else {
-                edit_details_submit(username,password,new_val,column);
-            }
-        }
-    });
-}
-
-
-function edit_details_submit(username,password,new_val,column,email) {  
+function edit_details_submit(username,column,old_val,new_val) {  
     new Ajax.Request(LoginScript,{
         method:      'post',
         parameters:  {action: ['edit_details'],
                       user:    username,
-                      pass:    password,
-                      new_val: new_val,
-                      column:  column
+                      column:  column,
+                      old_val: old_val,
+                      new_val: new_val
                      },
         onSuccess: function (transport) {
             $('loginWarning').innerHTML = transport.responseText;
-            if(column == 'pass') {password = new_val;}
-            edit_details_confirm(username,password,column);
+            edit_details_confirm(column);
         }
     });
 }
 
-
-function edit_details_confirm(username,password,column) {
+function edit_details_confirm(column) {
     if ($('loginWarning').innerHTML != "Success") {
         $('loginWarning').show();
     } else {
-        CurrentUser = username;
-        CurrentPass = password;
         $('loginWarning').style.color = 'blue';
 
         if(column == 'email') {
@@ -440,6 +499,122 @@ function edit_details_confirm(username,password,column) {
         edit_details('home');
         $('loginWarning').show();
     }
+}
+
+
+//******************************************************************
+// Account Confirmation Code:
+//******************************************************************
+
+function confirm_screen(confirm) {
+    var screen = document.getElementById('loginConfirmScreen');
+    var text   = document.getElementById('loginConfirmText');
+
+    if(!screen) {
+        var html = '<div style=border-bottom-style:solid;border-width:1px;' +
+                     'padding-left:3px;padding-top:8px><b>Account Creation Confirmation</b></div>' +
+                   '<form id=loginMain method=post action=\'return false;\'>' +
+                   '<table id=loginTable cellspacing=0 cellpadding=3 align=center width=100%>' +
+                     '<tr><td id=loginWarning colspan=3 align=center style=color:red;' +
+                       'padding-bottom:3px>&nbsp; &nbsp;</td></tr>' +
+                     '<tr><td colspan=3 align=center style=color:blue;padding-bottom:3px>' +
+                       'Thank you for creating an account with GBrowse, the generic genome browser.' +
+                       '<br><br>To complete the account creation process and to log into your GBrowse ' +
+                       'account; please type in your username and click the "Continue" button below.' +
+                     '<br><br></td></tr>' +
+                     '<tr><td>Username:</td>' +
+                       '<td><input align=right width=20% onKeyPress=if(event.keyCode==13){' +
+                         'confirm_update($(\'loginUser\').getValue(),\'' + confirm + '\');} ' +
+                         'id=loginUser type=text style=font-size:9pt size=20></td>' +
+                       '<td align=center padding-top:3px>' +
+                         '<input style=font-size:90% type=button value=\'Continue\'' +
+                           'onClick=confirm_update($(\'loginUser\').getValue(),\'' + confirm + '\'); />' +
+                     '</td></tr>' +
+                   '</table></font></form>';
+
+        var contents = document.getElementsByTagName('body')[0];
+        var div      = document.createElement('div');
+            div.id                    = 'loginConfirmScreen';
+            div.style.backgroundColor = '#000000';
+            div.style.display         = 'none';
+            div.style.filter          = 'alpha(opacity=70)';
+            div.style.height          = '100%';
+            div.style.left            = '0px';
+            div.style.MozOpacity      = '0.7';
+            div.style.opacity         = '0.7';
+            div.style.overflow        = 'hidden';
+            div.style.position        = 'absolute';
+            div.style.top             = '0px';
+            div.style.width           = '100%';
+            div.style.zIndex          = '50';
+
+        var msg = document.createElement('div');
+            msg.id                    = 'loginConfirmText';
+            msg.innerHTML             =  html;
+            msg.style.backgroundColor = '#DCDCDC';
+            msg.style.border          = '#000 solid 1px';
+            msg.style.bottom          = '0px';
+            msg.style.height          = '220px';
+            msg.style.left            = '0px';
+            msg.style.margin          = 'auto';
+            msg.style.overflow        = 'hidden';
+            msg.style.position        = 'absolute';
+            msg.style.right           = '0px';
+            msg.style.textAlign       = 'center';
+            msg.style.top             = '0px';
+            msg.style.width           = '380px';
+            msg.style.zIndex          = '60';
+
+        contents.appendChild(msg);
+        contents.appendChild(div);
+
+        screen = document.getElementById('loginConfirmScreen');
+        text   = document.getElementById('loginConfirmText');
+    }
+
+    document.body.style.overflow = 'hidden';
+    screen.style.display         = 'block';
+    text.style.display           = 'block';
+}
+
+function confirm_update(username, confirm) {
+    if(username == '') {
+        $('loginWarning').innerHTML = 'You must type in your username to continue.';
+    } else {
+        $('loginWarning').innerHTML = '&nbsp; &nbsp;';
+		new Ajax.Request(LoginScript,{
+		    method:      'post',
+		    parameters:  {action: ['confirm_account'],
+		                  user:    username,
+		                  confirm: confirm
+		                 },
+		    onSuccess: function (transport) {
+		        var session = transport.responseText;
+		        if(session.indexOf("Error:")!=-1) {
+		            $('loginWarning').innerHTML = session;
+                } else if(session.indexOf("Already Active")!=-1) {
+                    $('loginTable').innerHTML = '<tr><td id=loginWarning colspan=3 align=center style=color:red;' +
+                        'padding-bottom:3px><br><br>This user has already been activated.' +
+                            '<br> Please click continue to exit.<br><br></td></tr>' +
+                        '<tr><td align=center padding-top:3px>' +
+                            '<input style=font-size:90% type=button value=\'Continue\'' +
+                                'onClick=reload_login_script(); />' +
+                        '</td></tr>';
+		        } else {
+                    $('loginWarning').hide();
+		            $('loginWarning').innerHTML = "Success";
+		        }
+		        LoginPage = "main";
+		        login_user(username,session)
+		    }
+		});
+    }
+}
+
+
+function reload_login_script() {
+    var urlString  = String(document.location).split('?');
+    document.location.href = urlString[0];
 }
 
 

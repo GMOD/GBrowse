@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.239.4.3 2009-07-10 20:07:44 idavies Exp $
+# $Id: Browser.pm,v 1.239.4.4 2009-07-17 15:32:54 idavies Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -328,7 +328,6 @@ sub session {
                     lockdir  => $self->session_locks,
                     locktype => $self->session_locktype,
                     expires  => $self->remember_settings_time);
-  warn "#########",$id;
   return Bio::Graphics::Browser::Session->new(@args,id => $id);
 }
 

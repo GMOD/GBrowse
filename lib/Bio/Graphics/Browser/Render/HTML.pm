@@ -457,25 +457,35 @@ sub render_login {
                       'Welcome, '.$session->username.'.') . br() .
                  div({-style       => $style,
                       -title       => 'Click here to log out from '.$session->username.'.',
-                      -onClick     => "location.href='?id=logout';",
+                      -onMouseDown => 'location.href=\'?id=logout\';',
                       -onMouseOver => 'this.style.textDecoration=\'underline\'',
                       -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out') .
-                 div({-style => $style}, '&nbsp; &nbsp;');
+                 div({-style=>'float:right;font-weight:bold;color:black;'}, '&nbsp; &nbsp;');
 
         $title = 'Click here to change your account settings';
         $text  = 'My Account';
-        $click = 'load_login_balloon(event)';
+        $click = 'load_login_balloon(event,\''.$session->id.'\',\''.$session->username.'\')';
     } else {
         $title = 'Click here to log in or create a new gbrowse account';
         $text  = 'Log in / create account';
-        $click = 'load_login_balloon(event)';
+        $click = 'load_login_balloon(event,\''.$session->id.'\',false)';
     }
 
-    $html .= div({-style => $style, -title => $title, -onClick => $click,
+    $html .= div({-style => $style, -title => $title, -onMouseDown => $click,
                   -onMouseOver => 'this.style.textDecoration=\'underline\'',
                   -onMouseOut  => 'this.style.textDecoration=\'none\''}, $text);
 
-    return $settings->{head} ? $html : '';
+    my $container = div({-style=>'float:right;'},$html);
+
+    return $settings->{head} ? $container : '';
+}
+
+sub render_login_account_confirm {
+    my $self     = shift;
+    my $confirm  = shift;
+    my $settings = $self->state;
+    return iframe({-style  => 'display:none;',
+                   -onLoad => 'confirm_screen(\''.$confirm.'\')'});
 }
 
 sub render_title {

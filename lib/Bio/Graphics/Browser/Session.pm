@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.16.4.2 2009-07-17 15:32:54 idavies Exp $
+# $Id: Session.pm,v 1.16.4.3 2009-07-17 21:16:10 idavies Exp $
 
 use strict;
 use warnings;

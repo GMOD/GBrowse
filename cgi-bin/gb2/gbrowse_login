@@ -10,7 +10,7 @@ use Digest::SHA qw(sha1);
 use Mail::Mailer;
 use Text::ParseWords 'quotewords';
 
-our $VERSION = '$Id: gbrowse_login,v 1.1.2.2 2009-07-17 15:32:54 idavies Exp $';
+our $VERSION = '$Id: gbrowse_login,v 1.1.2.3 2009-07-17 21:16:10 idavies Exp $';
 
 umask 022;
 

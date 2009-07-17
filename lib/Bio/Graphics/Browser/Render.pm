@@ -603,8 +603,8 @@ sub asynchronous_event {
     }
 
     # authorize an attempted login
-    if (param('authorize_login') && param('username') && param('id') && param('old_id')) {
-	my ($id,$nonce) = $self->authorize_user(param('username'),param('id'),param('old_id'));
+    if (param('authorize_login') && param('username') && param('session')) {
+	my ($id,$nonce) = $self->authorize_user(param('username'),param('session'));
 	return (200,'application/json',{id=>$id,authority=>$nonce});
     }
 
@@ -616,15 +616,17 @@ sub asynchronous_event {
 
 sub authorize_user {
     my $self = shift;
-    my ($username,$id,$old) = @_;
+    my ($username,$id) = @_;
     my $session;
 
-	warn "Checking for active users";
-    $session = $self->globals->session($old);
-    warn "Old user ASDJALSKDJ";
-    if(!$session->private()) {
-        warn "No users active, retrieving old session";
-        $session = $self->globals->session($id);  # create/retrieve session
+	warn "Checking current session";
+    my $current = $self->session->id;
+    if($current eq $id) {
+        warn "Using current session";
+        $session = $self->session;
+    } else {
+        warn "Retrieving old session";
+	    $session = $self->globals->session($id);  # create/retrieve session
     }
     
     my $nonce = Bio::Graphics::Browser::Util->generate_id;

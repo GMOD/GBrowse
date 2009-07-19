@@ -4,7 +4,7 @@
 # map actual sequence coordinates from a clustal alignment
 # so that indels are taken into account.
 
-#$Id: clustal2hit.pl,v 1.1.2.3 2009-06-03 21:05:12 sheldon_mckay Exp $
+#$Id: clustal2hit.pl,v 1.1.2.4 2009-07-19 09:11:34 sheldon_mckay Exp $
 
 use strict;
 use Bio::AlignIO;
@@ -25,7 +25,7 @@ while (my $file = shift) {
 
   while (my $aln = $str->next_aln) {
     $idx++;
-    next if $aln->no_sequences < 2;
+    next if $aln->num_sequences < 2;
     my %seq;
     my $map = {};
     my $seq_idx;

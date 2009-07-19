@@ -1,24 +1,28 @@
 #!/usr/bin/perl -w
 
 # A script to prepare alignments for loading into a GBrowse_syn database and 
-# map actual sequence coordinates from a clustal alignment
-# so that indels are taken into account.
-# $Id: aln2hit.pl,v 1.1.2.2 2009-06-02 19:17:56 sheldon_mckay Exp $
+# map actual sequence coordinates to keep track on insertions/deletions
+# $Id: aln2hit.pl,v 1.1.2.3 2009-07-19 09:11:34 sheldon_mckay Exp $
 use strict;
 use lib "$ENV{HOME}/lib";;
 use Bio::AlignIO;
 use List::Util 'sum';
 use Getopt::Long;
 use Data::Dumper;
+use File::Temp 'tempfile';
+use IO::File;
 
 # The sequence naming convention used here is as follows:
 # species-seqname(strand)/start-end
 # The species, strand and coordinates of each sequence in the alignment
 # must be provided for the database to be loaded properly.
 
+# Sorry for the ad-hoc overloading of the sequence name -- Have
+# to get the strand and coordinate info for this to work
+
 # The format used in this example is 'clustalw'
-# adjust if necessary
-use constant FORMAT => 'clustal2';
+# adjust as required
+use constant FORMAT => 'clustalw';
 use constant DEBUG  => 0;
 
 use vars qw/$format $infile $outfile/;
@@ -34,15 +38,16 @@ my $verbose = DEBUG;
 $format ||= FORMAT;
 
 
-my $str = Bio::AlignIO->new( -file   => $infile, 
-			     -format => $format);
+my $alignIO = Bio::AlignIO->new( -file   => $infile, 
+				 -format => $format);
 
-while (my $aln = $str->next_aln) {
-  next if $aln->no_sequences < 2;
+while (my $aln = $alignIO->next_aln) {
+  next if $aln->num_sequences < 2;
   my %seq;
   my $map = {};
   for my $seq ($aln->each_seq) {
     my $seqid = $seq->display_name;
+    check_name_format($seqid);
     my ($species,$ref,$strand) = $seqid =~ /(\S+)-(\S+)\(([+-])\)/;
     next if $seq->seq =~ /^-+$/;
     $seq{$species} = [$ref, $seq->display_name, $seq->start, $seq->end, $strand, $seq->seq, $seq]; 
@@ -166,4 +171,28 @@ sub nearest {
   } @_;
 
   return (wantarray) ? @res : $res[0];
+}
+
+sub check_name_format {
+  my $name = shift;
+  my $nogood = <<'  END';
+I\'m sorry, this will not work unless you use the name format described below for each
+sequence in the alignment.  WE need the species, sequence name, strand, start and end for
+each sequence in the alignment.
+
+  species-sequence(strand)/start-end
+  
+  where species   = name of species, genome, strain, etc (string with no '-' characters)
+        sequence  = name of reference sequence (string with no '/' characters)
+        (strand)  = orientation of the alignment (relative to the reference sequence; + or -)
+        start     = start coordinate of the alignment relative to the reference sequence (integer)
+        end       = end coordinate of the alignment relative to the reference sequence   (integer)
+
+  Examples:
+    c_elegans-I(+)/1..2300
+    myco_bovis-chr1(-)/15000..25000
+  END
+  ;
+
+  die unless $name =~ /^[^-]+-[^\(]+\([+-]\)\/\-?\d+\-\-?\d+$/; 
 }

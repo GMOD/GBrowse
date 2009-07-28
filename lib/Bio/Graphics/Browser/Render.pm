@@ -603,8 +603,8 @@ sub asynchronous_event {
     }
 
     # authorize an attempted login
-    if (param('authorize_login') && param('username') && param('session')) {
-	my ($id,$nonce) = $self->authorize_user(param('username'),param('session'));
+    if (param('authorize_login') && param('username') && param('session') && param('openid')) {
+	my ($id,$nonce) = $self->authorize_user(param('username'),param('session'),param('remember'),param('openid'));
 	return (200,'application/json',{id=>$id,authority=>$nonce});
     }
 
@@ -616,14 +616,17 @@ sub asynchronous_event {
 
 sub authorize_user {
     my $self = shift;
-    my ($username,$id) = @_;
-    my $session;
+    my ($session,$error);
+    my ($username,$id,$remember,$using_openid) = @_;
 
 	warn "Checking current session";
     my $current = $self->session->id;
     if($current eq $id) {
         warn "Using current session";
         $session = $self->session;
+    } elsif($self->session->private) {
+        warn "Another account is currently in use";
+        return ("error");
     } else {
         warn "Retrieving old session";
 	    $session = $self->globals->session($id);  # create/retrieve session
@@ -632,8 +635,9 @@ sub authorize_user {
     my $nonce = Bio::Graphics::Browser::Util->generate_id;
     my $ip    = CGI::remote_addr();
 
-    $session->set_nonce($nonce,$ip);
+    $session->set_nonce($nonce,$ip,$remember);
     $session->username($username);
+    $session->using_openid($using_openid);
 
     $session->flush();
     return ($id,$nonce);
@@ -877,10 +881,6 @@ sub render_body {
   print $self->render_top($title,$features);
   print $self->render_navbar($region->seg);
 
-  if (param('confirm') && param('code') && param('id')) {
-      print $self->render_login_account_confirm(param('code'));
-  }
-
   if ($region->feature_count > 1) {
       print $self->render_multiple_choices($features,$self->state->{name});
       print $self->render_toggle_track_table;
@@ -899,6 +899,10 @@ sub render_body {
   }
   print $self->render_global_config();
   print $self->render_bottom($features);
+
+  if (param('confirm') && param('code') && param('id')) {
+      print $self->render_login_account_confirm(param('code'));
+  }
 }
 
 

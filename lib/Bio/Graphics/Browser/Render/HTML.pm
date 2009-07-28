@@ -456,19 +456,20 @@ sub render_login {
         $html .= div({-style=>'float:right;font-weight:bold;color:black;'},
                       'Welcome, '.$session->username.'.') . br() .
                  div({-style       => $style,
-                      -title       => 'Click here to log out from '.$session->username.'.',
+                      -title       => 'Click here to log out from '.$session->username.'',
                       -onMouseDown => 'location.href=\'?id=logout\';',
                       -onMouseOver => 'this.style.textDecoration=\'underline\'',
                       -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out') .
                  div({-style=>'float:right;font-weight:bold;color:black;'}, '&nbsp; &nbsp;');
 
-        $title = 'Click here to change your account settings';
-        $text  = 'My Account';
-        $click = 'load_login_balloon(event,\''.$session->id.'\',\''.$session->username.'\')';
+        $title  = 'Click here to change your account settings';
+        $text   = 'My Account';
+        $click  = 'load_login_balloon(event,\''.$session->id.'\',\'';
+        $click .= $session->username.'\',\''.$session->using_openid.'\')';
     } else {
-        $title = 'Click here to log in or create a new gbrowse account';
-        $text  = 'Log in / create account';
-        $click = 'load_login_balloon(event,\''.$session->id.'\',false)';
+        $title  = 'Click here to log in or create a new gbrowse account';
+        $text   = 'Log in / create account';
+        $click  = 'load_login_balloon(event,\''.$session->id.'\',false,false)';
     }
 
     $html .= div({-style => $style, -title => $title, -onMouseDown => $click,

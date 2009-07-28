@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.16.4.3 2009-07-17 21:16:10 idavies Exp $
+# $Id: Session.pm,v 1.16.4.4 2009-07-28 19:34:58 idavies Exp $
 
 use strict;
 use warnings;
@@ -243,12 +243,23 @@ sub username {
     return $d;
 }
 
+sub using_openid {
+    my $self = shift;
+    my $d = $self->{session}->param('.using_openid');
+    $self->{session}->param('.using_openid' => shift()) if @_;
+    return $d;
+}
+
 sub set_nonce {
     my $self = shift;
-    my ($nonce,$salt) = @_;
+    my ($nonce,$salt,$remember) = @_;
     warn "id=",$self->id," writing nonce = ",md5_hex($nonce,$salt);
     $self->{session}->param('.nonce' => md5_hex($nonce,$salt));
-    $self->{session}->expire('.nonce' => '1d');
+    if($remember) {
+        $self->{session}->expire('.nonce' => '30d');
+    } else {
+        $self->{session}->expire('.nonce' => '1d');
+    }
     $self->private(1);
 }
 

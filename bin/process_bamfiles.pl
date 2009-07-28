@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#$Id: process_bamfiles.pl,v 1.3.4.5 2009-07-17 21:16:10 idavies Exp $
+#$Id: process_bamfiles.pl,v 1.3.4.6 2009-07-28 19:34:58 idavies Exp $
 
 # The purpose of this module is to process a hierarchy of directories containing  sam/bam 
 # files and generate automatic GBrowse for them. Ultimately this will be integrated into

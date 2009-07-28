@@ -7,10 +7,12 @@ use Bio::Graphics::Browser::Render;
 use CGI qw(:standard);
 use DBI;
 use Digest::SHA qw(sha1);
+use JSON;
 use Mail::Mailer;
+use Net::OpenID::Consumer;
 use Text::ParseWords 'quotewords';
 
-our $VERSION = '$Id: gbrowse_login,v 1.1.2.3 2009-07-17 21:16:10 idavies Exp $';
+our $VERSION = '$Id: gbrowse_login,v 1.1.2.4 2009-07-28 19:34:58 idavies Exp $';
 
 umask 022;
 
@@ -34,14 +36,28 @@ my $new      = param('new_val');
 my $column   = param('column');
 
 my $confirm  = param('confirm');
+my $openid   = param('openid');
+my $option   = param('option');
+
+if ($actions{get_openid} or $actions{list_openid}) {
+    print header('application/json');
+    do_get_openid($login,$openid) if $actions{get_openid};
+    do_list_openid($login,$user)  if $actions{list_openid};
+    exit 0;
+}
 
 print header();
 
-do_add_user        ($login,$smtp,$url,$user,$email,$pass,$userid)  if $actions{add_user};
-do_validate        ($login,$user,$pass,$remember)    if $actions{validate};
-do_edit_details    ($login,$user,$column,$old,$new)  if $actions{edit_details};
-do_email_info      ($login,$smtp,$email)             if $actions{email_info};
-do_confirm_account ($login,$user,$confirm)           if $actions{confirm_account};
+do_add_user          ($login,$smtp,$url,$user,$email,$pass,$userid)  if $actions{add_user};
+do_validate          ($login,$user,$pass,$remember)                  if $actions{validate};
+do_edit_details      ($login,$user,$column,$old,$new)                if $actions{edit_details};
+do_email_info        ($login,$smtp,$email)                           if $actions{email_info};
+do_confirm_account   ($login,$user,$confirm)                         if $actions{confirm_account};
+do_delete_user       ($login,$user,$pass)                            if $actions{delete_user};
+
+do_add_openid_user   ($login,$user,$openid,$userid,$remember)        if $actions{add_openid_user};
+do_confirm_openid    ($login,$pass,$openid)                          if $actions{confirm_openid};
+do_change_openid     ($login,$user,$pass,$openid,$option)            if $actions{change_openid};
 
 exit 0;
 
@@ -81,10 +97,11 @@ sub do_validate {
             print "Success";
         }
     } elsif($rows == 0) {
-        print "Invalid username or password provided. Please try again.";
+        print "Invalid username or password provided, please try again.";
     } else {
         print "Error: $rows rows returned, please consult your service host.";
     }
+    return;
 }
 
 sub do_add_user {
@@ -102,23 +119,24 @@ sub do_add_user {
     }
 
     my $query = $login->prepare(
-        "INSERT INTO users VALUES (?,?,?,?,0,0,?,now(),now())"
+        "INSERT INTO users VALUES (?,?,?,?,0,0,0,?,now(),now())"
     );
 
     $pass = sha1($pass);
     if($query->execute($userid,$user,$email,$pass,$confirm)) {
         print "Success";
     } else {
-        if(DBI->errstr =~ m/for key 2$/) {
-            print "Username already in use. Please try another.";
+        if(DBI->errstr =~ m/for key 1$/) {
+            print "Username already in use, please try another.";
         } elsif(DBI->errstr =~ m/for key 3$/) {
-            print "E-mail address already in use. Please provide another.";
-        } elsif(DBI->errstr =~ m/for key 1$/) {
+            print "E-mail address already in use, please provide another.";
+        } elsif(DBI->errstr =~ m/for key 2$/) {
             print "Session Error";
         } else {
             print "Error: ",DBI->errstr,".";
         }
     }
+    return;
 }
 
 sub do_send_confirmation {
@@ -178,6 +196,7 @@ sub do_confirm_account {
     } else {
         print "Error: $rows rows returned, please consult your service host.";
     }
+    return;
 }
 
 sub do_edit_details {
@@ -198,8 +217,8 @@ sub do_edit_details {
     if($rows == 1) {
         print "Success";
     } elsif($rows == 0) {
-        print "Incorrect password provided. Please check your spelling." if($column eq 'pass');
-        print "Incorrect e-mail provided. Please check your spelling."   if($column eq 'email');
+        print "Incorrect password provided, please check your spelling." if($column eq 'pass');
+        print "Incorrect e-mail provided, please check your spelling."   if($column eq 'email');
     } else {
         if(($column eq 'email') and ($rows == -1)) {
             print "New e-mail already in use, please try another.";
@@ -207,10 +226,11 @@ sub do_edit_details {
             print "Error: $rows rows returned, please consult your service host.";
         }
     }
+    return;
 }
 
 sub do_email_info {
-    my ($login,$smtp,$emailz)  = @_;
+    my ($login,$smtp,$emailz) = @_;
     my ($user,$rows) = do_retrieve_user($login,$email);
     
     if($rows != 1) {print $user;return;}
@@ -241,6 +261,7 @@ sub do_email_info {
         and die "Failed to send message: $!");
 
     print "Success";
+    return;
 }
 
 sub do_retrieve_user {
@@ -274,4 +295,194 @@ sub get_footer {
     return $message;
 }
 
+sub do_delete_user {
+    my ($login,$user,$pass) = @_;
+    my $unseqpass = $pass;
+    $pass = sha1($pass);
+
+    my ($sql,@bind);
+    if($unseqpass eq "") {
+        $sql  = "DELETE FROM users WHERE username=?";
+        @bind = $user;
+    } else {
+        $sql  = "DELETE FROM users WHERE username=? AND pass=?";
+        @bind = ($user,$pass);
+    }
+
+    my $delete = $login->prepare($sql);
+    $delete->execute(@bind)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    my $rows = $delete->rows;
+    if($rows != 1) {
+        if($rows != 0) {
+            print "Error: $rows rows returned, please consult your service host.";
+        } else {
+            print "Incorrect password provided, please check your spelling and try again.";
+        }
+        return;
+    }
+
+    my $query = $login->prepare(
+        "DELETE FROM openid_users WHERE username=?");
+    if($query->execute($user)) {
+        print "Success";
+    } else {
+        print "Error: ",DBI->errstr,".";
+    }
+    return;
+}
+
+
+###################################################################
+# OpenID functions
+###################################################################
+
+sub do_get_openid {
+    my ($login,$openid) = @_;
+    my ($error,@results);
+
+    my $select  = "SELECT A.username, A.userid,     ";
+       $select .= "       A.remember, A.openid_only ";
+       $select .= "  FROM users A, openid_users B   ";
+       $select .= " WHERE A.userid     = B.userid   ";
+       $select .= "   AND A.username   = B.username ";
+       $select .= "   AND A.confirmed  = 1          ";
+       $select .= "   AND B.openid_url = ?          ";
+
+    my $query = $login->prepare($select);
+    $query->execute($openid)
+        or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
+        and print JSON::to_json(\@results) and die "Error: ",DBI->errstr);
+
+    my $rows = $query->rows;
+    if($rows != 1) {
+        if($rows != 0) {
+            $error  = "Error: $rows rows returned, please consult your service host.";
+        } else {
+            $error  = "The OpenID provided has not been used with GBrowse before. ";
+            $error .= "Please create an account first before trying to edit your information.";
+        }
+        push @results,{error=>$error};
+        print JSON::to_json(\@results);
+        return;
+    }
+
+    my @info = $query->fetchrow_array;
+    my $update = $login->prepare(
+        "UPDATE users SET last_login=now() WHERE username=? AND userid=? AND confirmed=1");
+    $update->execute($info[0],$info[1])
+        or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
+        and print JSON::to_json(\@results) and die "Error: ",DBI->errstr);
+
+    push @results,{user=>$info[0],session=>$info[1],remember=>$info[2],only=>$info[3]};
+    print JSON::to_json(\@results);
+    return;
+}
+
+sub do_add_openid_user {
+    my ($login,$user,$openid,$userid,$remember) = @_;
+    my $confirm = sha1(do_create_key('32'));
+    my $pass    = sha1(do_create_key('32'));
+    my $email   = do_create_key('64');
+
+    my $query = $login->prepare(
+        "INSERT INTO users VALUES (?,?,?,?,?,1,1,?,now(),now())"
+    );
+
+    $pass = sha1($pass);
+    if($query->execute($userid,$user,$email,$pass,$remember,$confirm)) {
+        my $insert = $login->prepare("INSERT INTO openid_users VALUES (?,?,?)");
+        if($insert->execute($userid,$user,$openid)) {
+            print "Success";
+        } else {
+            if(DBI->errstr =~ m/for key 1$/) {
+                print "The OpenID provided is already in use, please try another.";
+            } else {
+                print "Error: ",DBI->errstr,".";
+            }
+        }
+    } else {
+        if(DBI->errstr =~ m/for key 1$/ || DBI->errstr =~ m/for key 3$/) {
+            #If the e-mail happens to match another, this will still be called.
+            print "Username already in use, please try another.";
+        } elsif(DBI->errstr =~ m/for key 2$/) {
+            print "Session Error";
+        } else {
+            print "Error: ",DBI->errstr,".";
+        }
+    }
+    return;
+}
+
+sub do_change_openid {
+    my ($login,$user,$pass,$openid,$option) = @_;
+    my $unseqpass = $pass;
+    $pass = sha1($pass);
+
+    my ($sql,@bind);
+    if($unseqpass eq "") {
+        $sql  = "SELECT userid FROM users WHERE username=? AND openid_only=1";
+        @bind = $user;
+    } else {
+        $sql  = "SELECT userid FROM users WHERE username=? AND pass=?";
+        @bind = ($user,$pass);
+    }
+
+    my $select = $login->prepare($sql);
+    $select->execute(@bind)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    my $rows = $select->rows;
+    if($rows != 1) {
+        if($rows != 0) {
+            print "Error: $rows rows returned, please consult your service host.";
+        } else {
+            print "Incorrect password provided, please check your spelling and try again.";
+        }
+        return;
+    }
+
+    if($option eq "add") {
+        $sql = "INSERT INTO openid_users VALUES (?,?,?)";
+    } else {
+        $sql = "DELETE FROM openid_users WHERE userid=? AND username=? AND openid_url=?";
+    }
+
+    my $query = $login->prepare($sql);
+    if($query->execute($select->fetchrow_array(),$user,$openid)) {
+        print "Success";
+    } else {
+        if(DBI->errstr =~ m/for key 1$/) {
+            print "The OpenID provided is already in use, please try another.";
+        } else {
+            print "Error: ",DBI->errstr,".";
+        }
+    }
+    return;
+}
+
+sub do_list_openid {
+    my ($login,$user) = @_;
+    my ($error,@openids);
+
+    my $query = $login->prepare(
+        "SELECT openid_url FROM openid_users WHERE username=?");
+    $query->execute($user)
+        or ($error = DBI->errstr and push @openids,{error=>"Error: $error."}
+        and print JSON::to_json(\@openids) and die "Error: ",DBI->errstr);
+
+    if($query->rows == 0) {
+        push @openids,{error=>"There are no OpenIDs currently associated with this account."}
+    }
+
+    while (my $openid = $query->fetchrow_array) {
+        push @openids,{name=>$openid};
+    }
+    my @results = sort {$a->{name} cmp $b->{name}} @openids;
+    print JSON::to_json(\@results);
+}
+
 __END__
+
+
+

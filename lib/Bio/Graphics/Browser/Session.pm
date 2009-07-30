@@ -1,11 +1,12 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.16 2009-05-05 23:14:41 lstein Exp $
+# $Id: Session.pm,v 1.17 2009-07-30 16:38:03 lstein Exp $
 
 use strict;
 use warnings;
 
 use CGI::Session;
+use CGI::Cookie;
 use Fcntl 'LOCK_EX','LOCK_SH';
 use File::Spec;
 use File::Path 'mkpath';
@@ -32,7 +33,11 @@ sub new {
   $CGI::Session::NAME = 'gbrowse_sess';     # custom cookie
   $CGI::Session::Driver::file::NoFlock = 1; # flocking unnecessary because we roll our own
 
-  $id               ||= CGI->cookie($CGI::Session::NAME);
+  unless ($id) {
+      my $cookie = CGI::Cookie->fetch();
+      $id        = $cookie->{$CGI::Session::NAME}->value 
+	  if $cookie && $cookie->{$CGI::Session::NAME};
+  }
   my $self            = bless {
       lockdir  => $lockdir,
       locktype => $locktype,
@@ -40,6 +45,7 @@ sub new {
   $self->lock_ex($id) if $id;
 
   $self->{session}    = CGI::Session->new($driver,$id,$session_args);
+
   $self->{session}->expire($expire_time) 
       if defined $expire_time;
 

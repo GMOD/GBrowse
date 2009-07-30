@@ -43,13 +43,21 @@ sub new {
   my $config_file_path = shift;
   my ($name,$description,$globals) = @_;
 
+  # we expire what's in the config file path if a global timer
+  # has gone off OR the modification time of the path has changed
+
+  my $expire_time = $globals->time2sec($globals->datasources_expire);
+  my $cache_age   = time() - ($CONFIG_CACHE{$config_file_path}{ctime}||0);
+  my $expired     = $expire_time < $cache_age;
+
   # this code caches the config info so that we don't need to 
   # reparse in persistent (e.g. modperl) environment
-  my $mtime            = (stat($config_file_path))[9];
-  if (exists $CONFIG_CACHE{$config_file_path}
+  my $mtime            = (stat($config_file_path))[9] || 0;
+  if (!$expired
+      && exists $CONFIG_CACHE{$config_file_path}{mtime}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {
       $CONFIG_CACHE{$config_file_path}{object}->clear_cached_dbids;
-    return $CONFIG_CACHE{$config_file_path}{object};
+      return $CONFIG_CACHE{$config_file_path}{object};
   }
 
   my $self = $class->SUPER::new(-file=>$config_file_path,
@@ -62,6 +70,7 @@ sub new {
   $self->add_scale_tracks();
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
+  $CONFIG_CACHE{$config_file_path}{ctime}  = time();
   return $self;
 }
 
@@ -452,7 +461,7 @@ sub type2label {
     my @array  = $self->SUPER::type2label(lc $type) or return;
     my %label_groups;
     for my $label (@array) {
-      my ($label_base,$minlength) = $label =~ /([^:]+)(?::(\d+))?/;
+      my ($label_base,$minlength) = $label =~ /(.+)(?::(\d+))?/;
       $minlength ||= 0;
       next if defined $length && $minlength > $length;
       $label_groups{$label_base}++;
@@ -472,10 +481,6 @@ sub feature2label {
 
   (my $basetype = $type) =~ s/:.+$//;
   my @label = $self->type2label($type,$length);
-
-  # WARNING: if too many features start showing up in tracks, uncomment
-  # the following line and comment the one after that.
-  #@label    = $self->type2label($basetype,$length) unless @label;
   push @label,$self->type2label($basetype,$length);
 
   # @label    = ($type) unless @label;
@@ -873,6 +878,55 @@ sub _secondary_key_to_label {
     my %seenit;
     return grep {!$seenit{$_}++} 
            map  {exists $index->{$field}{lc $_} ? @{$index->{$field}{lc $_}} : () } @_;
+}
+
+
+######### experimental code to manage user-specific tracks ##########
+sub add_user_type {
+    my $self = shift;
+    my ($type,$type_configuration) = @_;
+
+    my $cc = ($type =~ /^(general|default)$/i) ? 'general' : $type;  # normalize
+
+    my $base = $self->{user_tracks} ||= {};
+    
+    push @{$base->{types}},$cc 
+	unless $cc eq 'general' or $base->{config}{$cc};
+
+    if (defined $type_configuration) {
+	for my $tag (keys %$type_configuration) {
+	    $base->{config}{$cc}{lc $tag} = $type_configuration->{$tag};
+	}
+    }
+}
+
+sub configured_types {
+    my $self  = shift;
+    my @types       = $self->SUPER::configured_types;
+    my @user_types  = @{$self->{user_tracks}{types}} if exists $self->{user_tracks}{types};
+    return (@types,@user_types);
+}
+
+sub _setting {
+    my $self = shift;
+    if (@_ == 2 && (my $base = $self->{user_tracks})) {
+	return $base->{config}{$_[0]}{$_[1]} if exists $base->{config}{$_[0]};
+    }
+    return $self->SUPER::_setting(@_);
+}
+
+sub parse_user_file {
+    my $self = shift;
+    local $self->{types}  = $self->{user_tracks}{types};
+    local $self->{config} = $self->{user_tracks}{config};
+    $self->SUPER::parse_file(@_);
+}
+
+sub parse_user_fh {
+    my $self = shift;
+    local $self->{types}  = $self->{user_tracks}{types};
+    local $self->{config} = $self->{user_tracks}{config};
+    $self->SUPER::parse_fh(@_);
 }
 
 1;

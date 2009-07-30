@@ -960,7 +960,11 @@ sub render_global_config {
 # This surrounds the external table with a toggle
 sub render_toggle_external_table {
   my $self     = shift;
-  return a({-name=>'upload_tracks'},$self->toggle('upload_tracks', $self->render_external_table()));
+  return a({-name=>'upload_tracks'},
+	   $self->toggle('upload_tracks', 
+			 $self->render_external_table()
+	   )
+      );
 }
 
 sub render_external_table {
@@ -976,6 +980,7 @@ sub render_external_table {
 	      $self->das_table)
         . end_form();
     $content .= $self->html_frag('html6',$state);
+    $content .= $self->test_new_track();
     return $content;
 }
 
@@ -1262,6 +1267,13 @@ sub edit_uploaded_file {
     $return_str .= end_form();
     $return_str .= $self->render_bottom();
     return $return_str;
+}
+
+#### a test button for the "new" way of uploading a data set ####
+sub test_new_track {
+    my $self = shift;
+    return button({-name     => 'Make a new track',
+		   -onClick  => 'Controller.new_test_track()'});
 }
 
 #### generate the fragment of HTML for printing out the examples

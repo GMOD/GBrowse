@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#$Id: process_bamfiles.pl,v 1.4 2009-06-30 09:44:44 lstein Exp $
+#$Id: process_bamfiles.pl,v 1.5 2009-07-30 16:38:02 lstein Exp $
 
 # The purpose of this module is to process a hierarchy of directories containing  sam/bam 
 # files and generate automatic GBrowse for them. Ultimately this will be integrated into
@@ -174,7 +174,7 @@ sub get_data_tracks {
     my $wanted = sub {
 	if (/\.(bam|sam|sam.gz)$/i) {
 	    return if /\.sorted\.bam$/;
-	    (my $path = $File::Find::dir) =~ s!^$root/!!;
+	    (my $path = $File::Find::dir) =~ s!^$root/?!!;
 	    my @categories = File::Spec->splitdir($path);
 	    push @result,Track->new(-categories=>\@categories,
 				    -path      => $File::Find::dir,
@@ -252,6 +252,9 @@ sub build_conf {
     my $fa_path   = $self->get_fa($dsn);
     my $conf_file = File::Spec->catfile($self->conf_root,$dsn,"$name.conf");
 
+    my $read_category  = $category ? "$category:Reads" : 'Reads';
+    my $pairs_category = $category ? "$category:Read Pairs" : 'Read Pairs';
+
     return if -e $conf_file && -M $conf_file <= -M $bam_path;  # already there
 
     warn "building configuration file for $bam_path\n";
@@ -270,7 +273,37 @@ sub build_conf {
 db_adaptor  = Bio::DB::Sam
 db_args     = -fasta "$fa_path"
               -bam   "$bam_path"
+              -split_splices 1
 search options = none
+
+[${name}_pairs]
+database      = $name
+feature       = read_pair
+glyph         = segments
+draw_target   = 1
+show_mismatch = 1
+mismatch_color= red
+bgcolor       = green
+fgcolor       = green
+height        = 10
+label         = sub {shift->display_name}
+label density = 50
+bump          = fast
+maxdepth      = 2
+connector     = sub {
+		my \$glyph = pop;
+	        \$glyph->level == 0 ? 'dashed' : 'solid';
+   }
+category      = $pairs_category
+feature_limit = 250
+key           = $name Read Pairs
+
+[${name}_pairs:10001]
+feature       = coverage:1000
+glyph         = wiggle_xyplot
+height        = 80
+min_score     = 0
+autoscale     = local
 
 [$name]
 database      = $name
@@ -285,7 +318,8 @@ height        = 5
 label         = sub {shift->display_name}
 label density = 10
 bump          = fast
-category      = $category
+category      = $read_category
+feature_limit = 250
 key           = $name Alignments
 
 [$name:10001]

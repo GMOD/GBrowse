@@ -1,6 +1,10 @@
+1.997   * Fixed bad bug in cookie handling that allowed cookies from one session to overwrite
+	another when mod_perl or fastcgi in use.
+	* Started working on redesign of data uploading and sharing.
 1.996   * Add "feature_limit" option to keep very populous tracks under control.
 	* Attempt to fix problem of FastCGI processes hanging around even after apache restarted.
 	* Installer will no longer overwrite locally-modified configuration files.
+	* Will now cache piped files and freshen cache at an interval set by "expire data sources".
 1.995	* Install to an alternate location (e.g. home directory) by using --install_base argument when
 	  calling perl Build.PL.
 	* Don't overwrite user's configuration files when doing an upgrade install!

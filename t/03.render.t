@@ -15,7 +15,7 @@ use FindBin '$Bin';
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
-use constant TEST_COUNT => 138;
+use constant TEST_COUNT => 148;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -475,6 +475,27 @@ ok ($png);
 $png =~ s!/gbrowse/i!/tmp/gbrowse_testing/images!;
 ok (-e $png);
 
+### check user tracks
+my $usertracks = $render->user_tracks;
+ok($usertracks);
+ok($usertracks->path =~ m!/gbrowse_testing/userdata/volvox/[0-9a-h]{32}$!);
+$usertracks->add_remote_track('http://www.foo.bar/this/is/a/remotetrack');
+my @tracks = $usertracks->tracks;
+ok(@tracks+0,1);
+ok($tracks[0],'http_www.foo.bar_this_is_a_remotetrack');
+my $path = $usertracks->track_conf($tracks[0]);
+ok(-e $path);
+
+$f = Bio::Graphics::FeatureFile->new(-file=>$path);
+ok (($f->configured_types)[0] eq 'http_www.foo.bar_this_is_a_remotetrack');
+ok ($f->setting('http_www.foo.bar_this_is_a_remotetrack'=>'remote feature'),
+    'http://www.foo.bar/this/is/a/remotetrack');
+ok ($f->setting('http_www.foo.bar_this_is_a_remotetrack'=>'category'),
+    'My Tracks:Remote Tracks');
+
+$usertracks->delete_track($tracks[0]);
+ok(!-e $path);
+ok($usertracks->tracks+0,0);
 exit 0;
 
 sub check_multiple_renders {

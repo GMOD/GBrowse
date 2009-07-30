@@ -112,7 +112,8 @@ sub set {
 	    delete $self->{cacheseq}{$_};
 	}
 
-	warn "garbage collecting done, values = ",join ' ',$self->values;
+	warn "garbage collecting done, values = ",join ' ',$self->values 
+	    if Bio::Graphics::Browser::DataBase::DEBUG;
     }
 
     $self->{cacheseq}{$key}=1;

@@ -20,6 +20,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::RenderPanels;
 use Bio::Graphics::Browser::GFFPrinter;
 use Bio::Graphics::Browser::Util qw[modperl_request url_label];
+use Bio::Graphics::Browser::UserTracks;
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -100,6 +101,14 @@ sub remote_sources {
   $d;
 }
 
+sub user_tracks {
+    my $self = shift;
+    return $self->{usertracks} 
+       ||= Bio::Graphics::Browser::UserTracks->new($self->data_source,
+						   $self->state,
+						   $self->language);
+}
+
 sub db {
   my $self = shift;
   my $d = $self->{db};
@@ -137,6 +146,12 @@ sub run {
        query_string() if $self->debug;
 
   $self->set_source();
+
+
+  # This guarantees that all user-specific tracks
+  # disappear after the current session completes.
+  local $self->data_source->{user_tracks} = {};
+
   my $state = $self->state;
 
   if ($self->run_asynchronous_event) {
@@ -597,6 +612,15 @@ sub asynchronous_event {
     # clear a cached data source
     if (param('clear_dsn') || param('reset_dsn')) {
 	$self->data_source->clear_cached_config();
+	return (204,'text/plain',undef);
+    }
+
+    # add a dummy track to the user data
+    if (param('new_test_track')) {
+	my $userdata = Bio::Graphics::Browser::UploadSet->new($self->data_source,
+							      $self->state,
+							      $self->language);
+	warn "Adding test track for ",$self->state->{uploadid}," path = ",($userdata->name_file('test'))[1];
 	return (204,'text/plain',undef);
     }
 
@@ -3191,7 +3215,7 @@ sub render_error_track {
     my $self = shift;
     my %args             = @_;
     my $image_width      = $args{'image_width'};
-    my $image_height     = $args{'image_height'};
+    my $image_height     = $args{'image_height'} * 3;
     my $image_element_id = $args{'image_element_id'};
     my $track_id         = $args{'track_id'};
     my $error_message    = $args{'error_message'};
@@ -3204,7 +3228,7 @@ sub render_error_track {
     my $font             = GD->gdMediumBoldFont;
     my ($swidth,$sheight) = ($font->width * length($error_message),$font->height);
     my $xoff              = ($image_width - $swidth)/2;
-    my $yoff              = ($image_height - $sheight)/2;
+    my $yoff              = ($image_height - $sheight - 3);
     $gd->string($font,$xoff,$yoff,$error_message,$black);
     my ($url,$path) = $self->data_source->generate_image($gd);
 

@@ -11,11 +11,12 @@ use File::Path 'rmtree';
 use FindBin '$Bin';
 use File::Spec;
 use FindBin '$Bin';
+use IO::String;
 
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
-use constant TEST_COUNT => 83;
+use constant TEST_COUNT => 90;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {
@@ -251,6 +252,34 @@ ok("@labels","CDS ORFs");
 ok("@labels","CDS Genes ORFs");
 @labels    = sort $source->data_source_to_label('flybase');
 ok("@labels","CDS");
+
+# Test whether user data can be added to the data source
+@labels = $source->labels;
+{
+    local $source->{user_tracks};
+    $source->add_user_type('fred',{glyph=>'segments',
+				   feature=>'genes',
+				   color => sub { return 'blue' },
+			   });
+    my @new_labels = $source->labels;
+    ok(@new_labels == @labels+1);
+    my $setting    = $source->setting(fred=>'glyph');
+    ok($setting,'segments');
+    ok('blue',$source->code_setting(fred=>'color'));
+
+    my $fh = IO::String->new(<<END);
+[tester]
+glyph = test
+feature = test
+bgcolor = orange
+END
+    $source->parse_user_fh($fh);
+    ok($source->labels+0,@labels+2);
+    ok('orange',$source->setting(tester => 'bgcolor'));
+}
+
+ok(@labels+0, $source->labels+0);
+ok(undef,$source->setting(fred=>'glyph'));
 
 exit 0;
 

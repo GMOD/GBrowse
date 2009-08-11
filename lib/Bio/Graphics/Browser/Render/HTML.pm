@@ -485,8 +485,23 @@ sub render_login_account_confirm {
     my $self     = shift;
     my $confirm  = shift;
     my $settings = $self->state;
-    return iframe({-style  => 'display:none;',
-                   -onLoad => 'confirm_screen(\''.$confirm.'\')'});
+
+    return $settings->{head} ?
+        iframe({-style  => 'display:none;',
+                -onLoad => 'confirm_screen(\''.$confirm.'\')'})
+        : "";
+}
+
+sub render_login_openid_confirm {
+    my $self     = shift;
+    my $settings = $self->state;
+    my ($page,$session) = @_;
+
+    return $settings->{head} ?
+        iframe({-style  => 'display:none;',
+                -onLoad => 'login_blackout(true,\'\');
+                 confirm_openid(\''.$session.'\',\''.$page.'\');'})
+        : "";
 }
 
 sub render_title {

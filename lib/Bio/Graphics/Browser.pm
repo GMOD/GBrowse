@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.239.4.6 2009-07-28 19:34:58 idavies Exp $
+# $Id: Browser.pm,v 1.239.4.7 2009-08-11 16:29:45 idavies Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -198,12 +198,13 @@ sub language_path  { shift->config_path('language_path')   }
 sub templates_path { shift->config_path('templates_path')  }
 sub moby_path      { shift->config_path('moby_path')       }
 
-sub global_timeout         { shift->setting(general=>'global_timeout') || 60   }
-sub remember_settings_time { shift->setting(general=>'expire session') || '1M' }
-sub cache_time             { shift->setting(general=>'expire cache')   || '2h' }
-sub upload_time            { shift->setting(general=>'expire uploads') || '6w' }
-sub url_fetch_timeout      { shift->setting(general=>'url_fetch_timeout')      }
-sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')     }
+sub global_timeout         { shift->setting(general=>'global_timeout')      ||  60   }
+sub remember_settings_time { shift->setting(general=>'expire session')      || '1M'  }
+sub cache_time             { shift->setting(general=>'expire cache')        || '2h'  }
+sub upload_time            { shift->setting(general=>'expire uploads')      || '6w'  }
+sub datasources_expire     { shift->setting(general=>'expire data sources') || '10m' }
+sub url_fetch_timeout      { shift->setting(general=>'url_fetch_timeout')            }
+sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')           }
 
 sub session_driver         { shift->setting(general=>'session driver') 
 				 || 'driver:file;serializer:default' }

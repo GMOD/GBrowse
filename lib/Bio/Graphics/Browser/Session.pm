@@ -1,11 +1,12 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.16.4.4 2009-07-28 19:34:58 idavies Exp $
+# $Id: Session.pm,v 1.16.4.5 2009-08-11 16:29:45 idavies Exp $
 
 use strict;
 use warnings;
 
 use CGI::Session;
+use CGI::Cookie;
 use Fcntl 'LOCK_EX','LOCK_SH';
 use File::Spec;
 use File::Path 'mkpath';
@@ -33,7 +34,12 @@ sub new {
   $CGI::Session::NAME = 'gbrowse_sess';     # custom cookie
   $CGI::Session::Driver::file::NoFlock = 1; # flocking unnecessary because we roll our own
 
-  $id               ||= CGI->cookie($CGI::Session::NAME);
+  unless ($id) {
+      my $cookie = CGI::Cookie->fetch();
+      $id        = $cookie->{$CGI::Session::NAME}->value
+      if $cookie && $cookie->{$CGI::Session::NAME};
+  }
+
   my $self            = bless {
       lockdir  => $lockdir,
       locktype => $locktype,
@@ -223,9 +229,7 @@ sub plugin_settings {
 sub source {
   my $self = shift;
   my $source = $self->{session}->param('.source');
-  if (@_) {
-    $self->{session}->param('.source' => shift());
-  }
+  $self->{session}->param('.source' => shift()) if @_;
   return $source;
 }
 
@@ -238,16 +242,16 @@ sub private {
 
 sub username {
     my $self = shift;
-    my $d = $self->{session}->param('.username');
+    my $user = $self->{session}->param('.username');
     $self->{session}->param('.username' => shift()) if @_;
-    return $d;
+    return $user;
 }
 
 sub using_openid {
     my $self = shift;
-    my $d = $self->{session}->param('.using_openid');
+    my $using = $self->{session}->param('.using_openid');
     $self->{session}->param('.using_openid' => shift()) if @_;
-    return $d;
+    return $using;
 }
 
 sub set_nonce {
@@ -258,7 +262,7 @@ sub set_nonce {
     if($remember) {
         $self->{session}->expire('.nonce' => '30d');
     } else {
-        $self->{session}->expire('.nonce' => '1d');
+        $self->{session}->expire('.nonce' => '12h');
     }
     $self->private(1);
 }

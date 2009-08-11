@@ -461,6 +461,9 @@ sub process_htdocs_files {
 	$self->substitute_in_place("blib/$_")
 	    if $copied
 	    or !$self->up_to_date('_build/config_data',"blib/$_");
+	if (/\.pl$/ && $copied) {
+	    
+	}
     }
 }
 
@@ -470,8 +473,12 @@ sub process_cgibin_files {
     while (<$f>) {
 	next unless m!^cgi-bin/!;
 	chomp;
-	$self->copy_if_modified($_=>'blib') &&
-	    $self->fix_shebang_line(File::Spec->catfile('blib',$_));
+	my $copied = $self->copy_if_modified($_=>'blib');
+	my $path   = File::Spec->catfile('blib',$_);
+	if ($copied) {
+	    $self->fix_shebang_line($path);
+	    chmod 0755,$path;
+	}
     }
 }
 

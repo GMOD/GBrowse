@@ -24,7 +24,6 @@ cgi-bin/gbrowse
 cgi-bin/gbrowse_details
 cgi-bin/gbrowse_gmap
 cgi-bin/gbrowse_img
-cgi-bin/README
 Changes
 conf/detail_select_menu.conf
 conf/enzymes.txt

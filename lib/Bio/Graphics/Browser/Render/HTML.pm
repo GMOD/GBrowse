@@ -465,7 +465,7 @@ sub render_login {
         $title  = 'Click here to change your account settings';
         $text   = 'My Account';
         $click  = 'load_login_balloon(event,\''.$session->id.'\',\'';
-        $click .= $session->username.'\',\''.$session->using_openid.'\')';
+        $click .= $session->username.'\','.$session->using_openid.')';
     } else {
         $title  = 'Click here to log in or create a new gbrowse account';
         $text   = 'Log in / create account';
@@ -493,14 +493,18 @@ sub render_login_account_confirm {
 }
 
 sub render_login_openid_confirm {
-    my $self     = shift;
-    my $settings = $self->state;
+    my $self            = shift;
+    my $settings        = $self->state;
+    my $this_session    = $self->session;
     my ($page,$session) = @_;
+
+    my $logged_in = 'false';
+       $logged_in = 'true'  if $this_session->private;
 
     return $settings->{head} ?
         iframe({-style  => 'display:none;',
                 -onLoad => 'login_blackout(true,\'\');
-                 confirm_openid(\''.$session.'\',\''.$page.'\');'})
+                 confirm_openid(\''.$session.'\',\''.$page.'\','.$logged_in.');'})
         : "";
 }
 

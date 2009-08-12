@@ -20,7 +20,7 @@ use Text::ParseWords 'quotewords';
 #required installation of Crypt::SSLeay and libssl-dev
 #If you dont have Math::BigInt, then Crypt::DH (installed with Net::OpenID::Consumer) will complain on every run.
 
-our $VERSION = '$Id: gbrowse_login,v 1.1.2.5 2009-08-11 16:29:44 idavies Exp $';
+our $VERSION = '$Id: gbrowse_login,v 1.1.2.6 2009-08-12 18:27:33 idavies Exp $';
 
 umask 022;
 
@@ -104,6 +104,8 @@ sub do_validate {
     my ($login,$user,$pass,$remember) = @_;
     my $update;
 
+    if($user =~ /(\s|\\)/) {print "Usernames cannot contain any backslashes or whitespace characters.";return;}
+
     if($remember != 2) {
         $update = $login->prepare(
             "UPDATE users SET last_login=now(),remember=$remember WHERE username=? AND pass=? AND confirmed=1");
@@ -138,6 +140,7 @@ sub do_validate {
 sub do_add_user {
     my ($login,$smtp,$url,$user,$email,$pass,$userid) = @_;
     if(check_email($email) eq "false") {print "Invalid e-mail address provided.";return;}
+    if($user =~ /(\s|\\)/) {print "Usernames cannot contain any backslashes or whitespace characters.";return;}
 
     my $confirm = create_key('32');
     my $check = $login->prepare(
@@ -597,6 +600,7 @@ sub do_add_openid_to_account {
 
 sub do_add_openid_user {
     my ($login,$user,$openid,$userid,$remember) = @_;
+    if ($user =~ /(\s|\\)/) {print "Usernames cannot contain any backslashes or whitespace characters.";return;}
     my $confirm = sha1(create_key('32'));
     my $pass    = sha1(create_key('32'));
     my $email   = create_key('64');

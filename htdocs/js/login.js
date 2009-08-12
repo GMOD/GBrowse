@@ -28,7 +28,7 @@ function load_login_balloon(event, session, username, openid) {
     SessionID   = session;
     SelectedID  = '';
     LoginPage   = 'main';
-    UsingOpenID = false;
+    UsingOpenID = openid;
 
     var html = '<form id=loginMain method=post action=\'return false;\'>' +
 
@@ -181,9 +181,6 @@ function load_login_balloon(event, session, username, openid) {
 
     GBox.showTooltip(event,html,1,320);
     $('loginMain').style.width = '268px';
-
-    //If the "using_openid" session tag is true, set UsingOpenID to true
-    openid == 'false' ? UsingOpenID = false : UsingOpenID = true;
 
     //If the user is logged in, display only the "edit account details" page when login is called
     if(username != false) {
@@ -398,9 +395,9 @@ function add_user() {
                 $('loginCancel').value      = 'Back';
                 $('loginWarning').innerHTML = 'Sorry, a user has already been created ' +
                     'for the current session.<br><br>Please log in with that account or<br>' +
-                    '<a href=#reset onClick=' +
+                    '<a href=#reset onClick="' +
                         '$(\'balloon\').hide();$(\'closeButton\').hide();' +
-                        'login_get_account("GBrowse","Reset",0,false);return false;>' +
+                        'login_get_account("GBrowse","Reset",0,false);return false;">' +
                     'click here</a> to create a new session.';
 
                 $('loginURow').hide(); $('loginBreak').hide();
@@ -440,9 +437,9 @@ function add_openid_user(openid,html) {
                 $('loginCancel').value      = 'Back';
                 $('loginWarning').innerHTML = 'Sorry, a user has already been created ' +
                     'for the current session.<br><br>Please log in with that account or<br>' +
-                    '<a href=#reset onClick=' +
+                    '<a href=#reset onClick="' +
                         '$(\'balloon\').hide();$(\'closeButton\').hide();' +
-                        'login_get_account("GBrowse","Reset",0,false);return false;>' +
+                        'login_get_account("GBrowse","Reset",0,false);return false;">' +
                     'click here</a> to create a new session.';
 
                 $('loginURow').hide();  $('loginSubmit').hide();
@@ -940,7 +937,7 @@ function fakeTarget() {
     this.nodeType = 4;
 }
 
-function confirm_openid(session,page) {
+function confirm_openid(session,page,logged_in) {
     var callback = process_openid();
     new Ajax.Request(LoginScript,{
         method:      'post',
@@ -952,11 +949,11 @@ function confirm_openid(session,page) {
         onSuccess: function (transport) {
             var results = transport.responseJSON;
             if(page == 'edit' || page == 'openid-add') {
-                var command = 'confirm_openid_error("'+session+'","'+page+'",' +
+                var command = 'confirm_openid_error("'+session+'","'+page+'","'+logged_in+'",' +
                               '"'+results[0].error+'","'+results[0].user+'","'+results[0].only+'")';
                 setTimeout(command,2000);
             } else if(results[0].error != null) {
-                var command = 'confirm_openid_error("'+session+'","'+page+'",' +
+                var command = 'confirm_openid_error("'+session+'","'+page+'","'+logged_in+'",' +
                               '"'+results[0].error+'","'+results[0].openid+'")';
                 setTimeout(command,2000);
             } else {
@@ -969,13 +966,13 @@ function confirm_openid(session,page) {
     return;
 }
 
-function confirm_openid_error(session,page,error,openid,only) {
+function confirm_openid_error(session,page,logged_in,error,openid,only) {
     var event  = new fakeEvent();
-    only == 0 ? OpenIDMenu = false : OpenIDMenu = true;
+    (only == 0 || logged_in) ? OpenIDMenu = false : OpenIDMenu = true;
     load_login_balloon(event,session,false,false);
     login_blackout(false,'');
 
-    if(only == 0) {UsingOpenID=false;}
+    if(only == 1) {UsingOpenID=true;}
     if(page == 'openid-add') {login_page_change('edit');}
     else {login_page_change(page);}
 
@@ -1005,7 +1002,7 @@ function confirm_openid_error(session,page,error,openid,only) {
     } else if(page == 'openid-add') {
         $('loginWarning').innerHTML = error;
         if(window.openid != 'undefined') {
-            Logged = true;
+            Logged = logged_in;
             CurrentUser = openid;
             edit_details('home');
             edit_details('openid-add');

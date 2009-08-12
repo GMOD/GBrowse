@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.239.4.8 2009-08-12 18:27:33 idavies Exp $
+# $Id: Browser.pm,v 1.239.4.9 2009-08-12 21:11:51 idavies Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;

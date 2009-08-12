@@ -995,20 +995,22 @@ function confirm_openid_error(session,page,logged_in,error,openid,only) {
             'please refresh the page and log out before attempting to sign in.';
         $('loginWarning').show();
     } else if(page == 'edit') {
-        if(window.error != 'undefined') {$('loginWarning').innerHTML = 'Success';}
-        else {$('loginWarning').innerHTML = error;}
+        $('loginWarning').innerHTML = error;
+        if($('loginWarning').innerHTML == 'undefined') {$('loginWarning').innerHTML = 'Success';}
         LoginPage = page;
         login_user(openid);
     } else if(page == 'openid-add') {
-        $('loginWarning').innerHTML = error;
-        if(window.openid != 'undefined') {
+        $('loginWarning').innerHTML = openid;
+        if($('loginWarning').innerHTML == 'undefined') {
+            $('loginWarning').innerHTML = error;
+            $('loginWarning').show();
+        } else {
+            $('loginWarning').innerHTML = error;
             Logged = logged_in;
             CurrentUser = openid;
             edit_details('home');
             edit_details('openid-add');
             edit_details_confirm();
-        } else {
-            $('loginWarning').show();
         }
     } else {
         $('loginWarning').innerHTML = error;

@@ -2,12 +2,12 @@
 
 use strict;
 use lib '~/Generic-Genome-Browser/lib';
-use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render;
-use Bio::Graphics::Browser::Session;
+#use Bio::Graphics::Browser;
+#use Bio::Graphics::Browser::Render;
+#use Bio::Graphics::Browser::Session;
 use CGI qw(:standard);
-use CGI::Cookie;
-use CGI::Session;
+#use CGI::Cookie;
+#use CGI::Session;
 use DBI;
 use Digest::SHA qw(sha1);
 use JSON;
@@ -20,7 +20,7 @@ use Text::ParseWords 'quotewords';
 #required installation of Crypt::SSLeay and libssl-dev
 #If you dont have Math::BigInt, then Crypt::DH (installed with Net::OpenID::Consumer) will complain on every run.
 
-our $VERSION = '$Id: gbrowse_login,v 1.1.2.6 2009-08-12 18:27:33 idavies Exp $';
+our $VERSION = '$Id: gbrowse_login,v 1.1.2.7 2009-08-12 21:11:51 idavies Exp $';
 
 umask 022;
 
@@ -365,13 +365,7 @@ sub do_delete_user {
     my ($login,$user,$pass) = @_;
     my $unseqpass = $pass;
     $pass = sha1($pass);
-#    my $globals    = Bio::Graphics::Browser->open_globals;
-#    my $render_obj = new Bio::Graphics::Browser::Render($globals);
-#    my $session    = $render_obj->globals->session('1257b24a410401ce7c31f47457dde1d2');
 
-#    $session->flush();
-#    print $session->id;
-#return;
     my ($sql,@bind);
     if($unseqpass eq "") {
         $sql  = "DELETE FROM users WHERE username=?";

@@ -94,14 +94,6 @@ BEGIN {
   my $h = <> unless $skip_start;
   print STDERR "*** Installing Perl files needed for a net-based install ***\n";
 
-  eval "CPAN::Config->load";
-  eval "CPAN::Config->commit";
-
-  $working_dir = getcwd;
-
-  $tmpdir = tempdir(CLEANUP=>1) 
-    or die "Could not create temporary directory: $!";
-
   $windows = $Config{osname} =~ /mswin/i;
 
   if ($windows and $] == 5.010) {
@@ -110,6 +102,18 @@ BEGIN {
      exit(0);
   }
 
+  if ($windows) {
+     print STDERR "\n\nInstalling Win32 perl module\n\n";
+     system("ppm install Win32");
+  }
+
+  eval "CPAN::Config->load";
+  eval "CPAN::Config->commit";
+
+  $working_dir = getcwd;
+
+  $tmpdir = tempdir(CLEANUP=>1) 
+    or die "Could not create temporary directory: $!";
 
   $binaries = $Config{'binexp'};
   $make     = $Config{'make'};
@@ -170,7 +174,7 @@ $build_param_string ||="";
 $install_param_string ||="";
 
 use constant BIOPERL_VERSION      => 'BioPerl-1.6.0';
-use constant BIOPERL_REQUIRES     => '1.6';  # sorry for the redundancy
+use constant BIOPERL_REQUIRES     => '1.006';  # sorry for the redundancy
 use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
 use constant GBROWSE_DEFAULT      => '1.70';
 use constant SOURCEFORGE_MIRROR2  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
@@ -178,7 +182,8 @@ use constant SOURCEFORGE_MIRROR1  => 'http://easynews.dl.sourceforge.net/sourcef
 use constant SOURCEFORGE_GBROWSE  => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';
 use constant BIOPERL              => 'http://bioperl.org/DIST/'.BIOPERL_VERSION.'.tar.gz';
 
-my %REPOSITORIES = ('BioPerl-Release-Candidates' => 'http://bioperl.org/DIST/RC',
+my %REPOSITORIES = (
+                    #'BioPerl-Release-Candidates' => 'http://bioperl.org/DIST/RC',
 		    'BioPerl-Regular-Releases'   => 'http://bioperl.org/DIST',
 	            'Kobes'                      => 'http://theoryx5.uwinnipeg.ca/ppms',
                     'Bribes'                     => 'http://www.Bribes.org/perl/ppm',
@@ -224,10 +229,12 @@ unless ($skip_bioperl) {
   my $version = BIOPERL_REQUIRES;
   if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_svn or $bioperl_path) {
     print STDERR "\n*** Installing BioPerl ***\n";
-    if ($windows and !$get_bioperl_svn and !$bioperl_path) {
-      my $bioperl_index = find_bioperl_ppm();
-      system("ppm install --force $bioperl_index");
-    } else {
+
+    #would like to use ppm, but ppm won't install 1.6
+    #if ($windows and !$get_bioperl_svn and !$bioperl_path) {
+    #  my $bioperl_index = find_bioperl_ppm();
+    #  system("ppm install --force $bioperl_index");
+    #} else {
         # recent versions of Module::Build fail to install without force!
         CPAN::Shell->force('Module::Build') unless eval "require Module::Build; 1";
         do_install(BIOPERL,
@@ -237,7 +244,7 @@ unless ($skip_bioperl) {
                    $get_bioperl_svn ? 'svn' : '',
                    '',
                    $bioperl_path);
-    }
+    #}
   }
   else {
     print STDERR "BioPerl is up to date.\n";

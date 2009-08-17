@@ -174,7 +174,7 @@ $build_param_string ||="";
 $install_param_string ||="";
 
 use constant BIOPERL_VERSION      => 'BioPerl-1.6.0';
-use constant BIOPERL_REQUIRES     => '1.6';  # sorry for the redundancy
+use constant BIOPERL_REQUIRES     => '1.006';  # sorry for the redundancy
 use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
 use constant GBROWSE_DEFAULT      => '1.70';
 use constant SOURCEFORGE_MIRROR2  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';

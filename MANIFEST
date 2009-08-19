@@ -482,6 +482,7 @@ lib/Bio/Graphics/Browser/Session.pm
 lib/Bio/Graphics/Browser/Shellwords.pm
 lib/Bio/Graphics/Browser/UploadSet.pm
 lib/Bio/Graphics/Browser/UserData.pm
+lib/Bio/Graphics/Browser/UserTracks.pm
 lib/Bio/Graphics/Browser/Util.pm
 lib/Bio/Graphics/GBrowseFeature.pm
 lib/Bio/Graphics/Karyotype.pm

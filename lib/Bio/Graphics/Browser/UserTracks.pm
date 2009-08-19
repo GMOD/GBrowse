@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::UserTracks;
 
-# $Id: UserTracks.pm,v 1.1 2009-07-30 16:38:03 lstein Exp $
+# $Id: UserTracks.pm,v 1.2 2009-08-19 19:17:58 lstein Exp $
 use strict;
 use Bio::Graphics::Browser::DataSource;
 use File::Spec;
@@ -125,7 +125,8 @@ sub upload_track {
     my $loader = $self->get_loader($type);
     my $load   = $loader->new($track_name,
 			      $self->track_path($track_name),
-			      $self->track_conf($track_name)
+			      $self->track_conf($track_name),
+			      $self->config,
 	);
     $load->load($lines,$fh);
 }

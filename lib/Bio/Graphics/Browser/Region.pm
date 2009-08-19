@@ -152,7 +152,7 @@ sub search_features {
 sub features2segments {
   my $self     = shift;
   my $features = shift;
-  my $refclass = $self->source->global_setting('reference class');
+  my $refclass = $self->source->global_setting('reference class') || '';
   my $db       = $self->db;
   my %seenit;
   my @segments = 
@@ -161,9 +161,9 @@ sub features2segments {
 	  $db->segment(-class    => $refclass,
 		       -seq_id   => $_->seq_id,
 		       -name     => $_->seq_id,  # to avoid breakage due to sloppy API
-		       -start    => $_->start,
-		       -end      => $_->end,
-		       -stop     => $_->end,     # to avoid breakage due to sloppy API
+		       -start    => $_->start||0,
+		       -end      => $_->end  ||0,
+		       -stop     => $_->end  ||0, # to avoid breakage due to sloppy API
 		       -absolute => 1,
 		       defined $version ? (-version => $version) : ())
   } grep {

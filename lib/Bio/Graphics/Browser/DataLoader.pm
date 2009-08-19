@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::DataLoader;
-# $Id: DataLoader.pm,v 1.1 2009-07-30 16:38:03 lstein Exp $
+# $Id: DataLoader.pm,v 1.2 2009-08-19 19:17:58 lstein Exp $
 
 use strict;
 use IO::File;
@@ -7,16 +7,24 @@ use Carp 'croak';
 
 sub new {
     my $self = shift;
-    my ($track_name,$data_path,$conf_path) = @_;
+    my ($track_name,$data_path,$conf_path,$settings) = @_;
     return { name => $track_name,
 	     data => $data_path,
-	     conf => $conf_path },ref $self || $self;
+	     conf => $conf_path,
+	     settings=>$settings,
+    },ref $self || $self;
  }
 
 sub track_name { shift->{name} }
 sub data_path  { shift->{data} }
 sub conf_path  { shift->{conf} }
 sub conf_fh    { shift->{conf_fh} }
+sub settings   { shift->{settings} }
+sub setting {
+    my $self   = shift;
+    my $option = shift;
+    $self->settings->global_setting($option);
+}
 sub status_path {
     my $self = shift;
     return File::Spec->catfile($self->data_path,'STATUS');

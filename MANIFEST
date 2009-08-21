@@ -456,7 +456,6 @@ lib/Bio/DB/Tagger.pm
 lib/Bio/DB/Tagger/mysql.pm
 lib/Bio/DB/Tagger/Tag.pm
 lib/Bio/Graphics/Browser.pm
-lib/Bio/Graphics/Browser/Admin.pm
 lib/Bio/Graphics/Browser/AuthorizedFeatureFile.pm
 lib/Bio/Graphics/Browser/CachedTrack.pm
 lib/Bio/Graphics/Browser/DataBase.pm
@@ -482,6 +481,7 @@ lib/Bio/Graphics/Browser/Session.pm
 lib/Bio/Graphics/Browser/Shellwords.pm
 lib/Bio/Graphics/Browser/UploadSet.pm
 lib/Bio/Graphics/Browser/UserData.pm
+lib/Bio/Graphics/Browser/UserTracks.pm
 lib/Bio/Graphics/Browser/Util.pm
 lib/Bio/Graphics/GBrowseFeature.pm
 lib/Bio/Graphics/Karyotype.pm

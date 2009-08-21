@@ -20,6 +20,7 @@ use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::RenderPanels;
 use Bio::Graphics::Browser::GFFPrinter;
 use Bio::Graphics::Browser::Util qw[modperl_request url_label];
+use Bio::Graphics::Browser::UserTracks;
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -103,11 +104,11 @@ sub remote_sources {
 }
 
 sub user_tracks {
-  my $self = shift;
-  return $self->{usertracks}
-      ||= Bio::Graphics::Browser::UserTracks->new($self->data_source,
-                                                  $self->state,
-                                                  $self->language);
+    my $self = shift;
+    return $self->{usertracks} 
+       ||= Bio::Graphics::Browser::UserTracks->new($self->data_source,
+						   $self->state,
+						   $self->language);
 }
 
 sub db {
@@ -148,9 +149,11 @@ sub run {
 
   $self->set_source();
 
+
   # This guarantees that all user-specific tracks
   # disappear after the current session completes.
   local $self->data_source->{user_tracks} = {};
+
   my $state = $self->state;
 
   if ($self->run_asynchronous_event) {
@@ -618,6 +621,15 @@ sub asynchronous_event {
     if (param('authorize_login') && param('username') && param('session') && param('openid')) {
 	my ($id,$nonce) = $self->authorize_user(param('username'),param('session'),param('remember'),param('openid'));
 	return (200,'application/json',{id=>$id,authority=>$nonce});
+    }
+
+    # add a dummy track to the user data
+    if (param('new_test_track')) {
+	my $userdata = Bio::Graphics::Browser::UploadSet->new($self->data_source,
+							      $self->state,
+							      $self->language);
+	warn "Adding test track for ",$self->state->{uploadid}," path = ",($userdata->name_file('test'))[1];
+	return (204,'text/plain',undef);
     }
 
     return unless $events;

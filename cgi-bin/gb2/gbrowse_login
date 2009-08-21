@@ -14,24 +14,27 @@ use JSON;
 use LWP::UserAgent;
 #use LWPx::ParanoidAgent; (Better, but currently broken, try installing when a bug fix is released)
 use Mail::Mailer;
+use Mail::SendEasy;
 use Net::OpenID::Consumer;
 use Text::ParseWords 'quotewords';
 
 #required installation of Crypt::SSLeay and libssl-dev
 #If you dont have Math::BigInt, then Crypt::DH (installed with Net::OpenID::Consumer) will complain on every run.
 
-our $VERSION = '$Id: gbrowse_login,v 1.1.2.7 2009-08-12 21:11:51 idavies Exp $';
+our $VERSION = '$Id: gbrowse_login,v 1.1.2.8 2009-08-21 20:06:40 idavies Exp $';
 
 umask 022;
 
-my $url   = "http://$ENV{'HTTP_HOST'}/gb2/gbrowse/yeast_advanced";
-my $smtp  = "mx.oicr.on.ca";
+my $index = index($ENV{'HTTP_REFERER'},'?');
+my $url   = substr($ENV{'HTTP_REFERER'},0,$index);
+   $url  .= '/'  if $index == -1;
 
+my $smtp  = "smtp.res.oicr.on.ca";
 my $login = DBI->connect("DBI:mysql:gbrowse_login", 'idavies')
-    or (print "Error: Could not open gbrowse login database."
-    and die "Could not open gbrowse login database");
+    or (print "Error: Could not open login database."
+    and die "Could not open login database");
 
-my %actions  = map {$_=>1}  param('action');
+my %actions  = map {$_=>1} param('action');
 my %callback;
 
 my $user     = param('user');
@@ -71,19 +74,52 @@ if($actions{confirm_openid}) {
 
 print header();
 
+do_add_user_check    ($login,$smtp,$url,$user,$email,$pass,$userid)  if $actions{add_user_check};
 do_add_user          ($login,$smtp,$url,$user,$email,$pass,$userid)  if $actions{add_user};
 do_validate          ($login,$user,$pass,$remember)                  if $actions{validate};
 do_edit_details      ($login,$user,$column,$old,$new)                if $actions{edit_details};
 do_email_info        ($login,$smtp,$email)                           if $actions{email_info};
+do_edit_confirmation ($login,$smtp,$url,$email,$option)              if $actions{edit_confirmation};
 do_confirm_account   ($login,$user,$confirm)                         if $actions{confirm_account};
 do_delete_user       ($login,$user,$pass)                            if $actions{delete_user};
 
 do_add_openid_user   ($login,$user,$openid,$userid,$remember)        if $actions{add_openid_user};
-do_check_openid      ($openid,$userid,$option)                       if $actions{check_openid};
-do_change_openid     ($login,$user,$pass,$openid,$option)            if $actions{change_openid};
+do_check_openid      ($url,$openid,$userid,$option)                  if $actions{check_openid};
+do_change_openid     ($login,$url,$user,$pass,$openid,$option)       if $actions{change_openid};
 
 exit 0;
 
+##################################################################################
+# Get Header - Returns the message found at the top of all confirmation e-mails.
+##################################################################################
+sub get_header {
+    my $message  = "\nThank you for creating an account with GBrowse: ";
+       $message .= "The Generic Genome Browser\n\nThe account information found below ";
+       $message .= "is for your reference only. Please keep all account names and passwords ";
+       $message .= "in a safe location and do not share your password with others.";
+
+    return $message;
+}
+
+##################################################################################
+# Get Footer - Returns the message found at the bottom of all e-mails.
+##################################################################################
+sub get_footer {
+    my $message  = "\n\nCourtesy of GBrowse Administration\n\n";
+       $message .= "This message and any attachments may contain confidential and/or ";
+       $message .= "privileged information for the sole use of the intended recipient. ";
+       $message .= "Any review or distribution by anyone other than the person for whom ";
+       $message .= "it was originally intended is strictly prohibited. If you have ";
+       $message .= "received this message in error, please contact the sender and delete ";
+       $message .= "all copies. Opinions, conclusions or other information contained in ";
+       $message .= "this message may not be that of the organization.";
+
+    return $message;
+}
+
+##################################################################################
+# Create Key - Generates a random string of a given length.
+##################################################################################
 sub create_key {
     my $val = shift;
     my $key;
@@ -92,19 +128,49 @@ sub create_key {
     return $key;
 }
 
+##################################################################################
+# Check String - Checks that an e-mail or username is in the proper format.
+##################################################################################
 sub check_email {
-    if(shift =~ /^(\w|\-|\_|\&|\+|\.)+\@((\w|\-|\_)+\.)+[a-zA-Z]{2,}$/) {
-        return "true";
+    if(shift =~ m/^(\w|\-|\_|\&|\+|\.)+\@((\w|\-|\_)+\.)+[a-zA-Z]{2,}$/) {
+        return 1;
     } else {
-        return "false";
+        return 0;
     }
 }
 
+sub check_user {
+    if(shift =~ m/^([!-\[]|[\]-~])+$/) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+##################################################################################
+# Check Old Confirmations - Deletes any unconfirmed accounts more than 7 days old.
+##################################################################################
+sub check_old_confirmations {
+    my $login  = shift;
+    my $delete = $login->prepare(
+        "DELETE FROM users WHERE confirmed=0 AND (now() - last_login) >= 7000000");
+    $delete->execute()
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    return;
+}
+
+##################################################################################
+#################### N O N - O P E N I D   F U N C T I O N S #####################
+##################################################################################
+# Validate - Ensures that a non-openid user's credentials are correct.
+##################################################################################
 sub do_validate {
     my ($login,$user,$pass,$remember) = @_;
     my $update;
 
-    if($user =~ /(\s|\\)/) {print "Usernames cannot contain any backslashes or whitespace characters.";return;}
+    if(check_user($user)==0) {
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
+    }
 
     if($remember != 2) {
         $update = $login->prepare(
@@ -120,12 +186,13 @@ sub do_validate {
 
     my $rows = $update->rows;
     if($rows == 1) {
+        check_old_confirmations($login);
         if($remember != 2) {
-            my $query = $login->prepare(
+            my $select = $login->prepare(
                 "SELECT userid FROM users WHERE username=? AND pass=? AND confirmed=1");
-            $query->execute($user,$pass)
+            $select->execute($user,$pass)
                 or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-            print session=>$query->fetchrow_array;
+            print "session",$select->fetchrow_array;
         } else {
             print "Success";
         }
@@ -137,27 +204,59 @@ sub do_validate {
     return;
 }
 
-sub do_add_user {
+##################################################################################
+# Add User Check - Checks to see if the user has already been added.
+##################################################################################
+sub do_add_user_check {
     my ($login,$smtp,$url,$user,$email,$pass,$userid) = @_;
-    if(check_email($email) eq "false") {print "Invalid e-mail address provided.";return;}
-    if($user =~ /(\s|\\)/) {print "Usernames cannot contain any backslashes or whitespace characters.";return;}
-
-    my $confirm = create_key('32');
-    my $check = $login->prepare(
-        "SELECT * FROM users WHERE userid=? OR username=? OR email=?");
-    $check->execute($userid,$user,$email)
-        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-
-    if($check->rows == 0) {
-        my ($mailer,$message) = do_send_confirmation($smtp,$url,$email,$confirm,$user,$pass);
+    if(check_email($email)==0) {print "Invalid e-mail address provided.";return;}
+    if(check_user($user)==0) {
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
     }
 
-    my $query = $login->prepare(
+    my $select = $login->prepare(
+        "SELECT confirmed FROM users WHERE email=?");
+    $select->execute($email)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    my $confirmed = $select->fetchrow_array;
+    if($select->rows == 0) {
+        do_add_user($login,$smtp,$url,$user,$email,$pass,$userid);
+    } elsif($confirmed == 1) {
+        print "E-mail in use";
+    } elsif($confirmed == 0) {
+        print "Message Already Sent";
+    }
+
+    return;
+}
+
+##################################################################################
+# Add User - Adds a new non-openid user to the user database.
+##################################################################################
+sub do_add_user {
+    my ($login,$smtp,$url,$user,$email,$pass,$userid) = @_;
+    if(check_email($email)==0) {print "Invalid e-mail address provided.";return;}
+    if(check_user($user)==0) {
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
+    }
+
+    my $confirm = create_key('32');
+    my $select = $login->prepare(
+        "SELECT * FROM users WHERE userid=? OR username=? OR email=?");
+    $select->execute($userid,$user,$email)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    if($select->rows == 0) {
+        do_send_confirmation($smtp,$url,$email,$confirm,$user,$pass);
+    }
+
+    my $insert = $login->prepare(
         "INSERT INTO users VALUES (?,?,?,?,0,0,0,?,now(),now())"
     );
 
     $pass = sha1($pass);
-    if($query->execute($userid,$user,$email,$pass,$confirm)) {
+    if($insert->execute($userid,$user,$email,$pass,$confirm)) {
         print "Success";
     } else {
         if(DBI->errstr =~ m/for key 1$/) {
@@ -173,32 +272,71 @@ sub do_add_user {
     return;
 }
 
+##################################################################################
+# Send Confirmation - Sends an e-mail when a user creates a new non-openid account
+#                       to ensure that the user is valid and the e-mail exists.
+##################################################################################
 sub do_send_confirmation {
     my ($smtp,$url,$email,$confirm,$user,$pass) = @_;
-    my $link = $url."/?confirm=1;code=$confirm;id=logout";
+    my $link = $url."?confirm=1;code=$confirm;id=logout";
 
-    my $message  = "\nThank you for creating an account with GBrowse: ";
-       $message .= "The Generic Genome Browser\n\nThe account information found below ";
-       $message .= "is for your reference only. Please keep all account names and passwords ";
-       $message .= "in a safe location and do not share your password with others.\n\n    ";
-       $message .= "Username: $user\n    Password: $pass\n    E-mail:   $email\n\n";
+    my $message  = get_header();
+       $message .= "\n\n    Username: $user\n    Password: $pass\n    E-mail:   $email\n\n";
        $message .= "To activate your account and complete the sign up process, please click ";
        $message .= "on the following link:\n    $link\n";
        $message .= get_footer();
 
-    my $mailer  = Mail::Mailer->new('smtp', Server=>$smtp);
-    $mailer->open({ From    => "noreply\@gbrowse.com",
-                    To      => $email,
-                    Subject => "GBrowse Account Activation",})
-        or (print "Error: Can't open mailer: $!." and die "Can't open mailer: $!");
+    my $mail = Mail::SendEasy->new(smtp=>$smtp);
+    my $status = $mail->send(
+        from       => "noreply\@gbrowse.com",
+        from_title => "GBrowse",
+        to         => $email,
+        subject    => "GBrowse Account Activation",
+        msg        => $message);
 
-    print $mailer $message;
-    $mailer->close()
-        or (print "Error: Can't close mailer: $!." and die "Can't close mailer: $!");
+    if(!$status) {
+        if($mail->error =~ m/ERROR: Can't connect to/) {
+            print "Error: Unable to send e-mail message, please check your internet connection.";}
+        else {print "Error: ",$mail->error;}
+        die "Error: ",$mail->error;
+    }
 
-    return ($mailer,$message);
+    return;
 }
 
+##################################################################################
+# Edit Confirmation - Deletes or resends unconfirmed information based on "option"
+##################################################################################
+sub do_edit_confirmation {
+    my ($login,$smtp,$url,$email,$option) = @_;
+
+    my $select = $login->prepare(
+        "SELECT username, userid FROM users WHERE email=?");
+    $select->execute($email)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    my ($user,$userid) = $select->fetchrow_array();
+
+    my $delete = $login->prepare(
+        "DELETE FROM users WHERE username=? AND userid=?");
+    $delete->execute($user,$userid)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    my $delete2 = $login->prepare(
+        "DELETE FROM openid_users WHERE username=? AND userid=?");
+    $delete2->execute($user,$userid)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    if($option == 1) {
+        my $pass = create_key('23');
+        do_add_user($login,$smtp,$url,$user,$email,$pass,$userid);
+    } else {
+        print "Your account has been successfully removed.";
+    }
+    return;
+}
+
+##################################################################################
+# Confirm Account - Activates a new account when the user follows the mailed link.
+##################################################################################
 sub do_confirm_account {
     my ($login,$user,$confirm) = @_;
     my $new_confirm = sha1($confirm);
@@ -232,11 +370,14 @@ sub do_confirm_account {
     return;
 }
 
+##################################################################################
+# Edit Details - Updates the user's e-mail or password depending on the "column"
+##################################################################################
 sub do_edit_details {
     my ($login,$user,$column,$old,$new) = @_;
 
     if($column eq 'email') {
-        if(check_email($new) eq "false") {
+        if(check_email($new) == 0) {
             print "New e-mail address is invalid, please try another.";return;}
     }
 
@@ -248,8 +389,8 @@ sub do_edit_details {
        $querystring .= " WHERE username = ?";
        $querystring .= "   AND $column  = ?";
 
-    my $query = $login->prepare($querystring);
-    unless($query->execute($new,$user,$old)) {
+    my $update = $login->prepare($querystring);
+    unless($update->execute($new,$user,$old)) {
         if($column eq 'email') {
             print "New e-mail already in use, please try another.";
             die "Error: ",DBI->errstr;
@@ -262,7 +403,7 @@ sub do_edit_details {
     if(DBI->errstr =~ m/for key 3$/) {
         print "New e-mail already in use, please try another.";}
 
-    my $rows = $query->rows;
+    my $rows = $update->rows;
     if($rows == 1) {
         print "Success";
     } elsif($rows == 0) {
@@ -278,9 +419,12 @@ sub do_edit_details {
     return;
 }
 
+##################################################################################
+# E-mail Info - Sends an e-mail when a user has forgotten their password.
+##################################################################################
 sub do_email_info {
     my ($login,$smtp,$email) = @_;
-    if(check_email($email) eq "false") {print "Invalid e-mail address provided.";return;}
+    if(check_email($email)==0) {print "Invalid e-mail address provided.";return;}
 
     my ($user,$rows,$openid_ref) = do_retrieve_user($login,$email);
     my @openids = @$openid_ref;
@@ -298,27 +442,34 @@ sub do_email_info {
        $message .= "Password: $pass\n\n    OpenIDs: $openid";
        $message .= get_footer();
 
-    my $mailer  = Mail::Mailer->new('smtp', Server=>$smtp);
-    $mailer->open({ From    => "noreply\@gbrowse.com",
-                    To      => $email,
-                    Subject => "GBrowse Account Information",})
-        or (print "Error: Can't open mailer: $!." and die "Can't open mailer: $!");
+    my $mail = Mail::SendEasy->new(smtp=>$smtp);
+    my $status = $mail->send(
+        from       => "noreply\@gbrowse.com",
+        from_title => "GBrowse",
+        to         => $email,
+        subject    => "GBrowse Account Information",
+        msg        => $message);
+
+    if(!$status) {
+        if($mail->error =~ m/ERROR: Can't connect to/) {
+            print "Error: Unable to send e-mail message, please check your internet connection.";}
+        else {print "Error: ",$mail->error;}
+        die "Error: ",$mail->error;
+    }
 
     my $secret = sha1($pass);
-    my $query = $login->prepare(
+    my $update = $login->prepare(
         "UPDATE users SET pass=? WHERE username=? AND email=? AND confirmed=1");
-    $query->execute($secret,$user,$email)
+    $update->execute($secret,$user,$email)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-
-    print $mailer $message;
-    $mailer->close()
-        or (print "Failed to send message: $!."
-        and die "Failed to send message: $!");
 
     print "Success";
     return;
 }
 
+##################################################################################
+# Retrieve User - Gets the username associated with a given e-mail.
+##################################################################################
 sub do_retrieve_user {
     my ($login,$email) = @_;
     my @openids;
@@ -348,19 +499,9 @@ sub do_retrieve_user {
     }
 }
 
-sub get_footer {
-    my $message  = "\n\nCourtesy of GBrowse Administration\n\n";
-       $message .= "This message and any attachments may contain confidential and/or ";
-       $message .= "privileged information for the sole use of the intended recipient. ";
-       $message .= "Any review or distribution by anyone other than the person for whom ";
-       $message .= "it was originally intended is strictly prohibited. If you have ";
-       $message .= "received this message in error, please contact the sender and delete ";
-       $message .= "all copies. Opinions, conclusions or other information contained in ";
-       $message .= "this message may not be that of the organization.";
-
-    return $message;
-}
-
+##################################################################################
+# Delete User - Removes a user from the database.
+##################################################################################
 sub do_delete_user {
     my ($login,$user,$pass) = @_;
     my $unseqpass = $pass;
@@ -399,14 +540,14 @@ sub do_delete_user {
 }
 
 
-###################################################################
-# OpenID functions
-###################################################################
-
+##################################################################################
+######################## O P E N I D   F U N C T I O N S #########################
+##################################################################################
+# Check OpenID - Sends a user to their openid host for confirmation.
+##################################################################################
 sub do_check_openid {
-    my ($openid,$userid,$option) = @_;
-    my $return_to  = "http://$ENV{'HTTP_HOST'}/gb2/gbrowse/yeast_advanced/";
-       $return_to .= "?openid_confirm=1;page=$option;s=$userid;";
+    my ($url,$openid,$userid,$option) = @_;
+    my $return_to  = "$url?openid_confirm=1;page=$option;s=$userid;";
        $return_to .= "id=logout;" if $option ne "openid-add";
        #id=logout needed in case another user is already signed in
 
@@ -431,6 +572,9 @@ sub do_check_openid {
     return;
 }
 
+##################################################################################
+# Confirm OpenID - Checks that the returned credentials are valid.
+##################################################################################
 sub do_confirm_openid {
     my ($login,$callback,$userid,$option) = @_;
     my ($error,@results,$select,$user,$only);
@@ -463,8 +607,6 @@ sub do_confirm_openid {
         setup_required => sub {
             push @results,{user=>$user,only=>$only,error=>"Error: Your OpenID requires setup."};
             print JSON::to_json(\@results);
-            #my $setup_url = shift;
-            # Redirect the user to $setup_url
         },
         cancelled => sub {
             push @results,{user=>$user,only=>$only,error=>"OpenID verification cancelled."};
@@ -487,36 +629,39 @@ sub do_confirm_openid {
     return;
 }
 
+##################################################################################
+# Get OpenID - Check to see if the provided openid has been used before.
+##################################################################################
 sub do_get_openid {
     my ($login,$openid) = @_;
     my ($error,@results);
 
-    my $select  = "SELECT A.username, A.userid,     ";
-       $select .= "       A.remember, A.openid_only ";
-       $select .= "  FROM users A, openid_users B   ";
-       $select .= " WHERE A.userid     = B.userid   ";
-       $select .= "   AND A.username   = B.username ";
-       $select .= "   AND A.confirmed  = 1          ";
-       $select .= "   AND B.openid_url = ?          ";
+    my $sql  = "SELECT A.username, A.userid,     ";
+       $sql .= "       A.remember, A.openid_only ";
+       $sql .= "  FROM users A, openid_users B   ";
+       $sql .= " WHERE A.userid     = B.userid   ";
+       $sql .= "   AND A.username   = B.username ";
+       $sql .= "   AND A.confirmed  = 1          ";
+       $sql .= "   AND B.openid_url = ?          ";
 
-    my $query = $login->prepare($select);
-    $query->execute($openid)
+    my $select = $login->prepare($sql);
+    $select->execute($openid)
         or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
         and return \@results);
 
-    my $rows = $query->rows;
+    my $rows = $select->rows;
     if($rows != 1) {
         if($rows != 0) {
             $error  = "Error: $rows rows returned, please consult your service host.";
         } else {
-            $error  = "The OpenID provided has not been used with GBrowse before. ";
+            $error  = "The OpenID provided has not been used before. ";
             $error .= "Please create an account first before trying to edit your information.";
         }
         push @results,{error=>$error,openid=>$openid};
         return \@results;
     }
 
-    my @info = $query->fetchrow_array;
+    my @info = $select->fetchrow_array;
     my $update = $login->prepare(
         "UPDATE users SET last_login=now() WHERE username=? AND userid=? AND confirmed=1");
     $update->execute($info[0],$info[1])
@@ -527,8 +672,11 @@ sub do_get_openid {
     return \@results;
 }
 
+##################################################################################
+# Change OpenID - Add or removes an openid from an account based on "option"
+##################################################################################
 sub do_change_openid {
-    my ($login,$user,$pass,$openid,$option) = @_;
+    my ($login,$url,$user,$pass,$openid,$option) = @_;
     my $unseqpass = $pass;
     $pass = sha1($pass);
 
@@ -556,13 +704,13 @@ sub do_change_openid {
     }
 
     if($option eq "add") {
-        do_check_openid($openid,$select->fetchrow_array(),"openid-add");
+        do_check_openid($url,$openid,$select->fetchrow_array(),"openid-add");
         return;
     }
 
-    my $query = $login->prepare(
+    my $delete = $login->prepare(
         "DELETE FROM openid_users WHERE userid=? AND username=? AND openid_url=?");
-    if($query->execute($select->fetchrow_array(),$user,$openid)) {
+    if($delete->execute($select->fetchrow_array(),$user,$openid)) {
         print "Success";
     } else {
         if(DBI->errstr =~ m/for key 1$/) {
@@ -574,27 +722,37 @@ sub do_change_openid {
     return;
 }
 
+##################################################################################
+# Add OpenID to Account - Adds a confirmed openid to an account.
+##################################################################################
 sub do_add_openid_to_account {
     my ($login,$userid,$user,$openid,$only) = @_;
     my ($error,@results);
 
-    my $query = $login->prepare("INSERT INTO openid_users VALUES (?,?,?)");
-    if($query->execute($userid,$user,$openid)) {
+    my $insert = $login->prepare("INSERT INTO openid_users VALUES (?,?,?)");
+    if($insert->execute($userid,$user,$openid)) {
         $error = "Success";
     } else {
         if(DBI->errstr =~ m/for key 1$/) {
             $error = "The OpenID provided is already in use, please try another.";
         } else {
-            $error = "Error: ",DBI->errstr,".";
+            $error = "Error: ".DBI->errstr.".";
         }
     }
     push @results,{user=>$user,only=>$only,error=>$error};
     return \@results;
 }
 
+##################################################################################
+# Add OpenID User - Adds a new openid user to the user database.
+##################################################################################
 sub do_add_openid_user {
     my ($login,$user,$openid,$userid,$remember) = @_;
-    if ($user =~ /(\s|\\)/) {print "Usernames cannot contain any backslashes or whitespace characters.";return;}
+
+    if(check_user($user)==0) {
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
+    }
+
     my $confirm = sha1(create_key('32'));
     my $pass    = sha1(create_key('32'));
     my $email   = create_key('64');
@@ -628,21 +786,24 @@ sub do_add_openid_user {
     return;
 }
 
+##################################################################################
+# List OpenID - Generates a list of openids associated with a user's account.
+##################################################################################
 sub do_list_openid {
     my ($login,$user) = @_;
     my ($error,@openids);
 
-    my $query = $login->prepare(
+    my $select = $login->prepare(
         "SELECT openid_url FROM openid_users WHERE username=?");
-    $query->execute($user)
+    $select->execute($user)
         or ($error = DBI->errstr and push @openids,{error=>"Error: $error."}
         and print JSON::to_json(\@openids) and die "Error: ",DBI->errstr);
 
-    if($query->rows == 0) {
+    if($select->rows == 0) {
         push @openids,{error=>"There are no OpenIDs currently associated with this account."}
     }
 
-    while (my $openid = $query->fetchrow_array) {
+    while (my $openid = $select->fetchrow_array) {
         push @openids,{name=>$openid};
     }
     my @results = sort {$a->{name} cmp $b->{name}} @openids;
@@ -651,5 +812,43 @@ sub do_list_openid {
 
 __END__
 
+
+##################################################################################
+# Database - Copy this script into a file called login.sql and run with mysql
+#              to create the tables required by the login application.
+##################################################################################
+
+/*  Usage: mysql -u root < /location/login.sql  */
+
+DROP DATABASE IF EXISTS gbrowse_login;
+CREATE DATABASE gbrowse_login;
+
+GRANT ALL PRIVILEGES 
+ON gbrowse_login.* 
+TO 'login'@'localhost'
+WITH GRANT OPTION;
+
+use gbrowse_login;
+
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+    userid        varchar(32) not null UNIQUE key,
+    username      varchar(32) not null PRIMARY key,
+    email         varchar(64) not null UNIQUE key,
+    pass          varchar(32) not null,
+    remember          boolean not null,
+    openid_only       boolean not null,
+    confirmed         boolean not null,
+    cnfrm_code    varchar(32) not null,
+    last_login      timestamp not null,
+    created          datetime not null
+) ENGINE=InnoDB;
+
+DROP TABLE IF EXISTS openid_users;
+CREATE TABLE openid_users (
+    userid        varchar(32) not null,
+    username      varchar(32) not null,
+    openid_url   varchar(128) not null PRIMARY key
+) ENGINE=InnoDB;
 
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.239.4.9 2009-08-12 21:11:51 idavies Exp $
+# $Id: Browser.pm,v 1.239.4.10 2009-08-21 20:06:40 idavies Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -20,7 +20,7 @@ use CGI 'redirect','url';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 my %CONFIG_CACHE;
-our $VERSION = 1.996;
+our $VERSION = 1.9971;
 
 sub open_globals {
     my $self = shift;
@@ -36,7 +36,7 @@ sub new {
 
   # this code caches the config info so that we don't need to 
   # reparse in persistent (e.g. modperl) environment
-  my $mtime            = (stat($config_file_path))[9];
+  my $mtime            = (stat($config_file_path))[9] || 0;
   if (exists $CONFIG_CACHE{$config_file_path}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {
     return $CONFIG_CACHE{$config_file_path}{object};
@@ -198,7 +198,7 @@ sub language_path  { shift->config_path('language_path')   }
 sub templates_path { shift->config_path('templates_path')  }
 sub moby_path      { shift->config_path('moby_path')       }
 
-sub global_timeout         { shift->setting(general=>'global_timeout')      ||  60   }
+sub global_timeout         { shift->setting(general=>'global_timeout')      || 60    }
 sub remember_settings_time { shift->setting(general=>'expire session')      || '1M'  }
 sub cache_time             { shift->setting(general=>'expire cache')        || '2h'  }
 sub upload_time            { shift->setting(general=>'expire uploads')      || '6w'  }

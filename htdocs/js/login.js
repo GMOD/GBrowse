@@ -1,5 +1,7 @@
 var LoginScript = '/cgi-bin/gb2/gbrowse_login';
 var ImgLocation = '/gbrowse2/images/openid/';
+var AppName     = 'GBrowse';
+var AppNameLong = 'the generic genome browser';
 var Logged      = false;
 var OpenIDMenu  = false;
 
@@ -101,18 +103,22 @@ function load_login_balloon(event, session, username, openid) {
                        'id=loginDPNew2 type=password maxlength=32 style=font-size:9pt size=18></td></tr>' +
                  '</tbody>' +
 
+                  //Password textbox for adding a new openid to an account
                  '<tbody id=loginDOpenidPass align=center style=display:none;>' +
-                   '<tr><td colspan=2>Current GBrowse Password:</td></tr>' +
+                   '<tr><td colspan=2>Current '+AppName+' Password:</td></tr>' +
                      '<tr><td colspan=2 style=padding-bottom:6px;><input onKeyPress=if(event.keyCode==13){' +
                        'login_loading(true);edit_details_verify();} id=loginDOPass type=password maxlength=32 ' +
                        'style=font-size:9pt size=24></td></tr>' +
                  '</tbody>' +
+                  //Username textbox for adding a new openid to an openid only account
                  '<tbody id=loginDOpenidUser align=center style=display:none;>' +
-                   '<tr><td colspan=2>Current GBrowse Username:</td></tr>' +
+                   '<tr><td colspan=2>Current '+AppName+' Username:</td></tr>' +
                      '<tr><td colspan=2 style=padding-bottom:6px;><input onKeyPress=if(event.keyCode==13){' +
                        'login_loading(true);edit_details_verify();} id=loginDOUser type=text maxlength=32 ' +
                        'style=font-size:9pt size=24></td></tr>' +
                  '</tbody>' +
+
+                  //OpenID textbox and images
                  '<tbody id=loginDOpenid align=center style=display:none;>' +
                    '<tr><td colspan=2 style=padding-top:6px;>' +
                      '<input onKeyPress=if(event.keyCode==13){login_loading(true);if(LoginPage==\'details\'){' +
@@ -127,14 +133,17 @@ function load_login_balloon(event, session, username, openid) {
                          'src='+ImgLocation+'blogspot-logo.png alt=\'Blogspot\' height=20px width=20px>' +
                        '<image onClick=login_openid_html(\'http://username.livejournal.com/\',7,8); ' +
                          'src='+ImgLocation+'livejournal-logo.png alt=\'LiveJournal\' height=20px width=20px>' +
+                       '<image onClick=login_openid_html(\'http://username.myopenid.com/\',7,8); ' +
+                         'src='+ImgLocation+'myopenid-logo.png alt=\'myOpenID\' height=20px width=20px>' +
                        '<image onClick=login_openid_html(\'https://me.yahoo.com/username\',21,8); ' +
                          'src='+ImgLocation+'yahoo-logo.png alt=\'YAHOO\' height=20px width=20px>' +
                    '</td></tr>' +
                  '</tbody>' +
 
+                  //Initially empty section used for populating with a list of openids associated with an account
                  '<tbody id=loginDList style=display:none;></tbody>' +
 
-                   //Submit, remember me and cancel buttons
+                  //Submit, remember me and cancel buttons
                  '<tbody>' +
                    '<tr><td id=loginButtons colspan=2 align=center style=padding-bottom:3px;padding-top:6px>' +
                      '<input id=loginSubmit style=font-size:90% type=button value=\'Log in\'' +
@@ -147,7 +156,7 @@ function load_login_balloon(event, session, username, openid) {
 
                    '<tr><td id=loginSpacing colspan=2 style=display:none><br></td></tr>' +
 
-                   //"Edit Details" submit and cancel buttons
+                    //"Edit Details" submit and cancel buttons
                    '<tr><td id=loginDButtons colspan=2 align=center style=display:none;' +
                      'padding-bottom:3px;padding-top:3px>' +
                      '<input id=loginDSubmit2 style=font-size:90% type=button value=\'Remove\'' +
@@ -158,7 +167,7 @@ function load_login_balloon(event, session, username, openid) {
                      '<input id=loginDCancel style=font-size:90% type=button value=\'Cancel\'' +
                        'onClick=edit_details(\'home\') /></td></tr>' +
 
-                   //Click here to Edit Details
+                    //Register, My Account and Forgotten Password selections
                    '<tr id=loginOpts align=center><td id=loginOptsContent1 colspan=2><font size=1>' +
                      '<a href=#register onClick=login_page_change(\'create\');>Register</a> / ' +
                      '<a href=#account onClick=login_page_change(\'edit\');>My Account</a> / ' +
@@ -169,6 +178,7 @@ function load_login_balloon(event, session, username, openid) {
                    '</tr>' +
                  '</tbody>' +
 
+                  //Switch between regular and openid login pages
                  '<tbody id=loginOpenID>' +
                    '<tr><td id=loginOpenIDY colspan=2 align=center style=padding-top:12px>' +
                      'Have an OpenID? <a href=#openid onClick=login_page_openid(true)>' +
@@ -193,9 +203,7 @@ function load_login_balloon(event, session, username, openid) {
     }
 
     //Format the login popup accordingly if it is opened with the openid login screen
-    if(OpenIDMenu) {
-        login_page_openid(true);
-    }
+    if(OpenIDMenu) {login_page_openid(true);}
     return;
 }
 
@@ -291,6 +299,7 @@ function login_page_openid(openID) {
     }
 }
 
+//Used to disable everything while AJAX requests are being processed
 function login_loading(toggle) {
     if(toggle) {
         $('loginSubmit').disabled  = true;   $('loginCancel').disabled  = true;
@@ -365,7 +374,7 @@ function validate_info() {
 
 
 //******************************************************************
-// Create New User Code:
+// Create New User Functions:
 //******************************************************************
 
 //Adds the user to the database (regular login)
@@ -376,38 +385,77 @@ function add_user() {
 
     new Ajax.Request(LoginScript,{
         method:      'post',
-        parameters:  {action: ['add_user'],
+        parameters:  {action: ['add_user_check'],
                       user:     username,
                       email:    email,
                       pass:     password,
                       session:  SessionID
                      },
         onSuccess: function (transport) {
-            $('loginWarning').innerHTML = transport.responseText;
+            var results = transport.responseText;
 
-            if($('loginWarning').innerHTML == '') {
+            if(results == '') {
                 $('loginWarning').innerHTML = 'Error: Cannot connect to mail ' +
                     'server, an account has not been created.';
             }
 
-            if($('loginWarning').innerHTML == 'Session Error') {
+            if(results=='Session Error' || results == 'E-mail in use' || results=='Message Already Sent') {
                 login_loading(false);
-                $('loginCancel').value      = 'Back';
-                $('loginWarning').innerHTML = 'Sorry, a user has already been created ' +
-                    'for the current session.<br><br>Please log in with that account or<br>' +
-                    '<a href=#reset onClick="' +
-                        '$(\'balloon\').hide();$(\'closeButton\').hide();' +
-                        'login_get_account("GBrowse","Reset",0,false);return false;">' +
-                    'click here</a> to create a new session.';
+                $('loginCancel').value = 'Back';
+
+                if(results == 'Session Error') {
+                    $('loginWarning').innerHTML = 'Sorry, a user has already been created ' +
+                        'for the current session.<br><br>Please log in with that account or<br>' +
+                        '<a href=#reset onClick="$(\'balloon\').hide();$(\'closeButton\').hide();' +
+                            'login_get_account(\'Reset\',\'Reset\',0,false);return false;">' +
+                        'click here</a> to create a new session.';
+                } else if(results == 'E-mail in use') {
+                    $('loginWarning').innerHTML = 'The e-mail provided is already in use by ' +
+                        'another '+AppName+' account. If you have forgotten your password and wish ' +
+                        'to recover your account, <a href=#forgot onClick="login_page_change(\'main\');' +
+                            'login_page_change(\'forgot\');login_loading(true);' +
+                            'email_user_info();return false;">click here</a>.';
+                } else if(results == 'Message Already Sent') {
+                    $('loginWarning').innerHTML = 'The e-mail provided has already been used ' +
+                        'to create an account, however the account has not been confirmed.<br><br>' +
+                        'Please choose one of the following:<br>' +
+                        '1. <a href=#resend onClick="edit_confirmation(1);return false;">' +
+                            'Resend the Confirmation E-mail</a><br>' +
+                        '2. <a href=#remove  onClick="edit_confirmation(0);return false;">' +
+                            'Delete the Unconfirmed Account</a>';
+                }
 
                 $('loginURow').hide(); $('loginBreak').hide();
                 $('loginPRow').hide(); $('loginSubmit').hide();
                 $('loginERow').hide(); $('loginWarning').show();
                 $('loginP2Row').hide();
             } else {
+                $('loginWarning').innerHTML = results;
                 UsingOpenID = false;
                 login_user(username);
             }
+        }
+    });
+    return;
+}
+
+//Resends or simply deletes an existing unconfirmed account if the same e-mail is used for a new account
+function edit_confirmation(resend) {
+    $('loginWarning').innerHTML = '';
+    login_page_change('main');
+    login_page_change('create');
+    login_loading(true);
+
+    var email = $('loginEmail').getValue();
+    new Ajax.Request(LoginScript,{
+        method:      'post',
+        parameters:  {action: ['edit_confirmation'],
+                      email:  email,
+                      option: resend
+                     },
+        onSuccess: function (transport) {
+            $('loginWarning').innerHTML = transport.responseText;
+            login_user(email);
         }
     });
     return;
@@ -437,9 +485,8 @@ function add_openid_user(openid,html) {
                 $('loginCancel').value      = 'Back';
                 $('loginWarning').innerHTML = 'Sorry, a user has already been created ' +
                     'for the current session.<br><br>Please log in with that account or<br>' +
-                    '<a href=#reset onClick="' +
-                        '$(\'balloon\').hide();$(\'closeButton\').hide();' +
-                        'login_get_account("GBrowse","Reset",0,false);return false;">' +
+                    '<a href=#reset onClick="$(\'balloon\').hide();$(\'closeButton\').hide();' +
+                        'login_get_account(\'Reset\',\'Reset\',0,false);return false;">' +
                     'click here</a> to create a new session.';
 
                 $('loginURow').hide();  $('loginSubmit').hide();
@@ -461,7 +508,7 @@ function add_openid_user(openid,html) {
 
 
 //******************************************************************
-// Log In Validation Code:
+// Log In Validation Functions:
 //******************************************************************
 
 //Checks to make sure that the provided credentials are valid
@@ -561,6 +608,7 @@ function login_get_account(username,session,remember,openid) {
     return;
 }
 
+//Display this message if an error occurs when attempting to retrieve a user's session
 function login_get_account_error() {
     login_page_change('main');
     UsingOpenID = false;
@@ -571,6 +619,7 @@ function login_get_account_error() {
     return;
 }
 
+//Load the user's account
 function login_load_account(to,p) {
     var myForm = document.createElement('form');
         myForm.method = 'post';
@@ -592,7 +641,7 @@ function login_load_account(to,p) {
 
 
 //******************************************************************
-// Forgot Password Code:
+// Forgot Password Function:
 //******************************************************************
 
 //E-mails the user their account information
@@ -633,7 +682,7 @@ function email_user_info() {
 
 
 //******************************************************************
-// Change Account E-mail/Password Code:
+// Change Account E-mail/Password Functions:
 //******************************************************************
 
 //Shows, hides, and changes the titles of elements for a given page in the account details menu
@@ -706,7 +755,7 @@ function edit_details(details) {
     case 'openid-remove-verify':
         if(UsingOpenID && OpenIDCount == 1) {
             $('loginWarning').innerHTML = 'Sorry, but you need at least one active ' +
-                'OpenID associated with this account in order to access GBrowse.';
+                'OpenID associated with this account in order to access '+AppName+'.';
             $('loginWarning').show();
             $('loginDSubmit').hide();
             $('loginDSubmit2').show();
@@ -720,9 +769,9 @@ function edit_details(details) {
         return;
     case 'delete':
         $('loginTitle').innerHTML   = 'Are You Sure?';
-        $('loginWarning').innerHTML = 'Warning: Deleting your GBrowse Account will remove all user ' +
+        $('loginWarning').innerHTML = 'Warning: Deleting your '+AppName+' Account will remove all user ' +
             'information including any saved data or uploaded tracks. Once deleted, you will no longer ' +
-            'have access to this GBrowse Account or any of the information associated with it. ' +
+            'have access to this '+AppName+' Account or any of the information associated with it. ' +
             'Are you sure you wish to perform this action?';
         $('loginWarning').show();
         $('loginDCancel').value = 'No';
@@ -860,7 +909,7 @@ function edit_details_confirm() {
 
 
 //******************************************************************
-// OpenID Stuff Code:
+// OpenID Functions:
 //******************************************************************
 
 //Switches the openid text based on the icon selected
@@ -871,6 +920,7 @@ function login_openid_html(html,start,strLength) {
     return;
 }
 
+//Send the user to their openid provider to be authenticated
 function check_openid(openid) {
     new Ajax.Request(LoginScript,{
         method:      'post',
@@ -893,6 +943,7 @@ function check_openid(openid) {
     return;
 }
 
+//Process the GET variables for the openid authentication
 function process_openid() {
     var i, element;
     var hash = new Array();
@@ -907,6 +958,7 @@ function process_openid() {
     return hash;
 }
 
+//Simulate an event handler for use with calling Balloon.js in the onLoad event
 function fakeEvent() {
     var clientX = 10;
     if (parseInt(navigator.appVersion) > 3) {
@@ -933,10 +985,12 @@ function fakeEvent() {
     //this.keyCode      (undefined)           //Returns UniCode value of key pressed
 }
 
+//Part of fakeEvent()
 function fakeTarget() {
     this.nodeType = 4;
 }
 
+//Retrieve the GET variables and pass them to the OpenID handler
 function confirm_openid(session,page,logged_in) {
     var callback = process_openid();
     new Ajax.Request(LoginScript,{
@@ -949,11 +1003,11 @@ function confirm_openid(session,page,logged_in) {
         onSuccess: function (transport) {
             var results = transport.responseJSON;
             if(page == 'edit' || page == 'openid-add') {
-                var command = 'confirm_openid_error("'+session+'","'+page+'","'+logged_in+'",' +
+                var command = 'confirm_openid_error("'+session+'","'+page+'",'+logged_in+',' +
                               '"'+results[0].error+'","'+results[0].user+'","'+results[0].only+'")';
                 setTimeout(command,2000);
             } else if(results[0].error != null) {
-                var command = 'confirm_openid_error("'+session+'","'+page+'","'+logged_in+'",' +
+                var command = 'confirm_openid_error("'+session+'","'+page+'",'+logged_in+',' +
                               '"'+results[0].error+'","'+results[0].openid+'")';
                 setTimeout(command,2000);
             } else {
@@ -966,6 +1020,7 @@ function confirm_openid(session,page,logged_in) {
     return;
 }
 
+//Handle the different cases and error messages associated with openid accounts
 function confirm_openid_error(session,page,logged_in,error,openid,only) {
     var event  = new fakeEvent();
     (only == 0 || logged_in) ? OpenIDMenu = false : OpenIDMenu = true;
@@ -976,13 +1031,13 @@ function confirm_openid_error(session,page,logged_in,error,openid,only) {
     if(page == 'openid-add') {login_page_change('edit');}
     else {login_page_change(page);}
 
-    if(error.indexOf('not been used with GBrowse')!=-1 && LoginPage=='main') {
+    if(error.indexOf('has not been used before.')!=-1 && LoginPage=='main') {
         LoginPage                     = 'new-openid';
         CurrentUser                   = openid;
         $('loginCancel').value        = 'Back';
         $('loginSubmit').value        = 'Create Account';
         $('loginWarning').innerHTML   = '<font /><font color=blue>The OpenID provided is not ' +
-            'associated with any active GBrowse Account. If you would like to create an ' +
+            'associated with any active '+AppName+' Account. If you would like to create an ' +
             'account now, please type a username to identify yourself below.</font>';
 
         $('loginRemember').hide();  $('loginRememberTxt').hide();
@@ -1089,7 +1144,7 @@ function format_openids(results) {
 
     if(html == '') {
         $('loginWarning').innerHTML = '<tr><td colspan=2><br>There are no OpenIDs currently ' +
-            'associated with this GBrowse Account.<br>' +
+            'associated with this '+AppName+' Account.<br>' +
             '<a href=#add onClick=$(\'loginDList\').hide();$(\'loginDOpenid\').show();' +
                 'edit_details(\'openid-add\')>Click here</a> to add one.</td></tr>';
     } else {
@@ -1101,7 +1156,7 @@ function format_openids(results) {
 
 
 //******************************************************************
-// Account Confirmation Code:
+// Account Confirmation Functions:
 //******************************************************************
 
 //Blanks out the screen and shows a confirmation window
@@ -1116,8 +1171,8 @@ function confirm_screen(confirm) {
                    'padding-bottom:3px>&nbsp; &nbsp;</td>' +
                    '<td id=loginWarning colspan=3 style=display:none;>Failed</td></tr>' +
                  '<tr><td colspan=3 align=center style=color:blue;padding-bottom:3px>' +
-                   'Thank you for creating an account with GBrowse, the generic genome browser.' +
-                   '<br><br>To complete the account creation process and to log into your GBrowse ' +
+                   'Thank you for creating an account with '+AppName+', '+AppNameLong+'.' +
+                   '<br><br>To complete the account creation process and to log into your '+AppName+' ' +
                    'account; please type in your username and click the "Continue" button below.' +
                  '<br><br></td></tr>' +
                  '<tr><td>Username:</td>' +
@@ -1167,7 +1222,7 @@ function confirm_check(username,session) {
         $('loginSubmit').disabled = false;
     } else if(session.indexOf('Already Active')!=-1) {
         $('loginTable').innerHTML = '<tr><td id=loginError colspan=3 align=center style=color:red;' +
-            'padding-bottom:3px><br><br>This user has already been activated.' +
+            'padding-bottom:3px><br><br>The link provided is either incorrect or expired.' +
                 '<br> Please click continue to exit.<br><br></td></tr>' +
             '<tr><td align=center padding-top:3px>' +
                 '<input style=font-size:90% type=button value=\'Continue\'' +
@@ -1188,7 +1243,7 @@ function reload_login_script() {
 
 
 //******************************************************************
-// Delete Account Code:
+// Delete Account Function:
 //******************************************************************
 
 //Deletes a user from an account provided the username and pass are correct
@@ -1221,7 +1276,7 @@ function login_delete_user(username,pass) {
 
 
 //******************************************************************
-// Code to Blackout Screen:
+// Function to Blackout Screen:
 //******************************************************************
 
 //Adapted from http://www.hunlock.com/blogs/Snippets:_Howto_Grey-Out_The_Screen

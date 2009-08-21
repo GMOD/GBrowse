@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Session;
 
-# $Id: Session.pm,v 1.16.4.7 2009-08-12 21:11:51 idavies Exp $
+# $Id: Session.pm,v 1.16.4.8 2009-08-21 20:06:40 idavies Exp $
 
 use strict;
 use warnings;
@@ -36,10 +36,9 @@ sub new {
 
   unless ($id) {
       my $cookie = CGI::Cookie->fetch();
-      $id        = $cookie->{$CGI::Session::NAME}->value
-      if $cookie && $cookie->{$CGI::Session::NAME};
+      $id        = $cookie->{$CGI::Session::NAME}->value 
+	  if $cookie && $cookie->{$CGI::Session::NAME};
   }
-
   my $self            = bless {
       lockdir  => $lockdir,
       locktype => $locktype,
@@ -47,6 +46,7 @@ sub new {
   $self->lock_ex($id) if $id;
 
   $self->{session}    = CGI::Session->new($driver,$id,$session_args);
+
   $self->{session}->expire($expire_time) 
       if defined $expire_time;
 
@@ -259,10 +259,12 @@ sub set_nonce {
     my ($nonce,$salt,$remember) = @_;
     warn "id=",$self->id," writing nonce = ",md5_hex($nonce,$salt);
     $self->{session}->param('.nonce' => md5_hex($nonce,$salt));
+
+    # BUG: must handle session expiration
     if($remember) {
         $self->{session}->expire('.nonce' => '30d');
     } else {
-        $self->{session}->expire('.nonce' => '12h');
+        $self->{session}->expire('.nonce' => '10m');
     }
     $self->private(1);
 }

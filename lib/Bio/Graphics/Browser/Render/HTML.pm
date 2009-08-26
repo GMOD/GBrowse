@@ -446,11 +446,15 @@ sub _render_select_menu {
 
 sub render_login {
     my $self     = shift;
+    my $images   = $self->globals->openid_url;
+    my $appname  = $self->globals->application_name;
+    my $appnamel = $self->globals->application_name_long;
     my $settings = $self->state;
     my $session  = $self->session;
     my $style    = 'float:right;font-weight:bold;color:blue;cursor:pointer;';
     my ($html,$title,$text,$click);
-    $html = '';
+    $click = 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');';
+    $html  = '';
 
     if ($session->private) {
         $html .= div({-style=>'float:right;font-weight:bold;color:black;'},
@@ -464,12 +468,12 @@ sub render_login {
 
         $title  = 'Click here to change your account settings';
         $text   = 'My Account';
-        $click  = 'load_login_balloon(event,\''.$session->id.'\',\'';
-        $click .= $session->username.'\','.$session->using_openid.')';
+        $click .= 'load_login_balloon(event,\''.$session->id.'\',\'';
+        $click .= $session->username.'\','.$session->using_openid.');';
     } else {
         $title  = 'Click here to log in or create a new gbrowse account';
         $text   = 'Log in / create account';
-        $click  = 'load_login_balloon(event,\''.$session->id.'\',false,false)';
+        $click .= 'load_login_balloon(event,\''.$session->id.'\',false,false);';
     }
 
     $html .= div({-style => $style, -title => $title, -onMouseDown => $click,
@@ -484,16 +488,23 @@ sub render_login {
 sub render_login_account_confirm {
     my $self     = shift;
     my $confirm  = shift;
+    my $images   = $self->globals->openid_url;
+    my $appname  = $self->globals->application_name;
+    my $appnamel = $self->globals->application_name_long;
     my $settings = $self->state;
 
     return $settings->{head} ?
         iframe({-style  => 'display:none;',
-                -onLoad => 'confirm_screen(\''.$confirm.'\')'})
+                -onLoad => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');
+                 confirm_screen(\''.$confirm.'\')'})
         : "";
 }
 
 sub render_login_openid_confirm {
     my $self            = shift;
+    my $images          = $self->globals->openid_url;
+    my $appname         = $self->globals->application_name;
+    my $appnamel        = $self->globals->application_name_long;
     my $settings        = $self->state;
     my $this_session    = $self->session;
     my ($page,$session) = @_;
@@ -503,8 +514,8 @@ sub render_login_openid_confirm {
 
     return $settings->{head} ?
         iframe({-style  => 'display:none;',
-                -onLoad => 'login_blackout(true,\'\');
-                 confirm_openid(\''.$session.'\',\''.$page.'\','.$logged_in.');'})
+                -onLoad => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');
+                 login_blackout(true,\'\');confirm_openid(\''.$session.'\',\''.$page.'\','.$logged_in.');'})
         : "";
 }
 

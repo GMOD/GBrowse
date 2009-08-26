@@ -2,35 +2,37 @@
 
 use strict;
 use lib '~/Generic-Genome-Browser/lib';
-#use Bio::Graphics::Browser;
-#use Bio::Graphics::Browser::Render;
-#use Bio::Graphics::Browser::Session;
+use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::Render;
 use CGI qw(:standard);
-#use CGI::Cookie;
-#use CGI::Session;
 use DBI;
 use Digest::SHA qw(sha1);
 use JSON;
 use LWP::UserAgent;
 #use LWPx::ParanoidAgent; (Better, but currently broken, try installing when a bug fix is released)
-use Mail::Mailer;
 use Mail::SendEasy;
 use Net::OpenID::Consumer;
 use Text::ParseWords 'quotewords';
 
-#required installation of Crypt::SSLeay and libssl-dev
-#If you dont have Math::BigInt, then Crypt::DH (installed with Net::OpenID::Consumer) will complain on every run.
+# Required installation of Crypt::SSLeay and libssl-dev
+# If you dont have Math::BigInt, then Crypt::DH (installed with Net::OpenID::Consumer) will complain on every run.
 
-our $VERSION = '$Id: gbrowse_login,v 1.1.2.8 2009-08-21 20:06:40 idavies Exp $';
+our $VERSION = '$Id: gbrowse_login,v 1.1.2.9 2009-08-26 18:57:54 idavies Exp $';
 
 umask 022;
+
+my $globals = Bio::Graphics::Browser->open_globals;
+
+our $AppName       = $globals->application_name;
+our $AppNameLong   = $globals->application_name_long;
+our $ReturnAddress = $globals->email_address;
 
 my $index = index($ENV{'HTTP_REFERER'},'?');
 my $url   = substr($ENV{'HTTP_REFERER'},0,$index);
    $url  .= '/'  if $index == -1;
 
-my $smtp  = "smtp.res.oicr.on.ca";
-my $login = DBI->connect("DBI:mysql:gbrowse_login", 'idavies')
+my $smtp  = $globals->smtp;
+my $login = DBI->connect("DBI:mysql:gbrowse_login", 'login')
     or (print "Error: Could not open login database."
     and die "Could not open login database");
 
@@ -93,10 +95,10 @@ exit 0;
 # Get Header - Returns the message found at the top of all confirmation e-mails.
 ##################################################################################
 sub get_header {
-    my $message  = "\nThank you for creating an account with GBrowse: ";
-       $message .= "The Generic Genome Browser\n\nThe account information found below ";
-       $message .= "is for your reference only. Please keep all account names and passwords ";
-       $message .= "in a safe location and do not share your password with others.";
+    my $message  = "\nThank you for creating an account with $AppName: $AppNameLong\n\n";
+       $message .= "The account information found below is for your reference only. ";
+       $message .= "Please keep all account names and passwords in a safe location ";
+       $message .= "and do not share your password with others.";
 
     return $message;
 }
@@ -105,7 +107,7 @@ sub get_header {
 # Get Footer - Returns the message found at the bottom of all e-mails.
 ##################################################################################
 sub get_footer {
-    my $message  = "\n\nCourtesy of GBrowse Administration\n\n";
+    my $message  = "Courtesy of $AppName Administration\n\n";
        $message .= "This message and any attachments may contain confidential and/or ";
        $message .= "privileged information for the sole use of the intended recipient. ";
        $message .= "Any review or distribution by anyone other than the person for whom ";
@@ -283,15 +285,15 @@ sub do_send_confirmation {
     my $message  = get_header();
        $message .= "\n\n    Username: $user\n    Password: $pass\n    E-mail:   $email\n\n";
        $message .= "To activate your account and complete the sign up process, please click ";
-       $message .= "on the following link:\n    $link\n";
+       $message .= "on the following link:\n    $link\n\n\n";
        $message .= get_footer();
 
     my $mail = Mail::SendEasy->new(smtp=>$smtp);
     my $status = $mail->send(
-        from       => "noreply\@gbrowse.com",
-        from_title => "GBrowse",
+        from       => $ReturnAddress,
+        from_title => $AppName,
         to         => $email,
-        subject    => "GBrowse Account Activation",
+        subject    => "$AppName Account Activation",
         msg        => $message);
 
     if(!$status) {
@@ -439,15 +441,15 @@ sub do_email_info {
     my $message  = "\nYour password has been reset to the one seen below. To fix this,";
        $message .= " select \"My Account\" from the log in menu and log in with the";
        $message .= " credentials found below.\n\n    Username: $user\n    ";
-       $message .= "Password: $pass\n\n    OpenIDs: $openid";
+       $message .= "Password: $pass\n\n    OpenIDs: $openid\n\n";
        $message .= get_footer();
 
     my $mail = Mail::SendEasy->new(smtp=>$smtp);
     my $status = $mail->send(
-        from       => "noreply\@gbrowse.com",
-        from_title => "GBrowse",
+        from       => $ReturnAddress,
+        from_title => $AppName,
         to         => $email,
-        subject    => "GBrowse Account Information",
+        subject    => "$AppName Account Information",
         msg        => $message);
 
     if(!$status) {
@@ -554,7 +556,7 @@ sub do_check_openid {
     my $csr = Net::OpenID::Consumer->new(
         ua              => LWP::UserAgent->new,
         args            => CGI->new,
-        consumer_secret => "cQzMJPUqKOPIQ0E5iq4Y4vT7u58yMwfS",
+        consumer_secret => sha1($ENV{'PERL5LIB'}.$ENV{'HTTP_USER_AGENT'}),
         required_root   => "http://$ENV{'HTTP_HOST'}/"
     );
 
@@ -582,7 +584,7 @@ sub do_confirm_openid {
     my $csr = Net::OpenID::Consumer->new(
         ua              => LWP::UserAgent->new,
         args            => $callback,
-        consumer_secret => "cQzMJPUqKOPIQ0E5iq4Y4vT7u58yMwfS",
+        consumer_secret => sha1($ENV{'PERL5LIB'}.$ENV{'HTTP_USER_AGENT'}),
         required_root   => "http://$ENV{'HTTP_HOST'}/"
     );
 

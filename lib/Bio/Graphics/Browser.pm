@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.239.4.10 2009-08-21 20:06:40 idavies Exp $
+# $Id: Browser.pm,v 1.239.4.11 2009-08-26 18:57:54 idavies Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -112,6 +112,7 @@ sub db_base     {eval{shift->setting(general=>'db_base')}
 # these are url-relative options
 sub button_url  { shift->url_path('buttons')            }
 sub balloon_url { shift->url_path('balloons')           }
+sub openid_url  { shift->url_path('openid')             }
 sub js_url      { shift->url_path('js')                 }
 sub help_url    { shift->url_path('gbrowse_help')       }
 sub stylesheet_url   { shift->url_path('stylesheet')    }
@@ -198,13 +199,18 @@ sub language_path  { shift->config_path('language_path')   }
 sub templates_path { shift->config_path('templates_path')  }
 sub moby_path      { shift->config_path('moby_path')       }
 
-sub global_timeout         { shift->setting(general=>'global_timeout')      || 60    }
+sub global_timeout         { shift->setting(general=>'global_timeout')      ||  60   }
 sub remember_settings_time { shift->setting(general=>'expire session')      || '1M'  }
 sub cache_time             { shift->setting(general=>'expire cache')        || '2h'  }
 sub upload_time            { shift->setting(general=>'expire uploads')      || '6w'  }
 sub datasources_expire     { shift->setting(general=>'expire data sources') || '10m' }
 sub url_fetch_timeout      { shift->setting(general=>'url_fetch_timeout')            }
 sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')           }
+
+sub application_name       { shift->setting(general=>'application_name')      || 'GBrowse'                    }
+sub application_name_long  { shift->setting(general=>'application_name_long') || 'The Generic Genome Browser' }
+sub email_address          { shift->setting(general=>'email_address')         || 'noreply@gbrowse.com'        }
+sub smtp                   { shift->setting(general=>'smtp')                  || 'smtp.res.oicr.on.ca'        }
 
 sub session_driver         { shift->setting(general=>'session driver') 
 				 || 'driver:file;serializer:default' }

@@ -1,17 +1,10 @@
 var LoginScript = '/cgi-bin/gb2/gbrowse_login';
-var ImgLocation = '/gbrowse2/images/openid/';
-var AppName     = 'GBrowse';
-var AppNameLong = 'the generic genome browser';
 var Logged      = false;
 var OpenIDMenu  = false;
 
-var CurrentUser, SessionID, LoginPage, EditDetails;
-var UsingOpenID, OpenIDCount, SelectedID;
-
-var CurrentUrl  = String(String(document.location).split('#')[0]).split('?')[0];
-    CurrentUrl  = String(CurrentUrl).split('http://')[1];
-    CurrentUrl  = CurrentUrl.slice(CurrentUrl.indexOf('/'));
-document.cookie = 'gbrowse_sess=; max-age=0; path='+CurrentUrl;
+var ImgLocation, AppName, AppNameLong;                 // General Information
+var CurrentUser, SessionID, LoginPage, EditDetails;    // Dynamic Variables
+var UsingOpenID, OpenIDCount, SelectedID;              // OpenID Variables
 
 ////////////////////////////////////////////////////////////////////////////////////
 //  Logged      = true if the user is logged in, false otherwise.
@@ -25,8 +18,15 @@ document.cookie = 'gbrowse_sess=; max-age=0; path='+CurrentUrl;
 //  SelectedID  = holds the value of the selected openID which is to be removed.
 ////////////////////////////////////////////////////////////////////////////////////
 
+//Loads the global variables for the rest of the script
+function load_login_globals(images,app,applong) {
+    ImgLocation = images;   // eg. /gbrowse2/images/openid
+    AppName     = app;      // eg. GBrowse
+    AppNameLong = applong;  // eg. The Generic Genome Browser
+}
+
 //Formats the entire login popup
-function load_login_balloon(event, session, username, openid) {
+function load_login_balloon(event,session,username,openid) {
     SessionID   = session;
     SelectedID  = '';
     LoginPage   = 'main';
@@ -124,19 +124,19 @@ function load_login_balloon(event, session, username, openid) {
                      '<input onKeyPress=if(event.keyCode==13){login_loading(true);if(LoginPage==\'details\'){' +
                        'edit_details_verify();}else{validate_info();}} value=http:// ' +
                        'id=loginDONew type=text maxlength=128 size=26 style=font-size:9pt;' +
-                       'padding-left:16px;background-image:url('+ImgLocation+'openid-logo.gif);' +
+                       'padding-left:16px;background-image:url('+ImgLocation+'/openid-logo.gif);' +
                        'background-repeat:no-repeat;border:solid;></td></tr>' +
                    '<tr><td colspan=2>' +
                        '<image onClick=login_openid_html(\'http://openid.aol.com/screenname\',22,10); ' +
-                         'src='+ImgLocation+'aim-logo.png alt=\'AIM\' height=20px width=20px>' +
+                         'src='+ImgLocation+'/aim-logo.png alt=\'AIM\' height=20px width=20px>' +
                        '<image onClick=login_openid_html(\'http://blogname.blogspot.com/\',7,8); ' +
-                         'src='+ImgLocation+'blogspot-logo.png alt=\'Blogspot\' height=20px width=20px>' +
+                         'src='+ImgLocation+'/blogspot-logo.png alt=\'Blogspot\' height=20px width=20px>' +
                        '<image onClick=login_openid_html(\'http://username.livejournal.com/\',7,8); ' +
-                         'src='+ImgLocation+'livejournal-logo.png alt=\'LiveJournal\' height=20px width=20px>' +
+                         'src='+ImgLocation+'/livejournal-logo.png alt=\'LiveJournal\' height=20px width=20px>' +
                        '<image onClick=login_openid_html(\'http://username.myopenid.com/\',7,8); ' +
-                         'src='+ImgLocation+'myopenid-logo.png alt=\'myOpenID\' height=20px width=20px>' +
+                         'src='+ImgLocation+'/myopenid-logo.png alt=\'myOpenID\' height=20px width=20px>' +
                        '<image onClick=login_openid_html(\'https://me.yahoo.com/username\',21,8); ' +
-                         'src='+ImgLocation+'yahoo-logo.png alt=\'YAHOO\' height=20px width=20px>' +
+                         'src='+ImgLocation+'/yahoo-logo.png alt=\'YAHOO\' height=20px width=20px>' +
                    '</td></tr>' +
                  '</tbody>' +
 
@@ -990,8 +990,17 @@ function fakeTarget() {
     this.nodeType = 4;
 }
 
+//Work around which removes the openid return cookie, otherwise it keeps popping up
+function remove_openid_cookie() {
+    var currentUrl  = String(String(document.location).split('#')[0]).split('?')[0];
+        currentUrl  = String(currentUrl).split('http://')[1];
+        currentUrl  = currentUrl.slice(currentUrl.indexOf('/'));
+    document.cookie = 'gbrowse_sess=; max-age=0; path='+currentUrl;
+}
+
 //Retrieve the GET variables and pass them to the OpenID handler
 function confirm_openid(session,page,logged_in) {
+    remove_openid_cookie();
     var callback = process_openid();
     new Ajax.Request(LoginScript,{
         method:      'post',

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::DataLoader;
-# $Id: DataLoader.pm,v 1.1.2.4 2009-08-26 18:57:55 idavies Exp $
+# $Id: DataLoader.pm,v 1.1.2.5 2009-08-27 19:02:58 idavies Exp $
 
 use strict;
 use IO::File;

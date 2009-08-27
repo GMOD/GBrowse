@@ -17,7 +17,7 @@ use Text::ParseWords 'quotewords';
 # Required installation of Crypt::SSLeay and libssl-dev
 # If you dont have Math::BigInt, then Crypt::DH (installed with Net::OpenID::Consumer) will complain on every run.
 
-our $VERSION = '$Id: gbrowse_login,v 1.2 2009-08-27 19:13:18 idavies Exp $';
+our $VERSION = '$Id: gbrowse_login,v 1.1 2009-08-27 20:33:23 idavies Exp $';
 
 umask 022;
 

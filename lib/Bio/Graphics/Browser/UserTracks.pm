@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::UserTracks;
 
-# $Id: UserTracks.pm,v 1.2 2009-08-19 19:17:58 lstein Exp $
+# $Id: UserTracks.pm,v 1.3 2009-08-27 19:13:19 idavies Exp $
 use strict;
 use Bio::Graphics::Browser::DataSource;
 use File::Spec;

@@ -1366,7 +1366,7 @@ sub add_features_to_track {
   # The effect of this loop is to fetch a feature from each iterator in turn
   # using a queueing scheme. This allows streaming iterators to parallelize a
   # bit. This may not be worth the effort.
-  my (%feature2dbid,%classes);
+  my (%feature2dbid,%classes,%max_features,%limit_hit);
 
   while (keys %iterators) {
     for my $iterator (values %iterators) {
@@ -1739,6 +1739,8 @@ sub create_track_args {
                         || {};   # user-set override settings for tracks
 
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
+
+  push @override,(-feature_limit => $override->{limit}) if $override->{limit};
 
   my $hilite_callback = $args->{hilite_callback};
 

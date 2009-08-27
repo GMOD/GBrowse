@@ -36,6 +36,11 @@ sub render_top {
     my $err  =  $self->render_error_div;
     my $html = '';
     $html   .=  $self->render_user_header;
+
+    if ($self->setting('login script')) {
+      $html   .=  $self->render_login;
+    }
+
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
     $html   .=  $self->html_frag('html1',$self->state);
@@ -242,9 +247,14 @@ sub render_html_head {
         yahoo-dom-event.js 
     );
 
- if ($self->setting('autocomplete')) {
+  if ($self->setting('autocomplete')) {
     push @scripts,{src=>"$js/$_"}
       foreach qw(controls.js autocomplete.js);
+  }
+
+  if ($self->setting('login script')) {
+    push @scripts,{src=>"$js/$_"}
+      foreach qw(login.js);
   }
 
   # our own javascript
@@ -260,7 +270,7 @@ sub render_html_head {
                track.js
                balloon.js
                balloon.config.js
-	       GBox.js
+               GBox.js
                controller.js
     );
 
@@ -293,8 +303,7 @@ sub render_html_head {
       $set_dragcolors = "set_dragcolors('$fill')";
   }
 
-  my $extra_headers = $self->render_user_head;
-  push @extra_headers,$extra_headers if $extra_headers;
+  push @extra_headers,$self->setting('head')  if $self->setting('head');
 
   # put them all together
   my @args = (-title    => $title,
@@ -433,6 +442,81 @@ sub _render_select_menu {
     return div( { -style => $style, 
 		  -id    => lc($view).'SelectMenu' }, 
 		$menu_html );
+}
+
+sub render_login {
+    my $self     = shift;
+    my $images   = $self->globals->openid_url;
+    my $appname  = $self->globals->application_name;
+    my $appnamel = $self->globals->application_name_long;
+    my $settings = $self->state;
+    my $session  = $self->session;
+    my $style    = 'float:right;font-weight:bold;color:blue;cursor:pointer;';
+    my ($html,$title,$text,$click);
+    $click = 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');';
+    $html  = '';
+
+    if ($session->private) {
+        $html .= div({-style=>'float:right;font-weight:bold;color:black;'},
+                      'Welcome, '.$session->username.'.') . br() .
+                 div({-style       => $style,
+                      -title       => 'Click here to log out from '.$session->username.'',
+                      -onMouseDown => 'location.href=\'?id=logout\';',
+                      -onMouseOver => 'this.style.textDecoration=\'underline\'',
+                      -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out') .
+                 div({-style=>'float:right;font-weight:bold;color:black;'}, '&nbsp; &nbsp;');
+
+        $title  = 'Click here to change your account settings';
+        $text   = 'My Account';
+        $click .= 'load_login_balloon(event,\''.$session->id.'\',\'';
+        $click .= $session->username.'\','.$session->using_openid.');';
+    } else {
+        $title  = 'Click here to log in or create a new gbrowse account';
+        $text   = 'Log in / create account';
+        $click .= 'load_login_balloon(event,\''.$session->id.'\',false,false);';
+    }
+
+    $html .= div({-style => $style, -title => $title, -onMouseDown => $click,
+                  -onMouseOver => 'this.style.textDecoration=\'underline\'',
+                  -onMouseOut  => 'this.style.textDecoration=\'none\''}, $text);
+
+    my $container = div({-style=>'float:right;'},$html);
+
+    return $settings->{head} ? $container : '';
+}
+
+sub render_login_account_confirm {
+    my $self     = shift;
+    my $confirm  = shift;
+    my $images   = $self->globals->openid_url;
+    my $appname  = $self->globals->application_name;
+    my $appnamel = $self->globals->application_name_long;
+    my $settings = $self->state;
+
+    return $settings->{head} ?
+        iframe({-style  => 'display:none;',
+                -onLoad => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');
+                 confirm_screen(\''.$confirm.'\')'})
+        : "";
+}
+
+sub render_login_openid_confirm {
+    my $self            = shift;
+    my $images          = $self->globals->openid_url;
+    my $appname         = $self->globals->application_name;
+    my $appnamel        = $self->globals->application_name_long;
+    my $settings        = $self->state;
+    my $this_session    = $self->session;
+    my ($page,$session) = @_;
+
+    my $logged_in = 'false';
+       $logged_in = 'true'  if $this_session->private;
+
+    return $settings->{head} ?
+        iframe({-style  => 'display:none;',
+                -onLoad => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');
+                 login_blackout(true,\'\');confirm_openid(\''.$session.'\',\''.$page.'\','.$logged_in.');'})
+        : "";
 }
 
 sub render_title {

@@ -24,7 +24,7 @@ cgi-bin/gbrowse
 cgi-bin/gbrowse_details
 cgi-bin/gbrowse_gmap
 cgi-bin/gbrowse_img
-cgi-bin/gb2/gbrowse_login
+cgi-bin/gbrowse_login
 Changes
 conf/detail_select_menu.conf
 conf/enzymes.txt

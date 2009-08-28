@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.23 2009-08-28 08:10:03 sheldon_mckay Exp $ 
+#$Id: gbrowse_syn.PLS,v 1.9.2.24 2009-08-28 13:40:42 sheldon_mckay Exp $ 
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -106,7 +106,7 @@ use constant SETTINGS =>
       species    => undef
       );
 
-use vars qw($CONF_DIR $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSION $SYNTENY_IO @hits);
+use vars qw($INVALID_SRC $CONF_DIR $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSION $SYNTENY_IO @hits);
 
 # initialization
 $CONF_DIR   = conf_dir($CONF_DIR);
@@ -157,7 +157,10 @@ if (!$segment && param('name') && !$CONF->page_settings("search_src")) {
 my @requested_species  = _unique(@{$page_settings->{species}});
 if (!@requested_species) {
   my $search_src = $page_settings->{search_src} || 'nosrc';
-  @requested_species  = grep {$_ ne $search_src} keys %$MAP;
+  unless ($MAP->{$search_src}->{db}) {
+    $INVALID_SRC = $search_src;
+  }
+  @requested_species  = grep {$_ ne $search_src} grep {$MAP->{$_}->{db}} keys %$MAP;
 }
 
 if ($segment) {
@@ -172,6 +175,11 @@ if ($segment) {
 my $header = $CONF->setting('header');
 $header = &$header if ref $header;
 print $header || h1($CONF->setting('description'));
+
+if ($INVALID_SRC) {
+  print warning("Species '$INVALID_SRC' is not configured for this database");
+}
+
 search_form($segment);
 
 print overview_panel($CONF->whole_segment($segment),$segment) if $segment;
@@ -207,7 +215,7 @@ sub species_chooser {
   # pointless if < 3 species
   return '' if keys %$MAP < 3;
   my $src = $CONF->search_src();
-  my @species = grep {$_ ne $src} keys %$MAP;
+  my @species = grep {$_ ne $src} grep {$MAP->{$_}->{db}} keys %$MAP;
   my $default = $CONF->page_settings->{species} || \@species;
   push @$default, $CONF->page_settings('old_src');
 
@@ -257,7 +265,7 @@ sub landmark_search {
 sub species_search {
   my $default = $CONF->page_settings("search_src");
   my %labels = map {$_=>$MAP->{$_}{desc}} keys %$MAP; 
-  my $values  = [sort {$MAP->{$a}{desc} cmp $MAP->{$b}{desc}} keys %labels];
+  my $values  = [sort {$MAP->{$a}{desc} cmp $MAP->{$b}{desc}} grep {$MAP->{$_}{desc}} keys %labels];
   unshift @$values, '';
 
   my $onchange = "document.mainform.submit()";
@@ -1055,13 +1063,14 @@ sub navigation_table {
 			       br.'Select a Region to Browse and a Reference species:',
 			       p($CONF->show_examples())));
   
+  my $html_frag = $INVALID_SRC ? '' : html_frag($segment,$CONF->page_settings);
   $table .= toggle( $CONF->tr('Search'),
-		    table({-border=>0, -width => '100%', -cellspacing=>0},
-			  TR({-class=>'searchtitle'},
-			     td({-align=>'left', -colspan=>3},
-				html_frag($segment,$CONF->page_settings)||''
-				)
-			     ),
+                    table({-border=>0, -width => '100%', -cellspacing=>0},
+                          TR({-class=>'searchtitle'},
+                             td({-align=>'left', -colspan=>3},
+                                $html_frag
+                                )
+                             ),
 			  TR({-class=>'searchtitle'},
 			     td({-align=>'left', -width=>'30%'},
 				[

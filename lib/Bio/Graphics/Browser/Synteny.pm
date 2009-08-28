@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Synteny;
 
-# $Id: Synteny.pm,v 1.1.2.9 2009-06-24 13:40:49 sheldon_mckay Exp $
+# $Id: Synteny.pm,v 1.1.2.10 2009-08-28 08:10:03 sheldon_mckay Exp $
 
 use strict;
 
@@ -8,7 +8,6 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
 use Bio::Root::RootI;
 use CGI qw/:standard escape/;
-use Text::Shellwords 'shellwords';
 use CGI::Toggle;
 use CGI::Carp 'fatalsToBrowser';
 use GD;

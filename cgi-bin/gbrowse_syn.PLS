@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.22 2009-08-04 11:07:38 sheldon_mckay Exp $ 
+#$Id: gbrowse_syn.PLS,v 1.9.2.23 2009-08-28 08:10:03 sheldon_mckay Exp $ 
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -65,7 +65,6 @@ use Bio::Graphics::Browser::Synteny;
 use Bio::Graphics::Browser::PageSettings;
 use Bio::DB::GFF::SyntenyIO;
 use Bio::DB::GFF::SyntenyBlock;
-use Text::Shellwords 'shellwords';
 use List::Util qw/min max sum/;
 use Digest::MD5 'md5_hex';
 

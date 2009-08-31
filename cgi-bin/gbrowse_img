@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbrowse_img,v 1.6 2009-08-27 19:13:18 idavies Exp $
+# $Id: gbrowse_img,v 1.7 2009-08-31 19:46:38 lstein Exp $
 
 use strict;
 
@@ -165,7 +165,12 @@ sub render_image {
     my $flip     = param('flip')   || 0;
 
     warn "labels = ",join ',',@labels if DEBUG;
-    unshift @labels,'_scale';
+    my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
+                          map { split /[+-]/ }
+			  (param('type'));
+
+    if (!@track_types) { @track_types = @labels; } # If no tracks specified, we want to see all tracks with this feature
+    unshift @track_types,'_scale';
 
     my $convert_to_pdf;
     if ($format eq 'PDF' && `which inkscape`) {
@@ -175,7 +180,7 @@ sub render_image {
 
     my $result   = $renderer->render_track_images(
 						  {
-						      labels            => \@labels,
+						      labels            => \@track_types,
 						      external_features => $external,
 						      section           => 'detail',
 						      cache_extra       => [$format],
@@ -186,10 +191,10 @@ sub render_image {
 						  );
     
     warn "returned labels = ",join ',',%$result if DEBUG;
-    my $data  = $self->consolidate_images(@{$result}{grep {$result->{$_}} @labels});
+    my $data  = $self->consolidate_images(@{$result}{grep {$result->{$_}} @track_types}); # Previously - @labels (caused drawing more tracks than asked for)
 
     my $seg = $render->segment;
-    my $fname = $seg->seq_id.':'.$seg->start.'..'.$seg->end;
+    my $fname = $seg ? $seg->seq_id.':'.$seg->start.'..'.$seg->end : "NA";
 
     if ($format eq 'GD') {
 	print $self->header(-type=>'image/png',

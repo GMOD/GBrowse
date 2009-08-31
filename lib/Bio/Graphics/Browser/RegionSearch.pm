@@ -314,7 +314,9 @@ sub search_features_locally {
     @dbs           = sort {$is_default{$b} cmp $is_default{$a}} @dbs;
 
     for my $db (@dbs) {
-	warn "searching in ",$self->source->db2id($db) if DEBUG;
+	my $dbid = $self->source->db2id($db);
+	next if ($state->{dbid} && $state->{dbid} ne $dbid); #if we have dbid param, search only that database 
+	warn "searching in ",$dbid if DEBUG;
 	# allow explicit db_id to override cached list of local dbs
 	my $region   = $local_dbs->{$db} || 
 	    Bio::Graphics::Browser::Region->new(

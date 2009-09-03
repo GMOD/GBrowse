@@ -1,3 +1,5 @@
+1.71    * Clicking on glyphs now works correctly when draggable tracks are turned off,
+	  at the cost of rubberbanding being deactivated for the detail panel.
 1.70
         * Bug fixes for the Chado adapter, including improving wildcard
           searching and fixing a bug that caused ALL features on a reference

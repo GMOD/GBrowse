@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.125 2009-07-06 15:46:17 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.126 2009-09-03 17:08:10 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1113,8 +1113,9 @@ sub render_composite_track {
   my $button  = $args->{image_button};
 
   my ($width,$height,$url,$map,$gd,$boxes) = @{$panel}{qw/width height image map gd boxes/};
-  
-  my $css_map = $self->map_css($boxes,$section) if $section eq 'detail';
+
+  # doesn't work
+  #   my $css_map = $self->map_css($boxes,$section) if $section eq 'detail';
 
   if ($args->{image_and_map}) {
     return $gd, $boxes;
@@ -1125,7 +1126,9 @@ sub render_composite_track {
 
   # The javascript functions for rubber-band selection
   # need this ID as a hook, please do not change it
-  my $id = "${section}_image";
+
+  # rubberbanding doesn't work with composite track
+  my $id = $section eq 'detail' ? 'composite_track' : "${section}_image";
 
   my $img = $button
       ? image_button(-src   => $url,
@@ -1139,12 +1142,15 @@ sub render_composite_track {
 	     -height=> $height,
 	     -border=> 0,
 	     -name  => $section,
-	     -alt   => $section});
+	     -alt   => $section,
+	     -style => 'position:relative'});
 
-  my $html    = div({-align=>'center'},$img);
-  $map        = "<noscript>\n<map name=\"$map_name\">$map</map>\n</noscript>" if $css_map;
-  $css_map  ||= '';
-  $html      .= $css_map . $map;
+
+  my $html    = div({-align=>'center'},
+		    $img,
+#		    $css_map,
+		    qq(<map name="$map_name">$map</map>)
+      );
 
   return $html;
 }
@@ -2837,22 +2843,32 @@ sub map_css {
   chomp @data;
   my $name = shift @data or return '';
 
+  my $pl = $self->setting('pad_left')|| 0;
+  my $pt = $self->setting('pad_top') || 0;
+
   my $html;
   for (@data) {
-      my @elements = split "\t";
+      my @elements  = @$_;
       push @elements,'' if @elements%2==0; # get rid of odd-number of elements warning
-      my ($ruler,$x1,$y1,$x2,$y2,%atts) = @elements;
+      my ($ruler,$x1,$y1,$x2,$y2,$atts) = @elements;
+      warn "($ruler,$x1,$y1,$x2,$y2,$atts)";
+      my %atts = %$atts;
       $x1 or next;
-      # get rid of recentering map elements
+      $x1 += $pl;
+      $y1 += $pt;
+      my $width  = abs($x2 - $x1);
+      my $height = abs($y2 - $y1); 
+
       next if $ruler eq 'ruler';
       my %style = ( top      => "${y1}px",
 		    left     => "${x1}px",
 		    cursor   => 'pointer',
-		    width    => abs($x2 - $x1) . 'px',
-		    height   => abs($y2 - $y1) . 'px',
+		    width    => "${width}px",
+		    height   => "${height}px",
 		    position => 'absolute');
       
-      my %conf = (name => "${view}_image_map");
+#      my %conf = (name => "${view}_image_map");
+      my %conf = ();
       for my $att (keys %atts) {
 	  my $val = $atts{$att};
 	  if ($att eq 'href') {
@@ -2871,7 +2887,7 @@ sub map_css {
       }
       $html .="></span>\n";
   }
-  
+
   return $html;
 }
 

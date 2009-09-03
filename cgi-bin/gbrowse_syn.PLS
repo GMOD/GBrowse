@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.24 2009-08-28 13:40:42 sheldon_mckay Exp $ 
+#$Id: gbrowse_syn.PLS,v 1.9.2.25 2009-09-03 12:09:40 sheldon_mckay Exp $ 
 use strict;
 
 use CGI qw/:standard Map Area delete_all/;
@@ -156,8 +156,8 @@ if (!$segment && param('name') && !$CONF->page_settings("search_src")) {
 # Which aligned species have been asked for
 my @requested_species  = _unique(@{$page_settings->{species}});
 if (!@requested_species) {
-  my $search_src = $page_settings->{search_src} || 'nosrc';
-  unless ($MAP->{$search_src}->{db}) {
+  my $search_src = $page_settings->{search_src};
+  unless ($search_src ne 'nosrc' && $MAP->{$search_src}->{db}) {
     $INVALID_SRC = $search_src;
   }
   @requested_species  = grep {$_ ne $search_src} grep {$MAP->{$_}->{db}} keys %$MAP;

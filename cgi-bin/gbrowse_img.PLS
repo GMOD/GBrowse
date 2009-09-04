@@ -41,7 +41,7 @@ $startperl -w
 \$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
 #
 ###################################################################
-\$VERSION   = $OPTIONS{VERSION};
+\$VERSION   = "$OPTIONS{VERSION}";
 
 !GROK!THIS!
 print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
@@ -49,7 +49,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.13 2008-12-12 20:57:22 scottcain Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.14 2009-09-04 20:15:47 lstein Exp $
 
 use strict;
 use File::Spec;

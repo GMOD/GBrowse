@@ -24,18 +24,16 @@ This data model is encouraged by GFF3 and is used by FlyBase;
 unfortunately Bio::DB::GFF cannot store such gene features without
 hacking the FlyBase GFF3 files.
 
-As of June 2006, the bleeding-edge (CVS) version of Bioperl has
-database support for GFF3 format via the Bio::DB::SeqFeature::Store
-module. Currently only Mysql and preliminary in-memory implementations
-are available, but a BerkeleyDB version is in progress. You are
-encouraged to install this module and test it out, but it is still a
-development project and is not guaranteed to be 100% stable.
+The most recent (1.6.x) series of Bioperl releases have support for
+the GFF3 format via the Bio::DB::SeqFeature::Store.
 
 Here are instructions for bringing up the Fly GFF3 annotations.
 
-1) Get the most recent version of Bioperl via CVS:
+1) Get the most recent version of Bioperl from CPAN:
 
-   cvs -d :pserver:cvs@code.open-bio.org:/home/repository/bioperl co bioperl-live
+   cpan Bio::DB::SeqFeature::Store
+     or
+   sudo cpan Bio::DB::SeqFeature::Store
 
 2) perl Makefile.PL, make and make install in the bioperl-live
 directory.

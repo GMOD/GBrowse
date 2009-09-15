@@ -110,7 +110,7 @@ Generic Genome Browser Installation
 
     E) Bioperl version 1.5 or higher -- <http://www.bioperl.org>
         GBrowse requires functionality that exists in bioperl-live (in the
-        cvs repository). Please either use bioperl-live or Bioperl 1.5 when
+        svn repository). Please either use bioperl-live or Bioperl 1.5 when
         it comes out. Until then, there is a release candidate of Bioperl
         1.5 that is thought to be stable with regard to GBrowse. It can be
         found at <http://bioperl.org/DIST/bioperl-1.5.0-RC1.tar.gz>. Other

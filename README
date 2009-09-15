@@ -6,15 +6,14 @@ Generic Model Organism Systems Database project (GMOD).
 
 ******* WARNING ******
 
-The HEAD of CVS (including this file) is currently in alpha test. You
+The HEAD of SVN (including this file) is currently in alpha test. You
 are encouraged to give this a try, and to report your experiences to
 the mailing lists at www.gmod.org.
 
 For production, we suggest you use one of the released tarballs, or
-check out the "stable" cvs branch:
+check out the "stable" svn branch:
 
- cvs -d pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod login
- cvs -d :pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod co -r stable Generic-Genome-Browser
+svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/branches/stable Generic-Genome-Browser
 
 **********************
 

@@ -23,6 +23,8 @@ options:
                             parameters such as CONF or PREFIX for
                             GBrowse installation
  --wincvs                 WinCVS is present--allow cvs install on Windows 
+                            NOTE: This will not work; GBrowse is in 
+                            svn now, so this script will have to be updated
  --gbrowse_path           Path to GBrowse tarball (will not download 
                             GBrowse); Assumes a resulting
                             'Generic-Genome-Browser' directory 
@@ -71,7 +73,7 @@ BEGIN {
 
   GetOptions(
         'h|help'              => \$show_help,             # Show help and exit
-        'd|dev'               => \$get_from_cvs,          # Use the dev cvs
+        'd|dev'               => \$get_from_cvs,          # Use the dev svn
         'build_param_str=s'   => \$build_param_string,    # Build parameters
         'bioperl_dev'         => \$get_bioperl_svn,
         'gbrowse_dev'         => \$get_gbrowse_cvs,
@@ -165,6 +167,10 @@ $is_cygwin = 1 if ( $^O eq 'cygwin' );
 
 if ($get_from_cvs) {
     $get_bioperl_svn = $get_gbrowse_cvs = 1;
+}
+
+if ($wincvs or ($windows and $get_from_cvs)) {
+    die "\n\nGBrowse is now in svn and fetching from svn on Windows\nis not currently supported\n ";
 }
 
 if ($windows and !$wincvs and $get_gbrowse_cvs ) {
@@ -347,7 +353,7 @@ sub do_get_distro {
                 or $is_cygwin)
             )
             {
-                print STDERR "Failed to check out the GBrowse from CVS: $!\n";
+                print STDERR "Failed to check out the GBrowse from svn: $!\n";
                 return undef;
             }
 

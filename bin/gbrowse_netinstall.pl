@@ -1,4 +1,4 @@
-#/usr/bin/perl
+#!/usr/bin/perl
 
 =head1 NAME
 
@@ -65,7 +65,7 @@ use constant NMAKE => 'http://download.microsoft.com/download/vc15/patch/1.52/w9
 my ( $show_help, $get_from_cvs, $build_param_string, $working_dir,
      $get_gbrowse_cvs, $get_bioperl_svn, $is_cygwin, $windows,
      $binaries, $make, $tmpdir, $wincvs, $gbrowse_path,$bioperl_path,
-     $skip_start, $install_param_string, $skip_bioperl);
+     $skip_start, $install_param_string, $skip_bioperl, $perl_path);
 
 BEGIN {
 
@@ -84,6 +84,8 @@ BEGIN {
         )
         or pod2usage(2);
   pod2usage(2) if $show_help;
+
+  $perl_path = $Config{perlpath}; 
 
   print STDERR "\nAbout to install GBrowse and all its prerequisites.\n";
   print STDERR "\nYou will be asked various questions during this process. You can almost always";
@@ -243,7 +245,9 @@ unless ($skip_bioperl) {
                    'Build',
                    $get_bioperl_svn ? 'svn' : '',
                    '',
-                   $bioperl_path);
+                   $bioperl_path,
+                   '',
+                   $perl_path);
     #}
   }
   else {
@@ -263,14 +267,23 @@ eval {do_install($gbrowse,
                  'gbrowse.tgz',
                  $latest_version,
                  'make',
-                 $get_gbrowse_cvs ? 'cvs' : '',
+                 $get_gbrowse_cvs ? 'svn' : '',
                  $build_param_string,
                  $gbrowse_path,
-                 $install_param_string)};
+                 $install_param_string,
+                 $perl_path)};
 if ($@ =~ /Could not download/) {
   print STDERR "Could not download: server down? Trying a different server...\n";
   $gbrowse        = SOURCEFORGE_MIRROR2.$latest_version.'.tar.gz';
-  do_install($gbrowse,'gbrowse.tgz',$latest_version,'make',$get_gbrowse_cvs,$build_param_string,$install_param_string);
+  do_install($gbrowse,
+             'gbrowse.tgz',
+             $latest_version,
+             'make',
+             $get_gbrowse_cvs? 'svn' : '',
+             $build_param_string,
+             $gbrowse_path,
+             $install_param_string,
+             $perl_path,);
 }
 
 exit 0;
@@ -281,7 +294,8 @@ END {
 
 sub do_install {
   my ($download,$local_name,$distribution,$method,
-         $from_cvs,$build_param_string,$file_path,$install_param_string) = @_;
+         $from_cvs,$build_param_string,$file_path,$install_param_string,
+         $perl_path) = @_;
 
   $install_param_string ||= '';
   chdir $tmpdir;
@@ -291,12 +305,12 @@ sub do_install {
   my $build_str = $windows ? "Build" : "./Build";
 
   if ($method eq 'make') {
-      system("perl Makefile.PL $build_param_string") == 0
+      system("$perl_path Makefile.PL $build_param_string") == 0
             or die "Couldn't run perl Makefile.PL command\n";
       system("$make install UNINST=1 $install_param_string")    == 0 ;
   }
   elsif ($method eq 'Build') {
-      system("perl $build_str.PL --yes=1")   == 0
+      system("$perl_path $build_str.PL --yes=1")   == 0
             or die "Couldn't run perl Build.PL command\n";
       system("$build_str install --uninst 1") == 0;
   }
@@ -326,14 +340,10 @@ sub do_get_distro {
         my $distribution_dir;
         if ($local_name =~ /gbrowse/) {
             $distribution_dir = 'Generic-Genome-Browser';
-            print STDERR "\n\nPlease press return when prompted for a password.\n";
             unless (
+               #should do an svn checkout of the stable branch
               (system(
-    "$distribution_method -d:pserver:anonymous\@gmod.cvs.sourceforge.net:/cvsroot/gmod login")==0
-                or $is_cygwin)
-              &&
-              (system(
-    "$distribution_method -z3 -d:pserver:anonymous\@gmod.cvs.sourceforge.net:/cvsroot/gmod co -kb -P -r stable Generic-Genome-Browser") == 0
+    "$distribution_method co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/branches/stable $distribution_dir") == 0
                 or $is_cygwin)
             )
             {

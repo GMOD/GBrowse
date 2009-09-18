@@ -632,6 +632,13 @@ sub asynchronous_event {
 	return (204,'text/plain',undef);
     }
 
+    # new-style ajax upload
+    if (my $fh = param('new_file_upload')) {
+	my $size = 0;
+	$size   += length($_) while <$fh>;
+	return (200,'text/html',"Successfully uploaded $size bytes");
+    }
+
     return unless $events;
     warn "processing asynchronous event(s)" if DEBUG;
     return (204,'text/plain',undef);
@@ -859,7 +866,6 @@ sub state_cookie {
   my $path    = url(-absolute => 1);
   $path       =~ s!gbrowse/?$!!;
   my $globals = $self->globals;
-  warn "setting cookie to ",$session->id;
   my $cookie = CGI::Cookie->new(
     -name    => $CGI::Session::NAME,
     -value   => $session->id,
@@ -878,6 +884,15 @@ sub auth_cookie {
     -name => 'authority',
     -value=> $auth,
     -path => $path);
+}
+
+# for backward compatibility
+sub create_cookie { 
+    my $self = shift;
+    return [
+	$self->state_cookie,
+	$self->auth_cookie
+	];
 }
 
 # For debugging
@@ -1952,6 +1967,18 @@ sub default_tracks {
       foreach @labels;
   $state->{features}{$_}{visible} = 1
       foreach $self->data_source->default_labels;
+
+  # set collapse state here
+  my $source = $self->data_source;
+  for my $label (@labels) {
+      my $visibility = $source->setting($label => 'visible');
+      next unless defined $visibility;
+      $visibility = lc $visibility;
+      $state->{features}{$label}{visible} = 1 if $visibility eq 'show'
+	                                      or $visibility eq 'collapse';
+      $state->{features}{$label}{visible} = 0 if $visibility eq 'hide';
+      $state->{track_collapsed}{$label}   = 1 if $visibility eq 'collapse';
+  }
 }
 
 # Open Automatically the tracks with features in them

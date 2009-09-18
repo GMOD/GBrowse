@@ -271,6 +271,7 @@ sub render_html_head {
                balloon.js
                balloon.config.js
                GBox.js
+               ajax_upload.js
                controller.js
     );
 
@@ -1065,6 +1066,7 @@ sub render_external_table {
         . end_form();
     $content .= $self->html_frag('html6',$state);
     $content .= $self->test_new_track();
+    $content .= $self->new_upload_section();
     return $content;
 }
 
@@ -1144,6 +1146,61 @@ sub upload_file_rows {
         td('&nbsp;'), td( { -colspan => 3}, @info ) );
     $return_html .= span({-id => $escaped_file});
     return $return_html;
+}
+
+sub new_upload_section {
+    my $self     = shift;
+    my $html     = '';
+
+    my $form     = <<'END';
+<form name="ajax_upload"
+      onSubmit="return AIM.submit(this,
+                                      {onStart    : startAjaxUpload,
+                                       onComplete : completeAjaxUpload
+                                      })"
+      enctype="multipart/form-data">
+        <input type="file"   name="new_file_upload" />
+        <input type="submit" name="submit" />
+        <a href="javascript:void(0)" onClick="this.parentNode.remove()">Remove</a>
+</form>
+END
+;
+    $form =~ s/\n/ /g;
+
+    $html       .= h3('New-style Uploads');
+
+    $html       .= script({-type=>'text/javascript'},<<END);
+    function startAjaxUpload() {
+	\$('upload_status').innerHTML = '<b>Uploading...</b>';
+        return true;
+    }
+    function completeAjaxUpload(response) {
+	\$('upload_status').innerHTML = response;
+    }
+    function addAnUploadField() {
+       var f       = 'f' + Math.floor(Math.random() * 99999);
+       var d       = new Element('div',{id:f}).update('$form');
+       var el      = \$('file_adder');
+       el.insert({before:d});
+    }
+END
+    ;
+    $html       .= div(a({-href=>'javascript:addAnUploadField()',-id=>'file_adder'},'Add file'));
+
+    $html       .= start_multipart_form(-name     => 'ajax_upload',
+					-onsubmit => q{return AIM.submit(this,
+                                                                        {'onStart'    : startAjaxUpload,
+                                                                         'onComplete' : completeAjaxUpload
+                                                                        }
+                                                                        )}
+                                       );
+    $html       .= filefield(-id   => 'new_upload_field',
+                             -name => 'new_file_upload',
+                             -size => 80);
+    $html       .= submit(-name=>'Upload');
+    $html       .= div({-id=>'upload_status'});
+    $html       .= end_form();
+    return $html;
 }
 
 sub get_uploaded_file_info {

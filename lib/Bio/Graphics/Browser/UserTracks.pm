@@ -72,6 +72,36 @@ sub track_conf {
     return File::Spec->catfile($self->path,$track,"$track.conf");
 }
 
+sub created {
+    my $self  = shift;
+    my $track = shift;
+    my $conf  = File::Spec->catfile($self->path,$track,"$track.conf");
+    return (stat($conf))[10];
+}
+
+sub modified {
+    my $self  = shift;
+    my $track = shift;
+    my $conf  = File::Spec->catfile($self->path,$track,"$track.conf");
+    return (stat($conf))[9];
+}
+
+sub description {
+    my $self  = shift;
+    my $track = shift;
+    my $desc  = File::Spec->catfile($self->path,$track,"$track.desc");
+    if (@_) {
+	open my $f,">",$desc or return;
+	print $f join("\n",@_);
+	close $f;
+	return 1;
+    } else {
+	open my $f,"<",$desc or return;
+	my @lines = <$f>;
+	return @lines;
+    }
+}
+
 sub delete_track {
     my $self  = shift;
     my $track = shift;

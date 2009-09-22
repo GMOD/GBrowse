@@ -74,6 +74,9 @@ sub load_line {
     my $self = shift;
     my $line = shift;
 
+    warn "sleeping 1 sec";
+    sleep 1;
+
     my $old_state = $self->state;
     my $state     = $self->_state_transition($old_state,$line);
 

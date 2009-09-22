@@ -1054,11 +1054,9 @@ sub render_toggle_external_table {
 
 sub render_toggle_userdata_table {
     my $self = shift;
-    return a({-name=>'userdata_table'},
-	     $self->toggle('userdata_table', 
-			   $self->render_userdata_table()
-	     )
-      );
+    return $self->toggle('userdata_table', 
+			 $self->render_userdata_table()
+	);
 }
 
 sub render_external_table {
@@ -1172,7 +1170,27 @@ sub list_userdata {
 							   $self->language);
     my @tracks = $userdata->tracks;
     warn "tracks = @tracks";
-    return ul(li(\@tracks));
+
+    my $buttons = $self->data_source->globals->button_url;
+    my $share   = "$buttons/share.png";
+    my $delete  = "$buttons/trash.png";
+
+    my $count = 0;
+    my @rows = map {
+	my $name          = $_;
+	my $created       = localtime $userdata->created($_);
+	my $modified      = localtime $userdata->modified($_);
+	my $description   = $userdata->description($_) || 'Click to add a description';
+	my $download_data = a({-href=>'?userdata_download=data',-target=>'_blank'},'[Download data]');
+	my $download_conf = a({-href=>'?userdata_download=conf',-target=>'_blank'},'[View Config]');
+	
+	my $color         = $count++%2 ? 'transparent': 'lightblue';
+	div({-style=>"background-color:$color"},
+	    img({-src=>$share}),img({-src=>$delete}),b($name),$modified,br(), 
+	    $download_data,$download_conf,br(),
+	    i($description));
+    } @tracks;
+    return p(\@rows);
 }
 
 sub userdata_upload {

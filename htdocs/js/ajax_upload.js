@@ -7,6 +7,8 @@
 *  http://www.webtoolkit.info/
 *
 **/
+
+var Ajax_Status_Updater;
  
 AIM = {
  
@@ -57,3 +59,24 @@ AIM = {
 	}
  
 }
+
+function startAjaxUpload() {
+  $('upload_status').innerHTML = '<b>Uploading...</b>';
+  $('ajax_upload').hide();
+  if (Ajax_Status_Updater==null)
+     Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('upload_status'),'#',{parameters:{new_file_upload_status:1}});
+  else
+     Ajax_Status_Updater.start();
+  return true;
+}
+
+function completeAjaxUpload(response) {
+      $('upload_status').innerHTML = response;
+      $('ajax_upload').remove();
+      if (Ajax_Status_Updater!=null)
+         Ajax_Status_Updater.stop();
+      $('upload_status').innerHTML = '';
+      Controller.update_sections(new Array(userdata_table_id));
+      return true;
+}
+

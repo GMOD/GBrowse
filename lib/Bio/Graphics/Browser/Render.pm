@@ -7,7 +7,7 @@ use JSON;
 use Digest::MD5 'md5_hex';
 use CGI qw(:standard param request_method header url iframe img span div br center);
 use Carp 'croak','cluck';
-use File::Basename 'dirname';
+use File::Basename 'dirname','basename';
 use Text::Tabs;
 
 use Bio::Graphics::Browser::I18n;
@@ -145,7 +145,7 @@ sub run {
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string() if $self->debug;
+       query_string(); # if $self->debug;
 
   $self->set_source();
 
@@ -634,9 +634,34 @@ sub asynchronous_event {
 
     # new-style ajax upload
     if (my $fh = param('new_file_upload')) {
-	my $size = 0;
-	$size   += length($_) while <$fh>;
-	return (200,'text/html',"Successfully uploaded $size bytes");
+	my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
+							       $self->state,
+							       $self->language);
+	warn "created userdata $userdata";
+	my $name = basename($fh );
+	$self->state->{current_upload} = $name;
+	$self->session->flush();
+	$self->session->unlock();
+	eval {
+	    $userdata->upload_track($name,$fh);
+	};
+	
+	return (200,'text/html',$@ ? "<pre style='background-color:pink'>$@</pre>" : "Loaded $name");
+    }
+
+    if (param('new_file_upload_status')) {
+	my $status    = 'status unknown';
+	my $file_name = 'Unknown';
+
+	if ($file_name = $self->state->{current_upload}) {
+	    my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
+								   $self->state,
+								   $self->language);
+	    $status      = $userdata->status($file_name);
+	    return (200,'text/html',"<b>$file_name:</b> <i>$status</i>");
+        } else {
+	    return (204,'text/plain',undef);
+	}
     }
 
     return unless $events;
@@ -930,11 +955,13 @@ sub render_body {
       print $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
       print $self->render_toggle_track_table;
       print $self->render_toggle_external_table;
+      print $self->render_toggle_userdata_table;
       print $self->render_galaxy_form($seg);
   }
   else {
       print $self->render_toggle_track_table;
       print $self->render_toggle_external_table;
+      print $self->render_toggle_userdata_table;
   }
   print $self->render_global_config();
   print $self->render_bottom($features);
@@ -1180,6 +1207,11 @@ sub render_global_config {
 sub render_toggle_external_table {
   my $self = shift;
   croak "render_toggle_external_table() should not be called in parent class";
+}
+
+sub render_toggle_userdata_table {
+  my $self = shift;
+  croak "render_toggle_userdata_table() should not be called in parent class";
 }
 
 sub render_external_table {
@@ -2461,10 +2493,16 @@ sub asynchronous_update_sections {
         $return_object->{'tracks_panel'} = $self->render_track_table();
     }
 
-    # External Data Form
+    # External Data Form (LEGACY)
     if ( $handle_section_name{'upload_tracks_panel'} ) {
         $return_object->{'upload_tracks_panel'}
             = $self->render_external_table();
+    }
+
+    # New Uploaded Data Section
+    if ( $handle_section_name{'userdata_table_panel'}) {
+	$return_object->{'userdata_table_panel'}
+	    = $self->render_userdata_table();
     }
 
     # Handle Remaining and Undefined Sections

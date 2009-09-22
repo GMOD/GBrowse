@@ -213,6 +213,8 @@ END
 
    UPLOAD_TRACKS=>'Add custom tracks',
 
+   USERDATA_TABLE=>'Manage custom tracks',
+
    UPLOAD_TITLE=> 'Upload your own data',
 
    UPLOAD_FILE => 'Upload a file',

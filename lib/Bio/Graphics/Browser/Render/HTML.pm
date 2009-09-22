@@ -1052,6 +1052,15 @@ sub render_toggle_external_table {
       );
 }
 
+sub render_toggle_userdata_table {
+    my $self = shift;
+    return a({-name=>'userdata_table'},
+	     $self->toggle('userdata_table', 
+			   $self->render_userdata_table()
+	     )
+      );
+}
+
 sub render_external_table {
     my $self = shift;
 
@@ -1065,8 +1074,6 @@ sub render_external_table {
 	      $self->das_table)
         . end_form();
     $content .= $self->html_frag('html6',$state);
-    $content .= $self->test_new_track();
-    $content .= $self->new_upload_section();
     return $content;
 }
 
@@ -1148,58 +1155,62 @@ sub upload_file_rows {
     return $return_html;
 }
 
-sub new_upload_section {
+sub render_userdata_table {
+    my $self = shift;
+    my $html = div( { -id => 'userdata_table_div',-class=>'uploadbody' },
+		    $self->list_userdata(),
+		    $self->userdata_upload(),
+		    $self->test_new_track(),
+		    scalar localtime,
+		    );
+}
+
+sub list_userdata {
+    my $self = shift;
+    my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
+							   $self->state,
+							   $self->language);
+    my @tracks = $userdata->tracks;
+    warn "tracks = @tracks";
+    return ul(li(\@tracks));
+}
+
+sub userdata_upload {
     my $self     = shift;
     my $html     = '';
 
-    my $form     = <<'END';
+    my $url      = url(-absolute=>1,-path_info=>1);
+    my $form     = <<END;
 <form name="ajax_upload"
+      id="ajax_upload"
       onSubmit="return AIM.submit(this,
                                       {onStart    : startAjaxUpload,
                                        onComplete : completeAjaxUpload
                                       })"
-      enctype="multipart/form-data">
-        <input type="file"   name="new_file_upload" />
-        <input type="submit" name="submit" />
+      action="$url"
+      enctype="multipart/form-data"
+       method="post">
+        <input type="file"   name="new_file_upload" id="new_upload_field" />
+        <input type="submit" name="submit" value="Upload"/>
         <a href="javascript:void(0)" onClick="this.parentNode.remove()">Remove</a>
 </form>
 END
 ;
     $form =~ s/\n/ /g;
 
-    $html       .= h3('New-style Uploads');
+    $html       .= div({-id=>'upload_status'},'');
+    $html       .= div(a({-href=>'javascript:addAnUploadField()',-id=>'file_adder'},'Add an experiment'));
 
     $html       .= script({-type=>'text/javascript'},<<END);
-    function startAjaxUpload() {
-	\$('upload_status').innerHTML = '<b>Uploading...</b>';
-        return true;
-    }
-    function completeAjaxUpload(response) {
-	\$('upload_status').innerHTML = response;
-    }
     function addAnUploadField() {
        var f       = 'f' + Math.floor(Math.random() * 99999);
        var d       = new Element('div',{id:f}).update('$form');
-       var el      = \$('file_adder');
+       var el      = \$('upload_status');
        el.insert({before:d});
     }
 END
     ;
-    $html       .= div(a({-href=>'javascript:addAnUploadField()',-id=>'file_adder'},'Add file'));
 
-    $html       .= start_multipart_form(-name     => 'ajax_upload',
-					-onsubmit => q{return AIM.submit(this,
-                                                                        {'onStart'    : startAjaxUpload,
-                                                                         'onComplete' : completeAjaxUpload
-                                                                        }
-                                                                        )}
-                                       );
-    $html       .= filefield(-id   => 'new_upload_field',
-                             -name => 'new_file_upload',
-                             -size => 80);
-    $html       .= submit(-name=>'Upload');
-    $html       .= div({-id=>'upload_status'});
-    $html       .= end_form();
     return $html;
 }
 

@@ -3,6 +3,7 @@ package Bio::Graphics::Browser::UserTracks;
 # $Id: UserTracks.pm,v 1.3 2009-08-27 19:13:19 idavies Exp $
 use strict;
 use Bio::Graphics::Browser::DataSource;
+use Bio::Graphics::Browser::DataLoader;
 use File::Spec;
 use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
@@ -128,7 +129,20 @@ sub upload_track {
 			      $self->track_conf($track_name),
 			      $self->config,
 	);
+    warn "created $load";
     $load->load($lines,$fh);
+}
+
+sub status {
+    my $self     = shift;
+    my $filename = shift;
+    my $loader   = 'Bio::Graphics::Browser::DataLoader';
+    my $load   = $loader->new($filename,
+			      $self->track_path($filename),
+			      $self->track_conf($filename),
+			      $self->config,
+	);
+    return $load->get_status();
 }
 
 sub get_loader {

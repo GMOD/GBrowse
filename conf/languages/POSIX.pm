@@ -50,9 +50,9 @@ END
 
    IMAGE_LINK => 'Link to Image',
 
-   PDF_LINK   => 'Download PDF',
-
    SVG_LINK   => 'High-res Image',
+
+   PDF_LINK   => 'Download PDF',
 
    SVG_DESCRIPTION => <<END,
 <p>
@@ -88,15 +88,8 @@ END
 
    IMAGE_DESCRIPTION => <<END,
 <p>
-To create an embedded image of this view, cut and paste this
-URL into an HTML page:
-</p>
-<pre>
-&lt;IMAGE src="%s" /&gt;
-</pre>
-<p>
-The image will look like this:
-</p>
+To create an embedded image of this view, copy this image's
+<b>location URL</b> into an HTML page:
 <p>
 <img src="%s" />
 </p>

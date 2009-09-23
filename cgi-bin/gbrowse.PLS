@@ -3358,8 +3358,7 @@ sub image_url {
     my $flip   = $settings->{flip} || param('flip') || 0;
     my $keystyle = $settings->{ks};
     my $grid     = $settings->{grid} || 0;
-    my $url      = url(-full=>1);
-    $url         = dirname($url) . "/gbrowse_img/".escape($source);
+    my $url    = "../../gbrowse_img/".escape($source);
     my $tracks = $settings->{tracks};
     my $width  = $CONFIG->width;
     my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";

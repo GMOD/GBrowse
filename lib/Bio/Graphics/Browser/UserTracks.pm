@@ -102,22 +102,23 @@ sub description {
     }
 }
 
-sub delete_track {
-    my $self  = shift;
-    my $track = shift;
-
-    # remove all path elements from track (security)
-    $track = basename($track);
-
-    my $dir  = File::Spec->catfile($self->path,$track);
-    rmtree($dir);
-}
-
 sub trackname_from_url {
     my $self = shift;
     my $url  = shift;
 
     (my $track_name = $url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
+
+    my $unique = 0;
+    while (!$unique) {
+	my $path = $self->track_path($track_name);
+	if (-e $path) {
+	    $track_name .= "-0" unless $track_name =~ /-\d+$/;
+	    $track_name  =~ s/-(\d+)$/'-'.($1+1)/e;
+	} else {
+	    $unique++;
+	}
+	warn "track_name = $track_name";
+    }
 
     mkpath $self->track_path($track_name);
     return $track_name;
@@ -150,17 +151,30 @@ sub upload_track {
     # guess the file type from the first non-blank line
     my ($type,$lines)   = $self->guess_upload_type($fh);
 
-    croak "Could not guess the type of the file $file_name"
-	unless $type;
+    my $result= eval {
+	croak "Could not guess the type of the file $file_name"
+	    unless $type;
 
-    my $loader = $self->get_loader($type);
-    my $load   = $loader->new($track_name,
-			      $self->track_path($track_name),
-			      $self->track_conf($track_name),
-			      $self->config,
-	);
-    warn "created $load";
-    $load->load($lines,$fh);
+	my $loader = $self->get_loader($type);
+	my $load   = $loader->new($track_name,
+				  $self->track_path($track_name),
+				  $self->track_conf($track_name),
+				  $self->config,
+	    );
+	$load->load($lines,$fh);
+	1;
+    };
+    my $msg = $@;
+
+    $self->delete_track($track_name) unless $result;
+    return ($result,$msg);
+    
+}
+
+sub delete_track {
+    my $self = shift;
+    my $track_name  = shift;
+     rmtree($self->track_path($track_name));
 }
 
 sub status {
@@ -179,7 +193,8 @@ sub get_loader {
     my $self   = shift;
     my $type   = shift;
     my $module = "Bio::Graphics::Browser::DataLoader::$type";
-    eval "require $module; 1" or croak $@;
+    eval "require $module";
+    die $@ if $@;
     return $module;
 }
 

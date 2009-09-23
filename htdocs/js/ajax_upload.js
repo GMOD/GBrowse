@@ -61,6 +61,7 @@ AIM = {
 }
 
 function startAjaxUpload() {
+  $('upload_indicator').innerHTML = "<image src='/gbrowse2/images/buttons/ajax-loader.gif' />";
   $('upload_status').innerHTML = '<b>Uploading...</b>';
   $('ajax_upload').hide();
   if (Ajax_Status_Updater==null)
@@ -72,11 +73,27 @@ function startAjaxUpload() {
 
 function completeAjaxUpload(response) {
       $('upload_status').innerHTML = response;
+      $('upload_indicator').innerHTML = '';
       $('ajax_upload').remove();
       if (Ajax_Status_Updater!=null)
          Ajax_Status_Updater.stop();
-      $('upload_status').innerHTML = '';
       Controller.update_sections(new Array(userdata_table_id));
       return true;
 }
+
+function deleteUploadTrack (trackName) {
+   var indicator = trackName + "_stat";
+   $(indicator).innerHTML = "<image src='/gbrowse2/images/buttons/ajax-loader.gif' />";
+   new Ajax.Request(document.URL, {
+        method:      'post',
+        parameters:  {deleteUploadTrack:trackName},
+        onSuccess:   function (transport) {
+                 Controller.update_sections(new Array(userdata_table_id));
+		 }
+        }
+   );
+}
+
+
+
 

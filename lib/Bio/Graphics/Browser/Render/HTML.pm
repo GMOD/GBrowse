@@ -1054,8 +1054,10 @@ sub render_toggle_external_table {
 
 sub render_toggle_userdata_table {
     my $self = shift;
+    return '' unless $self->setting('activate userdata table'); # temporary
     return $self->toggle('userdata_table', 
-			 $self->render_userdata_table()
+			 $self->render_userdata_table(),
+			 $self->userdata_upload(),
 	);
 }
 
@@ -1157,9 +1159,8 @@ sub render_userdata_table {
     my $self = shift;
     my $html = div( { -id => 'userdata_table_div',-class=>'uploadbody' },
 		    $self->list_userdata(),
-		    $self->userdata_upload(),
-		    $self->test_new_track(),
-		    scalar localtime,
+#		    $self->userdata_upload(),
+#		    $self->test_new_track(),
 		    );
 }
 
@@ -1168,8 +1169,7 @@ sub list_userdata {
     my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
 							   $self->state,
 							   $self->language);
-    my @tracks = $userdata->tracks;
-    warn "tracks = @tracks";
+    my @tracks   = sort $userdata->tracks;
 
     my $buttons = $self->data_source->globals->button_url;
     my $share   = "$buttons/share.png";
@@ -1178,7 +1178,6 @@ sub list_userdata {
     my $count = 0;
     my @rows = map {
 	my $name          = $_;
-	my $created       = localtime $userdata->created($_);
 	my $modified      = localtime $userdata->modified($_);
 	my $description   = $userdata->description($_) || 'Click to add a description';
 	my $download_data = a({-href=>'?userdata_download=data',-target=>'_blank'},'[Download data]');
@@ -1186,7 +1185,13 @@ sub list_userdata {
 	
 	my $color         = $count++%2 ? 'transparent': 'lightblue';
 	div({-style=>"background-color:$color"},
-	    img({-src=>$share}),img({-src=>$delete}),b($name),$modified,br(), 
+	    div({-id=>"${name}_stat"},''),
+	    img({-src=>$share}),
+	    img({-src     => $delete,
+		 -style   => 'cursor:pointer',
+		 -onClick => "deleteUploadTrack('$name')"
+		}
+	    ),'&nbsp;',b($name),$modified,br(), 
 	    $download_data,$download_conf,br(),
 	    i($description));
     } @tracks;
@@ -1209,15 +1214,23 @@ sub userdata_upload {
       enctype="multipart/form-data"
        method="post">
         <input type="file"   name="new_file_upload" id="new_upload_field" />
-        <input type="submit" name="submit" value="Upload"/>
+        <input type="submit" name="new_file_submit" value="Upload"/>
         <a href="javascript:void(0)" onClick="this.parentNode.remove()">Remove</a>
 </form>
 END
 ;
     $form =~ s/\n/ /g;
+    $html   .= div({-id=>'upload_indicator'},'');
 
-    $html       .= div({-id=>'upload_status'},'');
-    $html       .= div(a({-href=>'javascript:addAnUploadField()',-id=>'file_adder'},'Add an experiment'));
+    $html       .= div(
+	{-id=>'upload_status',
+	 -style=>"background-color:'green'"
+	},
+	'');
+    $html       .= div({-style=>'text-indent:10pt'},
+		       a({-href=>'javascript:addAnUploadField()',
+			  -id=>'file_adder',
+			 },'Add an experiment'));
 
     $html       .= script({-type=>'text/javascript'},<<END);
     function addAnUploadField() {

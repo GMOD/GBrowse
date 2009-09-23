@@ -33,7 +33,7 @@ var page_title_id           = 'page_title';
 var galaxy_form_id          = 'galaxy_form';
 var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
-var userdata_table_id       = 'userdata_table_panel';
+var userdata_table_id       = 'userdata_table_div';
 
 //  Sorta Constants
 var expired_limit  = 1;

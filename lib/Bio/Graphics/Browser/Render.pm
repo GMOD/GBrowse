@@ -633,20 +633,30 @@ sub asynchronous_event {
     }
 
     # new-style ajax upload
-    if (my $fh = param('new_file_upload')) {
-	my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
-							       $self->state,
-							       $self->language);
-	warn "created userdata $userdata";
-	my $name = basename($fh );
-	$self->state->{current_upload} = $name;
-	$self->session->flush();
-	$self->session->unlock();
-	eval {
-	    $userdata->upload_track($name,$fh);
-	};
-	
-	return (200,'text/html',$@ ? "<pre style='background-color:pink'>$@</pre>" : "Loaded $name");
+    if (param('new_file_submit')) {
+	if (my $fh = param('new_file_upload')) {
+	    my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
+								   $self->state,
+								   $self->language);
+	    warn "created userdata $userdata";
+	    my $name = basename($fh );
+	    $self->state->{current_upload} = $name;
+	    $self->session->flush();
+	    $self->session->unlock();
+	    my ($result,$msg) = $userdata->upload_track($name,$fh);
+	    return $msg ? (200,
+			 'text/html',
+			 "<pre style='background-color:pink'>$msg</pre>".
+			 a({
+			     -href    =>'javascript:void(0)',
+			     -onClick =>"\$('upload_status').innerHTML=''"
+			   },
+			   '[Remove]'
+			 )
+		)
+		      : (200,'text/plain',undef);
+	}
+	return (204,'text/plain',undef);
     }
 
     if (param('new_file_upload_status')) {
@@ -662,6 +672,14 @@ sub asynchronous_event {
         } else {
 	    return (204,'text/plain',undef);
 	}
+    }
+
+    if (my $track = param('deleteUploadTrack')) {
+	my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
+							       $self->state,
+							       $self->language);
+	$userdata->delete_track($track);
+	return (204,'text/plain',undef);
     }
 
     return unless $events;
@@ -2500,8 +2518,8 @@ sub asynchronous_update_sections {
     }
 
     # New Uploaded Data Section
-    if ( $handle_section_name{'userdata_table_panel'}) {
-	$return_object->{'userdata_table_panel'}
+    if ( $handle_section_name{'userdata_table_div'}) {
+	$return_object->{'userdata_table_div'}
 	    = $self->render_userdata_table();
     }
 

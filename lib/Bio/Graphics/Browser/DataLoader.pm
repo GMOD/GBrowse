@@ -9,14 +9,14 @@ use Carp 'croak';
 # grant create on `userdata_%`.* to www-data@localhost
 
 sub new {
-    my $self = shift;
+    my $class = shift;
     my ($track_name,$data_path,$conf_path,$settings) = @_;
     my $self = bless
     { name => $track_name,
       data => $data_path,
       conf => $conf_path,
       settings=>$settings,
-    },ref $self || $self;
+    },ref $class || $class;
     return $self;
  }
 

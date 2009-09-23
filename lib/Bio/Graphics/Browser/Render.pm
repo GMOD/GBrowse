@@ -145,7 +145,7 @@ sub run {
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string(); # if $self->debug;
+       query_string() if $self->debug;
 
   $self->set_source();
 

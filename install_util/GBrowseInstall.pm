@@ -220,7 +220,7 @@ sub ACTION_config {
 
 	# next if $self->config_data($key);
 	my $conf_dir = $props->{$key} =~ /directory/i;
-	
+
 	$opts{$key} = prompt($props->{$key},
 			     $opts{$key} ||
 			     ($conf_dir 

@@ -238,7 +238,7 @@ var GBrowseController = Class.create({
         spin = false;
     }
 
-    var request_str = "update_sections=1" + param_str;
+    var request_str = "action=update_sections" + param_str;
     for (var i = 0; i < section_names.length; i++) {
       if (spin)
          $(section_names[i]).innerHTML="<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
@@ -316,26 +316,6 @@ var GBrowseController = Class.create({
 
   // Kick-off Render Methods ****************************************
 
-  first_render:
-  function()  {
-
-    new Ajax.Request(document.URL,{
-      method:     'post',
-      parameters: {first_render: 1},
-      onSuccess: function(transport) {
-	var results             = transport.responseJSON;
-        var track_keys          = results.track_keys;
-        Controller.segment_info = results.segment_info;
-        $('details_msg').innerHTML = results.details_msg;
-        Controller.set_last_update_keys(track_keys);
-        Controller.get_multiple_tracks(track_keys);
-        if (results.display_details == 0){
-          Controller.hide_detail_tracks();
-        }
-      }
-    });
-  },
-
   update_coordinates:
   function (action) {
 
@@ -355,7 +335,9 @@ var GBrowseController = Class.create({
     
     new Ajax.Request(document.URL,{
       method:     'post',
-      parameters: {navigate: action},
+      parameters: {action:   'navigate',  // 'action'   triggers an async call
+                   navigate: action       // 'navigate' is an argument passed to the async routine
+                  },
       onSuccess: function(transport) {
 	var results                 = transport.responseJSON;
         Controller.segment_info     = results.segment_info;
@@ -615,7 +597,8 @@ var GBrowseController = Class.create({
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
-            reconfigure_track: track_id,
+            action:         'reconfigure_track',
+	    track:          track_id,
 	    semantic_label: semantic_label
           }).toQueryString(),
       onSuccess: function(transport) {
@@ -641,7 +624,8 @@ var GBrowseController = Class.create({
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
-            filter_subtrack:  track_id
+            action:  'filter_subtrack',
+	    track:   track_id
           }).toQueryString(),
       onSuccess: function(transport) {
         Balloon.prototype.hideTooltip(1);
@@ -916,8 +900,6 @@ function initialize_page() {
     }
   });
   
-  //  Controller.first_render(); // no longer because "left 0" will do the same
-
   // The next statement is to avoid the scalebars from being "out of sync"
   // when manually advancing the browser with its forward/backward buttons.
   // Unfortunately it causes an infinite loop when there are multiple regions!

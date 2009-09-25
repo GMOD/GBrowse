@@ -15,6 +15,7 @@ use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
 use Bio::Graphics::Browser::Shellwords;
+use Bio::Graphics::Browser::Action;
 use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::RenderPanels;
@@ -263,95 +264,16 @@ sub asynchronous_event {
 
     warn "event(",(join ' ',param()),")" if DEBUG;
 
-    if ( my $action = param('navigate') ) {
-
-        my $updated = $self->asynchronous_update_coordinates($action);
-        $self->init_database() if $updated;
-
-        my ( $track_keys, $display_details, $details_msg )
-            = $self->background_track_render();
-
-        my $overview_scale_return_object
-            = $self->asynchronous_update_overview_scale_bar();
-        my $region_scale_return_object
-            = $self->asynchronous_update_region_scale_bar()
-            if ( $settings->{region_size} );
-        my $detail_scale_return_object
-            = $self->asynchronous_update_detail_scale_bar();
-        my $segment_info_object = $self->segment_info_object();
-
-	warn "navigate() returning track keys = ",join ' ',%$track_keys if DEBUG;
-
-        my $return_object = {
-            segment            => $settings->{name},
-            segment_info       => $segment_info_object,
-            track_keys         => $track_keys,
-            display_details    => $display_details,
-            details_msg        => $details_msg,
-            overview_scale_bar => $overview_scale_return_object,
-            region_scale_bar   => $region_scale_return_object,
-            detail_scale_bar   => $detail_scale_return_object,
-        };
-	return (200,'application/json',$return_object);
+    # the big IF/ELSE statement that follows is HORRIBLE,
+    # so we are slowly cleaning this up with a more orderly
+    # dispatch object.
+    if (my $action = param('action')) {
+	my $dispatch = Bio::Graphics::Browser::Action->new($self);
+	my $method   = "ACTION_${action}";
+	return $dispatch->$method($CGI::Q);
     }
 
-    if ( my $action = param('first_render') ) {
-
-	return (204,'text/plain','no content')
-	    unless $self->state->{valid_region};
-
-        $self->init_database();
-        my ( $track_keys, $display_details, $details_msg )
-            = $self->background_track_render();
-        return unless ( $track_keys || $details_msg );
-
-        my $segment_info_object = $self->segment_info_object();
-
-        my $return_object = {
-            segment         => $settings->{name},
-            segment_info    => $segment_info_object,
-            track_keys      => $track_keys,
-            display_details => $display_details,
-            details_msg     => $details_msg,
-        };
-        return ( 200, 'application/json', $return_object );
-    }
-
-    if ( param('update_sections') ) {
-        my @section_names = param('section_names');
-
-        my $section_html
-            = $self->asynchronous_update_sections( \@section_names );
-        my $return_object = { section_html => $section_html, };
-        return ( 200, 'application/json', $return_object );
-    }
-
-    if ( param('upload_table') ) {
-	$self->init_remote_sources();
-        my $html        = $self->render_external_table();
-        return ( 200, 'text/html', $html );
-    }
-
-    if ( my $track_name = param('configure_track') ) {
-        my $html = $self->track_config($track_name);
-        return ( 200, 'text/html', $html );
-    }
-
-    if ( my $track_name = param('select_subtracks') ) {
-        my $html = $self->select_subtracks($track_name);
-        return ( 200, 'text/html', $html );
-    }
-
-    if ( my $track_name = param('filter_subtrack') ) {
-        my $html = $self->filter_subtrack($track_name);
-        return ( 200, 'application/json', {} );
-    }
-
-    if ( my $track_name = param('reconfigure_track') ) {
-	my $semantic_label = param('semantic_label');
-        $self->reconfigure_track($track_name,$semantic_label);
-        return ( 200, 'application/json', {} );
-    }
+    # everything below here should be migrated into Bio::Graphics::Browser::Action
 
     if ( my $track_name = param('share_track') ) {
         my $html = $self->share_track($track_name);

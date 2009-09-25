@@ -464,6 +464,7 @@ lib/Bio/DB/Tagger.pm
 lib/Bio/DB/Tagger/mysql.pm
 lib/Bio/DB/Tagger/Tag.pm
 lib/Bio/Graphics/Browser.pm
+lib/Bio/Graphics/Browser/Action.pm
 lib/Bio/Graphics/Browser/AuthorizedFeatureFile.pm
 lib/Bio/Graphics/Browser/CachedTrack.pm
 lib/Bio/Graphics/Browser/DataBase.pm

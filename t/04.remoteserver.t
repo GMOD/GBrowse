@@ -41,23 +41,23 @@ $ENV{GBROWSE_DOCS} = $Bin;
 
 chdir $Bin;
 use lib "$Bin/../lib";
-use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render::HTML;
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::Render::HTML;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use Storable 'nfreeze','thaw';
-use Bio::Graphics::Browser::Render::Slave;
+use Bio::Graphics::Browser2::Render::Slave;
 
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
 # alignments requires the server at 8100
-my $alignment_server = Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic');
+my $alignment_server = Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic');
 $alignment_server->debug(0);
 $alignment_server->run();
 
 # cleavage sites track requires the server at 8101
-my $cleavage_server  = Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic');
+my $cleavage_server  = Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic');
 $cleavage_server->debug(0);
 $cleavage_server->run();
 
@@ -71,7 +71,7 @@ for ('volvox_final.conf','yeast_chr1.conf') {
 
 
 # Test remote rendering
-my $server = Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic');
+my $server = Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic');
 ok($server);
 $server->debug(0);
 my $server_pid = $server->run;
@@ -85,11 +85,11 @@ $ENV{REQUEST_METHOD} = 'GET';
 $CGI::Q    = new CGI('name=ctgA:1..20000;label=Clones-Motifs-Transcripts');
 
 # this is the standard initialization, ok?
-my $globals = Bio::Graphics::Browser->new(CONF_FILE);
+my $globals = Bio::Graphics::Browser2->new(CONF_FILE);
 
 my $session = $globals->session;
 my $source  = $globals->create_data_source('volvox');
-my $render  = Bio::Graphics::Browser::Render::HTML->new($source,$session);
+my $render  = Bio::Graphics::Browser2::Render::HTML->new($source,$session);
 $render->init_database;
 $render->init_plugins;
 $render->update_state;

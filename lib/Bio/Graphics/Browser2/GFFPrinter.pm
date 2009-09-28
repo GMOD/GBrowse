@@ -23,7 +23,7 @@ package Bio::Graphics::Browser2::GFFPrinter;
 use strict;
 
 use CGI 'param', 'path_info', 'header';
-use Bio::Graphics::Browser;
+use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::UserData;
 use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::FeatureFile;

@@ -117,7 +117,6 @@ sub trackname_from_url {
 	} else {
 	    $unique++;
 	}
-	warn "track_name = $track_name";
     }
 
     mkpath $self->track_path($track_name);

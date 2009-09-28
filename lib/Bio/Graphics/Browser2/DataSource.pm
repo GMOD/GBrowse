@@ -635,10 +635,10 @@ sub db_settings {
   # Do environment substitutions in the args. Assume that the environment is safe.
   foreach (@argv) {
       s/\$ENV{(\w+)}/$ENV{$1}||''/ge;
-      s/\$HTDOCS/Bio::Graphics::Browser->htdocs_base/ge;
-      s/\$DB/Bio::Graphics::Browser->db_base/ge;
-      s/\$CONF/Bio::Graphics::Browser->config_base/ge;
-      s/\$ROOT/Bio::Graphics::Browser->url_base/ge;
+      s/\$HTDOCS/Bio::Graphics::Browser2->htdocs_base/ge;
+      s/\$DB/Bio::Graphics::Browser2->db_base/ge;
+      s/\$CONF/Bio::Graphics::Browser2->config_base/ge;
+      s/\$ROOT/Bio::Graphics::Browser2->url_base/ge;
   }
 
   if (defined (my $a = $self->fallback_setting($section => 'aggregators'))) {

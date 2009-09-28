@@ -22,9 +22,9 @@ BEGIN {
   plan test => TEST_COUNT;
 }
 use lib "$Bin/../blib/lib","$Bin/../blib/arch";
-use Bio::Graphics::Browser::Realign;
+use Bio::Graphics::Browser2::Realign;
 
-my $aligner = Bio::Graphics::Browser::Realign->new('gattttttc','gattttccc');
+my $aligner = Bio::Graphics::Browser2::Realign->new('gattttttc','gattttccc');
 ok($aligner);
 my $score   = $aligner->score;
 my $align   = $aligner->alignment; 

@@ -4,7 +4,7 @@ package Bio::Graphics::Browser2::PluginSet;
 #  $Id: PluginSet.pm,v 1.13 2009-05-22 21:37:09 lstein Exp $
 
 use strict;
-use Bio::Graphics::Browser;
+use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::Util 'shellwords';
 use CGI 'param';
 use constant DEBUG=>0;
@@ -22,7 +22,7 @@ sub new {
 
  PLUGIN:
   for my $plugin (@plugins) {
-    my $class = "Bio\:\:Graphics\:\:Browser\:\:Plugin\:\:$plugin";
+    my $class = "Bio\:\:Graphics\:\:Browser2\:\:Plugin\:\:$plugin";
     for my $search_path (@search_path) {
       my $plugin_with_path = "$search_path/$plugin.pm";
       if (eval {require $plugin_with_path}) {
@@ -258,7 +258,7 @@ currently unused.
 
 =head1 SEE ALSO
 
-L<Bio::Graphics::Browser>
+L<Bio::Graphics::Browser2>
 
 =head1 AUTHOR
 

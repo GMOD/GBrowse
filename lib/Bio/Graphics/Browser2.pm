@@ -4,7 +4,7 @@ package Bio::Graphics::Browser2;
 
 use strict;
 use warnings;
-use base 'Bio::Graphics::Browser::AuthorizedFeatureFile';
+use base 'Bio::Graphics::Browser2::AuthorizedFeatureFile';
 
 use File::Spec;
 use File::Path 'mkpath';
@@ -249,7 +249,7 @@ sub create_data_source {
   my $self = shift;
   my $dsn  = shift;
   my $path = $self->data_source_path($dsn) or return;
-  return Bio::Graphics::Browser::DataSource->new($path,$dsn,$self->data_source_description($dsn),$self);
+  return Bio::Graphics::Browser2::DataSource->new($path,$dsn,$self->data_source_description($dsn),$self);
 }
 
 sub default_source {
@@ -335,7 +335,7 @@ sub session {
                     lockdir  => $self->session_locks,
                     locktype => $self->session_locktype,
                     expires  => $self->remember_settings_time);
-  return Bio::Graphics::Browser::Session->new(@args,id => $id);
+  return Bio::Graphics::Browser2::Session->new(@args,id => $id);
 }
 
 sub authorized_session {

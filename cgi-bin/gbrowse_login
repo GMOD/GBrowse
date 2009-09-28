@@ -21,7 +21,7 @@ our $VERSION = '$Id: gbrowse_login,v 1.1 2009-08-27 20:33:23 idavies Exp $';
 
 umask 022;
 
-my $globals = Bio::Graphics::Browser->open_globals;
+my $globals = Bio::Graphics::Browser2->open_globals;
 
 our $AppName       = $globals->application_name;
 our $AppNameLong   = $globals->application_name_long;

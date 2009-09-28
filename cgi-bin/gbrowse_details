@@ -15,9 +15,9 @@ use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 umask 022;
 
-my $conf_dir  = Bio::Graphics::Browser->config_base;
+my $conf_dir  = Bio::Graphics::Browser2->config_base;
 my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
-my $conf      = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
+my $conf      = Bio::Graphics::Browser2->new(File::Spec->catfile($conf_dir,$conf_file))
     or die "Couldn't read globals";
 
 my $fcgi = Bio::Graphics::Browser2::Render->fcgi_request;

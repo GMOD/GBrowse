@@ -33,7 +33,7 @@ BEGIN {
 
 chdir $Bin;
 use lib "$Bin/../lib";
-use Bio::Graphics::Browser;
+use Bio::Graphics::Browser2;
 
 for ('volvox_final.conf','yeast_chr1.conf') {
     template_copy("testdata/conf/templates/$_",
@@ -45,7 +45,7 @@ for ('volvox_final.conf','yeast_chr1.conf') {
 # this avoids a race condition when checking the cache time of the config file
 sleep 1;
 
-my $globals = Bio::Graphics::Browser->new(CONF_FILE);
+my $globals = Bio::Graphics::Browser2->new(CONF_FILE);
 ok($globals);
 
 # exercise globals a bit
@@ -130,11 +130,11 @@ ok($globals->update_data_source($session),'yeast_chr1');
 ok($globals->update_data_source($session,'volvox'),'volvox');
 
 # see whether the singleton caching system is working
-ok(Bio::Graphics::Browser->new(CONF_FILE),$globals);
+ok(Bio::Graphics::Browser2->new(CONF_FILE),$globals);
 
 my $time = time;
 utime($time,$time,CONF_FILE); # equivalent to "touch"
-ok(Bio::Graphics::Browser->new(CONF_FILE) ne $globals);
+ok(Bio::Graphics::Browser2->new(CONF_FILE) ne $globals);
 
 # test data source creation
 my $source = $globals->create_data_source($session->source);

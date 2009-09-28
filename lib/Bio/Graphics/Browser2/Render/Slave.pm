@@ -10,7 +10,7 @@ use File::Spec;
 use Text::ParseWords 'shellwords';
 use File::Basename 'basename';
 use Bio::Graphics::GBrowseFeature;
-use Bio::Graphics::Browser;
+use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::I18n;
 use Bio::Graphics::Browser2::DataSource;
 use Bio::Graphics::Browser2::RenderPanels;

@@ -10,7 +10,7 @@ use GBrowseInstall;
 
 my $build = GBrowseInstall->new(
     module_name        => 'GBrowse',
-    dist_version_from  => 'lib/Bio/Graphics/Browser.pm',
+    dist_version_from  => 'lib/Bio/Graphics/Browser2.pm',
     dist_author        => 'Lincoln Stein <lincoln.stein@gmail.com>',
     dist_abstract      => 'The GMOD Generic Genome Browser',
     license            => 'perl',

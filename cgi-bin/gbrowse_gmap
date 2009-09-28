@@ -215,7 +215,7 @@ my @color_list = (
 my $conf_dir  = $ENV{GBROWSE_CONF}   || DEFAULT_CONF;
 my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
 my $conf
-    = Bio::Graphics::Browser->new(
+    = Bio::Graphics::Browser2->new(
     File::Spec->catfile( $conf_dir, $conf_file ) )
     or die "Couldn't read globals";
 

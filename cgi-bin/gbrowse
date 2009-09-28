@@ -2,7 +2,7 @@
 
 use strict;
 use CGI;
-use Bio::Graphics::Browser;
+use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::Render::HTML;
 
 umask 022;
@@ -20,13 +20,13 @@ if ($fcgi) {
     };
 
     while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
-	my $globals = Bio::Graphics::Browser->open_globals;
+	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
 	Bio::Graphics::Browser2::Render::HTML->new($globals)->run();
     }
 
 } else {
-    my $globals = Bio::Graphics::Browser->open_globals;
+    my $globals = Bio::Graphics::Browser2->open_globals;
     Bio::Graphics::Browser2::Render::HTML->new($globals)->run();
 }
 

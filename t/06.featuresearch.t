@@ -38,18 +38,18 @@ END {
 
 chdir $Bin;
 use lib "$Bin/../lib";
-use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render::Slave;
-use Bio::Graphics::Browser::Region;
-use Bio::Graphics::Browser::RegionSearch;
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::Render::Slave;
+use Bio::Graphics::Browser2::Region;
+use Bio::Graphics::Browser2::RegionSearch;
 
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
 # Test remote rendering
-my @servers = (Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # main
-	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # volvox4 "heterodox sites"
-	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # volvox3 "cleavage sites"
+my @servers = (Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # main
+	       Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # volvox4 "heterodox sites"
+	       Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # volvox3 "cleavage sites"
     );
 
 for ('volvox_final.conf','yeast_chr1.conf') {
@@ -71,13 +71,13 @@ for my $s (@servers) {
 $ENV{GBROWSE_DOCS}   = $Bin;
 
 # create objects we need to test region fetching
-my $globals = Bio::Graphics::Browser->new(CONF_FILE);
+my $globals = Bio::Graphics::Browser2->new(CONF_FILE);
 my $session = $globals->session;
 my $source  = $globals->create_data_source('volvox');
 my $state   = $session->page_settings;
 
 # first test that the region search is working
-my $region = Bio::Graphics::Browser::Region->new(
+my $region = Bio::Graphics::Browser2::Region->new(
     { source => $source,
       state  => $state,
       db     => $source->open_database(), # this will open the default database
@@ -104,7 +104,7 @@ ok(scalar @$features,2);
 $features    = $region->search_features({-search_term => 'My_feature:f12'});
 ok(scalar @$features,1);
 
-$region = Bio::Graphics::Browser::Region->new(
+$region = Bio::Graphics::Browser2::Region->new(
     { source => $source,
       state  => $state,
       db     => $source->open_database('CleavageSites'),
@@ -116,7 +116,7 @@ ok(scalar @$features,15);
 $features    = $region->search_features({-search_term => 'Cleavage11'});
 ok(scalar @$features,1);
 
-$region = Bio::Graphics::Browser::Region->new(
+$region = Bio::Graphics::Browser2::Region->new(
     { source => $source,
       state  => $state,
       db     => $source->open_database('Alignments'),
@@ -131,7 +131,7 @@ ok(scalar @$features,1);
 
 
 # now try the local multidatabase functionality
-my $search = Bio::Graphics::Browser::RegionSearch->new(
+my $search = Bio::Graphics::Browser2::RegionSearch->new(
     { source => $source,
       state  => $state,
     }

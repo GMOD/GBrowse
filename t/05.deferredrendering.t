@@ -40,12 +40,12 @@ END {
 
 chdir $Bin;
 use lib "$Bin/../lib";
-use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render::HTML;
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::Render::HTML;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use Storable 'freeze','thaw';
-use Bio::Graphics::Browser::Render::Slave;
+use Bio::Graphics::Browser2::Render::Slave;
 
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
@@ -53,9 +53,9 @@ use TemplateCopy; # for the template_copy() function
 # Test remote rendering
 # Notice that $ENV{GBROWSE_DOCS} is NOT set when we launch these servers.
 # It is set at run time as part of the exchange between master and slave.
-my @servers = (Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # main
-	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # alignments
-	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # cleavage sites
+my @servers = (Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # main
+	       Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # alignments
+	       Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # cleavage sites
     );
 
 for my $s (@servers) {
@@ -84,10 +84,10 @@ $ENV{REQUEST_METHOD} = 'GET';
 $CGI::Q = new CGI('name=ctgA:1..20000;label=CleavageSites-Alignments-Motifs-BindingSites-Clones');
 
 # standard initialization incantation
-my $globals = Bio::Graphics::Browser->new(CONF_FILE);
+my $globals = Bio::Graphics::Browser2->new(CONF_FILE);
 my $session = $globals->session;
 my $source  = $globals->create_data_source('volvox');
-my $render  = Bio::Graphics::Browser::Render::HTML->new($source,$session);
+my $render  = Bio::Graphics::Browser2::Render::HTML->new($source,$session);
 $render->default_state(); 
 $render->init_database;
 $render->init_plugins;

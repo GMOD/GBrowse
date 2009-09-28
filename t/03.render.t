@@ -44,15 +44,15 @@ $ENV{GBROWSE_DOCS} = $Bin;
 
 chdir $Bin;
 use lib "$Bin/../lib";
-use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render::HTML;
-use Bio::Graphics::Browser::Render::Slave;
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::Render::HTML;
+use Bio::Graphics::Browser2::Render::Slave;
 
 # Test remote rendering
 # Notice that $ENV{GBROWSE_DOCS} is NOT set when we launch these servers.
 # It is set at run time as part of the exchange between master and slave.
-my @servers = (Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # alignments
-	       Bio::Graphics::Browser::Render::Slave->new(LocalPort=>'dynamic'), # cleavage sites
+my @servers = (Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # alignments
+	       Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # cleavage sites
     );
 
 # rewrite the template config files
@@ -68,7 +68,7 @@ for my $s (@servers) {
     ok($s->run);
 }
 
-my $globals = Bio::Graphics::Browser->new(CONF_FILE);
+my $globals = Bio::Graphics::Browser2->new(CONF_FILE);
 ok($globals);
 
 ok(my $session     = $globals->session());
@@ -81,7 +81,7 @@ ok($id,$session->id);
 my $source      = $globals->create_data_source($session->source);
 ok($source);
 
-my $render      = Bio::Graphics::Browser::Render->new($source,$session);
+my $render      = Bio::Graphics::Browser2::Render->new($source,$session);
 ok($render);
 
 ok($render->globals,$globals);
@@ -91,7 +91,7 @@ ok(($render->language->language)[0],'posix');
 ok($render->tr('IMAGE_LINK','Link to Image'));
 
 $ENV{'HTTP_ACCEPT_LANGUAGE'} = 'fr';
-$render      = Bio::Graphics::Browser::Render->new($source,$session);
+$render      = Bio::Graphics::Browser2::Render->new($source,$session);
 ok(($render->language->language)[0],'fr');
 ok($render->tr('IMAGE_LINK','Lien vers une image de cet affichage'));
 
@@ -129,7 +129,7 @@ undef $render;
 
 $session = $globals->session($id);
 ok($session->id,$id);
-$render  = Bio::Graphics::Browser::Render::HTML->new($source,$session);
+$render  = Bio::Graphics::Browser2::Render::HTML->new($source,$session);
 ok($render->init_database);
 ok($render->init_plugins);
 ok($render->state->{width},1024);
@@ -171,7 +171,7 @@ ok($render->state->{name},'ctgA:4901..5000');
 
 # Is the asynchronous rendering working
 my ($render_object,$retrieve_object,$status,$mime);
-$CGI::Q = new CGI('right+5000+bp.x=yes;navigate=1');
+$CGI::Q = new CGI('action=navigate;navigate=right+5000+bp');
 ($status,$mime,$render_object) = $render->asynchronous_event();
 if (ok($render_object) and ok($render_object->{'track_keys'})){
 
@@ -211,7 +211,7 @@ if (ok($render_object) and ok($render_object->{'track_data'})){
 
 # Check update sections
 $CGI::Q = new CGI(
-    'update_sections=1'
+    'action=update_sections'
   . '&section_names=nonsense'
   . '&section_names=page_title'
   . '&section_names=span'
@@ -231,7 +231,7 @@ if (ok($render_object) and ok($render_object->{'section_html'})){
 # Check update sections for plugin conifig
 # Nonsense plugin
 $CGI::Q = new CGI(
-    'update_sections=1'
+    'action=update_sections'
   . '&section_names=plugin_configure_div'
   . '&plugin_base=blah'
 );
@@ -243,7 +243,7 @@ if (ok($render_object) and ok($render_object->{'section_html'})){
 
 # No plugin
 $CGI::Q = new CGI(
-    'update_sections=1'
+    'action=update_sections'
   . '&section_names=plugin_configure_div'
 );
 ($status,$mime,$render_object) = $render->asynchronous_event();
@@ -254,7 +254,7 @@ if (ok($render_object) and ok($render_object->{'section_html'})){
 
 # Real plugin
 $CGI::Q = new CGI(
-    'update_sections=1'
+    'action=update_sections'
   . '&section_names=plugin_configure_div'
   . '&plugin_base=RestrictionAnnotator'
 );
@@ -266,7 +266,7 @@ if (ok($render_object) and ok($render_object->{'section_html'})){
 
 # Check New File (this also hits some of the edit file code)
 $CGI::Q = new CGI(
-    'update_sections=1'
+    'action=update_sections'
   . '&section_names=external_utility_div'
   . '&new_edit_file=1'
 );
@@ -278,7 +278,7 @@ if (ok($render_object) and ok($render_object->{'section_html'})){
 
 # no action
 $CGI::Q = new CGI(
-    'update_sections=1'
+    'action=update_sections'
   . '&section_names=external_utility_div'
 );
 ($status,$mime,$render_object) = $render->asynchronous_event();
@@ -426,7 +426,7 @@ $CGI::Q = new CGI('name=kinase;label=Clones-Transcripts-Motifs');
 $ENV{'HTTP_ACCEPT_LANGUAGE'} = 'en';
 
 # start with a fresh renderer!
-$render      = Bio::Graphics::Browser::Render::HTML->new($source,$session);
+$render      = Bio::Graphics::Browser2::Render::HTML->new($source,$session);
 
 {
     local $^W = 0; # bioperl is giving uninit warnings here

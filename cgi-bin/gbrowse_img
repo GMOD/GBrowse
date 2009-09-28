@@ -37,7 +37,7 @@ if ($fcgi) {
     };
 
     while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
-	my $globals = Bio::Graphics::Browser->open_globals;
+	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
 	GBrowse_img->new($globals)->run();
 	$fcgi->Finish();
@@ -46,7 +46,7 @@ if ($fcgi) {
 }
 
 else {
-    my $globals = Bio::Graphics::Browser->open_globals;
+    my $globals = Bio::Graphics::Browser2->open_globals;
     GBrowse_img->new($globals)->run();    
 }
 

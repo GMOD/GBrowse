@@ -41,8 +41,8 @@ $ENV{GBROWSE_DOCS}   = $Bin;
 
 chdir $Bin;
 use lib "$Bin/../lib";
-use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::I18n;
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::I18n;
 use Bio::Graphics::Karyotype;
 
 use lib "$Bin/testdata";
@@ -56,10 +56,10 @@ for ('volvox_final.conf','yeast_chr1.conf') {
 
 
 # create objects we need to test the karyotype generator
-my $globals = Bio::Graphics::Browser->new(CONF_FILE);
+my $globals = Bio::Graphics::Browser2->new(CONF_FILE);
 my $session = $globals->session;
 my $source  = $globals->create_data_source('volvox');
-my $lang    = Bio::Graphics::Browser::I18n->new($source->globals->language_path);
+my $lang    = Bio::Graphics::Browser2::I18n->new($source->globals->language_path);
 $lang->language('en');
 
 my $kg      = Bio::Graphics::Karyotype->new(source   => $source,

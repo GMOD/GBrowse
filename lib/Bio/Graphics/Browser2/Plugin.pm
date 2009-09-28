@@ -703,7 +703,7 @@ instead of the more familiar CGI module's param() function.
 
 
 use strict;
-use Bio::Graphics::Browser;
+use Bio::Graphics::Browser2;
 use Data::Dumper;
 use Digest::MD5 'md5_hex';
 use CGI qw(url header p);

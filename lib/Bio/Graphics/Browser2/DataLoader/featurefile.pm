@@ -43,7 +43,7 @@ END
     if (my @lines = @{$self->{conflines}}) {  # good! user has provided some config hints
 	for my $line (@lines) {
 	    print $conf $line;
-	    if ($line =~ /\^\[/) {
+	    if ($line =~ /^\[/) {
 		print $conf "database = ",$self->track_name,"\n" ;
 		print $conf "category = My Tracks:Uploaded Tracks:",$self->track_name,"\n";
 	    }

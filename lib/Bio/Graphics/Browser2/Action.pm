@@ -208,6 +208,28 @@ sub ACTION_add_tracks {
     return ( 200, 'application/json', $return_object );
 }
 
+sub ACTION_set_track_visibility {
+    my $self = shift;
+    my $q    = shift;
+
+    my $render     = $self->render;
+    my $track_name = $q->param('track_name') or croak;
+    my $visible    = $q->param('visible');
+    
+    warn "$track_name=>$visible" if DEBUG;
+
+    if ($visible) {
+	$render->init_plugins();
+	$render->init_remote_sources();
+	$render->add_track_to_state($track_name);
+    }
+    else {
+	$render->remove_track_from_state($track_name);
+    }
+
+    return (204,'text/plain',undef);
+}
+
 sub ACTION_reconfigure_plugin {
     my $self   = shift;
     my $q      = shift;

@@ -1186,9 +1186,12 @@ sub list_userdata {
 	my $color         = $count++%2 ? 'transparent': 'lightblue';
 	div({-style=>"background-color:$color"},
 	    div({-id=>"${name}_stat"},''),
-	    img({-src=>$share}),
+	    img({-src=>$share,
+		 -onMouseOver => 'balloon.showTooltip(event,"Share with other users",0,100)',
+		}),
 	    img({-src     => $delete,
 		 -style   => 'cursor:pointer',
+		 -onMouseOver => 'balloon.showTooltip(event,"Delete",0,100)',
 		 -onClick => "deleteUploadTrack('$name')"
 		}
 	    ),'&nbsp;',b($name),$modified,br(), 

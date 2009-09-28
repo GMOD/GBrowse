@@ -150,10 +150,10 @@ sub run {
 
   $self->set_source();
 
-
   # This guarantees that all user-specific tracks
   # disappear after the current session completes.
   local $self->data_source->{user_tracks} = {};
+  $self->add_user_tracks($self->data_source);
 
   my $state = $self->state;
 
@@ -1727,7 +1727,6 @@ sub auto_open {
     }
 }
 
-
 sub add_track_to_state {
   my $self  = shift;
   my $label = shift;
@@ -3241,6 +3240,20 @@ sub external_data {
 
     warn "FEATURE files = ",join ' ',%$f if DEBUG;
     return $self->{feature_files} = $f;
+}
+
+# Supplement data source with user uploads
+sub add_user_tracks {
+    my $self        = shift;
+    my $data_source = shift;
+    my $userdata = Bio::Graphics::Browser2::UserTracks->new($data_source,
+							    $self->state,
+							    $self->language);
+    my @user_tracks = $userdata->tracks;
+    for my $track (@user_tracks) {
+	my $config_path = $userdata->track_conf($track);
+	$data_source->parse_user_file($config_path);
+    }
 }
 
 # Delete the segments so that they can be recreated with new parameters

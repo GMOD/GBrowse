@@ -497,7 +497,6 @@ sub invert_types {
   my $config  = $self->{config} or return;
   my %inverted;
   for my $label (keys %{$config}) {
-#    next if $label=~/:?(overview|region)$/;   # special case
     my $feature = $config->{$label}{'feature'} or next;
     foreach (shellwords($feature||'')) {
       $inverted{lc $_}{$label}++;
@@ -675,6 +674,7 @@ sub open_database {
 
   my ($dbid,$adaptor,@argv) = $self->db_settings($track);
   my $db                    = Bio::Graphics::Browser2::DataBase->open_database($adaptor,@argv);
+
 
   # do a little extra stuff the first time we see a new database
   unless ($self->{databases_seen}{$db}++) {
@@ -917,6 +917,9 @@ sub _setting {
 
 sub parse_user_file {
     my $self = shift;
+    $self->{user_tracks}{types}  ||= [];
+    $self->{user_tracks}{config} ||= {};
+
     local $self->{types}  = $self->{user_tracks}{types};
     local $self->{config} = $self->{user_tracks}{config};
     $self->SUPER::parse_file(@_);

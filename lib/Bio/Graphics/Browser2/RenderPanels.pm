@@ -1356,7 +1356,6 @@ sub add_features_to_track {
 					  $segment,
 					  \@types_in_this_db)
 	  or next;
-
       $iterators{$iterator}     = $iterator;
       $iterator2dbid{$iterator} = $source->db2id($db);
   }
@@ -1381,6 +1380,8 @@ sub add_features_to_track {
       $source->add_dbid_to_feature($feature,$iterator2dbid{$iterator});
 
       my @labels = $source->feature2label($feature,$length);
+
+      warn "iterator = $iterator, feature = $feature, labels=@labels";
 
       for my $l (@labels) {
 

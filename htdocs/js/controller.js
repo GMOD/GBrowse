@@ -299,9 +299,9 @@ var GBrowseController = Class.create({
       new Ajax.Request(document.URL,{
         method:     'post',
         parameters: {
-          set_track_visibility:  1,
-          visible:             visible,
-          track_name:          track_name
+	  action:     'set_track_visibility',
+          visible:    visible,
+          track_name: track_name
         },
         onSuccess: function(transport) {
           if (visible && 

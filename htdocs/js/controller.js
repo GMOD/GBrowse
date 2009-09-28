@@ -271,7 +271,7 @@ var GBrowseController = Class.create({
    set_display_option:
    function(option,value) {
 
-     var param = {set_display_option: 1};
+     var param = {action: 'set_display_option'};
      param[option] = value;
      new Ajax.Request(document.URL,
             {
@@ -387,7 +387,7 @@ var GBrowseController = Class.create({
 
     if (force == null) force=false;
 
-    var request_str = "add_tracks=1";
+    var request_str = "action=add_tracks";
     var found_track = false;
     for (var i = 0; i < track_names.length; i++) {
       var track_name = track_names[i];
@@ -461,7 +461,7 @@ var GBrowseController = Class.create({
        new Ajax.Request(document.URL,{
          method:     'post',
          parameters: {
-           rerender_track:  1,
+           action:          'rerender_track',
            track_id:        gbtrack.track_id
          },
          onSuccess: function(transport) {
@@ -527,7 +527,7 @@ var GBrowseController = Class.create({
 
     new Ajax.Request(document.URL,{
       method:     'post',
-      parameters: $H({ retrieve_multiple: 1, 
+      parameters: $H({ action:        'retrieve_multiple', 
                        track_ids:     track_ids
 		    }).toQueryString()  + track_key_str,
       onSuccess: function(transport) {
@@ -654,7 +654,7 @@ var GBrowseController = Class.create({
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
             plugin_action: plugin_action,
-            reconfigure_plugin: 1
+	    action:  'reconfigure_plugin'
           }).toQueryString(),
 
       onSuccess: function(transport) {
@@ -729,13 +729,19 @@ var GBrowseController = Class.create({
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
-            edited_file: edited_file,
-            commit_file_edit: 1
+            action:      'commit_file_edit',
+            edited_file: edited_file
           }).toQueryString(),
       onSuccess: function(transport) {
         var results      = transport.responseJSON;
         var file_created = results.file_created;
 	var tracks       = results.tracks;
+	var error        = results.error;
+	
+	if (error) {
+           alert(error);
+           return; 
+        }        
 
         Controller.wipe_div(external_utility_div_id); 
 
@@ -788,8 +794,8 @@ var GBrowseController = Class.create({
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: {
-        delete_upload_file: 1,
-        file: file_name
+        action: 'delete_upload_file',
+	file:   file_name
       },
       onSuccess: function(transport) {
         Controller.each_track(file_name,function(gbtrack) {
@@ -812,8 +818,8 @@ var GBrowseController = Class.create({
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters:{
-            add_url:    1,
-            eurl:       eurl
+            action: 'add_url',
+            eurl:    eurl
       },
       onSuccess: function(transport) {
         var results     = transport.responseJSON;

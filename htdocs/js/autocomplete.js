@@ -8,7 +8,7 @@ function initAutocomplete() {
                     	 document.URL,
                          {indicator:          'indicator1',
                           parameters:         'action=autocomplete',
-                          paramName:          'autocomplete',
+                          paramName:          'prefix',
 			  minChars:           2
                          }
 	 );

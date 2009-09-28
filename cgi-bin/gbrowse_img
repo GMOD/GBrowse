@@ -4,7 +4,7 @@
 
 use strict;
 
-use Bio::Graphics::Browser;
+use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::Render;
 use Bio::Graphics::Browser2::Util;
 use Digest::MD5 'md5_hex';

@@ -248,15 +248,9 @@ sub run_asynchronous_event {
 
 # handle asynchronous events
 #
-# asynchronous requests:
-#
-# div_visible_<label>=bool              Turn on/off visibility of track with <label>
-# track_collapse_<label>=bool           Collapse/uncollapse track with <label>
-# label[]=<label1>,label[]=<label2>...  Change track order
-# render=<label1>,render=<label2>...    Render the specified tracks
-# navigate=
-#
-# returns ($http_status,$mime_type,$body_data)
+# Asynchronous requests. See Bio::Graphics::Browser2::Action for dispatch
+# table. Each request returns a three element list of format:
+#    ($http_status,$mime_type,$body_data)
 sub asynchronous_event {
     my $self     = shift;
     my $settings = $self->state;
@@ -264,350 +258,32 @@ sub asynchronous_event {
 
     warn "event(",(join ' ',param()),")" if DEBUG;
 
-    # the big IF/ELSE statement that follows is HORRIBLE,
-    # so we are slowly cleaning this up with a more orderly
-    # dispatch object.
-    if (my $action = param('action')) {
+    # TO ADD AN ASYNCHRONOUS REQUEST...
+    # 1. Give the request a unique name, such as "foo"
+    # 2. Arrange for the client to POST or GET the document URL with a CGI
+    #    argument list that includes "action=foo".
+    # 3. Modify Bio::Graphics::Browser2::Action to include a method named
+    #    ACTION_foo that processes the request. The method will receive 
+    #    the CGI object as its argument, and is expected to return
+    #    a three-item list consisting of the HTTP status code, the MIME type,
+    #    and the message contents in the appropriate format for the MIME type.
+    #    Within the method call $self->render()
+    #    to get this Bio::Graphics::Browser2::Render object.
+
+    # legacy URLs
+    if (my @result = Bio::Graphics::Browser2::Action->handle_legacy_calls($CGI::Q,$self)) {
+	return @result;
+    }
+
+    elsif (my $action = param('action')) {
 	my $dispatch = Bio::Graphics::Browser2::Action->new($self);
 	my $method   = "ACTION_${action}";
 	return $dispatch->$method($CGI::Q);
     }
 
-    # everything below here should be migrated into Bio::Graphics::Browser2::Action
-
-    if ( my $track_name = param('share_track') ) {
-        my $html = $self->share_track($track_name);
-        return ( 200, 'text/html', $html );
+    else {
+	return;
     }
-
-    if ( my $element = param('update') ) {
-        warn "UPDATE HAS BEEN DEPRECATED";
-        my $html = $self->asynchronous_update_element($element);
-	return (200,'text/html',$html);
-    }
-
-    if ( param('retrieve_multiple') ) {
-        $self->init_plugins();
-        $self->init_remote_sources();
-
-        my %track_html;
-        my @track_ids = param('track_ids');
-
-        foreach my $track_id (@track_ids) {
-            my $track_key = param( 'tk_' . $track_id ) or next;
-	    warn "retrieving $track_id=>$track_key" if DEBUG;
-            $track_html{$track_id} = $self->render_deferred_track(
-                cache_key  => $track_key,
-                track_id   => $track_id,
-            ) || '';
-        }
-
-        my $return_object = { track_html => \%track_html, };
-        return ( 200, 'application/json', $return_object );
-    }
-
-    if ( my $action = param('add_tracks') ) {
-        my @track_names = param('track_names');
-
-        $self->init_database();
-        $self->init_plugins();
-        $self->init_remote_sources();
-        my %track_data;
-
-        foreach my $track_name ( @track_names ) {
-	    warn "add_track_to_state($track_name)" if DEBUG;
-
-            $self->add_track_to_state($track_name);
-	    next unless $self->segment;
-
-	    my @track_ids = $self->expand_track_names($track_name);
-
-	    for my $track_id (@track_ids) {
-
-		warn "rendering track $track_id" if DEBUG;
-
-		my ( $track_keys, $display_details, $details_msg )
-		    = $self->background_individual_track_render($track_id);
-
-		my $track_key        = $track_keys->{$track_id};
-		my $track_section    = $self->get_section_from_label($track_id);
-		my $image_width      = $self->get_image_width;
-		my $image_element_id = $track_name . "_image";
-
-		my $track_html;
-		if ( $track_section eq 'detail' and not $display_details ) {
-		    my $image_width = $self->get_image_width;
-		    $track_html .= $self->render_grey_track(
-			track_id         => $track_name,
-			image_width      => $image_width,
-			image_height     => EMPTY_IMAGE_HEIGHT,
-			image_element_id => $track_name . "_image",
-			);
-		}
-		else {
-		    $track_html = $self->render_deferred_track(
-			cache_key  => $track_key,
-			track_id   => $track_id,
-			) || '';
-		}
-		$track_html = $self->wrap_track_in_track_div(
-		    track_id   => $track_id,
-		    track_name => $track_name,
-		    track_html => $track_html,
-		    );
-
-		my $panel_id = 'detail_panels';
-		if ( $track_id =~ /:overview$/ ) {
-		    $panel_id = 'overview_panels';
-		}
-		elsif ( $track_id =~ /:region$/ ) {
-		    $panel_id = 'region_panels';
-		}
-		warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name, panel_id=$panel_id" if DEBUG;
-		
-		$track_data{$track_id} = {
-		    track_key        => $track_key,
-		    track_id         => $track_id,
-		    track_name       => $track_name,
-		    track_html       => $track_html,
-		    track_section    => $track_section,
-		    image_element_id => $image_element_id,
-		    panel_id         => $panel_id,
-		    display_details  => $display_details,
-		    details_msg      => $details_msg,
-		};
-	    }
-	}
-
-        my $return_object = { track_data => \%track_data, };
-        return ( 200, 'application/json', $return_object );
-    }
-    if ( param('set_track_visibility') ) {
-        my $visible    = param('visible');
-        my $track_name = param('track_name');
-
-	param('track_name'),'=>',param('visible') if DEBUG;
-
-        if ($visible) {
-	    $self->init_plugins();
-	    $self->init_remote_sources();
-            $self->add_track_to_state($track_name);
-        }
-        else {
-            $self->remove_track_from_state($track_name);
-        }
-
-        return (204,'text/plain',undef);
-    }
-
-    if ( my $action = param('rerender_track') ) {
-        my $track_id = param('track_id');
-
-        $self->init_database();
-        $self->init_plugins();
-        $self->init_remote_sources();
-
-        my ( $track_keys, $display_details, $details_msg )
-            = $self->background_individual_track_render($track_id);
-
-        my $return_object = {
-            track_keys      => $track_keys,
-            display_details => $display_details,
-            details_msg     => $details_msg,
-        };
-        return (200,'application/json',$return_object);
-    }
-
-    if ( param('reconfigure_plugin') ) {
-        # init_plugins will do the configure call needed
-        $self->init_plugins();
-	return (204,'text/plain',undef);
-    }
-
-    if ( param('commit_file_edit') ) {
-        my $data        = param('a_data');
-        my $edited_file = param('edited_file');
-
-        return ( 204, 'text/plain', undef ) unless ( $edited_file and $data );
-        $self->init_remote_sources();
-        my ($file_created,$tracks) = $self->handle_edit( $edited_file, $self->state, $data );
-
-        my $return_object = {
-            file_created   => $file_created,
-	    tracks         => $tracks,
-        };
-
-        return (200,'application/json',$return_object);
-    }
-
-    if (param ('add_url')) {
-	my $data = param('eurl');
-	$self->init_remote_sources;
-	$self->remote_sources->add_source($data);
-	$self->add_track_to_state($data);
-	warn "adding $data to remote sources" if DEBUG;
-	return (200,'application/json',{url_created=>1});
-    }
-
-    if ( param('delete_upload_file') ) {
-        my $file = param('file');
-	warn "deleting file $file " if DEBUG;
-        $self->init_remote_sources();
-        $self->uploaded_sources->clear_file($file);
-        $self->remote_sources->delete_source($file);
-        $self->remove_track_from_state($file);
-
-        return (204,'text/plain',undef);
-    }
-
-    # toggle the visibility of sections by looking for "div_visible_*"
-    # parameters
-    for my $p ( grep {/^div_visible_/} param() ) {
-        my $visibility = param($p);
-        $p =~ s/^div_visible_//;
-        $settings->{section_visible}{$p} = $visibility;
-        $events++;
-    }
-
-    # toggle the visibility of individual tracks
-    for my $p ( grep {/^track_collapse_/} param() ) {
-        my $collapsed = param($p);
-        $p =~ s/^track_collapse_//;
-	warn "\$settings->{track_collapsed}{$p} = $collapsed" if DEBUG;
-        $settings->{track_collapsed}{$p} = $collapsed;
-        $events++;
-    }
-
-    # Change the order of tracks if any "label[]" parameters are present
-    if ( my @labels = param('label[]') ) {
-        foreach (@labels) {
-	    s/%5F/_/g;
-	    s/:(overview|region|detail)$// if m/^(plugin|file|http|ftp):/;
-	}
-        my %seen;
-        @{ $settings->{tracks} } = grep { length() > 0 && !$seen{$_}++ }
-            ( @labels, @{ $settings->{tracks} } );
-        $events++;
-    }
-
-    # Slightly different -- process a tracks request in the background.
-    if ( my @labels = param('render') ) {    # deferred rendering requested
-        $self->init_database();
-        $self->init_plugins();
-        $self->init_remote_sources();
-        my $features = $self->region->features;
-        my $seg      = $self->features2segments($features)->[0];    # likely wrong
-
-        $self->set_segment($seg);
-
-        my $deferred_data = $self->render_deferred( labels => \@labels );
-	return (200,'application/json',$deferred_data);
-    }
-
-    # miscellaneous options
-    if (param('set_display_option')) {
-	$self->update_options();
-	$events++;
-    }
-
-    # redirect to the bookmark
-    if (param('bookmark')) {
-	return (302,undef,$self->bookmark_link($self->state));
-    }
-
-    # redirect to galaxy form submission
-    if (param('galaxy')) {
-	return (302,undef,$self->galaxy_link($self->state));
-    }
-
-    # redirect to the imagelink
-    if (my $format = param('make_image')) {
-	return (302,undef,$self->image_link($self->state,$format));
-    }
-
-    # autocomplete support
-    if (my $match  = param('autocomplete')) {
-	my $search = $self->get_search_object;
-	my $matches= $search->features_by_prefix($match,100);
-	my $autocomplete = $self->format_autocomplete($matches,$match);
-	return (200,'text/html',$autocomplete);
-    }
-
-    # clear a cached data source
-    if (param('clear_dsn') || param('reset_dsn')) {
-	$self->data_source->clear_cached_config();
-	return (204,'text/plain',undef);
-    }
-
-    # authorize an attempted login
-    if (param('authorize_login') && param('username') && param('session') && param('openid')) {
-	my ($id,$nonce) = $self->authorize_user(param('username'),param('session'),param('remember'),param('openid'));
-	return (200,'application/json',{id=>$id,authority=>$nonce});
-    }
-
-    # add a dummy track to the user data
-    if (param('new_test_track')) {
-	my $userdata = Bio::Graphics::Browser2::UploadSet->new($self->data_source,
-							      $self->state,
-							      $self->language);
-	warn "Adding test track for ",$self->state->{uploadid}," path = ",($userdata->name_file('test'))[1];
-	return (204,'text/plain',undef);
-    }
-
-    # new-style ajax upload
-    if (param('new_file_submit')) {
-	if (my $fh = param('new_file_upload')) {
-	    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
-								   $self->state,
-								   $self->language);
-	    warn "created userdata $userdata";
-	    my $name = basename($fh );
-	    $self->state->{current_upload} = $name;
-	    $self->session->flush();
-	    $self->session->unlock();
-	    my ($result,$msg) = $userdata->upload_track($name,$fh);
-	    return $msg ? (200,
-			 'text/html',
-			 "<pre style='background-color:pink'>$msg</pre>".
-			 a({
-			     -href    =>'javascript:void(0)',
-			     -onClick =>"\$('upload_status').innerHTML=''"
-			   },
-			   '[Remove]'
-			 )
-		)
-		      : (200,'text/plain',undef);
-	}
-	return (204,'text/plain',undef);
-    }
-
-    if (param('new_file_upload_status')) {
-	my $status    = 'status unknown';
-	my $file_name = 'Unknown';
-
-	if ($file_name = $self->state->{current_upload}) {
-	    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
-								   $self->state,
-								   $self->language);
-	    $status      = $userdata->status($file_name);
-	    return (200,'text/html',"<b>$file_name:</b> <i>$status</i>");
-        } else {
-	    return (204,'text/plain',undef);
-	}
-    }
-
-    if (my $track = param('deleteUploadTrack')) {
-	my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
-							       $self->state,
-							       $self->language);
-	$userdata->delete_track($track);
-	return (204,'text/plain',undef);
-    }
-
-    return unless $events;
-    warn "processing asynchronous event(s)" if DEBUG;
-    return (204,'text/plain',undef);
-    1;
 }
 
 sub authorize_user {
@@ -709,6 +385,81 @@ sub background_track_render {
     warn "background_track_render() return track keys ",join ' ',%track_keys if DEBUG;
 
     return (\%track_keys, $display_details, $details_msg);
+}
+
+sub add_tracks {
+    my $self        = shift;
+    my $track_names = shift;
+
+    my %track_data;
+
+    foreach my $track_name ( @$track_names ) {
+
+	warn "add_track_to_state($track_name)" if DEBUG;
+
+	$self->add_track_to_state($track_name);
+	next unless $self->segment;
+
+	my @track_ids = $self->expand_track_names($track_name);
+
+	for my $track_id (@track_ids) {
+
+	    warn "rendering track $track_id" if DEBUG;
+
+	    my ( $track_keys, $display_details, $details_msg )
+		= $self->background_individual_track_render($track_id);
+	    
+	    my $track_key        = $track_keys->{$track_id};
+	    my $track_section    = $self->get_section_from_label($track_id);
+	    my $image_width      = $self->get_image_width;
+	    my $image_element_id = $track_name . "_image";
+
+	    my $track_html;
+	    if ( $track_section eq 'detail' and not $display_details ) {
+		my $image_width = $self->get_image_width;
+		$track_html .= $self->render_grey_track(
+		    track_id         => $track_name,
+		    image_width      => $image_width,
+		    image_height     => EMPTY_IMAGE_HEIGHT,
+		    image_element_id => $track_name . "_image",
+		    );
+	    }
+	    else {
+		$track_html = $self->render_deferred_track(
+		    cache_key  => $track_key,
+		    track_id   => $track_id,
+		    ) || '';
+	    }
+	    $track_html = $self->wrap_track_in_track_div(
+		track_id   => $track_id,
+		track_name => $track_name,
+		track_html => $track_html,
+		);
+	    
+	    my $panel_id = 'detail_panels';
+	    if ( $track_id =~ /:overview$/ ) {
+		$panel_id = 'overview_panels';
+	    }
+	    elsif ( $track_id =~ /:region$/ ) {
+		$panel_id = 'region_panels';
+	    }
+	    warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name, panel_id=$panel_id" if DEBUG;
+	    
+	    $track_data{$track_id} = {
+		track_key        => $track_key,
+		track_id         => $track_id,
+		track_name       => $track_name,
+		track_html       => $track_html,
+		track_section    => $track_section,
+		image_element_id => $image_element_id,
+		panel_id         => $panel_id,
+		display_details  => $display_details,
+		details_msg      => $details_msg,
+	    };
+	}
+    }
+
+    return \%track_data;
 }
 
 sub create_cache_extra {
@@ -1723,7 +1474,11 @@ sub handle_edit {
 							 $self->state,
 							 $self->language);
     $uploads->add_file($uploads->name_file($file));
-    my @sections = eval {$self->_featurefile_sections($uploads->feature_file($file))};
+
+    my $ff = eval {$uploads->feature_file($file)};
+    return (0,[],$@) unless $ff;
+
+    my @sections = $self->_featurefile_sections($ff);
     my @tracks   = map {"$file:$_"} @sections;
 
     warn "will return tracks @tracks" if DEBUG;
@@ -3476,9 +3231,11 @@ sub external_data {
 	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} if DEBUG;
 	    next unless $featureset;
 
-	    $featureset->annotate($meta_segment,$f,
-				  $rel2abs,$rel2abs_slow,$max_segment,
-				  $self->whole_segment,$self->region_segment);
+	    eval {
+		$featureset->annotate($meta_segment,$f,
+				      $rel2abs,$rel2abs_slow,$max_segment,
+				      $self->whole_segment,$self->region_segment);
+	    };
 	}
     }
 
@@ -3546,9 +3303,6 @@ sub bookmark_link {
   $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
   my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
   $q->param(-name=>'h_feat',  -value=>\@h_feat) if @h_feat;
-
-  warn 'query string = ',$q->query_string();
-
   return "?".$q->query_string();
 }
 

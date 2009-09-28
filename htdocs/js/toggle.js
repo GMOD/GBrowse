@@ -6,7 +6,8 @@ function turnOff (element) {
 }
 
 function setVisState (element_name,is_visible) {
-  var postData = 'div_visible_'+ element_name + '=' + is_visible;
+  var visibility = is_visible ? 'show' : 'hide';
+  var postData   = 'action=show_hide_section;'+visibility+'='+element_name;
   new Ajax.Request(document.URL,{method:'post',postBody:postData});
 }
 
@@ -51,7 +52,9 @@ function collapse(element_name) {
      pad.style.display = 'none';
      control.className = 'titlebar';
    }
-   var postData = 'track_collapse_'+ escape(element_name) + '=' + (closeit ? 1 : 0);
+   
+   var direction = closeit ? 'collapse' : 'open';
+   var postData  = 'action=open_collapse_track;'+direction+'='+escape(element_name);
    new Ajax.Request(document.URL,{method:'post',postBody:postData});
    return false;
 }

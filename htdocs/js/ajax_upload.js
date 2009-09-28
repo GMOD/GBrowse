@@ -65,7 +65,7 @@ function startAjaxUpload() {
   $('upload_status').innerHTML = '<b>Uploading...</b>';
   $('ajax_upload').hide();
   if (Ajax_Status_Updater==null)
-     Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('upload_status'),'#',{parameters:{new_file_upload_status:1}});
+     Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('upload_status'),'#',{parameters:{action:'upload_status'}});
   else
      Ajax_Status_Updater.start();
   return true;
@@ -86,7 +86,9 @@ function deleteUploadTrack (trackName) {
    $(indicator).innerHTML = "<image src='/gbrowse2/images/buttons/ajax-loader.gif' />";
    new Ajax.Request(document.URL, {
         method:      'post',
-        parameters:  {deleteUploadTrack:trackName},
+        parameters:  {action: 'delete_upload',
+	              track:  trackName
+		      },
         onSuccess:   function (transport) {
                  Controller.update_sections(new Array(userdata_table_id));
 		 }

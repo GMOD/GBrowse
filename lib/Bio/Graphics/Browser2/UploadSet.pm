@@ -152,14 +152,13 @@ sub feature_file {
   my $fh   = $self->open_file($url) or return;
   my $safe = $self->config->setting('allow remote callbacks') || 0;
   warn "creating $url feature_file" if DEBUG;
-  my $feature_file = eval {
+  my $feature_file = 
       Bio::Graphics::FeatureFile->new(-file             => $fh,
 				      -smart_features   => 1,
 				      -allow_whitespace => 1,
 				      -safe_world       => $safe,
 				      @args,
-	  );
-  };
+      );
   close $fh;
 
   # BUG: breaking encapsulation here

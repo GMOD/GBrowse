@@ -73,7 +73,6 @@ sub filter {
     warn $@ if $@;
     return $filter,"$key (filter incorrect)" if $@;  # error occurred
     
-    my $value   = $config->{filter_value};
     my $new_key = $FILTERS[ $config->{filter} ][1] =~ m/\$value/
 	          ? "$key ($FILTERS[$config->{filter}][0] $value)"
                   : "$key ($FILTERS[$config->{filter}][0])" ;

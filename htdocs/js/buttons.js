@@ -97,7 +97,7 @@ function create_drag (div_name) {
 		      handle:  'titlebar',
 		      scroll:   window,
 		      onUpdate: function() {
-		      var postData = Sortable.serialize(div_name,{name:'label'});
+		      var postData = Sortable.serialize(div_name,{name:'label'})+';action=change_track_order';
 		      new Ajax.Request(document.URL,{method:'post',postBody:postData});
 		    }
 		  }

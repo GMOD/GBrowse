@@ -314,7 +314,7 @@ sub render_html_head {
 	      -head     => \@extra_headers,
 	     );
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
-  my $autocomplete = ''; # $self->setting('autocomplete') ? 'initAutocomplete()' : '';
+  my $autocomplete = '';
   push @args,(-onLoad=>"initialize_page();$set_dragcolors;$autocomplete");
 
   return start_html(@args);
@@ -583,7 +583,7 @@ sub render_links {
       );
 
   my @segment_showing_links =(
-      a({-href=>'?bookmark=1'},'['.$self->tr('BOOKMARK').']'),
+      a({-href=>'?action=bookmark'},'['.$self->tr('BOOKMARK').']'),
       a({-href=>'#',
 	 -onMouseDown=>'visibility("upload_tracks_panel",1);new Effect.ScrollTo("upload_tracks_panel");setTimeout(\'new Effect.Highlight("upload_tracks_panel_title")\',1000)'},
       '['.$self->tr('Add_your_own_tracks').']'),
@@ -643,7 +643,7 @@ sub galaxy_form {
     }
 
     my $action = $galaxy_url =~ /\?/ ? "$galaxy_url&URL=$URL" : "$galaxy_url?URL=$URL";
-    
+
     my $html = start_multipart_form(-name  => 'galaxyform',
 				    -action => $action,
 				    -method => 'POST');
@@ -1213,8 +1213,9 @@ sub userdata_upload {
       action="$url"
       enctype="multipart/form-data"
        method="post">
-        <input type="file"   name="new_file_upload" id="new_upload_field" />
-        <input type="submit" name="new_file_submit" value="Upload"/>
+        <input type="file"   name="file"        id="upload_field" />
+        <input type="submit" name="submit"      value="Upload" />
+        <input type="hidden" name="action"      value="upload_file" />
         <a href="javascript:void(0)" onClick="this.parentNode.remove()">Remove</a>
 </form>
 END

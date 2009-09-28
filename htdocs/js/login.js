@@ -582,7 +582,7 @@ function login_user(username,session,remember) {
 function login_get_account(username,session,remember,openid) {
     new Ajax.Request(document.URL,{
         method:      'post',
-        parameters: {authorize_login: 1,
+        parameters: {action:   'authorize_login',
                      username: username,
                      session:  session,
                      remember: remember,

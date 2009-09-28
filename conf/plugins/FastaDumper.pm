@@ -1,9 +1,9 @@
-package Bio::Graphics::Browser::Plugin::FastaDumper;
+package Bio::Graphics::Browser2::Plugin::FastaDumper;
 # $Id: FastaDumper.pm,v 1.11 2005-12-09 22:19:09 mwz444 Exp $
 # test plugin
 use strict;
-use Bio::Graphics::Browser::Plugin;
-use Bio::Graphics::Browser::Markup;
+use Bio::Graphics::Browser2::Plugin;
+use Bio::Graphics::Browser2::Markup;
 
 use CGI qw(:standard );
 
@@ -40,7 +40,7 @@ BEGIN {
 
 $VERSION = '0.20';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Decorated FASTA File" }
 sub description {
@@ -75,7 +75,7 @@ sub dump {
       $dna = reverse $dna;
       $dna =~ tr/gatcGATC/ctagCTAG/;
     }
-    my $markup = Bio::Graphics::Browser::Markup->new;
+    my $markup = Bio::Graphics::Browser2::Markup->new;
 
     while( my ($type,$val) = each %{$config} ) {
 

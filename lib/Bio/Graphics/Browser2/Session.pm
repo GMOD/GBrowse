@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::Session;
+package Bio::Graphics::Browser2::Session;
 
 # $Id: Session.pm,v 1.18 2009-08-27 19:13:19 idavies Exp $
 

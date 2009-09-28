@@ -1,8 +1,8 @@
-package Bio::Graphics::Browser::Plugin::SimpleTrackFinder;
+package Bio::Graphics::Browser2::Plugin::SimpleTrackFinder;
 # $Id: SimpleTrackFinder.pm,v 1.2 2009-05-20 21:29:40 lstein Exp $
 use strict;
 use CGI qw(:standard *table);
-use base 'Bio::Graphics::Browser::Plugin';
+use base 'Bio::Graphics::Browser2::Plugin';
 our $VERSION = '0.25';
 
 sub name { "Simple Track Finder" }
@@ -66,7 +66,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::SimpleTrackFinder - Limit list of tracks to those that match a name pattern
+Bio::Graphics::Browser2::Plugin::SimpleTrackFinder - Limit list of tracks to those that match a name pattern
 
 =head1 SYNOPSIS
 
@@ -93,7 +93,7 @@ None known yet.
 
 =head1 SEE ALSO
 
-L<Bio::Graphics::Browser::Plugin>
+L<Bio::Graphics::Browser2::Plugin>
 
 =head1 AUTHOR
 

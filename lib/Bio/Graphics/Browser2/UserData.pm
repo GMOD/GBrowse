@@ -1,10 +1,10 @@
-package Bio::Graphics::Browser::UserData;
+package Bio::Graphics::Browser2::UserData;
 
-# base class for Bio::Graphics::Browser::UploadSet and Bio::Graphics::Browser::RemoteSet;
+# base class for Bio::Graphics::Browser2::UploadSet and Bio::Graphics::Browser::RemoteSet;
 
 use strict;
 use Carp 'croak';
-use Bio::Graphics::Browser::Util 'error';
+use Bio::Graphics::Browser2::Util 'error';
 use Bio::Graphics::Wiggle;
 
 use constant DEBUG => 0;

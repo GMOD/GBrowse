@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::Shellwords;
+package Bio::Graphics::Browser2::Shellwords;
 
 require Text::ParseWords;
 

@@ -1,10 +1,10 @@
-package Bio::Graphics::Browser::UploadSet;
+package Bio::Graphics::Browser2::UploadSet;
 # API for handling uploaded files
 
 use strict;
-use base 'Bio::Graphics::Browser::UserData';
+use base 'Bio::Graphics::Browser2::UserData';
 
-use Bio::Graphics::Browser::Util 'shellwords','error';
+use Bio::Graphics::Browser2::Util 'shellwords','error';
 use CGI 'cookie','param';
 use Digest::MD5 'md5_hex';
 use Carp qw/carp croak cluck/;
@@ -208,7 +208,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Browser::UploadSet -- A set of uploaded feature files
+Bio::Graphics::Browser2::UploadSet -- A set of uploaded feature files
 
 =head1 SYNOPSIS
 
@@ -218,7 +218,7 @@ None.  Used internally by gbrowse & gbrowse_img.
 
 =over 4
 
-=item $upload_set = Bio::Graphics::Browser::UploadSet->new($config,$state)
+=item $upload_set = Bio::Graphics::Browser2::UploadSet->new($config,$state)
 
 Initialize uploaded files according to the configuration and page
 state.  Returns an object.

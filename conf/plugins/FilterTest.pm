@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::Plugin::FilterTest;
+package Bio::Graphics::Browser2::Plugin::FilterTest;
 
 # $Id: FilterTest.pm,v 1.3 2009-05-22 21:37:09 lstein Exp $
 # Filter plugin to filter features from the ORFs track
@@ -7,12 +7,12 @@ use strict;
 use vars qw($VERSION @ISA);
 use constant DEBUG => 0;
 
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use CGI qw(:standard *pre);
 
 $VERSION = '0.O1';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 my @FILTERS = (
     [

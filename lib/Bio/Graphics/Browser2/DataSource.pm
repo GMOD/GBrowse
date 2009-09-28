@@ -1,12 +1,12 @@
-package Bio::Graphics::Browser::DataSource;
+package Bio::Graphics::Browser2::DataSource;
 
 use strict;
 use warnings;
-use base 'Bio::Graphics::Browser::AuthorizedFeatureFile';
+use base 'Bio::Graphics::Browser2::AuthorizedFeatureFile';
 
-use Bio::Graphics::Browser::Shellwords;
-use Bio::Graphics::Browser::Util 'modperl_request';
-use Bio::Graphics::Browser::DataBase;
+use Bio::Graphics::Browser2::Shellwords;
+use Bio::Graphics::Browser2::Util 'modperl_request';
+use Bio::Graphics::Browser2::DataBase;
 use File::Basename 'dirname';
 use File::Path 'mkpath';
 use File::Spec;
@@ -674,7 +674,7 @@ sub open_database {
   $track  ||= 'general';
 
   my ($dbid,$adaptor,@argv) = $self->db_settings($track);
-  my $db                    = Bio::Graphics::Browser::DataBase->open_database($adaptor,@argv);
+  my $db                    = Bio::Graphics::Browser2::DataBase->open_database($adaptor,@argv);
 
   # do a little extra stuff the first time we see a new database
   unless ($self->{databases_seen}{$db}++) {

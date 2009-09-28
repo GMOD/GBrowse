@@ -1,15 +1,15 @@
-package Bio::Graphics::Browser::Plugin::AlignTwoSequences;
+package Bio::Graphics::Browser2::Plugin::AlignTwoSequences;
 # $Id: AlignTwoSequences.pm,v 1.2 2003-08-27 21:17:46 markwilkinson Exp $
 
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use CGI qw(:standard *table);
 use vars '$VERSION','@ISA','$blast_executable';
 
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::AlignTwoSequences -- a plugin that executes NCBI's bl2seq on the current view
+Bio::Graphics::Browser2::Plugin::AlignTwoSequences -- a plugin that executes NCBI's bl2seq on the current view
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,7 @@ $blast_executable = "";
 
 $VERSION = '0.02';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 my @COLORS = qw(red green blue orange cyan black 
 		turquoise brown indigo wheat yellow emerald);

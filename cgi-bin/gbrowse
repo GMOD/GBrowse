@@ -3,11 +3,11 @@
 use strict;
 use CGI;
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render::HTML;
+use Bio::Graphics::Browser2::Render::HTML;
 
 umask 022;
 
-my $fcgi   = Bio::Graphics::Browser::Render->fcgi_request;
+my $fcgi   = Bio::Graphics::Browser2::Render->fcgi_request;
 
 if ($fcgi) {
 
@@ -22,12 +22,12 @@ if ($fcgi) {
     while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
 	my $globals = Bio::Graphics::Browser->open_globals;
 	CGI->initialize_globals();
-	Bio::Graphics::Browser::Render::HTML->new($globals)->run();
+	Bio::Graphics::Browser2::Render::HTML->new($globals)->run();
     }
 
 } else {
     my $globals = Bio::Graphics::Browser->open_globals;
-    Bio::Graphics::Browser::Render::HTML->new($globals)->run();
+    Bio::Graphics::Browser2::Render::HTML->new($globals)->run();
 }
 
 exit 0;

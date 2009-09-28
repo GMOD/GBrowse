@@ -1,8 +1,8 @@
-package Bio::Graphics::Browser::DataLoader::bam;
+package Bio::Graphics::Browser2::DataLoader::bam;
 
 # $Id: bam.pm,v 1.1 2009-07-30 16:38:03 lstein Exp $
 use strict;
-use base 'Bio::Graphic::Browser::DataLoader';
+use base 'Bio::Graphic::Browser2::DataLoader';
 
 sub start_load {
     my $self = shift;

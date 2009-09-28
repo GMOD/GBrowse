@@ -1,14 +1,14 @@
-package Bio::Graphics::Browser::Util;
+package Bio::Graphics::Browser2::Util;
 
 # a package of useful internal routines for GBrowse
 
 =head1 NAME
 
-Bio::Graphics::Browser::Util -- Exported utilities
+Bio::Graphics::Browser2::Util -- Exported utilities
 
 =head1 SYNOPSIS
 
-  use Bio::Graphics::Browser::Util;
+  use Bio::Graphics::Browser2::Util;
 
   my $r = modperl_request();
 

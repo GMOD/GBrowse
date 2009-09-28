@@ -2,16 +2,16 @@
 
 =head1 NAME
 
-Bio::Graphics::Browser::GFFhelper -- Helps gbrowse plugins handle GFF
+Bio::Graphics::Browser2::GFFhelper -- Helps gbrowse plugins handle GFF
 
 =head1 SYNOPSIS
 
-  package Bio::Graphics::Browser::Plugin::MyPlugin;
+  package Bio::Graphics::Browser2::Plugin::MyPlugin;
 
   use vars qw/@ISA $ROLLBACK/;
 
-  @ISA = qw/ Bio::Graphics::Browser::Plugin 
-             Bio::Graphics::Browser::GFFhelper /;
+  @ISA = qw/ Bio::Graphics::Browser2::Plugin 
+             Bio::Graphics::Browser2::GFFhelper /;
 
   $ROLLBACK = '/tmp/';
 
@@ -101,7 +101,7 @@ please see DISCLAIMER.txt for disclaimers of warranty.
 
 =cut
 
-package Bio::Graphics::Browser::GFFhelper;
+package Bio::Graphics::Browser2::GFFhelper;
 
 use strict;
 use IO::String;
@@ -270,7 +270,7 @@ sub gff_header {
     # don't give GFF.pm this line if the segment exists
     $header   .= "##sequence-region $ref $start $end\n" unless $exists;
     
-    $header .= "##source Bio::Graphics::Browser::GFFhelper.pm";
+    $header .= "##source Bio::Graphics::Browser2::GFFhelper.pm";
     $header;
 }
 

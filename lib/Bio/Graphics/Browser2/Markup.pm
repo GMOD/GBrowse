@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::Markup;
+package Bio::Graphics::Browser2::Markup;
 
 use strict;
 use Carp 'croak';
@@ -6,7 +6,7 @@ use Bio::Graphics::Panel;
 
 =head1 NAME
 
-Bio::Graphics::Browser::Markup - Markup routines for sequences in text form
+Bio::Graphics::Browser2::Markup - Markup routines for sequences in text form
 
 =head1 VERSION (CVS-info)
 
@@ -17,10 +17,10 @@ Bio::Graphics::Browser::Markup - Markup routines for sequences in text form
 
 =head1 SYNOPSIS
 
- use Bio::Graphics::Browser::Markup;
+ use Bio::Graphics::Browser2::Markup;
 
  my $string = join '','a'..'z','a'..'z','a'..'z';
- my $markup = Bio::Graphics::Browser::Markup->new;
+ my $markup = Bio::Graphics::Browser2::Markup->new;
 
  $markup->add_style(cds=>'UPPERCASE');
  $markup->add_style(exon     =>'Text-decoration: underline');
@@ -61,7 +61,7 @@ intersecting colors are added up.
 =head1 METHODS
 
 
-=head2 $annotator = Bio::Graphics::Browser::Markup->new
+=head2 $annotator = Bio::Graphics::Browser2::Markup->new
 
 Create a new Markup object.
 
@@ -582,7 +582,7 @@ L<Bio::Graphics::Glyph>,
 L<Bio::Graphics::Feature>,
 L<Bio::Graphics::FeatureFile>,
 L<Bio::Graphics::Browser>,
-L<Bio::Graphics::Browser::Plugin>
+L<Bio::Graphics::Browser2::Plugin>
 
 =head1 AUTHOR
 

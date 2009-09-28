@@ -1,8 +1,8 @@
-package Bio::Graphics::Browser::Plugin::OligoFinder;
+package Bio::Graphics::Browser2::Plugin::OligoFinder;
 # $Id: OligoFinder.pm,v 1.9 2004-08-23 15:56:31 lstein Exp $
 # test plugin
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use Bio::Graphics::Feature;
 use Text::Shellwords;
 use DBI;
@@ -11,7 +11,7 @@ use CGI qw(:standard *table);
 use vars '$VERSION','@ISA';
 $VERSION = '0.15';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Short Oligos" }
 

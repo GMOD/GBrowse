@@ -1,14 +1,14 @@
-package Bio::Graphics::Browser::Plugin::test;
+package Bio::Graphics::Browser2::Plugin::test;
 # $Id: test.pm,v 1.1 2002-03-25 05:31:45 lstein Exp $
 # test plugin
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use CGI qw(param url header p);
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.10';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Test" }
 sub description {

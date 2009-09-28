@@ -1,10 +1,10 @@
-package Bio::Graphics::Browser::DataLoader::featurefile;
+package Bio::Graphics::Browser2::DataLoader::featurefile;
 
 # $Id: featurefile.pm,v 1.3 2009/08/31 19:46:38 lstein Exp $
 use strict;
 use Bio::DB::SeqFeature::Store::FeatureFileLoader;
 use Bio::DB::SeqFeature::Store;
-use base 'Bio::Graphics::Browser::DataLoader';
+use base 'Bio::Graphics::Browser2::DataLoader';
 
 sub start_load {
     my $self = shift;

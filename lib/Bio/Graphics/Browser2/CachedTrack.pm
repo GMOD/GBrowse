@@ -1,7 +1,7 @@
-package Bio::Graphics::Browser::CachedTrack;
+package Bio::Graphics::Browser2::CachedTrack;
 
 # $Id: CachedTrack.pm,v 1.11 2009-06-16 14:08:24 lstein Exp $
-# This package defines a Bio::Graphics::Browser::Track option that manages
+# This package defines a Bio::Graphics::Browser2::Track option that manages
 # the caching of track images and imagemaps.
 
 use strict;
@@ -19,7 +19,7 @@ use constant DEFAULT_REQUEST_TIME => 60;
 use constant DEFAULT_CACHE_TIME   => 60*60; # 1 hour
 
 # constructor:
-# Bio::Graphics::Browser::CachedTrack->new($cache_base_directory,$key_data)
+# Bio::Graphics::Browser2::CachedTrack->new($cache_base_directory,$key_data)
 # If $key_data is a scalar, then it is taken to be the literal key.
 # Otherwise if it is an arrayref, it is an array of arguments that will be
 # converted into the key.

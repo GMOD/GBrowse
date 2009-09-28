@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::PrimerDesigner -- a plugin to design PCR primers with primer3
+Bio::Graphics::Browser2::Plugin::PrimerDesigner -- a plugin to design PCR primers with primer3
 
 =head1 SYNOPSIS
 
@@ -42,7 +42,7 @@ more optimal optimal primers may be found by specifying a specific size-range.
 
 =head1 Bio::Graphics::Browser
 
-This plugin contains an additional package Bio::Graphics::Browser::faux.
+This plugin contains an additional package Bio::Graphics::Browser2::faux.
 This class inherits from  Bio::Graphics::Browser.  Its purpose is to
 keep the  Bio::Graphics::Browser funtionality and configuration data
 while overriding image_map-related funtions required for this plugin.
@@ -65,13 +65,13 @@ Bio::PrimerDesigner (www.cpan.org)
 primer3 (http://frodo.wi.mit.edu/primer3/primer3_code.html)
 
 =cut
-package Bio::Graphics::Browser::Plugin::PrimerDesigner;
+package Bio::Graphics::Browser2::Plugin::PrimerDesigner;
 
 use strict;
 use Bio::PrimerDesigner;
 use Bio::PrimerDesigner::Tables;
-use Bio::Graphics::Browser::Plugin;
-use Bio::Graphics::Browser::Util;
+use Bio::Graphics::Browser2::Plugin;
+use Bio::Graphics::Browser2::Util;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Feature;
 use Bio::Graphics::FeatureFile;
@@ -92,7 +92,7 @@ use constant STYLE             => '/gbrowse/gbrowse.css';
 
 use vars '@ISA';
 
-@ISA = qw / Bio::Graphics::Browser::Plugin /;
+@ISA = qw / Bio::Graphics::Browser2::Plugin /;
 
 # Arg, modperl
 END {
@@ -952,7 +952,7 @@ sub renderer {
     return $render;
   }
   
-  $self->{render} = Bio::Graphics::Browser::faux->new($config);
+  $self->{render} = Bio::Graphics::Browser2::faux->new($config);
   $self->{render}->current_segment($segment);
   return $self->{render};
 }
@@ -968,7 +968,7 @@ sub back_button {
 
 # A package to override some Bio::Graphics::Browser
 # image mapping methods
-package Bio::Graphics::Browser::faux;
+package Bio::Graphics::Browser2::faux;
 use Bio::Graphics::Browser;
 use CGI qw/:standard unescape/;
 use warnings;

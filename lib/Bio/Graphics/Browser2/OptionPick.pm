@@ -1,13 +1,13 @@
-package Bio::Graphics::Browser::OptionPick;
+package Bio::Graphics::Browser2::OptionPick;
 
 =head1 NAME
 
-Bio::Graphics::Browser::OptionPick -- Pick options
+Bio::Graphics::Browser2::OptionPick -- Pick options
 
 =head1 SYNOPSIS
 
- use Bio::Graphics::Browser::OptionPick;
- my $picker = Bio::Graphics::Browser::OptionPick->new($render_object);
+ use Bio::Graphics::Browser2::OptionPick;
+ my $picker = Bio::Graphics::Browser2::OptionPick->new($render_object);
 
  print start_html(),
   start_form(),

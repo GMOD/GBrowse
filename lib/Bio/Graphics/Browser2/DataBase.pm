@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::DataBase;
+package Bio::Graphics::Browser2::DataBase;
 
 # This module maintains a cache of opened genome databases
 # keyed by the database module name and the parameters
@@ -8,7 +8,7 @@ package Bio::Graphics::Browser::DataBase;
 
 =head1 NAME
 
-Bio::Graphics::Browser::DataBase -- A simple cache for database handles
+Bio::Graphics::Browser2::DataBase -- A simple cache for database handles
 
 =head1 SYNOPSIS
 
@@ -56,7 +56,7 @@ sub open_database {
   $db;
 }
 
-=item Bio::Graphics::Browser::DataBase->clone_databases()
+=item Bio::Graphics::Browser2::DataBase->clone_databases()
 
 Call this after a fork in the child process to make sure that all open
 databases have had a chance to clone themselves if they need
@@ -113,7 +113,7 @@ sub set {
 	}
 
 	warn "garbage collecting done, values = ",join ' ',$self->values 
-	    if Bio::Graphics::Browser::DataBase::DEBUG;
+	    if Bio::Graphics::Browser2::DataBase::DEBUG;
     }
 
     $self->{cacheseq}{$key}=1;

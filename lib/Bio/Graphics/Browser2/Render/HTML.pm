@@ -1,11 +1,11 @@
-package Bio::Graphics::Browser::Render::HTML;
+package Bio::Graphics::Browser2::Render::HTML;
 
 use strict;
 use warnings;
-use base 'Bio::Graphics::Browser::Render';
-use Bio::Graphics::Browser::Shellwords;
+use base 'Bio::Graphics::Browser2::Render';
+use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Karyotype;
-use Bio::Graphics::Browser::Util qw[citation url_label];
+use Bio::Graphics::Browser2::Util qw[citation url_label];
 use JSON;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
@@ -1166,7 +1166,7 @@ sub render_userdata_table {
 
 sub list_userdata {
     my $self = shift;
-    my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
+    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
 							   $self->state,
 							   $self->language);
     my @tracks   = sort $userdata->tracks;
@@ -1809,10 +1809,10 @@ sub track_config {
     my $length      = $self->thin_segment->length;
     my $slabel      = $data_source->semantic_label($label,$length);
 
-    eval 'require Bio::Graphics::Browser::OptionPick; 1'
-        unless Bio::Graphics::Browser::OptionPick->can('new');
+    eval 'require Bio::Graphics::Browser2::OptionPick; 1'
+        unless Bio::Graphics::Browser2::OptionPick->can('new');
 
-    my $picker = Bio::Graphics::Browser::OptionPick->new($self);
+    my $picker = Bio::Graphics::Browser2::OptionPick->new($self);
 
     my $key = $self->label2key($slabel);
 

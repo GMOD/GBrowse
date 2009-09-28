@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser;
+package Bio::Graphics::Browser2;
 # $Id: Browser.pm,v 1.243 2009-08-27 19:13:19 idavies Exp $
 # Globals and utilities for GBrowse and friends
 
@@ -11,8 +11,8 @@ use File::Path 'mkpath';
 use File::Basename 'dirname','basename';
 use Text::ParseWords 'shellwords';
 use File::Path 'mkpath';
-use Bio::Graphics::Browser::DataSource;
-use Bio::Graphics::Browser::Session;
+use Bio::Graphics::Browser2::DataSource;
+use Bio::Graphics::Browser2::Session;
 use GBrowse::ConfigData;
 use Carp 'croak','carp';
 use CGI 'redirect','url';

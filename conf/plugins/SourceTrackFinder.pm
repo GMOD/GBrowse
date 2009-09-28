@@ -1,9 +1,9 @@
-package Bio::Graphics::Browser::Plugin::SourceTrackFinder;
+package Bio::Graphics::Browser2::Plugin::SourceTrackFinder;
 # $Id: SourceTrackFinder.pm,v 1.2 2009-05-20 21:29:40 lstein Exp $
 use strict;
 use CGI qw(:standard *table);
-use base 'Bio::Graphics::Browser::Plugin';
-use Bio::Graphics::Browser::Util 'shellwords';
+use base 'Bio::Graphics::Browser2::Plugin';
+use Bio::Graphics::Browser2::Util 'shellwords';
 our $VERSION = '0.25';
 
 sub name { "Source Track Finder" }
@@ -103,7 +103,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::SourceTrackFinder - Limit list of tracks to those that contain arbitrary fields
+Bio::Graphics::Browser2::Plugin::SourceTrackFinder - Limit list of tracks to those that contain arbitrary fields
 
 =head1 SYNOPSIS
 
@@ -157,7 +157,7 @@ None known yet.
 
 =head1 SEE ALSO
 
-L<Bio::Graphics::Browser::Plugin>
+L<Bio::Graphics::Browser2::Plugin>
 
 =head1 AUTHOR
 

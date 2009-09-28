@@ -1,11 +1,11 @@
-package Bio::Graphics::Browser::Region;
+package Bio::Graphics::Browser2::Region;
 
 # provide method for fetching and manipulating the current
 # region or regions.
 
 use strict;
 use warnings;
-use Bio::Graphics::Browser::Shellwords;
+use Bio::Graphics::Browser2::Shellwords;
 use constant DEBUG=>0;
 
 sub new {

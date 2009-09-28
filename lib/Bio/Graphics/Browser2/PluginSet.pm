@@ -1,11 +1,11 @@
-package Bio::Graphics::Browser::PluginSet;
+package Bio::Graphics::Browser2::PluginSet;
 # API for using plugins
 
 #  $Id: PluginSet.pm,v 1.13 2009-05-22 21:37:09 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Util 'shellwords';
+use Bio::Graphics::Browser2::Util 'shellwords';
 use CGI 'param';
 use constant DEBUG=>0;
 
@@ -228,7 +228,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Browser::PluginSet -- A set of plugins
+Bio::Graphics::Browser2::PluginSet -- A set of plugins
 
 =head1 SYNOPSIS
 
@@ -238,7 +238,7 @@ None.  Used internally by gbrowse & gbrowse_img.
 
 =over 4
 
-=item $plugin_set = Bio::Graphics::Browser::PluginSet->new($config,$page_settings,@search_path)
+=item $plugin_set = Bio::Graphics::Browser2::PluginSet->new($config,$page_settings,@search_path)
 
 Initialize plugins according to the configuration, page settings and
 the plugin search path.  Returns an object.

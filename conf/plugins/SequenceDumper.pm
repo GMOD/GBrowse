@@ -1,6 +1,6 @@
 # $Id: SequenceDumper.pm,v 1.18 2009-01-02 20:57:37 lstein Exp $
 #
-# BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
+# BioPerl module for Bio::Graphics::Browser2::Plugin::SequenceDumper
 #
 # Cared for by Jason Stajich <jason@bioperl.org>
 #
@@ -12,7 +12,7 @@
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::SequenceDumper - A plugin for dumping sequences in various formats
+Bio::Graphics::Browser2::Plugin::SequenceDumper - A plugin for dumping sequences in various formats
 
 =head1 SYNOPSIS
 
@@ -49,12 +49,12 @@ Internal methods are usually preceded with a _
 # Let the code begin...
 
 
-package Bio::Graphics::Browser::Plugin::SequenceDumper;
+package Bio::Graphics::Browser2::Plugin::SequenceDumper;
 # $Id: SequenceDumper.pm,v 1.18 2009-01-02 20:57:37 lstein Exp $
 # Sequence Dumper plugin
 
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use Bio::SeqIO;
 use Bio::Seq::RichSeq;
 use POSIX qw(strftime);
@@ -93,7 +93,7 @@ my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
 $VERSION = '0.12';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Sequence File" }
 sub description {

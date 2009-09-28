@@ -1,15 +1,15 @@
-package Bio::Graphics::Browser::Plugin::TrackDumper;
+package Bio::Graphics::Browser2::Plugin::TrackDumper;
 # $Id: TrackDumper.pm,v 1.3 2009-01-30 22:06:19 lstein Exp $
 # test plugin
 use strict;
-use Bio::Graphics::Browser::Plugin;
-use Bio::Graphics::Browser::GFFPrinter;
+use Bio::Graphics::Browser2::Plugin;
+use Bio::Graphics::Browser2::GFFPrinter;
 use CGI qw(:standard *sup);
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.90';
 
-@ISA = qw/ Bio::Graphics::Browser::Plugin /;
+@ISA = qw/ Bio::Graphics::Browser2::Plugin /;
 
 sub name { "Track Data" }
 sub description {
@@ -125,7 +125,7 @@ sub dump {
 
   # safest thing to do is to use embedded logic
   if ($version == 3 && $config->{print_config}) {
-      my $dumper = Bio::Graphics::Browser::GFFPrinter->new(
+      my $dumper = Bio::Graphics::Browser2::GFFPrinter->new(
 	  -data_source => $conf,
 	  -id          => $page_settings->{userid},
 	  -segment     => $segment->seq_id.':'.$segment->start.'..'.$segment->end,
@@ -137,7 +137,7 @@ sub dump {
   }
 
   elsif ($config->{print_config}) {
-      Bio::Graphics::Browser::GFFPrinter->print_configuration
+      Bio::Graphics::Browser2::GFFPrinter->print_configuration
 	  ($self->browser_config,
 	   $mode eq 'selected' ? [$self->selected_tracks] : ()
 	  );

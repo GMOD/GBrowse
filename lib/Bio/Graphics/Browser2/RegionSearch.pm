@@ -1,12 +1,12 @@
-package Bio::Graphics::Browser::RegionSearch;
+package Bio::Graphics::Browser2::RegionSearch;
 
 use strict;
 use warnings;
 use Bio::Graphics::GBrowseFeature;
-use Bio::Graphics::Browser::Region;
-use Bio::Graphics::Browser::RenderPanels;
-use Bio::Graphics::Browser::Util 'shellwords';
-use Bio::Graphics::Browser::Render::Slave::Status;
+use Bio::Graphics::Browser2::Region;
+use Bio::Graphics::Browser2::RenderPanels;
+use Bio::Graphics::Browser2::Util 'shellwords';
+use Bio::Graphics::Browser2::Render::Slave::Status;
 use LWP::UserAgent;
 use HTTP::Request::Common 'POST';
 use Carp 'cluck';
@@ -20,11 +20,11 @@ use constant DEBUG => 0;
 
 =head1 NAME
 
-Bio::Graphics::Browser::RegionSearch -- Search through multiple databases for feature matches.
+Bio::Graphics::Browser2::RegionSearch -- Search through multiple databases for feature matches.
 
 =head1 SYNOPSIS
 
-  my $dbs = Bio::Graphics::Browser::RegionSearch->new(
+  my $dbs = Bio::Graphics::Browser2::RegionSearch->new(
               { source => $data_source, 
                 state  => $session_state
               });
@@ -35,7 +35,7 @@ Bio::Graphics::Browser::RegionSearch -- Search through multiple databases for fe
 =head1 DESCRIPTION
 
 This implements a feature search based on the heuristics in
-Bio::Graphics::Browser::Region. The search is distributed across all
+Bio::Graphics::Browser2::Region. The search is distributed across all
 local and remote databases as specified in the data source.
 
 =head1 METHODS
@@ -45,13 +45,13 @@ programmer.
 
 =cut
 
-=head2 $db = Bio::Graphics::Browser::RegionSearch->new({opts})
+=head2 $db = Bio::Graphics::Browser2::RegionSearch->new({opts})
 
 Create a new RegionSearch object. Required parameters are:
 
         Parameter     Description
 
-        source        The Bio::Graphics::Browser::DataSource
+        source        The Bio::Graphics::Browser2::DataSource
                       object describing the local and remote
                       databases for this source.
 
@@ -98,7 +98,7 @@ sub init_databases {
 
     my $renderfarm = $self->source->global_setting('renderfarm');
 
-    my $slave_status = Bio::Graphics::Browser::Render::Slave::Status->new(
+    my $slave_status = Bio::Graphics::Browser2::Render::Slave::Status->new(
 	$source->globals->slave_status_path
 	);
 
@@ -143,7 +143,7 @@ sub init_databases {
 	if (!$can_remote || $dbs{$dbid}{options} =~ /(?<!-)autocomplete/) {
 	    my $db = $source->open_database($dbid);
 	    $self->{local_dbs}{$db} ||= 
-		Bio::Graphics::Browser::Region->new(
+		Bio::Graphics::Browser2::Region->new(
 		    { source     => $source,
 		      state      => $self->state,
 		      db         => $db,
@@ -209,12 +209,12 @@ sub features {
 =head2 $meta_segment = $db->segment($segment)
 
 Given an existing segment, return a
-Bio::Graphics::Browser::MetaSegment object, which behaves more or less
+Bio::Graphics::Browser2::MetaSegment object, which behaves more or less
 like a regular Bio::Das::SegmentI object, but searches multiple
 databases. Both iterative and non-iterative feature fetching is
 supported.
 
-(The class definitions for Bio::Graphics::Browser::MetaSegment are
+(The class definitions for Bio::Graphics::Browser2::MetaSegment are
 located in the Bio/Graphics/Browser/RegionSearch.pm file.)
 
 =cut
@@ -222,7 +222,7 @@ located in the Bio/Graphics/Browser/RegionSearch.pm file.)
 sub segment {
     my $self    = shift;
     my $segment = shift;
-    return Bio::Graphics::Browser::MetaSegment->new($self,$segment);
+    return Bio::Graphics::Browser2::MetaSegment->new($self,$segment);
 }
 
 =head2 $found = $db->search_features($args)
@@ -319,7 +319,7 @@ sub search_features_locally {
 	warn "searching in ",$dbid if DEBUG;
 	# allow explicit db_id to override cached list of local dbs
 	my $region   = $local_dbs->{$db} || 
-	    Bio::Graphics::Browser::Region->new(
+	    Bio::Graphics::Browser2::Region->new(
 						{ source  => $self->source,
 						  state   => $self->state,
 						  db      => $db,
@@ -370,7 +370,7 @@ sub search_features_remotely {
     for my $url (keys %$remote_dbs) {
 
 	my $pipe  = IO::Pipe->new();
-	my $child = Bio::Graphics::Browser::Render->fork();
+	my $child = Bio::Graphics::Browser2::Render->fork();
 	if ($child) { # parent
 	    $pipe->reader();
 	    $select->add($pipe);
@@ -582,7 +582,7 @@ sub features_by_prefix {
 ##################################################################33
 # META SEGMENT DEFINITIONS
 ##################################################################33
-package Bio::Graphics::Browser::MetaSegment;
+package Bio::Graphics::Browser2::MetaSegment;
 
 our $AUTOLOAD;
 use overload 
@@ -624,10 +624,10 @@ sub features {
 sub get_seq_stream {
     my $self = shift;
     my $features = $self->features(@_);
-    return Bio::Graphics::Browser::MetaSegment::Iterator->new($features);
+    return Bio::Graphics::Browser2::MetaSegment::Iterator->new($features);
 }
 
-package Bio::Graphics::Browser::MetaSegment::Iterator;
+package Bio::Graphics::Browser2::MetaSegment::Iterator;
 
 sub new {
     my $class    = shift;
@@ -647,7 +647,7 @@ __END__
 
 =head1 SEE ALSO
 
-L<Bio::Graphics::Browser::Region>,
+L<Bio::Graphics::Browser2::Region>,
 L<Bio::Graphics::Browser>,
 L<Bio::Graphics::Feature>,
 

@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::Render::Slave::Status;
+package Bio::Graphics::Browser2::Render::Slave::Status;
 # $Id: Status.pm,v 1.3 2008-12-19 03:11:01 lstein Exp $
 
 # This module keeps track of when slaves were last contacted and their

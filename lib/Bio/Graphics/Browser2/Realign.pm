@@ -1,12 +1,12 @@
-package Bio::Graphics::Browser::Realign;
+package Bio::Graphics::Browser2::Realign;
 
 =head1 NAME
 
-Bio::Graphics::Browser::Realign - Perl extension for Smith-Waterman alignments
+Bio::Graphics::Browser2::Realign - Perl extension for Smith-Waterman alignments
 
 =head1 SYNOPSIS
 
-  use Bio::Graphics::Browser::Realign 'align';
+  use Bio::Graphics::Browser2::Realign 'align';
   my ($top,$middle,$bottom) = align('gattttttc','gattttccc');
   print join "\n",$top,$middle,$bottom,"\n";
 
@@ -23,7 +23,7 @@ It uses slow Smith-Waterman, so is only appropriate for short segments
 that are mostly aligned already.
 
 It can be speeded up significantly by compiling
-Bio::Graphics::Browser::CAlign, an XS extension.  To do this, build
+Bio::Graphics::Browser2::CAlign, an XS extension.  To do this, build
 gbrowse with the DO_XS=1 option:
 
   cd Generic-Genome-Browser
@@ -70,7 +70,7 @@ use constant GAP_TGT => 2;
 
 my @EVENTS = qw(extend gap_src gap_tgt);
 
-=item $aligner = Bio::Graphics::Browser::Realign->new($src,$target [,\%matrix])
+=item $aligner = Bio::Graphics::Browser2::Realign->new($src,$target [,\%matrix])
 
 The new() method takes two the two sequence strings to be aligned and
 an optional weight matrix.  Legal weight matrix keys and their default
@@ -101,8 +101,8 @@ sub new {
 		      matrix => $matrix || {},
 		      },$class;
     my $implementor = $class;
-    if (eval {require Bio::Graphics::Browser::CAlign}) {
-      $implementor = 'Bio::Graphics::Browser::CAlign';
+    if (eval {require Bio::Graphics::Browser2::CAlign}) {
+      $implementor = 'Bio::Graphics::Browser2::CAlign';
     }
     my ($score,$alignment) = $implementor->_do_alignment($src,$tgt,$self->{matrix});
     $self->{score}     = $score;
@@ -238,7 +238,7 @@ can be imported explicitly.
 Align the source and target sequences and return the padded strings
 representing the alignment.  It is exactly equivalent to calling:
 
-  Bio::Graphics::Browser::Realign->new($source,$target)->pads;
+  Bio::Graphics::Browser2::Realign->new($source,$target)->pads;
 
 =cut
 

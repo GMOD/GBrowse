@@ -1,14 +1,14 @@
-package Bio::Graphics::Browser::Plugin::CMapDumper;
+package Bio::Graphics::Browser2::Plugin::CMapDumper;
 
 # $Id: CMapDumper.pm,v 1.2 2005-12-09 22:19:09 mwz444 Exp $
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use CGI qw(:standard *sup);
 
 use vars '$VERSION', '@ISA';
 $VERSION = '0.80';
 
-@ISA = qw/ Bio::Graphics::Browser::Plugin /;
+@ISA = qw/ Bio::Graphics::Browser2::Plugin /;
 
 sub name { "CMap File" }
 

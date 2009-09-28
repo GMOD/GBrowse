@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::RenderPanels;
+package Bio::Graphics::Browser2::RenderPanels;
 
 use strict;
 use warnings;
@@ -6,10 +6,10 @@ use warnings;
 use Bio::Graphics;
 use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
-use Bio::Graphics::Browser::Render;
-use Bio::Graphics::Browser::CachedTrack;
-use Bio::Graphics::Browser::Util qw[citation shellwords url_label];
-use Bio::Graphics::Browser::Render::Slave::Status;
+use Bio::Graphics::Browser2::Render;
+use Bio::Graphics::Browser2::CachedTrack;
+use Bio::Graphics::Browser2::Util qw[citation shellwords url_label];
+use Bio::Graphics::Browser2::Render::Slave::Status;
 use IO::File;
 use Time::HiRes 'sleep';
 use POSIX 'WNOHANG','setsid';
@@ -125,7 +125,7 @@ sub request_panels {
   # a race condition where the parent hits the DB before the child
   # NOTE: commented out because clone logic has changed - may need to reenable this
   # for postgresql databases
-  # Bio::Graphics::Browser::DataBase->clone_databases();
+  # Bio::Graphics::Browser2::DataBase->clone_databases();
 
   my $do_local  = @$local_labels;
   my $do_remote = @$remote_labels;
@@ -138,7 +138,7 @@ sub request_panels {
   if ($args->{deferred}) {
       $SIG{CHLD} = 'IGNORE';
 
-      my $child = Bio::Graphics::Browser::Render->fork();
+      my $child = Bio::Graphics::Browser2::Render->fork();
 
       if ($child) {
 	  return $data_destinations;
@@ -149,7 +149,7 @@ sub request_panels {
       POSIX::setsid()          or die "Couldn't start new session";
 
       if ( $do_local && $do_remote ) {
-          if ( Bio::Graphics::Browser::Render->fork() ) {
+          if ( Bio::Graphics::Browser2::Render->fork() ) {
               $self->run_local_requests( $data_destinations,
 					 $args,
 					 $local_labels );
@@ -246,7 +246,7 @@ sub make_requests {
 	    my $feature_file = $feature_files->{$track};
 
 	    unless (ref $feature_file) { # upload problem!
-		my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
+		my $cache_object = Bio::Graphics::Browser2::CachedTrack->new(
 		    -cache_base => $base,
 		    -panel_args => \@panel_args,
 		    -track_args => \@track_args,
@@ -265,7 +265,7 @@ sub make_requests {
 	}
 
 	warn "[$$] creating CachedTrack for $label" if DEBUG;
-        my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
+        my $cache_object = Bio::Graphics::Browser2::CachedTrack->new(
             -cache_base => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
@@ -496,7 +496,7 @@ sub wrap_rendered_track {
     # when the track is collapsed. Otherwise the track labels get moved
     # to the center of the page!
     my $pad     = $self->render_image_pad(
-	$args{section}||Bio::Graphics::Browser::Render->get_section_from_label($label),
+	$args{section}||Bio::Graphics::Browser2::Render->get_section_from_label($label),
 	);
     my $pad_url = $self->source->generate_image($pad);
     my $pad_img = img(
@@ -561,7 +561,7 @@ sub wrap_rendered_track {
 # RETURN NOTHING (data will be stored in track cache for later retrieval)
 #
 # POST outgoing arguments:
-#    datasource => serialized Bio::Graphics::Browser::DataSource
+#    datasource => serialized Bio::Graphics::Browser2::DataSource
 #    settings   => serialized state hash (from the session)
 #    tracks     => serialized list of track names to render
 #
@@ -597,7 +597,7 @@ sub run_remote_requests {
   my $s_args    = Storable::nfreeze(\%args);
 
   # sort requests by their renderers
-  my $slave_status = Bio::Graphics::Browser::Render::Slave::Status->new(
+  my $slave_status = Bio::Graphics::Browser2::Render::Slave::Status->new(
       $source->globals->slave_status_path
       );
 
@@ -625,7 +625,7 @@ sub run_remote_requests {
 
   for my $url (keys %renderers) {
 
-      my $child   = Bio::Graphics::Browser::Render->fork();
+      my $child   = Bio::Graphics::Browser2::Render->fork();
       next if $child;
 
       # THIS PART IS IN THE CHILD
@@ -873,7 +873,7 @@ sub render_image_pad {
     my @track_args  = ();
     my @extra_args  = ($self->settings->{start},
 		       $self->settings->{stop});
-    my $cache = Bio::Graphics::Browser::CachedTrack->new(
+    my $cache = Bio::Graphics::Browser2::CachedTrack->new(
 	-cache_base => $self->get_cache_base,
 	-panel_args => \@panel_args,
 	-track_args => \@track_args,
@@ -1061,7 +1061,7 @@ sub make_centering_map {
 # this is the routine that actually does the work!!!!
 # input
 #    arg1: request hashref 
-#                 {label => Bio::Graphics::Browser::CachedTrack}
+#                 {label => Bio::Graphics::Browser2::CachedTrack}
 #    arg2: arguments hashref
 #                  {
 #                    external_features => [list of external features, plugins]
@@ -1079,7 +1079,7 @@ sub make_centering_map {
 
 sub run_local_requests {
     my $self     = shift;
-    my $requests = shift;  # a hash of labels => Bio::Graphics::Browser::CachedTrack objects
+    my $requests = shift;  # a hash of labels => Bio::Graphics::Browser2::CachedTrack objects
     my $args     = shift;
     my $labels   = shift;
 

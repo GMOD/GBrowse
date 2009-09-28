@@ -1,13 +1,13 @@
-package Bio::Graphics::Browser::PadAlignment;
+package Bio::Graphics::Browser2::PadAlignment;
 
 use strict;
-use Bio::Graphics::Browser::Markup;
+use Bio::Graphics::Browser2::Markup;
 use constant DEBUG=>0;
 use Data::Dumper;
 
 =head1 NAME
 
-Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
+Bio::Graphics::Browser2::PadAlignment - Insert pads into a multiple alignment
 
 =head1 VERSION (CVS-info)
 
@@ -18,7 +18,7 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 
 =head1 SYNOPSIS
 
- use Bio::Graphics::Browser::PadAlignment;
+ use Bio::Graphics::Browser2::PadAlignment;
 
  my @dnas = (
 	     dna1 =>'FFFFgatcGATCgatcGATCgatcGATCgatcGBATCgatcGATCatcGATCgatcGATCgatcGATCgatcGATgatcGATCgatcNNNNGATC',
@@ -53,7 +53,7 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 		  );
 
 
- my $align = Bio::Graphics::Browser::PadAlignment->new(\@dnas,\@alignments);
+ my $align = Bio::Graphics::Browser2::PadAlignment->new(\@dnas,\@alignments);
 
  my @padded = $align->padded_sequences;
  print join "\n",@padded,"\n";
@@ -97,7 +97,7 @@ This section describes the methods used by this class.
 
 =over 4
 
-=item $aligner = Bio::Graphics::Browser::PadAlignment->new(\@sequences,\@alignments)
+=item $aligner = Bio::Graphics::Browser2::PadAlignment->new(\@sequences,\@alignments)
 
 Create a new aligner.  The two arguments are \@sequences, an array ref
 to the list of sequences to be aligned, and \@alignments, an array ref
@@ -191,7 +191,7 @@ L<Bio::Graphics::Glyph>,
 L<Bio::Graphics::Feature>,
 L<Bio::Graphics::FeatureFile>,
 L<Bio::Graphics::Browser>,
-L<Bio::Graphics::Browser::Plugin>
+L<Bio::Graphics::Browser2::Plugin>
 
 =head1 AUTHOR
 
@@ -474,7 +474,7 @@ sub alignment {
   }
   
   # use markup to insert word and line breaks
-  my $markup = Bio::Graphics::Browser::Markup->new;
+  my $markup = Bio::Graphics::Browser2::Markup->new;
   $markup->add_style(space    => ' ');
   $markup->add_style(newline  => "\n");
   $markup->add_style(mismatch => "BGCOLOR pink");
@@ -809,7 +809,7 @@ foreach (@lines) {
 print join("\n",@lines),"\n";
 
 # use markup to insert word and line breaks
-my $markup = Bio::Graphics::Browser::Markup->new;
+my $markup = Bio::Graphics::Browser2::Markup->new;
 $markup->add_style(space   => ' ');
 $markup->add_style(newline => "\n");
 for (my $i=0; $i < @lines; $i++) {

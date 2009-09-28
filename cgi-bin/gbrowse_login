@@ -3,7 +3,7 @@
 use strict;
 use lib '~/Generic-Genome-Browser/lib';
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render;
+use Bio::Graphics::Browser2::Render;
 use CGI qw(:standard);
 use DBI;
 use Digest::SHA qw(sha1);

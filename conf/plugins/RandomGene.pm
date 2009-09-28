@@ -1,15 +1,15 @@
-package Bio::Graphics::Browser::Plugin::RandomGene;
+package Bio::Graphics::Browser2::Plugin::RandomGene;
 # $Id: RandomGene.pm,v 1.2 2005-12-09 22:19:09 mwz444 Exp $
 # test plugin
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use Bio::Graphics::Feature;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.3';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Simulated Genes" }
 

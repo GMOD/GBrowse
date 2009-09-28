@@ -1,11 +1,11 @@
 # $Id: Spectrogram.pm,v 1.9 2009-01-08 16:42:29 lstein Exp $
-# bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
+# bioperl module for Bio::Graphics::Browser2::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::Spectrogram
+Bio::Graphics::Browser2::Plugin::Spectrogram
 
 =head1 SYNOPSIS
 
@@ -68,10 +68,10 @@ Email E<lt>mckays@cshl.eduE<gt>
 =cut
 ;
 
-package Bio::Graphics::Browser::Plugin::Spectrogram;
+package Bio::Graphics::Browser2::Plugin::Spectrogram;
 use strict;
-use Bio::Graphics::Browser::Plugin;
-use Bio::Graphics::Browser::Util qw/error/;
+use Bio::Graphics::Browser2::Plugin;
+use Bio::Graphics::Browser2::Util qw/error/;
 use CGI ':standard';
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
@@ -89,7 +89,7 @@ use constant IMAGE_DIR   => '/gbrowse2/images/help';
 use constant BUTTONS_DIR => '/gbrowse2/images/buttons'; 
 
 $VERSION = 1.1;
-@ISA = qw/ Bio::Graphics::Browser::Plugin /;
+@ISA = qw/ Bio::Graphics::Browser2::Plugin /;
 
 sub init {
   my $self = shift;

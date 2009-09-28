@@ -1,6 +1,6 @@
 # $Id: ProteinDumper.pm,v 1.5 2006-08-30 02:37:07 lstein Exp $
 #
-# BioPerl module for Bio::Graphics::Browser::Plugin::ProteinDumper
+# BioPerl module for Bio::Graphics::Browser2::Plugin::ProteinDumper
 #
 # Cared for by Aaron Mackey <amackey@pcbi.upenn.edu>
 #
@@ -10,7 +10,7 @@
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::ProteinDumper - A plugin for dumping translated protein sequences in various formats
+Bio::Graphics::Browser2::Plugin::ProteinDumper - A plugin for dumping translated protein sequences in various formats
 
 =head1 SYNOPSIS
 
@@ -46,12 +46,12 @@ Internal methods are usually preceded with a _
 # Let the code begin...
 
 
-package Bio::Graphics::Browser::Plugin::ProteinDumper;
+package Bio::Graphics::Browser2::Plugin::ProteinDumper;
 # $Id: ProteinDumper.pm,v 1.5 2006-08-30 02:37:07 lstein Exp $
 # Protein Dumper plugin
 
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use Bio::SeqIO;
 use Bio::Tools::CodonTable;
 use CGI qw(:standard *pre);
@@ -83,7 +83,7 @@ my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
 $VERSION = '1.00';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Protein Sequence File" }
 sub description {

@@ -1,8 +1,8 @@
-package Bio::Graphics::Browser::Plugin::AttributeHiliter;
+package Bio::Graphics::Browser2::Plugin::AttributeHiliter;
 # $Id: AttributeHiliter.pm,v 1.3 2009-05-22 14:33:38 lstein Exp $
 use strict;
-use Bio::Graphics::Browser::Plugin;
-use Bio::Graphics::Browser::Util 'shellwords';
+use Bio::Graphics::Browser2::Plugin;
+use Bio::Graphics::Browser2::Util 'shellwords';
 use CGI qw(:standard);
 
 use constant DEBUG => 0;
@@ -17,7 +17,7 @@ my @COLORS = ('',qw(
 
 $VERSION = '0.01';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Selected Properties" }
 sub description {
@@ -129,7 +129,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::AttributeHiliter -- hilite features based on attributes
+Bio::Graphics::Browser2::Plugin::AttributeHiliter -- hilite features based on attributes
 
 =head1 SYNOPSIS
 
@@ -162,7 +162,7 @@ None known yet.
 
 =head1 SEE ALSO
 
-L<Bio::Graphics::Browser::Plugin>
+L<Bio::Graphics::Browser2::Plugin>
 
 =head1 AUTHOR
 

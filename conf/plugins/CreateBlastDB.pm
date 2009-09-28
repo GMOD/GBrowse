@@ -1,11 +1,11 @@
-package Bio::Graphics::Browser::Plugin::CreateBlastDB;
+package Bio::Graphics::Browser2::Plugin::CreateBlastDB;
 # $Id: CreateBlastDB.pm,v 1.1 2003-11-17 22:01:38 markwilkinson Exp $
 
 
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::CreateBlastDB -- a plugin that creates a Blast-formatted database from a Bio::DB::GFF database
+Bio::Graphics::Browser2::Plugin::CreateBlastDB -- a plugin that creates a Blast-formatted database from a Bio::DB::GFF database
 
 =head1 SYNOPSIS
 
@@ -35,7 +35,7 @@ set two parameters in the 0X.organism.conf file:
 
 
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use Bio::Graphics::Feature;
 use DBI;
 use CGI qw(:standard *table);
@@ -43,7 +43,7 @@ use CGI qw(:standard *table);
 use vars '$VERSION','@ISA', '$formatdb', '$outdir', '$dbname';
 $VERSION = '0.15';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Blast Database" }
 

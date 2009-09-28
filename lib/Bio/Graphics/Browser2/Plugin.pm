@@ -1,17 +1,17 @@
-package Bio::Graphics::Browser::Plugin;
+package Bio::Graphics::Browser2::Plugin;
 # $Id: Plugin.pm,v 1.22 2009-05-22 21:37:09 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin -- Base class for gbrowse plugins.
+Bio::Graphics::Browser2::Plugin -- Base class for gbrowse plugins.
 
 =head1 SYNOPSIS
 
- package Bio::Graphics::Browser::Plugin::MyPlugin;
- use Bio::Graphics::Browser::Plugin;
+ package Bio::Graphics::Browser2::Plugin::MyPlugin;
+ use Bio::Graphics::Browser2::Plugin;
  use CGI ':standard';
- @ISA = 'Bio::Graphics::Browser::Plugin';
+ @ISA = 'Bio::Graphics::Browser2::Plugin';
 
  # called by gbrowse to return name of plugin for popup menu
  sub name        { 'Example Plugin' }
@@ -134,7 +134,7 @@ length (e.g. short RNAs) are shown.
 
 =back
 	
-All plug-ins inherit from Bio::Graphics::Browser::Plugin, which
+All plug-ins inherit from Bio::Graphics::Browser2::Plugin, which
 defines reasonable (but uninteresting) defaults for each of the
 methods.  Specific behavior is then implemented by selectively
 overriding certain methods.
@@ -309,7 +309,7 @@ values.
 
 =item $browser_config = $self->browser_config
 
-This method returns a copy of the Bio::Graphics::Browser::DataSource
+This method returns a copy of the Bio::Graphics::Browser2::DataSource
 object that drives gbrowse.  This object allows you to interrogate
 (and change!)  the values set in the current gbrowse configuration
 file.
@@ -340,7 +340,7 @@ stored in the hash returned by configuration().
 
 =item $search = $self->region_search
 
-This method returns a Bio::Graphics::Browser::RegionSearch object,
+This method returns a Bio::Graphics::Browser2::RegionSearch object,
 which you can use to search all local and remote databases. The
 interface is this:
 
@@ -565,7 +565,7 @@ RestrictionAnnotator.pm plugin for an example.
 
 =item @track_names = $plugin->filter_tracks($tracks,$source)
 
-Given a list of track names and a Bio::Graphics::Browser::DataSource
+Given a list of track names and a Bio::Graphics::Browser2::DataSource
 object, identify the track names to display and return them as a
 list. The tracks are passed as a reference to a list of all possible
 track names.
@@ -662,7 +662,7 @@ gbrowse, plugin fill-out forms must respect a namespacing convention
 in which the name of each form field is preceded by the plugin package
 name and a dot.  The package name is the last component of the
 plugin's package; for example "GoSearch" is the package name for
-Bio::Graphics::Browser::Plugin::GoSearch. To represent the "query"
+Bio::Graphics::Browser2::Plugin::GoSearch. To represent the "query"
 field of the plugin named "GOSearch", the text field must be named
 "GOSearch.query".
 
@@ -836,7 +836,7 @@ sub segments {
   $d;
 }
 
-# get/store a RegionSearch object (see Bio::Graphics::Browser::RegionSearch)
+# get/store a RegionSearch object (see Bio::Graphics::Browser2::RegionSearch)
 sub region_search {
   my $self = shift;
   my $d = $self->{region_search};

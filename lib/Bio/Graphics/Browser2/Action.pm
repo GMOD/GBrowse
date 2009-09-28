@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::Action;
+package Bio::Graphics::Browser2::Action;
 
 #$Id$
 # dispatch

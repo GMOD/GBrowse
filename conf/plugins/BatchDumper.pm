@@ -1,7 +1,7 @@
-package Bio::Graphics::Browser::Plugin::BatchDumper;
+package Bio::Graphics::Browser2::Plugin::BatchDumper;
 
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use Bio::Seq::RichSeq;
 use Bio::SeqIO;
 use Bio::Seq;
@@ -42,7 +42,7 @@ my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
 $VERSION = '0.20';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Sequence File" }
 sub description {

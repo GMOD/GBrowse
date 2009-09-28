@@ -1,8 +1,8 @@
-package Bio::Graphics::Browser::Plugin::Blat;
+package Bio::Graphics::Browser2::Plugin::Blat;
 # $Id: Blat.pm  - Sean O'Keeffe
 
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use Bio::Graphics::Feature;
 use Text::Shellwords;
 use File::Temp qw/ tempfile tempdir /;
@@ -13,7 +13,7 @@ use vars '$VERSION','@ISA','$blat_executable','$twobit_dir','$host','$port';
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::Blat -- plugin to map sequences against the genome
+Bio::Graphics::Browser2::Plugin::Blat -- plugin to map sequences against the genome
 
 =head1 SYNOPSIS
 
@@ -60,7 +60,7 @@ $port = "";
 
 $VERSION = '0.01';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "BLAT Alignment" }
 

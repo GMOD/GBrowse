@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::GFFPrinter;
+package Bio::Graphics::Browser2::GFFPrinter;
 
 ###################################################################
 #
@@ -24,10 +24,10 @@ use strict;
 
 use CGI 'param', 'path_info', 'header';
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::UserData;
-use Bio::Graphics::Browser::RegionSearch;
+use Bio::Graphics::Browser2::UserData;
+use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::FeatureFile;
-use Bio::Graphics::Browser::Shellwords;
+use Bio::Graphics::Browser2::Shellwords;
 
 sub new {
     my $class   = shift;
@@ -236,7 +236,7 @@ sub labels_to_files {
 
     my @files;
 
-    my $search = Bio::Graphics::Browser::RegionSearch->new(
+    my $search = Bio::Graphics::Browser2::RegionSearch->new(
 	{
 	    source => $data_source,
 	    state  => { },
@@ -247,7 +247,7 @@ sub labels_to_files {
     my $mapper = $search->coordinate_mapper( $segment, 1 );
     for my $filename (@$labels) {
 	$filename =~ s/:(detail|overview|region).*$//;
-	my $path = Bio::Graphics::Browser::UserData->file2path($data_source,$id,$filename);
+	my $path = Bio::Graphics::Browser2::UserData->file2path($data_source,$id,$filename);
         my $featurefile = eval {
             Bio::Graphics::FeatureFile->new(
                 -file           => $path,

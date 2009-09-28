@@ -1,10 +1,10 @@
-package Bio::Graphics::Browser::RemoteSet;
+package Bio::Graphics::Browser2::RemoteSet;
 # API for handling a set of remote annotation sources
 
 use strict;
-use base 'Bio::Graphics::Browser::UserData';
+use base 'Bio::Graphics::Browser2::UserData';
 
-use Bio::Graphics::Browser::Util 'error','shellwords';
+use Bio::Graphics::Browser2::Util 'error','shellwords';
 use IO::File;
 use CGI 'cookie','param','unescape';
 use Digest::MD5 'md5_hex';
@@ -337,7 +337,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Browser::PluginSet -- A set of plugins
+Bio::Graphics::Browser2::PluginSet -- A set of plugins
 
 =head1 SYNOPSIS
 
@@ -347,7 +347,7 @@ None.  Used internally by gbrowse & gbrowse_img.
 
 =over 4
 
-=item $plugin_set = Bio::Graphics::Browser::PluginSet->new($config,$state,@search_path)
+=item $plugin_set = Bio::Graphics::Browser2::PluginSet->new($config,$state,@search_path)
 
 Initialize plugins according to the configuration, page settings and
 the plugin search path.  Returns an object.

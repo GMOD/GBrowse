@@ -1,8 +1,8 @@
-package Bio::Graphics::Browser::Plugin::TestFinder;
+package Bio::Graphics::Browser2::Plugin::TestFinder;
 
 use strict;
 use warnings;
-use base 'Bio::Graphics::Browser::Plugin';
+use base 'Bio::Graphics::Browser2::Plugin';
 
 sub name { 'TypeFinder'}
 

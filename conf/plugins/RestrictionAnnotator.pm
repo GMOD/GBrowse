@@ -1,14 +1,14 @@
-package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
+package Bio::Graphics::Browser2::Plugin::RestrictionAnnotator;
 # $Id: RestrictionAnnotator.pm,v 1.16 2009-01-02 20:57:37 lstein Exp $
 # test plugin
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.25';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 my %SITES;
 
@@ -138,7 +138,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::RestrictionAnnotator - Generate a restriction map track in GBrowse
+Bio::Graphics::Browser2::Plugin::RestrictionAnnotator - Generate a restriction map track in GBrowse
 
 =head1 SYNOPSIS
 
@@ -179,7 +179,7 @@ None known yet.
 
 =head1 SEE ALSO
 
-L<Bio::Graphics::Browser::Plugin>
+L<Bio::Graphics::Browser2::Plugin>
 
 =head1 AUTHOR
 

@@ -189,7 +189,7 @@ need it again.
 
 use strict;
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::RegionSearch;
+use Bio::Graphics::Browser2::RegionSearch;
 use Template;
 use JSON;
 
@@ -353,7 +353,7 @@ sub run {
 
     $self->state->{dbid} = $db_id if $db_id;    # to search correct database
 
-    my $search = Bio::Graphics::Browser::RegionSearch->new(
+    my $search = Bio::Graphics::Browser2::RegionSearch->new(
         {   source => $self->source,
             state  => $self->state,
         }

@@ -1,9 +1,9 @@
-package Bio::Graphics::Browser::UserTracks;
+package Bio::Graphics::Browser2::UserTracks;
 
 # $Id: UserTracks.pm,v 1.3 2009-08-27 19:13:19 idavies Exp $
 use strict;
-use Bio::Graphics::Browser::DataSource;
-use Bio::Graphics::Browser::DataLoader;
+use Bio::Graphics::Browser2::DataSource;
+use Bio::Graphics::Browser2::DataLoader;
 use File::Spec;
 use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
@@ -180,7 +180,7 @@ sub delete_track {
 sub status {
     my $self     = shift;
     my $filename = shift;
-    my $loader   = 'Bio::Graphics::Browser::DataLoader';
+    my $loader   = 'Bio::Graphics::Browser2::DataLoader';
     my $load   = $loader->new($filename,
 			      $self->track_path($filename),
 			      $self->track_conf($filename),
@@ -192,7 +192,7 @@ sub status {
 sub get_loader {
     my $self   = shift;
     my $type   = shift;
-    my $module = "Bio::Graphics::Browser::DataLoader::$type";
+    my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";
     die $@ if $@;
     return $module;

@@ -2,8 +2,8 @@
 
 use strict;
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::RegionSearch;
-use Bio::Graphics::Browser::Markup;
+use Bio::Graphics::Browser2::RegionSearch;
+use Bio::Graphics::Browser2::Markup;
 use Bio::Graphics::Glyph::generic;
 
 our $VERSION = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
@@ -20,7 +20,7 @@ my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
 my $conf      = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
     or die "Couldn't read globals";
 
-my $fcgi = Bio::Graphics::Browser::Render->fcgi_request;
+my $fcgi = Bio::Graphics::Browser2::Render->fcgi_request;
 
 if ($fcgi) {
 
@@ -54,7 +54,7 @@ use constant DEBUG   => 0;
 use constant MAX_DNA => 500_000;
 
 use CGI qw(:standard *table *TR escape);
-use Bio::Graphics::Browser::Realign 'align';
+use Bio::Graphics::Browser2::Realign 'align';
 
 sub new {
     my $package = shift;
@@ -112,7 +112,7 @@ sub run {
     # This populates the $self->{urls} variable with link rules from the config file.
     $self->get_link_urls();
 
-    my $search = Bio::Graphics::Browser::RegionSearch->new(
+    my $search = Bio::Graphics::Browser2::RegionSearch->new(
 	{
 	    source => $self->source,
 	    state  => $self->state,
@@ -333,7 +333,7 @@ sub print_dna {
 
     warn "dna=$dna" if DEBUG;
 
-    my $markup = Bio::Graphics::Browser::Markup->new;
+    my $markup = Bio::Graphics::Browser2::Markup->new;
     for my $f (@$features) {
 	warn "f = $f" if DEBUG;
 	my $method = $f->primary_tag . $subf;

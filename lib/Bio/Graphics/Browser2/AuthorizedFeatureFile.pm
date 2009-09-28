@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::AuthorizedFeatureFile;
+package Bio::Graphics::Browser2::AuthorizedFeatureFile;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use CGI();
 
 =head1 NAME
 
-Bio::Graphics::Browser::AuthorizedFeatureFile -- Add HTTP authorization features to FeatureFile
+Bio::Graphics::Browser2::AuthorizedFeatureFile -- Add HTTP authorization features to FeatureFile
 
 =head1 SYNOPSIS
 

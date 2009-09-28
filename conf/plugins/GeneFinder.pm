@@ -1,11 +1,11 @@
-package Bio::Graphics::Browser::Plugin::GeneFinder;
+package Bio::Graphics::Browser2::Plugin::GeneFinder;
 
 # $Id: GeneFinder.pm,v 1.3 2005-12-09 22:19:09 mwz444 Exp $
 # test plugin
 use strict;
 use File::Temp 'tempfile';
 use File::Spec;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use Bio::SeqFeature::Generic;
 use CGI qw(:standard *table);
 
@@ -15,7 +15,7 @@ $VERSION = '0.2';
 use constant GENEFINDER => 'gfcode';   # must be in the path somewhere
 use constant GFTABLES   => 'gftables'; # must be in the gbrowse.conf directory
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "GeneFinder Features" }
 

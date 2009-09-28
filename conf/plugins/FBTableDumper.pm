@@ -1,14 +1,14 @@
-package Bio::Graphics::Browser::Plugin::FBTableDumper;
+package Bio::Graphics::Browser2::Plugin::FBTableDumper;
 # FBTableDumper.pm v1 2006 V.Strelets at FlyBase.org
 # derived from GFFDumper by L.Stein
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use CGI qw(:standard *sup);
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.80';
 
-@ISA = qw/ Bio::Graphics::Browser::Plugin /;
+@ISA = qw/ Bio::Graphics::Browser2::Plugin /;
 
 sub name { "HTML table view" }
 sub description {

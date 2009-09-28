@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::Render::Slave;
+package Bio::Graphics::Browser2::Render::Slave;
 
 use strict;
 use HTTP::Daemon;
@@ -11,12 +11,12 @@ use Text::ParseWords 'shellwords';
 use File::Basename 'basename';
 use Bio::Graphics::GBrowseFeature;
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::I18n;
-use Bio::Graphics::Browser::DataSource;
-use Bio::Graphics::Browser::RenderPanels;
-use Bio::Graphics::Browser::Region;
-use Bio::Graphics::Browser::RegionSearch; 
-use Bio::Graphics::Browser::DataBase;
+use Bio::Graphics::Browser2::I18n;
+use Bio::Graphics::Browser2::DataSource;
+use Bio::Graphics::Browser2::RenderPanels;
+use Bio::Graphics::Browser2::Region;
+use Bio::Graphics::Browser2::RegionSearch; 
+use Bio::Graphics::Browser2::DataBase;
 use POSIX 'WNOHANG','setsid','setuid';
 
 use Carp 'croak';
@@ -116,7 +116,7 @@ sub do_preload {
 	    my @aggregators = shellwords($a||'');
 	    push @argv,(-aggregator => \@aggregators);
 	}
-	my $db = Bio::Graphics::Browser::DataBase->open_database($adaptor,@argv);
+	my $db = Bio::Graphics::Browser2::DataBase->open_database($adaptor,@argv);
 	if ($db) {
 	    $self->Info("Preloaded $adaptor database $label");
 	} else {
@@ -158,7 +158,7 @@ sub run {
 	    $self->Info("Forked child PID $child");
 	    $c->close();
 	} else {
-	    Bio::Graphics::Browser::DataBase->clone_databases();
+	    Bio::Graphics::Browser2::DataBase->clone_databases();
 	    $self->process_connection($c);
 	    $d->close();
 	    $c->close();
@@ -261,9 +261,9 @@ sub render_tracks {
     # BUG: duplicated code from Render.pm -- move into a common place
     $panel_args->{section} ||= '';  # prevent uninit variable warnings
     if ($panel_args->{section} eq 'overview') {
-	$segment = Bio::Graphics::Browser::Region->whole_segment($segment,$settings);
+	$segment = Bio::Graphics::Browser2::Region->whole_segment($segment,$settings);
     } elsif ($panel_args->{section} eq 'region') {
-	$segment  = Bio::Graphics::Browser::Region->region_segment($segment,$settings);
+	$segment  = Bio::Graphics::Browser2::Region->region_segment($segment,$settings);
     }
 
     $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop} (2)")
@@ -271,7 +271,7 @@ sub render_tracks {
 	    
     # generate the panels
     $self->Debug("Calling RenderPanels->new()");
-    my $renderer = Bio::Graphics::Browser::RenderPanels->new(-segment  => $segment,
+    my $renderer = Bio::Graphics::Browser2::RenderPanels->new(-segment  => $segment,
 							     -source   => $datasource,
 							     -settings => $settings,
 							     -language => $language);
@@ -325,7 +325,7 @@ sub search_features {
     my $datasource	= thaw param('datasource');
 
     # initialize a region search object
-    my $search = Bio::Graphics::Browser::RegionSearch->new(
+    my $search = Bio::Graphics::Browser2::RegionSearch->new(
 	{source => $datasource,
 	 state  => $settings}
 	) or return;

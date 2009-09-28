@@ -1,8 +1,8 @@
-package Bio::Graphics::Browser::Plugin::SinWave;
+package Bio::Graphics::Browser2::Plugin::SinWave;
 # $Id: SinWave.pm,v 1.2 2008-12-02 23:56:53 lstein Exp $
 # test plugin
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use Bio::Graphics::Feature;
 use CGI qw(:standard *table);
 
@@ -11,7 +11,7 @@ $VERSION = '0.1';
 use constant RADIANS_PER_CYCLE  => 2*3.14159265; # pi
 use constant BINS_PER_SEGMENT   => 1000;         # number of data points
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "Sine Wave" }
 

@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser::Render;
+package Bio::Graphics::Browser2::Render;
 
 use strict;	
 use warnings;
@@ -10,18 +10,18 @@ use Carp 'croak','cluck';
 use File::Basename 'dirname','basename';
 use Text::Tabs;
 
-use Bio::Graphics::Browser::I18n;
-use Bio::Graphics::Browser::PluginSet;
-use Bio::Graphics::Browser::UploadSet;
-use Bio::Graphics::Browser::RemoteSet;
-use Bio::Graphics::Browser::Shellwords;
-use Bio::Graphics::Browser::Action;
-use Bio::Graphics::Browser::Region;
-use Bio::Graphics::Browser::RegionSearch;
-use Bio::Graphics::Browser::RenderPanels;
-use Bio::Graphics::Browser::GFFPrinter;
-use Bio::Graphics::Browser::Util qw[modperl_request url_label];
-use Bio::Graphics::Browser::UserTracks;
+use Bio::Graphics::Browser2::I18n;
+use Bio::Graphics::Browser2::PluginSet;
+use Bio::Graphics::Browser2::UploadSet;
+use Bio::Graphics::Browser2::RemoteSet;
+use Bio::Graphics::Browser2::Shellwords;
+use Bio::Graphics::Browser2::Action;
+use Bio::Graphics::Browser2::Region;
+use Bio::Graphics::Browser2::RegionSearch;
+use Bio::Graphics::Browser2::RenderPanels;
+use Bio::Graphics::Browser2::GFFPrinter;
+use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
+use Bio::Graphics::Browser2::UserTracks;
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -107,7 +107,7 @@ sub remote_sources {
 sub user_tracks {
     my $self = shift;
     return $self->{usertracks} 
-       ||= Bio::Graphics::Browser::UserTracks->new($self->data_source,
+       ||= Bio::Graphics::Browser2::UserTracks->new($self->data_source,
 						   $self->state,
 						   $self->language);
 }
@@ -268,12 +268,12 @@ sub asynchronous_event {
     # so we are slowly cleaning this up with a more orderly
     # dispatch object.
     if (my $action = param('action')) {
-	my $dispatch = Bio::Graphics::Browser::Action->new($self);
+	my $dispatch = Bio::Graphics::Browser2::Action->new($self);
 	my $method   = "ACTION_${action}";
 	return $dispatch->$method($CGI::Q);
     }
 
-    # everything below here should be migrated into Bio::Graphics::Browser::Action
+    # everything below here should be migrated into Bio::Graphics::Browser2::Action
 
     if ( my $track_name = param('share_track') ) {
         my $html = $self->share_track($track_name);
@@ -547,7 +547,7 @@ sub asynchronous_event {
 
     # add a dummy track to the user data
     if (param('new_test_track')) {
-	my $userdata = Bio::Graphics::Browser::UploadSet->new($self->data_source,
+	my $userdata = Bio::Graphics::Browser2::UploadSet->new($self->data_source,
 							      $self->state,
 							      $self->language);
 	warn "Adding test track for ",$self->state->{uploadid}," path = ",($userdata->name_file('test'))[1];
@@ -557,7 +557,7 @@ sub asynchronous_event {
     # new-style ajax upload
     if (param('new_file_submit')) {
 	if (my $fh = param('new_file_upload')) {
-	    my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
+	    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
 								   $self->state,
 								   $self->language);
 	    warn "created userdata $userdata";
@@ -586,7 +586,7 @@ sub asynchronous_event {
 	my $file_name = 'Unknown';
 
 	if ($file_name = $self->state->{current_upload}) {
-	    my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
+	    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
 								   $self->state,
 								   $self->language);
 	    $status      = $userdata->status($file_name);
@@ -597,7 +597,7 @@ sub asynchronous_event {
     }
 
     if (my $track = param('deleteUploadTrack')) {
-	my $userdata = Bio::Graphics::Browser::UserTracks->new($self->data_source,
+	my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
 							       $self->state,
 							       $self->language);
 	$userdata->delete_track($track);
@@ -628,7 +628,7 @@ sub authorize_user {
 	    $session = $self->globals->session($id);  # create/retrieve session
     }
     
-    my $nonce = Bio::Graphics::Browser::Util->generate_id;
+    my $nonce = Bio::Graphics::Browser2::Util->generate_id;
     my $ip    = CGI::remote_addr();
 
     $session->set_nonce($nonce,$ip,$remember);
@@ -1192,7 +1192,7 @@ sub region {
 
     my $db = $self->data_source->open_database();
 
-    my $region   = Bio::Graphics::Browser::Region->new(
+    my $region   = Bio::Graphics::Browser2::Region->new(
  	{ source => $self->data_source,
  	  state  => $self->state,
  	  db     => $db }
@@ -1250,7 +1250,7 @@ sub thin_region_segment {
     my $thin_segment       = $self->thin_segment;
     my $thin_whole_segment = $self->thin_whole_segment;
 
-    return Bio::Graphics::Browser::Region->region_segment(
+    return Bio::Graphics::Browser2::Region->region_segment(
 	$thin_segment,
 	$state,
 	$thin_whole_segment);
@@ -1289,7 +1289,7 @@ sub region_segment {
 sub get_search_object {
     my $self = shift;
     return $self->{searchobj} if defined $self->{searchobj};
-    my $search = Bio::Graphics::Browser::RegionSearch->new(
+    my $search = Bio::Graphics::Browser2::RegionSearch->new(
 	{ source => $self->data_source,
 	  state  => $self->state,
 	});
@@ -1308,7 +1308,7 @@ sub init_plugins {
   my @plugin_path = shellwords($self->data_source->globals->plugin_path);
 
   my $plugins = $PLUGINS{$source} 
-    ||= Bio::Graphics::Browser::PluginSet->new($self->data_source,
+    ||= Bio::Graphics::Browser2::PluginSet->new($self->data_source,
 					       $self->state,
 					       $self->language,
 					       @plugin_path);
@@ -1373,7 +1373,7 @@ sub handle_gff_dump {
     my $gff_action = param('gbgff') or return;
     my $segment    = param('q') || param('segment') || undef,
 
-    my $dumper = Bio::Graphics::Browser::GFFPrinter->new(
+    my $dumper = Bio::Graphics::Browser2::GFFPrinter->new(
         -data_source => $self->data_source(),
         -stylesheet  => param('stylesheet') || param('s')  ||  'no',
         -id          => param('id')         || undef,         
@@ -1543,10 +1543,10 @@ sub galaxy_form { }
 #======================== remote sources ====================
 sub init_remote_sources {
   my $self = shift;
-  my $uploaded_sources = Bio::Graphics::Browser::UploadSet->new($self->data_source,
+  my $uploaded_sources = Bio::Graphics::Browser2::UploadSet->new($self->data_source,
 								$self->state,
 								$self->language);
-  my $remote_sources   = Bio::Graphics::Browser::RemoteSet->new($self->data_source,
+  my $remote_sources   = Bio::Graphics::Browser2::RemoteSet->new($self->data_source,
 								$self->state,
 								$self->language);
   for ($uploaded_sources,$remote_sources) { $_->add_files_from_state; }
@@ -1566,12 +1566,12 @@ sub cleanup {
 sub fatal_error {
   my $self = shift;
   my @msg  = @_;
-  croak 'Please call fatal_error() for a subclass of Bio::Graphics::Browser::Render';
+  croak 'Please call fatal_error() for a subclass of Bio::Graphics::Browser2::Render';
 }
 
 sub zoomBar {
     my $self = shift;
-    croak 'Please define zoomBar() in a subclass of Bio::Graphics::Browser::Render';
+    croak 'Please define zoomBar() in a subclass of Bio::Graphics::Browser2::Render';
 }
 
 sub write_auto {
@@ -1719,7 +1719,7 @@ sub handle_edit {
     close $fh;
 
     # parse the new file to find out what tracks it contains
-    my $uploads = Bio::Graphics::Browser::UploadSet->new($self->data_source,
+    my $uploads = Bio::Graphics::Browser2::UploadSet->new($self->data_source,
 							 $self->state,
 							 $self->language);
     $uploads->add_file($uploads->name_file($file));
@@ -1916,7 +1916,7 @@ sub default_state {
   $state->{ks}           = 'between';
   $state->{grid}         = 1;
   $state->{sk}           = $self->setting("default varying") ? "unsorted" : "sorted";
-  $state->{uploadid}     = Bio::Graphics::Browser::Util->generate_id;
+  $state->{uploadid}     = Bio::Graphics::Browser2::Util->generate_id;
 
   # if no name is specified but there is a "initial landmark" defined in the
   # config file, then we default to that.
@@ -2198,7 +2198,7 @@ sub update_coordinates {
   elsif (param('q')) {
       warn "param(q) = ",param('q') if DEBUG;
       @{$state}{'ref','start','stop'} 
-          = Bio::Graphics::Browser::Region->parse_feature_name(param('q'));
+          = Bio::Graphics::Browser2::Region->parse_feature_name(param('q'));
       $position_updated++;
   }
 
@@ -2754,7 +2754,7 @@ sub set_language {
 
   my $data_source = $self->data_source;
 
-  my $lang             = Bio::Graphics::Browser::I18n->new($data_source->globals->language_path);
+  my $lang             = Bio::Graphics::Browser2::I18n->new($data_source->globals->language_path);
   my $default_language = $data_source->setting('language') || 'POSIX';
 
   my $accept           = CGI::http('Accept-language') || '';
@@ -3125,7 +3125,7 @@ sub get_panel_renderer {
   my $seg    = shift || $self->segment;
   my $whole  = shift || $self->whole_segment;
   my $region = shift || $self->region_segment;
-  return Bio::Graphics::Browser::RenderPanels->new(-segment        => $seg,
+  return Bio::Graphics::Browser2::RenderPanels->new(-segment        => $seg,
 						   -whole_segment  => $whole,
 						   -region_segment => $region,
 						   -source         => $self->data_source,
@@ -3318,7 +3318,7 @@ sub render_deferred_track {
 	);
 
     my $base  = $renderer->get_cache_base();
-    my $cache = Bio::Graphics::Browser::CachedTrack->new(
+    my $cache = Bio::Graphics::Browser2::CachedTrack->new(
         -cache_base => $base,
         -key        => $cache_key,
 	-cache_time => ($self->state->{cache} 
@@ -3657,8 +3657,8 @@ sub fork {
     }
 
     else {
-	Bio::Graphics::Browser::DataBase->clone_databases();
-	Bio::Graphics::Browser::Render->prepare_fcgi_for_fork('child');
+	Bio::Graphics::Browser2::DataBase->clone_databases();
+	Bio::Graphics::Browser2::Render->prepare_fcgi_for_fork('child');
     }
 
     return $child;

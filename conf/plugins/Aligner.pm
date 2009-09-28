@@ -1,19 +1,19 @@
-package Bio::Graphics::Browser::Plugin::Aligner;
+package Bio::Graphics::Browser2::Plugin::Aligner;
 # $Id: Aligner.pm,v 1.13 2008-09-18 15:27:07 lstein Exp $
 
 use strict;
-use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser2::Plugin;
 use CGI qw(table a TR td th p popup_menu radio_group checkbox checkbox_group h1 h2 pre);
-use Bio::Graphics::Browser::Realign 'align_segs';
-use Bio::Graphics::Browser::PadAlignment;
-use Bio::Graphics::Browser::Util 'shellwords';
+use Bio::Graphics::Browser2::Realign 'align_segs';
+use Bio::Graphics::Browser2::PadAlignment;
+use Bio::Graphics::Browser2::Util 'shellwords';
 
 use constant DEBUG => 0;
 use constant DEFAULT_RAGGED_ENDS => (0,10,25,50,100,150,500);
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.23';
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 use constant TARGET    => 0;
 use constant SRC_START => 1;
@@ -247,7 +247,7 @@ sub dump {
   my $ragged = $configuration->{ragged} || 0;
 
   # sort aligned sequences from left to right and store them in the data structure
-  # needed by Bio::Graphics::Browser::PadAlignment
+  # needed by Bio::Graphics::Browser2::PadAlignment
   my @sequences = ($segment->seq_id => $ref_dna);
 
   my %seqs;
@@ -301,7 +301,7 @@ sub dump {
     }
   }
 
-  my $align = Bio::Graphics::Browser::PadAlignment->new(\@sequences,\@segments);
+  my $align = Bio::Graphics::Browser2::PadAlignment->new(\@sequences,\@segments);
   my %offsets = map {$_ => $strands{$_} >= 0 ? $clip{$_}{low} : -$clip{$_}{low}} keys %clip;
   $offsets{$segment->display_name} = $abs_start;
 
@@ -313,7 +313,7 @@ sub dump {
 sub realign {
   my $self = shift;
   my ($src,$tgt) = @_;
-  warn join "\n",Bio::Graphics::Browser::Realign::align($src,$tgt) if DEBUG;
+  warn join "\n",Bio::Graphics::Browser2::Realign::align($src,$tgt) if DEBUG;
   return align_segs($src,$tgt);
 }
 
@@ -329,7 +329,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::Aligner - Dump multiple alignments from GBrowse
+Bio::Graphics::Browser2::Plugin::Aligner - Dump multiple alignments from GBrowse
 
 =head1 SYNOPSIS
 
@@ -391,7 +391,7 @@ None known yet.
 
 =head1 SEE ALSO
 
-L<Bio::Graphics::Browser::Plugin>
+L<Bio::Graphics::Browser2::Plugin>
 
 =head1 AUTHOR
 

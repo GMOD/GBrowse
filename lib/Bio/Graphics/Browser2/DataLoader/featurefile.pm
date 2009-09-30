@@ -35,7 +35,6 @@ sub finish_load {
 
     my $trackno   = 0;
     my $loadid    = $self->loadid;
-    warn "LOADID = $loadid";
 
     print $conf <<END;
 [$loadid:database]
@@ -48,7 +47,7 @@ END
     if (my @lines = @{$self->{conflines}}) {  # good! user has provided some config hints
 	for my $line (@lines) {
 	    if ($line =~ /^\[/) { # overwrite track names to avoid collisions
-		my $trackname = $loadid.'_'.$trackno++;
+		my $trackname = $self->new_track_label;
 		print $conf "[$trackname]\n";
 		print $conf "database = $loadid\n" ;
 		print $conf "category = My Tracks:Uploaded Tracks:",$self->track_name,"\n";
@@ -60,7 +59,7 @@ END
     } else {  # make something up
 	my @types = $db->types;
 	for my $t (@types) {
-	    my $trackname = $loadid.'_'.$trackno++;
+	    my $trackname = $self->new_track_label;
 	    print $conf "[$trackname]\n";
 	    print $conf "database = $loadid\n";
 	    print $conf "category = My Tracks:Uploaded Tracks:",$self->track_name,"\n";

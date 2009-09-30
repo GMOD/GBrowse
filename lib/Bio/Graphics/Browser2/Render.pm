@@ -391,11 +391,11 @@ sub add_tracks {
     my $self        = shift;
     my $track_names = shift;
 
+    warn "add_tracks(@$track_names)" if DEBUG;
+
     my %track_data;
 
     foreach my $track_name ( @$track_names ) {
-
-	warn "add_track_to_state($track_name)" if DEBUG;
 
 	$self->add_track_to_state($track_name);
 	next unless $self->segment;
@@ -1738,6 +1738,7 @@ sub add_track_to_state {
 
   # don't add invalid track
   my %potential_tracks = map {$_=>1} $self->potential_tracks;
+  warn "invalid track $label" unless $potential_tracks{$label};
   return unless $potential_tracks{$label};
 
   my %current = map {$_=> 1} @{$state->{tracks}};
@@ -1746,7 +1747,7 @@ sub add_track_to_state {
   warn "[$$]ADD TRACK TO STATE WAS: ",
     join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n" if DEBUG;
 
-  if($state->{features}{$label}){
+  if ($state->{features}{$label}) {
     $state->{features}{$label}{visible}=1;
   }
   else{

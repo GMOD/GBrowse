@@ -12,7 +12,6 @@ sub new {
     my $class = shift;
     my ($track_name,$data_path,$conf_path,$settings,$userid) = @_;
     my $loadid = substr($userid,0,6).'_'.$track_name;
-    warn "loadid = $loadid";
     my $self = bless
     { name     => $track_name,
       data     => $data_path,
@@ -90,10 +89,33 @@ sub load {
     $self->finish_load;
     $self->close_conf;
     $self->set_status("READY");
+    return $self->tracks;
 }
 
 sub start_load  { }
 sub finish_load { }
+
+sub add_track {
+    my $self  = shift;
+    my $label = shift;
+
+    $self->{_tracks} ||= {};
+    $self->{_tracks}{$label}++;
+}
+sub tracks {
+    my $self = shift;
+    return unless $self->{_tracks};
+    return keys %{$self->{_tracks}};
+}
+
+sub new_track_label {
+    my $self   = shift;
+    my $loadid = $self->loadid;
+    $self->{_trackno} ||= 0;
+    my $label  = $loadid.'_'.$self->{_trackno}++;
+    $self->add_track($label);
+    return $label;
+}
 
 sub load_line {
     croak "virtual base class";

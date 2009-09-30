@@ -419,35 +419,39 @@ sub ACTION_upload_file {
     my $self = shift;
     my $q    = shift;
 
-    my $fh = $q->param('file') or return(204,'text/plain',undef);
+    my $fh = $q->param('file') or 
+	return(200,'text/html',JSON::to_json({success=>0,
+					      error_msg=>'empty file'}
+	       ));
 
     my $render   = $self->render;
     my $state    = $self->state;
     my $session  = $render->session;
 
-    my $userdata = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
-							    $render->state,
-							    $render->language);
-    warn "created userdata $userdata";
+    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
+							      $render->state,
+							      $render->language);
 
     my $name = File::Basename::basename($fh );
     $state->{current_upload} = $name;
     $session->flush();
     $session->unlock();
+    
+    my ($result,$msg,$tracks) = $usertracks->upload_file($name,$fh);
+    if (0 && $tracks) {
+	$session->lock('exclusive');
+	$self->data_source->parse_user_file($usertracks->track_conf($name));
+	$render->add_track_to_state($_) foreach @$tracks;
+	$session->flush();
+	$session->unlock();
+    }
 
-    my ($result,$msg) = $userdata->upload_track($name,$fh);
-
-    return $msg ? (200,
-		   'text/html',
-		   "<pre style='background-color:pink'>$msg</pre>".
-		   CGI->a({
-		       -href    =>'javascript:void(0)',
-		       -onClick =>"\$('upload_status').innerHTML=''"
-		     },
-		     '[Remove]'
-		   )
-	)
-	: (200,'text/plain','');
+    my $return_object        = { success   => $result||0,
+				 error_msg => CGI::escapeHTML($msg),
+				 tracks    => $tracks ,
+				 uploadName=> $name,
+                               };
+    return (200,'text/html',JSON::to_json($return_object));  # workaround
 }
 
 sub ACTION_delete_upload {
@@ -457,11 +461,15 @@ sub ACTION_delete_upload {
     my $track  = $q->param('track') or croak;
     my $render = $self->render;
 
-    my $userdata = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
+    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
 							    $render->state,
 							    $render->language);
-    $userdata->delete_track($track);
-    return (204,'text/plain',undef);
+    my @tracks     = $usertracks->labels($track);
+
+    $render->remove_track_from_state($_) foreach @tracks;
+    $usertracks->delete_file($track);
+
+    return (200,'application/json',{tracks=>\@tracks});
 }
 
 sub ACTION_upload_status {
@@ -475,16 +483,31 @@ sub ACTION_upload_status {
     my $render     = $self->render;
 
     if ($file_name = $state->{current_upload}) {
-	my $userdata = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
+	my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
 								$render->state,
 								$render->language);
-	$status      = $userdata->status($file_name);
+	$status      = $usertracks->status($file_name);
 	return (200,'text/html',"<b>$file_name:</b> <i>$status</i>");
     } else {
 	return (204,'text/plain',undef);
     }
 }
 
+sub ACTION_set_upload_description {
+    my $self = shift;
+    my $q    = shift;
+
+    my $state       = $self->state;
+    my $render      = $self->render;
+    my $upload_name = $q->param('upload_name') or croak;
+    my $upload_desc = $q->param('description') or croak;
+
+    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
+							      $render->state,
+							      $render->language);
+    $usertracks->description($upload_name,$upload_desc);
+    return (204,'text/plain',undef);
+}
 
 1;
 

@@ -9,31 +9,33 @@ sub start_load {
     my $conf = $self->conf_fh;
     my $track_name = $self->track_name;
     my $data_path  = $self->data_path;
+    my $loadid     = $self->loadid;
+    my $trackname  = $self->new_track_label;
 
     print $conf <<END;
-[${track_name}_db:database]
+[$loadid:database]
 db_adaptor = Bio::DB::Sam
 db_args    = -bam "$data_path/$track_name.bam"
 search options = none
 
-[$track_name:499]
+[$trackname:499]
 feature   = coverage:2000
 min_score = 0
 glyph     = wiggle_xyplot
-database  = ${track_name}_db
+database  = $loadid
 height    = 50
 fgcolor   = blue
 bgcolor   = blue
 autoscale = local
 key       = $track_name
 
-[$track_name]
+[$trackname]
 feature       = match
 glyph         = segments
 draw_target   = 1
 show_mismatch = 1
 mismatch_color = red
-database       = ${track_name}_db
+database       = $loadid
 bgcolor        = blue
 fgcolor        = blue
 height         = 3

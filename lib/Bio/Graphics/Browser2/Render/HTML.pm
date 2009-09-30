@@ -1179,7 +1179,14 @@ sub list_userdata {
     my @rows = map {
 	my $name          = $_;
 	my $modified      = localtime $userdata->modified($_);
-	my $description   = $userdata->description($_) || 'Click to add a description';
+	my $description   = div(
+	    {
+		-id              => "${name}_description",
+		-onClick         => "Controller.edit_upload_description('$name',this)",
+		-contentEditable => 'true',
+	    },
+	    $userdata->description($_) || 'Click to add a description'
+	    );
 	my $download_data = a({-href=>'?userdata_download=data',-target=>'_blank'},'[Download data]');
 	my $download_conf = a({-href=>'?userdata_download=conf',-target=>'_blank'},'[View Config]');
 	
@@ -1187,12 +1194,12 @@ sub list_userdata {
 	div({-style=>"background-color:$color"},
 	    div({-id=>"${name}_stat"},''),
 	    img({-src=>$share,
-		 -onMouseOver => 'balloon.showTooltip(event,"Share with other users",0,100)',
+		 -onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0,100)',
 		}),
 	    img({-src     => $delete,
 		 -style   => 'cursor:pointer',
-		 -onMouseOver => 'balloon.showTooltip(event,"Delete",0,100)',
-		 -onClick => "deleteUploadTrack('$name')"
+		 -onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
+		 -onClick     => "deleteUploadTrack('$name')"
 		}
 	    ),'&nbsp;',b($name),$modified,br(), 
 	    $download_data,$download_conf,br(),
@@ -1209,7 +1216,7 @@ sub userdata_upload {
     my $form     = <<END;
 <form name="ajax_upload"
       id="ajax_upload"
-      onSubmit="return AIM.submit(this,
+      onSubmit= "return AIM.submit(this,
                                       {onStart    : startAjaxUpload,
                                        onComplete : completeAjaxUpload
                                       })"

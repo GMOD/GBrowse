@@ -91,6 +91,7 @@ sub description {
     my $track = shift;
     my $desc  = File::Spec->catfile($self->path,$track,"$track.desc");
     if (@_) {
+	warn "setting desc to @_";
 	open my $f,">",$desc or return;
 	print $f join("\n",@_);
 	close $f;
@@ -98,7 +99,7 @@ sub description {
     } else {
 	open my $f,"<",$desc or return;
 	my @lines = <$f>;
-	return @lines;
+	return join '',@lines;
     }
 }
 
@@ -141,7 +142,7 @@ END
     close $f;
 }
 
-sub upload_track {
+sub upload_file {
     my $self = shift;
     my ($file_name,$fh) = @_;
     
@@ -150,6 +151,7 @@ sub upload_track {
     # guess the file type from the first non-blank line
     my ($type,$lines)   = $self->guess_upload_type($fh);
 
+    my @tracks;
     my $result= eval {
 	croak "Could not guess the type of the file $file_name"
 	    unless $type;
@@ -161,20 +163,28 @@ sub upload_track {
 				  $self->config,
 				  $self->state->{uploadid},
 	    );
-	$load->load($lines,$fh);
+	@tracks = $load->load($lines,$fh);
 	1;
     };
     my $msg = $@;
+    warn $@ unless $result;
 
-    $self->delete_track($track_name) unless $result;
-    return ($result,$msg);
+    $self->delete_file($track_name) unless $result;
+    return ($result,$msg,\@tracks);
     
 }
 
-sub delete_track {
+sub delete_file {
     my $self = shift;
     my $track_name  = shift;
      rmtree($self->track_path($track_name));
+}
+
+sub labels {
+    my $self       = shift;
+    my $track_name = shift;
+    my $conf       = $self->track_conf($track_name) or return;
+    return Bio::Graphics::FeatureFile->new(-file=>$conf)->labels;
 }
 
 sub status {

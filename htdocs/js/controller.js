@@ -226,7 +226,7 @@ var GBrowseController = Class.create({
 
   // Update Section Methods *****************************************
   update_sections:
-  function(section_names, param_str, scroll_there, spin) {
+  function(section_names, param_str, scroll_there, spin, onSuccessFunc) {
 
     if (param_str==null){
         param_str = '';
@@ -262,6 +262,7 @@ var GBrowseController = Class.create({
 	    }
 	  if (section_name == page_title_id)
 	     document.title = $(section_name).innerHTML;
+	  if (onSuccessFunc != null) onSuccessFunc();
         }
       }
     });
@@ -486,6 +487,16 @@ var GBrowseController = Class.create({
     }); //end each_track()
 
   }, // end rerender_track
+
+  delete_track:
+  function(track_name) {
+      var track_obj     = this.gbtracks.get(track_name)
+      if (track_obj != null) {
+	  var track_div_id = track_obj.track_div_id;
+	  this.unregister_track(track_name);
+	  actually_remove(track_div_id);
+      }
+  }, // end delete_track
 
   // Retrieve Rendered Track Methods ********************************
   
@@ -836,18 +847,6 @@ var GBrowseController = Class.create({
     });
   },
 
-  // this is for testing ....
-  new_test_track:
-  function () {
-      new Ajax.Request(document.URL, {
-            method:      'post',
-            parameters:  { new_test_track: 1 },
-            onSuccess: function (transport) {
-	        Controller.update_sections(new Array(track_listing_id,external_listing_id),null,null,true);
-            } // end onSuccess
-      });
-  },
-
   // Utility methods *********************************
   show_error:
   function (message,details) {
@@ -892,7 +891,56 @@ var GBrowseController = Class.create({
        caption.innerHTML="Hide details";
        detailsdiv.show();
     }
- }
+ },
+
+  edit_upload_description:
+  function(upload_name,container_element) {
+      if (container_element == null)
+	  return true;
+      container_element.setStyle({
+	      border: '2px',
+	      inset:  'black',
+	      backgroundColor:'beige',
+	      padding:'5px 5px 5px 5px'
+		  });
+      // var r = document.createRange();
+      // r.selectNodeContents(container_element);
+      // window.getSelection().addRange(r);
+      Event.observe(container_element,'keypress',this.set_upload_description);
+  },
+
+  set_upload_description:
+  function(event) {
+      var el = event.findElement();
+      if (event.keyCode==Event.KEY_RETURN) {
+	  var upload_name = el.id.sub('_description$','');
+	  var desc        = el.innerHTML;
+	  el.innerHTML  = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
+	  new Ajax.Request(document.URL, {
+		      method:      'post',
+		      parameters:{  
+		          action: 'set_upload_description',
+			  upload_name: upload_name,
+			  description: desc
+		      },
+		      onSuccess: function(transport) {
+		      Controller.update_sections(new Array(userdata_table_id))
+		      }
+	       });
+	  el.stopObserving('keypress');
+	  el.blur();
+	  return true;
+      }
+      if (event.keyCode==Event.KEY_ESC) {
+	  el.innerHTML  = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
+	  Controller.update_sections(new Array(userdata_table_id));
+	  el.stopObserving('keypress');
+	  el.blur();
+	  return true;
+      }
+      return false;
+  }
+
 
 });
 

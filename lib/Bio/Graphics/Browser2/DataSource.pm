@@ -457,6 +457,7 @@ sub get_ranges {
 sub type2label {
   my $self  = shift;
   my ($type,$length,$dbid) = @_;
+  $dbid   ||= '';
   $type   ||= '';
   $length ||= 0;
 

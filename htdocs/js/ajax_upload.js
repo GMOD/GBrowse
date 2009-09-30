@@ -61,8 +61,8 @@ AIM = {
 }
 
 function startAjaxUpload() {
-  $('upload_indicator').innerHTML = "<image src='/gbrowse2/images/buttons/ajax-loader.gif' />";
-  $('upload_status').innerHTML = '<b>Uploading...</b>';
+  $('upload_indicator').innerHTML = "<image src='/gbrowse2/images/spinner.gif' />";
+  $('upload_status').innerHTML    = '<b>Uploading...</b>';
   $('ajax_upload').hide();
   if (Ajax_Status_Updater==null)
      Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('upload_status'),'#',{parameters:{action:'upload_status'}});
@@ -72,26 +72,43 @@ function startAjaxUpload() {
 }
 
 function completeAjaxUpload(response) {
-      $('upload_status').innerHTML = response;
-      $('upload_indicator').innerHTML = '';
-      $('ajax_upload').remove();
-      if (Ajax_Status_Updater!=null)
-         Ajax_Status_Updater.stop();
-      Controller.update_sections(new Array(userdata_table_id));
-      return true;
+    var r = response.evalJSON(true);
+
+    if (r.success) {
+	Controller.add_tracks(r.tracks,
+			      function() { 
+				  Controller.update_sections(new Array(userdata_table_id,track_listing_id))
+				      }
+			      );
+    	$('upload_status').innerHTML = '';
+    } else {
+	var uploadName = r.uploadName;
+    	var msg =  '<div style="background-color:pink">'+'<b>'+uploadName+'</b>: '+r.error_msg+'<br>'
+    	         + '<a href="javascript:void(0)" onClick="$(\'upload_status\').innerHTML=\'\'">[Remove Message]</a>'+'</div>';
+    	$('upload_status').innerHTML = msg;
+    }
+
+    if (Ajax_Status_Updater!=null)
+	Ajax_Status_Updater.stop();
+    $('upload_indicator').innerHTML = '';
+    $('ajax_upload').remove();
+    return true;
 }
 
 function deleteUploadTrack (trackName) {
    var indicator = trackName + "_stat";
-   $(indicator).innerHTML = "<image src='/gbrowse2/images/buttons/ajax-loader.gif' />";
+   $(indicator).innerHTML = "<image src='/gbrowse2/images/spinner.gif' />";
    new Ajax.Request(document.URL, {
         method:      'post',
         parameters:  {action: 'delete_upload',
 	              track:  trackName
 		      },
         onSuccess:   function (transport) {
-                 Controller.update_sections(new Array(userdata_table_id));
-		 }
+	       var tracks = transport.responseJSON.tracks;
+	       if (tracks != null)
+		   tracks.each(function(tid) { Controller.delete_track(tid) });
+	       Controller.update_sections(new Array(userdata_table_id,track_listing_id));
+	    }
         }
    );
 }

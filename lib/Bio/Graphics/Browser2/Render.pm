@@ -152,7 +152,7 @@ sub run {
 
   # This guarantees that all user-specific tracks
   # disappear after the current session completes.
-  local $self->data_source->{user_tracks} = {};
+  local $self->data_source->{_user_tracks} = {};
   $self->add_user_tracks($self->data_source);
 
   my $state = $self->state;

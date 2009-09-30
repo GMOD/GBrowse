@@ -440,7 +440,7 @@ sub ACTION_upload_file {
     return $msg ? (200,
 		   'text/html',
 		   "<pre style='background-color:pink'>$msg</pre>".
-		   a({
+		   CGI->a({
 		       -href    =>'javascript:void(0)',
 		       -onClick =>"\$('upload_status').innerHTML=''"
 		     },

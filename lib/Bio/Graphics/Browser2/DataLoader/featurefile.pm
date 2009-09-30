@@ -14,7 +14,8 @@ sub start_load {
     my $db     = $self->create_database($data_path);
     warn "db = $db";
     my $loader = Bio::DB::SeqFeature::Store::FeatureFileLoader->new(-store=> $db,
-								    -fast => 0);
+								    -fast => 0,
+	);
     warn "starting load";
     $loader->start_load();
     $self->{loader}    = $loader;
@@ -32,8 +33,12 @@ sub finish_load {
     my $dsn       = $self->dsn;
     my $backend   = $self->backend;
 
+    my $trackno   = 0;
+    my $loadid    = $self->loadid;
+    warn "LOADID = $loadid";
+
     print $conf <<END;
-[$trackname:database]
+[$loadid:database]
 db_adaptor = Bio::DB::SeqFeature::Store
 db_args    = -adaptor $backend
              -dsn     $dsn
@@ -42,18 +47,22 @@ END
 
     if (my @lines = @{$self->{conflines}}) {  # good! user has provided some config hints
 	for my $line (@lines) {
-	    print $conf $line;
-	    if ($line =~ /^\[/) {
-		print $conf "database = ",$self->track_name,"\n" ;
+	    if ($line =~ /^\[/) { # overwrite track names to avoid collisions
+		my $trackname = $loadid.'_'.$trackno++;
+		print $conf "[$trackname]\n";
+		print $conf "database = $loadid\n" ;
 		print $conf "category = My Tracks:Uploaded Tracks:",$self->track_name,"\n";
+	    } else {
+		print $conf $line;
 	    }
 
 	}
     } else {  # make something up
 	my @types = $db->types;
 	for my $t (@types) {
-	    print $conf "[$t]\n";
-	    print $conf "database = ",$self->track_name,"\n";
+	    my $trackname = $loadid.'_'.$trackno++;
+	    print $conf "[$trackname]\n";
+	    print $conf "database = $loadid\n";
 	    print $conf "category = My Tracks:Uploaded Tracks:",$self->track_name,"\n";
 	    print $conf "glyph = generic\n";
 	    print $conf "key   = ",$self->track_name," ($t)\n";
@@ -77,8 +86,6 @@ sub load_line {
     my $old_state = $self->state;
     my $state     = $self->_state_transition($old_state,$line);
 
-    warn "old_state=$old_state, new_state=$state, data=$line";
-
     if ($state eq 'data') {
 	$self->loader->load_line($line);
     } elsif ($state eq 'config') {
@@ -91,8 +98,6 @@ sub load_line {
 sub _state_transition {
     my $self = shift;
     my ($current_state,$line) = @_;
-
-    warn "current_state=$current_state,line=$line";
 
     if ($current_state eq 'data') {
 	return 'config' if $line =~ m/^\s*\[([^\]]+)\]/;  # start of a configuration section

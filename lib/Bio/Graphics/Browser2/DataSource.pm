@@ -314,8 +314,8 @@ sub default_style {
 sub style {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);
-  return $l eq $label ? $self->SUPER::style($l) 
-                      : ($self->SUPER::style($label),$self->SUPER::style($l));
+  return $l eq $label ? $self->user_style($l) 
+                      : ($self->user_style($label),$self->user_style($l));
 }
 
 # return language-specific options
@@ -347,6 +347,14 @@ sub i18n_style {
 		/^(-[^:]+)(:(\w+))?$/; [$_ => $option, $priority{$lang||''}||99] }
 	keys %options;
   %lang_options;
+}
+
+sub user_style {
+    my $self = shift;
+    my $type = shift;
+    local $self->{config} = $self->{_user_tracks}{config}
+      if exists $self->{_user_tracks}{config}{$type};
+    return $self->SUPER::style($type);
 }
 
 # like setting, but falls back to 'track defaults' and then to 'general'
@@ -447,29 +455,44 @@ sub get_ranges {
 # override inherited in order to be case insensitive
 # and to account for semantic zooming
 sub type2label {
-  my $self           = shift;
-  my ($type,$length) = @_;
+  my $self  = shift;
+  my ($type,$length,$dbid) = @_;
   $type   ||= '';
   $length ||= 0;
 
   my @labels;
 
-  @labels = @{$self->{_type2labelmemo}{$type,$length}}
-    if defined $self->{_type2labelmemo}{$type,$length};
+  @labels =  @{$self->{_type2labelmemo}{$type,$length,$dbid}}
+    if defined $self->{_type2labelmemo}{$type,$length,$dbid};
 
   unless (@labels) {
-    my @array  = $self->SUPER::type2label(lc $type) or return;
-    my %label_groups;
-    for my $label (@array) {
-      my ($label_base,$minlength) = $label =~ /(.+)(?::(\d+))?/;
-      $minlength ||= 0;
-      next if defined $length && $minlength > $length;
-      $label_groups{$label_base}++;
-    }
-    @labels = keys %label_groups;
-    $self->{_type2labelmemo}{$type,$length} = \@labels;
+      my @main_labels = $self->_type2label($self,
+					   $type,
+					   $dbid);
+      my @user_labels = $self->_type2label($self->{_user_tracks},
+					   $type,
+					   $dbid);
+      my %label_groups;
+      for my $label (@main_labels,@user_labels) {
+	  my ($label_base,$minlength) = $label =~ /(.+)(?::(\d+))?/;
+	  $minlength ||= 0;
+	  next if defined $length && $minlength > $length;
+	  $label_groups{$label_base}++;
+      }
+      @labels = keys %label_groups;
+      $self->{_type2labelmemo}{$type,$length} = \@labels;
   }
   return wantarray ? @labels : $labels[0];
+}
+
+sub _type2label {
+    my $self = shift;
+    my ($storage_hash,$type,$dbid) = @_;
+    my $type2label = $storage_hash->{_type2label} 
+                 ||= $self->invert_types($storage_hash->{config});
+    $dbid =~ s/:database$//;
+    my @labels = keys %{$type2label->{lc $type}{$dbid}};
+    return wantarray ? @labels : $labels[0];
 }
 
 # override inherited in order to allow for semantic zooming
@@ -479,11 +502,11 @@ sub feature2label {
   my $type  = eval {$feature->type}
     || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
 
-  (my $basetype = $type) =~ s/:.+$//;
-  my @label = $self->type2label($type,$length);
-  push @label,$self->type2label($basetype,$length);
+  my $dbid = eval{$feature->gbrowse_dbid};
 
-  # @label    = ($type) unless @label;
+  (my $basetype = $type) =~ s/:.+$//;
+  my @label = $self->type2label($type,$length,$dbid);
+  push @label,$self->type2label($basetype,$length,$dbid);
 
   # remove duplicate labels
   my %seen;
@@ -493,13 +516,17 @@ sub feature2label {
 }
 
 sub invert_types {
-  my $self = shift;
-  my $config  = $self->{config} or return;
+  my $self    = shift;
+  my $config  = shift;
+  return unless $config;
+
   my %inverted;
   for my $label (keys %{$config}) {
     my $feature = $config->{$label}{'feature'} or next;
+    my $dbid    = $config->{$label}{'database'} ||
+	$self->fallback_setting(TRACK_DEFAULTS => 'database');
     foreach (shellwords($feature||'')) {
-      $inverted{lc $_}{$label}++;
+      $inverted{lc $_}{$dbid}{$label}++;
     }
   }
   \%inverted;
@@ -882,34 +909,36 @@ sub _secondary_key_to_label {
 
 
 ######### experimental code to manage user-specific tracks ##########
-sub add_user_type {
-    my $self = shift;
-    my ($type,$type_configuration) = @_;
-
-    my $cc = ($type =~ /^(general|default)$/i) ? 'general' : $type;  # normalize
-
-    my $base = $self->{user_tracks} ||= {};
-    
-    push @{$base->{types}},$cc 
-	unless $cc eq 'general' or $base->{config}{$cc};
-
-    if (defined $type_configuration) {
-	for my $tag (keys %$type_configuration) {
-	    $base->{config}{$cc}{lc $tag} = $type_configuration->{$tag};
-	}
-    }
-}
-
 sub configured_types {
     my $self  = shift;
     my @types       = $self->SUPER::configured_types;
-    my @user_types  = @{$self->{user_tracks}{types}} if exists $self->{user_tracks}{types};
+    my @user_types  = @{$self->{_user_tracks}{types}}
+         if exists $self->{_user_tracks}{types};
     return (@types,@user_types);
+}
+
+sub usertype2label {
+    my $self = shift;
+    my ($type,$length) = @_;
+    return unless $self->{_user_tracks}{types};
+    my @userlabels = @{$self->{_user_tracks}{types}} or return;
+
+    my %labels;
+    for my $label (@userlabels) {
+	my ($label_base,$minlength) = $label =~ /(.+)(?::(\d+))?/;
+	$minlength ||= 0;
+	next if defined $length && $minlength > $length;
+	my @types = shellwords($self->{_user_tracks}{config}{$label}{feature});
+	@types    = $label unless @types;
+	next unless grep {/$type/i} @types;
+	$labels{$label}++;
+    }
+    return keys %labels;
 }
 
 sub _setting {
     my $self = shift;
-    if (@_ == 2 && (my $base = $self->{user_tracks})) {
+    if (@_ == 2 && (my $base = $self->{_user_tracks})) {
 	return $base->{config}{$_[0]}{$_[1]} if exists $base->{config}{$_[0]};
     }
     return $self->SUPER::_setting(@_);
@@ -917,18 +946,18 @@ sub _setting {
 
 sub parse_user_file {
     my $self = shift;
-    $self->{user_tracks}{types}  ||= [];
-    $self->{user_tracks}{config} ||= {};
+    $self->{_user_tracks}{types}  ||= [];
+    $self->{_user_tracks}{config} ||= {};
 
-    local $self->{types}  = $self->{user_tracks}{types};
-    local $self->{config} = $self->{user_tracks}{config};
+    local $self->{types}  = $self->{_user_tracks}{types};
+    local $self->{config} = $self->{_user_tracks}{config};
     $self->SUPER::parse_file(@_);
 }
 
 sub parse_user_fh {
     my $self = shift;
-    local $self->{types}  = $self->{user_tracks}{types};
-    local $self->{config} = $self->{user_tracks}{config};
+    local $self->{types}  = $self->{_user_tracks}{types};
+    local $self->{config} = $self->{_user_tracks}{config};
     $self->SUPER::parse_fh(@_);
 }
 

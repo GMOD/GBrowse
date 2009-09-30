@@ -10,12 +10,15 @@ use Carp 'croak';
 
 sub new {
     my $class = shift;
-    my ($track_name,$data_path,$conf_path,$settings) = @_;
+    my ($track_name,$data_path,$conf_path,$settings,$userid) = @_;
+    my $loadid = substr($userid,0,6).'_'.$track_name;
+    warn "loadid = $loadid";
     my $self = bless
-    { name => $track_name,
-      data => $data_path,
-      conf => $conf_path,
-      settings=>$settings,
+    { name     => $track_name,
+      data     => $data_path,
+      conf     => $conf_path,
+      settings => $settings,
+      loadid   => $loadid,
     },ref $class || $class;
     return $self;
  }
@@ -23,8 +26,9 @@ sub new {
 sub track_name { shift->{name} }
 sub data_path  { shift->{data} }
 sub conf_path  { shift->{conf} }
-sub conf_fh    { shift->{conf_fh} }
+sub conf_fh    { shift->{conf_fh}  }
 sub settings   { shift->{settings} }
+sub loadid     { shift->{loadid}   }
 sub setting {
     my $self   = shift;
     my $option = shift;

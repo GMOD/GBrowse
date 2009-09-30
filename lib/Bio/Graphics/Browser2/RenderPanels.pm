@@ -1381,8 +1381,6 @@ sub add_features_to_track {
 
       my @labels = $source->feature2label($feature,$length);
 
-      warn "iterator = $iterator, feature = $feature, labels=@labels";
-
       for my $l (@labels) {
 
           $l =~ s/:\d+//;  # get rid of semantic zooming tag

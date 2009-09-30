@@ -159,6 +159,7 @@ sub upload_track {
 				  $self->track_path($track_name),
 				  $self->track_conf($track_name),
 				  $self->config,
+				  $self->state->{uploadid},
 	    );
 	$load->load($lines,$fh);
 	1;
@@ -184,6 +185,7 @@ sub status {
 			      $self->track_path($filename),
 			      $self->track_conf($filename),
 			      $self->config,
+			      $self->state->{uploadid},
 	);
     return $load->get_status();
 }

@@ -6,8 +6,7 @@
   Will need plugin authors to provide internationalization.
 * Allow administrator to change track label fonts and sizes.
 * Boolean operations on queries
-* Add per-track parameter lists as per letter from Russell Smithies, 
-	Monday, Sept 5, 2006
+* Add per-track parameter lists as per letter from Russell Smithies, Monday, Sept 5, 2006
 * More internationalization
 
 $Id: TODO,v 1.4.6.16.2.2.2.3 2007-07-23 19:49:14 lstein Exp $

@@ -41,7 +41,7 @@ $startperl -w
 \$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
 #
 ###################################################################
-\$VERSION   = $OPTIONS{VERSION};
+\$VERSION   = "$OPTIONS{VERSION}";
 \$BIOGRAPHICS_VERSION   = $OPTIONS{BIOGRAPHICS_VERSION};
 
 

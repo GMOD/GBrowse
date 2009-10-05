@@ -582,13 +582,15 @@ sub render_links {
       $debug_link,
       );
 
+  my $upload_tracks_panel = $self->setting('activate userdata table') ? 'userdata_table_panel': 'upload_tracks_panel';
+
   my @segment_showing_links =(
       a({-href=>'?action=bookmark'},'['.$self->tr('BOOKMARK').']'),
       a({-href=>'#',
-	 -onMouseDown=>'visibility("upload_tracks_panel",1);new Effect.ScrollTo("upload_tracks_panel");setTimeout(\'new Effect.Highlight("upload_tracks_panel_title")\',1000)'},
+	 -onMouseDown=>qq(visibility("$upload_tracks_panel",1);new Effect.ScrollTo("$upload_tracks_panel");setTimeout(\'new Effect.Highlight("${upload_tracks_panel}_title")\',1000))},
       '['.$self->tr('Add_your_own_tracks').']'),
       a({-href        => '#',
-	 -onMouseDown => "GFade.showTooltip(event,'url:?share_track=all')"},
+	 -onMouseDown => "GBox.showTooltip(event,'url:?action=share_track;track=all')"},
 	'[' . ($self->tr('SHARE_ALL') || "Share These Tracks" ) .']'),
       $plugin_link,
       $galaxy_link,
@@ -1054,10 +1056,17 @@ sub render_toggle_external_table {
 
 sub render_toggle_userdata_table {
     my $self = shift;
-    return '' unless $self->setting('activate userdata table'); # temporary
     return $self->toggle('userdata_table', 
 			 $self->render_userdata_table(),
 			 $self->userdata_upload(),
+	);
+}
+
+sub render_toggle_import_table {
+    my $self = shift;
+    return $self->toggle('userimport_table', 
+			 $self->render_userimport_table(),
+			 $self->userdata_import(),
 	);
 }
 
@@ -1159,8 +1168,13 @@ sub render_userdata_table {
     my $self = shift;
     my $html = div( { -id => 'userdata_table_div',-class=>'uploadbody' },
 		    $self->list_userdata(),
-#		    $self->userdata_upload(),
-#		    $self->test_new_track(),
+		    );
+}
+
+sub render_userimport_table {
+    my $self = shift;
+    my $html = div( { -id => 'userimport_table_div',-class=>'uploadbody' },
+		    # foo
 		    );
 }
 
@@ -1208,6 +1222,55 @@ sub list_userdata {
     return p(\@rows);
 }
 
+sub userdata_import {
+    my $self     = shift;
+    my $html     = '';
+
+    my $url      = url(-absolute=>1,-path_info=>1);
+    my $form     = <<END;
+<form name="ajax_upload"
+      id="ajax_upload"
+      onSubmit= "return AIM.submit(this,
+                                      {onStart    : startAjaxUpload,
+                                       onComplete : completeAjaxUpload
+                                      })"
+      action="$url"
+      enctype="multipart/form-data"
+       method="post">
+        <input type="input"  name="url"         id="import_field" />
+        <input type="submit" name="submit"      value="Import" />
+        <input type="hidden" name="action"      value="import_track" />
+        <a href="javascript:void(0)" onClick="this.parentNode.remove()">Remove</a>
+</form>
+END
+;
+    $form =~ s/\n/ /g;
+    $html   .= div({-id=>'upload_indicator'},'');
+
+    $html       .= div(
+	{-id=>'upload_status',
+	 -style=>"background-color:'green'"
+	},
+	'');
+    my $upload_label = $self->tr('IMPORT_TRACK');
+    $html       .= div({-style=>'text-indent:10pt'},
+		       a({-href=>'javascript:addAnImportField()',
+			  -id=>'file_adder',
+			 },b($upload_label)));
+
+    $html       .= script({-type=>'text/javascript'},<<END);
+    function addAnImportField() {
+       var f       = 'f' + Math.floor(Math.random() * 99999);
+       var d       = new Element('div',{id:f}).update('$form');
+       var el      = \$('upload_status');
+       el.insert({before:d});
+    }
+END
+    ;
+
+    return $html;
+}
+
 sub userdata_upload {
     my $self     = shift;
     my $html     = '';
@@ -1238,10 +1301,11 @@ END
 	 -style=>"background-color:'green'"
 	},
 	'');
+    my $upload_label = $self->tr('UPLOAD_FILE');
     $html       .= div({-style=>'text-indent:10pt'},
 		       a({-href=>'javascript:addAnUploadField()',
 			  -id=>'file_adder',
-			 },'Add an experiment'));
+			 },b($upload_label)));
 
     $html       .= script({-type=>'text/javascript'},<<END);
     function addAnUploadField() {

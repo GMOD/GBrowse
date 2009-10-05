@@ -213,11 +213,15 @@ END
 
    UPLOAD_TRACKS=>'Add custom tracks',
 
-   USERDATA_TABLE=>'Manage custom tracks',
+   USERDATA_TABLE=>'Upload and share tracks',
+
+   USERIMPORT_TABLE=>'Import tracks',
 
    UPLOAD_TITLE=> 'Upload your own data',
 
-   UPLOAD_FILE => 'Upload a file',
+   UPLOAD_FILE => 'Upload a track',
+
+   IMPORT_TRACK => 'Import a track',
 
    KEY_POSITION => 'Key position',
 

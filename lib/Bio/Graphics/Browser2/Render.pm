@@ -641,20 +641,18 @@ sub render_body {
   if ($region->feature_count > 1) {
       print $self->render_multiple_choices($features,$self->state->{name});
       print $self->render_toggle_track_table;
-      print $self->render_toggle_external_table;
+      print $self->render_upload_share_section;
   }
 
   elsif (my $seg = $region->seg) {
       print $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
       print $self->render_toggle_track_table;
-      print $self->render_toggle_external_table;
-      print $self->render_toggle_userdata_table;
+      print $self->render_upload_share_section;
       print $self->render_galaxy_form($seg);
   }
   else {
       print $self->render_toggle_track_table;
-      print $self->render_toggle_external_table;
-      print $self->render_toggle_userdata_table;
+      print $self->render_upload_share_section;
   }
   print $self->render_global_config();
   print $self->render_bottom($features);
@@ -666,6 +664,16 @@ sub render_body {
   if (param('openid_confirm') && param('page') && param('s')) {
       print $self->render_login_openid_confirm(param('page'),param('s'));
   }
+}
+
+sub render_upload_share_section {
+    my $self = shift;
+    if ($self->setting('activate userdata table')) {
+	return $self->render_toggle_userdata_table.
+	       $self->render_toggle_import_table;
+    } else {
+	return $self->render_toggle_external_table;
+    }
 }
 
 
@@ -2200,6 +2208,11 @@ sub asynchronous_update_sections {
     if ( $handle_section_name{'userdata_table_div'}) {
 	$return_object->{'userdata_table_div'}
 	    = $self->render_userdata_table();
+    }
+
+    if ( $handle_section_name{'userimport_table_div'}) {
+	$return_object->{'userdata_table_div'}
+	    = $self->render_userimport_table();
     }
 
     # Handle Remaining and Undefined Sections

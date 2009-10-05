@@ -88,7 +88,7 @@ sub load {
     }
     $self->finish_load;
     $self->close_conf;
-    $self->set_status("READY");
+    $self->set_status("processing complete");
     return $self->tracks;
 }
 

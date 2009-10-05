@@ -184,7 +184,7 @@ sub labels {
     my $self       = shift;
     my $track_name = shift;
     my $conf       = $self->track_conf($track_name) or return;
-    return Bio::Graphics::FeatureFile->new(-file=>$conf)->labels;
+    return eval{Bio::Graphics::FeatureFile->new(-file=>$conf)->labels};
 }
 
 sub status {

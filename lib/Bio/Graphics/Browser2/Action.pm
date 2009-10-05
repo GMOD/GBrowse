@@ -438,13 +438,10 @@ sub ACTION_upload_file {
     $session->unlock();
     
     my ($result,$msg,$tracks) = $usertracks->upload_file($name,$fh);
-    if (0 && $tracks) {
-	$session->lock('exclusive');
-	$self->data_source->parse_user_file($usertracks->track_conf($name));
-	$render->add_track_to_state($_) foreach @$tracks;
-	$session->flush();
-	$session->unlock();
-    }
+    $session->lock('exclusive');
+    $state->{current_upload} = '';
+    $session->flush();
+    $session->unlock();
 
     my $return_object        = { success   => $result||0,
 				 error_msg => CGI::escapeHTML($msg),

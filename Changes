@@ -1,4 +1,6 @@
 1.9971  * Fixed bugs that were preventing name searches from working across BAM databases.
+	* Fixed incorrect character sets returned from asynchronous calls.
+	* Implemented asynchronous upload of files.
 1.997   * Fixed bad bug in cookie handling that allowed cookies from one session to overwrite
 	another when mod_perl or fastcgi in use.
 	* Started working on redesign of data uploading and sharing.

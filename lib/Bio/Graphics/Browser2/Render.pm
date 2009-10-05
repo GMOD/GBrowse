@@ -234,12 +234,14 @@ sub run_asynchronous_event {
     elsif ($mime_type eq 'application/json') {
 	print CGI::header(-status=>$status,
 			  -cache_control => 'no-cache',
+			  -charset       => $self->tr('CHARSET'),
 			  -type  => $mime_type),
 	      JSON::to_json($data);
     }
     else {
 	print CGI::header(-status        => $status,
 			  -cache_control => 'no-cache',
+			  -charset       => $self->tr('CHARSET'),
 			  -type          => $mime_type),
 	       $data;
     }
@@ -3253,7 +3255,7 @@ sub add_user_tracks {
     my @user_tracks = $userdata->tracks;
     for my $track (@user_tracks) {
 	my $config_path = $userdata->track_conf($track);
-	$data_source->parse_user_file($config_path);
+	eval {$data_source->parse_user_file($config_path)};
     }
 }
 

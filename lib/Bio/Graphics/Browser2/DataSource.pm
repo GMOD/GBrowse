@@ -526,6 +526,7 @@ sub invert_types {
     my $feature = $config->{$label}{'feature'} or next;
     my $dbid    = $config->{$label}{'database'} ||
 	$self->fallback_setting(TRACK_DEFAULTS => 'database');
+    $dbid ||= '';
     foreach (shellwords($feature||'')) {
       $inverted{lc $_}{$dbid}{$label}++;
     }
@@ -910,6 +911,24 @@ sub _secondary_key_to_label {
 
 
 ######### experimental code to manage user-specific tracks ##########
+sub add_user_type {
+    my $self = shift;
+    my ($type,$type_configuration) = @_;
+
+    my $cc = ($type =~ /^(general|default)$/i) ? 'general' : $type;  # normalize
+
+    my $base = $self->{_user_tracks} ||= {};
+    
+    push @{$base->{types}},$cc 
+	unless $cc eq 'general' or $base->{config}{$cc};
+
+    if (defined $type_configuration) {
+	for my $tag (keys %$type_configuration) {
+	    $base->{config}{$cc}{lc $tag} = $type_configuration->{$tag};
+	}
+    }
+}
+
 sub configured_types {
     my $self  = shift;
     my @types       = $self->SUPER::configured_types;

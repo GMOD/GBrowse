@@ -160,7 +160,8 @@ sub get_remote_upload {
   my $in_overview    = $rel2abs ne $slow_mapper && $self->probe_for_overview_sections($fh);
   my $feature_file   =
     Bio::Graphics::FeatureFile->new(-file           => $fh,
-				    -map_coords     => $in_overview ? $slow_mapper : $rel2abs,
+			    # this is broken
+#				    -map_coords     => $in_overview ? $slow_mapper : $rel2abs,
 				    -smart_features => 1,
 				    -safe_world     => 
 				       $self->config->global_setting('allow remote callbacks')||0,

@@ -177,7 +177,7 @@ if (ok($render_object) and ok($render_object->{'track_keys'})){
 
   # Check the retrieve_multiple option for asynch render
 
-  my $query_str = 'retrieve_multiple=1';
+  my $query_str = 'action=retrieve_multiple';
   foreach
     my $track_div_id ( keys %{ $render_object->{'track_keys'} || {} } )
   {
@@ -190,14 +190,14 @@ if (ok($render_object) and ok($render_object->{'track_keys'})){
 }
 
 # Check Add Track
-$CGI::Q = new CGI('track_names=Motif;add_tracks=1');
+$CGI::Q = new CGI('track_names=Motif;action=add_tracks');
 ($status,$mime,$render_object) = $render->asynchronous_event();
 if (ok($render_object) and ok($render_object->{'track_data'})){
 
   my $track_data = $render_object->{'track_data'};
   # Check the retrieve_multiple option for asynch render
 
-  my $query_str = 'retrieve_multiple=1';
+  my $query_str = 'action=retrieve_multiple';
   foreach my $track_div_id ( keys %{ $track_data || {} } )
   {
     ok( $track_data->{$track_div_id} );
@@ -289,12 +289,12 @@ if (ok($render_object) and ok($render_object->{'section_html'})){
 }
 
 # Check setting visibility
-$CGI::Q = new CGI('set_track_visibility=1;track_name=Motif;visible=0');
+$CGI::Q = new CGI('action=set_track_visibility;track_name=Motif;visible=0');
 ($status,$mime,$render_object) = $render->asynchronous_event();
 ok($status, 204);
 ok($render->state()->{features}{'Motifs'}{'visible'},0);
 
-$CGI::Q = new CGI('set_track_visibility=1;track_name=Motif;visible=1');
+$CGI::Q = new CGI('action=set_track_visibility;track_name=Motif;visible=1');
 ($status,$mime,$render_object) = $render->asynchronous_event();
 ok($status, 204);
 ok($render->state()->{features}{'Motifs'}{'visible'},0);
@@ -493,7 +493,7 @@ ok ($f->setting('http_www.foo.bar_this_is_a_remotetrack'=>'remote feature'),
 ok ($f->setting('http_www.foo.bar_this_is_a_remotetrack'=>'category'),
     'My Tracks:Remote Tracks');
 
-$usertracks->delete_track($tracks[0]);
+$usertracks->delete_file($tracks[0]);
 ok(!-e $path);
 ok($usertracks->tracks+0,0);
 exit 0;

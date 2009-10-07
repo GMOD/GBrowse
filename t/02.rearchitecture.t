@@ -256,7 +256,7 @@ ok("@labels","CDS");
 # Test whether user data can be added to the data source
 @labels = $source->labels;
 {
-    local $source->{user_tracks};
+    local $source->{_user_tracks};
     $source->add_user_type('fred',{glyph=>'segments',
 				   feature=>'genes',
 				   color => sub { return 'blue' },

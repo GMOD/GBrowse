@@ -37,17 +37,11 @@ sub render_top {
     my $html = '';
     $html   .=  $self->render_user_header;
 
-    if ($self->setting('login script')) {
-      $html   .=  $self->render_login;
-    }
-
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
     $html   .=  $self->html_frag('html1',$self->state);
-    $html   .=  $self->render_instructions;
     return  $err
-	  . $self->toggle({nodiv=>1},'banner','',$html)
-	  . $self->render_links;
+	  . $self->toggle({nodiv=>1},'banner','',$html);
 }
 
 sub render_error_div {
@@ -69,6 +63,27 @@ sub render_error_div {
 		   'no details'
 	       )
 	);
+}
+
+sub render_tabbed_pages {
+    my $self = shift;
+    my ($main_html,$custom_tracks_html,$settings_html) = @_;
+    my $main_title          = $self->tr('MAIN_PAGE');
+    my $custom_tracks_title = $self->tr('CUSTOM_TRACKS_PAGE');
+    my $settings_title      = $self->tr('SETTINGS_PAGE');
+
+    my $html = '';
+    $html   .= div({-id=>'tabbed_section',-class=>'tabbed'},
+		   div({-id=>'tabbed_menu',-class=>'tabmenu'},
+		       span({id=>'main_page_select'},    $main_title),
+		       span({id=>'custom_tracks_page_select'},$custom_tracks_title),
+		       span({id=>'settings_page_select'},$settings_title)
+		   ),
+		   span({-id=>'main_page'},         $main_html),
+		   span({-id=>'custom_tracks_page'},$custom_tracks_html),
+		   span({-id=>'settings_page'},     $settings_html)
+	);
+    return $html;
 }
 
 sub render_user_head {
@@ -272,6 +287,7 @@ sub render_html_head {
                balloon.config.js
                GBox.js
                ajax_upload.js
+               tabs.js
                controller.js
     );
 
@@ -293,6 +309,8 @@ sub render_html_head {
   my $stylesheet = $self->setting('stylesheet')||'/gbrowse/gbrowse.css';
   push @stylesheets,{src => $self->globals->resolve_path('css/tracks.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/karyotype.css','url')};
+  push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/dropdown.css','url')};
+  push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/default_theme.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path($titlebar,'url')};
 
   # colors for "rubberband" selection 
@@ -368,6 +386,7 @@ GBox.images = "$balloon_images/GBubble";
 GBox.allowEventHandlers = true;
 GBox.opacity = 1;
 GBox.fontFamily = 'sans-serif';
+GBox.stemHeight = 0;
 END
 ;
     							   
@@ -458,14 +477,14 @@ sub render_login {
     $html  = '';
 
     if ($session->private) {
-        $html .= div({-style=>'float:right;font-weight:bold;color:black;'},
+        $html .= span({-style=>'float:right;font-weight:bold;color:black;'},
                       'Welcome, '.$session->username.'.') . br() .
-                 div({-style       => $style,
-                      -title       => 'Click here to log out from '.$session->username.'',
-                      -onMouseDown => 'location.href=\'?id=logout\';',
-                      -onMouseOver => 'this.style.textDecoration=\'underline\'',
-                      -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out') .
-                 div({-style=>'float:right;font-weight:bold;color:black;'}, '&nbsp; &nbsp;');
+                 span({-style       => $style,
+		       -title       => 'Click here to log out from '.$session->username.'',
+		       -onMouseDown => 'location.href=\'?id=logout\';',
+		       -onMouseOver => 'this.style.textDecoration=\'underline\'',
+		       -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out') .
+		       span({-style=>'float:right;font-weight:bold;color:black;'}, '&nbsp; &nbsp;');
 
         $title  = 'Click here to change your account settings';
         $text   = 'My Account';
@@ -477,11 +496,13 @@ sub render_login {
         $click .= 'load_login_balloon(event,\''.$session->id.'\',false,false);';
     }
 
-    $html .= div({-style => $style, -title => $title, -onMouseDown => $click,
+    $html .= span({-style => $style, -title => $title, -onMouseDown => $click,
                   -onMouseOver => 'this.style.textDecoration=\'underline\'',
                   -onMouseOut  => 'this.style.textDecoration=\'none\''}, $text);
 
-    my $container = div({-style=>'float:right;'},$html);
+    return $settings->{head} ? $html : '';
+
+    my $container = span({-style=>'float:right;'},$html);
 
     return $settings->{head} ? $container : '';
 }
@@ -551,6 +572,72 @@ sub render_instructions {
       )
   : '';
 }
+
+# sub render_actionmenu {
+#     my $self  = shift;
+#     my $login = $self->setting('login script') ? $self->render_login : '';
+#     my $file_menu = br([qw(one two three four)]);
+#     return div({-id=>'actionmenu',
+# 		-style=>'background-color:lightgray'},
+# 	       $login,
+# 	       span({-class=>'menutitle',
+# 		     -onMouseDown=>"GBox.showTooltip(event,'$file_menu',0)"
+# 		    },'File'),
+# 	       span({-class=>'menutitle'},'Help'));
+# }
+
+sub render_actionmenu {
+    my $self  = shift;
+    my $settings = $self->state;
+
+    my $svg_link     = HAVE_SVG
+	? a({-href=>'?make_image=GD::SVG',-target=>'_blank'},      $self->tr('SVG_LINK'))
+	: '';
+
+    my $pdf_link     = HAVE_SVG && $self->can_generate_pdf()
+	? a({-href=>'?make_image=PDF',    -target=>'_blank'},$self->tr('PDF_LINK'))
+	: '';
+    
+    my $reset_link   = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
+    my $help_link    = a({-href=>$self->general_help(),-target=>'help'},$self->tr('Help'));
+    my $plugin_link  = $self->plugin_links($self->plugins);
+    my $galaxy_link  = a({-href=>'javascript:'.$self->galaxy_link},     $self->tr('SEND_TO_GALAXY'));
+    my $image_link   = a({-href=>'?make_image=GD',-target=>'_blank'},   $self->tr('IMAGE_LINK'));
+    my $rand         = substr(md5_hex(rand),0,5);
+
+
+    my @standard_links        = ($reset_link);
+
+
+    my @segment_showing_links =(
+	a({-href=>'?action=bookmark'},$self->tr('BOOKMARK')),
+	a({-href        => '#',
+	   -onMouseDown => "GBox.showTooltip(event,'url:?action=share_track;track=all')"},
+	  ($self->tr('SHARE_ALL') || "Share These Tracks" )),
+	$plugin_link,
+	$galaxy_link,
+	$image_link,
+	$svg_link,
+	$pdf_link,
+	);
+
+    my $segment_present = $self->region->feature_count == 1;
+    my @links           = $segment_present ? (@segment_showing_links,@standard_links)
+	                                   : @standard_links;
+    
+    my $login = $self->setting('login script') ? $self->render_login : '';
+
+    my $file_menu = ul({-id    => 'actionmenu',
+			-class => 'dropdown downdown-horizontal'},
+		       li({-class=>'dir'},'File',
+			  ul(li(\@links))
+		       ),
+		       li({-class=>'dir'},'About',
+			  ul(li($help_link))),
+	);
+    return $file_menu.$login.br({-clear=>'all'});
+}
+
 
 sub render_links {
   my $self     = shift;
@@ -1040,34 +1127,40 @@ sub render_global_config {
 		      )
 	       )
 	) . end_form();
-
-    return $self->toggle( 'Display_settings', $content );
+#    return $self->toggle( 'Display_settings', $content );
+    return div($content);
 }
 
 # This surrounds the external table with a toggle
 sub render_toggle_external_table {
   my $self     = shift;
-  return a({-name=>'upload_tracks'},
-	   $self->toggle('upload_tracks', 
-			 $self->render_external_table()
-	   )
-      );
+  return div($self->render_external_table());
+#   return a({-name=>'upload_tracks'},
+# 	   $self->toggle('upload_tracks', 
+# 			 $self->render_external_table()
+# 	   )
+#       );
 }
 
 sub render_toggle_userdata_table {
     my $self = shift;
-    return $self->toggle('userdata_table', 
-			 $self->render_userdata_table(),
-			 $self->userdata_upload(),
-	);
+    return div($self->render_userdata_table(),
+	       $self->userdata_upload());
+#     return $self->toggle('userdata_table', 
+# 			 $self->render_userdata_table(),
+# 			 $self->userdata_upload(),
+# 	);
 }
 
 sub render_toggle_import_table {
     my $self = shift;
-    return $self->toggle('userimport_table', 
-			 $self->render_userimport_table(),
-			 $self->userdata_import(),
-	);
+    return div(h2('Imported Tracks'),
+	       $self->render_userimport_table(),
+	       $self->userdata_import());
+#    return $self->toggle('userimport_table', 
+#			 $self->render_userimport_table(),
+#			 $self->userdata_import(),
+#	);
 }
 
 sub render_external_table {
@@ -1174,8 +1267,8 @@ sub render_userdata_table {
 sub render_userimport_table {
     my $self = shift;
     my $html = div( { -id => 'userimport_table_div',-class=>'uploadbody' },
-		    # foo
-		    );
+		    ''
+	);
 }
 
 sub list_userdata {
@@ -1317,7 +1410,7 @@ END
 END
     ;
 
-    return $html;
+    return h2('Upload and Share').$html;
 }
 
 sub get_uploaded_file_info {

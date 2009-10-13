@@ -634,43 +634,70 @@ sub render_body {
 
   my $title    = $self->generate_title($features);
 
-  print $self->render_html_start($title);
-  print $self->render_top($title,$features);
-  print $self->render_navbar($region->seg);
+  my $output;
+  $output .= $self->render_html_start($title);
+  $output .= $self->render_actionmenu;
+
+  $output .= $self->render_top($title,$features);
+
+#  my $main_page =  $self->render_instructions;
+#  $main_page   .= $self->render_links();
+
+  my $main_page   .= $self->render_navbar($region->seg);
 
   if ($region->feature_count > 1) {
-      print $self->render_multiple_choices($features,$self->state->{name});
-      print $self->render_toggle_track_table;
-      print $self->render_upload_share_section;
+      $main_page .= $self->render_multiple_choices($features,$self->state->{name});
+      $main_page .= $self->render_toggle_track_table;
   }
 
   elsif (my $seg = $region->seg) {
-      print $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
-      print $self->render_toggle_track_table;
-      print $self->render_upload_share_section;
-      print $self->render_galaxy_form($seg);
+      $main_page .= $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
+      $main_page .= $self->render_toggle_track_table;
+      $main_page .= $self->render_galaxy_form($seg);
   }
   else {
-      print $self->render_toggle_track_table;
-      print $self->render_upload_share_section;
-  }
-  print $self->render_global_config();
-  print $self->render_bottom($features);
-
-  if (param('confirm') && param('code') && param('id')) {
-      print $self->render_login_account_confirm(param('code'));
+      $main_page .= $self->render_toggle_track_table;
   }
 
-  if (param('openid_confirm') && param('page') && param('s')) {
-      print $self->render_login_openid_confirm(param('page'),param('s'));
-  }
+  my $upload_share  = $self->render_upload_share_section;
+  my $global_config = $self->render_global_config;
+
+  $output .= $self->render_tabbed_pages($main_page,$upload_share,$global_config);
+  $output .= $self->render_bottom($features);
+
+  warn "got here";
+
+  print $output;
+}
+
+sub render_actionmenu {
+    my $self = shift;
+    croak "implement in subclass";
+}
+
+sub render_tabbed_pages {
+    my $self = shift;
+    my ($main,$upload_share,$config) = @_;
+    croak "implement in subclass";
+}
+
+sub render_login_section {
+    my $self = shift;
+    my $output = '';
+
+    if (param('confirm') && param('code') && param('id')) {
+	$output .= $self->render_login_account_confirm(param('code'));
+    }elsif (param('openid_confirm') && param('page') && param('s')) {
+	$output .= $self->render_login_openid_confirm(param('page'),param('s'));
+    }
+    return $output;
 }
 
 sub render_upload_share_section {
     my $self = shift;
     if ($self->setting('activate userdata table')) {
-	return $self->render_toggle_userdata_table.
-	       $self->render_toggle_import_table;
+	return div($self->render_toggle_userdata_table,
+		   $self->render_toggle_import_table);
     } else {
 	return $self->render_toggle_external_table;
     }

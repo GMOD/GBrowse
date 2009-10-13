@@ -967,6 +967,9 @@ function initialize_page() {
   Details.prototype.initialize();
   if ($('autocomplete_choices') != null) 
        initAutocomplete();
+
+  // These statements initialize the tabbing
+  new TabbedSection(['main_page','custom_tracks_page','settings_page']);
 }
 
 // set the colors for the rubberband regions

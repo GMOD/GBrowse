@@ -36,3 +36,46 @@ BODY              { background-color: #F7FBFF;
 	            font-size: small;
 		    margin-left: 1em;
 }
+.tabmenu_active   { cursor: pointer;
+			color: black;
+			background-color: beige;
+			font-size: 10pt;
+			font-weight: bold;
+                        font-family: sans-serif;
+			padding-top: 5px;
+			padding-left: 5px;
+			padding-right: 5px;
+		      }
+.tabmenu_inactive { cursor: pointer;
+			color: blue;
+			font-size: 10pt;
+			background-color: transparent;
+			font-weight: bold;
+                        font-family: sans-serif;
+			padding-top:   5px;
+			padding-left:  5px;
+			padding-right: 5px;
+		      }
+.tabmenu_inactive:hover {
+    text-decoration: underline;
+}
+.tabbed {
+    background-color: beige;
+}
+.tabmenu {
+    background-color: white;
+}
+.menutitle {
+    color: blue;
+    font-size: 10pt;
+    background-color: transparent;
+    font-weight: bold;
+    font-family: sans-serif;
+    cursor:        pointer;
+    padding-top:   5px;
+    padding-left:  5px;
+    padding-right: 5px;
+}
+.menutitle:hover {
+    text-decoration: underline;
+}

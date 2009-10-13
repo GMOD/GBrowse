@@ -31,6 +31,7 @@ BODY              { background-color: #F7FBFF;
                   }
 DIV               { margin: 0 }
 H1                { color: navy;
+		    font-size: medium;
                     font-family: sans-serif; 
                   }
 H2                { color: navy;

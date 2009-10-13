@@ -509,4 +509,8 @@ other browser and enter it as a new DAS source. <i>Quantitative tracks
 ("wiggle" files) and uploaded files can not be shared using DAS.</i>
 END
 
+    MAIN_PAGE          => 'Browser',
+    CUSTOM_TRACKS_PAGE => 'Upload and Share Tracks',
+    SETTINGS_PAGE      => 'Preferences',
+
 };

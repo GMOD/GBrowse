@@ -40,19 +40,23 @@ END
 
    HIDE_INSTRUCTIONS => 'Hide instructions',
 
-   SHOW_HEADER       => 'Show banner',
+   SHOW_HEADER => 'Show banner',
 
-   HIDE_HEADER       => 'Hide banner',
+   HIDE_HEADER => 'Hide banner',
 
-   LANDMARK => 'Landmark or Region',
+   LANDMARK   => 'Landmark or Region',
 
-   BOOKMARK => 'Bookmark this',
+   BOOKMARK   => 'Bookmark this',
 
-   IMAGE_LINK => 'Link to Image',
+   IMAGE_LINK => '...low-res image',
 
-   SVG_LINK   => 'High-res Image',
+   SVG_LINK   => '...high-res image',
 
-   PDF_LINK   => 'Download PDF',
+   PDF_LINK   => '...PDF',
+
+   DUMP_GFF   => '...GFF annotation table',
+
+   DUMP_SEQ   => '...FASTA sequence file',
 
    SVG_DESCRIPTION => <<END,
 <p>

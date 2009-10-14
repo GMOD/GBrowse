@@ -3362,6 +3362,26 @@ sub bookmark_link {
   return "?".$q->query_string();
 }
 
+sub gff_dump_link {
+  my $self     = shift;
+
+  my $state     = $self->state;
+  my $upload_id = $state->{uploadid} || $state->{userid};
+  my $s         = $self->segment;
+  my $segment   = $s->seq_id.':'.$s->start.'..'.$s->end;
+  my @labels    = $self->visible_tracks;
+  
+  my $q = new CGI('');
+  $q->param(-name=>'gbgff',   -value=>'Save');
+  $q->param(-name=>'segment', -value=>$segment);
+  $q->param(-name=>'id',      -value=>$upload_id);
+  $q->param(-name=>'t',       -value=>\@labels);
+  $q->param(-name=>'m',       -value=>'application/x-gff3');
+
+  # handle external urls
+  return "?".$q->query_string();
+}
+
 sub galaxy_link {
     my $self = shift;
 

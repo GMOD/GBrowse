@@ -590,47 +590,37 @@ sub render_actionmenu {
     my $self  = shift;
     my $settings = $self->state;
 
-    my $svg_link     = HAVE_SVG
-	? a({-href=>'?make_image=GD::SVG',-target=>'_blank'},      $self->tr('SVG_LINK'))
-	: '';
+    my   @export_links=a({-href=>'?make_image=GD', -target=>'_blank'},     $self->tr('IMAGE_LINK'));
+    push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->tr('SVG_LINK'))
+	if HAVE_SVG;
+    push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->tr('PDF_LINK'))
+	if HAVE_SVG && $self->can_generate_pdf;
 
-    my $pdf_link     = HAVE_SVG && $self->can_generate_pdf()
-	? a({-href=>'?make_image=PDF',    -target=>'_blank'},$self->tr('PDF_LINK'))
-	: '';
-    
-    my $reset_link   = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
-    my $help_link    = a({-href=>$self->general_help(),-target=>'help'},$self->tr('Help'));
-    my $plugin_link  = $self->plugin_links($self->plugins);
-    my $galaxy_link  = a({-href=>'javascript:'.$self->galaxy_link},     $self->tr('SEND_TO_GALAXY'));
-    my $image_link   = a({-href=>'?make_image=GD',-target=>'_blank'},   $self->tr('IMAGE_LINK'));
-    my $rand         = substr(md5_hex(rand),0,5);
+    push @export_links,a({-href=>$self->gff_dump_link},                    $self->tr('DUMP_GFF'));
+    push @export_links,a({-href=>'?action=dump_seq'},                      $self->tr('DUMP_SEQ'));
+    push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->tr('SEND_TO_GALAXY'));
 
+    my $bookmark_link = a({-href=>'?action=bookmark'},$self->tr('BOOKMARK')),;
+    my $share_link    = a({-href        => '#',
+			   -onMouseDown => "GBox.showTooltip(event,'url:?action=share_track;track=all')"},
+			  ($self->tr('SHARE_ALL') || "Share These Tracks" )),
 
-    my @standard_links        = ($reset_link);
+    my $help_link     = a({-href=>$self->general_help(),-target=>'help'},$self->tr('Help'));
+    my $plugin_link   = $self->plugin_links($self->plugins);
+    my $reset_link    = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
 
-
-    my @segment_showing_links =(
-	a({-href=>'?action=bookmark'},$self->tr('BOOKMARK')),
-	a({-href        => '#',
-	   -onMouseDown => "GBox.showTooltip(event,'url:?action=share_track;track=all')"},
-	  ($self->tr('SHARE_ALL') || "Share These Tracks" )),
-	$plugin_link,
-	$galaxy_link,
-	$image_link,
-	$svg_link,
-	$pdf_link,
-	);
-
-    my $segment_present = $self->region->feature_count == 1;
-    my @links           = $segment_present ? (@segment_showing_links,@standard_links)
-	                                   : @standard_links;
-    
     my $login = $self->setting('login script') ? $self->render_login : '';
 
     my $file_menu = ul({-id    => 'actionmenu',
 			-class => 'dropdown downdown-horizontal'},
 		       li({-class=>'dir'},'File',
-			  ul(li(\@links))
+			  ul(li($bookmark_link),
+			     li($share_link),
+			     li({-class=>'dir'},a({-href=>'#'},$self->tr('EXPORT')),
+				ul(li(\@export_links))),
+			     $plugin_link ? li($plugin_link) : (),
+			     li($reset_link)
+			  )
 		       ),
 		       li({-class=>'dir'},'About',
 			  ul(li($help_link))),
@@ -710,7 +700,7 @@ sub plugin_links {
     my $action = "?plugin=$p;plugin_do=".$self->tr('Go');
     push @result,a({-href=>$action,-target=>'_new'},"[$labels->{$p}]");
   }
-  return join ' ',@result;
+  return \@result;
 }
 
 sub galaxy_form {

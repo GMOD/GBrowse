@@ -63,8 +63,8 @@ ul.dropdown {
 	 border-width: 1px;
 	 border-color: #f0f0f0 #666 #666 #f0f0f0;
 	 background-color: #fff;
-	 font-weight: normal;
-	 font-size: 11px;
+	 font-weight: bold;
+	 font-size: 12px;
 	}
 
 		ul.dropdown ul li {

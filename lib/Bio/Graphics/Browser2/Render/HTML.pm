@@ -135,7 +135,7 @@ sub render_navbar {
   );
 
   my $search = $self->setting('no search')
-    ? '' : b($self->tr('Landmark')).':'.br().$searchform;
+               ? '' : b($self->tr('Landmark')).':'.br().$searchform.$self->examples();
 
   my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
 

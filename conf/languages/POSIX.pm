@@ -127,7 +127,7 @@ END
 
    SCROLL   => 'Scroll/Zoom',
 
-   RESET    => 'Reset',
+   RESET    => 'Reset to defaults',
 
    FLIP     => 'Flip',
 

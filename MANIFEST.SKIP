@@ -5,6 +5,7 @@
 \.bak$
 ^MANIFEST\.SKIP$
 CVS
+\.svn
 ^\.
 \.old$
 \.bak$
@@ -62,4 +63,4 @@ docs/developer_notes/old_makefile.pl
 docs/developer_notes/ubuntu_notes.txt
 dummy_form.html
 htdocs/databases/
-
+track001.ctgA.1202327456.wig

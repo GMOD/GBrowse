@@ -23,7 +23,6 @@ cgi-bin/gbgff
 cgi-bin/gbrowse
 cgi-bin/gbrowse_details
 cgi-bin/gbrowse_gmap
-cgi-bin/gbrowse_img
 cgi-bin/gbrowse_login
 Changes
 conf/detail_select_menu.conf
@@ -78,6 +77,7 @@ conf/plugins/Submitter.pm
 conf/plugins/test.pm
 conf/plugins/TestFinder.pm
 conf/plugins/TrackDumper.pm
+conf/pop_demo.conf
 conf/slave_preload.conf
 conf/submitter_plugin.conf
 conf/themes/solid_gray_colors
@@ -141,6 +141,7 @@ contrib/TextDumper/README
 contrib/TextDumper/TextDumper.pm
 DISCLAIMER
 docs/developer_notes/README.rearchitecture
+docs/developer_notes/README.sharing_tracks
 docs/example_remote_configs/volvox_local.conf
 docs/example_remote_configs/volvox_remote.conf
 docs/example_remote_configs/volvox_slave.conf
@@ -165,6 +166,26 @@ docs/README.tutorial
 etc/default/gbrowse-slave
 etc/init.d/gbrowse-slave
 htdocs/annotation_help.html
+htdocs/css/dropdown/default_theme.css
+htdocs/css/dropdown/dropdown.css
+htdocs/css/dropdown/helper.css
+htdocs/css/dropdown/images/favicon.ico
+htdocs/css/dropdown/images/icon.png
+htdocs/css/dropdown/images/nav-arrow-down-on.png
+htdocs/css/dropdown/images/nav-arrow-down-open.png
+htdocs/css/dropdown/images/nav-arrow-down.png
+htdocs/css/dropdown/images/nav-arrow-left-on.png
+htdocs/css/dropdown/images/nav-arrow-left-open.png
+htdocs/css/dropdown/images/nav-arrow-left.png
+htdocs/css/dropdown/images/nav-arrow-right-on.png
+htdocs/css/dropdown/images/nav-arrow-right-open.png
+htdocs/css/dropdown/images/nav-arrow-right.png
+htdocs/css/dropdown/images/nav-arrow-up-on.png
+htdocs/css/dropdown/images/nav-arrow-up-open.png
+htdocs/css/dropdown/images/nav-arrow-up.png
+htdocs/css/dropdown/images/pattern1.png
+htdocs/css/dropdown/images/pattern2.png
+htdocs/css/dropdown/images/pattern3.png
 htdocs/css/gbrowse.css
 htdocs/css/gbrowse_autocomplete.css
 htdocs/css/gbrowse_elements.css
@@ -238,6 +259,7 @@ htdocs/images/buttons/red7.gif
 htdocs/images/buttons/red8.gif
 htdocs/images/buttons/share.png
 htdocs/images/buttons/trash.gif
+htdocs/images/buttons/trash.png
 htdocs/images/help/detail.gif
 htdocs/images/help/detail_scale.gif
 htdocs/images/help/landmark.gif
@@ -261,6 +283,7 @@ htdocs/images/openid/openid-logo.gif
 htdocs/images/openid/yahoo-logo.png
 htdocs/images/spinner.gif
 htdocs/index.html
+htdocs/js/ajax_upload.js
 htdocs/js/animation.js
 htdocs/js/autocomplete.js
 htdocs/js/balloon.config.js
@@ -279,6 +302,7 @@ htdocs/js/event.js
 htdocs/js/GBox.js
 htdocs/js/karyotype.js
 htdocs/js/login.js
+htdocs/js/menu.js
 htdocs/js/overviewSelect.js
 htdocs/js/prototype.js
 htdocs/js/regionSelect.js
@@ -286,6 +310,7 @@ htdocs/js/rubber.js
 htdocs/js/scriptaculous.js
 htdocs/js/slider.js
 htdocs/js/sound.js
+htdocs/js/tabs.js
 htdocs/js/toggle.js
 htdocs/js/track.js
 htdocs/js/unittest.js
@@ -329,7 +354,6 @@ htdocs/tutorial/data_files/elegans_sts.gff3
 htdocs/tutorial/data_files/ests.fa
 htdocs/tutorial/data_files/HEADER.html
 htdocs/tutorial/data_files/species.tre
-htdocs/tutorial/data_files/track001.ctgA.1202327456.wig
 htdocs/tutorial/data_files/volvox.fa
 htdocs/tutorial/data_files/volvox.gff3
 htdocs/tutorial/data_files/volvox1.gff
@@ -445,6 +469,7 @@ htdocs/tutorial/tutorial.css
 htdocs/tutorial/tutorial.html
 htdocs/tutorial/tutorial.phyTreeEdit.html
 INSTALL
+INSTALL.SKIP
 install_util/cgi_install.pl
 install_util/conf_install.pl
 install_util/gbrowse_ppm_install.pl
@@ -468,7 +493,15 @@ lib/Bio/Graphics/Browser2.pm
 lib/Bio/Graphics/Browser2/Action.pm
 lib/Bio/Graphics/Browser2/AuthorizedFeatureFile.pm
 lib/Bio/Graphics/Browser2/CachedTrack.pm
+lib/Bio/Graphics/Browser2/CAlign.c
+lib/Bio/Graphics/Browser2/CAlign.pm
+lib/Bio/Graphics/Browser2/CAlign.xs
 lib/Bio/Graphics/Browser2/DataBase.pm
+lib/Bio/Graphics/Browser2/DataLoader.pm
+lib/Bio/Graphics/Browser2/DataLoader/bam.pm
+lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
+lib/Bio/Graphics/Browser2/DataLoader/generic.pm
+lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
 lib/Bio/Graphics/Browser2/DataSource.pm
 lib/Bio/Graphics/Browser2/GFFhelper.pm
 lib/Bio/Graphics/Browser2/GFFPrinter.pm
@@ -513,6 +546,7 @@ README.IF.GBROWSE.ISNT.WORKING
 sample_data/ideograms/human_cytobands.gff
 sample_data/ideograms/mouse_cytobands.gff
 sample_data/ideograms/rat_cytobands.gff
+sample_data/pop_demo/pop_demo.gff3
 sample_data/yeast_chr1+2/yeast_chr1+2.gff3
 sample_data/yeast_scaffolds/chr1.fa
 sample_data/yeast_scaffolds/chr2.fa

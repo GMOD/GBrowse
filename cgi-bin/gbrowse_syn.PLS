@@ -552,6 +552,12 @@ sub draw_image {
 
   for my $key (keys %span) {
     my $color            = $CONF->setting($MAP->{$span{$key}{src}}{db}=>'color');
+    # report missing config for the species if no color is found
+    $color || die  <<END;
+    No color configured for $MAP->{$span{$key}{src}}{db}.
+    Check the \[$MAP->{$span{$key}{src}}{db}\] stanza in your main configuration file;
+END
+;
     my @colrgb = Bio::Graphics::Panel->color_name_to_rgb($color);
     $span{$key}{tcolor}  = $gd->colorAllocateAlpha(@colrgb,110);
     $span{$key}{bgcolor} = $gd->colorAllocateAlpha(@colrgb,115);

@@ -37,6 +37,7 @@ my %options = map {split /=/} @ARGV;
 
 my $root      =  $options{GBROWSE_ROOT} || 'gbrowse';
 my $ht_target = "$options{HTDOCS}/$root";
+my $course    =  1 if $options{COURSE};
 
 print "Installing stylesheet and images...\n";
 
@@ -67,7 +68,7 @@ while (my $file = readdir(HTDOCS) ) {
 	chmod (0666, $installfile);
         copy_with_substitutions($localfile, $installfile)
            or die "unable to copy to $installfile\n";
-	chmod (0444, $installfile);
+	chmod (0444, $installfile) unless $course;
     }
 }
 closedir HTDOCS; 
@@ -190,7 +191,13 @@ copy_tree("./htdocs/js",$ht_target);
 
 print "Installing sample data files...\n";
 copy_tree("./htdocs/databases",$ht_target);
-chmod 0777,glob("$ht_target/databases/*");
+if ($course) {
+    chmod 0777,glob("$ht_target/databases/*");
+    chmod 0777,"$ht_target/databases";
+}
+else {
+    chmod 0777,glob("$ht_target/databases/*");
+}
 
 print "\n\n#############################################################################\n";
 print "GBrowse is now installed.  Read INSTALL for further setup instructions.\n";

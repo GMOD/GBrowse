@@ -34,13 +34,17 @@ foreach (@ARGV) {
 
 # get configuration stuff from command line
 my %options = map {split /=/} @ARGV;
-my $dir = "$options{CONF}/gbrowse.conf";
+my $dir    = "$options{CONF}/gbrowse.conf";
+my $course = 1 if $options{COURSE}; 
 
 #start the installation...
 print "Installing sample configuration files...\n";
 
 if (! (-e $dir)) {
+    my $old_umask = umask;
+    umask 0000 if $course;
     mkpath($dir,0,0777) or die "unable to make $dir directory\n";
+    umask $old_umask if $course;
 }
 
 installdir( source => "conf" , target => "$dir" , recurse => 1 );
@@ -67,7 +71,7 @@ sub installdir {
 #      copy($sourcefile,$targetfile) or die "unable to write to $targetfile: $!";
       copy_with_substitutions($sourcefile,$targetfile) or die "unable to write to $targetfile: $!";
       print STDERR "    file $sourcefile -> $targetfile\n" if DEBUG;
-      chmod(0444,$targetfile);
+      chmod(0444,$targetfile) unless $course;
     } elsif(-d $sourcefile && $recurse){
       next if $file eq '.' or $file eq '..' or $file eq 'CVS';
       print STDERR "directory $sourcefile -> $targetfile\n" if DEBUG;

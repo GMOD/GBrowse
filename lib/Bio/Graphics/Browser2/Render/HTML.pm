@@ -597,7 +597,7 @@ sub render_actionmenu {
 	if HAVE_SVG && $self->can_generate_pdf;
 
     push @export_links,a({-href=>$self->gff_dump_link},                    $self->tr('DUMP_GFF'));
-    push @export_links,a({-href=>'?action=dump_seq'},                      $self->tr('DUMP_SEQ'));
+    push @export_links,a({-href=>$self->dna_dump_link},                           $self->tr('DUMP_SEQ'));
     push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->tr('SEND_TO_GALAXY'));
 
     my $bookmark_link = a({-href=>'?action=bookmark'},$self->tr('BOOKMARK')),;

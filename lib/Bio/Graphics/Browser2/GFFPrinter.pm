@@ -76,6 +76,15 @@ sub print_gff3 {
     $self->print_gff3_data($_) for @$files;
 }
 
+sub print_fasta {
+    my $self    = shift;
+    my $segment = $self->get_segment;
+    my $seq     = $segment->seq;
+    eval "require Bio::SeqIO" unless Bio::SeqIO->can('new');
+    my $out     = Bio::SeqIO->new(-format => 'Fasta');
+    $out->write_seq($seq);
+}
+
 sub data_source { shift->{data_source} }
 
 sub db     { 

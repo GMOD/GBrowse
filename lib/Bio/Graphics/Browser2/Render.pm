@@ -146,7 +146,7 @@ sub run {
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string() if $self->debug;
+       query_string(); # if $self->debug;
 
   $self->set_source();
 
@@ -640,9 +640,6 @@ sub render_body {
 
   $output .= $self->render_top($title,$features);
 
-#  my $main_page =  $self->render_instructions;
-#  $main_page   .= $self->render_links();
-
   my $main_page   .= $self->render_navbar($region->seg);
 
   if ($region->feature_count > 1) {
@@ -991,12 +988,16 @@ sub region {
     my $current_plugin = $self->current_plugin;
     if ($current_plugin && $plugin_action eq $self->tr('Find') || 
 	$plugin_action eq 'Find') {
+	warn "1";
 	$region->features($self->plugin_find($current_plugin,$self->state->{name}));
     }
     elsif ($self->state->{ref}) { # a known region
+	warn "2";
+	warn "start = ",$self->state->{start};
 	$region->set_features_by_region(@{$self->state}{'ref','start','stop'});
     }
     else { # a feature search
+	warn '3';
 	my $search   = $self->get_search_object();
 	my $features = $search->search_features();
 	$region->features($features);
@@ -1159,7 +1160,17 @@ sub handle_gff_dump {
     my $self = shift;
 
     my $gff_action = param('gbgff') or return;
-    my $segment    = param('q') || param('segment') || undef,
+    my $segment    = param('q') || param('segment') || undef;
+    my @labels     = (param('type'),param('t'));
+
+    unless ($segment) {
+	my $s    = $self->segment;
+	$segment = $s->seq_id.':'.$s->start.'..'.$s->end;
+    }
+
+    unless (@labels) {
+	@labels    = $self->visible_tracks;
+    }
 
     my $dumper = Bio::Graphics::Browser2::GFFPrinter->new(
         -data_source => $self->data_source(),
@@ -1176,10 +1187,17 @@ sub handle_gff_dump {
     }
     else {
 	$dumper->get_segment($segment) or return 1;
-	print header( $dumper->get_mime_type );
-	$dumper->print_gff3();
+	if ($gff_action eq 'Save') {
+	    print header( -type                => $dumper->get_mime_type,
+			  -content_disposition => "attachment; filename=$segment.gff3");
+	    $dumper->print_gff3();
+	}
+	elsif ($gff_action eq 'Fasta') {
+	    print header( -type                => $dumper->get_mime_type,
+			  -content_disposition => "attachment; filename=$segment.fa");
+	    $dumper->print_fasta();
+	}
     }
-
     return 1;
 }
 
@@ -1662,31 +1680,34 @@ sub set_default_state {
 
 sub update_state {
   my $self   = shift;
-
   warn "[$$] update_state()" if DEBUG;
-
   return if param('gbgff'); # don't let gbgff requests update our coordinates!!!
+  $self->_update_state;
+}
 
-  $self->update_state_from_cgi;
-  my $state  = $self->state;
+sub _update_state {
+    my $self = shift;
 
-  warn "[$$] CGI updated" if DEBUG;
-  if (my $seg = $self->segment) {
-      # A reset won't have a segment, so we need to test for that before we use
-      # one in whole_segment().
-      my $whole_segment = $self->whole_segment;
-      $state->{seg_min} = $whole_segment->start;
-      $state->{seg_max} = $whole_segment->end;
+    $self->update_state_from_cgi;
+    my $state  = $self->state;
 
-      $state->{ref}     ||= $seg->seq_id;
-      $state->{start}   ||= $seg->start;
-      $state->{stop}    ||= $seg->end;
-
-      # Automatically open the tracks with found features in them
-      $self->auto_open();
-  }
-
-  warn "[$$] update_state() done" if DEBUG;
+    warn "[$$] CGI updated" if DEBUG;
+    if (my $seg = $self->segment) {
+	# A reset won't have a segment, so we need to test for that before we use
+	# one in whole_segment().
+	my $whole_segment = $self->whole_segment;
+	$state->{seg_min} = $whole_segment->start;
+	$state->{seg_max} = $whole_segment->end;
+	
+	$state->{ref}     ||= $seg->seq_id;
+	$state->{start}   ||= $seg->start;
+	$state->{stop}    ||= $seg->end;
+	
+	# Automatically open the tracks with found features in them
+	$self->auto_open();
+    }
+    
+    warn "[$$] update_state() done" if DEBUG;
 }
 
 sub default_state {
@@ -3364,22 +3385,31 @@ sub bookmark_link {
 
 sub gff_dump_link {
   my $self     = shift;
+  my $fasta    = shift;
 
   my $state     = $self->state;
   my $upload_id = $state->{uploadid} || $state->{userid};
-  my $s         = $self->segment;
-  my $segment   = $s->seq_id.':'.$s->start.'..'.$s->end;
-  my @labels    = $self->visible_tracks;
-  
+
   my $q = new CGI('');
-  $q->param(-name=>'gbgff',   -value=>'Save');
-  $q->param(-name=>'segment', -value=>$segment);
-  $q->param(-name=>'id',      -value=>$upload_id);
-  $q->param(-name=>'t',       -value=>\@labels);
-  $q->param(-name=>'m',       -value=>'application/x-gff3');
+  if ($fasta) {
+      $q->param(-name=>'gbgff',   -value=>'Fasta');
+      $q->param(-name=>'m',       -value=>'application/x-fasta');
+  } else {
+       $q->param(-name=>'gbgff',   -value=>'Save');
+       $q->param(-name=>'m',       -value=>'application/x-gff3');
+  }
+
+  # we probably need this
+  #  $q->param(-name=>'id',      -value=>$upload_id);
 
   # handle external urls
   return "?".$q->query_string();
+}
+
+sub dna_dump_link {
+  my $self     = shift;
+  my $link     = $self->gff_dump_link('fastaonly');
+  return $link;
 }
 
 sub galaxy_link {

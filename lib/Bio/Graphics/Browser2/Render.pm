@@ -146,7 +146,7 @@ sub run {
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string(); # if $self->debug;
+       query_string() if $self->debug;
 
   $self->set_source();
 
@@ -988,16 +988,12 @@ sub region {
     my $current_plugin = $self->current_plugin;
     if ($current_plugin && $plugin_action eq $self->tr('Find') || 
 	$plugin_action eq 'Find') {
-	warn "1";
 	$region->features($self->plugin_find($current_plugin,$self->state->{name}));
     }
     elsif ($self->state->{ref}) { # a known region
-	warn "2";
-	warn "start = ",$self->state->{start};
 	$region->set_features_by_region(@{$self->state}{'ref','start','stop'});
     }
     else { # a feature search
-	warn '3';
 	my $search   = $self->get_search_object();
 	my $features = $search->search_features();
 	$region->features($features);

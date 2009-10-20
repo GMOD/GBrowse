@@ -43,7 +43,7 @@ $startperl -w
 use lib "$OPTIONS{CONF}/gbrowse.conf";
 #
 ###################################################################
-\$VERSION   = $OPTIONS{VERSION};
+\$VERSION   = "$OPTIONS{VERSION}";
 
 !GROK!THIS!
 

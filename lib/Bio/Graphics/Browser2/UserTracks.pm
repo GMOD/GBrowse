@@ -44,11 +44,15 @@ sub path {
 
 sub tracks {
     my $self = shift;
-    my $path = $self->path;
+    my $path     = $self->path;
+    my $imported = shift;
+
     my @result;
     opendir D,$path;
     while (my $dir = readdir(D)) {
 	next if $dir =~ /^\.+$/;
+	my $is_imported       = (-e File::Spec->catfile($path,$dir,'imported'))||0;
+	next if defined $imported && $imported != $is_imported;
 	push @result,$dir;
     }
     return @result;
@@ -70,6 +74,12 @@ sub track_conf {
     my $self  = shift;
     my $track = shift;
     return File::Spec->catfile($self->path,$track,"$track.conf");
+}
+
+sub import_flag {
+    my $self  = shift;
+    my $track = shift;
+    return File::Spec->catfile($self->path,$track,"imported");
 }
 
 sub created {
@@ -124,7 +134,7 @@ sub trackname_from_url {
     return $track_name;
 }
 
-sub add_remote_track {
+sub import_url {
     my $self = shift;
     my $url  = shift;
 
@@ -139,7 +149,12 @@ remote feature = $url
 category = My Tracks:Remote Tracks
 key      = $key
 END
+    ;
     close $f;
+    open my $i,">",$self->import_flag($track_name);
+    close $i;
+
+    return (1,'',[$track_name]);
 }
 
 sub upload_file {
@@ -177,7 +192,8 @@ sub upload_file {
 sub delete_file {
     my $self = shift;
     my $track_name  = shift;
-     rmtree($self->track_path($track_name));
+    warn "removing ",$self->track_path($track_name);
+    rmtree($self->track_path($track_name));
 }
 
 sub labels {

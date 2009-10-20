@@ -1125,32 +1125,21 @@ sub render_global_config {
 sub render_toggle_external_table {
   my $self     = shift;
   return div($self->render_external_table());
-#   return a({-name=>'upload_tracks'},
-# 	   $self->toggle('upload_tracks', 
-# 			 $self->render_external_table()
-# 	   )
-#       );
 }
 
 sub render_toggle_userdata_table {
     my $self = shift;
-    return div($self->render_userdata_table(),
+    return h2('Uploaded Tracks').
+	      div($self->render_userdata_table(),
 	       $self->userdata_upload());
-#     return $self->toggle('userdata_table', 
-# 			 $self->render_userdata_table(),
-# 			 $self->userdata_upload(),
-# 	);
 }
 
 sub render_toggle_import_table {
     my $self = shift;
-    return div(h2('Imported Tracks'),
-	       $self->render_userimport_table(),
-	       $self->userdata_import());
-#    return $self->toggle('userimport_table', 
-#			 $self->render_userimport_table(),
-#			 $self->userdata_import(),
-#	);
+    return h2('Imported Tracks').
+	div(
+	    $self->render_userimport_table(),
+	    $self->userdata_import());
 }
 
 sub render_external_table {
@@ -1250,23 +1239,27 @@ sub upload_file_rows {
 sub render_userdata_table {
     my $self = shift;
     my $html = div( { -id => 'userdata_table_div',-class=>'uploadbody' },
-		    $self->list_userdata(),
-		    );
+		    $self->list_userdata('uploaded'),
+	       );
 }
 
 sub render_userimport_table {
     my $self = shift;
     my $html = div( { -id => 'userimport_table_div',-class=>'uploadbody' },
-		    ''
+		    $self->list_userdata('imported'),
 	);
 }
 
 sub list_userdata {
     my $self = shift;
+    my $type = shift;
+
     my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
 							   $self->state,
 							   $self->language);
-    my @tracks   = sort $userdata->tracks;
+
+    my $imported = $type eq 'imported' ? 1 : 0;
+    my @tracks   = sort $userdata->tracks($imported);
 
     my $buttons = $self->data_source->globals->button_url;
     my $share   = "$buttons/share.png";
@@ -1311,16 +1304,17 @@ sub userdata_import {
 
     my $url      = url(-absolute=>1,-path_info=>1);
     my $form     = <<END;
-<form name="ajax_upload"
-      id="ajax_upload"
+<form name="ajax_import"
+      id="ajax_import"
       onSubmit= "return AIM.submit(this,
-                                      {onStart    : startAjaxUpload,
-                                       onComplete : completeAjaxUpload
+                                      {onStart    : startAjaxImport,
+                                       onComplete : completeAjaxImport
                                       })"
-      action="$url"
+     action="$url"
       enctype="multipart/form-data"
        method="post">
-        <input type="input"  name="url"         id="import_field" />
+       <b>Enter URL of track to import:</b>
+        <input type="input"  name="url"         size="78" id="import_field" />
         <input type="submit" name="submit"      value="Import" />
         <input type="hidden" name="action"      value="import_track" />
         <a href="javascript:void(0)" onClick="this.parentNode.remove()">Remove</a>
@@ -1328,29 +1322,18 @@ sub userdata_import {
 END
 ;
     $form =~ s/\n/ /g;
-    $html   .= div({-id=>'upload_indicator'},'');
+    $html   .= div({-id=>'import_indicator'},'');
 
     $html       .= div(
-	{-id=>'upload_status',
+	{-id=>'import_status',
 	 -style=>"background-color:'green'"
 	},
 	'');
-    my $upload_label = $self->tr('IMPORT_TRACK');
-    $html       .= div({-style=>'text-indent:10pt'},
-		       a({-href=>'javascript:addAnImportField()',
-			  -id=>'file_adder',
-			 },b($upload_label)));
-
-    $html       .= script({-type=>'text/javascript'},<<END);
-    function addAnImportField() {
-       var f       = 'f' + Math.floor(Math.random() * 99999);
-       var d       = new Element('div',{id:f}).update('$form');
-       var el      = \$('upload_status');
-       el.insert({before:d});
-    }
-END
-    ;
-
+    my $import_label = $self->tr('IMPORT_TRACK');
+    $html           .= div({-style=>'text-indent:10pt'},
+			   a({-href => "javascript:addAnUploadorImportField('import_status','$form')",
+			      -id   => 'import_adder',
+			     },b($import_label)));
     return $html;
 }
 
@@ -1384,23 +1367,14 @@ END
 	 -style=>"background-color:'green'"
 	},
 	'');
+
     my $upload_label = $self->tr('UPLOAD_FILE');
-    $html       .= div({-style=>'text-indent:10pt'},
-		       a({-href=>'javascript:addAnUploadField()',
+    $html       .= p({-style=>'text-indent:10pt'},
+		       a({-href=>"javascript:addAnUploadorImportField('upload_status','$form')",
 			  -id=>'file_adder',
 			 },b($upload_label)));
 
-    $html       .= script({-type=>'text/javascript'},<<END);
-    function addAnUploadField() {
-       var f       = 'f' + Math.floor(Math.random() * 99999);
-       var d       = new Element('div',{id:f}).update('$form');
-       var el      = \$('upload_status');
-       el.insert({before:d});
-    }
-END
-    ;
-
-    return h2('Upload and Share').$html;
+    return $html;
 }
 
 sub get_uploaded_file_info {

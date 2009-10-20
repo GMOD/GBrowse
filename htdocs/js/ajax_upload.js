@@ -75,10 +75,13 @@ function completeAjaxUpload(response) {
     var r = response.evalJSON(true);
 
     if (r.success) {
+        $(userdata_table_id).innerHTML = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
 	Controller.add_tracks(r.tracks,
 			      function() { 
-				  Controller.update_sections(new Array(userdata_table_id,track_listing_id))
-				      }
+				  Controller.update_sections(
+				  new Array(userdata_table_id,track_listing_id),
+				      '',false,true)
+					}
 			      );
     	$('upload_status').innerHTML = '';
     } else {
@@ -107,12 +110,56 @@ function deleteUploadTrack (trackName) {
 	       var tracks = transport.responseJSON.tracks;
 	       if (tracks != null)
 		   tracks.each(function(tid) { Controller.delete_track(tid) });
-	       Controller.update_sections(new Array(userdata_table_id,track_listing_id));
+	       Controller.update_sections(new Array(userdata_table_id,userimport_table_id,track_listing_id));
 	    }
         }
    );
 }
 
+function addAnUploadorImportField(status_element,html) {
+       var f       = 'f' + Math.floor(Math.random() * 99999);
+       var d       = new Element('div',{id:f}).update(html);
+       var el      = $(status_element);
+       el.insert({after:d});
+}
+
+function startAjaxImport() {
+  $('import_indicator').innerHTML = "<image src='/gbrowse2/images/spinner.gif' />";
+  $('import_status').innerHTML    = '<b>Importing...</b>';
+  $('ajax_import').hide();
+  if (Ajax_Status_Updater==null)
+     Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('import_status'),'#',{parameters:{action:'upload_status'}});
+  else
+     Ajax_Status_Updater.start();
+  return true;
+}
+
+function completeAjaxImport(response) {
+    var r = response.evalJSON(true);
+
+    if (r.success) {
+        $(userdata_table_id).innerHTML = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
+	Controller.add_tracks(r.tracks,
+			      function() { 
+				  Controller.update_sections(
+				  new Array(userdata_table_id,track_listing_id),
+				      '',false,true)
+					}
+			      );
+    	$('import_status').innerHTML = '';
+    } else {
+	var importName = r.importName;
+    	var msg =  '<div style="background-color:pink">'+'<b>'+importName+'</b>: '+r.error_msg+'<br>'
+    	         + '<a href="javascript:void(0)" onClick="$(\'import_status\').innerHTML=\'\'">[Remove Message]</a>'+'</div>';
+    	$('import_status').innerHTML = msg;
+    }
+
+    if (Ajax_Status_Updater!=null)
+	Ajax_Status_Updater.stop();
+    $('import_indicator').innerHTML = '';
+    $('ajax_import').remove();
+    return true;
+}
 
 
 

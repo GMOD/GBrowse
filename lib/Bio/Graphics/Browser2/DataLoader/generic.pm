@@ -12,14 +12,12 @@ sub start_load {
     my $data_path  = $self->data_path;
 
     my $db     = $self->create_database($data_path);
-    warn "db = $db";
     my $loader_class = $self->Loader;
     eval "require $loader_class" unless $loader_class->can('new');
     my $loader = $loader_class->new(-store=> $db,
 				    -fast => 0,
 				    -index_subfeatures=>0,
 	);
-    warn "starting load";
     $loader->start_load();
     $self->{loader}    = $loader;
     $self->{conflines} = [];

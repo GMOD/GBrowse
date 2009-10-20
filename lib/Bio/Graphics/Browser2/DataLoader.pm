@@ -72,7 +72,7 @@ sub load {
     my ($initial_lines,$fh) = @_;
 
     $self->set_status('starting load');
-    sleep 1;
+
     $self->open_conf;
     $self->start_load;
 

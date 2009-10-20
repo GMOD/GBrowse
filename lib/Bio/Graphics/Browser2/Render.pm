@@ -25,6 +25,7 @@ use Bio::Graphics::Browser2::UserTracks;
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
+use constant TRACE                => 0; # shows top level events
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
 use constant REGION_SCALE_LABEL   => 'Region Scale';
 use constant DETAIL_SCALE_LABEL   => 'Detail Scale';
@@ -143,44 +144,51 @@ sub run {
   my $fh   = shift || \*STDOUT;
   my $old_fh = select($fh);
 
+  my $debug = $self->debug || TRACE;
+
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string() if $self->debug;
+       query_string() if $debug;
 
   $self->set_source();
 
   # This guarantees that all user-specific tracks
   # disappear after the current session completes.
+  warn "[$$] add_user_tracks()" if $debug;
   local $self->data_source->{_user_tracks} = {};
   $self->add_user_tracks($self->data_source);
 
   my $state = $self->state;
 
+  warn "[$$] testing for asynchronous event()" if $debug;
   if ($self->run_asynchronous_event) {
-      warn "[$$] asynchronous exit" if DEBUG;
+      warn "[$$] asynchronous exit" if $debug;
       $self->session->flush;
       return ;
   }
 
+  warn "[$$] init()"         if $debug;
   $self->init();
+
+  warn "[$$] update_state()" if $debug;
   $self->update_state();
 
   # EXPERIMENTAL CODE -- GET RID OF THE URL PARAMETERS
   if ($ENV{QUERY_STRING} && $ENV{QUERY_STRING} =~ /reset/) {
       print CGI::redirect(CGI::url(-absolute=>1,-path_info=>1));
   } else {
-      warn "[$$] render()" if DEBUG;
+      warn "[$$] render()" if $debug;
       $self->render();
   }
 
-  warn "[$$] cleanup" if DEBUG;
+  warn "[$$] cleanup" if $debug;
   $self->cleanup();
   select($old_fh);
 
-  warn "[$$] session flush" if DEBUG;
+  warn "[$$] session flush" if $debug;
   $self->session->flush;
-  warn "[$$] synchronous exit" if $self->debug;
+  warn "[$$] synchronous exit" if $debug;
 }
 
 sub set_source {
@@ -661,8 +669,6 @@ sub render_body {
 
   $output .= $self->render_tabbed_pages($main_page,$upload_share,$global_config);
   $output .= $self->render_bottom($features);
-
-  warn "got here";
 
   print $output;
 }
@@ -1193,7 +1199,12 @@ sub handle_gff_dump {
 			  -content_disposition => "attachment; filename=$segment.fa");
 	    $dumper->print_fasta();
 	}
+	else {
+	    print header( -type                => $dumper->get_mime_type);
+	    $dumper->print_gff3();
+	}
     }
+
     return 1;
 }
 

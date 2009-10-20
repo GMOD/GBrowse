@@ -451,6 +451,41 @@ sub ACTION_upload_file {
     return (200,'text/html',JSON::to_json($return_object));  # workaround
 }
 
+sub ACTION_import_track {
+    my $self   = shift;
+    my $q    = shift;
+
+    my $url = $q->param('url') or 
+	return(200,'text/html',JSON::to_json({success=>0,
+					      error_msg=>'no URL provided'}
+	       ));
+
+    my $render   = $self->render;
+    my $state    = $self->state;
+    my $session  = $render->session;
+
+    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
+							      $render->state,
+							      $render->language);
+
+    $state->{current_upload} = $url;
+    $session->flush();
+    $session->unlock();
+    
+    my ($result,$msg,$tracks) = $usertracks->import_url($url);
+    $session->lock('exclusive');
+    $state->{current_upload} = '';
+    $session->flush();
+    $session->unlock();
+
+    my $return_object        = { success   => $result||0,
+				 error_msg => CGI::escapeHTML($msg),
+				 tracks    => $tracks ,
+				 uploadName=> $url,
+                               };
+    return (200,'text/html',JSON::to_json($return_object));  # workaround
+}
+
 sub ACTION_delete_upload {
     my $self  = shift;
     my $q     = shift;

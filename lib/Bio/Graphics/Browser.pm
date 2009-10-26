@@ -67,6 +67,7 @@ use File::Path 'mkpath';
 use IO::File;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::Util qw(modperl_request is_safari shellwords);
+use Bio::Graphics::Browser::Circular ':all';
 
 require Exporter;
 
@@ -1471,7 +1472,10 @@ sub add_features_to_track {
   my $conf    = $self->config;
 
   my (%groups,%feature_count,%group_pattern,%group_field);
-  my $iterator = $segment->get_feature_stream(-type=>$feature_types);
+
+  my $iterator = $segment->{origin} ? 
+		 $segment->factory->get_seq_stream(-type=>$feature_types) :
+		 $segment->get_feature_stream(-type=>$feature_types) ;
 
   while (my $feature = $iterator->next_seq) {
 
@@ -1515,6 +1519,7 @@ sub add_features_to_track {
 	}
       }
 
+      $feature = $self->make_circular($feature,$segment);
       $track->add_feature($feature);
     }
   }
@@ -2157,6 +2162,8 @@ sub name2segments {
     $class = $1;
     $name  = $2;
   }
+
+  ($start, $stop) = $self->adjust_bounds($start,$stop,$db); #NML
 
   my $divisor = $self->config->setting(general=>'unit_divider') || 1;
   $start *= $divisor if defined $start;

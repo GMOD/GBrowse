@@ -461,6 +461,8 @@ sub main_display {
     $segment = $segments->[0];
 
     $whole_segment = $CONFIG->whole_segment($segment);
+    $CONFIG->adjust_segment($segment,$CONFIG->{settings}->{start},$CONFIG->{settings}->{stop});  #NML
+    $CONFIG->adjust_segment($whole_segment);  #NML
 
     # truncate the segment to fit within min and max segment boundaries
     resize(\$segment,$whole_segment);
@@ -544,6 +546,7 @@ sub main_display {
 						      -start=>$region_seg_start,
 						      -end=>$region_seg_end,
 						      -absolute=>1);
+      $CONFIG->adjust_segment($region_segment,$region_seg_start,$region_seg_end);  #NML
 
       print region_panel($region_segment,$segment,$page_settings,$feature_files);
     }
@@ -959,7 +962,7 @@ sub adjust_region_size {
   my ($segment,$settings) = @_;
   my $region_size;
   my $length = $segment ? $segment->length : abs($settings->{stop} - $settings->{start});
-  my $whole_segment = $CONFIG->whole_segment($segment) if $segment;
+  my $whole_segment = $CONFIG->whole_segment($segment,$settings) if $segment;
 
   my $region_segment = $CONFIG->setting('region segment');
   if ($region_segment && $region_segment eq 'AUTO') {
@@ -2623,8 +2626,15 @@ sub _region_panel {
 					                  || DEFAULT_OVERVIEW_BGCOLOR(),
 					});
 
-  my $hidden = hidden(-name=>'seg_min',-value=>$region->start,-override=>1) .
-    hidden(-name=>'seg_max',-value=>$region->end,-override=>1);
+  my $hidden;
+  if ($region->{origin}) { #NML
+    my $span = abs($segment->end - $segment->start) + 1;
+    $hidden = hidden(-name=>'seg_min',-value=>$region->start-$span,-override=>1) .
+      hidden(-name=>'seg_max',-value=>$region->end+$span,-override=>1);
+  } else {
+    $hidden = hidden(-name=>'seg_min',-value=>$region->start,-override=>1) .
+      hidden(-name=>'seg_max',-value=>$region->end,-override=>1);
+  }
 
    if ($CONFIG->drag_and_drop) {
      return div({-id=>$panel_name,-class=>'track'},$panels) . drag_script($panel_name,'track') .$hidden;

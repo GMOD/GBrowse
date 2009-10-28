@@ -36,6 +36,10 @@ sub new
     bless { original_key => undef }, $class;
 }
 
+
+#this causes a track with the name of "Genes" to show up in the Tracks
+#section.  Perhaps it should be changed to make it obvious where it
+#is coming from?  
 sub name
 {
     'Genes';

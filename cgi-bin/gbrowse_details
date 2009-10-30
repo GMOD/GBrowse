@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Bio::Graphics::Browser;
+use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::Browser2::Markup;
 use Bio::Graphics::Glyph::generic;

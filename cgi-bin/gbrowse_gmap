@@ -188,7 +188,7 @@ need it again.
 =cut
 
 use strict;
-use Bio::Graphics::Browser;
+use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::RegionSearch;
 use Template;
 use JSON;

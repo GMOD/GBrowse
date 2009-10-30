@@ -13,9 +13,10 @@ sub start_load {
 
     my $db     = $self->create_database($data_path);
     my $loader_class = $self->Loader;
+    my $fast         = $self->do_fast;
     eval "require $loader_class" unless $loader_class->can('new');
     my $loader = $loader_class->new(-store=> $db,
-				    -fast => 0,
+				    -fast => $fast,
 				    -index_subfeatures=>0,
 	);
     $loader->start_load();
@@ -24,6 +25,8 @@ sub start_load {
     $self->state('config');
 }
 
+sub do_fast { 1 };
+
 sub Loader {
     croak "The Loader() class method must be implemented in a subclass";
 }
@@ -31,6 +34,7 @@ sub Loader {
 sub finish_load {
     my $self = shift;
 
+    $self->set_status('creating database');
     $self->loader->finish_load();
     my $db        = $self->loader->store;
     my $conf      = $self->conf_fh;

@@ -1277,8 +1277,8 @@ sub list_userdata {
 	    },
 	    $userdata->description($_) || 'Click to add a description'
 	    );
+	my $download_conf = a({-href=>"?userdata_download=conf;track=$name"},'[Config file]');
 	my $download_data = a({-href=>'?userdata_download=data',-target=>'_blank'},'[Download data]');
-	my $download_conf = a({-href=>'?userdata_download=conf',-target=>'_blank'},'[View Config]');
 	
 	my $color         = $count++%2 ? 'transparent': 'lightblue';
 	div({-style=>"background-color:$color"},
@@ -1292,7 +1292,7 @@ sub list_userdata {
 		 -onClick     => "deleteUploadTrack('$name')"
 		}
 	    ),'&nbsp;',b($name),$modified,br(), 
-	    $download_data,$download_conf,br(),
+	    $download_conf,$download_data,br(),
 	    i($description));
     } @tracks;
     return p(\@rows);

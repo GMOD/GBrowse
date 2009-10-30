@@ -182,11 +182,8 @@ sub upload_file {
 	1;
     };
     my $msg = $@;
-    warn $@ unless $result;
-
     $self->delete_file($track_name) unless $result;
-    return ($result,$msg,\@tracks);
-    
+    return ($result,"$msg",\@tracks);
 }
 
 sub delete_file {

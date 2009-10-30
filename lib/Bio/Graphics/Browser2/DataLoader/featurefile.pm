@@ -8,5 +8,7 @@ sub Loader {
     return 'Bio::DB::SeqFeature::Store::FeatureFileLoader';
 }
 
+sub do_fast {0}
+
 
 1;

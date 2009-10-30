@@ -568,7 +568,8 @@ sub render {
   $self->handle_track_dump() && return;
   $self->handle_gff_dump()   && return;
   $self->handle_plugins()    && return;
-  $self->handle_downloads()  && return;
+  $self->handle_downloads()  && return;  # this is the "old" method
+  $self->handle_download_userdata()  && return;
 
   $self->render_header();
   $self->render_body();
@@ -1430,6 +1431,27 @@ sub write_auto {
     close $out;
 }
 
+sub handle_download_userdata {
+    my $self = shift;
+    my $ftype    = param('userdata_download')    or return;
+    my $track    = param('track')                or return;
+
+    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
+							    $self->state,
+							    $self->language);
+    my $file = $ftype eq 'conf' ? $userdata->track_conf($track)
+	                        : croak "Not implemented yet";
+    my $fname = basename($file);
+
+    print CGI::header(-attachment   => $fname,
+		      -charset      => $self->tr('CHARSET'),
+		      -type         => 'text/plain');
+    open my $f,$file or croak "$file: $!";
+    print $_ while <$f>;
+    close $f;
+    return 1;
+}
+
 sub handle_downloads {
   my $self = shift;
   my ($file,$action)        = $self->get_file_action;
@@ -2266,7 +2288,7 @@ sub asynchronous_update_sections {
     }
 
     if ( $handle_section_name{'userimport_table_div'}) {
-	$return_object->{'userdata_table_div'}
+	$return_object->{'userimport_table_div'}
 	    = $self->render_userimport_table();
     }
 

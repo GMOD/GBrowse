@@ -64,10 +64,9 @@ function startAjaxUpload() {
   $('upload_indicator').innerHTML = "<image src='/gbrowse2/images/spinner.gif' />";
   $('upload_status').innerHTML    = '<b>Uploading...</b>';
   $('ajax_upload').hide();
-  if (Ajax_Status_Updater==null)
-     Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('upload_status'),'#',{parameters:{action:'upload_status'}});
-  else
-     Ajax_Status_Updater.start();
+  Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('upload_status'),
+                                                       '#',
+						       {parameters:{action:'upload_status'}});
   return true;
 }
 
@@ -75,26 +74,28 @@ function completeAjaxUpload(response) {
     var r = response.evalJSON(true);
 
     if (r.success) {
-        $(userdata_table_id).innerHTML = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
 	Controller.add_tracks(r.tracks,
 			      function() { 
 				  Controller.update_sections(
 				  new Array(userdata_table_id,track_listing_id),
-				      '',false,true)
+				      '',false,false,
+                                      function() {
+				          if (Ajax_Status_Updater!=null)
+					  	Ajax_Status_Updater.stop();
+				          $('upload_indicator').innerHTML = '';
+					  $('ajax_upload').remove();
+					  $('upload_status').innerHTML = '';
+                                      })
 					}
 			      );
-    	$('upload_status').innerHTML = '';
     } else {
+        if (Ajax_Status_Updater!=null) Ajax_Status_Updater.stop();
+	$('upload_indicator').innerHTML = '';
 	var uploadName = r.uploadName;
     	var msg =  '<div style="background-color:pink">'+'<b>'+uploadName+'</b>: '+r.error_msg+'<br>'
     	         + '<a href="javascript:void(0)" onClick="$(\'upload_status\').innerHTML=\'\'">[Remove Message]</a>'+'</div>';
     	$('upload_status').innerHTML = msg;
     }
-
-    if (Ajax_Status_Updater!=null)
-	Ajax_Status_Updater.stop();
-    $('upload_indicator').innerHTML = '';
-    $('ajax_upload').remove();
     return true;
 }
 
@@ -127,10 +128,10 @@ function startAjaxImport() {
   $('import_indicator').innerHTML = "<image src='/gbrowse2/images/spinner.gif' />";
   $('import_status').innerHTML    = '<b>Importing...</b>';
   $('ajax_import').hide();
-  if (Ajax_Status_Updater==null)
-     Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('import_status'),'#',{parameters:{action:'upload_status'}});
-  else
-     Ajax_Status_Updater.start();
+   Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('import_status'),
+                                                      '#',
+						      {parameters:{action:'import_status'}}
+                                                     );
   return true;
 }
 
@@ -138,12 +139,11 @@ function completeAjaxImport(response) {
     var r = response.evalJSON(true);
 
     if (r.success) {
-        $(userdata_table_id).innerHTML = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
 	Controller.add_tracks(r.tracks,
 			      function() { 
 				  Controller.update_sections(
-				  new Array(userdata_table_id,track_listing_id),
-				      '',false,true)
+				  new Array(userimport_table_id,track_listing_id),
+				      '',false,false)
 					}
 			      );
     	$('import_status').innerHTML = '';

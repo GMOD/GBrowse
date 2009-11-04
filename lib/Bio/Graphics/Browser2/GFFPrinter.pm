@@ -52,9 +52,10 @@ sub new {
 sub print_gff3 {
     my $self = shift;
 
+    my $segment= $self->get_segment;
     my $labels = $self->get_labels;
-    my $types  = $labels ? $self->labels_to_types($labels) : undef;
-    my $files  = $labels ? $self->labels_to_files($labels) : undef;
+    my $types  = $labels ? $self->labels_to_types($labels,eval{$segment->length}) : undef;
+    my $files  = $labels ? $self->labels_to_files($labels,eval{$segment->length}) : undef;
 
     if ($self->get_do_stylesheet) {
 	$self->print_configuration( $self->data_source(), $labels );
@@ -66,7 +67,6 @@ sub print_gff3 {
         @$labels;
 
     my $date = localtime;
-    my $segment = $self->get_segment;
     print "##gff-version 3\n";
     print "##date $date\n";
     print "##source gbrowse gbgff gff3 dumper\n";
@@ -215,6 +215,8 @@ sub get_mime_type {
 sub labels_to_types {
     my $self        = shift;
     my $labels      = shift;
+    my $length      = shift;
+
     my $data_source = $self->data_source;
 
     # remove dynamic labels, such as uploads
@@ -224,7 +226,7 @@ sub labels_to_types {
                        } @$labels;
     my @types;
     for my $l (@labels) {
-        my @f = shellwords( $data_source->setting( $l => 'feature' ) || '' );
+        my @f = shellwords( $data_source->semantic_setting( $l => 'feature', $length ) || '' );
 	next unless @f;
         push @types, @f;
     }

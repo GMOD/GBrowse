@@ -424,6 +424,8 @@ sub ACTION_upload_file {
 					      error_msg=>'empty file'}
 	       ));
 
+    my $upload_id = $q->param('upload_id');
+
     my $render   = $self->render;
     my $state    = $self->state;
     my $session  = $render->session;
@@ -433,15 +435,19 @@ sub ACTION_upload_file {
 							      $render->language);
 
     my $name = File::Basename::basename($fh );
-    $state->{current_upload} = $name;
+    $state->{uploads}{$upload_id} = [$name,$$];
     $session->flush();
     $session->unlock();
     
-    my ($result,$msg,$tracks) = $usertracks->upload_file($name,$fh);
+    my ($result,$msg,$tracks,$pid) = $usertracks->upload_file($name,$fh);
+
     $session->lock('exclusive');
-    $state->{current_upload} = '';
+    delete $state->{uploads}{$upload_id};
     $session->flush();
     $session->unlock();
+
+    # simplify the message if it is coming from BioPerl
+    $msg = $1 if $msg =~ /MSG:\s+(.+?)\nSTACK/s;
 
     my $return_object        = { success   => $result||0,
 				 error_msg => CGI::escapeHTML($msg),
@@ -508,21 +514,44 @@ sub ACTION_upload_status {
     my $self = shift;
     my $q    = shift;
 
+    my $upload_id = $q->param('upload_id');
+
     my $status    = 'status unknown';
     my $file_name = 'Unknown';
 
     my $state      = $self->state;
     my $render     = $self->render;
 
-    if ($file_name = $state->{current_upload}) {
+    if ($file_name = $state->{uploads}{$upload_id}[0]) {
 	my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
-								$render->state,
-								$render->language);
+								  $render->state,
+								  $render->language);
 	$status      = $usertracks->status($file_name);
 	return (200,'text/html',"<b>$file_name:</b> <i>$status</i>");
     } else {
 	return (204,'text/plain',undef);
     }
+}
+
+sub ACTION_cancel_upload {
+    my $self = shift;
+    my $q    = shift;
+    my $upload_id = $q->param('upload_id');
+
+    my $state      = $self->state;
+    my $render     = $self->render;
+
+    if (my ($file_name,$pid) = @{$state->{uploads}{$upload_id}}) {
+	my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
+								  $render->state,
+								  $render->language);
+	kill TERM=>$pid;
+	$usertracks->delete_file($file_name);
+	return (200,'text/html',"<b>$file_name:</b> <i>Cancelled</i>");
+    } else {
+	return (204,'text/plain',undef);
+    }
+    
 }
 
 sub ACTION_set_upload_description {

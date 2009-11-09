@@ -63,10 +63,16 @@ AIM = {
 function startAjaxUpload(upload_id) {
   var status = $(upload_id + '_status');
   status.update("<image src='/gbrowse2/images/spinner.gif' />");
-  status.insert(new Element('span').update('<b>Uploading...</b>');
-  Ajax_Status_Updater = new Ajax.PeriodicalUpdater(status.down('span'),
-                                                       '#',
-						       {parameters:{action:'upload_status',upload_id:upload_id}});
+  status.insert(new Element('span').update('<b>Uploading...</b>'));
+
+  if (Ajax_Status_Updater == null)
+    Ajax_Status_Updater = new Hash();
+  var updater = new Ajax.PeriodicalUpdater(
+      status.down('span'),
+      '#',
+      {parameters:{action:'upload_status',upload_id:upload_id}});
+
+  Ajax_Status_Updater.set(upload_id,updater);
   return true;
 }
 
@@ -80,21 +86,24 @@ function completeAjaxUpload(response,upload_id) {
 				  new Array(userdata_table_id,track_listing_id),
 				      '',false,false,
                                       function() {
-				          if (Ajax_Status_Updater!=null)
-					  	Ajax_Status_Updater.stop();
-				          $('upload_indicator').innerHTML = '';
-					  $('ajax_upload').remove();
-					  $('upload_status').innerHTML = '';
+                                          var updater = Ajax_Status_Updater.get(upload_id);
+				          if (updater != null)
+					  	updater.stop();
+                                          $(upload_id).remove();
                                       })
 					}
 			      );
     } else {
-        if (Ajax_Status_Updater!=null) Ajax_Status_Updater.stop();
-	$('upload_indicator').innerHTML = '';
+        if (Ajax_Status_Updater.get(upload_id) !=null)
+             Ajax_Status_Updater.get(upload_id).stop();
+        var status = $(upload_id + '_status');
 	var uploadName = r.uploadName;
-    	var msg =  '<div style="background-color:pink">'+'<b>'+uploadName+'</b>: '+r.error_msg+'<br>'
-    	         + '<a href="javascript:void(0)" onClick="$(\'upload_status\').innerHTML=\'\'">[Remove Message]</a>'+'</div>';
-    	$('upload_status').innerHTML = msg;
+    	var msg =  '<div style="background-color:pink">';
+	msg    +=  '<b>'+uploadName+'</b>: '+r.error_msg+'<br>';
+	msg    +=  '<a href="javascript:void(0)" onClick="\$\(\''+upload_id+'\').remove()">[Remove Message]</a>';
+	msg    +=  '</div>';
+    	status.update(msg);
+        $(upload_id).remove();
     }
     return true;
 }
@@ -128,12 +137,13 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt) {
     var upload_tag  = 'upload_' + Math.floor(Math.random() * 99999);
 
     var script      = 'return AIM.submit(this,{  onStart:  function() {';
-    script         +=                                        'startAjaxUpload("'+upload_tag+'")';
+    script         +=                                        'startAjaxUpload(\''+upload_tag+'\')';
     script         +=                                      '},';
     script         +=                           'onComplete: function(response) {'
-    script         +=                                        'completeAjaxUpload(response,"'+upload_tag+'")';
-    script         +=                         '})';
-    var div         = new Element('div');
+    script         +=                                        'completeAjaxUpload(response,\''+upload_tag+'\')';
+    script         +=                         '}})';
+
+    var div         = new Element('div',{id:upload_tag});
     var form        = new Element('form',{name: 'ajax_upload',
                                             id: 'ajax_upload',
                                       onSubmit: script,

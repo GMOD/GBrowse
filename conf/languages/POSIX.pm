@@ -229,6 +229,8 @@ END
 
    IMPORT_TRACK => 'Import a track',
 
+   REMOVE       => 'Remove',
+
    KEY_POSITION => 'Key position',
 
    BROWSE      => 'Browse...',

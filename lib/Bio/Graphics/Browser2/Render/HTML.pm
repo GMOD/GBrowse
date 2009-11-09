@@ -1303,35 +1303,12 @@ sub userdata_import {
     my $html     = '';
 
     my $url      = url(-absolute=>1,-path_info=>1);
-    my $form     = <<END;
-<form name="ajax_import"
-      id="ajax_import"
-      onSubmit= "return AIM.submit(this,
-                                      {onStart    : startAjaxImport,
-                                       onComplete : completeAjaxImport
-                                      })"
-     action="$url"
-      enctype="multipart/form-data"
-       method="post">
-       <b>Enter URL of track to import:</b>
-        <input type="input"  name="url"         size="78" id="import_field" />
-        <input type="submit" name="submit"      value="Import" />
-        <input type="hidden" name="action"      value="import_track" />
-        <a href="javascript:void(0)" onClick="this.parentNode.remove()">Remove</a>
-</form>
-END
-;
-    $form =~ s/\n/ /g;
-    $html   .= div({-id=>'import_indicator'},'');
+    $html   .= div({-id=>'import_list_start'},'');
 
-    $html       .= div(
-	{-id=>'import_status',
-	 -style=>"background-color:'green'"
-	},
-	'');
     my $import_label = $self->tr('IMPORT_TRACK');
+    my $remove_label = $self->tr('REMOVE');
     $html           .= div({-style=>'text-indent:10pt'},
-			   a({-href => "javascript:addAnUploadorImportField('import_status','$form')",
+			   a({-href => "javascript:addAnUploadField('import_list_start','$url','$import_label','$remove_label')",
 			      -id   => 'import_adder',
 			     },b($import_label)));
     return $html;
@@ -1339,38 +1316,15 @@ END
 
 sub userdata_upload {
     my $self     = shift;
-    my $html     = '';
-
     my $url      = url(-absolute=>1,-path_info=>1);
-    my $form     = <<END;
-<form name="ajax_upload"
-      id="ajax_upload"
-      onSubmit= "return AIM.submit(this,
-                                      {onStart    : startAjaxUpload,
-                                       onComplete : completeAjaxUpload
-                                      })"
-      action="$url"
-      enctype="multipart/form-data"
-       method="post">
-        <input type="file"   name="file"        id="upload_field" />
-        <input type="submit" name="submit"      value="Upload" />
-        <input type="hidden" name="action"      value="upload_file" />
-        <a href="javascript:void(0)" onClick="this.parentNode.remove()">Remove</a>
-</form>
-END
-;
-    $form =~ s/\n/ /g;
-    $html   .= div({-id=>'upload_indicator'},'');
 
-    $html       .= div(
-	{-id=>'upload_status',
-	 -style=>"background-color:'green'"
-	},
-	'');
+    my $html     = '';
+    $html       .= div({-id=>'upload_list_start'},'');
 
     my $upload_label = $self->tr('UPLOAD_FILE');
+    my $remove_label = $self->tr('REMOVE');
     $html       .= p({-style=>'text-indent:10pt'},
-		       a({-href=>"javascript:addAnUploadorImportField('upload_status','$form')",
+		       a({-href=>"javascript:addAnUploadField('upload_list_start','$url','$upload_label','$remove_label')",
 			  -id=>'file_adder',
 			 },b($upload_label)));
 

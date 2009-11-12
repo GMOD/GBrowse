@@ -33,6 +33,10 @@ sub setting {
     my $option = shift;
     $self->settings->global_setting($option);
 }
+sub busy_path {
+    my $self = shift;
+    return File::Spec->catfile($self->data_path,'BUSY');
+}
 sub status_path {
     my $self = shift;
     return File::Spec->catfile($self->data_path,'STATUS');
@@ -71,29 +75,53 @@ sub load {
     my $self                = shift;
     my ($initial_lines,$fh) = @_;
 
-    $self->set_status('starting load');
+    $self->flag_busy(1);
+    eval {
+	$self->set_status('starting load');
 
-    $self->open_conf;
-    $self->start_load;
+	$self->open_conf;
+	$self->start_load;
 
-    $self->set_status('load data');
-    foreach (@$initial_lines) {
-	$self->load_line($_);
-    }
+	$self->set_status('load data');
+	foreach (@$initial_lines) {
+	    $self->load_line($_);
+	}
 
-    my $count = @$initial_lines;
-    while (<$fh>) {
-	$self->load_line($_);
-	$self->set_status("loaded $count lines") if $count++ % 1000;
-    }
-    $self->finish_load;
-    $self->close_conf;
-    $self->set_status("processing complete");
+	my $count = @$initial_lines;
+	while (<$fh>) {
+	    $self->load_line($_);
+	    $self->set_status("loaded $count lines") if $count++ % 1000;
+	}
+	$self->finish_load;
+	$self->close_conf;
+	$self->set_status("processing complete");
+    };
+    $self->flag_busy(0);
+
+    die $@ if $@;
     return $self->tracks;
 }
 
 sub start_load  { }
 sub finish_load { }
+sub flag_busy {
+    my $self = shift;
+    my $busy = shift;
+    my $busy_file = $self->busy_path;
+
+    if ($busy) {
+	warn "busy_file = $busy_file";
+	my $fh        = IO::File->new($busy_file,'>');
+    } else {
+	unlink $busy_file;
+    }
+}
+
+sub busy {
+    my $self = shift;
+    my $busy_file = $self->busy_path;
+    return -e $busy_file;
+}
 
 sub add_track {
     my $self  = shift;
@@ -148,8 +176,6 @@ sub create_database {
     my $data_path = shift;
 
     my $backend   = $self->backend;
-
-    warn "backend = $backend";
 
     if ($backend eq 'DBI::mysql') {
 	my @components = split '/',$data_path;

@@ -1259,7 +1259,9 @@ sub list_userdata {
 							   $self->language);
 
     my $imported = $type eq 'imported' ? 1 : 0;
-    my @tracks   = sort $userdata->tracks($imported);
+    my @tracks   = $userdata->tracks($imported);
+    my %modified = map {$_ => $userdata->modified($_) } @tracks;
+    @tracks      = sort {$modified{$a}<=>$modified{$b}} @tracks;
 
     my $buttons = $self->data_source->globals->button_url;
     my $share   = "$buttons/share.png";
@@ -1268,7 +1270,7 @@ sub list_userdata {
     my $count = 0;
     my @rows = map {
 	my $name          = $_;
-	my $modified      = localtime $userdata->modified($_);
+	my $modified      = localtime $modified{$_};
 	my $description   = div(
 	    {
 		-id              => "${name}_description",
@@ -1279,6 +1281,9 @@ sub list_userdata {
 	    );
 	my $download_conf = a({-href=>"?userdata_download=conf;track=$name"},'[Config file]');
 	my $download_data = a({-href=>'?userdata_download=data',-target=>'_blank'},'[Download data]');
+	my $go_there      = a({-href    => 'javascript:void(0)',
+			       -onClick => qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$name"))},
+			      '[View track]');
 	
 	my $color         = $count++%2 ? 'transparent': 'lightblue';
 	div({-style=>"background-color:$color"},
@@ -1291,7 +1296,7 @@ sub list_userdata {
 		 -onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
 		 -onClick     => "deleteUploadTrack('$name')"
 		}
-	    ),'&nbsp;',b($name),$modified,br(), 
+	    ),'&nbsp;',b($name),$modified,$go_there,br(), 
 	    $download_conf,$download_data,br(),
 	    i($description));
     } @tracks;
@@ -1305,10 +1310,11 @@ sub userdata_import {
     my $url      = url(-absolute=>1,-path_info=>1);
     $html   .= div({-id=>'import_list_start'},'');
 
-    my $import_label = $self->tr('IMPORT_TRACK');
-    my $remove_label = $self->tr('REMOVE');
-    $html           .= div({-style=>'text-indent:10pt'},
-			   a({-href => "javascript:addAnUploadField('import_list_start','$url','$import_label','$remove_label')",
+    my $import_label  = $self->tr('IMPORT_TRACK');
+    my $import_prompt = $self->tr('REMOTE_URL');
+    my $remove_label  = $self->tr('REMOVE');
+    $html            .= div({-style=>'text-indent:10pt'},
+			   a({-href => "javascript:addAnUploadField('import_list_start','$url','$import_prompt','$remove_label','import')",
 			      -id   => 'import_adder',
 			     },b($import_label)));
     return $html;

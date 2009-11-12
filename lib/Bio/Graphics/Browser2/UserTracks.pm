@@ -51,8 +51,13 @@ sub tracks {
     opendir D,$path;
     while (my $dir = readdir(D)) {
 	next if $dir =~ /^\.+$/;
-	my $is_imported       = (-e File::Spec->catfile($path,$dir,'imported'))||0;
+
+	my $is_busy       = (-e File::Spec->catfile($path,$dir,'BUSY'))||0;
+	next if $is_busy;
+
+	my $is_imported   = (-e File::Spec->catfile($path,$dir,'imported'))||0;
 	next if defined $imported && $imported != $is_imported;
+
 	push @result,$dir;
     }
     return @result;
@@ -166,8 +171,10 @@ sub upload_file {
     # guess the file type from the first non-blank line
     my ($type,$lines)   = $self->guess_upload_type($fh);
 
-    my @tracks;
+    my (@tracks,$fcgi);
+
     my $result= eval {
+	local $SIG{TERM} = sub { die "cancelled" };
 	croak "Could not guess the type of the file $file_name"
 	    unless $type;
 
@@ -181,6 +188,12 @@ sub upload_file {
 	@tracks = $load->load($lines,$fh);
 	1;
     };
+
+    if ($@ =~ /cancelled/) {
+	$self->delete_file($track_name);
+	return (0,'Cancelled by user',[]);
+    }
+
     my $msg = $@;
     $self->delete_file($track_name) unless $result;
     return ($result,"$msg",\@tracks);
@@ -189,7 +202,6 @@ sub upload_file {
 sub delete_file {
     my $self = shift;
     my $track_name  = shift;
-    warn "removing ",$self->track_path($track_name);
     rmtree($self->track_path($track_name));
 }
 

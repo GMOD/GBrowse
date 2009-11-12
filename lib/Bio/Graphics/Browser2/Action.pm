@@ -194,14 +194,12 @@ sub ACTION_add_tracks {
     my $q    = shift;
 
     my $render = $self->render;
-    
 
     my @track_names = $q->param('track_names');
 
     $render->init_database();
     $render->init_plugins();
     $render->init_remote_sources();
-
     my $track_data = $render->add_tracks(\@track_names);
     my $return_object = { track_data => $track_data, };
 
@@ -529,7 +527,7 @@ sub ACTION_upload_status {
 	$status      = $usertracks->status($file_name);
 	return (200,'text/html',"<b>$file_name:</b> <i>$status</i>");
     } else {
-	return (204,'text/plain',undef);
+	return (500,'text/html',"not found");
     }
 }
 

@@ -404,68 +404,69 @@ sub add_tracks {
     warn "add_tracks(@$track_names)" if DEBUG;
 
     my %track_data;
+    my $segment = $self->segment;
+    
+    $self->add_track_to_state($_) foreach @$track_names;
+    if ($segment) {
+	foreach my $track_name ( @$track_names ) {
 
-    foreach my $track_name ( @$track_names ) {
-
-	$self->add_track_to_state($track_name);
-	next unless $self->segment;
-
-	my @track_ids = $self->expand_track_names($track_name);
-
-	for my $track_id (@track_ids) {
-
-	    warn "rendering track $track_id" if DEBUG;
-
-	    my ( $track_keys, $display_details, $details_msg )
-		= $self->background_individual_track_render($track_id);
+	    my @track_ids = $self->expand_track_names($track_name);
 	    
-	    my $track_key        = $track_keys->{$track_id};
-	    my $track_section    = $self->get_section_from_label($track_id);
-	    my $image_width      = $self->get_image_width;
-	    my $image_element_id = $track_name . "_image";
+	    for my $track_id (@track_ids) {
+	    
+		warn "rendering track $track_id" if DEBUG;
 
-	    my $track_html;
-	    if ( $track_section eq 'detail' and not $display_details ) {
-		my $image_width = $self->get_image_width;
-		$track_html .= $self->render_grey_track(
-		    track_id         => $track_name,
-		    image_width      => $image_width,
-		    image_height     => EMPTY_IMAGE_HEIGHT,
-		    image_element_id => $track_name . "_image",
-		    );
-	    }
-	    else {
-		$track_html = $self->render_deferred_track(
-		    cache_key  => $track_key,
+		my ( $track_keys, $display_details, $details_msg )
+		    = $self->background_individual_track_render($track_id);
+	    
+		my $track_key        = $track_keys->{$track_id};
+		my $track_section    = $self->get_section_from_label($track_id);
+		my $image_width      = $self->get_image_width;
+		my $image_element_id = $track_name . "_image";
+
+		my $track_html;
+		if ( $track_section eq 'detail' and not $display_details ) {
+		    my $image_width = $self->get_image_width;
+		    $track_html .= $self->render_grey_track(
+			track_id         => $track_name,
+			image_width      => $image_width,
+			image_height     => EMPTY_IMAGE_HEIGHT,
+			image_element_id => $track_name . "_image",
+			);
+		}
+		else {
+		    $track_html = $self->render_deferred_track(
+			cache_key  => $track_key,
+			track_id   => $track_id,
+			) || '';
+		}
+		$track_html = $self->wrap_track_in_track_div(
 		    track_id   => $track_id,
-		    ) || '';
-	    }
-	    $track_html = $self->wrap_track_in_track_div(
-		track_id   => $track_id,
-		track_name => $track_name,
-		track_html => $track_html,
-		);
+		    track_name => $track_name,
+		    track_html => $track_html,
+		    );
 	    
-	    my $panel_id = 'detail_panels';
-	    if ( $track_id =~ /:overview$/ ) {
-		$panel_id = 'overview_panels';
+		my $panel_id = 'detail_panels';
+		if ( $track_id =~ /:overview$/ ) {
+		    $panel_id = 'overview_panels';
+		}
+		elsif ( $track_id =~ /:region$/ ) {
+		    $panel_id = 'region_panels';
+		}
+		warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name, panel_id=$panel_id" if DEBUG;
+		
+		$track_data{$track_id} = {
+		    track_key        => $track_key,
+		    track_id         => $track_id,
+		    track_name       => $track_name,
+		    track_html       => $track_html,
+		    track_section    => $track_section,
+		    image_element_id => $image_element_id,
+		    panel_id         => $panel_id,
+		    display_details  => $display_details,
+		    details_msg      => $details_msg,
+		};
 	    }
-	    elsif ( $track_id =~ /:region$/ ) {
-		$panel_id = 'region_panels';
-	    }
-	    warn "add_track() returning track_id=$track_id, key=$track_key, name=$track_name, panel_id=$panel_id" if DEBUG;
-	    
-	    $track_data{$track_id} = {
-		track_key        => $track_key,
-		track_id         => $track_id,
-		track_name       => $track_name,
-		track_html       => $track_html,
-		track_section    => $track_section,
-		image_element_id => $image_element_id,
-		panel_id         => $panel_id,
-		display_details  => $display_details,
-		details_msg      => $details_msg,
-	    };
 	}
     }
 

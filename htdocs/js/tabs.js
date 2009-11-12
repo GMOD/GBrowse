@@ -21,9 +21,19 @@ var TabbedSection = Class.create( {
     function(event) {
         var menu = Event.element(event);
 	var id   = menu.id;
+        this.do_select_tab(id);
+  },
+
+  select_tab:
+  function(tabname) {
+     this.do_select_tab(tabname+'_select');
+  },
+
+  do_select_tab:
+  function(tab_id) {
 	var whichOne;
 	for (var i=0;i<this.tab_menus.length;i++) {
-	    if (this.tab_menus[i].id == id)
+	    if (this.tab_menus[i].id == tab_id)
 	    	 whichOne=i;
         }
 	this.tab_menus.each(

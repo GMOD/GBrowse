@@ -704,7 +704,6 @@ sub open_database {
   my ($dbid,$adaptor,@argv) = $self->db_settings($track);
   my $db                    = Bio::Graphics::Browser2::DataBase->open_database($adaptor,@argv);
 
-
   # do a little extra stuff the first time we see a new database
   unless ($self->{databases_seen}{$db}++) {
       my $refclass = $self->setting('reference class');

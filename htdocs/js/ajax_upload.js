@@ -61,23 +61,42 @@ AIM = {
 }
 
 function startAjaxUpload(upload_id) {
-  var status = $(upload_id + '_status');
+  var status       = $(upload_id + '_status');
+  var upload_form  = $(upload_id + '_form');
+  upload_form.hide();
+  var cancel_script = 'Controller.cancel_upload("'+upload_id+'");'
+  
   status.update("<image src='/gbrowse2/images/spinner.gif' />");
   status.insert(new Element('span').update('<b>Uploading...</b>'));
+  status.insert(new Element('a',{   href: 'javascript:void(0)',
+                                 onClick: cancel_script
+                                }
+		            ).update(' Cancel'));
 
   if (Ajax_Status_Updater == null)
     Ajax_Status_Updater = new Hash();
-  var updater = new Ajax.PeriodicalUpdater(
-      status.down('span'),
-      '#',
-      {parameters:{action:'upload_status',upload_id:upload_id}});
+     var updater = new Ajax.PeriodicalUpdater(
+         {success: status.down('span')},
+         '#',
+         {parameters: {   action: 'upload_status',
+                       upload_id: upload_id
+                      },
+         }
+         );
 
   Ajax_Status_Updater.set(upload_id,updater);
   return true;
 }
 
 function completeAjaxUpload(response,upload_id) {
-    var r = response.evalJSON(true);
+
+  var r;
+
+  try {
+    r = response.evalJSON(true);
+  } catch(e) { r = {success:     false, 
+                    upload_name: 'Uploaded file',
+                    error_msg:   'The server returned an error during upload'}}
 
     if (r.success) {
 	Controller.add_tracks(r.tracks,
@@ -103,8 +122,8 @@ function completeAjaxUpload(response,upload_id) {
 	msg    +=  '<a href="javascript:void(0)" onClick="\$\(\''+upload_id+'\').remove()">[Remove Message]</a>';
 	msg    +=  '</div>';
     	status.update(msg);
-        $(upload_id).remove();
     }
+    Ajax_Status_Updater.unset(upload_id);
     return true;
 }
 
@@ -126,14 +145,10 @@ function deleteUploadTrack (trackName) {
    );
 }
 
-function addAnUploadorImportField(status_element,html) {
-       var f       = 'f' + Math.floor(Math.random() * 99999);
-       var d       = new Element('div',{id:f}).update(html);
-       var el      = $(status_element);
-       el.insert({after:d});
-}
+function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field_type) {
 
-function addAnUploadField(after_element,action,upload_prompt,remove_prompt) {
+    if (field_type == null) field_type='upload';
+
     var upload_tag  = 'upload_' + Math.floor(Math.random() * 99999);
 
     var script      = 'return AIM.submit(this,{  onStart:  function() {';
@@ -145,7 +160,7 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt) {
 
     var div         = new Element('div',{id:upload_tag});
     var form        = new Element('form',{name: 'ajax_upload',
-                                            id: 'ajax_upload',
+                                            id: upload_tag + '_form',
                                       onSubmit: script,
 				        action: action,
                                        enctype: 'multipart/form-data',
@@ -153,19 +168,28 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt) {
 				      });
     var paragraph   = new Element('p',{style:'text-indent:10pt'});
     form.update(paragraph);
-    paragraph.insert(upload_prompt);
-    paragraph.insert(new Element('input',{type:'file',   name:'file',   id:'upload_field'}));
+    paragraph.insert('<b>'+upload_prompt+' </b>');
+    paragraph.insert(new Element('input',{type:'hidden', 
+                                          name:'action', 
+                                         value:(field_type=='upload'
+                                                ?'upload_file':'import_track')
+                                         }));
+    if (field_type=='upload')
+       paragraph.insert(new Element('input',{type:'file',   name:'file',   id:'upload_field'}));
+    else
+       paragraph.insert(new Element('input',{type:'text',   name:'url',    id:'import_field',
+                                             size:50}));
+
     paragraph.insert(new Element('input',{type:'submit', name:'submit', value:'Upload'}));
-    paragraph.insert(new Element('input',{type:'hidden', name:'action', value:'upload_file'}));
     paragraph.insert(new Element('input',{type:'hidden', name:'upload_id',value:upload_tag}));
     paragraph.insert(new Element('a',{   href: 'javascript:void(0)',
                                       onClick: 'this.up("div").remove()',
-                                 }).update(remove_prompt));
+                                 }).update(' '+remove_prompt));
     div.insert(new Element('div',{id:upload_tag+'_status'}));
     div.insert(form);
 
     var el = $(after_element);
-    el.insert({after:div});
+    el.insert({before:div});
 }
 
 function startAjaxImport() {

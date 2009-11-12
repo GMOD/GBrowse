@@ -53,6 +53,7 @@ var GBrowseController = Class.create({
     // segment_info holds the information used in rubber.js
     this.segment_info;
     this.last_update_key;
+    this.tabs;
   },
 
   reset_after_track_load:
@@ -489,6 +490,20 @@ var GBrowseController = Class.create({
 
   }, // end rerender_track
 
+  scroll_to_matching_track:
+  function scroll_to_matching_track(partial_name) {
+     var tracks = $$('span.titlebar');
+     var first_track = tracks.find(function(n) {
+                         var result = n.id.include(partial_name)
+                                      && n.visible();
+                         return result;
+                           }
+			);
+     if (first_track != null) {
+         new Effect.ScrollTo(first_track.id);
+     }
+  },
+
   delete_track:
   function(track_name) {
       var track_obj     = this.gbtracks.get(track_name)
@@ -819,6 +834,17 @@ var GBrowseController = Class.create({
     });
   },
 
+  cancel_upload:
+  function(upload_id) {
+       new Ajax.Request(document.URL,{
+              method:    'post',
+              parameters: {
+                              action: 'cancel_upload',
+                           upload_id: upload_id
+                          }
+        });
+  },
+
   // Remote Annotations Methods *************************************************
 
   new_remote_track:
@@ -940,6 +966,13 @@ var GBrowseController = Class.create({
 	  return true;
       }
       return false;
+  },
+
+  select_tab:
+  function (tab_id) {
+     if (this.tabs != null) {
+       this.tabs.select_tab(tab_id);
+     }
   }
 
 
@@ -969,7 +1002,7 @@ function initialize_page() {
        initAutocomplete();
 
   // These statements initialize the tabbing
-  new TabbedSection(['main_page','custom_tracks_page','settings_page']);
+  Controller.tabs = new TabbedSection(['main_page','custom_tracks_page','settings_page']);
 }
 
 // set the colors for the rubberband regions

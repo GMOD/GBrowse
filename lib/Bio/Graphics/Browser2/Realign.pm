@@ -49,7 +49,7 @@ require Exporter;
 @EXPORT    = ();
 @EXPORT_OK = qw(align align_segs);
 
-# The default scoring matrix introduces a penalty of -1 for opening
+# The default scoring matrix introduces a penalty of -2 for opening
 # a gap in the sequence, but no penalty for extending an already opened
 # gap.  A nucleotide mismatch has a penalty of -1, and a match has a
 # positive score of +1.  An ambiguous nucleotide ("N")  can match
@@ -57,7 +57,7 @@ require Exporter;
 use constant DEFAULT_MATRIX => { 'wildcard_match'  => 0,
 				 'match'           => 1,
 				 'mismatch'        => -1,
-				 'gap'             => -1,
+				 'gap'             => -2,
 				 'gap_extend'      => 0,
 				 'wildcard'        => 'N',
 				 };
@@ -196,6 +196,7 @@ Will produce this output:
 # return the alignment as three padded strings for pretty-printing, etc.
 sub pads {
     my ($align,$src,$tgt) = @{shift()}{'alignment','src','target'};
+    warn join ',',@$align;
     my ($ps,$pt,$last);
     $ps = '-' x ($align->[0])        if defined $align->[0];  # pad up the source
     $pt = substr($tgt,0,$align->[0]) if defined $align->[0];
@@ -318,21 +319,23 @@ sub _do_alignment {
                                               $matrix{mismatch};
 
         # what happens if we extend the src strand one character, gapping the tgt?
-	my $gap_tgt  = $row[$#row][SCORE] + (($row[$#row][EVENT]>EXTEND) ? $matrix{gap_extend}
+	my $gap_tgt  = $row[$#row][SCORE] + (($row[$#row][EVENT]==GAP_TGT) ? $matrix{gap_extend}
 	                                                                 : $matrix{gap});
 
         # what happens if we extend the tgt strand one character, gapping the src?
-	my $gap_src  = $scores->[$col+1][SCORE] + (($scores->[$col+1][EVENT] > EXTEND) ? $matrix{gap_extend}
+	my $gap_src  = $scores->[$col+1][SCORE] + (($scores->[$col+1][EVENT] == GAP_SRC) ? $matrix{gap_extend}
 	                                                                               : $matrix{gap});
 
 	# find the best score among the possibilities
 	my $score;
-	if ($extend >= $gap_src && $extend >= $gap_tgt) {
-	    $score = [$extend,EXTEND];
-	} elsif ($gap_src >= $gap_tgt) {
+	if ($gap_src >= $gap_tgt && $gap_src >= $extend) {
 	    $score = [$gap_src,GAP_SRC];
-	} else {
+	}
+	elsif ($gap_tgt >= $extend) {
 	    $score = [$gap_tgt,GAP_TGT];
+	}
+	else {
+	    $score = [$extend,EXTEND];
 	}
 
 	# save it for posterity

@@ -16,7 +16,7 @@ static ACellPtr new_row (int len) {
 static void initMatrix(MatchMatrix* matrix) {
   matrix->match      = 1;
   matrix->mismatch   = -1;
-  matrix->gap        = -1;
+  matrix->gap        = -2;
   matrix->gap_extend = 0;
   matrix->wcmatch    = 0;
   matrix->wildcard   = 'N';
@@ -56,11 +56,11 @@ int realign (const char* src, const char* tgt,
 #if DBG
   fprintf(stderr,"%-4c %-4c",' ',' ');
   for (i=0;i<tgt_len;i++)
-    fprintf(stderr," %4c",tgt[i]);
+    fprintf(stderr," %5c",tgt[i]);
   fprintf(stderr,"\n");
   fprintf(stderr,"%-4c ",' ');
   for (i=0; i<=tgt_len; i++) {
-    fprintf(stderr,"%4d ",dpm[0][i]);
+    fprintf(stderr,"%4d  ",dpm[0][i].score);
   }
   fprintf(stderr,"\n");
 #endif
@@ -89,22 +89,23 @@ int realign (const char* src, const char* tgt,
 
       /* what happens if we extend the src one character, gapping tgt? */
       gap_tgt_score = dpm[row+1][col].score + 
-	((dpm[row+1][col].event > A_EXTEND) ? mat->gap_extend : mat->gap);
+	((dpm[row+1][col].event == GAP_TGT) ? mat->gap_extend : mat->gap);
 
       /* what happens if we extend the tgt strand one character, gapping src? */
       gap_src_score = dpm[row][col+1].score + 
-	((dpm[row][col+1].event > A_EXTEND) ? mat->gap_extend : mat->gap);
+	((dpm[row][col+1].event == GAP_SRC) ? mat->gap_extend : mat->gap);
 
       /* find best score among the possibilities */
-      if (extend_score >= gap_src_score && extend_score >= gap_tgt_score) {
-	score = dpm[row+1][col+1].score = extend_score;
-	dpm[row+1][col+1].event = A_EXTEND;
-      } else if (gap_src_score >= gap_tgt_score) {
+      if (gap_src_score >= gap_tgt_score && gap_src_score >= extend_score) {
 	score = dpm[row+1][col+1].score = gap_src_score;
 	dpm[row+1][col+1].event = GAP_SRC;
-      } else {
+      }
+      else if (gap_tgt_score >= extend_score) {
 	score = dpm[row+1][col+1].score = gap_tgt_score;
 	dpm[row+1][col+1].event = GAP_TGT;
+      } else {
+	score = dpm[row+1][col+1].score = extend_score;
+	dpm[row+1][col+1].event = A_EXTEND;
       }
      
       /* save it for posterity */
@@ -116,7 +117,10 @@ int realign (const char* src, const char* tgt,
     }
 #if DBG
     for (i=0; i<=tgt_len; i++) {
-      fprintf(stderr,"%4d ",dpm[row+1][i]);
+      fprintf(stderr,"%4d%1s ",dpm[row+1][i].score,
+	                       ( dpm[row+1][i].event==A_EXTEND ? "e"
+				 :dpm[row+1][i].event==GAP_SRC  ? "s"
+	                         :"t"));
     }
     fprintf(stderr,"\n");
 #endif

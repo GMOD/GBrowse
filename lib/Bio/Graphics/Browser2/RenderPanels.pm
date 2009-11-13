@@ -1352,6 +1352,7 @@ sub add_features_to_track {
       my @types_in_this_db = map { $source->label2type($_,$length) } @labels;
       next unless @types_in_this_db;
 
+      warn "[$$] RenderPanels->get_iterator(@types_in_this_db)";
       my $iterator  = $self->get_iterator($db2db{$db},
 					  $segment,
 					  \@types_in_this_db)
@@ -1431,6 +1432,7 @@ sub add_features_to_track {
       }
     }
   }
+  warn "[$$] RenderPanels finished iteration fetch";
 
   # ------------------------------------------------------------------------------------------
   # fixups

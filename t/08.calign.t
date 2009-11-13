@@ -24,13 +24,13 @@ BEGIN {
 use lib "$Bin/../blib/lib","$Bin/../blib/arch";
 use Bio::Graphics::Browser2::Realign;
 
-my $aligner = Bio::Graphics::Browser2::Realign->new('gattttttc','gattttccc');
+my $aligner = Bio::Graphics::Browser2::Realign->new('gattttgttccc','gattttacccc');
 ok($aligner);
 my $score   = $aligner->score;
 my $align   = $aligner->alignment; 
 ok($align);
 ok($score,6);
 ok($align->[0],0);
-ok($align->[6],undef);
-ok($align->[8],8);
+ok($align->[7],undef);
+ok($align->[9],7);
 

@@ -5,7 +5,7 @@ use Getopt::Long;
 use FindBin '$Bin';
 use lib "$Bin/../lib";
 
-use Bio::Graphics::Browser::Render::Slave;
+use Bio::Graphics::Browser2::Render::Slave;
 use constant DEFAULT_PORT => 8101;
 
 my ($port,$debug,$logfile,$pidfile,$user,$kill,$preload);
@@ -61,7 +61,7 @@ if ($kill) {
 
 $port  ||= DEFAULT_PORT;
 
-my $server = Bio::Graphics::Browser::Render::Slave->new(LocalPort=>$port,
+my $server = Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>$port,
 							User     => $user,
 							LogFile  => $logfile,
 							PidFile  => $pidfile,

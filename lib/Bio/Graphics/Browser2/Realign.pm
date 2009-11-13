@@ -196,7 +196,6 @@ Will produce this output:
 # return the alignment as three padded strings for pretty-printing, etc.
 sub pads {
     my ($align,$src,$tgt) = @{shift()}{'alignment','src','target'};
-    warn join ',',@$align;
     my ($ps,$pt,$last);
     $ps = '-' x ($align->[0])        if defined $align->[0];  # pad up the source
     $pt = substr($tgt,0,$align->[0]) if defined $align->[0];
@@ -252,6 +251,7 @@ sub align {
   return $align->pads;
 }
 
+
 =item $segs_arrayref = align_segs($source,$target [,\%matrix])
 
 The align_segs() function aligns $source and $target and returns an
@@ -269,28 +269,48 @@ segments.
 
 sub align_segs {
   my ($gap1,$align,$gap2) = align(@_);
+  return __PACKAGE__->pads_to_segments($gap1,$align,$gap2);
+}
 
-  # create arrays that map residue positions to gap positions
-  my @maps;
-  for my $seq ($gap1,$gap2) {
-    my @seq = split '',$seq;
-    my @map;
-    my $residue = 0;
-    for (my $i=0;$i<@seq;$i++) {
-      $map[$i] = $residue;
-      $residue++ if $seq[$i] ne '-';
+=item $segs_arrayref = Bio::Graphics::Browser2::Realign->pads_to_segments($seq1,$pads,$seq2)
+
+This class method takes two padded sequence strings and the alignment
+string that relates them and returns an array ref of non-gapped aligned
+sequence in the format:
+
+  [src_start,src_end,tgt_start,tgt_end]
+
+The 3 strings look like this CA-ACCCCCTTGCAACAACCTTGAGAACCCCAGGGA
+                             | |||||||||||||||||||||||||||||||||
+                             AAGACCCCCTTGCAACAACCTTGAGAACCCCAGGGA
+
+=cut
+
+sub pads_to_segments {
+    my $self = shift;
+    my ($gap1,$align,$gap2) = @_;
+
+    # create arrays that map residue positions to gap positions
+    my @maps;
+    for my $seq ($gap1,$gap2) {
+	my @seq = split '',$seq;
+	my @map;
+	my $residue = 0;
+	for (my $i=0;$i<@seq;$i++) {
+	    $map[$i] = $residue;
+	    $residue++ if $seq[$i] ne '-';
+	}
+	push @maps,\@map;
     }
-    push @maps,\@map;
-  }
 
-  my @result;
-  while ($align =~ /(\S+)/g) {
-    my $align_end   = pos($align) - 1;
-    my $align_start = $align_end  - length($1) + 1;
-    push @result,[@{$maps[0]}[$align_start,$align_end],
-		  @{$maps[1]}[$align_start,$align_end]];
-  }
-  return wantarray ? @result : \@result;
+    my @result;
+    while ($align =~ /(\S+)/g) {
+	my $align_end   = pos($align) - 1;
+	my $align_start = $align_end  - length($1) + 1;
+	push @result,[@{$maps[0]}[$align_start,$align_end],
+		      @{$maps[1]}[$align_start,$align_end]];
+    }
+    return wantarray ? @result : \@result;
 }
 
 sub _do_alignment {

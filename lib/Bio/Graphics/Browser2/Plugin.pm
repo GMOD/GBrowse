@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser2::Plugin;
-# $Id: Plugin.pm,v 1.22 2009-05-22 21:37:09 lstein Exp $
+# $Id$
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME

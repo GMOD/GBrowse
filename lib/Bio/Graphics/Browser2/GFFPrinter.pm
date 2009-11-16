@@ -7,7 +7,7 @@ package Bio::Graphics::Browser2::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.11 2009-03-05 23:03:00 lstein Exp $
+# $Id$
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser2::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.11 2009-06-16 14:08:24 lstein Exp $
+# $Id$
 # This package defines a Bio::Graphics::Browser2::Track option that manages
 # the caching of track images and imagemaps.
 

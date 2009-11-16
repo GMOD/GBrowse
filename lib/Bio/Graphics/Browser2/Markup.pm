@@ -11,7 +11,7 @@ Bio::Graphics::Browser2::Markup - Markup routines for sequences in text form
 =head1 VERSION (CVS-info)
 
  $RCSfile: Markup.pm,v $
- $Revision: 1.5 $
+ $Revision$
  $Author: lstein $
  $Date: 2008-09-09 20:53:36 $
 

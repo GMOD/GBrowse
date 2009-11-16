@@ -2,7 +2,7 @@
  track.js -- The GBrowse track object
 
  Ben Faga <faga.cshl@gmail.com>
- $Id: track.js,v 1.7 2008-12-28 00:05:44 lstein Exp $
+ $Id$
 
 Method structure
  - Class Utility Methods

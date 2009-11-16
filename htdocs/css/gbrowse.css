@@ -81,3 +81,17 @@ TH.linkmenu       {
 .ctl_hidden       { z-index:10; }
 
 span.tctl         { cursor: pointer }
+.menutitle {
+    color: blue;
+    font-size: 10pt;
+    background-color: transparent;
+    font-weight: bold;
+    font-family: sans-serif;
+    cursor:        pointer;
+    padding-top:   5px;
+    padding-left:  5px;
+    padding-right: 5px;
+}
+.menutitle:hover {
+    text-decoration: underline;
+}

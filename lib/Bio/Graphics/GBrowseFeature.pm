@@ -1,6 +1,6 @@
 package Bio::Graphics::GBrowseFeature;
 
-# $Id: GBrowseFeature.pm,v 1.1 2008-10-11 00:02:43 lstein Exp $
+# $Id$
 # add gbrowse_dbid() method to Bio::Graphics::Feature;
 
 use strict;

@@ -1,6 +1,6 @@
 @import url('gbrowse.css');
 
-/* These are frequently-changed options that provide a buttond-down
+/* These are frequently-changed options that provide a buttoned-down
    "gray" look */
 
 .datatitle        { background-color: khaki; }
@@ -32,4 +32,33 @@
 .uploadbody       { background-color: #F2F6FA;
 	            font-size: small;
 		    margin-left: 1em;
+}
+.tabmenu_active   { cursor: pointer;
+			color: black;
+			background-color: #F2F6FA;
+			font-size: 10pt;
+			font-weight: bold;
+                        font-family: sans-serif;
+			padding-top: 5px;
+			padding-left: 5px;
+			padding-right: 5px;
+		      }
+.tabmenu_inactive { cursor: pointer;
+			color: blue;
+			font-size: 10pt;
+			background-color: transparent;
+			font-weight: bold;
+                        font-family: sans-serif;
+			padding-top:   5px;
+			padding-left:  5px;
+			padding-right: 5px;
+		      }
+.tabmenu_inactive:hover {
+    text-decoration: underline;
+}
+.tabbed {
+    background-color: #F2F6FA;
+}
+.tabmenu {
+    background-color: transparent;
 }

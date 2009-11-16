@@ -1,5 +1,5 @@
 package Bio::DB::Tagger::Tag;
-# $Id: Tag.pm,v 1.2 2009-02-28 00:05:44 lstein Exp $
+# $Id$
 
 use Carp 'croak';
 use overload

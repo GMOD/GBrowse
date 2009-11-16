@@ -12,7 +12,7 @@ Bio::Graphics::Browser2::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.23 $
+ $Revision$
  $Author: lstein $
  $Date: 2008-09-09 20:53:36 $
 

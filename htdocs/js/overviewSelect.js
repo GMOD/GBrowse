@@ -4,7 +4,7 @@
                       This class handles overview-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: overviewSelect.js,v 1.6 2008-12-23 08:07:12 lstein Exp $
+ $Id$
 
 */
 

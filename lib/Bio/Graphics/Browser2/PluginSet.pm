@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser2::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.13 2009-05-22 21:37:09 lstein Exp $
+#  $Id$
 
 use strict;
 use Bio::Graphics::Browser2;

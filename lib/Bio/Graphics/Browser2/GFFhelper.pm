@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.24 2008-12-29 14:58:51 lstein Exp $
+# $Id$
 
 =head1 NAME
 

@@ -40,13 +40,15 @@ END
 
    HIDE_INSTRUCTIONS => 'Hide instructions',
 
-   SHOW_HEADER => 'Show banner',
+   SHOW_HEADER       => 'Show banner',
 
-   HIDE_HEADER => 'Hide banner',
+   HIDE_HEADER       => 'Hide banner',
 
-   LANDMARK   => 'Landmark or Region',
+   LANDMARK => 'Landmark or Region',
 
-   BOOKMARK   => 'Bookmark this',
+   BOOKMARK => 'Bookmark this',
+
+   EXPORT => 'Export as...',
 
    IMAGE_LINK => '...low-res image',
 
@@ -131,7 +133,7 @@ END
 
    SCROLL   => 'Scroll/Zoom',
 
-   RESET    => 'Reset',
+   RESET    => 'Reset to defaults',
 
    FLIP     => 'Flip',
 
@@ -144,6 +146,10 @@ END
    DISPLAY_SETTINGS => 'Display Settings',
 
    TRACKS   => 'Tracks',
+
+   TRACK_SELECT   => 'Search for Specific Tracks',
+
+   TRACK_NAME     => 'Track name',
 
    EXTERNAL_TRACKS => '<i>External tracks italicized</i>',
 
@@ -168,6 +174,8 @@ END
    CONFIGURE   => 'Configure...',
 
    CONFIGURE_TRACKS   => 'Configure tracks...',
+
+   SELECT_SUBTRACKS   => 'Click to select subtracks...',
 
    EDIT       => 'Edit File...',
 
@@ -197,6 +205,8 @@ END
 
    CLEAR_HIGHLIGHTING => 'Clear highlighting',
 
+   CLEAR       => 'Clear',
+
    UPDATE      => 'Update',
 
    UPDATE_TRACKS => 'Update Tracks',
@@ -209,9 +219,17 @@ END
 
    UPLOAD_TRACKS=>'Add custom tracks',
 
+   USERDATA_TABLE=>'Upload and share tracks',
+
+   USERIMPORT_TABLE=>'Import tracks',
+
    UPLOAD_TITLE=> 'Upload your own data',
 
-   UPLOAD_FILE => 'Upload a file',
+   UPLOAD_FILE => 'Upload a track',
+
+   IMPORT_TRACK => 'Import a track',
+
+   REMOVE       => 'Remove',
 
    KEY_POSITION => 'Key position',
 
@@ -370,8 +388,6 @@ END
 
    NO_EXTERNAL        => 'No external features loaded.',
 
-   NO_CITATION        => 'No additional information available.',
-
    #--------------
    # PLUGIN PAGES
    #--------------
@@ -444,17 +460,21 @@ END
 
  OPTIONS_UPDATED   => 'A new site configuration is in effect; all page settings have been reset to their defaults',
 
- SEND_TO_GALAXY    => 'Send to Galaxy',
+ SEND_TO_GALAXY    => 'Export to Galaxy',
 
  NO_DAS            => 'Installation error: Bio::Das module must be installed for DAS URLs to work. Please inform this site\'s webmaster.',
 
  SHOW_OR_HIDE_TRACK => '<b>Show or hide this track</b>',
+
+ KILL_THIS_TRACK    => '<b>Turn off this track.</b>',
 
  CONFIGURE_THIS_TRACK   => '<b class="error">Configure this track.</b>',
 
  SUBTRACKS_SHOWN    => 'This track contains selectable subtracks:',
 
  SHOW_SUBTRACKS     => '<b>Select subtracks</b>',
+
+ SHOWING_SUBTRACKS  => '(<i>Showing %d of %d subtracks</i>)',
 
  SHARE_THIS_TRACK   => '<b>Share this track</b>',
 
@@ -496,5 +516,9 @@ Annotation System (DAS)</a> first copy the URL below, then go to the
 other browser and enter it as a new DAS source. <i>Quantitative tracks
 ("wiggle" files) and uploaded files can not be shared using DAS.</i>
 END
+
+    MAIN_PAGE          => 'Browser',
+    CUSTOM_TRACKS_PAGE => 'Upload and Share Tracks',
+    SETTINGS_PAGE      => 'Preferences',
 
 };

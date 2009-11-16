@@ -7,8 +7,8 @@ use Pod::Usage;
 
 use File::Find ();
 use File::Basename 'basename';
-use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Util 'shellwords';
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::Util 'shellwords';
 use POSIX 'ENOTEMPTY';
 use CGI::Session;
 
@@ -30,9 +30,9 @@ use vars qw/*name *dir *prune/;
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 use constant SECS_PER_DAY   => 60*60*24;
 
-my $conf_dir  = Bio::Graphics::Browser->config_base;
+my $conf_dir  = Bio::Graphics::Browser2->config_base;
 my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
-my $globals   = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,
+my $globals   = Bio::Graphics::Browser2->new(File::Spec->catfile($conf_dir,
 								$conf_file)
     ) or die "Couldn't read globals";
 

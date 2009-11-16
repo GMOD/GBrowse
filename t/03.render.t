@@ -190,7 +190,7 @@ if (ok($render_object) and ok($render_object->{'track_keys'})){
 }
 
 # Check Add Track
-$CGI::Q = new CGI('track_names=Motif;action=add_tracks');
+$CGI::Q = new CGI('track_names=Motifs;action=add_tracks');
 ($status,$mime,$render_object) = $render->asynchronous_event();
 if (ok($render_object) and ok($render_object->{'track_data'})){
 
@@ -289,15 +289,15 @@ if (ok($render_object) and ok($render_object->{'section_html'})){
 }
 
 # Check setting visibility
-$CGI::Q = new CGI('action=set_track_visibility;track_name=Motif;visible=0');
+$CGI::Q = new CGI('action=set_track_visibility;track_name=Motifs;visible=0');
 ($status,$mime,$render_object) = $render->asynchronous_event();
 ok($status, 204);
-ok($render->state()->{features}{'Motifs'}{'visible'},0);
+ok($render->state()->{features}{'Motifs'}{'visible'},undef);
 
-$CGI::Q = new CGI('action=set_track_visibility;track_name=Motif;visible=1');
+$CGI::Q = new CGI('action=set_track_visibility;track_name=Motifs;visible=1');
 ($status,$mime,$render_object) = $render->asynchronous_event();
 ok($status, 204);
-ok($render->state()->{features}{'Motifs'}{'visible'},0);
+ok($render->state()->{features}{'Motifs'}{'visible'},1);
 
 # Try to fetch the segment.
 ok($render->init_database);
@@ -479,7 +479,7 @@ ok (-e $png);
 my $usertracks = $render->user_tracks;
 ok($usertracks);
 ok($usertracks->path =~ m!/gbrowse_testing/userdata/volvox/[0-9a-h]{32}$!);
-$usertracks->add_remote_track('http://www.foo.bar/this/is/a/remotetrack');
+$usertracks->import_url('http://www.foo.bar/this/is/a/remotetrack');
 my @tracks = $usertracks->tracks;
 ok(@tracks+0,1);
 ok($tracks[0],'http_www.foo.bar_this_is_a_remotetrack');

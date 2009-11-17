@@ -181,8 +181,8 @@ if ($windows and !$wincvs and $get_gbrowse_cvs ) {
 $build_param_string ||="";
 $install_param_string ||="";
 
-use constant BIOPERL_VERSION      => 'BioPerl-1.6.0';
-use constant BIOPERL_REQUIRES     => '1.006';  # sorry for the redundancy
+use constant BIOPERL_VERSION      => 'BioPerl-1.6.1';
+use constant BIOPERL_REQUIRES     => '1.006001';  # sorry for the redundancy
 use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
 use constant GBROWSE_DEFAULT      => '1.70';
 use constant SOURCEFORGE_MIRROR2  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
@@ -221,17 +221,27 @@ print STDERR "\n*** Installing prerequisites for BioPerl ***\n";
 
 if ($windows and !eval "use DB_File; 1") {
   print STDERR "Installing DB_File for BioPerl.\n";
-  system("ppm install DB_File");
+
+  # GBrowse doesn't like DB_File 1.820, so we explicitly get DB_File by url
+  system("ppm install http://ppm.tcool.org/archives/DB_File.ppd");
 }
 system("ppm install SVG") if $windows;
 CPAN::Shell->install('GD::SVG');
 CPAN::Shell->install('IO::String');
 CPAN::Shell->install('Text::Shellwords');
-CPAN::Shell->install('CGI::Session');
+if ($windows) {
+    #CGI::Session and Digest::MD5 both fail to install via cpan on windows
+    system("ppm install CGI-Session");
+    system("ppm install Digest-MD5");
+}
+else {
+    CPAN::Shell->install('CGI::Session');
+    CPAN::Shell->install('Digest::MD5');
+}
 CPAN::Shell->install('File::Temp');
 CPAN::Shell->install('Class::Base');
-CPAN::Shell->install('Digest::MD5');
 CPAN::Shell->install('Statistics::Descriptive');
+CPAN::Shell->install('Data::Stag');
 
 unless ($skip_bioperl) {
   my $version = BIOPERL_REQUIRES;

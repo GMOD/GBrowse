@@ -1160,10 +1160,32 @@ sub plugin_find {
 }
 
 # Handle plug-ins that aren't taken care of asynchronously
+# http://localhost/cgi-bin/gb2/gbrowse/yeast/?fetch=gff3           gff3 dump as text/plain
+# http://localhost/cgi-bin/gb2/gbrowse/yeast/?fetch=save+gff3      gff3 dump as attachment
+# http://localhost/cgi-bin/gb2/gbrowse/yeast/?fetch=save+gff3      gff3 dump as attachment
+# http://localhost/cgi-bin/gb2/gbrowse/yeast/?fetch=gff3+trackdef  gff3 plus trackdefs
+# add q=chr:start..end to filter by region (otherwise uses current session)
+# add t=track1+track2+track3... to select tracks
+
 sub handle_gff_dump {
     my $self = shift;
 
-    my $gff_action = param('gbgff') or return;
+    my $gff_action;
+    
+    # new API
+    if (my $action = param ('f') || param('fetch')) {
+	$gff_action = $action;
+    } elsif ($action = param('gbgff')) {
+	$gff_action = 'scan'       if $action eq 'scan';
+	$gff_action = 'gff3'       if $action eq '1';
+	$gff_action = 'save gff3'  if $action =~ /save/i;
+	$gff_action = 'save fasta' if $action =~ /fasta/i;
+	$gff_action .= " trackdef" if param('s') or param('stylesheet');
+    }
+    return unless $gff_action;
+
+    my %actions = map {$_=>1} split /\s+/,$gff_action;
+
     my $segment    = param('q') || param('segment') || undef;
     my @labels     = (param('type'),param('t'));
 
@@ -1178,32 +1200,35 @@ sub handle_gff_dump {
 
     my $dumper = Bio::Graphics::Browser2::GFFPrinter->new(
         -data_source => $self->data_source(),
-        -stylesheet  => param('stylesheet') || param('s')  ||  'no',
-        -id          => param('id')         || undef,         
-        '-dump'      => param('d')          || undef,
+        -stylesheet  => $actions{trackdef}   ||  'no',
+        -id          => param('id')          || undef,         
+        '-dump'      => param('d')           || undef,
         -labels      => [ param('type'), param('t') ],
-        -mimetype    => param('m')          || undef,
+        -mimetype    => param('m')           || undef,
     ) or return 1;
 
-    if ($gff_action eq 'scan') {
+    if ($actions{scan}) {
 	print header('text/plain');
 	$dumper->print_scan();
     }
     else {
 	$dumper->get_segment($segment) or return 1;
-	if ($gff_action eq 'Save') {
+	if ($actions{save} && $actions{gff3}) {
 	    print header( -type                => $dumper->get_mime_type,
 			  -content_disposition => "attachment; filename=$segment.gff3");
 	    $dumper->print_gff3();
 	}
-	elsif ($gff_action eq 'Fasta') {
+	elsif ($actions{fasta}) {
 	    print header( -type                => $dumper->get_mime_type,
 			  -content_disposition => "attachment; filename=$segment.fa");
 	    $dumper->print_fasta();
 	}
-	else {
+	elsif ($actions{gff3}) {
 	    print header( -type                => $dumper->get_mime_type);
 	    $dumper->print_gff3();
+	} elsif ($actions{trackdef}) {
+	    print header( -type                => 'text/plain');
+	    $dumper->print_stylesheet();
 	}
     }
 
@@ -2247,7 +2272,7 @@ sub asynchronous_update_sections {
 	$return_object->{'galaxy_form'} = $self->galaxy_form($self->thin_segment);
     }
 
-    # Galaxy form
+    # Plugin form
     if ( $handle_section_name{'plugin_form'} ) {
 	$return_object->{'plugin_form'} = $self->plugin_form();
     }
@@ -2639,7 +2664,7 @@ sub label2key {
 
   # make URL labels a bit nicer
   if ($label =~ /^ftp|^http/) {
-    $key = url_label($label);
+    $key = $source->setting($label => 'key') || url_label($label);
   }
 
   my $presets = $self->get_external_presets || {};

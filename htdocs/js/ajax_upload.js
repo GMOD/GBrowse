@@ -83,12 +83,11 @@ function startAjaxUpload(upload_id) {
                       },
          }
          );
-
   Ajax_Status_Updater.set(upload_id,updater);
   return true;
 }
 
-function completeAjaxUpload(response,upload_id) {
+function completeAjaxUpload(response,upload_id,field_type) {
 
   var r;
 
@@ -99,22 +98,26 @@ function completeAjaxUpload(response,upload_id) {
                     error_msg:   'The server returned an error during upload'}}
 
     if (r.success) {
+
+        var fields = field_type == 'upload' ? new Array(track_listing_id,userdata_table_id)
+                                            : new Array(track_listing_id,userimport_table_id);
 	Controller.add_tracks(r.tracks,
 			      function() { 
 				  Controller.update_sections(
-				  new Array(userdata_table_id,track_listing_id),
+                                      fields,
 				      '',false,false,
                                       function() {
                                           var updater = Ajax_Status_Updater.get(upload_id);
 				          if (updater != null)
 					  	updater.stop();
                                           $(upload_id).remove();
-                                      })
-					}
-			      );
+                                        }
+				     )}
+				);
     } else {
         if (Ajax_Status_Updater.get(upload_id) !=null)
              Ajax_Status_Updater.get(upload_id).stop();
+	Ajax_Status_Updater.unset(upload_id);
         var status = $(upload_id + '_status');
 	var uploadName = r.uploadName;
     	var msg =  '<div style="background-color:pink">';
@@ -123,7 +126,6 @@ function completeAjaxUpload(response,upload_id) {
 	msg    +=  '</div>';
     	status.update(msg);
     }
-    Ajax_Status_Updater.unset(upload_id);
     return true;
 }
 
@@ -151,11 +153,11 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field
 
     var upload_tag  = 'upload_' + Math.floor(Math.random() * 99999);
 
-    var script      = 'return AIM.submit(this,{  onStart:  function() {';
-    script         +=                                        'startAjaxUpload(\''+upload_tag+'\')';
-    script         +=                                      '},';
-    script         +=                           'onComplete: function(response) {'
-    script         +=                                        'completeAjaxUpload(response,\''+upload_tag+'\')';
+    var script      = 'return AIM.submit(this,{onStart:  function() {';
+    script         +=                                      'startAjaxUpload(\''+upload_tag+'\')';
+    script         +=                                    '},';
+    script         +=                         'onComplete: function(response) {'
+    script         +=                                      'completeAjaxUpload(response,\''+upload_tag+'\',\''+field_type+'\')';
     script         +=                         '}})';
 
     var div         = new Element('div',{id:upload_tag});
@@ -191,43 +193,3 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field
     var el = $(after_element);
     el.insert({before:div});
 }
-
-function startAjaxImport() {
-  $('import_indicator').innerHTML = "<image src='/gbrowse2/images/spinner.gif' />";
-  $('import_status').innerHTML    = '<b>Importing...</b>';
-  $('ajax_import').hide();
-   Ajax_Status_Updater = new Ajax.PeriodicalUpdater($('import_status'),
-                                                      '#',
-						      {parameters:{action:'import_status'}}
-                                                     );
-  return true;
-}
-
-function completeAjaxImport(response) {
-    var r = response.evalJSON(true);
-
-    if (r.success) {
-	Controller.add_tracks(r.tracks,
-			      function() { 
-				  Controller.update_sections(
-				  new Array(userimport_table_id,track_listing_id),
-				      '',false,false)
-					}
-			      );
-    	$('import_status').innerHTML = '';
-    } else {
-	var importName = r.importName;
-    	var msg =  '<div style="background-color:pink">'+'<b>'+importName+'</b>: '+r.error_msg+'<br>'
-    	         + '<a href="javascript:void(0)" onClick="$(\'import_status\').innerHTML=\'\'">[Remove Message]</a>'+'</div>';
-    	$('import_status').innerHTML = msg;
-    }
-
-    if (Ajax_Status_Updater!=null)
-	Ajax_Status_Updater.stop();
-    $('import_indicator').innerHTML = '';
-    $('ajax_import').remove();
-    return true;
-}
-
-
-

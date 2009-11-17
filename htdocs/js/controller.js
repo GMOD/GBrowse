@@ -506,12 +506,10 @@ var GBrowseController = Class.create({
 
   delete_track:
   function(track_name) {
-      var track_obj     = this.gbtracks.get(track_name)
-      if (track_obj != null) {
-	  var track_div_id = track_obj.track_div_id;
-	  this.unregister_track(track_name);
-	  actually_remove(track_div_id);
-      }
+      this.each_track(track_name,function(gb) {
+	  Controller.unregister_track(gb.track_name);
+	  actually_remove(gb.track_div_id);         
+      });
   }, // end delete_track
 
   // Retrieve Rendered Track Methods ********************************

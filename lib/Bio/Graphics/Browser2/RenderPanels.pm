@@ -432,9 +432,11 @@ sub wrap_rendered_track {
     }
     elsif ($label =~ /^(http|ftp):/) {
 	$title = url_label($label);
+
     }
     else {
-      $title = $source->setting($label=>'key') || $label;
+	(my $l = $label) =~ s/:\w+$//;
+	$title = $source->setting($l=>'key') || $label;
     }
     $title =~ s/:(overview|region|detail)$//;
 

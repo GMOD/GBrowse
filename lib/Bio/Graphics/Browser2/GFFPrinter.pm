@@ -49,6 +49,19 @@ sub new {
     return $self;
 }
 
+sub print_stylesheet {
+    my $self = shift;
+    my ($segment,$labels) = @_;
+
+    my $segment||= $self->get_segment;
+    my $labels ||= $self->get_labels;
+    my $types  = $labels ? $self->labels_to_types($labels,eval{$segment->length}) : undef;
+    my $files  = $labels ? $self->labels_to_files($labels,eval{$segment->length}) : undef;
+
+    $self->print_configuration( $self->data_source(), $labels );
+    $self->print_configuration( $_, [ $_->labels ] ) for @$files;
+}
+
 sub print_gff3 {
     my $self = shift;
 
@@ -58,8 +71,7 @@ sub print_gff3 {
     my $files  = $labels ? $self->labels_to_files($labels,eval{$segment->length}) : undef;
 
     if ($self->get_do_stylesheet) {
-	$self->print_configuration( $self->data_source(), $labels );
-	$self->print_configuration( $_, [ $_->labels ] ) for @$files;
+	$self->print_stylesheet($segment,$labels);
     }
 
     my %filters

@@ -143,7 +143,13 @@ sub import_url {
     my $self = shift;
     my $url  = shift;
 
-    my $key  = "Shared track from $url";
+    my $key;
+    if ($url =~ m!http://([^/]+).+/(\w+)/\?.*t=([^+;]+)!) {
+	my @tracks = split /\+/,$3;
+	$key = "Shared track from $1 (@tracks)";
+    }
+    else {$key  = "Shared track from $url";}
+
     my $track_name = $self->trackname_from_url($url);
 
     my $conf = $self->track_conf($track_name);

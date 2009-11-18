@@ -53,8 +53,8 @@ sub print_stylesheet {
     my $self = shift;
     my ($segment,$labels) = @_;
 
-    my $segment||= $self->get_segment;
-    my $labels ||= $self->get_labels;
+    $segment||= $self->get_segment;
+    $labels ||= $self->get_labels;
     my $types  = $labels ? $self->labels_to_types($labels,eval{$segment->length}) : undef;
     my $files  = $labels ? $self->labels_to_files($labels,eval{$segment->length}) : undef;
 

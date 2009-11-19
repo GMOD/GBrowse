@@ -29,3 +29,12 @@
 ^blib/conf\/yeast_simple\.conf$
 ^blib/etc\/default\/gbrowse\-slave$
 ^blib/etc\/init\.d\/gbrowse\-slave$
+^blib/conf\/GBrowse\.conf$
+^blib/conf\/MobyServices\/GbrowseServices\.pm$
+^blib/conf\/MobyServices\/GbrowseServices\.PMS$
+^blib/conf\/slave_preload\.conf$
+^blib/conf\/yeast_chr1\+2\.conf$
+^blib/conf\/yeast_renderfarm\.conf$
+^blib/conf\/yeast_simple\.conf$
+^blib/etc\/default\/gbrowse\-slave$
+^blib/etc\/init\.d\/gbrowse\-slave$

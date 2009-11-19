@@ -29,7 +29,6 @@ my $build = GBrowseInstall->new(
 	'LWP'                 => 0,
 	'Statistics::Descriptive'  => 0,
         'ExtUtils::CBuilder'  => 0,
-	'Cache::MemoryCache'  => 0,
     },
     recommends  => { 
 	'DB_File::Lock'            => 0,

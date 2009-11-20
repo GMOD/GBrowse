@@ -932,12 +932,13 @@ var GBrowseController = Class.create({
       // r.selectNodeContents(container_element);
       // window.getSelection().addRange(r);
       Event.observe(container_element,'keypress',this.set_upload_description);
+      Event.observe(container_element,'blur',this.set_upload_description);
   },
 
   set_upload_description:
   function(event) {
       var el = event.findElement();
-      if (event.keyCode==Event.KEY_RETURN) {
+      if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
 	  var upload_name = el.id.sub('_description$','');
 	  var desc        = el.innerHTML;
 	  el.innerHTML  = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
@@ -949,17 +950,19 @@ var GBrowseController = Class.create({
 			  description: desc
 		      },
 		      onSuccess: function(transport) {
-		      Controller.update_sections(new Array(userdata_table_id))
+		      Controller.update_sections(new Array(userdata_table_id,userimport_table_id))
 		      }
 	       });
 	  el.stopObserving('keypress');
+	  el.stopObserving('blur');
 	  el.blur();
 	  return true;
       }
       if (event.keyCode==Event.KEY_ESC) {
 	  el.innerHTML  = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
-	  Controller.update_sections(new Array(userdata_table_id));
+	  Controller.update_sections(new Array(userdata_table_id,userimport_table_id));
 	  el.stopObserving('keypress');
+	  el.stopObserving('blur');
 	  el.blur();
 	  return true;
       }

@@ -1466,12 +1466,12 @@ sub handle_download_userdata {
 							    $self->state,
 							    $self->language);
     my $file = $ftype eq 'conf' ? $userdata->track_conf($track)
-	                        : croak "Not implemented yet";
+	                        : $userdata->data_path($track,$ftype);
     my $fname = basename($file);
 
     print CGI::header(-attachment   => $fname,
 		      -charset      => $self->tr('CHARSET'),
-		      -type         => 'text/plain');
+		      -type         => -T $file ? 'text/plain' : 'application/octet-stream');
     open my $f,$file or croak "$file: $!";
     print $_ while <$f>;
     close $f;

@@ -4,6 +4,7 @@ package Bio::Graphics::Browser2::DataLoader::generic;
 use strict;
 use Bio::DB::SeqFeature::Store;
 use Carp 'croak';
+use File::Basename 'basename';
 use base 'Bio::Graphics::Browser2::DataLoader';
 
 sub start_load {
@@ -45,7 +46,7 @@ sub finish_load {
     my $trackno   = 0;
     my $loadid    = $self->loadid;
     $self->set_status('creating configuration');
-
+    
     print $conf <<END;
 [$loadid:database]
 db_adaptor = Bio::DB::SeqFeature::Store

@@ -79,9 +79,9 @@ sub render_tabbed_pages {
 		       span({id=>'custom_tracks_page_select'},$custom_tracks_title),
 		       span({id=>'settings_page_select'},$settings_title)
 		   ),
-		   span({-id=>'main_page'},         $main_html),
-		   span({-id=>'custom_tracks_page'},$custom_tracks_html),
-		   span({-id=>'settings_page'},     $settings_html)
+		   div({-id=>'main_page'},         $main_html),
+		   div({-id=>'custom_tracks_page'},$custom_tracks_html),
+		   div({-id=>'settings_page'},     $settings_html)
 	);
     return $html;
 }
@@ -1270,7 +1270,6 @@ sub list_userdata {
     my $count = 0;
     my @rows = map {
 	my $name          = $_;
-	my $modified      = localtime $modified{$_};
 	my $description   = div(
 	    {
 		-id              => "${name}_description",
@@ -1279,10 +1278,29 @@ sub list_userdata {
 	    },
 	    $userdata->description($_) || 'Click to add a description'
 	    );
-	my $download_conf = a({-href=>"?userdata_download=conf;track=$name"},'[Config file]');
-	my $download_data = a({-href=>'?userdata_download=data',-target=>'_blank'},'[Download data]');
+
+	my ($conf_name,$conf_modified,$conf_size) = $userdata->conf_metadata($name);
+
+	my @source_files  = $userdata->source_files($name);
+	my $download_data = 
+	    table({-class=>'padded-table'},
+		  TR(th({-align=>'left'},
+			(a({-href=>"?userdata_download=conf;track=$name"},'Configuration'))),
+		     td(scalar localtime $conf_modified),
+		     td("$conf_size bytes"),
+		     td(a({-href=>"?userdata_edit=conf;track=$name"},'[edit]'))
+		  ),
+		  TR([map { th({-align=>'left'},
+			       a({-href=>"?userdata_download=$_->[0];track=$name"},$_->[0])).
+				td(scalar localtime($_->[2])).
+				td($_->[1],'bytes').
+				td(a({-href=>"?userdata_edit=$_->[0];track=$name"},'[edit]'))
+				,
+		      } @source_files]));
+		  
 	my $go_there      = a({-href    => 'javascript:void(0)',
-			       -onClick => qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$name"))},
+			       -onClick => 
+				   qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$name"))},
 			      '[View track]');
 	
 	my $color         = $count++%2 ? 'transparent': 'lightblue';
@@ -1296,9 +1314,11 @@ sub list_userdata {
 		 -onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
 		 -onClick     => "deleteUploadTrack('$name')"
 		}
-	    ),'&nbsp;',b($name),$modified,$go_there,br(), 
-	    $download_conf,$download_data,br(),
-	    i($description));
+	    ),'&nbsp;',b($name),$go_there,br(), 
+	    i($description),
+	    div({-style=>'padding-left:10em'},
+		b('Source files:'),
+		$download_data));
     } @tracks;
     return p(\@rows);
 }

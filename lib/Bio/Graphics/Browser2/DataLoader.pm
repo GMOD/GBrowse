@@ -35,11 +35,15 @@ sub setting {
 }
 sub busy_path {
     my $self = shift;
-    return File::Spec->catfile($self->data_path,'BUSY');
+    return File::Spec->catfile($self->data_path,Bio::Graphics::Browser2::UserTracks->busy_file_name);
 }
 sub status_path {
     my $self = shift;
-    return File::Spec->catfile($self->data_path,'STATUS');
+    return File::Spec->catfile($self->data_path,Bio::Graphics::Browser2::UserTracks->status_file_name);
+}
+sub sources_path {
+    my $self = shift;
+    return File::Spec->catfile($self->data_path,Bio::Graphics::Browser2::UserTracks->sources_dir_name);
 }
 
 sub set_status {
@@ -78,17 +82,23 @@ sub load {
     $self->flag_busy(1);
     eval {
 	$self->set_status('starting load');
+	
+	mkdir $self->sources_path or die $!;
+	my $source_file = IO::File->new(
+	    File::Spec->catfile($self->sources_path,$self->track_name),'>');
 
 	$self->open_conf;
 	$self->start_load;
 
 	$self->set_status('load data');
 	foreach (@$initial_lines) {
+	    $source_file->print($_) if $source_file;
 	    $self->load_line($_);
 	}
 
 	my $count = @$initial_lines;
 	while (<$fh>) {
+	    $source_file->print($_) if $source_file;
 	    $self->load_line($_);
 	    $self->set_status("loaded $count lines") if $count++ % 1000;
 	}
@@ -110,7 +120,6 @@ sub flag_busy {
     my $busy_file = $self->busy_path;
 
     if ($busy) {
-	warn "busy_file = $busy_file";
 	my $fh        = IO::File->new($busy_file,'>');
     } else {
 	unlink $busy_file;
@@ -203,7 +212,7 @@ END
 	    or die "Could not create $data_path:",DBI->errstr,'. ',$mysql_usage,;
 		 
     } elsif ($backend eq 'DBI::SQLite') {
-	$self->dsn(File::Spec->catfile($data_path,'SQLite'));
+	$self->dsn(File::Spec->catfile($data_path,'index.SQLite'));
     } else {
 	$self->dsn($data_path);
     }

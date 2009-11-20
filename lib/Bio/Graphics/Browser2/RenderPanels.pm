@@ -186,9 +186,17 @@ sub render_panels {
     return $self->render_tracks($requests,$args);
 }
 
+
+# this method returns a hashref in which the keys are track labels
+# and the values are hashrefs with the keys 'gd' and 'map'. The former
+# is a GD object, and the latter is the raw map data.
+# Raw map data is tab-delimited in the format
+# <feature name><x1><y1><x2><y2><key1><value1><key2><value2>...
+# use map_html() to make HTML out of the thing
 sub render_track_images {
-    my $self = shift;
-    my $args = shift;
+    my $self         = shift;
+    my $args         = shift;
+
     delete $args->{deferred}; # deferred execution incompatible with this call
     my $requests = $self->request_panels($args);
 
@@ -202,8 +210,9 @@ sub render_track_images {
 	    next if $data->status eq 'PENDING';
 	    next if $data->status eq 'EMPTY';
 	    if ($data->status eq 'AVAILABLE') {
-		my $gd = eval{$data->gd};
-		$results{$label} = $gd;
+		my ($gd,$map)  = eval{($data->gd,$data->map)};
+		$results{$label}{gd}  = $gd;
+		$results{$label}{map} = $map;
 	    }
 	    delete $still_pending{$label};
 	}

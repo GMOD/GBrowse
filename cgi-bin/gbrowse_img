@@ -163,6 +163,8 @@ sub render_image {
 
     my $format   = param('format') || 'GD';
     my $flip     = param('flip')   || 0;
+    my $embed    = param('embed');
+    $format      = 'GD' if $embed;
 
     warn "labels = ",join ',',@labels if DEBUG;
     my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
@@ -191,15 +193,32 @@ sub render_image {
 						  );
     
     warn "returned labels = ",join ',',%$result if DEBUG;
-    my $data  = $self->consolidate_images(@{$result}{grep {$result->{$_}} @track_types}); # Previously - @labels (caused drawing more tracks than asked for)
 
-    my $seg = $render->segment;
+    # Previously - @labels (caused drawing more tracks than asked for)
+    my @image_data      = @{$result}{grep {$result->{$_}} @track_types};
+    my @gds             = map {$_->{gd} } @image_data;
+    my @map_data        = map {$_->{map}} @image_data;
+
+    my $img_data  = $self->consolidate_images(\@gds);
+
+    my $seg   = $render->segment;
     my $fname = $seg ? $seg->seq_id.':'.$seg->start.'..'.$seg->end : "NA";
 
-    if ($format eq 'GD') {
+    if ($embed) {
+	my $map    = $self->consolidate_maps  (\@map_data, \@gds);
+        my $url    = $renderer->source->generate_image($img_data);
+	print $self->header(-type=>'text/html');
+	print start_html(),
+	      img({-src=>$url,
+		   -usemap=>"#gbrowse2_img_map"}),
+	      $map,
+	      end_html();
+    }
+
+    elsif ($format eq 'GD') {
 	print $self->header(-type=>'image/png',
 			    -content_disposition => "filename=$fname.png");	
-	print $data
+	print $img_data->png;
     } 
     elsif ($format eq 'GD::SVG' && $convert_to_pdf) {
 	print $self->header(-type=>'application/pdf',
@@ -208,7 +227,7 @@ sub render_image {
 	my ($infh,$in)   = tempfile(UNLINK=>0,SUFFIX=>'.svg');
 	my ($outfh,$out) = tempfile(UNLINK=>0,SUFFIX=>'.pdf');
 
-	print $infh $data or die "$in: $!";
+	print $infh $img_data or die "$in: $!";
 	close $infh;
 
 	system "inkscape -z --without-gui --export-pdf=$out $in 3<&1 1>&2 2>&3 | grep -v GDK_IS_DISPLAY";
@@ -220,7 +239,7 @@ sub render_image {
     elsif ($format eq 'GD::SVG') {
 	print $self->header(-type => 'image/svg+xml',
 			    -content_disposition => "filename=$fname.svg");
-	print $data
+	print $img_data
     } 
     else { 
 	print $self->header('text/plain');
@@ -228,26 +247,37 @@ sub render_image {
     }
 }
 
-sub consolidate_images {
+sub calculate_composite_bounds {
     my $self = shift;
-    my @gds  = @_;
+    my $gds  = shift;
 
-    warn "consolidating ",scalar @gds," GD objects" if DEBUG;
+    warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
 
     my $height = 0;
     my $width  = 0;
-    for my $g (@gds) {
+    for my $g (@$gds) {
 	warn "g=$g" if DEBUG;
 	next unless $g;
 	$height +=   ($g->getBounds)[1];  # because GD::SVG is missing the width() and height() methods
 	$width   ||= ($g->getBounds)[0];
     }
+    
+    return ($width,$height);
+}
 
-    my $format = ref($gds[0]);
+sub consolidate_images {
+    my $self = shift;
+    my ($gds,$width,$height) = @_;
+    ($width,$height) = $self->calculate_composite_bounds($gds) 
+	unless defined $width && defined $height;
+
+    warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
+
+    my $format = ref($gds->[0]);
     warn "format = $format" if DEBUG;
 
-    return $format =~ /^GD::SVG/ ? $self->_consolidate_svg($width,$height,@gds)
-                                 : $self->_consolidate_gd ($width,$height,@gds);
+    return $format =~ /^GD::SVG/ ? $self->_consolidate_svg($width,$height,@$gds)
+                                 : $self->_consolidate_gd ($width,$height,@$gds);
 }
 
 sub _consolidate_gd {
@@ -264,7 +294,7 @@ sub _consolidate_gd {
 	$offset += ($g->getBounds)[1];
     }
 
-    return $gd->png;
+    return $gd;
 }
 
 # because the GD::SVG copy() method is broken
@@ -301,6 +331,27 @@ sub _consolidate_svg {
     $svg    =~ s/font-size="11"/font-size="9"/gi;  
     $svg    =~ s/font-size="13"/font-size="12"/gi;  
     return $svg;
+}
+
+sub consolidate_maps {
+    my $self = shift;
+    my ($maps,$gds) = @_;
+
+    my $offset = 0;
+    my @integrated_list = 'gbrowse2_img';
+    for (my $i=0;$i<@$maps;$i++) {
+	my $data = $maps->[$i];
+	shift @$data;
+	for (@$data) {
+	    my ($name,$x1,$y1,$x2,$y2,@rest) = split "\t";
+	    $y1 += $offset;
+	    $y2 += $offset;
+	    push @integrated_list,join "\t",($name,$x1,$y1,$x2,$y2,@rest);
+	}
+	$offset += ($gds->[$i]->getBounds)[1];
+    }
+
+    return Bio::Graphics::Browser2::RenderPanels->map_html(\@integrated_list);
 }
 
 sub usage {

@@ -22,6 +22,12 @@ use Carp 'croak';
 # Each directory has a .conf file that describes its contents and configuration.
 # There will also be data files associated with the configuration.
 
+# class methods
+sub busy_file_name     { 'BUSY'      }
+sub status_file_name   { 'STATUS'    }
+sub imported_file_name { 'IMPORTED'  }
+sub sources_dir_name   { 'SOURCES'   }
+
 sub new {
     my $self = shift;
     my ($config,$state,$lang) = @_;
@@ -52,10 +58,10 @@ sub tracks {
     while (my $dir = readdir(D)) {
 	next if $dir =~ /^\.+$/;
 
-	my $is_busy       = (-e File::Spec->catfile($path,$dir,'BUSY'))||0;
+	my $is_busy       = (-e File::Spec->catfile($path,$dir,$self->busy_file_name))||0;
 	next if $is_busy;
 
-	my $is_imported   = (-e File::Spec->catfile($path,$dir,'imported'))||0;
+	my $is_imported   = (-e File::Spec->catfile($path,$dir,$self->imported_file_name))||0;
 	next if defined $imported && $imported != $is_imported;
 
 	push @result,$dir;
@@ -75,6 +81,12 @@ sub track_path {
     return File::Spec->catfile($self->path,$track);
 }
 
+sub data_path {
+    my $self = shift;
+    my ($track,$datafile) = @_;
+    return File::Spec->catfile($self->path,$track,$datafile);
+}
+
 sub track_conf {
     my $self  = shift;
     my $track = shift;
@@ -84,7 +96,9 @@ sub track_conf {
 sub import_flag {
     my $self  = shift;
     my $track = shift;
-    return File::Spec->catfile($self->path,$track,"imported");
+    return File::Spec->catfile($self->path,
+			       $track,
+			       $self->imported_file_name);
 }
 
 sub created {
@@ -97,8 +111,15 @@ sub created {
 sub modified {
     my $self  = shift;
     my $track = shift;
+    return ($self->conf_metadata($track))[1];
+}
+
+sub conf_metadata {
+    my $self  = shift;
+    my $track = shift;
     my $conf  = File::Spec->catfile($self->path,$track,"$track.conf");
-    return (stat($conf))[9];
+    my $name  = basename($conf);
+    return ($name,(stat($conf))[9,7]);
 }
 
 sub description {
@@ -116,6 +137,22 @@ sub description {
 	my @lines = <$f>;
 	return join '',@lines;
     }
+}
+
+sub source_files {
+    my $self = shift;
+    my $track = shift;
+    my $path = File::Spec->catfile($self->track_path($track),
+				   $self->sources_dir_name);
+    my @files;
+    if (opendir my $dir,$path) {
+	while (my $f = readdir($dir)) {
+	    next unless -f File::Spec->catfile($path,$f);
+	    my ($size,$mtime) = (stat(_))[7,9];
+	    push @files,[$f,$size,$mtime];
+	}
+    }
+    return @files;
 }
 
 sub trackname_from_url {

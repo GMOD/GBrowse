@@ -46,9 +46,7 @@ H4                { color: navy;
 INPUT             { background-color: white; }
 P                 { font-family: sans-serif; }
 SELECT            { background-color: white; }
-TABLE             { padding: 0;
-                    width: 100%;
-                  }
+TABLE             { padding: 0;              }
 TD                { font-family: sans-serif; 
                     padding: 0; 
 	            font-size: small;
@@ -57,6 +55,7 @@ TH                { font-family: sans-serif;
                     padding: 0; 
 	            font-size: small;
                   }
+table.padded-table td { padding-left:10px; padding-right:10px}
 TH.linkmenu       { 
                     font-family: sans-serif;
                     padding: 0;

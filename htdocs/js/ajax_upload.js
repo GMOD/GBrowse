@@ -80,9 +80,8 @@ function startAjaxUpload(upload_id) {
          '#',
          {parameters: {   action: 'upload_status',
                        upload_id: upload_id
-                      },
-         }
-         );
+                      }
+         });
   Ajax_Status_Updater.set(upload_id,updater);
   return true;
 }
@@ -185,7 +184,7 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field
     paragraph.insert(new Element('input',{type:'submit', name:'submit', value:'Upload'}));
     paragraph.insert(new Element('input',{type:'hidden', name:'upload_id',value:upload_tag}));
     paragraph.insert(new Element('a',{   href: 'javascript:void(0)',
-                                      onClick: 'this.up("div").remove()',
+                                      onClick: 'this.up("div").remove()'
                                  }).update(' '+remove_prompt));
     div.insert(new Element('div',{id:upload_tag+'_status'}));
     div.insert(form);

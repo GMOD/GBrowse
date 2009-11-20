@@ -56,8 +56,10 @@ sub new {
   if (!$expired
       && exists $CONFIG_CACHE{$config_file_path}{mtime}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {
-      $CONFIG_CACHE{$config_file_path}{object}->clear_cached_dbids;
-      return $CONFIG_CACHE{$config_file_path}{object};
+      my $object = $CONFIG_CACHE{$config_file_path}{object};
+      $object->clear_cached_dbids;
+      $object->clear_usertracks;
+      return $object;
   }
 
   my $self = $class->SUPER::new(-file=>$config_file_path,
@@ -347,6 +349,11 @@ sub i18n_style {
 		/^(-[^:]+)(:(\w+))?$/; [$_ => $option, $priority{$lang||''}||99] }
 	keys %options;
   %lang_options;
+}
+
+sub clear_usertracks {
+    my $self = shift;
+    delete $self->{_user_tracks};
 }
 
 sub user_style {
@@ -965,6 +972,8 @@ sub _setting {
 
 sub parse_user_file {
     my $self = shift;
+    warn "parse_user_file: @_";
+
     $self->{_user_tracks}{types}  ||= [];
     $self->{_user_tracks}{config} ||= {};
 

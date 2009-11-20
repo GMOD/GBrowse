@@ -179,10 +179,11 @@ SelectArea.prototype.startRubber = function(self,event) {
   var t = self.elementLocation(self.selectLayer,'y1');
   YAHOO.util.Dom.setStyle(self.selectBox,'top',t+'px');
 
-  var spanReport = self.spanReport || self.createAndAppend('h2',self.selectBox,'spanReport');
+  var spanReport = self.spanReport || self.createAndAppend('p',self.selectBox,'spanReport');
   YAHOO.util.Dom.setStyle(spanReport,'color',self.fontColor||'black');
   YAHOO.util.Dom.setStyle(spanReport,'margin-top',self.marginTop||'0px');
   YAHOO.util.Dom.setStyle(spanReport,'background','transparent');
+  YAHOO.util.Dom.setStyle(spanReport,'font','normal bold 14px sans-serif');
 
   spanReport.innerHTML = ' ';
   self.spanReport = spanReport;
@@ -304,7 +305,7 @@ SelectArea.prototype.moveRubber = function(event) {
     selectSequenceWidth = selectSequenceWidth.toFixed(2);
   }
 
-  if (selectPixelWidth > 100) {
+  if (selectPixelWidth > 20) {
     self.spanReport.innerHTML = selectSequenceWidth+' '+unit;
   }
   else {
@@ -370,7 +371,8 @@ SelectArea.prototype.addSelectBox = function(view) {
   var box = this.createAndAppend('div',this.selectLayer,view+'selectBox');
 
   YAHOO.util.Dom.setStyle(box,'position','absolute');
-  YAHOO.util.Dom.setStyle(box,'display', 'inline');
+// this was breaking IE for some reason
+//  YAHOO.util.Dom.setStyle(box,'display', 'inline');
   YAHOO.util.Dom.setStyle(box,'visibility', 'hidden');
   YAHOO.util.Dom.setStyle(box,'top',this.top+'px');
   YAHOO.util.Dom.setStyle(box,'left','0px');

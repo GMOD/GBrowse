@@ -7,6 +7,7 @@ use Bio::Graphics::Browser2::DataLoader;
 use File::Spec;
 use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
+use IO::String;
 use Carp 'croak';
 
 # The intent of this is to provide a single unified interface for managing
@@ -84,7 +85,7 @@ sub track_path {
 sub data_path {
     my $self = shift;
     my ($track,$datafile) = @_;
-    return File::Spec->catfile($self->path,$track,$datafile);
+    return File::Spec->catfile($self->path,$track,$self->sources_dir_name,$datafile);
 }
 
 sub track_conf {
@@ -156,13 +157,15 @@ sub source_files {
 }
 
 sub trackname_from_url {
-    my $self = shift;
-    my $url  = shift;
+    my $self     = shift;
+    my $url      = shift;
+
+    my $uniquefy = shift;
 
     (my $track_name = $url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
 
     my $unique = 0;
-    while (!$unique) {
+    while ($uniquefy && !$unique) {
 	my $path = $self->track_path($track_name);
 	if (-e $path) {
 	    $track_name .= "-0" unless $track_name =~ /-\d+$/;
@@ -172,13 +175,17 @@ sub trackname_from_url {
 	}
     }
 
-    mkpath $self->track_path($track_name);
+    my $path = $self->track_path($track_name);
+    rmtree($path) if -e $path;  # only happens if uniquefy = 0
+    mkpath $path;
     return $track_name;
 }
 
 sub import_url {
     my $self = shift;
-    my $url  = shift;
+
+    my $url       = shift;
+    my $overwrite = shift;
 
     my $key;
     if ($url =~ m!http://([^/]+).+/(\w+)/\?.*t=([^+;]+)!) {
@@ -187,7 +194,7 @@ sub import_url {
     }
     else {$key  = "Shared track from $url";}
 
-    my $track_name = $self->trackname_from_url($url);
+    my $track_name = $self->trackname_from_url($url,!$overwrite);
 
     my $conf = $self->track_conf($track_name);
     open my $f,">",$conf or croak "Couldn't open $conf: $!";
@@ -205,15 +212,21 @@ END
     return (1,'',[$track_name]);
 }
 
+sub upload_data {
+    my $self = shift;
+    my ($file_name,$data,$overwrite) = @_;
+    my $io = IO::String->new($data);
+    $self->upload_file($file_name,$io,$overwrite);
+}
+
 sub upload_file {
     my $self = shift;
-    my ($file_name,$fh) = @_;
+    my ($file_name,$fh,$overwrite) = @_;
     
-    my $track_name = $self->trackname_from_url($file_name);
+    my $track_name = $self->trackname_from_url($file_name,!$overwrite);
 
     # guess the file type from the first non-blank line
     my ($type,$lines)   = $self->guess_upload_type($fh);
-
     my (@tracks,$fcgi);
 
     my $result= eval {
@@ -239,6 +252,7 @@ sub upload_file {
 
     my $msg = $@;
     $self->delete_file($track_name) unless $result;
+    warn "result = $result, msg=$msg, upload = ",$self->track_path($track_name);
     return ($result,"$msg",\@tracks);
 }
 
@@ -284,7 +298,8 @@ sub guess_upload_type {
     my @lines;
     while (my $line = <$fh>) {
 	push @lines,$line;
-	return ('featurefile',\@lines) if $line =~ /^\[.+\]$/;
+	return ('featurefile',\@lines) if $line =~ /^reference/i;
+	return ('featurefile',\@lines) if $line =~ /\w+:\d+\.\.\d+/i;
 	return ('gff2',\@lines)        if $line =~ /^\#\#gff-version\s+2/;
 	return ('gff3',\@lines)        if $line =~ /^\#\#gff-version\s+3/;
 	return ('wiggle',\@lines)      if $line =~ /type=wiggle/;

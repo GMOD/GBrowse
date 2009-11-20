@@ -2295,10 +2295,10 @@ sub toggle_section {
 
   my $visible = $config{on};
 
-  # IE hack
-  my $agent      = CGI->user_agent || '';
-  my $ie         = $agent =~ /MSIE/;
-  $config{tight} = undef if $ie;
+  # IE hack -- no longer needed?
+  # my $agent      = CGI->user_agent || '';
+  # my $ie         = $agent =~ /MSIE/;
+  # $config{tight} = undef if $ie;
 
   my $buttons = $self->globals->button_url;
   my $plus  = "$buttons/plus.png";

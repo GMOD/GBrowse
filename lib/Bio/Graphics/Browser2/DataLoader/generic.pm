@@ -23,7 +23,7 @@ sub start_load {
     $loader->start_load();
     $self->{loader}    = $loader;
     $self->{conflines} = [];
-    $self->state('config');
+    $self->state('starting');
 }
 
 sub do_fast { 1 };
@@ -77,6 +77,7 @@ END
     } else {  # make something up
 	my @types = eval {$db->toplevel_types};
 	@types    = $db->types unless @types;
+
 	my $filename = $self->track_name;
 	for my $t (@types) {
 	    my $trackname = $self->new_track_label;
@@ -124,10 +125,13 @@ sub load_line {
     my $old_state = $self->state;
     my $state     = $self->_state_transition($old_state,$line);
 
+
     if ($state eq 'data') {
 	$self->loader->load_line($line);
     } elsif ($state eq 'config') {
 	push @{$self->{conflines}},$line;
+    } else {
+	# ignore it
     }
     $self->state($state) if $state ne $old_state;
 }
@@ -137,10 +141,14 @@ sub _state_transition {
     my $self = shift;
     my ($current_state,$line) = @_;
 
-    if ($current_state eq 'data') {
-	return 'config' if $line =~ m/^\s*\[([^\]]+)\]/;  # start of a configuration section
+    if ($current_state eq 'starting') {
+	return $current_state unless /\S/;
+	$current_state = 'config';
     }
 
+    if ($current_state eq 'data') {
+	return 'config' if $line =~ m/^\s*\[([^\]]+)\]/;  # start of a configuration section
+    } 
     elsif ($current_state eq 'config') {
 	return 'data'   if $line =~ /^\#\#(\w+)/;     # GFF3 meta instruction
 	return 'data'   if $line =~ /^reference\s*=/; # feature-file reference sequence directive

@@ -982,6 +982,10 @@ var GBrowseController = Class.create({
 var Controller = new GBrowseController; // singleton
 
 function initialize_page() {
+
+  // These statements initialize the tabbing
+  Controller.tabs = new TabbedSection(['main_page','custom_tracks_page','settings_page']);
+
   //event handlers
     [page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
     if ($(el) != null) {
@@ -1002,8 +1006,6 @@ function initialize_page() {
   if ($('autocomplete_choices') != null) 
        initAutocomplete();
 
-  // These statements initialize the tabbing
-  Controller.tabs = new TabbedSection(['main_page','custom_tracks_page','settings_page']);
 }
 
 // set the colors for the rubberband regions

@@ -153,10 +153,13 @@ sub run {
 
   $self->set_source();
 
+  warn "[$$] add_user_tracks()" if $debug;
   # This guarantees that all user-specific tracks
   # disappear after the current session completes.
-  warn "[$$] add_user_tracks()" if $debug;
-  local $self->data_source->{_user_tracks} = {};
+  # But it is no longer needed as usertracks are cleared
+  # every time session is retrieved from cache
+  # local $self->data_source->{_user_tracks} = {};
+
   $self->add_user_tracks($self->data_source);
 
   my $state = $self->state;
@@ -806,23 +809,22 @@ sub render_panels {
     # Kick off track rendering
     if ($section->{'overview'} ) {
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
-        my $panels_html   .= $self->get_blank_panels( [$self->overview_tracks],
+        my $panels_html    = $self->get_blank_panels( [$self->overview_tracks],
 						      'overview' );
-        my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
-        $html .= div(
-            $self->toggle({tight=>1},
-                'Overview',
-                div({ -id => 'overview_panels', -class => 'track', -style=>'padding-bottom:3px' },
-                    $scale_bar_html, $panels_html,
-                )
-            )
-        ) . $drag_script;
+	my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
+ 	$html .= div(
+ 	    $self->toggle({tight=>1},
+ 			  'Overview',
+ 			  div({ -id => 'overview_panels', -class => 'track', -style=>'padding-bottom:3px' },
+ 			      $scale_bar_html, $panels_html,
+ 			  ))
+ 	    ) . $drag_script;
     }
 
     if ( $section->{'regionview'} and $self->state->{region_size} ) {
 
         my $scale_bar_html = $self->scale_bar( $seg, 'region' );
-        my $panels_html   .= $self->get_blank_panels( [$self->regionview_tracks],
+        my $panels_html    = $self->get_blank_panels( [$self->regionview_tracks],
 						      'region');
         my $drag_script    = $self->drag_script( 'region_panels', 'track' );
 
@@ -838,7 +840,7 @@ sub render_panels {
 
     if ( $section->{'detailview'} ) {
         my $scale_bar_html = $self->scale_bar( $seg, 'detail' );
-        my $panels_html   .= $self->get_blank_panels( [$self->detail_tracks],
+        my $panels_html    = $self->get_blank_panels( [$self->detail_tracks],
 						      'detail');
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
         my $details_msg    = span({ -id => 'details_msg', },'');
@@ -1419,28 +1421,24 @@ sub write_auto {
     my $features         = shift;
     my $styles           = shift;
     my $setting          = $self->state();
-    my $uploaded_sources = $self->uploaded_sources();
     return unless @$features;
 
-    my $basename = "Custom_Track";
-    $uploaded_sources->clear_file("file:${basename}")
-        ;    # in case it's already there
-    my $file = $uploaded_sources->new_file($basename);
+    my $user_tracks = $self->user_tracks;
 
-    my %seenit;
-
-    warn "opening $file...\n" if DEBUG;
-    my $out = $uploaded_sources->open_file( $file, ">>" ) or return;
-    warn "writing $file...\n" if DEBUG;
+    # ideally we should fork here and pass our child's STDOUT
+    # to $user_tracks->upload_file(), but I'm scared...
+    # So we create the file in core.
+    my $feature_file = '';
 
     $styles ||= [];
     for my $style (@$styles) {
         my ( $type, @options ) = shellwords($style);
-        print $out "[$type]\n";
-        print $out join "\n", @options;
-        print $out "\n";
+        $feature_file .= "[$type]\n";
+        $feature_file .= join "\n", @options;
+        $feature_file .= "\n";
     }
 
+    my %seenit;
     for my $f (@$features) {
         my $reference = $f->can('seq_id') ? $f->seq_id : $f->seq_id;
         my $type      = $f->primary_tag;
@@ -1451,10 +1449,17 @@ sub write_auto {
             map { $_->start . '..' . $_->end } $f->sub_SeqFeature )
             : $f->start . '..' . $f->end;
         $name .= "($seenit{$name})" if $seenit{$name}++;
-        print $out "\nreference=$reference\n";
-        print $out join( "\t", qq("$type"), qq("$name"), $position ), "\n";
+        $feature_file .= "\nreference=$reference\n";
+        $feature_file .= join( "\t", qq("$type"), qq("$name"), $position ). "\n";
     }
-    close $out;
+
+    my ($result,$msg,$tracks) 
+	= $user_tracks->upload_data('My Track',$feature_file,'overwrite');
+    warn $msg unless $result;
+
+    local $self->data_source->{_user_tracks} = {};
+    $self->add_user_tracks($self->data_source);
+    $self->add_track_to_state($_) foreach @$tracks;
 }
 
 sub handle_download_userdata {
@@ -1462,9 +1467,7 @@ sub handle_download_userdata {
     my $ftype    = param('userdata_download')    or return;
     my $track    = param('track')                or return;
 
-    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
-							    $self->state,
-							    $self->language);
+    my $userdata = $self->user_tracks;
     my $file = $ftype eq 'conf' ? $userdata->track_conf($track)
 	                        : $userdata->data_path($track,$ftype);
     my $fname = basename($file);
@@ -1544,7 +1547,7 @@ sub handle_external_data {
 
   elsif (my @data = (param('auto'),param('add'),param('a'))) {
     my @styles    = (param('style'),param('s'));
-    $self->handle_quickie($state,\@data,\@styles);
+    $self->handle_quickie(\@data,\@styles);
   }
 
   elsif ( param('eurl') ) {
@@ -1616,7 +1619,7 @@ sub handle_quickie {
             -segments => \@segments,
             );
     }
-    write_auto( \@features, $styles );
+    $self->write_auto( \@features, $styles );
 }
 
 sub parse_feature_str {
@@ -2869,7 +2872,7 @@ sub all_tracks {
 # configuration file.
 sub potential_tracks {
     my $self   = shift;
-    my $source = $self->data_source;
+    my $source  = $self->data_source;
     my $uploads = $self->uploaded_sources;
     my $remotes = $self->remote_sources;
     my %seenit;

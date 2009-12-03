@@ -494,16 +494,16 @@ sub ACTION_delete_upload {
     my $self  = shift;
     my $q     = shift;
 
-    my $track  = $q->param('track') or croak;
+    my $file   = $q->param('file') or croak;
     my $render = $self->render;
 
     my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
 							    $render->state,
 							    $render->language);
-    my @tracks     = $usertracks->labels($track);
+    my @tracks     = $usertracks->labels($file);
 
     $render->remove_track_from_state($_) foreach @tracks;
-    $usertracks->delete_file($track);
+    $usertracks->delete_file($file);
 
     return (200,'application/json',{tracks=>\@tracks});
 }

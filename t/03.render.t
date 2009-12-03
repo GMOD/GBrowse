@@ -415,6 +415,10 @@ ok($s    = $r->segments);
 ok(scalar @$f,12,"Finder plugin should have found 12 motifs, but didn't");
 ok(scalar @$s,11,"Finder plugin should have found 11 unique motif segments, but didn't");
 
+# The finder plugin creates a "My Tracks" track, which then interferes with
+# other tests.
+$render->delete_uploads;
+
 # something funny with getting render settings
 ok($render->setting('mag icon height') > 0);
 ok($render->setting('fine zoom') ne '');

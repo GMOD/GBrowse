@@ -128,13 +128,13 @@ function completeAjaxUpload(response,upload_id,field_type) {
     return true;
 }
 
-function deleteUploadTrack (trackName) {
-   var indicator = trackName + "_stat";
+function deleteUploadTrack (fileName) {
+   var indicator = fileName + "_stat";
    $(indicator).innerHTML = "<image src='/gbrowse2/images/spinner.gif' />";
    new Ajax.Request(document.URL, {
         method:      'post',
         parameters:  {action: 'delete_upload',
-	              track:  trackName
+	              file:  fileName
 		      },
         onSuccess:   function (transport) {
 	       var tracks = transport.responseJSON.tracks;

@@ -1397,6 +1397,19 @@ sub init_remote_sources {
   return $uploaded_sources && $remote_sources;  # true if both defined
 }
 
+sub delete_uploads {
+    my $self = shift;
+    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
+							    $self->state,
+							    $self->language);
+    my @files  = $userdata->tracks();
+    for my $file (@files) {
+	my @tracks = $userdata->labels($file);
+	$userdata->delete_file($file);
+	$self->remove_track_from_state($_) foreach @tracks;
+    }
+}
+
 sub cleanup {
   my $self = shift;
   warn "cleanup()" if DEBUG;

@@ -972,7 +972,6 @@ sub _setting {
 
 sub parse_user_file {
     my $self = shift;
-    warn "parse_user_file: @_";
 
     $self->{_user_tracks}{types}  ||= [];
     $self->{_user_tracks}{config} ||= {};

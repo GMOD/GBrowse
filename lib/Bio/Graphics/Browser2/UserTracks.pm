@@ -252,7 +252,6 @@ sub upload_file {
 
     my $msg = $@;
     $self->delete_file($track_name) unless $result;
-    warn "result = $result, msg=$msg, upload = ",$self->track_path($track_name);
     return ($result,"$msg",\@tracks);
 }
 

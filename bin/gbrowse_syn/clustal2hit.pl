@@ -17,7 +17,7 @@ use List::Util 'sum';
 
 # The format used in this example is 'clustalw'
 # adjust if necessary or use aln2hit.pl for other formats
-use constant FORMAT => 'fasta';
+use constant FORMAT => 'clustalw';
 
 my $idx;
 while (my $file = shift) {

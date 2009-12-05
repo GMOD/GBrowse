@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 
-# A script to prepare alignments for loading into a GBrowse_syn database and 
-# map actual sequence coordinates from a clustal alignment
-# so that indels are taken into account.
+# A script to prepare alignments for loading into a GBrowse_syn database from
+# mercator-generated multiple sequence alignments
+
 
 # $Id: mercatoraln_to_synhits.pl,v 1.1.2.3 2009-06-02 19:16:15 sheldon_mckay Exp $
 use strict;
@@ -14,9 +14,9 @@ use Getopt::Long;
 
 # The format used in this example is 'fasta' adjust if necessary
 use constant OFFSET => 4;
-my $aln_name = 'output.mfa';
-my $format = 'fasta';
-my $mapfile = 'map';
+my $aln_name   = 'output.mfa';
+my $format     = 'fasta';
+my $mapfile    = 'map';
 my $genomefile = 'genomes';
 my $debug = 0;
 my $dir;

@@ -119,7 +119,9 @@ sub ACTION_configure_track {
     my $q    = shift;
 
     my $track_name = $q->param('track') or croak;
-    my $html = $self->render->track_config($track_name);
+    my $revert     = $q->param('track_defaults');
+
+    my $html = $self->render->track_config($track_name,$revert);
     return ( 200, 'text/html', $html );
 }
 
@@ -583,6 +585,7 @@ sub ACTION_modifyUserData {
 	$userdata->upload_data($track,$text,1);
     }
     my @tracks     = $userdata->labels($track);
+    $self->render->track_config($_,'revert') foreach @tracks;
     return (200,'application/json',{tracks=>\@tracks});
 }
 

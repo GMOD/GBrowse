@@ -1923,6 +1923,8 @@ sub source_menu {
 sub track_config {
     my $self        = shift;
     my $label       = shift;
+    my $revert_to_defaults = shift;
+
     my $state       = $self->state();
     my $data_source = $self->data_source();
 
@@ -1936,7 +1938,7 @@ sub track_config {
 
     my $key = $self->label2key($slabel);
 
-    if ( param('track_defaults') ) {
+    if ( $revert_to_defaults ) {
         $state->{features}{$slabel}{override_settings} = {};
     }
 
@@ -1975,7 +1977,7 @@ sub track_config {
 new Ajax.Request('$url',
                   { method: 'get',
                     asynchronous: false,
-                    parameters: 'configure_track=$label&track_defaults=1',
+                    parameters: 'action=configure_track&track=$label&track_defaults=1',
                     onSuccess: function(t) { document.getElementById('contents').innerHTML=t.responseText },
                     onFailure: function(t) { alert('AJAX Failure! '+t.statusText)}
                   }

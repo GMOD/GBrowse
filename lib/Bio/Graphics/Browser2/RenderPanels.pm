@@ -284,7 +284,7 @@ sub make_requests {
 	    };
 	}
 
-	warn "[$$] creating CachedTrack for $label, nocache = $args->{nocache}";# if DEBUG;
+	warn "[$$] creating CachedTrack for $label, nocache = $args->{nocache}" if DEBUG;
         my $cache_object = Bio::Graphics::Browser2::CachedTrack->new(
             -cache_base => $base,
             -panel_args => \@panel_args,

@@ -128,6 +128,8 @@ function completeAjaxUpload(response,upload_id,field_type) {
     return true;
 }
 
+// NOTE: these functions should be migrated to Controller
+
 function deleteUploadTrack (fileName) {
    var indicator = fileName + "_stat";
    $(indicator).innerHTML = "<image src='/gbrowse2/images/spinner.gif' />";
@@ -144,6 +146,33 @@ function deleteUploadTrack (fileName) {
 	    }
         }
    );
+}
+
+function editUploadData (fileName,sourceFile) {
+   editUpload(fileName,sourceFile);
+}
+
+function editUploadConf (fileName) {
+    editUpload(fileName,'conf');
+}
+
+function editUpload (fileName,sourceFile) {
+    var editDiv = fileName + "_editfield";
+    var editID  = 'edit_' + Math.floor(Math.random() * 99999);
+    $(editDiv).innerHTML = '<p><b>Editing '+sourceFile+'</b></p>'
+             		  +'<textarea id="'+editID+'" cols="120" rows="20" wrap="off">'
+			  + 'fetching...'
+                          +'</textarea>'
+		          +'<p>'
+		          +'<a href="javascript:void(0)" onClick="'
+                          +'$(\''+editDiv+'\').innerHTML=\'\'">[Cancel]</a>'
+			  +'<button onClick="Controller.uploadUserTrackSource(\''+ editID     +'\','
+                                                                            +'\''+ fileName   +'\','
+                                                                            +'\''+ sourceFile +'\','
+								            +'\''+ editDiv    +'\')">Submit</button>'
+			  +'</p>'
+                       ;
+    Controller.downloadUserTrackSource(editID,fileName,sourceFile);
 }
 
 function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field_type) {

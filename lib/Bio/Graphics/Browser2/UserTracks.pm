@@ -94,6 +94,12 @@ sub track_conf {
     return File::Spec->catfile($self->path,$track,"$track.conf");
 }
 
+sub conf_fh {
+    my $self = shift;
+    my $track = shift;
+    return Bio::Graphics::Browser2::UserConf->fh($self->track_conf($track));
+}
+
 sub import_flag {
     my $self  = shift;
     my $track = shift;
@@ -261,11 +267,57 @@ sub delete_file {
     rmtree($self->track_path($track_name));
 }
 
+sub merge_conf {
+    my $self       = shift;
+    my ($track_name,$new_data) = @_;
+
+    my $path = $self->track_conf($track_name) or return;
+
+    my @lines = split /\r\n|\r|\n/,$new_data;
+    my (%stanzas,$current_stanza);
+    for (@lines) {
+	if (/^\[(.+)\]/) {
+	    $current_stanza = $1;
+	    $stanzas{$current_stanza} = '';
+	} elsif ($current_stanza) {
+	    $stanzas{$current_stanza} .= "$_\n";
+	}
+    }
+
+    open my $fh,$path or croak "$path: $!";
+    my $merged = '';
+    my $database;
+    # read header with the [database] definition
+    while (<$fh>) {
+	$merged .= $_;
+	$database = $1 if /^\[(.+):database/;
+	last if /cut here/;
+    }
+
+    $merged .= "\n";
+
+    # read the rest
+    while (<$fh>) {
+	if (/^\[/) {
+	    (my $stanza = $_) =~ s/\[(\w+?)_.+_(\d+)\]\s*\n/$1_$2/;
+	    if (my $body = $stanzas{$stanza}) {
+		$merged .= $_;
+		$merged .= "database = $database\n";
+		$merged .= $body;
+	    }
+	}
+    }
+
+    open $fh,'>',$path or croak "Can't open $path for writing: $!";
+    print $fh $merged;
+    close $fh;
+}
+
 sub labels {
     my $self       = shift;
     my $track_name = shift;
     my $conf       = $self->track_conf($track_name) or return;
-    return eval{Bio::Graphics::FeatureFile->new(-file=>$conf)->labels};
+    return grep {!/:database/} eval{Bio::Graphics::FeatureFile->new(-file=>$conf)->labels};
 }
 
 sub status {
@@ -310,5 +362,47 @@ sub guess_upload_type {
 
     return;
 }
+
+package Bio::Graphics::Browser2::UserConf;
+
+use base 'Tie::Handle';
+use Symbol;
+
+sub fh {
+    my $class = shift;
+    my $path  = shift;
+    my $g = gensym;
+    tie(*$g,$class,$path);
+    return $g;
+}
+
+sub TIEHANDLE {
+    my $class = shift;
+    my $path  = shift;
+    open my $f,$path or die "$path:$!";
+    return bless {
+	fh       => $f,
+	seen_cut => 0,
+    },$class;
+}
+
+sub READLINE {
+    my $self = shift;
+    my $fh   = $self->{fh};
+    while (my $line = <$fh>) {
+	if ($line =~ /cut here/i) {
+	    $self->{seen_cut}++;
+	    next;
+	}
+	next unless $self->{seen_cut};
+	next if $line =~ /^\s*database/;
+	$line =~ s/\[(\w+?)_.+_(\d+)\]/[$1_$2]/;
+	return $line;
+    }
+    return;
+}
+
+sub CLOSE { close shift->{fh} } 
+
 
 1;

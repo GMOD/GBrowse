@@ -451,10 +451,12 @@ var GBrowseController = Class.create({
   },
 
   rerender_track:
-  function(track_id,scroll_there) {
+  function(track_id,scroll_there,nocache) {
 
     if (scroll_there == null)
       scroll_there = false;
+    if (nocache == null)
+      nocache = false;
 
     this.each_track(track_id,function(gbtrack) {
 
@@ -465,7 +467,8 @@ var GBrowseController = Class.create({
          method:     'post',
          parameters: {
            action:          'rerender_track',
-           track_id:        gbtrack.track_id
+           track_id:        gbtrack.track_id,
+	   nocache:         nocache
          },
          onSuccess: function(transport) {
            var results    = transport.responseJSON;
@@ -630,7 +633,7 @@ var GBrowseController = Class.create({
         var track_div_id = Controller.gbtracks.get(track_id).track_div_id;
         Balloon.prototype.hideTooltip(1);
         if (show_track == track_id){
-          Controller.rerender_track(track_id,true);
+          Controller.rerender_track(track_id,false,false);
         }
         else{
           if ($(track_div_id) != null){
@@ -969,12 +972,49 @@ var GBrowseController = Class.create({
       return false;
   },
 
+  // downloadUserTrackSource() is called to populate the user track edit field
+  // with source or configuration data for the track
+  downloadUserTrackSource:
+  function (destination,fileName,sourceFile) {
+      new Ajax.Updater(destination,
+                       document.URL, 
+		       {
+		         method:     'post',
+			 parameters: {
+			     userdata_download: sourceFile,
+                                         track: fileName
+			 }
+		       });
+
+  },
+
+  // uploadUserTrackSource() is called to submit a user track edit field
+  // to the server
+  uploadUserTrackSource:
+  function (sourceField,fileName,sourceFile,editElement) {
+     new Ajax.Request(document.URL, {
+     	 method:       'post',
+	 parameters:   { action:     'modifyUserData',
+                         track:      fileName,
+                         sourceFile: sourceFile,
+			 data:       $F(sourceField)},
+         onSuccess:   function (transport) {
+	 	          if ($(editElement) != null) $(editElement).innerHTML = '';
+			  var r = transport.responseJSON;
+			  r.tracks.each(function(t) {
+			  	      Controller.rerender_track(t);
+				      });
+		          Controller.update_sections(new Array(userdata_table_id,userimport_table_id,track_listing_id));
+	               }
+         });
+  },
+
   select_tab:
   function (tab_id) {
      if (this.tabs != null) {
        this.tabs.select_tab(tab_id);
      }
-  }
+  },
 
 
 });

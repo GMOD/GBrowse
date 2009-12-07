@@ -341,7 +341,7 @@ sub background_track_render {
     $self->init_remote_sources();
 
     $self->segment or return;
-    my $cache_extra = $self->create_cache_extra();
+    my $cache_extra = $self->create_cache_extra;
     my $external    = $self->external_data;
 
     my $display_details   = 1;
@@ -499,8 +499,9 @@ sub create_cache_extra {
 }
 
 sub background_individual_track_render {
-    my $self = shift;
-    my $label = shift;
+    my $self    = shift;
+    my $label   = shift;
+    my $nocache = shift;
 
     my $display_details = 1;
     my $details_msg = '';
@@ -541,11 +542,12 @@ sub background_individual_track_render {
 
     # Start rendering the detail and overview tracks
     my $cache_track_hash = $self->render_deferred( 
-	labels       => [ $label, ],
-	segment     => $segment, 
-        section     => $section, 
-	cache_extra => $cache_extra, 
+	labels          => [ $label, ],
+	segment         => $segment, 
+        section         => $section, 
+	cache_extra     => $cache_extra, 
 	external_tracks => $external,
+	nocache         => $nocache,
 	);
 
     my %track_keys;
@@ -1488,7 +1490,10 @@ sub handle_download_userdata {
     print CGI::header(-attachment   => $fname,
 		      -charset      => $self->tr('CHARSET'),
 		      -type         => -T $file ? 'text/plain' : 'application/octet-stream');
-    open my $f,$file or croak "$file: $!";
+
+    my $f = $ftype eq 'conf' ? $userdata->conf_fh($track)
+	                     : IO::File->new($file);
+    $f or croak "$file: $!";
     print $_ while <$f>;
     close $f;
     return 1;
@@ -3114,9 +3119,10 @@ sub render_deferred {
     my $section     = $args{section}         || 'detail';
     my $cache_extra = $args{cache_extra}     || $self->create_cache_extra();
     my $external    = $args{external_tracks} || $self->external_data;
-
+    my $nocache     = $args{nocache};
+    
     warn '(render_deferred(',join(',',@$labels),') for section ',$section if DEBUG;
-
+    
     my $renderer   = $self->get_panel_renderer($seg,
 					       $self->thin_whole_segment,
 					       $self->thin_region_segment
@@ -3132,6 +3138,7 @@ sub render_deferred {
 	    external_features=> $external,
             hilite_callback  => $h_callback || undef,
             cache_extra      => $cache_extra,
+	    nocache          => $nocache || 0,
             flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
         }
     );
@@ -3240,6 +3247,7 @@ sub render_deferred_track {
 						 image_element_id => $track_id . "_image",
 						 );
     }
+    $result_html .= '';   # to prevent uninit warning
     return $status_html . $result_html;
 }
 

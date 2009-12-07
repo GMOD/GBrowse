@@ -147,9 +147,15 @@ sub tracks {
 
 sub new_track_label {
     my $self   = shift;
+    my $type   = shift;
+    $type    ||= 'track';
+    $type    =~ tr/a-zA-Z0-9_/_/c;
+
     my $loadid = $self->loadid;
-    $self->{_trackno} ||= 0;
-    my $label  = $loadid.'_'.$self->{_trackno}++;
+    $self->{_trackno}{$type} ||= 1;
+
+    my $label  = $type."_${loadid}_$self->{_trackno}{$type}";
+    $self->{_trackno}{$type}++;
     $self->add_track($label);
     return $label;
 }

@@ -93,7 +93,7 @@ sub run {
 
     $render->update_state();
 
-    warn join ' ',$render->potential_tracks;
+    warn join ' ',$render->potential_tracks if DEBUG;
 
     # self-documentation feature: dump out tab-delimited list of mnemonics and keys
     if (param('list')) {
@@ -167,7 +167,7 @@ sub render_image {
     my $render   = $self->render;
     my $renderer = $render->get_panel_renderer;
     my $external = $render->external_data;
-    warn 'visible = ',join ' ',$render->visible_tracks;
+    warn 'visible = ',join ' ',$render->visible_tracks if DEBUG;
     my @labels   = $render->expand_track_names($render->detail_tracks);
 
     my $format   = param('format') || 'GD';
@@ -175,7 +175,7 @@ sub render_image {
     my $embed    = param('embed');
     $format      = 'GD' if $embed;
 
-    warn "labels = ",join ',',@labels; # if DEBUG;
+    warn "labels = ",join ',',@labels if DEBUG;
     my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
                           map { split /[+-]/ }
 			  (param('type'));

@@ -7,6 +7,8 @@ use Carp 'croak';
 use File::Basename 'basename';
 use base 'Bio::Graphics::Browser2::DataLoader';
 
+my @COLORS = qw(blue red orange brown mauve peach green cyan black ivory beige);
+
 sub start_load {
     my $self = shift;
     my $track_name = $self->track_name;
@@ -53,12 +55,16 @@ db_adaptor = Bio::DB::SeqFeature::Store
 db_args    = -adaptor $backend
              -dsn     $dsn
 
+#>>>>>>>>>> cut here <<<<<<<<
 END
 
     if (my @lines = @{$self->{conflines}}) {  # good! user has provided some config hints
 	my $in_sub;
 	for my $line (@lines) {
-	    if ($line =~ /^\[/) { # overwrite track names to avoid collisions
+	    if ($line =~ /^\s*database/) {
+		next;   # disallowed
+	    }
+	    elsif ($line =~ /^\[/) { # overwrite track names to avoid collisions
 		my $trackname = $self->new_track_label;
 		print $conf "[$trackname]\n";
 		print $conf "database = $loadid\n" ;
@@ -80,7 +86,7 @@ END
 
 	my $filename = $self->track_name;
 	for my $t (@types) {
-	    my $trackname = $self->new_track_label;
+	    my $trackname = $self->new_track_label($t);
 
 	    my ($glyph,$stranded);
 	    # start of a big heuristic section
@@ -92,17 +98,18 @@ END
 		$stranded = 1;
 	    }
 
-
+	    my $color = $COLORS[rand @COLORS];
 	    print $conf <<END;
 [$trackname]
 database = $loadid
 feature   = $t
 glyph     = $glyph
-bgcolor   = blue
+bgcolor   = $color
+fgcolor   = black
 label     = 1
 stranded  = $stranded
 connector = solid
-balloon hover = sub {my \$f=shift;join ' ',\$f->attributes('Note')}
+balloon hover = \$description
 category    = My Tracks:Uploaded Tracks:$filename
 key         = $t
 

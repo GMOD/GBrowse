@@ -242,7 +242,17 @@ sub make_requests {
     my %d;
     foreach my $label ( @{ $labels || [] } ) {
         my @track_args = $self->create_track_args( $label, $args );
-	my (@filter_args,@featurefile_args);
+	my (@filter_args,@featurefile_args,@segment_args);
+
+	# it should be this way, but then we need to draw the selection rectangle
+	# on top!
+#	my $segment = $label =~ /overview/ ? $self->segment
+#                     :$label =~ /region/   ? $self->region_segment
+#                     :$self->segment;
+#	@segment_args = ($segment->seq_id,$segment->start,$segment->end);
+
+	# warn "segment_args = @segment_args";
+
 
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
@@ -259,7 +269,8 @@ sub make_requests {
 		    -cache_base => $base,
 		    -panel_args => \@panel_args,
 		    -track_args => \@track_args,
-		    -extra_args => [ @cache_extra, @filter_args, @featurefile_args, $label ],
+		    -extra_args => [ @cache_extra, @filter_args, 
+				     @featurefile_args, @segment_args, $label ],
 		    );
 		$cache_object->flag_error("Could not fetch data for $track");
 		$d{$track} = $cache_object;
@@ -273,13 +284,13 @@ sub make_requests {
 	    };
 	}
 
-	warn "[$$] creating CachedTrack for $label" if DEBUG;
+	warn "[$$] creating CachedTrack for $label, nocache = $args->{nocache}";# if DEBUG;
         my $cache_object = Bio::Graphics::Browser2::CachedTrack->new(
             -cache_base => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
             -extra_args => [ @cache_extra, @filter_args, @featurefile_args, $label ],
-	    -cache_time => $settings->{cache} 
+	    -cache_time => $settings->{cache} && !$args->{nocache}
 			    ? $source->cache_time 
 			    : 0
         );
@@ -897,7 +908,8 @@ sub render_image_pad {
 	$cache->put_data($gd,'');
     }
 
-    return $cache->gd;
+    my $gd = $cache->gd;
+    return $gd;
 }
 
 sub bump_density {
@@ -1102,6 +1114,7 @@ sub run_local_requests {
     my $do_map         = $args->{do_map};
     my $cache_extra    = $args->{cache_extra} || [];
     my $section        = $args->{section}     || 'detail';
+    my $nocache        = $args->{nocache};
 
     my $settings       = $self->settings;
     my $segment        = $self->segment;
@@ -1645,7 +1658,8 @@ sub create_panel_args {
   my $detail_start = $settings->{start};
   my $detail_stop  = $settings->{stop};
   my $h_region_str     = '';
-  if ($section eq 'overview' or $section eq 'region'){
+#  warn "disabling highlighted regions";
+  if (1 && ($section eq 'overview' or $section eq 'region')){
     $postgrid  = hilite_regions_closure(
 	            [$detail_start,
 		     $detail_stop,

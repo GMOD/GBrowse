@@ -241,13 +241,14 @@ sub ACTION_rerender_track {
 
     my $render   = $self->render;
     my $track_id = $q->param('track_id');
+    my $nocache  = $q->param('nocache');
 
     $render->init_database();
     $render->init_plugins();
     $render->init_remote_sources();
 
     my ( $track_keys, $display_details, $details_msg )
-	= $render->background_individual_track_render($track_id);
+	= $render->background_individual_track_render($track_id,$nocache);
 
     my $return_object = {
 	track_keys      => $track_keys,
@@ -566,6 +567,23 @@ sub ACTION_set_upload_description {
 							      $render->language);
     $usertracks->description($upload_name,$upload_desc);
     return (204,'text/plain',undef);
+}
+
+sub ACTION_modifyUserData {
+    my $self = shift;
+    my $q    = shift;
+    my $ftype = $q->param('sourceFile');
+    my $track = $q->param('track');
+    my $text  = $q->param('data');
+
+    my $userdata = $self->render->user_tracks;
+    if ($ftype eq 'conf') {
+	$userdata->merge_conf($track,$text);
+    } else {
+	$userdata->upload_data($track,$text,1);
+    }
+    my @tracks     = $userdata->labels($track);
+    return (200,'application/json',{tracks=>\@tracks});
 }
 
 1;

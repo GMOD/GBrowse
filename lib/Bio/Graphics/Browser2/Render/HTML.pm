@@ -1129,17 +1129,17 @@ sub render_toggle_external_table {
 
 sub render_toggle_userdata_table {
     my $self = shift;
-    return h2('Uploaded Tracks').
-	      div($self->render_userdata_table(),
-	       $self->userdata_upload());
+    return h2('Uploaded Tracks')
+	   .$self->render_userdata_table()
+	   .$self->userdata_upload();
 }
 
 sub render_toggle_import_table {
     my $self = shift;
     return h2('Imported Tracks').
-	div(
-	    $self->render_userimport_table(),
-	    $self->userdata_import());
+	div($self->render_userimport_table(),
+	    $self->userdata_import()
+	    );
 }
 
 sub render_external_table {
@@ -1238,9 +1238,11 @@ sub upload_file_rows {
 
 sub render_userdata_table {
     my $self = shift;
-    my $html = div( { -id => 'userdata_table_div',-class=>'uploadbody' },
-		    $self->list_userdata('uploaded'),
-	       );
+#    my $html = div( { -id => 'userdata_table_div',-class=>'uploadbody' },
+#		    $self->list_userdata('uploaded'),
+#	       );
+    my $html = div( {-id=>'userdata_table_div'},scalar $self->list_userdata('uploaded'));
+    return $html;
 }
 
 sub render_userimport_table {
@@ -1248,6 +1250,7 @@ sub render_userimport_table {
     my $html = div( { -id => 'userimport_table_div',-class=>'uploadbody' },
 		    $self->list_userdata('imported'),
 	);
+    return $html;
 }
 
 sub list_userdata {
@@ -1288,13 +1291,15 @@ sub list_userdata {
 			(a({-href=>"?userdata_download=conf;track=$name"},'Configuration'))),
 		     td(scalar localtime $conf_modified),
 		     td("$conf_size bytes"),
-		     td(a({-href=>"?userdata_edit=conf;track=$name"},'[edit]'))
+		     td(a({-href    => "javascript:void(0)",
+			   -onClick => "editUploadConf('$name')"},'[edit]'))
 		  ),
 		  TR([map { th({-align=>'left'},
 			       a({-href=>"?userdata_download=$_->[0];track=$name"},$_->[0])).
 				td(scalar localtime($_->[2])).
 				td($_->[1],'bytes').
-				td(a({-href=>"?userdata_edit=$_->[0];track=$name"},'[edit]'))
+				td(a({-href    => "javascript:void(0)",
+				      -onClick => "editUploadData('$name','$_->[0]')"},'[edit]'))
 				,
 		      } @source_files]));
 		  
@@ -1303,7 +1308,8 @@ sub list_userdata {
 				   qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$name"))},
 			      '[View track]');
 	
-	my $color         = $count++%2 ? 'transparent': 'lightblue';
+	my $color         = $count++%2 ? 'paleturquoise': 'lightblue';
+
 	div({-style=>"background-color:$color"},
 	    div({-id=>"${name}_stat"},''),
 	    img({-src=>$share,
@@ -1318,9 +1324,11 @@ sub list_userdata {
 	    i($description),
 	    div({-style=>'padding-left:10em'},
 		b('Source files:'),
-		$download_data));
+		$download_data),
+	    div({-id=>"${name}_editfield"},'')
+	    )
     } @tracks;
-    return p(\@rows);
+    return join '',@rows;
 }
 
 sub userdata_import {

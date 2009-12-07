@@ -18,6 +18,8 @@ db_adaptor = Bio::DB::Sam
 db_args    = -bam "$data_path/$track_name.bam"
 search options = none
 
+#>>>>>>>>>> cut here <<<<<<<<
+
 [$trackname:499]
 feature   = coverage:2000
 min_score = 0

@@ -43,22 +43,25 @@ programmer.
 =cut
 
 use strict;
+use Storable qw(dclone);
+use Data::Dumper;
+use Carp qw(carp);
 use base qw(Exporter Bio::Graphics::Browser);
 
 
-our @EXPORT = qw( new make_circular );
+our @EXPORT = qw( make_circular );
 
 our @EXPORT_OK = qw( adjust_bounds adjust_segment calculate_circular_bounds );
 
 our %EXPORT_TAGS = (
 		    all => [ @EXPORT, @EXPORT_OK ],	
 		    adjust => [ @EXPORT_OK ],
-		    make_circular => [ @EXPORT ],	
+		    make_circular => [ 'new', @EXPORT ],	
 		   );
 
 
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head2 new()
 
@@ -96,16 +99,17 @@ sub adjust_bounds {
 
   my $region = get_circular_region($self,$db);
 
+    $self->{origin} = $region->stop if $region;
+
+    return unless defined($start) && defined($stop);
   return ($start,$stop) if !$region || ( $stop < $region->stop && $start > $region->start );   
 
   my ($new_start,$new_stop) = $self->calculate_circular_bounds($start,$stop,$region->start,$region->stop);
 
   $self->{settings}->{start} = $new_start;
   $self->{settings}->{stop} = $new_stop;
-
   return ($new_start,$new_stop) if $new_stop < $region->stop;
 
-  $self->{absolute_start}  = $region->start;
   $self->{absolute_stop}  = $region->stop;
 
   return ($new_start,$new_stop);
@@ -158,8 +162,9 @@ without a Bio::Graphics::Browser::Circular object.
 
 sub adjust_segment { 
   my $self = shift;
-  return unless $self->{absolute_stop};
   my $segment = shift;
+  $segment->{origin} = $self->{origin} if $self->{origin};
+  return unless $self->{absolute_stop};
   my ($start,$stop);
 
   if (@_) {
@@ -170,8 +175,6 @@ sub adjust_segment {
   }
   $segment->{start} = $start;
   exists $segment->{end} ? $segment->{end} = $stop : $segment->{stop} = $stop;
-
-  $segment->{origin} = $self->{absolute_stop};
 }
 
 =head2 get_circular_region()
@@ -291,6 +294,7 @@ sub clone {
   return if collides($feature,$subfeature,@subfeatures);
 
   my $clone = $feature->clone_feature($subfeature);
+  #my $clone = dclone($subfeature);
   $_ += $segment->{origin} for @{$clone}{qw(start stop)}; 
   _add_to_segments($feature,$clone);
 }
@@ -366,30 +370,54 @@ Returns a new Bio::Graphics::Feature compatible feature, or the original feature
 =cut
 
 sub make_circular {
-  my $self = shift;
-  my $feature = shift;
-  return $feature unless $self->{absolute_stop};
-  my $segment = shift;
+    my $self = shift;
 
-  $self->{feature} = $feature;
-  $self->{segment} = $segment;
-  @{$self->{subfeatures}} = $feature->segments ? $feature->segments : $feature;
+    my $feature = shift;
+    my $segment = shift;
+    return $feature unless ref $feature; 
+    return $feature unless defined($segment->{origin});
+    #die 'segment origin '.$segment->{origin}; 
+
+
+    $self->{feature} = $feature;
+    $self->{segment} = $segment;
+
+    @{$self->{subfeatures}} = $feature->segments ? 
+	$feature->segments : $feature;
+
+
+   if ($feature->stop > $segment->{origin}) {
+	my @clones;
+	for my $subfeature (@{$self->{subfeatures}}) {
+	    next if (($feature->stop - $segment->{origin}) < $segment->start 
+		|| ($feature->start - $segment->{origin}) > $segment->stop);
+
+	    my $clone = $self->clone_feature($subfeature);
+	    $clone->{start} = 1;
+	    $clone->{stop} -= $segment->{origin};
+	    push @clones, $clone;
+	}
+
+	push @{$self->{subfeatures}}, @clones;
+   }
 
   $self->{args} = { -segments => [],
+		    -'ref' => $feature->ref,
 		    -strand => $feature->strand,
 		    -type   => $feature->primary_tag,
 		    -source => $feature->source,
 		    -name   => $feature->display_name
 		  };
 
-  my @subfeatures = @{$self->{subfeatures}};
+    my $sf = @{$self->{subfeatures}};
 
-  for ($self->{number} = 0; 
-       $self->{number} < scalar(@subfeatures); 
+    for ($self->{number} = 0; 
+       $self->{number} < $sf;
        $self->{number}++) 
-  { inside_panel($self) ? add_to_segments($self) : shift_region_length($self) }
+    { inside_panel($self) ? add_to_segments($self) : shift_region_length($self) }
 
-  return Bio::Graphics::Feature->new(%{$self->{args}}) if scalar @{$self->{args}{-segments}};
+    return Bio::Graphics::Feature->new(%{$self->{args}}) 
+	if scalar @{$self->{args}{-segments}};
 }
 
 1;

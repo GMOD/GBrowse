@@ -59,8 +59,8 @@ sub tracks {
     while (my $dir = readdir(D)) {
 	next if $dir =~ /^\.+$/;
 
-	my $is_busy       = (-e File::Spec->catfile($path,$dir,$self->busy_file_name))||0;
-	next if $is_busy;
+	# my $is_busy       = (-e File::Spec->catfile($path,$dir,$self->busy_file_name))||0;
+	# next if $is_busy;
 
 	my $is_imported   = (-e File::Spec->catfile($path,$dir,$self->imported_file_name))||0;
 	next if defined $imported && $imported != $is_imported;

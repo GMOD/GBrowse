@@ -416,6 +416,19 @@ sub ACTION_new_test_track {
     return (204,'text/plain',undef);
 }
 
+sub ACTION_register_upload {
+    my $self = shift;
+    my $q    = shift;
+    my $id   = $q->param('upload_id');
+    my $name = $q->param('upload_name');
+
+    if ($id && $name) {
+	$self->state->{uploads}{$id} = [$name,0];
+    }
+
+    return (204,'text/plain',undef);
+}
+
 sub ACTION_upload_file {
     my $self = shift;
     my $q    = shift;
@@ -548,6 +561,7 @@ sub ACTION_cancel_upload {
 								  $render->language);
 	kill TERM=>$pid;
 	$usertracks->delete_file($file_name);
+	delete $state->{uploads}{$upload_id};
 	return (200,'text/html',"<b>$file_name:</b> <i>Cancelled</i>");
     } else {
 	return (204,'text/plain',undef);
@@ -574,16 +588,23 @@ sub ACTION_set_upload_description {
 sub ACTION_modifyUserData {
     my $self = shift;
     my $q    = shift;
-    my $ftype = $q->param('sourceFile');
-    my $track = $q->param('track');
-    my $text  = $q->param('data');
+    my $ftype     = $q->param('sourceFile');
+    my $track     = $q->param('track');
+    my $text      = $q->param('data');
+    my $upload_id = $q->param('upload_id');
 
     my $userdata = $self->render->user_tracks;
+    my $state    = $self->state;
+
+    warn 'uploads = ',join ' ',keys %{$state->{uploads}};
+    $state->{uploads}{$upload_id} = [$ftype,$$];
+
     if ($ftype eq 'conf') {
 	$userdata->merge_conf($track,$text);
     } else {
 	$userdata->upload_data($track,$text,1);
     }
+    delete $state->{uploads}{$upload_id};
     my @tracks     = $userdata->labels($track);
     $self->render->track_config($_,'revert') foreach @tracks;
     return (200,'application/json',{tracks=>\@tracks});

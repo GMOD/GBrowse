@@ -1238,9 +1238,6 @@ sub upload_file_rows {
 
 sub render_userdata_table {
     my $self = shift;
-#    my $html = div( { -id => 'userdata_table_div',-class=>'uploadbody' },
-#		    $self->list_userdata('uploaded'),
-#	       );
     my $html = div( {-id=>'userdata_table_div'},scalar $self->list_userdata('uploaded'));
     return $html;
 }
@@ -1281,6 +1278,9 @@ sub list_userdata {
 	    },
 	    $userdata->description($_) || 'Click to add a description'
 	    );
+
+	my $status    = $userdata->status($name);
+	my $random_id = 'upload_'.int rand(9999);
 
 	my ($conf_name,$conf_modified,$conf_size) = $userdata->conf_metadata($name);
 
@@ -1325,7 +1325,19 @@ sub list_userdata {
 	    div({-style=>'padding-left:10em'},
 		b('Source files:'),
 		$download_data),
-	    div({-id=>"${name}_editfield"},'')
+	    div({-id=>"${name}_editfield"},''),
+	    ($status !~ /complete/) 
+	      ? div(
+		div({-id=>"${random_id}_form"},'&nbsp;'),
+		div({-id=>"${random_id}_status"},i($status),
+		           a({-href    =>'javascript:void(0)',
+			      -onClick => 
+#				  'Controller.update_sections(new Array(userdata_table_id))'
+				  "Controller.monitor_upload('$random_id','$name')",
+			     },' [refresh]')
+		)
+	      )
+	      : '',
 	    )
     } @tracks;
     return join '',@rows;

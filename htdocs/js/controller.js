@@ -992,21 +992,50 @@ var GBrowseController = Class.create({
   // to the server
   uploadUserTrackSource:
   function (sourceField,fileName,sourceFile,editElement) {
+
+     var upload_id  = 'upload_' + Math.floor(Math.random() * 99999);
+
      new Ajax.Request(document.URL, {
      	 method:       'post',
 	 parameters:   { action:     'modifyUserData',
                          track:      fileName,
                          sourceFile: sourceFile,
+			 upload_id:  upload_id,
 			 data:       $F(sourceField)},
+         onCreate:    function() {
+	      if ($(editElement) != null) {
+	      	 $(editElement).innerHTML = '<div id="'+upload_id+'_form'+'"></div>'
+                               		   +'<div id="'+upload_id+'_status'+'"></div>';
+	      }
+	      startAjaxUpload(upload_id);
+	     },
          onSuccess:   function (transport) {
-	 	          if ($(editElement) != null) $(editElement).innerHTML = '';
+//	 	          if ($(editElement) != null) $(editElement).innerHTML = '';
+	 	          if ($(editElement) != null) $(editElement).remove();
 			  var r = transport.responseJSON;
 			  r.tracks.each(function(t) {
 			  	      Controller.rerender_track(t);
 				      });
+		          var updater = Ajax_Status_Updater.get(upload_id);
+			  if (updater != null) updater.stop();
 		          Controller.update_sections(new Array(userdata_table_id,userimport_table_id,track_listing_id));
 	               }
          });
+  },
+
+// monitor_upload is redundant and needs to be refactored
+// the idea is to register a new upload
+  monitor_upload:
+  function (upload_id,upload_name) {
+  	new Ajax.Request(document.URL, {
+	    method:     'post',
+	    parameters: {
+	    		action:      'register_upload',
+			upload_id:   upload_id,
+			upload_name: upload_name
+	      }
+	    });
+	startAjaxUpload(upload_id);
   },
 
   select_tab:
@@ -1014,7 +1043,7 @@ var GBrowseController = Class.create({
      if (this.tabs != null) {
        this.tabs.select_tab(tab_id);
      }
-  },
+  }
 
 
 });

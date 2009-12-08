@@ -1764,8 +1764,9 @@ sub update_state {
 sub _update_state {
     my $self = shift;
 
-    $self->update_state_from_cgi;
     my $state  = $self->state;
+
+    $self->update_state_from_cgi;
 
     warn "[$$] CGI updated" if DEBUG;
     if (my $seg = $self->segment) {
@@ -1782,7 +1783,8 @@ sub _update_state {
 	# Automatically open the tracks with found features in them
 	$self->auto_open();
     }
-    
+    $self->cleanup_dangling_uploads($state);
+
     warn "[$$] update_state() done" if DEBUG;
 }
 
@@ -1860,6 +1862,31 @@ sub auto_open {
 	}
     }
 }
+
+# remove upload markers that are no longer relevant
+sub cleanup_dangling_uploads {
+    my $self  = shift;
+    my $state = shift;
+
+    my %name_to_id;
+    for my $id (keys %{$state->{uploads}}) {
+	delete $state->{uploads}{$id} unless $state->{uploads}{$id}[0];
+	$name_to_id{$state->{uploads}{$id}[0]}{$id}++;
+    }
+
+
+    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
+							      $state,
+							      $self->language);
+    my %tracks = map {$_=>1} $usertracks->tracks();
+
+    for my $k (keys %name_to_id) {
+	unless (exists $tracks{$k}) {
+	    delete $state->{uploads}{$_} foreach keys %{$name_to_id{$k}};
+	}
+    }
+}
+
 
 sub add_track_to_state {
   my $self  = shift;

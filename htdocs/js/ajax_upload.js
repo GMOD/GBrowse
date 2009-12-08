@@ -74,14 +74,22 @@ function startAjaxUpload(upload_id) {
 		            ).update(' Cancel'));
 
   if (Ajax_Status_Updater == null)
-    Ajax_Status_Updater = new Hash();
-     var updater = new Ajax.PeriodicalUpdater(
-         {success: status.down('span')},
-         '#',
-         {parameters: {   action: 'upload_status',
-                       upload_id: upload_id
-                      }
-         });
+      Ajax_Status_Updater = new Hash();
+  var updater = new Ajax.PeriodicalUpdater(
+       {success: status.down('span')},
+       '#',
+       {parameters: {   action: 'upload_status',
+                        upload_id: upload_id
+                    },
+        onSuccess: function(transport) {
+	   if (transport.responseText.match(/complete/)) {
+	   	    Ajax_Status_Updater.get(upload_id).stop();
+	            Controller.update_sections(new Array(userdata_table_id,
+							 userimport_table_id,
+							 track_listing_id));
+	    }
+        }
+       });
   Ajax_Status_Updater.set(upload_id,updater);
   return true;
 }

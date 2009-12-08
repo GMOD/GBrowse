@@ -56,6 +56,12 @@ sub open_database {
   $db;
 }
 
+sub delete_database {
+    my $self = shift;
+    my $key  = Dumper(@_);
+    $CACHE->delete($key);
+}
+
 =item Bio::Graphics::Browser2::DataBase->clone_databases()
 
 Call this after a fork in the child process to make sure that all open
@@ -81,6 +87,14 @@ sub new {
 		  cacheseq  => {},
 		  cachedata => {},
     },ref $self || $self;
+}
+
+sub delete {
+    my $self = shift;
+    my $key  = shift;
+    delete $self->{cachedata}{$key};
+    delete $self->{cacheseq}{$key};
+    $self->{curopen}--;
 }
 
 sub get {

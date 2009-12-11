@@ -514,7 +514,6 @@ lib/Bio/Graphics/Browser2/PluginSet.pm
 lib/Bio/Graphics/Browser2/Realign.pm
 lib/Bio/Graphics/Browser2/Region.pm
 lib/Bio/Graphics/Browser2/RegionSearch.pm
-lib/Bio/Graphics/Browser2/RemoteSet.pm
 lib/Bio/Graphics/Browser2/Render.pm
 lib/Bio/Graphics/Browser2/Render/HTML.pm
 lib/Bio/Graphics/Browser2/Render/Slave.pm
@@ -522,8 +521,6 @@ lib/Bio/Graphics/Browser2/Render/Slave/Status.pm
 lib/Bio/Graphics/Browser2/RenderPanels.pm
 lib/Bio/Graphics/Browser2/Session.pm
 lib/Bio/Graphics/Browser2/Shellwords.pm
-lib/Bio/Graphics/Browser2/UploadSet.pm
-lib/Bio/Graphics/Browser2/UserData.pm
 lib/Bio/Graphics/Browser2/UserTracks.pm
 lib/Bio/Graphics/Browser2/Util.pm
 lib/Bio/Graphics/GBrowseFeature.pm

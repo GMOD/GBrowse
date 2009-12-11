@@ -1,3 +1,4 @@
+1.9981  * The old-style upload code has been removed.
 1.998   * WARNING: WIG FILE UPLOADING NOT WORKING.
 	* New tabbed layout for browser, uploads & preferences.
 	* Background uploading working well; will now resume automatically if window is closed and reopened.

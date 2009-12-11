@@ -163,7 +163,6 @@ sub ACTION_retrieve_multiple {
     my $render = $self->render;
 
     $render->init_plugins();
-    $render->init_remote_sources();
 
     my %track_html;
     my @track_ids = $q->param('track_ids');
@@ -192,7 +191,6 @@ sub ACTION_add_tracks {
 
     $render->init_database();
     $render->init_plugins();
-    $render->init_remote_sources();
     my $track_data = $render->add_tracks(\@track_names);
     my $return_object = { track_data => $track_data, };
 
@@ -211,7 +209,6 @@ sub ACTION_set_track_visibility {
 
     if ($visible) {
 	$render->init_plugins();
-	$render->init_remote_sources();
 	$render->add_track_to_state($track_name);
     }
     else {
@@ -238,7 +235,6 @@ sub ACTION_rerender_track {
 
     $render->init_database();
     $render->init_plugins();
-    $render->init_remote_sources();
 
     my ( $track_keys, $display_details, $details_msg )
 	= $render->background_individual_track_render($track_id,$nocache);
@@ -505,16 +501,17 @@ sub ACTION_cancel_upload {
     my $state      = $self->state;
     my $render     = $self->render;
 
-    if (my ($file_name,$pid) = @{$state->{uploads}{$upload_id}}) {
+    if ($state->{uploads}{$upload_id} && (my ($file_name,$pid) = @{$state->{uploads}{$upload_id}})) {
 	my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
 								  $render->state,
 								  $render->language);
 	kill TERM=>$pid;
 	$usertracks->delete_file($file_name);
 	delete $state->{uploads}{$upload_id};
-	return (200,'text/html',"<b>$file_name:</b> <i>Cancelled</i>");
+	return (200,'text/html',"<div class='error'><b>$file_name:</b> <i>Cancelling</i></div>");
     } else {
-	return (204,'text/plain',undef);
+	warn "here I am";
+	return (200,'text/html','<div class="error"><i>Not found</i></div>');
     }
     
 }
@@ -563,22 +560,4 @@ sub ACTION_modifyUserData {
 1;
 
 __END__
-
-# some dead code follows here
-
-# This looks like an older version of the retrieve_multiple request
-
-# Slightly different -- process a tracks request in the background.
-#     if ( my @labels = param('render') ) {    # deferred rendering requested
-#         $self->init_database();
-#         $self->init_plugins();
-#         $self->init_remote_sources();
-#         my $features = $self->region->features;
-#         my $seg      = $self->features2segments($features)->[0];    # likely wrong
-
-#         $self->set_segment($seg);
-
-#         my $deferred_data = $self->render_deferred( labels => \@labels );
-# 	return (200,'application/json',$deferred_data);
-#     }
 

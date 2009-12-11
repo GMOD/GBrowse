@@ -12,8 +12,6 @@ use Text::Tabs;
 
 use Bio::Graphics::Browser2::I18n;
 use Bio::Graphics::Browser2::PluginSet;
-use Bio::Graphics::Browser2::UploadSet;
-use Bio::Graphics::Browser2::RemoteSet;
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Browser2::Action;
 use Bio::Graphics::Browser2::Region;
@@ -88,20 +86,6 @@ sub state {
   my $self = shift;
   my $d = $self->{state};
   $self->{state} = shift if @_;
-  $d;
-}
-
-sub uploaded_sources {
-  my $self = shift;
-  my $d = $self->{uploaded_sources};
-  $self->{uploaded_sources} = shift if @_;
-  $d;
-}
-
-sub remote_sources {
-  my $self = shift;
-  my $d = $self->{remote_sources};
-  $self->{remote_sources} = shift if @_;
   $d;
 }
 
@@ -223,8 +207,6 @@ sub init {
     $self->init_database();
     warn "init_plugins()" if DEBUG;
     $self->init_plugins();
-    warn "init_remote_sources()" if DEBUG;
-    $self->init_remote_sources();
     warn "init done" if DEBUG;
 }
 
@@ -338,7 +320,6 @@ sub background_track_render {
     $self->session->unlock(); # don't hold session captive on renderers!
     
     $self->init_plugins();
-    $self->init_remote_sources();
 
     $self->segment or return;
     my $cache_extra = $self->create_cache_extra;
@@ -571,10 +552,9 @@ sub render {
 
   # NOTE: these handle_* methods will return true
   # if they want us to exit before printing the header
-  $self->handle_track_dump() && return;
-  $self->handle_gff_dump()   && return;
-  $self->handle_plugins()    && return;
-  $self->handle_downloads()  && return;  # this is the "old" method
+  $self->handle_track_dump()         && return;
+  $self->handle_gff_dump()           && return;
+  $self->handle_plugins()            && return;
   $self->handle_download_userdata()  && return;
 
   $self->render_header();
@@ -1381,21 +1361,6 @@ sub render_galaxy_form {
 # to be inherited
 sub galaxy_form { }
 
-#======================== remote sources ====================
-sub init_remote_sources {
-  my $self = shift;
-  my $uploaded_sources = Bio::Graphics::Browser2::UploadSet->new($self->data_source,
-								$self->state,
-								$self->language);
-  my $remote_sources   = Bio::Graphics::Browser2::RemoteSet->new($self->data_source,
-								$self->state,
-								$self->language);
-  for ($uploaded_sources,$remote_sources) { $_->add_files_from_state; }
-  $self->uploaded_sources($uploaded_sources);
-  $self->remote_sources($remote_sources);
-  return $uploaded_sources && $remote_sources;  # true if both defined
-}
-
 sub delete_uploads {
     my $self = shift;
     my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
@@ -1494,124 +1459,6 @@ sub handle_download_userdata {
     print $_ while <$f>;
     close $f;
     return 1;
-}
-
-sub handle_downloads {
-  my $self = shift;
-  my ($file,$action)        = $self->get_file_action;
-
-  return unless (my $to_download = (param($self->tr('Download_file'))
-				    ||
-				    (
-				     $action 
-				     && param($action) eq $self->tr('Download_file')
-				    ) 
-				    && $file));
-  
-  # This gets called if the user wants to download his annotation data
-  my $download = CGI::unescape($to_download);
-  (my $fname = $to_download) =~ s/^file://;
-  print CGI::header(-attachment   => $fname,
-		    -charset      => $self->tr('CHARSET'),
-		    -type         => 'application/octet-stream');
-  my $line_end = $self->line_end();
-  if (my $fh   = $self->uploaded_sources->open_file($to_download)) {
-    while (<$fh>) {
-      chomp;
-      print $_,$line_end;
-    }
-  }
-  return 1;  # this will cause an exit from the script
-
-  # return 1 to exit
-  return;
-}
-
-sub line_end {
-    my $self  = shift;
-   my $agent  = CGI->user_agent();
-   return "\r"   if $agent =~ /Mac/;
-   return "\r\n" if $agent =~ /Win/;
-   return "\n";
-}
-
-
-sub get_file_action {
-    my $self = shift;
-
-    my ($file_action)         = grep {/^modify\./} param();
-    (my $file = $file_action) =~ s/^modify\.// if $file_action;
-    $file = CGI::unescape($file);
-    
-    return ($file,$file_action);
-}
-
-sub handle_external_data {
-  my $self = shift;
-
-  my ($file,$action)   = $self->get_file_action;
-  my $state            = $self->state;
-
-  my $uploads = $self->uploaded_sources;
-  my $remotes = $self->remote_sources;
-
-  if ((param('Upload')||param('upload')) && (my $f = param('upload_annotations'))) {
-      $file = $uploads->upload_file($f);
-      $self->add_track_to_state($file);
-  }
-
-  elsif (my @data = (param('auto'),param('add'),param('a'))) {
-    my @styles    = (param('style'),param('s'));
-    $self->handle_quickie(\@data,\@styles);
-  }
-
-  elsif ( param('eurl') ) {
-      my @urls = param('eurl');
-      $self->add_track_to_state($_) foreach @urls;
-  }
-  
-  # return 1 to exit
-  return;
-}
-
-sub handle_edit {
-    my $self             = shift;
-    my $file             = shift;
-    my $setting          = shift;
-    my $data             = shift;
-
-    my $uploaded_sources = $self->uploaded_sources();
-    my @lines            = unexpand( split '\r?\n|\r\n?', $data );
-    $data = join "\n", @lines;
-    $data .= "\n";
-
-    my $file_created = 0;
-    if (not $uploaded_sources->url2path($file)){
-        $file_created = 1;
-    }
-
-    $uploaded_sources->new_file($file);    # register it
-    $self->add_track_to_state($file);
-
-    my $fh = $uploaded_sources->open_file( $file, '>' ) or return;
-    print $fh $data;
-    close $fh;
-
-    # parse the new file to find out what tracks it contains
-    my $uploads = Bio::Graphics::Browser2::UploadSet->new($self->data_source,
-							 $self->state,
-							 $self->language);
-    $uploads->add_file($uploads->name_file($file));
-
-    my $ff = eval {$uploads->feature_file($file)};
-    return (0,[],$@) unless $ff;
-
-    my @sections = $self->_featurefile_sections($ff);
-    my @tracks   = map {"$file:$_"} @sections;
-
-    warn "will return tracks @tracks" if DEBUG;
-    
-    return ($file_created,\@tracks);
 }
 
 sub handle_quickie {
@@ -1944,8 +1791,6 @@ sub update_state_from_cgi {
   $self->update_coordinates($state);
   $self->update_region($state);
   $self->update_section_visibility($state);
-  $self->update_external_sources();
-  $self->handle_external_data();
   $self->update_galaxy_url($state);
 }
 
@@ -2261,14 +2106,6 @@ sub asynchronous_update_sections {
         $self->init_plugins();
     }
 
-    # Init remote sources if need be
-    if (   $handle_section_name{'external_utility_div'}
-        || $handle_section_name{'tracks_panel'}
-        || $handle_section_name{'upload_tracks_panel'} )
-    {
-        $self->init_remote_sources();
-    }
-
     # Page Title
     if ( $handle_section_name{'page_title'} ) {
 	my $segment     = $self->thin_segment;  # avoids a db open
@@ -2407,7 +2244,6 @@ sub asynchronous_update_element {
     }
     elsif ( $element eq 'detail_panels' ) {
         $self->init_plugins();
-        $self->init_remote_sources();
         return join ' ',
             $self->render_detailview_panels( $self->region->seg );
     }
@@ -2420,7 +2256,6 @@ sub asynchronous_update_element {
         return $self->wrap_plugin_configuration($plugin_base,$plugin);
     }
     elsif ( $element eq 'external_utility_div' ) {
-        $self->init_remote_sources();
         if ( my $file_name = param('edit_file') ) {
             $file_name = CGI::unescape($file_name);
             return $self->edit_uploaded_file($file_name);
@@ -2434,12 +2269,10 @@ sub asynchronous_update_element {
     # Track Checkboxes
     elsif ( $element eq 'tracks_panel' ) {
         $self->init_plugins();
-        $self->init_remote_sources();
         return $self->render_track_table();
     }
     # External Data Form
     elsif ( $element eq 'upload_tracks_panel' ) {
-        $self->init_remote_sources();
         return $self->render_external_table();
     }
 
@@ -2915,16 +2748,12 @@ sub all_tracks {
 sub potential_tracks {
     my $self   = shift;
     my $source  = $self->data_source;
-    my $uploads = $self->uploaded_sources;
-    my $remotes = $self->remote_sources;
     my %seenit;
     return grep {!$seenit{$_}++
 	      && !/^_/} ($source->detail_tracks,
 			 $source->overview_tracks,
 			 $source->plugin_tracks,
 			 $source->regionview_tracks,
-			 $uploads ? $uploads->files   : (),
-			 $remotes ? $remotes->sources : ()
                         );
 }
 
@@ -3391,18 +3220,11 @@ sub external_data {
 	my $search       = $self->get_search_object;
 	my $rel2abs      = $search->coordinate_mapper($segment,1);
 	my $rel2abs_slow = $search->coordinate_mapper($segment,0);
-	for my $featureset ($self->plugins,
-			    $self->uploaded_sources,
-			    $self->remote_sources) {
-	    warn "FEATURESET = $featureset, sources = ",join ' ',eval{$featureset->sources} if DEBUG;
-	    next unless $featureset;
-
-	    eval {
-		$featureset->annotate($meta_segment,$f,
-				      $rel2abs,$rel2abs_slow,$max_segment,
-				      $self->whole_segment,$self->region_segment);
-	    };
-	}
+	eval {
+	    $self->plugins->annotate($meta_segment,$f,
+				     $rel2abs,$rel2abs_slow,$max_segment,
+				     $self->whole_segment,$self->region_segment);
+	} if $self->plugins;
     }
 
     warn "FEATURE files = ",join ' ',%$f if DEBUG;

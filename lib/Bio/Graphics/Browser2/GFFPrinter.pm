@@ -24,9 +24,8 @@ use strict;
 
 use CGI 'param', 'path_info', 'header';
 use Bio::Graphics::Browser2;
-use Bio::Graphics::Browser2::UserData;
-use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::FeatureFile;
+use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::Browser2::Shellwords;
 
 sub new {

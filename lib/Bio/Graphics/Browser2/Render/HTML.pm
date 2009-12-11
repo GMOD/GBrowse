@@ -1179,7 +1179,7 @@ sub list_userdata {
 		           a({-href    =>'javascript:void(0)',
 			      -onClick => 
 				  "Controller.monitor_upload('$random_id','$name')",
-			     },' [refresh]')
+			     },'Interrupted [Resume]')
 		)
 	      )
 	      : '',

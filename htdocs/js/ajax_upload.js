@@ -64,7 +64,7 @@ function startAjaxUpload(upload_id) {
   var status       = $(upload_id + '_status');
   var upload_form  = $(upload_id + '_form');
   upload_form.hide();
-  var cancel_script = 'Controller.cancel_upload("'+upload_id+'");'
+  var cancel_script = 'Controller.cancel_upload("'+upload_id+'_status","'+upload_id+'");'
   
   status.update("<image src='/gbrowse2/images/spinner.gif' />");
   status.insert(new Element('span').update('<b>Uploading...</b>'));

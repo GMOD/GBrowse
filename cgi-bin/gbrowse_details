@@ -4,6 +4,7 @@ use strict;
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::Browser2::Markup;
+use Bio::Graphics::Browser2::UserTracks;
 use Bio::Graphics::Glyph::generic;
 
 our $VERSION = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
@@ -97,6 +98,7 @@ sub run {
     $conf->update_data_source($session);
     $self->source($conf->create_data_source($session->source));
     $self->state($session->page_settings);
+    $self->add_user_tracks($self->source);
 
     my $name  = param('name');
     my $class = param('class');
@@ -172,6 +174,19 @@ sub run {
 	print end_html();
     }
 
+}
+
+sub add_user_tracks {
+    my $self = shift;
+    my $data_source = shift;
+    my $userdata = Bio::Graphics::Browser2::UserTracks->new($data_source,
+							    $self->state,
+							    undef);
+    my @user_tracks = $userdata->tracks;
+    for my $track (@user_tracks) {
+	my $config_path = $userdata->track_conf($track);
+	eval {$data_source->parse_user_file($config_path)};
+    }
 }
 
 ######################

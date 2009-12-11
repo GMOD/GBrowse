@@ -105,15 +105,6 @@ sub ACTION_update_sections {
     return ( 200, 'application/json', $return_object );
 }
 
-sub ACTION_upload_table {
-    my $self   = shift;
-    my $render = $self->render_table;
-    $render->init_remote_sources();
-    my $html   = $render->render_external_table();
-    return ( 200, 'text/html', $html );
-}
-
-
 sub ACTION_configure_track {
     my $self = shift;
     my $q    = shift;
@@ -258,57 +249,6 @@ sub ACTION_rerender_track {
 	details_msg     => $details_msg,
     };
     return (200,'application/json',$return_object);
-}
-
-sub ACTION_commit_file_edit {
-    my $self = shift;
-    my $q    = shift;
-
-    my $data        = $q->param('a_data');
-    my $edited_file = $q->param('edited_file');
-
-    return ( 204, 'text/plain', undef ) unless ( $edited_file and $data );
-
-    $self->render->init_remote_sources();
-    my ($file_created,$tracks,$error) = $self->render->handle_edit( $edited_file, $self->state, $data );
-
-    my $return_object = {
-	file_created   => $file_created,
-	tracks         => $tracks,
-	error          => "$error"
-    };
-
-    return (200,'application/json',$return_object);
-}
-
-sub ACTION_add_url {
-    my $self = shift;
-    my $q    = shift;
-
-    my $data   = $q->param('eurl');
-    my $render = $self->render;
-
-    $render->init_remote_sources;
-    $render->remote_sources->add_source($data);
-    $render->add_track_to_state($data);
-    warn "adding $data to remote sources" if DEBUG;
-    return (200,'application/json',{url_created=>1});
-}
-
-sub ACTION_delete_upload_file {
-    my $self = shift;
-    my $q    = shift;
-
-    my $render = $self->render;
-    my $file   = $q->param('file');
-    warn "deleting file $file " if DEBUG;
-
-    $render->init_remote_sources();
-    $render->uploaded_sources->clear_file($file);
-    $render->remote_sources->delete_source($file);
-    $render->remove_track_from_state($file);
-
-    return (204,'text/plain',undef);
 }
 
 sub ACTION_show_hide_section {

@@ -28,7 +28,6 @@ var overview_container_id   = 'overview_panels';
 var region_container_id     = 'region_panels'; 
 var detail_container_id     = 'detail_panels'; 
 var external_utility_div_id = 'external_utility_div'; 
-var edit_upload_form_id     = 'edit_upload_form';
 var page_title_id           = 'page_title';
 var galaxy_form_id          = 'galaxy_form';
 var visible_span_id         = 'span';
@@ -735,106 +734,6 @@ var GBrowseController = Class.create({
     }
   }, // end plugin_go
 
-  // Upload File Methods *************************************************
-
-  edit_new_file:
-  function() {
-    Controller.update_sections(new Array(external_utility_div_id), '&new_edit_file=1',true,true);
-  },
-
-  edit_upload:
-  function(edit_file) {
-    var gbtrack  = this.gbtracks.get(decodeURIComponent(edit_file));
-    var basename = gbtrack!=null ? gbtrack.track_name : edit_file;
-    visibility('upload_tracks_panel',1);
-    Controller.update_sections(new Array(external_utility_div_id), 
-   	    '&edit_file='+basename,true,true);
-  },
-
-  commit_file_edit:
-  function(edited_file) {
-    var form_element = $(edit_upload_form_id);
-    new Ajax.Request(document.URL,{
-      method:     'post',
-      parameters: form_element.serialize() +"&"+ $H({
-            action:      'commit_file_edit',
-            edited_file: edited_file
-          }).toQueryString(),
-      onSuccess: function(transport) {
-        var results      = transport.responseJSON;
-        var file_created = results.file_created;
-	var tracks       = results.tracks;
-	var error        = results.error;
-	
-	if (error) {
-           alert(error);
-           return; 
-        }        
-
-        Controller.wipe_div(external_utility_div_id); 
-
-	var current_tracks = new Hash();
-	Controller.each_track(edited_file,function(gbtrack){
-           current_tracks.set(gbtrack.track_id,gbtrack);
-	});
-
-	var new_tracks = new Hash();
-	tracks.each(function(trackid){
-           new_tracks.set(trackid,1);
-	});
-
-	var tracks_to_delete = current_tracks.keys().findAll(function(trackid) {
-            return new_tracks.get(trackid)==null;
-	});
-	var tracks_to_add    = new_tracks.keys().findAll(function(trackid) {
-	    return current_tracks.get(trackid)==null;
-	});
-	var tracks_to_update = new_tracks.keys().findAll(function(trackid) {
-	    return current_tracks.get(trackid)!= null;
-	});
-
-	tracks_to_update.each(function(id) { 
-	   Controller.rerender_track(id,true);
-	   Controller.update_sections(new Array(external_listing_id),null,null,true);
-	});
-
-	tracks_to_delete.each(function(id) { 
-	   var gbtrack = current_tracks.get(id);
-	   actually_remove(gbtrack.track_div_id);
-	   Controller.unregister_gbtrack(gbtrack);
-	   Controller.update_sections(new Array(track_listing_id,external_listing_id),null,null,false);
-	});
-
-	if (tracks_to_add.length > 0)
-          Controller.add_track(edited_file, function(){
-            Controller.update_sections(new Array(track_listing_id,external_listing_id),null,null,false);
-        },true);	
-
-      } // end onSuccess
-    });
-  },
-
-  delete_upload_file:
-  function(file_name) {
-
-    $(external_listing_id).innerHTML='<p><b style="background-color:yellow">Working...</b></p>';
-
-    new Ajax.Request(document.URL,{
-      method:     'post',
-      parameters: {
-        action: 'delete_upload_file',
-	file:   file_name
-      },
-      onSuccess: function(transport) {
-        Controller.each_track(file_name,function(gbtrack) {
-	      actually_remove(gbtrack.track_div_id);
-          });
-        Controller.update_sections(new Array(track_listing_id,external_listing_id),null,null,true);
-        Controller.unregister_track(file_name);
-      } // end onSuccess
-    });
-  },
-
   cancel_upload:
   function(upload_id) {
        new Ajax.Request(document.URL,{
@@ -844,35 +743,6 @@ var GBrowseController = Class.create({
                            upload_id: upload_id
                           }
         });
-  },
-
-  // Remote Annotations Methods *************************************************
-
-  new_remote_track:
-  function(eurl) {
-    if ( eurl == '') return;
-
-    $(external_listing_id).innerHTML='<p><b style="background-color:yellow">Working...</b></p>';
-
-    new Ajax.Request(document.URL,{
-      method:     'post',
-      parameters:{
-            action: 'add_url',
-            eurl:    eurl
-      },
-      onSuccess: function(transport) {
-        var results     = transport.responseJSON;
-        var url_created = results.url_created;
-        if ( 1 == url_created ){
-          Controller.add_track(eurl, function(){
-            Controller.update_sections(new Array(track_listing_id,external_listing_id),null,null,true);
-          })
-        } else
-	  Controller.each_track(eurl,function(gbtrack) {
-             Controller.rerender_track(gbtrack.track_id,true);
-          });
-        }
-    });
   },
 
   // Utility methods *********************************

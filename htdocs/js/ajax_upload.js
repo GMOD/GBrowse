@@ -183,7 +183,7 @@ function editUpload (fileName,sourceFile) {
     Controller.downloadUserTrackSource(editID,fileName,sourceFile);
 }
 
-function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field_type) {
+function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field_type,help_link) {
 
     if (field_type == null) field_type='upload';
 
@@ -206,7 +206,11 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field
 				      });
     var paragraph   = new Element('p',{style:'text-indent:10pt'});
     form.update(paragraph);
-    paragraph.insert('<b>'+upload_prompt+' </b>');
+    paragraph.insert(new Element('a',
+    			     {href:  help_link,
+			      target:'_new'
+			     }).update('<b>Help with the file format</b>'));
+    paragraph.insert('<br><b>'+upload_prompt+' </b><br>');
 
     if (field_type=='upload') {
        paragraph.insert(new Element('input',{type:'hidden', 

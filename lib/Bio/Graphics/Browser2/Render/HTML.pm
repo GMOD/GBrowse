@@ -628,62 +628,6 @@ sub render_actionmenu {
     return $file_menu.$login.br({-clear=>'all'});
 }
 
-
-sub render_links {
-  my $self     = shift;
-  my $settings = $self->state;
-
-  my $svg_link     = HAVE_SVG
-      ? a({-href=>'?make_image=GD::SVG',-target=>'_blank'},      '['.$self->tr('SVG_LINK').']')
-      : '';
-
-  my $pdf_link     = HAVE_SVG && $self->can_generate_pdf()
-    ? a({-href=>'?make_image=PDF',    -target=>'_blank'},'['.$self->tr('PDF_LINK').']')
-    : '';
-
-  my $reset_link   = a({-href=>'?reset=1',-class=>'reset_button'},    '['.$self->tr('RESET').']');
-  my $help_link    = a({-href=>$self->general_help(),-target=>'help'},'['.$self->tr('Help').']');
-  my $plugin_link  = $self->plugin_links($self->plugins);
-  my $galaxy_link  = a({-href=>'javascript:'.$self->galaxy_link},     '['.$self->tr('SEND_TO_GALAXY').']');
-  my $image_link   = a({-href=>'?make_image=GD',-target=>'_blank'},   '['.$self->tr('IMAGE_LINK').']');
-  my $rand         = substr(md5_hex(rand),0,5);
-
-  my $debug_link   = a({-href    => 'javascript:void(0)',
-			-onClick => 'Controller.show_error("This is a test of an error message.","A stitch in time saves nine.")'},
-		       'Make an Error');
-
-
-  my @standard_links        = (
-      $help_link,
-      $reset_link,
-      $debug_link,
-      );
-
-  my $upload_tracks_panel = 'userdata_table_panel';
-
-  my @segment_showing_links =(
-      a({-href=>'?action=bookmark'},'['.$self->tr('BOOKMARK').']'),
-      a({-href=>'#',
-	 -onMouseDown=>qq(visibility("$upload_tracks_panel",1);new Effect.ScrollTo("$upload_tracks_panel");setTimeout(\'new Effect.Highlight("${upload_tracks_panel}_title")\',1000))},
-      '['.$self->tr('Add_your_own_tracks').']'),
-      a({-href        => '#',
-	 -onMouseDown => "GBox.showTooltip(event,'url:?action=share_track;track=all')"},
-	'[' . ($self->tr('SHARE_ALL') || "Share These Tracks" ) .']'),
-      $plugin_link,
-      $galaxy_link,
-      $image_link,
-      $svg_link,
-      $pdf_link,
-      );
-
-  my $segment_present = $self->region->feature_count == 1;
-
-  # standard status bar
-  return div({-class=>'searchtitle',-style=>'font-weight:bold'},
-	     $segment_present ? @segment_showing_links : (),
-	     @standard_links);
-}
-
 # for the subset of plugins that are named in the 'quicklink plugins' option, create
 # quick links for them.
 sub plugin_links {
@@ -1117,21 +1061,15 @@ sub render_global_config {
 		      )
 	       )
 	) . end_form();
-#    return $self->toggle( 'Display_settings', $content );
     return div($content);
-}
-
-# This surrounds the external table with a toggle
-sub render_toggle_external_table {
-  my $self     = shift;
-  return div($self->render_external_table());
 }
 
 sub render_toggle_userdata_table {
     my $self = shift;
-    return h2('Uploaded Tracks')
-	   .$self->render_userdata_table()
-	   .$self->userdata_upload();
+    return h2('Uploaded Tracks').
+	div($self->render_userdata_table(),
+	    $self->userdata_upload()
+	);
 }
 
 sub render_toggle_import_table {
@@ -1139,106 +1077,13 @@ sub render_toggle_import_table {
     return h2('Imported Tracks').
 	div($self->render_userimport_table(),
 	    $self->userdata_import()
-	    );
-}
-
-sub render_external_table {
-    my $self = shift;
-
-    $self->init_database();
-    my $state = $self->state;
-
-    my $content 
-        = div( { -id => "external_utility_div" }, '' )
-        . start_form( -name => 'externalform', -id => 'externalform' )
-        . div({-class=>'uploadbody'},$self->upload_table,
-	      $self->das_table)
-        . end_form();
-    $content .= $self->html_frag('html6',$state);
-    return $content;
-}
-
-sub upload_table {
-  my $self      = shift;
-  my $settings  = $self->state;
-
-  # start the table.
-  my $cTable = start_table({-border=>0,-cellspacing=>0,-cellpadding=>0,-width=>'100%',-id=>'upload_table',})
-    . TR(
-	 th({-class=>'uploadtitle', -colspan=>4, -align=>'left'},
-	    a({-href=>$self->annotation_help(),-target=>'_new'},'['.$self->tr('HELP').']'))
 	);
-
-  $cTable .= TR({-class=>'uploadbody', -name=>'something', -id=>'something'},
-		th({-width=>'20%',-align=>'right'},$self->tr('Upload_File')),
-		td({-colspan=>3},
-		   filefield(-size=>80,-name=>'upload_annotations'),
-		   '&nbsp;',
-		   submit(-name=>$self->tr('Upload')),
-		   '&nbsp;',
-            button(
-              -value   => $self->tr('New'),
-              -onClick => 'Controller.edit_new_file();'
-            ),
-		  )
-	       );
-
-  # now add existing files
-  my $uploaded_sources = $self->uploaded_sources();
-  for my $file ($uploaded_sources->files) {
-    $cTable .=  $self->upload_file_rows($file);
-  }
-
-  # end the table.
-  $cTable .= end_table;
-  return a({-name=>"upload"},$cTable);
-}
-
-sub upload_file_rows {
-    my $self             = shift;
-    my $file             = shift;
-
-    my $uploaded_sources = $self->uploaded_sources();
-    ( my $name = $file ) =~ s/^file://;
-    $name = escape($name);
-
-    my $return_html = '';
-    my $download    = escape( $self->tr('Download_file') );
-    my $link        = a( { -href => "?$download=$file" }, "[$name]" );
-
-    my @info = $self->get_uploaded_file_info( $self->track_visible($file)
-					      && $self->external_data->{$file});
-
-    my $escaped_file = CGI::escape($file);
-    $return_html .= TR(
-        { -class => 'uploadbody'},
-        th( { -width => '20%', -align => 'right' }, $link ),
-        td( { -colspan => 3 },
-            button(
-                -value   => $self->tr('edit'),
-                -onClick => 'Controller.edit_upload("' . $escaped_file . '");'
-                )
-                . '&nbsp;'
-                . submit(
-                -name  => "modify.$escaped_file",
-                -value => $self->tr('Download_file')
-                )
-                . '&nbsp;'
-                . button(
-                -name    => 'delete_button',
-                -value   => $self->tr('Delete'),
-                -onClick => 'Controller.delete_upload_file("' . $file . '");'
-                )),
-    );
-    $return_html .= TR( { -class => 'uploadbody' },
-        td('&nbsp;'), td( { -colspan => 3}, @info ) );
-    $return_html .= span({-id => $escaped_file});
-    return $return_html;
 }
 
 sub render_userdata_table {
     my $self = shift;
-    my $html = div( {-id=>'userdata_table_div'},scalar $self->list_userdata('uploaded'));
+    my $html = div( {-id=>'userdata_table_div',-class=>'uploadbody'},
+		    scalar $self->list_userdata('uploaded'));
     return $html;
 }
 
@@ -1279,7 +1124,7 @@ sub list_userdata {
 	    $userdata->description($_) || 'Click to add a description'
 	    );
 
-	my $status    = $userdata->status($name);
+	my $status    = $userdata->status($name) || 'complete';
 	my $random_id = 'upload_'.int rand(9999);
 
 	my ($conf_name,$conf_modified,$conf_size) = $userdata->conf_metadata($name);
@@ -1313,7 +1158,8 @@ sub list_userdata {
 	div({-style=>"background-color:$color"},
 	    div({-id=>"${name}_stat"},''),
 	    img({-src=>$share,
-		 -onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0,100)',
+		 -onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
+		 -onClick     => 'GBubble.showTooltip(event,"Sorry, not yet implemented",0)',
 		}),
 	    img({-src     => $delete,
 		 -style   => 'cursor:pointer',
@@ -1352,8 +1198,9 @@ sub userdata_import {
     my $import_label  = $self->tr('IMPORT_TRACK');
     my $import_prompt = $self->tr('REMOTE_URL');
     my $remove_label  = $self->tr('REMOVE');
-    $html            .= div({-style=>'text-indent:10pt'},
-			   a({-href => "javascript:addAnUploadField('import_list_start','$url','$import_prompt','$remove_label','import')",
+    my $help_link     = $self->annotation_help;
+    $html            .= div({-style=>'margin-left:10pt'},
+			   a({-href => "javascript:addAnUploadField('import_list_start','$url','$import_prompt','$remove_label','import','$help_link')",
 			      -id   => 'import_adder',
 			     },b("[$import_label]")));
     return $html;
@@ -1371,40 +1218,18 @@ sub userdata_upload {
     my $new_label    = $self->tr('NEW_TRACK');
     my $from_text    = $self->tr('FROM_TEXT');
     my $from_file    = $self->tr('FROM_FILE');
+    my $help_link     = $self->annotation_help;
     $html         .= p({-style=>'margin-left:10pt;font-weight:bold'},
 		       'Add custom track(s):',
-		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',   '$remove_label', 'edit')"},
+		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',   '$remove_label', 'edit','$help_link')"},
 			 "[$from_text]"),
-		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url','$upload_label','$remove_label' , 'upload')",
+		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url','$upload_label','$remove_label' , 'upload','$help_link')",
 			  -id=>'file_adder',
 			 },"[$from_file]"));
 		       
 
     return $html;
 }
-
-sub get_uploaded_file_info {
-    my $self         = shift;
-    my $feature_file = shift or return i("Display off");
-
-    warn "get_uploaded_file_info(): feature_file = $feature_file" if DEBUG;
-
-    my $modified  = localtime($feature_file->mtime);
-    my @refs      = sort($feature_file->features)
-	unless $feature_file->name =~ m!/das/!;
-
-    my ($landmarks,@landmarks,@links);
-
-    if (@refs > $self->data_source->too_many_landmarks) {
-	$landmarks = b($self->tr('Too_many_landmarks',scalar @refs));
-    } else {
-	@links = map {$self->segment2link($_,$_->display_name)} @refs;
-	$landmarks = $self->tableize(\@links);
-    }
-    warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
-    return i($self->tr('File_info',$modified),$landmarks||'');
-}
-
 
 sub segment2link {
     my $self = shift;
@@ -1422,83 +1247,6 @@ sub segment2link {
     $label ||= "$ref:$s..$e";
     $ref||='';  # get rid of uninit warnings
     return a({-href=>"?ref=$ref;start=$start;stop=$stop"},$label);
-}
-
-# URLs for external annotations
-sub das_table {
-  my $self          = shift;
-
-  my $settings      = $self->state;
-  my $feature_files = $self->external_data;
-
-  my (@rows);
-
-  my ($preset_labels,$preset_urls) = $self->get_external_presets($settings);  # (arrayref,arrayref)
-  my $presets = '&nbsp;';
-  if ($preset_labels && @$preset_labels) {  # defined AND non-empty
-    my %presets;
-    @presets{@$preset_urls} = @$preset_labels;
-    unshift @$preset_urls,'';
-    $presets{''} = $self->tr('PRESETS');
-    $presets = popup_menu(-name   => 'eurl',
-			  -values => $preset_urls,
-			  -labels => \%presets,
-			  -override => 1,
-			  -default  => '',
-			  -onChange => 'document.externalform.submit()'
-			 );
-  }
-
-  local $^W = 0;
-  if (my $segment = $self->segment) {
-
-      my $remote_sources = $self->remote_sources();
-      for my $url ($remote_sources->sources) {
-
-	  my $f = $remote_sources->transform_url($url,$segment);
-
-	  next unless $url =~ /^(ftp|http):/ && exists $feature_files->{$url};
-	  my $escaped_url = CGI::escape($url);
-          my $ulabel = url_label($url);
-          $ulabel = '' unless $ulabel ne $url;
-          push @rows,th({-align=>'right',-valign=>'top',-width=>'20%'},"$ulabel&nbsp;&nbsp;").
-	      td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
-         button(
-            -name    => 'delete_button',
-            -value   => $self->tr('Delete'),
-            -onClick => 'Controller.delete_upload_file("' . $url . '");'
-         ),
-		 br,
-		 a({-href=>$f,-target=>'help'},
-		   '['.$self->tr('Download').']'),
-		 $feature_files->{$url} 
-		 && $self->get_uploaded_file_info($self->track_visible($url) 
-						  && $feature_files->{$url}
-		 )
-	      );
-      }
-  }
-
-  my $url_help = $self->tr('Remote_url_help')||'';
-  push @rows,
-    th({-align=>'right',
-	-width      =>'20%',
-	-onMouseOver=>"GBubble.showTooltip(event,'$url_help')",
-	-style      => 'cursor:pointer',
-       },
-       $self->tr('Remote_url')).
-    td(textfield(-name=>'eurl',-id=>'eurl',-size=>80,-value=>'',-override=>1),
-       $presets,
-       button(
-         -name    => 'update_url_button',
-         -value   => $self->tr('Update_urls'),
-         -onClick => 'Controller.new_remote_track($("eurl").value);',
-       ),
-    );
-
-  return table({-border=>0,-cellspacing=>0,-cellpadding=>0,-width=>'100%'},
-	       TR({-class=>'uploadbody'},\@rows),
-	      );
 }
 
 sub tableize {
@@ -1521,80 +1269,6 @@ sub tableize {
     $html .= "</tr>\n";
   }
   $html .= end_table();
-}
-
-sub edit_uploaded_file {
-    my $self = shift;
-    my ($file) = @_;
-
-    my $uploaded_sources = $self->uploaded_sources();
-
-    my $return_str = '';
-    $return_str .= h1( { -align => 'center' }, "Editing $file" );
-    $return_str .= start_form(
-        -name => 'edit_upload_form',
-        -id   => 'edit_upload_form',
-    );
-
-    my $data = '';
-    if ( $uploaded_sources->url2path($file) ) {
-        my $fh = $uploaded_sources->open_file($file) or return;
-        $data = join '', expand(<$fh>);
-    }
-
-    my $buttons_str = reset( $self->tr('Undo') ) 
-        . '&nbsp;'
-        . button(
-        -name    => 'cancel_button',
-        -value   => $self->tr('CANCEL'),
-        -onClick => 'Controller.wipe_div("external_utility_div");'
-        )
-        . '&nbsp;'
-        . button(
-        -name    => 'accept_button',
-        -value   => $self->tr('ACCEPT_RETURN'),
-        -onClick => qq[Controller.commit_file_edit("$file");],
-        );
-
-    $return_str .= table(
-        { -width => '100%' },
-        TR( { -class => 'searchbody' },
-            td( $self->tr('Edit_instructions') ),
-        ),
-        TR( { -class => 'searchbody' },
-            td( a(  { -href => $self->annotation_help().'#format', -target => 'help' },
-                    b( '[' . $self->tr('Help_format') . ']' )
-                )
-            ),
-        ),
-        TR( { -class => 'searchtitle' }, th( $self->tr('Edit_title') ) ),
-        TR( th($buttons_str) ),
-        TR( { -class => 'searchbody' },
-            td( { -align => 'center' },
-                pre(textarea(
-                        -name  => 'a_data',
-                        -value => $data,
-                        -rows  => ANNOTATION_EDIT_ROWS,
-                        -cols  => ANNOTATION_EDIT_COLS,
-                        -wrap  => 'off',
-                        -style => "white-space : pre"
-                    )
-                )
-            )
-        ),
-        TR( { -class => 'searchtitle' }, th($buttons_str) )
-    );
-    $return_str .= hidden( -name => 'edited file', -value => $file );
-    $return_str .= end_form();
-    $return_str .= $self->render_bottom();
-    return $return_str;
-}
-
-#### a test button for the "new" way of uploading a data set ####
-sub test_new_track {
-    my $self = shift;
-    return button({-name     => 'Make a new track',
-		   -onClick  => 'Controller.new_test_track()'});
 }
 
 #### generate the fragment of HTML for printing out the examples

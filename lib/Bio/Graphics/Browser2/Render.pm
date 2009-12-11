@@ -706,14 +706,8 @@ sub render_login_section {
 sub render_upload_share_section {
     my $self = shift;
     return div($self->render_toggle_userdata_table,
-	       $self->render_toggle_import_table);
-
-#     if ($self->setting('activate userdata table')) {
-# 	return div($self->render_toggle_userdata_table,
-# 		   $self->render_toggle_import_table);
-#     } else {
-# 	return $self->render_toggle_external_table;
-#     }
+	       $self->render_toggle_import_table,
+	);
 }
 
 

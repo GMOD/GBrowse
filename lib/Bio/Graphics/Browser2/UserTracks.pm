@@ -205,6 +205,7 @@ sub import_url {
     my $conf = $self->track_conf($track_name);
     open my $f,">",$conf or croak "Couldn't open $conf: $!";
     print $f <<END;
+>>>>>>>>>>>>>> cut here <<<<<<<<<<<<
 [$track_name]
 remote feature = $url
 category = My Tracks:Remote Tracks

@@ -659,7 +659,7 @@ sub render_links {
       $debug_link,
       );
 
-  my $upload_tracks_panel = $self->setting('activate userdata table') ? 'userdata_table_panel': 'upload_tracks_panel';
+  my $upload_tracks_panel = 'userdata_table_panel';
 
   my @segment_showing_links =(
       a({-href=>'?action=bookmark'},'['.$self->tr('BOOKMARK').']'),
@@ -1332,7 +1332,6 @@ sub list_userdata {
 		div({-id=>"${random_id}_status"},i($status),
 		           a({-href    =>'javascript:void(0)',
 			      -onClick => 
-#				  'Controller.update_sections(new Array(userdata_table_id))'
 				  "Controller.monitor_upload('$random_id','$name')",
 			     },' [refresh]')
 		)
@@ -1356,7 +1355,7 @@ sub userdata_import {
     $html            .= div({-style=>'text-indent:10pt'},
 			   a({-href => "javascript:addAnUploadField('import_list_start','$url','$import_prompt','$remove_label','import')",
 			      -id   => 'import_adder',
-			     },b($import_label)));
+			     },b("[$import_label]")));
     return $html;
 }
 
@@ -1369,10 +1368,17 @@ sub userdata_upload {
 
     my $upload_label = $self->tr('UPLOAD_FILE');
     my $remove_label = $self->tr('REMOVE');
-    $html       .= p({-style=>'text-indent:10pt'},
-		       a({-href=>"javascript:addAnUploadField('upload_list_start','$url','$upload_label','$remove_label')",
+    my $new_label    = $self->tr('NEW_TRACK');
+    my $from_text    = $self->tr('FROM_TEXT');
+    my $from_file    = $self->tr('FROM_FILE');
+    $html         .= p({-style=>'margin-left:10pt;font-weight:bold'},
+		       'Add custom track(s):',
+		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',   '$remove_label', 'edit')"},
+			 "[$from_text]"),
+		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url','$upload_label','$remove_label' , 'upload')",
 			  -id=>'file_adder',
-			 },b($upload_label)));
+			 },"[$from_file]"));
+		       
 
     return $html;
 }

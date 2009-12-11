@@ -1,3 +1,7 @@
+1.998   * WARNING: WIG FILE UPLOADING NOT WORKING.
+	* New tabbed layout for browser, uploads & preferences.
+	* Background uploading working well; will now resume automatically if window is closed and reopened.
+	* Editing of uploaded files and config files now working properly.
 1.9971  * Fixed bugs that were preventing name searches from working across BAM databases.
 	* Fixed incorrect character sets returned from asynchronous calls.
 	* Implemented asynchronous upload of files.

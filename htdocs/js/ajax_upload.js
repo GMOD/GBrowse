@@ -207,16 +207,32 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field
     var paragraph   = new Element('p',{style:'text-indent:10pt'});
     form.update(paragraph);
     paragraph.insert('<b>'+upload_prompt+' </b>');
-    paragraph.insert(new Element('input',{type:'hidden', 
-                                          name:'action', 
-                                         value:(field_type=='upload'
-                                                ?'upload_file':'import_track')
-                                         }));
-    if (field_type=='upload')
-       paragraph.insert(new Element('input',{type:'file',   name:'file',   id:'upload_field'}));
-    else
-       paragraph.insert(new Element('input',{type:'text',   name:'url',    id:'import_field',
-                                             size:50}));
+
+    if (field_type=='upload') {
+       paragraph.insert(new Element('input',{type:'hidden', 
+                                             name:'action', 
+                                            value:'upload_file'}));
+       paragraph.insert(new Element('input',   {name:'file', id:'upload_field', type:'file'}));
+    }
+
+    else if (field_type=='edit') {
+       paragraph.insert(new Element('input',{type:'hidden', 
+                                             name:'action', 
+                                            value:'upload_file'}));
+       paragraph.insert(new Element('input',{type:'hidden', 
+                                             name:'name', 
+                                            value:upload_tag}));
+       paragraph.insert(new Element('textarea',{name:'data', id:'edit_field',
+       			    		        rows:20, cols:120, wrap:'off'})); 
+    }
+
+    else {
+       paragraph.insert(new Element('input',{type:'hidden', 
+                                             name:'action', 
+                                            value:'import_track'}));
+       paragraph.insert(new Element('input',   {name:'url',  id:'import_field',type:'text',
+                                                size:50}));
+    }
 
     paragraph.insert(new Element('input',{type:'submit', name:'submit', value:'Upload'}));
     paragraph.insert(new Element('input',{type:'hidden', name:'upload_id',value:upload_tag}));

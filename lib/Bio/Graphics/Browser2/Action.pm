@@ -433,7 +433,10 @@ sub ACTION_upload_file {
     my $self = shift;
     my $q    = shift;
 
-    my $fh = $q->param('file') or 
+    my $fh   = $q->param('file');
+    my $data = $q->param('data');
+
+    ($fh || $data) or 
 	return(200,'text/html',JSON::to_json({success=>0,
 					      error_msg=>'empty file'}
 	       ));
@@ -448,12 +451,15 @@ sub ACTION_upload_file {
 							      $render->state,
 							      $render->language);
 
-    my $name = File::Basename::basename($fh );
+    my $name = $fh ? File::Basename::basename($fh) : $q->param('name');
+    $name ||= 'New track definition';
+
     $state->{uploads}{$upload_id} = [$name,$$];
     $session->flush();
     $session->unlock();
     
-    my ($result,$msg,$tracks,$pid) = $usertracks->upload_file($name,$fh);
+    my ($result,$msg,$tracks,$pid) = $data ? $usertracks->upload_data($name,$data)
+                                           : $usertracks->upload_file($name,$fh);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};

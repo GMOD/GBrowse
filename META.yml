@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 1.9971
+version: 1.998
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -49,74 +49,91 @@ provides:
     file: lib/Bio/DB/GFF/SyntenyIO.pm
   Bio::DB::Tagger:
     file: lib/Bio/DB/Tagger.pm
+    version: 1.00
   Bio::DB::Tagger::Iterator:
     file: lib/Bio/DB/Tagger.pm
   Bio::DB::Tagger::Tag:
     file: lib/Bio/DB/Tagger/Tag.pm
   Bio::DB::Tagger::mysql:
     file: lib/Bio/DB/Tagger/mysql.pm
-  Bio::Graphics::Browser:
-    file: lib/Bio/Graphics/Browser.pm
-    version: 1.9971
-  Bio::Graphics::Browser::AuthorizedFeatureFile:
-    file: lib/Bio/Graphics/Browser/AuthorizedFeatureFile.pm
-  Bio::Graphics::Browser::CachedTrack:
-    file: lib/Bio/Graphics/Browser/CachedTrack.pm
-  Bio::Graphics::Browser::DataBase:
-    file: lib/Bio/Graphics/Browser/DataBase.pm
-  Bio::Graphics::Browser::DataSource:
-    file: lib/Bio/Graphics/Browser/DataSource.pm
-  Bio::Graphics::Browser::GFFPrinter:
-    file: lib/Bio/Graphics/Browser/GFFPrinter.pm
-  Bio::Graphics::Browser::GFFhelper:
-    file: lib/Bio/Graphics/Browser/GFFhelper.pm
-  Bio::Graphics::Browser::I18n:
-    file: lib/Bio/Graphics/Browser/I18n.pm
-  Bio::Graphics::Browser::Markup:
-    file: lib/Bio/Graphics/Browser/Markup.pm
-  Bio::Graphics::Browser::MetaSegment:
-    file: lib/Bio/Graphics/Browser/RegionSearch.pm
-  Bio::Graphics::Browser::MetaSegment::Iterator:
-    file: lib/Bio/Graphics/Browser/RegionSearch.pm
-  Bio::Graphics::Browser::OptionPick:
-    file: lib/Bio/Graphics/Browser/OptionPick.pm
-  Bio::Graphics::Browser::PadAlignment:
-    file: lib/Bio/Graphics/Browser/PadAlignment.pm
-  Bio::Graphics::Browser::Plugin:
-    file: lib/Bio/Graphics/Browser/Plugin.pm
+  Bio::Graphics::Browser2:
+    file: lib/Bio/Graphics/Browser2.pm
+    version: 1.998
+  Bio::Graphics::Browser2::Action:
+    file: lib/Bio/Graphics/Browser2/Action.pm
+  Bio::Graphics::Browser2::AuthorizedFeatureFile:
+    file: lib/Bio/Graphics/Browser2/AuthorizedFeatureFile.pm
+  Bio::Graphics::Browser2::CAlign:
+    file: lib/Bio/Graphics/Browser2/CAlign.pm
+  Bio::Graphics::Browser2::CachedTrack:
+    file: lib/Bio/Graphics/Browser2/CachedTrack.pm
+  Bio::Graphics::Browser2::DataBase:
+    file: lib/Bio/Graphics/Browser2/DataBase.pm
+  Bio::Graphics::Browser2::DataLoader:
+    file: lib/Bio/Graphics/Browser2/DataLoader.pm
+  Bio::Graphics::Browser2::DataLoader::bam:
+    file: lib/Bio/Graphics/Browser2/DataLoader/bam.pm
+  Bio::Graphics::Browser2::DataLoader::featurefile:
+    file: lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
+  Bio::Graphics::Browser2::DataLoader::generic:
+    file: lib/Bio/Graphics/Browser2/DataLoader/generic.pm
+  Bio::Graphics::Browser2::DataLoader::gff3:
+    file: lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
+  Bio::Graphics::Browser2::DataSource:
+    file: lib/Bio/Graphics/Browser2/DataSource.pm
+  Bio::Graphics::Browser2::GFFPrinter:
+    file: lib/Bio/Graphics/Browser2/GFFPrinter.pm
+  Bio::Graphics::Browser2::GFFhelper:
+    file: lib/Bio/Graphics/Browser2/GFFhelper.pm
+  Bio::Graphics::Browser2::I18n:
+    file: lib/Bio/Graphics/Browser2/I18n.pm
+  Bio::Graphics::Browser2::Markup:
+    file: lib/Bio/Graphics/Browser2/Markup.pm
+  Bio::Graphics::Browser2::MetaSegment:
+    file: lib/Bio/Graphics/Browser2/RegionSearch.pm
+  Bio::Graphics::Browser2::MetaSegment::Iterator:
+    file: lib/Bio/Graphics/Browser2/RegionSearch.pm
+  Bio::Graphics::Browser2::OptionPick:
+    file: lib/Bio/Graphics/Browser2/OptionPick.pm
+  Bio::Graphics::Browser2::PadAlignment:
+    file: lib/Bio/Graphics/Browser2/PadAlignment.pm
+  Bio::Graphics::Browser2::Plugin:
+    file: lib/Bio/Graphics/Browser2/Plugin.pm
     version: 0.20
-  Bio::Graphics::Browser::PluginSet:
-    file: lib/Bio/Graphics/Browser/PluginSet.pm
-  Bio::Graphics::Browser::Realign:
-    file: lib/Bio/Graphics/Browser/Realign.pm
-  Bio::Graphics::Browser::Region:
-    file: lib/Bio/Graphics/Browser/Region.pm
-  Bio::Graphics::Browser::RegionSearch:
-    file: lib/Bio/Graphics/Browser/RegionSearch.pm
-  Bio::Graphics::Browser::RemoteSet:
-    file: lib/Bio/Graphics/Browser/RemoteSet.pm
-  Bio::Graphics::Browser::Render:
-    file: lib/Bio/Graphics/Browser/Render.pm
-  Bio::Graphics::Browser::Render::HTML:
-    file: lib/Bio/Graphics/Browser/Render/HTML.pm
-  Bio::Graphics::Browser::Render::Slave:
-    file: lib/Bio/Graphics/Browser/Render/Slave.pm
-  Bio::Graphics::Browser::Render::Slave::Status:
-    file: lib/Bio/Graphics/Browser/Render/Slave/Status.pm
-  Bio::Graphics::Browser::RenderPanels:
-    file: lib/Bio/Graphics/Browser/RenderPanels.pm
-  Bio::Graphics::Browser::Session:
-    file: lib/Bio/Graphics/Browser/Session.pm
-  Bio::Graphics::Browser::Shellwords:
-    file: lib/Bio/Graphics/Browser/Shellwords.pm
-  Bio::Graphics::Browser::UploadSet:
-    file: lib/Bio/Graphics/Browser/UploadSet.pm
-  Bio::Graphics::Browser::UserData:
-    file: lib/Bio/Graphics/Browser/UserData.pm
-  Bio::Graphics::Browser::UserTracks:
-    file: lib/Bio/Graphics/Browser/UserTracks.pm
-  Bio::Graphics::Browser::Util:
-    file: lib/Bio/Graphics/Browser/Util.pm
+  Bio::Graphics::Browser2::PluginSet:
+    file: lib/Bio/Graphics/Browser2/PluginSet.pm
+  Bio::Graphics::Browser2::Realign:
+    file: lib/Bio/Graphics/Browser2/Realign.pm
+  Bio::Graphics::Browser2::Region:
+    file: lib/Bio/Graphics/Browser2/Region.pm
+  Bio::Graphics::Browser2::RegionSearch:
+    file: lib/Bio/Graphics/Browser2/RegionSearch.pm
+  Bio::Graphics::Browser2::RemoteSet:
+    file: lib/Bio/Graphics/Browser2/RemoteSet.pm
+  Bio::Graphics::Browser2::Render:
+    file: lib/Bio/Graphics/Browser2/Render.pm
+  Bio::Graphics::Browser2::Render::HTML:
+    file: lib/Bio/Graphics/Browser2/Render/HTML.pm
+  Bio::Graphics::Browser2::Render::Slave:
+    file: lib/Bio/Graphics/Browser2/Render/Slave.pm
+  Bio::Graphics::Browser2::Render::Slave::Status:
+    file: lib/Bio/Graphics/Browser2/Render/Slave/Status.pm
+  Bio::Graphics::Browser2::RenderPanels:
+    file: lib/Bio/Graphics/Browser2/RenderPanels.pm
+  Bio::Graphics::Browser2::Session:
+    file: lib/Bio/Graphics/Browser2/Session.pm
+  Bio::Graphics::Browser2::Shellwords:
+    file: lib/Bio/Graphics/Browser2/Shellwords.pm
+  Bio::Graphics::Browser2::UploadSet:
+    file: lib/Bio/Graphics/Browser2/UploadSet.pm
+  Bio::Graphics::Browser2::UserConf:
+    file: lib/Bio/Graphics/Browser2/UserTracks.pm
+  Bio::Graphics::Browser2::UserData:
+    file: lib/Bio/Graphics/Browser2/UserData.pm
+  Bio::Graphics::Browser2::UserTracks:
+    file: lib/Bio/Graphics/Browser2/UserTracks.pm
+  Bio::Graphics::Browser2::Util:
+    file: lib/Bio/Graphics/Browser2/Util.pm
   Bio::Graphics::GBrowseFeature:
     file: lib/Bio/Graphics/GBrowseFeature.pm
   Bio::Graphics::Karyotype:
@@ -124,9 +141,9 @@ provides:
   CGI::Toggle:
     file: lib/CGI/Toggle.pm
   FakeHomol:
-    file: lib/Bio/Graphics/Browser/GFFhelper.pm
+    file: lib/Bio/Graphics/Browser2/GFFhelper.pm
   LRUCache:
-    file: lib/Bio/Graphics/Browser/DataBase.pm
+    file: lib/Bio/Graphics/Browser2/DataBase.pm
 generated_by: Module::Build version 0.3
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

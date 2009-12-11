@@ -225,9 +225,15 @@ END
 
    UPLOAD_TITLE=> 'Upload your own data',
 
-   UPLOAD_FILE => 'Upload a track',
+   UPLOAD_FILE => 'Upload a track file',
 
-   IMPORT_TRACK => 'Import a track',
+   IMPORT_TRACK => 'Import a track URL',
+
+   NEW_TRACK    => 'Create a new track',
+
+   FROM_TEXT    => 'From text',
+
+   FROM_FILE    => 'From a file',
 
    REMOVE       => 'Remove',
 

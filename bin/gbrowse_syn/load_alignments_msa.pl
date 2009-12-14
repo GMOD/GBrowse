@@ -1,5 +1,7 @@
 #!/usr/bin/perl -w
 # $Id: load_alignments_msa.pl,v 1.1.2.2 2009-07-19 09:15:43 sheldon_mckay Exp $
+# This script will load the gbrowse_syn alignment database directly from a
+# multiple sequence alignment file.
 
 use strict;
 use Bio::AlignIO;
@@ -8,11 +10,14 @@ use Getopt::Long;
 use DBI;
 use Bio::DB::GFF::Util::Binning 'bin';
 
+use Data::Dumper;
+
 use constant MINBIN   => 1000;
 use constant FORMAT   => 'clustalw';
 use constant VERBOSE  => 0;
+use constant MAPRES   => 100;
 
-use vars qw/$format $tempfile $outfh $user $pass $dsn $hit_idx $aln_idx $verbose $nomap/;
+use vars qw/$format $create $user $pass $dsn $aln_idx $verbose $nomap $mapres $hit_idx $pidx %map/;
 
 $| = 1;
 GetOptions(
@@ -20,16 +25,19 @@ GetOptions(
            'user=s'      => \$user,
 	   'pass=s'      => \$pass,
 	   'dsn=s'       => \$dsn,
+           'map=i'       => \$mapres,
 	   'verbose'     => \$verbose,
-	   'nomap'       => \$nomap     
+	   'nomap'       => \$nomap,
+	   'create'      => \$create
 	   );
 
-my $usage = "Usage: load_alignments_msa.pl -u username -p password -d database [-f format, -v, -n] file1, file2 ... filen\n\n";
+my $usage = "Usage: load_alignments_msa.pl -u username -p password -d database [-f format, -m map_resolution, -v, -n, -c] file1, file2 ... filen\n\n";
 
 $dsn     || die $usage;
 $user    || die $usage;
 $format  ||= FORMAT;
 $verbose ||= VERBOSE;
+$mapres  ||= MAPRES;
 
 my ($dbh,$sth_hit,$sth_map) = prepare_database($dsn,$user,$pass);
 
@@ -39,23 +47,22 @@ while (my $infile = shift) {
 				   -format => $format);
 
   while (my $aln = $alignIO->next_aln) {
-    print "Processing alignment " . ++$aln_idx . "\n" if $verbose; 
+    my $len = $aln->length;
+    $pidx = 0;
+    print "Processing Multiple Sequence Alignment " . ++$aln_idx . " (length $len)\n" if $verbose; 
     next if $aln->num_sequences < 2;
     my %seq;
+    %map = ();
     my $map = {};
     for my $seq ($aln->each_seq) {
       my $seqid = $seq->id;
       my ($species,$ref,$strand) = check_name_format($seqid,$seq);
       next if $seq->seq =~ /^-+$/;
+      # We have to tell the sequence object what its strand is
+      $seq->strand($strand eq '-' ? -1 : 1);
       $seq{$species} = [$ref, $seq->display_name, $seq->start, $seq->end, $strand, $seq->seq, $seq]; 
     }
     
-    unless ($nomap) {
-      print "Mapping coordinates for alignment $aln_idx... " if $verbose;
-      map_coords($seq{$_},$map) for keys %seq;
-      print "Done!\n" if $verbose;
-    }
-
     # make all pairwise hits and grid coordinates
     my @species = keys %seq;
     
@@ -63,93 +70,89 @@ while (my $infile = shift) {
       my ($s1,$s2) = @$p;
       my $array1 = $seq{$s1};
       my $array2 = $seq{$s2};
+      
+      my $seq1 = $$array1[6];
+      my $seq2 = $$array2[6];
 
       unless ($nomap) {
-	$array1->[6] = make_map($array1,$array2,$map);
-	$array2->[6] = make_map($array2,$array1,$map);
+	$array1->[7] = make_map($seq1,$seq2,$map);
+	$array2->[7] = make_map($seq2,$seq1,$map);
       }
+
       make_hit($s1 => $array1, $s2 => $array2);
     }
   }
 }  
 
+# Make coordinate maps at the specified resolution
 sub make_map {
   my ($s1,$s2,$map) = @_;
   $s1 && $s2 || return {};
-  my $seq1 = $s1->[1];
-  my $seq2 = $s2->[1];
-  my $coord = nearest(100,$s1->[2]);
-  $coord += 100 if $coord < $s1->[2];
+  unless (UNIVERSAL::can($s1,'isa')) {
+    warn "WTF? $s1 $s2\n" and next;
+  }
+  
+  column_to_residue_number($s1,$s2);
+  my $coord = nearest($mapres,$s1->start);
+  $coord += $mapres if $coord < $s1->start;
   my @map;
   
-  my $reverse = $s2->[4] ne $s1->[4];
-  my $strand2 = $reverse ? 'minus' : 'plus';
-  
-  while(1) {
-    last if $coord >= $s1->[3];
-    my $col = $map->{$seq1}{pmap}{plus}{$coord};
-    my $coord2  = $map->{$seq2}{cmap}{$col}{$strand2};
+  my $reverse = $s1->strand ne $s2->strand;
+ 
+  # have to get the column number from residue position, then
+  # the matching residue num from the column number 
+  while ($coord < $s1->end) {
+    my $col     = column_from_residue_number($s1,$coord);
+    my $coord2  = residue_from_column_number($s2,$col) if $col;
     push @map, ($coord,$coord2) if $coord2;
-    $coord += 100;
+    $coord += $mapres;
   }
   return {@map};
 }
 
-sub map_coords {
-  my ($s,$map) = @_;
-  my $forward_offset = $s->[2]-1;
-  my $reverse_offset = $s->[3];
-  my @chars = split '', $s->[5];
-  my $cmap  = {};
-  my $pmap = {};
-  
-  for my $col (1..@chars) {
-    # forward strand map
-    my $gap = $chars[$col-1] eq '-';
-    $forward_offset++ unless $gap;
-    $cmap->{$col}->{plus} = $forward_offset;
-    push @{$pmap->{plus}->{$forward_offset}}, $col;
-    # reverse strand map
-    $reverse_offset-- unless $gap;
-    $cmap->{$col}->{minus} = $reverse_offset;
-    push @{$pmap->{minus}->{$reverse_offset}}, $col;
+sub column_to_residue_number {
+  for my $seq (@_) {
+    my $str = $seq->seq;
+    my $id  = $seq->id;
+    next if $map{$id};
+    my $rev = $seq->strand < 0;
+    my $res = $rev ? $seq->end - 1 : $seq->start + 1;
+    my @cols = split '', $str;
+    
+    my $pos;
+    my $col;
+    for my $chr (@cols) {
+      unless ($chr eq '-') {
+	$rev ? $res-- : $res++;
+      }
+
+      $col++;
+      $map{$id}{col}{$col} = $res;
+      $map{$id}{res}{$res} ||= $col;
+    }
   }
-  
-  # position maps to middle of gap if gaps are present
-  for my $coord (keys %{$pmap->{minus}}) {
-      my $ary = $pmap->{minus}->{$coord};
-      if (@$ary == 1) {
-	  $ary = @$ary[0];
-      }
-      else {
-	  # round down mean
-	  $ary = int((sum(@$ary)/@$ary));
-      }
-      $pmap->{minus}->{$coord} = $ary;
-  }
-  for my $coord (keys %{$pmap->{plus}}) {
-      my $ary = $pmap->{plus}->{$coord};
-      if (@$ary == 1) {
-          $ary = @$ary[0];
-      }
-      else {
-          # round up mean
-          $ary = int((sum(@$ary)/@$ary)+0.5);
-      }
-      $pmap->{plus}->{$coord} = $ary;
-  }
-  $map->{$s->[1]}{cmap} = $cmap;    
-  $map->{$s->[1]}{pmap} = $pmap;
 }
 
+sub column_from_residue_number {
+  my ($seq, $res) = @_;
+  my $id = $seq->id;
+  return $map{$id}{res}{$res};  
+}
 
+sub residue_from_column_number {
+  my ($seq, $col) = @_;
+  my $id = $seq->id;
+  print"WTF? $seq $id $col\n" unless $id &&$col;
+  return $map{$id}{col}{$col};
+}
 
 sub make_hit {
   my ($s1,$aln1,$s2,$aln2,$fh) = @_;
-  die "wrong number of keys @$aln1" unless @$aln1 == 7;
-  die "wrong number of keys @$aln2" unless @$aln2 == 7;
-  my $map1 = $aln1->[6] || {};
-  my $map2 = $aln2->[6] || {};
+  my $rightnum = $nomap ? 7 : 8;
+  die "wrong number of keys @$aln1" unless @$aln1 == $rightnum;
+  die "wrong number of keys @$aln2" unless @$aln2 == $rightnum;
+  my $map1 = $aln1->[7] || {};
+  my $map2 = $aln2->[7] || {};
 
   # not using these yet
   my ($cigar1,$cigar2) = qw/. ./;
@@ -220,11 +223,13 @@ sub prepare_database {
   $dsn = "dbi:mysql:$dsn" unless $dsn =~ /^dbi/;
 
   my $dbh = DBI->connect($dsn, $user, $pass) or die DBI->errstr;
-  $dbh->do('drop table if exists alignments') or die DBI->errstr;
-  $dbh->do('drop table if exists map') or die DBI->errstr;
 
-  $dbh->do(<<END) or die DBI->errstr;
-create table alignments (
+  if ($create) {
+    $dbh->do('drop table if exists alignments') or die DBI->errstr;
+    $dbh->do('drop table if exists map') or die DBI->errstr;
+  
+    $dbh->do(<<"    END;") or die DBI->errstr;
+    create table alignments (
 			 hit_id    int not null auto_increment,
 			 hit_name  varchar(100) not null,
 			 src1      varchar(100) not null,
@@ -243,12 +248,11 @@ create table alignments (
 			 primary key(hit_id),
 			 index(src1,ref1,bin,start1,end1)
 			 )
-END
-;
+    END;
 
-  $dbh->do(<<END) or die DBI->errstr;
-create table map (
-		  map_id int not null auto_increment,
+    $dbh->do(<<"    END;") or die DBI->errstr;
+    create table map (
+	  	  map_id int not null auto_increment,
 		  hit_name  varchar(100) not null,
                   src1 varchar(100),
 		  pos1 int not null,
@@ -256,11 +260,12 @@ create table map (
 		  primary key(map_id),
 		  index(hit_name)
 		  )
-END
-;
+    END;
 
-  $dbh->do('alter table alignments disable keys');
-  $dbh->do('alter table map');
+    $dbh->do('alter table alignments disable keys');
+    $dbh->do('alter table map');
+  }
+  
   my $hit_insert = $dbh->prepare(<<END) or die $dbh->errstr;
 insert into alignments (hit_name,src1,ref1,start1,end1,strand1,seq1,bin,src2,ref2,start2,end2,strand2,seq2) 
 values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -318,7 +323,7 @@ sub load_alignment {
     }
   }
 
-  print STDERR "Processed pair-wise alignment $hit_idx\n" if $verbose;
+  print STDERR "Processed pair-wise alignment ".++$pidx."\r" if $verbose;
 
 }
 

@@ -543,7 +543,6 @@ sub ACTION_modifyUserData {
     my $userdata = $self->render->user_tracks;
     my $state    = $self->state;
 
-    warn 'uploads = ',join ' ',keys %{$state->{uploads}};
     $state->{uploads}{$upload_id} = [$ftype,$$];
 
     if ($ftype eq 'conf') {

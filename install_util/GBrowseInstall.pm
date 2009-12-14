@@ -347,8 +347,8 @@ sub ACTION_install {
 	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->cgibin);
     $self->install_path->{'etc'} 
         ||= File::Spec->catfile($prefix,GBrowseGuessDirectories->etc);
-    $self->install_path->{'database'} 
-        ||= $self->config_data('database')
+    $self->install_path->{'databases'} 
+        ||= $self->config_data('databases')
 	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->databases);
     
     $self->SUPER::ACTION_install();
@@ -377,7 +377,7 @@ sub ACTION_install {
     }
     chown $>,-1,$self->install_path->{htdocs};
 
-    my $databases = $self->install_path->{'database'};
+    my $databases = $self->install_path->{'databases'};
     chown $uid,$gid,glob(File::Spec->catfile($databases,'').'*');
 
     chmod 0755,File::Spec->catfile($self->install_path->{'etc'},'init.d','gbrowse-slave');
@@ -412,7 +412,7 @@ sub fix_selinux {
     my $htdocs = $self->config_data('htdocs');
     my $conf   = $self->config_data('conf');
     my $tmp    = $self->config_data('tmp');
-    my $db     = $self->config_data('database');
+    my $db     = $self->config_data('databases');
     system "/usr/bin/chcon -R -t httpd_sys_content_t $conf";
     system "/usr/bin/chcon -R -t httpd_sys_content_t $htdocs";
     system "/usr/bin/chcon -R -t httpd_sys_content_rw_t $tmp";

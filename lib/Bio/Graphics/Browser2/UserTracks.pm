@@ -7,6 +7,7 @@ use Bio::Graphics::Browser2::DataLoader;
 use File::Spec;
 use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
+use IO::File;
 use IO::String;
 use Carp 'croak';
 
@@ -233,8 +234,13 @@ sub upload_file {
     my $track_name = $self->trackname_from_url($file_name,!$overwrite);
 
     # guess the file type from the first non-blank line
-    my ($type,$lines)   = $self->guess_upload_type($fh);
+    my ($type,$lines)   = $self->guess_upload_type($file_name,$fh);
+    $lines            ||= [];
     my (@tracks,$fcgi);
+
+    if ($file_name =~ /\.(gz|Z|bz2)$/) {
+	$fh = $self->uncompress($fh,$1);
+    }
 
     my $result= eval {
 	local $SIG{TERM} = sub { die "cancelled" };
@@ -301,7 +307,7 @@ sub merge_conf {
     # read the rest
     while (<$fh>) {
 	if (/^\[/) {
-	    (my $stanza = $_) =~ s/\[(\w+?)_.+_(\d+)\]\s*\n/$1_$2/;
+	    (my $stanza = $_) =~ s/\[(\w+?)_.+_(\d+)(:\d+)?\]\s*\n/$1_$2$3/;
 	    if (my $body = $stanzas{$stanza}) {
 		$merged .= $_;
 		$merged .= "database = $database\n";
@@ -346,7 +352,16 @@ sub get_loader {
 
 sub guess_upload_type {
     my $self = shift;
-    my $fh   = shift;
+    my ($filename,$fh) = @_;
+
+    # first guess based on file names
+    return ('gff')          if $filename =~ /\.gff(\.(gz|bz2|Z))?$/i;
+    return ('gff3')         if $filename =~ /\.gff3(\.(gz|bz2|Z))?$/i;
+    return ('bed')          if $filename =~ /\.bed(\.(gz|bz2|Z))?$/i;
+    return ('wiggle')       if $filename =~ /\.wig(\.(gz|bz2|Z))?$/i;
+    return ('featurefile')  if $filename =~ /\.fff(\.(gz|bz2|Z))?$/i;
+    return ('bam')          if $filename =~ /\.bam(\.gz)?$/i;
+    return ('sam')          if $filename =~ /\.sam(\.gz)?$/i;
 
     my @lines;
     while (my $line = <$fh>) {
@@ -364,6 +379,32 @@ sub guess_upload_type {
 
     return;
 }
+
+sub uncompress {
+    my $self = shift;
+    my ($in_fh,$type) = @_;
+    my @exec =  $type eq 'gz' ? ('gunzip','-c')
+               :$type eq 'Z'  ? ('gunzip','-c')
+               :$type eq 'bz2'? ('bunzip2','-c')
+	       :();
+    @exec or die "Don't know how to uncompress files of type $type";
+
+    my $child = open(my $out_fh,"-|");
+    defined $child or die "Couldn't fork for pipe: $!";
+    return $out_fh if $child;
+
+    # we are in child now
+    my $unzip = IO::File->new("| @exec") or die "Can't open @exec: $!";
+    my $buffer;
+    while ((my $bytes = read($in_fh,$buffer,8192))>0) {
+	$unzip->print($buffer);
+    }
+    close $unzip;
+    exit 0;
+}
+
+
+
 
 package Bio::Graphics::Browser2::UserConf;
 
@@ -398,13 +439,12 @@ sub READLINE {
 	}
 	next unless $self->{seen_cut};
 	next if $line =~ /^\s*database/;
-	$line =~ s/\[(\w+?)_.+_(\d+)\]/[$1_$2]/;
+	$line =~ s/\[(\w+?)_.+_(\d+)(:\d+)?\]/[$1_$2$3]/;
 	return $line;
     }
     return;
 }
 
 sub CLOSE { close shift->{fh} } 
-
 
 1;

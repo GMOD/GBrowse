@@ -65,6 +65,12 @@ sub get_status {
     return $msg;
 }
 
+# the client depends on this status literally
+# BUG: this will interfere with i18n
+sub set_processing_complete {
+    shift->set_status('processing complete');
+}
+
 sub open_conf {
     my $self = shift;
     $self->{conf_fh} ||= IO::File->new($self->conf_path,">");
@@ -104,11 +110,11 @@ sub load {
 	}
 	$self->finish_load;
 	$self->close_conf;
-	$self->set_status("processing complete");
     };
     $self->flag_busy(0);
 
     die $@ if $@;
+    $self->set_processing_complete;
     return $self->tracks;
 }
 

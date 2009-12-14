@@ -5,14 +5,16 @@ use strict;
 use base 'Bio::Graphics::Browser2::DataLoader';
 use File::Basename 'basename','dirname';
 
-sub start_load {
-    my $self = shift;
+sub create_conf_file {
+    my $self     = shift;
+    my $bam_file = shift;
+
     my $conf = $self->conf_fh;
 
-    my $track_name = $self->track_name;
     my $data_path  = $self->data_path;
     my $loadid     = $self->loadid;
-    my $trackname  = $self->new_track_label;
+    my $tracklabel = $self->new_track_label;
+    my $filename   = $self->track_name;
 
     # find a fasta file to use
     my $fasta  = $self->get_fasta_file || '';
@@ -20,13 +22,13 @@ sub start_load {
     print $conf <<END;
 [$loadid:database]
 db_adaptor = Bio::DB::Sam
-db_args    = -bam    "$data_path/$track_name"
+db_args    = -bam    "$bam_file"
              -fasta  "$fasta"
 search options = none
 
 #>>>>>>>>>> cut here <<<<<<<<
 
-[$trackname:499]
+[$tracklabel:499]
 feature   = coverage:2000
 min_score = 0
 glyph     = wiggle_xyplot
@@ -35,9 +37,9 @@ height    = 50
 fgcolor   = blue
 bgcolor   = blue
 autoscale = local
-key       = $track_name
+key       = $filename
 
-[$trackname]
+[$tracklabel]
 feature       = match
 glyph         = segments
 draw_target   = 1
@@ -51,7 +53,7 @@ label          = sub {shift->display_name}
 category       = My Tracks:Uploaded Tracks
 label density = 50
 bump          = fast
-key           = $track_name
+key           = $filename
 
 
 END
@@ -103,7 +105,7 @@ sub load {
 
 	$self->finish_load;
 	$self->close_conf;
-	$self->set_status("processing complete");
+	$self->set_processing_complete;
     };
 
     $self->flag_busy(0);
@@ -119,7 +121,7 @@ sub finish_load {
     # copy in main level
     my $source  = File::Spec->catfile($self->sources_path,$self->track_name);
     my $dest    = File::Spec->catfile($self->data_path,$self->track_name);
-    $dest      =~ s/\.bam$//i; # sorting will add the .bam extension
+    $dest      =~ s/\.[bs]am$//i; # sorting will add the .bam extension
 
     $self->set_status('sorting BAM file');
     Bio::DB::Bam->sort_core(0,$source,$dest);
@@ -129,7 +131,8 @@ sub finish_load {
     $dest     .= '.bam';
     Bio::DB::Bam->index_build($dest);
 
-    $self->set_status('Ready')
+    $self->set_status('creating conf file');
+    $self->create_conf_file($dest);
 }
 
 1;

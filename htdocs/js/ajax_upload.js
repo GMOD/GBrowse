@@ -204,12 +204,12 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field
                                        enctype: 'multipart/form-data',
                                         method: 'post'
 				      });
-    var paragraph   = new Element('p',{style:'text-indent:10pt'});
+    var paragraph   = new Element('p');
     form.update(paragraph);
     paragraph.insert(new Element('a',
     			     {href:  help_link,
 			      target:'_new'
-			     }).update('<b>Help with the file format</b>'));
+			     }).update('<i>[Help with the file format]</i>'));
     paragraph.insert('<br><b>'+upload_prompt+' </b><br>');
 
     if (field_type=='upload') {

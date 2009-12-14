@@ -79,6 +79,8 @@ provides:
     file: lib/Bio/Graphics/Browser2/DataLoader/generic.pm
   Bio::Graphics::Browser2::DataLoader::gff3:
     file: lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
+  Bio::Graphics::Browser2::DataLoader::sam:
+    file: lib/Bio/Graphics/Browser2/DataLoader/sam.pm
   Bio::Graphics::Browser2::DataSource:
     file: lib/Bio/Graphics/Browser2/DataSource.pm
   Bio::Graphics::Browser2::GFFPrinter:
@@ -108,8 +110,6 @@ provides:
     file: lib/Bio/Graphics/Browser2/Region.pm
   Bio::Graphics::Browser2::RegionSearch:
     file: lib/Bio/Graphics/Browser2/RegionSearch.pm
-  Bio::Graphics::Browser2::RemoteSet:
-    file: lib/Bio/Graphics/Browser2/RemoteSet.pm
   Bio::Graphics::Browser2::Render:
     file: lib/Bio/Graphics/Browser2/Render.pm
   Bio::Graphics::Browser2::Render::HTML:
@@ -124,12 +124,8 @@ provides:
     file: lib/Bio/Graphics/Browser2/Session.pm
   Bio::Graphics::Browser2::Shellwords:
     file: lib/Bio/Graphics/Browser2/Shellwords.pm
-  Bio::Graphics::Browser2::UploadSet:
-    file: lib/Bio/Graphics/Browser2/UploadSet.pm
   Bio::Graphics::Browser2::UserConf:
     file: lib/Bio/Graphics/Browser2/UserTracks.pm
-  Bio::Graphics::Browser2::UserData:
-    file: lib/Bio/Graphics/Browser2/UserData.pm
   Bio::Graphics::Browser2::UserTracks:
     file: lib/Bio/Graphics/Browser2/UserTracks.pm
   Bio::Graphics::Browser2::Util:

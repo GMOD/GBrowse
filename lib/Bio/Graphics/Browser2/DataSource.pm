@@ -612,7 +612,7 @@ sub databases {
     return @dbs;
 }
 
-=item ($adaptor,@argv) = $dsn->db2args('db')
+=item ($adaptor,@argv) = $dsn->db2args('databasename')
 
 Given a database named by ['databasename':database], return its
 adaptor and arguments.

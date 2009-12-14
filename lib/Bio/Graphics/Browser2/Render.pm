@@ -631,8 +631,8 @@ sub render_body {
 
   my $output;
   $output .= $self->render_html_start($title);
+  $output .= $self->render_user_header;
   $output .= $self->render_actionmenu;
-
   $output .= $self->render_top($title,$features);
 
   my $main_page   .= $self->render_navbar($region->seg);

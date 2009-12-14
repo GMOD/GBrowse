@@ -258,6 +258,7 @@ sub upload_file {
     }
 
     my $msg = $@;
+    warn $msg if $msg;
     $self->delete_file($track_name) unless $result;
     return ($result,"$msg",\@tracks);
 }
@@ -358,7 +359,7 @@ sub guess_upload_type {
 	return ('bed',\@lines)         if $line =~ /^\w+\s+\d+\s+\d+/;
 	return ('sam',\@lines)         if $line =~ /^\@[A-Z]{2}/;
 	return ('sam',\@lines)         if $line =~ /^[^ \t\n\r]+\t[0-9]+\t[^ \t\n\r@=]+\t[0-9]+\t[0-9]+\t(?:[0-9]+[MIDNSHP])+|\*/;
-	return ('bam',\@lines)         if $line =~ /^BAM\001/;
+	return ('bam',\@lines)         if substr($line,0,6) eq "\x1f\x8b\x08\x04\x00\x00";
     }
 
     return;

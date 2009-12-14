@@ -58,9 +58,9 @@ install-stamp
 htdocs/js/balloon_modified.js
 htdocs/js/balloon_new.js
 ^docs/tutorial
-cgi-bin/gbrowse_img
 docs/developer_notes/old_makefile.pl
 docs/developer_notes/ubuntu_notes.txt
 dummy_form.html
+debug_alignment.pl
 htdocs/databases/
 track001.ctgA.1202327456.wig

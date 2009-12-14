@@ -23,6 +23,7 @@ cgi-bin/gbgff
 cgi-bin/gbrowse
 cgi-bin/gbrowse_details
 cgi-bin/gbrowse_gmap
+cgi-bin/gbrowse_img
 cgi-bin/gbrowse_login
 Changes
 conf/detail_select_menu.conf
@@ -502,6 +503,7 @@ lib/Bio/Graphics/Browser2/DataLoader/bam.pm
 lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
 lib/Bio/Graphics/Browser2/DataLoader/generic.pm
 lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
+lib/Bio/Graphics/Browser2/DataLoader/sam.pm
 lib/Bio/Graphics/Browser2/DataSource.pm
 lib/Bio/Graphics/Browser2/GFFhelper.pm
 lib/Bio/Graphics/Browser2/GFFPrinter.pm

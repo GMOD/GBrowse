@@ -35,7 +35,6 @@ sub render_top {
     my ($title,$features) = @_;
     my $err  =  $self->render_error_div;
     my $html = '';
-    $html   .=  $self->render_user_header;
 
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
@@ -108,8 +107,9 @@ sub render_bottom {
   my $self = shift;
   my $features = shift; # not used
   my $a   = $self->data_source->global_setting('footer');
-  my $val = (ref $a eq 'CODE' ? $a->(@_) : $a) || '';
-  return $a.end_html();
+  my $value = ref $a eq 'CODE' ? $a->(@_) : $a;
+  $value ||= '';
+  return $value.end_html();
 }
 
 sub render_navbar {

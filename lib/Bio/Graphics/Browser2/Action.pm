@@ -339,19 +339,6 @@ sub ACTION_authorize_login {
     return (200,'application/json',{id=>$id,authority=>$nonce});
 }
 
-# DEBUGGING METHOD
-sub ACTION_new_test_track {
-    my $self = shift;
-    my $q    = shift;
-
-    my $render   = $self->render;
-    my $userdata = Bio::Graphics::Browser2::UploadSet->new($render->data_source,
-							   $render->state,
-							   $render->language);
-    warn "Adding test track for ",$render->state->{uploadid}," path = ",($userdata->name_file('test'))[1];
-    return (204,'text/plain',undef);
-}
-
 sub ACTION_register_upload {
     my $self = shift;
     my $q    = shift;
@@ -390,12 +377,14 @@ sub ACTION_upload_file {
     my $name = $fh ? File::Basename::basename($fh) : $q->param('name');
     $name ||= 'New track definition';
 
+    my $content_type = $fh ? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain';
+
     $state->{uploads}{$upload_id} = [$name,$$];
     $session->flush();
     $session->unlock();
     
-    my ($result,$msg,$tracks,$pid) = $data ? $usertracks->upload_data($name,$data)
-                                           : $usertracks->upload_file($name,$fh);
+    my ($result,$msg,$tracks,$pid) = $data ? $usertracks->upload_data($name, $data,$content_type)
+                                           : $usertracks->upload_file($name, $fh,  $content_type);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
@@ -548,7 +537,7 @@ sub ACTION_modifyUserData {
     if ($ftype eq 'conf') {
 	$userdata->merge_conf($track,$text);
     } else {
-	$userdata->upload_data($track,$text,1);
+	$userdata->upload_data($track,$text,'text/plain',1); # overwrite
     }
     delete $state->{uploads}{$upload_id};
     my @tracks     = $userdata->labels($track);

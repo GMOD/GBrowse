@@ -244,15 +244,6 @@ sub make_requests {
         my @track_args = $self->create_track_args( $label, $args );
 	my (@filter_args,@featurefile_args,@segment_args);
 
-	# it should be this way, but then we need to draw the selection rectangle
-	# on top!
-#	my $segment = $label =~ /overview/ ? $self->segment
-#                     :$label =~ /region/   ? $self->region_segment
-#                     :$self->segment;
-#	@segment_args = ($segment->seq_id,$segment->start,$segment->end);
-
-	# warn "segment_args = @segment_args";
-
 
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
@@ -285,14 +276,16 @@ sub make_requests {
 	}
 
 	warn "[$$] creating CachedTrack for $label, nocache = $args->{nocache}" if DEBUG;
+	my $cache_time = $args->{nocache}    ? -1
+	                :$settings->{cache}  ? $source->cache_time
+                        : -1;
+
         my $cache_object = Bio::Graphics::Browser2::CachedTrack->new(
             -cache_base => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
             -extra_args => [ @cache_extra, @filter_args, @featurefile_args, $label ],
-	    -cache_time => $settings->{cache} && !$args->{nocache}
-			    ? $source->cache_time 
-			    : 0
+	    -cache_time => $cache_time
         );
         $d{$label} = $cache_object;
     }
@@ -1173,6 +1166,7 @@ sub run_local_requests {
              : ();
         my $panel_args = $requests->{$label}->panel_args;
 
+	
         my $panel
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
 

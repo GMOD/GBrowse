@@ -48,11 +48,17 @@ END
 
    BOOKMARK => 'Bookmark this',
 
-   IMAGE_LINK => 'Link to Image',
+   EXPORT => 'Export as...',
 
-   SVG_LINK   => 'High-res Image',
+   IMAGE_LINK => '...low-res image',
 
-   PDF_LINK   => 'Download PDF',
+   SVG_LINK   => '...high-res image',
+
+   PDF_LINK   => '...PDF',
+
+   DUMP_GFF   => '...GFF annotation table',
+
+   DUMP_SEQ   => '...FASTA sequence file',
 
    SVG_DESCRIPTION => <<END,
 <p>
@@ -127,7 +133,7 @@ END
 
    SCROLL   => 'Scroll/Zoom',
 
-   RESET    => 'Reset',
+   RESET    => 'Reset to defaults',
 
    FLIP     => 'Flip',
 
@@ -140,6 +146,10 @@ END
    DISPLAY_SETTINGS => 'Display Settings',
 
    TRACKS   => 'Tracks',
+
+   TRACK_SELECT   => 'Search for Specific Tracks',
+
+   TRACK_NAME     => 'Track name',
 
    EXTERNAL_TRACKS => '<i>External tracks italicized</i>',
 
@@ -164,6 +174,8 @@ END
    CONFIGURE   => 'Configure...',
 
    CONFIGURE_TRACKS   => 'Configure tracks...',
+
+   SELECT_SUBTRACKS   => 'Click to select subtracks...',
 
    EDIT       => 'Edit File...',
 
@@ -193,6 +205,8 @@ END
 
    CLEAR_HIGHLIGHTING => 'Clear highlighting',
 
+   CLEAR       => 'Clear',
+
    UPDATE      => 'Update',
 
    UPDATE_TRACKS => 'Update Tracks',
@@ -205,9 +219,23 @@ END
 
    UPLOAD_TRACKS=>'Add custom tracks',
 
+   USERDATA_TABLE=>'Upload and share tracks',
+
+   USERIMPORT_TABLE=>'Import tracks',
+
    UPLOAD_TITLE=> 'Upload your own data',
 
-   UPLOAD_FILE => 'Upload a file',
+   UPLOAD_FILE => 'Upload a track file',
+
+   IMPORT_TRACK => 'Import a track URL',
+
+   NEW_TRACK    => 'Create a new track',
+
+   FROM_TEXT    => 'From text',
+
+   FROM_FILE    => 'From a file',
+
+   REMOVE       => 'Remove',
 
    KEY_POSITION => 'Key position',
 
@@ -236,6 +264,8 @@ END
    REGIONS_TO_HIGHLIGHT_HINT  => 'Hint: use region@color to select the color, as in \'Chr1:10000..20000@lightblue\'',
 
    NO_TRACKS    => '*none*',
+
+   FEATURES_CLIPPED => 'Showing %s of %s features',
 
    FILE_INFO    => 'Last modified %s.  Annotated landmarks: %s',
 
@@ -310,7 +340,7 @@ END
 
    FORMAT => 'Format',
 
-   LIMIT  => 'Limit',
+   LIMIT  => 'Max. features to show',
 
    ADJUST_ORDER => 'Adjust Order',
 
@@ -363,8 +393,6 @@ END
    ACTIVATE           => 'Please activate this track in order to view its information.',
 
    NO_EXTERNAL        => 'No external features loaded.',
-
-   NO_CITATION        => 'No additional information available.',
 
    #--------------
    # PLUGIN PAGES
@@ -420,6 +448,8 @@ END
 
  LINEWIDTH        => 'Line width',
 
+ STRANDED         => 'Show strand',
+
  DEFAULT          => '(default)',
 
  DYNAMIC_VALUE    => 'Dynamically calculated',
@@ -436,13 +466,21 @@ END
 
  OPTIONS_UPDATED   => 'A new site configuration is in effect; all page settings have been reset to their defaults',
 
- SEND_TO_GALAXY    => 'Send to Galaxy',
+ SEND_TO_GALAXY    => 'Export to Galaxy',
 
  NO_DAS            => 'Installation error: Bio::Das module must be installed for DAS URLs to work. Please inform this site\'s webmaster.',
 
  SHOW_OR_HIDE_TRACK => '<b>Show or hide this track</b>',
 
- CONFIGURE_THIS_TRACK   => '<b>Click to change track settings.</b>',
+ KILL_THIS_TRACK    => '<b>Turn off this track.</b>',
+
+ CONFIGURE_THIS_TRACK   => '<b class="error">Configure this track.</b>',
+
+ SUBTRACKS_SHOWN    => 'This track contains selectable subtracks:',
+
+ SHOW_SUBTRACKS     => '<b>Select subtracks</b>',
+
+ SHOWING_SUBTRACKS  => '(<i>Showing %d of %d subtracks</i>)',
 
  SHARE_THIS_TRACK   => '<b>Share this track</b>',
 
@@ -484,5 +522,9 @@ Annotation System (DAS)</a> first copy the URL below, then go to the
 other browser and enter it as a new DAS source. <i>Quantitative tracks
 ("wiggle" files) and uploaded files can not be shared using DAS.</i>
 END
+
+    MAIN_PAGE          => 'Browser',
+    CUSTOM_TRACKS_PAGE => 'Upload and Share Tracks',
+    SETTINGS_PAGE      => 'Preferences',
 
 };

@@ -573,19 +573,6 @@ sub render_instructions {
   : '';
 }
 
-# sub render_actionmenu {
-#     my $self  = shift;
-#     my $login = $self->setting('login script') ? $self->render_login : '';
-#     my $file_menu = br([qw(one two three four)]);
-#     return div({-id=>'actionmenu',
-# 		-style=>'background-color:lightgray'},
-# 	       $login,
-# 	       span({-class=>'menutitle',
-# 		     -onMouseDown=>"GBox.showTooltip(event,'$file_menu',0)"
-# 		    },'File'),
-# 	       span({-class=>'menutitle'},'Help'));
-# }
-
 sub render_actionmenu {
     my $self  = shift;
     my $settings = $self->state;
@@ -625,7 +612,7 @@ sub render_actionmenu {
 		       li({-class=>'dir'},'About',
 			  ul(li($help_link))),
 	);
-    return $file_menu.$login.br({-clear=>'all'});
+    return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));
 }
 
 # for the subset of plugins that are named in the 'quicklink plugins' option, create
@@ -1157,10 +1144,10 @@ sub list_userdata {
 
 	div({-style=>"background-color:$color"},
 	    div({-id=>"${name}_stat"},''),
-	    img({-src=>$share,
-		 -onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
-		 -onClick     => 'GBubble.showTooltip(event,"Sorry, not yet implemented",0)',
-		}),
+#	    img({-src=>$share,
+#		 -onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
+#		 -onClick     => 'GBubble.showTooltip(event,"Sorry, not yet implemented",0)',
+#		}),
 	    img({-src     => $delete,
 		 -style   => 'cursor:pointer',
 		 -onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',

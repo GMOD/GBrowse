@@ -20,7 +20,7 @@ use CGI 'redirect','url';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 my %CONFIG_CACHE;
-our $VERSION = 1.998;
+our $VERSION = 1.9982;
 
 sub open_globals {
     my $self = shift;

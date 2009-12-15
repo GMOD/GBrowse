@@ -23,7 +23,6 @@ Method structure
 
 //  Element Names
 var track_listing_id        = 'tracks_panel'; 
-var external_listing_id     = 'upload_tracks_panel'; 
 var overview_container_id   = 'overview_panels'; 
 var region_container_id     = 'region_panels'; 
 var detail_container_id     = 'detail_panels'; 
@@ -467,7 +466,7 @@ var GBrowseController = Class.create({
          parameters: {
            action:          'rerender_track',
            track_id:        gbtrack.track_id,
-	   nocache:         nocache
+	   nocache:         nocache ? 1 : 0
          },
          onSuccess: function(transport) {
            var results    = transport.responseJSON;
@@ -881,11 +880,10 @@ var GBrowseController = Class.create({
 	      startAjaxUpload(upload_id);
 	     },
          onSuccess:   function (transport) {
-//	 	          if ($(editElement) != null) $(editElement).innerHTML = '';
 	 	          if ($(editElement) != null) $(editElement).remove();
 			  var r = transport.responseJSON;
 			  r.tracks.each(function(t) {
-			  	      Controller.rerender_track(t);
+			  	      Controller.rerender_track(t,true,true);
 				      });
 		          var updater = Ajax_Status_Updater.get(upload_id);
 			  if (updater != null) updater.stop();

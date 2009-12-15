@@ -928,11 +928,6 @@ sub render_toggle_userdata_table {
   croak "render_toggle_userdata_table() should not be called in parent class";
 }
 
-sub render_external_table {
-  my $self = shift;
-  croak "render_external_table() should not be called in parent class";
-}
-
 sub render_bottom {
   my $self = shift;
   my $features = shift;
@@ -1712,9 +1707,13 @@ sub cleanup_dangling_uploads {
     my $self  = shift;
     my $state = shift;
 
+
     my %name_to_id;
     for my $id (keys %{$state->{uploads}}) {
-	delete $state->{uploads}{$id} unless $state->{uploads}{$id}[0];
+	unless ($state->{uploads}{$id}[0]) {
+	    delete $state->{uploads}{$id};
+	    next;
+	}
 	$name_to_id{$state->{uploads}{$id}[0]}{$id}++;
     }
 
@@ -1729,6 +1728,7 @@ sub cleanup_dangling_uploads {
 	    delete $state->{uploads}{$_} foreach keys %{$name_to_id{$k}};
 	}
     }
+
 }
 
 
@@ -2159,34 +2159,9 @@ sub asynchronous_update_sections {
 	$return_object->{'plugin_form'} = $self->plugin_form();
     }
 
-    # External File Stuff
-    # Params are used to determine which type of activity the user wants
-    if ( $handle_section_name{'external_utility_div'} ) {
-        if ( my $file_name = param('edit_file') ) {
-            $file_name = CGI::unescape($file_name);
-            $return_object->{'external_utility_div'}
-                = $self->edit_uploaded_file($file_name);
-        }
-        elsif ( param('new_edit_file') ) {
-            my $file_name = $self->uploaded_sources->new_file_name();
-            $return_object->{'external_utility_div'}
-                = $self->edit_uploaded_file($file_name);
-        }
-        else {
-            $return_object->{'external_utility_div'}
-                = "No recognized action for external_utility_div.";
-        }
-    }
-
     # Track Checkboxes
     if ( $handle_section_name{'tracks_panel'} ) {
         $return_object->{'tracks_panel'} = $self->render_track_table();
-    }
-
-    # External Data Form (LEGACY)
-    if ( $handle_section_name{'upload_tracks_panel'} ) {
-        $return_object->{'upload_tracks_panel'}
-            = $self->render_external_table();
     }
 
     # New Uploaded Data Section
@@ -2974,7 +2949,8 @@ sub render_deferred {
     my $external    = $args{external_tracks} || $self->external_data;
     my $nocache     = $args{nocache};
     
-    warn '(render_deferred(',join(',',@$labels),') for section ',$section if DEBUG;
+    warn '(render_deferred(',join(',',@$labels),') for section ',$section,' nocache=',$nocache if DEBUG;
+
     
     my $renderer   = $self->get_panel_renderer($seg,
 					       $self->thin_whole_segment,

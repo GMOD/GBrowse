@@ -78,7 +78,6 @@ my $server_pid = $server->run;
 ok($server_pid);
 
 sleep 1; # give slave renderers a chance to settle down
-
 $ENV{REQUEST_URI}    = 'http://localhost/cgi-bin/gbrowse/volvox';
 $ENV{PATH_INFO}      = '/volvox';
 $ENV{REQUEST_METHOD} = 'GET';
@@ -90,6 +89,7 @@ my $globals = Bio::Graphics::Browser2->new(CONF_FILE);
 my $session = $globals->session;
 my $source  = $globals->create_data_source('volvox');
 my $render  = Bio::Graphics::Browser2::Render::HTML->new($source,$session);
+
 $render->init_database;
 $render->init_plugins;
 $render->update_state;

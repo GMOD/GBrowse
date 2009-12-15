@@ -47,11 +47,11 @@ sub language { shift->{language}  }
 
 sub path {
     my $self   = shift;
-    $self->config->userdata($self->state->{uploadid});
+    $self->config->userdata($self->state->{uploadid}||'');
 }
 
 sub tracks {
-    my $self = shift;
+    my $self     = shift;
     my $path     = $self->path;
     my $imported = shift;
 
@@ -59,9 +59,6 @@ sub tracks {
     opendir D,$path;
     while (my $dir = readdir(D)) {
 	next if $dir =~ /^\.+$/;
-
-	# my $is_busy       = (-e File::Spec->catfile($path,$dir,$self->busy_file_name))||0;
-	# next if $is_busy;
 
 	my $is_imported   = (-e File::Spec->catfile($path,$dir,$self->imported_file_name))||0;
 	next if defined $imported && $imported != $is_imported;
@@ -222,25 +219,28 @@ END
 
 sub upload_data {
     my $self = shift;
-    my ($file_name,$data,$overwrite) = @_;
+    my ($file_name,$data,$content_type,$overwrite) = @_;
     my $io = IO::String->new($data);
-    $self->upload_file($file_name,$io,$overwrite);
+    $self->upload_file($file_name,$io,$content_type,$overwrite);
 }
 
 sub upload_file {
     my $self = shift;
-    my ($file_name,$fh,$overwrite) = @_;
+    my ($file_name,$fh,$content_type,$overwrite) = @_;
     
     my $track_name = $self->trackname_from_url($file_name,!$overwrite);
+    $content_type ||= '';
+
+    if ($content_type eq 'application/gzip' or $file_name =~ /\.gz$/) {
+	$fh = $self->install_filter($fh,'gunzip -c');
+    } elsif ($content_type eq 'application/bzip2' or $file_name =~ /\.bz2$/) {
+	$fh = $self->install_filter($fh,'bunzip2 -c');
+    }
 
     # guess the file type from the first non-blank line
     my ($type,$lines)   = $self->guess_upload_type($file_name,$fh);
     $lines            ||= [];
     my (@tracks,$fcgi);
-
-    if ($file_name =~ /\.(gz|Z|bz2)$/) {
-	$fh = $self->uncompress($fh,$1);
-    }
 
     my $result= eval {
 	local $SIG{TERM} = sub { die "cancelled" };
@@ -380,21 +380,16 @@ sub guess_upload_type {
     return;
 }
 
-sub uncompress {
+sub install_filter {
     my $self = shift;
-    my ($in_fh,$type) = @_;
-    my @exec =  $type eq 'gz' ? ('gunzip','-c')
-               :$type eq 'Z'  ? ('gunzip','-c')
-               :$type eq 'bz2'? ('bunzip2','-c')
-	       :();
-    @exec or die "Don't know how to uncompress files of type $type";
+    my ($in_fh,$command) = @_;
 
     my $child = open(my $out_fh,"-|");
     defined $child or die "Couldn't fork for pipe: $!";
     return $out_fh if $child;
 
     # we are in child now
-    my $unzip = IO::File->new("| @exec") or die "Can't open @exec: $!";
+    my $unzip = IO::File->new("| $command") or die "Can't open $command: $!";
     my $buffer;
     while ((my $bytes = read($in_fh,$buffer,8192))>0) {
 	$unzip->print($buffer);

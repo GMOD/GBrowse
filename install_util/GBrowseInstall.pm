@@ -553,7 +553,7 @@ sub process_database_files {
 	chomp;
 	my ($subdir) = m!^sample_data/([^/]+)/!;
 	$self->copy_if_modified(from    => $_,
-				to_dir  => "blib/database/$subdir",
+				to_dir  => "blib/databases/$subdir",
 				flatten => 1,
 	    );
     }

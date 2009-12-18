@@ -60,6 +60,7 @@ psql shell grant select permissions:
   GRANT SELECT ON feature_pub          TO nobody;
   GRANT SELECT ON db                   TO nobody;
   GRANT SELECT ON analysisfeature      TO nobody;
+  GARNT SELECT ON all_feature_names    TO nobody;
 
 =head1 Creating a configuration file
 

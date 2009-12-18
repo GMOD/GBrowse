@@ -725,7 +725,7 @@ sub detail_panel {
 					   cache         => $page_settings->{cache} || 0,
 					   -add_category_labels => $CONFIG->setting('show track categories') || undef,
 					   -grid         => $page_settings->{grid} || 0,
-					   drag_n_drop => $page_settings->{drag_and_drop}||0,
+					   drag_n_drop => $page_settings->{drag_and_drop}||$CONFIG->drag_and_drop||0,
 					  }
 					 );
   }

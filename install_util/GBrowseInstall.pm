@@ -315,6 +315,7 @@ ScriptAlias  "/gb2"      "$cgibin"
   Alias /fgb2 "$cgibin"
   <Location /fgb2>
     SetHandler   fastcgi-script
+    Options      ExecCGI
   </Location>
   FastCgiConfig $fcgi_inc -initial-env GBROWSE_CONF=$conf
 </IfModule>
@@ -357,7 +358,7 @@ sub ACTION_install {
 
     # fix some directories so that www user can write into them
     my $tmp = $self->config_data('tmp') || GBrowseGuessDirectories->tmp;
-    mkdir $tmp;
+    mkpath($tmp);
     my ($uid,$gid) = (getpwnam($user))[2,3];
 
     # taint check issues
@@ -366,11 +367,14 @@ sub ACTION_install {
     $gid =~ /^(\d+)$/;
     $gid = $1;
     
-    chown $uid,$gid,$tmp;
+    unless (chown $uid,$gid,$tmp) {
+	$self->ownership_warning($tmp,$user);
+    }
 
     my $htdocs_i = File::Spec->catfile($self->install_path->{htdocs},'i');
     my $images   = File::Spec->catfile($tmp,'images');
-    chown $uid,-1,$self->install_path->{htdocs};
+    my $htdocs = $self->install_path->{htdocs};
+    chown $uid,-1,$htdocs;
     {
 	local $> = $uid;
 	symlink($images,$htdocs_i);  # so symlinkifowner match works!
@@ -378,7 +382,10 @@ sub ACTION_install {
     chown $>,-1,$self->install_path->{htdocs};
 
     my $databases = $self->install_path->{'databases'};
-    chown $uid,$gid,glob(File::Spec->catfile($databases,'').'*');
+    
+    unless (chown $uid,$gid,glob(File::Spec->catfile($databases,'').'*')) {
+	$self->ownership_warning($databases,$user);
+    }
 
     chmod 0755,File::Spec->catfile($self->install_path->{'etc'},'init.d','gbrowse-slave');
     $self->fix_selinux;
@@ -442,7 +449,7 @@ sub process_conf_files {
 	    $skip ||= IO::File->new('>>INSTALL.SKIP');
 	    (my $new = $base) =~ s/^conf\///;
 	    my $installed = File::Spec->catfile($install_path,$new);
-	    if (-e $installed && compare($base,$installed) != 0) {
+	    if (-e $installed && (compare($base,$installed) != 0)) {
 		warn "$installed is already installed. New version will be installed as $installed.new\n";
 		copy ("blib/$base","blib/$base.new");
 		print $skip '^',"blib/",quotemeta($base),'$',"\n";
@@ -510,9 +517,11 @@ sub process_etc_files {
 		$skip ||= IO::File->new('>>INSTALL.SKIP');
 		(my $new = $base) =~ s/^etc\///;
 		my $installed = File::Spec->catfile($install_path,$new);
-		warn "$installed is already installed. New version will be installed as $installed.new\n";
-		copy ("blib/$base","blib/$base.new");
-		print $skip '^',"blib/",quotemeta($base),'$',"\n";
+		if (-e $installed) {
+		    warn "$installed is already installed. New version will be installed as $installed.new\n";
+		    copy ("blib/$base","blib/$base.new");
+		    print $skip '^',"blib/",quotemeta($base),'$',"\n";
+		}
 	    }
 	}
     }
@@ -736,16 +745,17 @@ sub config_done {
 }
 
 sub added_to_INC {
-    my $self = shift;
-    my @inc    = grep {!/install_util/} eval {$self->_added_to_INC};  # not in published API
+    my $self       = shift;
+    my @inc        = grep {!/install_util/} eval {$self->_added_to_INC};  # not in published API
+    my $lib_base   = $self->install_destination('lib');
+    my %standard   = map {$_=>1} @INC;
+    push @inc,$lib_base unless $standard{$lib_base};
     return @inc ? join(':',@inc) : '';
 }
 
 sub perl5lib {
     my $self = shift;
-    my @inc    = grep {!/install_util/} eval {$self->_added_to_INC};  # not in published API
-    return unless @inc;
-    return join(':',@inc);
+    return $self->added_to_INC or undef;
 }
 
 sub scriptdir {
@@ -756,6 +766,12 @@ sub scriptdir {
                    :$id eq 'vendor' ? 'installvendorbin'
 		   :'installsitebin';
     return $Config::Config{$scriptdir};
+}
+
+sub ownership_warning {
+    my $self = shift;
+    my ($path,$owner) = @_;
+    warn "*** WARNING: Could not change ownership of $path to '$owner'.\n\tPlease change manually using 'sudo chown -R $owner $path' ***\n";
 }
 
 1;

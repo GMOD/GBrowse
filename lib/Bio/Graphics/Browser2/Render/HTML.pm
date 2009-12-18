@@ -2057,7 +2057,7 @@ sub format_autocomplete {
     my $partial  = shift;
     my %names;
     for my $f (@$features) {
-	my $name = $f->display_name or next;
+	my ($name) = grep {/$partial/i} ($f->display_name,eval{$f->aliases});
 	$names{$name}++;
     }
     my $html = "<ul>\n";

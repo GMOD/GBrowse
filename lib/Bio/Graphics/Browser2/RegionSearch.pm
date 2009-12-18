@@ -569,7 +569,7 @@ sub features_by_prefix {
 	my $db = $region->db;
 	eval {
 	    my $i = $db->get_seq_stream(-name=>"${match}*",
-					-aliases=>0);
+					-aliases=>1);
 	    while (my $f = $i->next_seq) {
 		push @f,$f;
 		last if $limit && $count++ > $limit;

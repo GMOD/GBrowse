@@ -470,7 +470,6 @@ htdocs/tutorial/tutorial.css
 htdocs/tutorial/tutorial.html
 htdocs/tutorial/tutorial.phyTreeEdit.html
 INSTALL
-INSTALL.SKIP
 install_util/cgi_install.pl
 install_util/conf_install.pl
 install_util/gbrowse_ppm_install.pl
@@ -494,7 +493,6 @@ lib/Bio/Graphics/Browser2.pm
 lib/Bio/Graphics/Browser2/Action.pm
 lib/Bio/Graphics/Browser2/AuthorizedFeatureFile.pm
 lib/Bio/Graphics/Browser2/CachedTrack.pm
-lib/Bio/Graphics/Browser2/CAlign.c
 lib/Bio/Graphics/Browser2/CAlign.pm
 lib/Bio/Graphics/Browser2/CAlign.xs
 lib/Bio/Graphics/Browser2/DataBase.pm

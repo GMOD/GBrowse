@@ -374,39 +374,49 @@ sub usage {
 
 <pre>
 
-  &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=mec-3;width=400"&gt;
+  &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
 <blockquote>
   <i>Will generate this picture:</i>
- <img src="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=mec-3;width=400">
+ <img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;width=400">
 </blockquote>
 
   &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Sources
-  fly
+  b_malayi
+  c_brenneri
+  c_briggsae_cb25
+  c_briggsae
+  c_elegans
+  c_elegans_gmap
+  c_elegans_pmap
+  ws77
+  c_japonica
+  c_remanei
+  c_remanei_nGASP
+  nGASP_submissions
+  nGASP
+  Gbrowse_karyotype
+  p_pacificus
   yeast
-  wormbase
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img/elegans?list=types"&gt;types&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
-  ## Feature types for source wormbase
-  tRNA	tRNAs	
-  NG	Named Genes	default
-  CG	Curated genes	default
-  PG	Predicted genes	
-  WABA	Briggsae alignments (WABA)	
-  ESTB	ESTs aligned by BLAT (best)	
-  ESTO	ESTs aligned by BLAT (other)	
-  mRNAB	mRNAs aligned by BLAT (best)	
-  mRNAO	mRNAs aligned by BLAT (other)	
-  RNAi	RNAi experiments	
-  EXPR	Expression chip profiles	
-  WTP	Worm Transcriptome Project genes	
-  SNP	SNPs	
-  TcI	Transposon Insertions
+  ## Feature types for source c_elegans
+  LOCI:overview	Landmarks	default
+  RNAZ	RNAz non-coding RNA genes	
+  CG	Gene Models	default
+  CDS	Coding Segments	
+  RNA	Predicted non-coding RNAs	
+  HISTORICAL	Obsolete gene models	
+  GENEFINDER	GeneFinder Predictions	
+  TWINSCAN	Twinscan Predictions	
+  GENEMARKHMM	GeneMarkHMM Predictions	
+  mSPLICER_TRANSCRIPT	mSplicer
+  ...
 </blockquote>
 
 </pre>
@@ -420,7 +430,7 @@ can be used as the destination of an &lt;img&gt; tag like this:
 </p>
 
 <blockquote><pre>
-&lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=III:1..1000"&gt;
+&lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=III:1..1000"&gt;
 </pre></blockquote>
 
 <p>
@@ -488,7 +498,7 @@ lengths.
       a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
       <p>
       <pre>
-      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=mec-3;
+      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;
                    type=tRNA+NG+WABA+CG+ESTB"&gt;
       </pre>
       Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
@@ -621,7 +631,7 @@ lengths.
 </dl>
 <p>
 Putting it all together, here's a working (very long) URL:
-<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
+<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
 <p>
@@ -633,8 +643,8 @@ gbrowse config file, you may do so by placing the URL in an
 </p>
 
 <pre>
-&lt;iframe src="http://localhost/cgi-bin/gbrowse_img/elegans?name=B0001;embed=1" width="100%" height="250"&gt;
-   &lt;img src="http://localhost/cgi-bin/gbrowse_img/elegans?name=B0001"/&gt;
+&lt;iframe src="http://localhost/cgi-bin/gbrowse_img/c_elegans?name=B0001;embed=1" width="100%" height="250"&gt;
+   &lt;img src="http://localhost/cgi-bin/gbrowse_img/c_elegans?name=B0001"/&gt;
 &lt;/iframe&gt;
 </pre>
 

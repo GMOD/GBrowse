@@ -126,6 +126,15 @@ sub ACTION_select_subtracks {
     return ( 200, 'text/html', $html );
 }
 
+# return a listing of all discoverable tracks
+sub ACTION_scan {
+    my $self = shift;
+    my $q    = shift;
+    my $dumper = Bio::Graphics::Browser2::GFFPrinter->new(
+        -data_source => $self->data_source(),
+    );
+    return (200, 'text/plain', $dumper->get_scan);
+}
 
 sub ACTION_filter_subtrack {
     my $self = shift;

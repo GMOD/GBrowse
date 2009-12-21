@@ -274,6 +274,9 @@ sub asynchronous_event {
     elsif (my $action = param('action')) {
 	my $dispatch = Bio::Graphics::Browser2::Action->new($self);
 	my $method   = "ACTION_${action}";
+	unless ($dispatch->can($method)) {
+	    return (401,'text/plain',"invalid action: '$action'");
+	}
 	return $dispatch->$method($CGI::Q);
     }
 

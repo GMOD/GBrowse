@@ -384,9 +384,16 @@ sub do_wigfile_substitution {
 # list all the labels that are marked "discoverable" 
 sub print_scan {
     my $self   = shift;
+    print $self->get_scan;
+}
+
+sub get_scan {
+    my $self   = shift;
     my $config = $self->data_source;
     my @labels = $config->labels;
-    print "# Discoverable tracks from ",CGI->self_url,"\n";
+
+    my $result = '';
+    $result .=  "# Discoverable tracks from ".CGI->self_url."\n";
     for my $l (@labels) {
 	next if $l =~ /^_/;
 	next if $l =~ /:\w+/;
@@ -394,13 +401,17 @@ sub print_scan {
 	next if        $config->code_setting($l=>'global feature');
 	my $key      = $config->code_setting($l => 'key');
 	my $citation = $config->code_setting($l => 'citation');
-	print <<END;
+	my (undef,@subtracks) = shellwords($config->code_setting($l => 'select'));
+	$result .=  <<END;
 [$l]
 key      = $key
-citation = $citation
-
 END
+    ;
+    $result .=  "select   = @subtracks\n" if @subtracks;
+    $result .=  "citation = $citation\n"  if $citation;
+    $result .=  "\n";
     }
+return $result;
 }
 
 1;

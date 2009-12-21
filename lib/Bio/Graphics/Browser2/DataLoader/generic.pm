@@ -60,25 +60,40 @@ END
 
     if (my @lines = @{$self->{conflines}}) {  # good! user has provided some config hints
 	my $in_sub;
+	my ($old_trackname,$seen_feature);
 	for my $line (@lines) {
+	    chomp $line;
 	    if ($line =~ /^\s*database/) {
 		next;   # disallowed
 	    }
-	    elsif ($line =~ /^\[/) { # overwrite track names to avoid collisions
+	    elsif ($line =~ /^\[([^\]]+)\]/) { # overwrite track names to avoid collisions
+		$old_trackname = $1;
+		undef $seen_feature;
 		my $trackname = $self->new_track_label;
 		print $conf "[$trackname]\n";
 		print $conf "database = $loadid\n" ;
 		print $conf "category = My Tracks:Uploaded Tracks:",$self->track_name,"\n";
 	    } elsif ($line =~ s/(=\s*)(sub .*)/$1 1 # no user subs allowed! $2/) {
 		$in_sub++;
-		print $conf $line;
+		print $conf $line,"\n";
 	    } elsif ($in_sub && $line =~ /^\s+/) { # continuation line
 		$line =~ s/^/# /;                  # continuation line of
-		print $conf $line;
+		print $conf $line,"\n";
+	    }
+	    elsif ($line =~ /^feature/) {
+		$seen_feature++;
+		print $conf $line,"\n";
+	    } elsif (!$line && $old_trackname && !$seen_feature) {
+		print $conf "feature = $old_trackname\n\n";
+		undef $old_trackname;
+		undef $seen_feature;
 	    } else {
 		undef $in_sub;
-		print $conf $line;
+		print $conf $line,"\n";
 	    }
+	}
+	if ($old_trackname && !$seen_feature) {
+	    print $conf "feature = $old_trackname\n\n";
 	}
     } else {  # make something up
 	my @types = eval {$db->toplevel_types};

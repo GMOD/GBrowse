@@ -81,6 +81,11 @@ sub close_conf {
     undef shift->{conf_fh};
 }
 
+sub source_file {
+    my $self = shift;
+    return File::Spec->catfile($self->sources_path,$self->track_name);
+}
+
 sub load {
     my $self                = shift;
     my ($initial_lines,$fh) = @_;
@@ -90,8 +95,7 @@ sub load {
 	$self->set_status('starting load');
 	
 	mkdir $self->sources_path or die $!;
-	my $source_file = IO::File->new(
-	    File::Spec->catfile($self->sources_path,$self->track_name),'>');
+	my $source_file = IO::File->new($self->source_file,'>');
 
 	$self->open_conf;
 	$self->start_load;
@@ -108,6 +112,7 @@ sub load {
 	    $self->load_line($_);
 	    $self->set_status("loaded $count lines") if $count++ % 1000;
 	}
+	$source_file->close;
 	$self->finish_load;
 	$self->close_conf;
     };

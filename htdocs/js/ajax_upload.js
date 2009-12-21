@@ -108,7 +108,9 @@ function completeAjaxUpload(response,upload_id,field_type) {
 
         var fields = field_type == 'upload' ? new Array(track_listing_id,userdata_table_id)
                                             : new Array(track_listing_id,userimport_table_id);
-	Controller.add_tracks(r.tracks,
+
+	if (r.tracks != null && r.tracks.length > 0) {
+  	  Controller.add_tracks(r.tracks,
 			      function() { 
 				  Controller.update_sections(
                                       fields,
@@ -121,6 +123,11 @@ function completeAjaxUpload(response,upload_id,field_type) {
                                         }
 				     )}
 				);
+	} else {
+            var updater = Ajax_Status_Updater.get(upload_id);
+            if (updater != null) updater.stop();
+            $(upload_id).remove();
+        }
     } else {
         if (Ajax_Status_Updater.get(upload_id) !=null)
              Ajax_Status_Updater.get(upload_id).stop();

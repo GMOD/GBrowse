@@ -31,6 +31,7 @@ use constant EMPTY_IMAGE_HEIGHT   => 12;
 use constant MAX_SEGMENT          => 1_000_000;
 use constant TOO_MANY_SEGMENTS    => 5_000;
 use constant OVERVIEW_RATIO       => 1.0;
+use constant GROUP_SEPARATOR      => "\x1d";
 
 my %PLUGINS;       # cache initialized plugins
 my $FCGI_REQUEST;  # stash fastCGI request handle
@@ -1797,9 +1798,17 @@ sub update_state_from_cgi {
 sub filter_subtrack {
     my $self        = shift;
     my $label       = shift;
+    my $subtracks   = shift;
 
-    my %filters     = map {$_=>1} param('select');
     my $state       = $self->state;
+
+    # if undef passed, then turn off all filters
+    unless ($subtracks) {
+	undef $state->{features}{$label}{filter};
+	return;
+    }
+
+    my %filters     = map {$_=>1} @$subtracks;
     my ($method,@values) = shellwords $self->data_source->setting($label=>'select');
     $state->{features}{$label}{filter}{values} = {map {$_=>$filters{$_}} @values};
     $state->{features}{$label}{filter}{method} = $method;
@@ -2629,8 +2638,10 @@ sub regionview_bounds {
 sub split_labels {
   my $self = shift;
   my @results = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
+  my $group_separator = GROUP_SEPARATOR;
   foreach (@results) {
-      tr/$;/-/;  # unescape hyphens
+      s/$group_separator/-/g;  # unescape hyphens
+      s/$;/-/g;                # unescape hyphens -backward compatibility
   }
   @results;
 }
@@ -2654,10 +2665,23 @@ sub set_tracks {
 
     my %potential = map {$_=>1} $self->potential_tracks;
 
-    $state->{tracks} = [grep {$potential{$_}} @labels];
-    $self->load_plugin_annotators(\@labels);
+    my @main;
+    for my $label (@labels) {
+	my ($main,$subtracks) = split '/',$label;
+	$subtracks ||= '';
+	my @subtracks         = split ' ',$subtracks;
+	push @main,$main;
+	if (@subtracks) {
+	    $self->filter_subtrack($main,\@subtracks);
+	} else {
+	    $self->filter_subtrack($main,undef);
+	}
+    }
+
+    $state->{tracks} = [grep {$potential{$_}} @main];
+    $self->load_plugin_annotators(\@main);
     $state->{features}{$_}{visible} = 0 foreach $self->data_source->labels;
-    $state->{features}{$_}{visible} = 1 foreach @labels;
+    $state->{features}{$_}{visible} = 1 foreach @main;
 }
 
 sub load_plugin_annotators {
@@ -3255,10 +3279,16 @@ sub general_help {
 
 sub join_selected_tracks {
     my $self = shift;
+    my $state = $self->state;
+    my $group_separator = GROUP_SEPARATOR;
 
     my @selected = $self->visible_tracks;
-    foreach (@selected) { # escape hyphens
-	tr/-/$;/;
+    for (@selected) { # escape hyphens
+	if ((my $filter = $state->{features}{$_}{filter}{values})) {
+	    my @subtracks = grep {$filter->{$_}} keys %{$filter};
+	    $_ .= "/@subtracks";
+	}
+	s/-/$group_separator/g;
     }
     return join '-',@selected;
 }

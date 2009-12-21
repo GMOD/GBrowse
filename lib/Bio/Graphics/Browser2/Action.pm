@@ -131,8 +131,9 @@ sub ACTION_filter_subtrack {
     my $self = shift;
     my $q    = shift;
 
-    my $track_name = $q->param('track') or croak;
-    my $html = $self->render->filter_subtrack($track_name);
+    my $track_name = $q->param('track')  or croak;
+    my @subtracks  = $q->param('select') or croak;
+    my $html = $self->render->filter_subtrack($track_name,\@subtracks);
     return ( 200, 'application/json', {} );
 }
 

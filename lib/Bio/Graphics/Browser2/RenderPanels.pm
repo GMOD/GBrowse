@@ -1277,7 +1277,7 @@ sub select_features_menu {
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
 
     my $select_features_click
-	= "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',1,500,500)";
+	= "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',1)";
     my $select_features_over = "$balloon_style.showTooltip(event,'$select_features')";
 
     # modify the title to show that some subtracks are hidden

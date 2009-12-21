@@ -1645,11 +1645,15 @@ sub track_config {
         $data_source->semantic_fallback_setting( $label => 'glyph select', $length )
 	);
 
-    @glyph_select
-        = ($dynamic,qw(arrow anchored_arrow box crossbox dashed_line diamond dna dot dumbbell ellipse
-        ex line primers saw_teeth segments span splice_site translation triangle
-        two_bolts wave)) unless @glyph_select;
+    @glyph_select = $glyph =~ /wiggle/ ? qw(wiggle_xyplot wiggle_density wiggle_box)
+                                       : qw(arrow anchored_arrow box crossbox dashed_line diamond 
+                                         dna dot dumbbell ellipse
+                                         ex line primers saw_teeth segments span splice_site translation triangle
+                                         two_bolts wave) unless @glyph_select;
+    unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
+
     my %glyphs = map { $_ => 1 } ( $glyph, @glyph_select );
+    my @all_glyphs   = sort keys %glyphs;
 
     my $url = url( -absolute => 1, -path => 1 );
     my $reset_js = <<END;
@@ -1701,8 +1705,8 @@ END
         TR( th( { -align => 'right' }, $self->tr('GLYPH') ),
             td( $picker->popup_menu(
                     -name    => 'glyph',
-                    -values  => [ sort keys %glyphs ],
-                    -default => $glyph,
+                    -values  => \@all_glyphs,
+                    -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
                     -current => $override->{'glyph'},
                 )
             )

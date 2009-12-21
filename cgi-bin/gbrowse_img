@@ -7,6 +7,7 @@ use strict;
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::Render;
 use Bio::Graphics::Browser2::Util;
+use Bio::Graphics::Karyotype;
 use Digest::MD5 'md5_hex';
 
 
@@ -86,11 +87,7 @@ sub run {
     $render->set_source() && exit;  # may cause a redirect and exit 
     $render->init();
 
-    # This guarantees that all user-specific tracks
-    # disappear after the current session completes.
-    # local $render->data_source->{_user_tracks} = {};
     $render->add_user_tracks($render->data_source);
-
     $render->update_state();
 
     warn join ' ',$render->potential_tracks if DEBUG;
@@ -166,23 +163,10 @@ sub render_image {
     my $self     = shift;
     my $render   = $self->render;
     my $renderer = $render->get_panel_renderer;
-    my $external = $render->external_data;
-    warn 'visible = ',join ' ',$render->visible_tracks if DEBUG;
-    my @labels   = $render->expand_track_names($render->detail_tracks);
 
     my $format   = param('format') || 'GD';
     my $flip     = param('flip')   || 0;
     my $embed    = param('embed');
-    $format      = 'GD' if $embed;
-
-    warn "labels = ",join ',',@labels if DEBUG;
-    my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
-                          map { split /[+-]/ }
-			  (param('type'));
-
-    # If no tracks specified, we want to see all tracks with this feature
-    if (!@track_types) { @track_types = @labels; } 
-    unshift @track_types,'_scale';
 
     my $convert_to_pdf;
     if ($format eq 'PDF' && `which inkscape`) {
@@ -190,32 +174,17 @@ sub render_image {
 	$format = 'GD::SVG';
     }
 
-    my $result   = $renderer->render_track_images(
-						  {
-						      labels            => \@track_types,
-						      external_features => $external,
-						      section           => 'detail',
-						      cache_extra       => [$format],
-						      image_class       => $format,
-						      flip              => $flip,
-						      -key_style        => 'between',
-						      }
-						  );
-    
-    warn "returned labels = ",join ',',%$result if DEBUG;
+    $format      = 'GD' if $embed;
 
-    # Previously - @labels (caused drawing more tracks than asked for)
-    my @image_data      = @{$result}{grep {$result->{$_}} @track_types};
-    my @gds             = map {$_->{gd} } @image_data;
-    my @map_data        = map {$_->{map}} @image_data;
+    my ($img_data,$map) = $render->region->feature_count > 1 
+                                 ? $self->render_multiple($renderer,$format,$flip,$embed)
+	                         : $self->render_tracks  ($renderer,$format,$flip,$embed);
 
-    my $img_data  = $self->consolidate_images(\@gds);
-
+ 
     my $seg   = $render->segment;
     my $fname = $seg ? $seg->seq_id.':'.$seg->start.'..'.$seg->end : "NA";
 
     if ($embed) {
-	my $map    = $self->consolidate_maps  (\@map_data, \@gds);
         my $url    = $renderer->source->generate_image($img_data);
 	print $self->header(-type=>'text/html');
 	print start_html(),
@@ -249,7 +218,7 @@ sub render_image {
     elsif ($format eq 'GD::SVG') {
 	print $self->header(-type => 'image/svg+xml',
 			    -content_disposition => "filename=$fname.svg");
-	print $img_data
+	print $img_data;
     } 
     else { 
 	print $self->header('text/plain');
@@ -257,19 +226,90 @@ sub render_image {
     }
 }
 
+sub render_multiple {
+    my $self = shift;
+    my ($renderer,$format,$flip,$embed) = @_;
+    my $features = $self->render->region->features;
+    my $karyotype = Bio::Graphics::Karyotype->new(source   => $self->render->data_source,
+						  language => $self->render->language);
+    $karyotype->add_hits($features);
+    my $panels = $karyotype->generate_panels;
+    my (@gds,@seqids);
+    for my $seqid (keys %$panels) {
+	push @gds,$panels->{$seqid}{panel}->gd;
+	push @seqids,$seqid;
+    }
+    my $img_data = $self->consolidate_images(\@gds,undef,undef,'horizontal',\@seqids);
+    return ($img_data,undef);
+}
+
+sub render_tracks {
+    my $self = shift;
+    my ($renderer,$format,$flip,$embed) = @_;
+
+    my $render   = $self->render;
+
+    my $external = $render->external_data;
+    warn 'visible = ',join ' ',$render->visible_tracks if DEBUG;
+    my @labels   = $render->expand_track_names($render->detail_tracks);
+
+    warn "labels = ",join ',',@labels if DEBUG;
+    my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
+                          map { split /[+-]/ }
+			  (param('type'));
+
+    # If no tracks specified, we want to see all tracks with this feature
+    if (!@track_types) { @track_types = @labels; } 
+    unshift @track_types,'_scale';
+
+    my $result   = $renderer->render_track_images(
+						  {
+						      labels            => \@track_types,
+						      external_features => $external,
+						      section           => 'detail',
+						      cache_extra       => [$format],
+						      image_class       => $format,
+						      flip              => $flip,
+						      -key_style        => 'between',
+						      }
+						  );
+    
+    warn "returned labels = ",join ',',%$result if DEBUG;
+
+    # Previously - @labels (caused drawing more tracks than asked for)
+    my @image_data      = @{$result}{grep {$result->{$_}} @track_types};
+    my @gds             = map {$_->{gd} } @image_data;
+    my @map_data        = map {$_->{map}} @image_data;
+
+    my $img_data  = $self->consolidate_images(\@gds);
+    my $map    = $self->consolidate_maps  (\@map_data, \@gds) if $embed;
+
+    return ($img_data,$map);
+
+}
+
 sub calculate_composite_bounds {
     my $self = shift;
-    my $gds  = shift;
+    my ($gds,$orientation)  = @_;
 
     warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
 
     my $height = 0;
     my $width  = 0;
-    for my $g (@$gds) {
-	warn "g=$g" if DEBUG;
-	next unless $g;
-	$height +=   ($g->getBounds)[1];  # because GD::SVG is missing the width() and height() methods
-	$width   ||= ($g->getBounds)[0];
+    if ($orientation eq 'vertical') {
+	for my $g (@$gds) {
+	    warn "g=$g" if DEBUG;
+	    next unless $g;
+	    $height +=   ($g->getBounds)[1];  # because GD::SVG is missing the width() and height() methods
+	    $width   ||= ($g->getBounds)[0];
+	}
+    } elsif ($orientation eq 'horizontal') {
+	for my $g (@$gds) {
+	    warn "g=$g" if DEBUG;
+	    next unless $g;
+	    $height    = ($g->getBounds)[1] if $height < ($g->getBounds)[1];
+	    $width    += ($g->getBounds)[0];
+	}
     }
     
     return ($width,$height);
@@ -277,8 +317,10 @@ sub calculate_composite_bounds {
 
 sub consolidate_images {
     my $self = shift;
-    my ($gds,$width,$height) = @_;
-    ($width,$height) = $self->calculate_composite_bounds($gds) 
+    my ($gds,$width,$height,$orientation,$labels) = @_;
+    $orientation ||= 'vertical';
+
+    ($width,$height) = $self->calculate_composite_bounds($gds,$orientation) 
 	unless defined $width && defined $height;
 
     warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
@@ -286,22 +328,46 @@ sub consolidate_images {
     my $format = ref($gds->[0]);
     warn "format = $format" if DEBUG;
 
-    return $format =~ /^GD::SVG/ ? $self->_consolidate_svg($width,$height,@$gds)
-                                 : $self->_consolidate_gd ($width,$height,@$gds);
+    return $format =~ /^GD::SVG/ ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
+                                 : $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
 }
 
 sub _consolidate_gd {
     my $self = shift;
-    my ($width,$height,@gds) = @_;
+    my ($width,$height,$gds,$orientation,$labels) = @_;
+
+    my $lineheight = GD->gdMediumBoldFont->height;
+    my $charwidth  = GD->gdMediumBoldFont->width;
+    $height += $lineheight if $orientation eq 'horizontal';
 
     my $gd = GD::Image->new($width,$height);
-    $gd->colorAllocate(255,255,255);
+    my $white = $gd->colorAllocate(255,255,255);
+    my $black = $gd->colorAllocate(0,0,0);
+
+    my $bg = $gds->[0]->getPixel(0,0);
+    my @bg = $gds->[0]->rgb($bg);
+    my $i  = $gd->colorAllocate(@bg);
+    $gd->filledRectangle(0,0,$width,$height,$i);
 
     my $offset = 0;
-    for my $g (@gds) {
-	next unless $g;
-	$gd->copy($g,0,$offset,0,0,$g->getBounds);
-	$offset += ($g->getBounds)[1];
+    if ($orientation eq 'vertical') {
+	for my $g (@$gds) {
+	    next unless $g;
+	    $gd->copy($g,0,$offset,0,0,$g->getBounds);
+	    $offset += ($g->getBounds)[1];
+	}
+    } else {
+	for my $g (@$gds) {
+	    next unless $g;
+	    $gd->copy($g,$offset,$height-($g->getBounds)[1]-$lineheight,0,0,$g->getBounds);
+	    if ($labels) {
+		my $l = shift @$labels;
+		$gd->string(GD->gdMediumBoldFont,
+			    $offset+(($g->getBounds)[0]-$charwidth*length $l)/2,
+			    $height-$lineheight,$l,$black);
+	    }
+	    $offset += ($g->getBounds)[0];
+	}
     }
 
     return $gd;

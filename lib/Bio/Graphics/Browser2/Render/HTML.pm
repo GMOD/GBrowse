@@ -1652,7 +1652,7 @@ sub track_config {
                                          two_bolts wave) unless @glyph_select;
     unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
 
-    my %glyphs = map { $_ => 1 } ( $glyph, @glyph_select );
+    my %glyphs       = map { $_ => 1 } ( $glyph, @glyph_select );
     my @all_glyphs   = sort keys %glyphs;
 
     my $url = url( -absolute => 1, -path => 1 );

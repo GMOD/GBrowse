@@ -573,7 +573,7 @@ sub position {
     my $strand = $s > 0 ? '+' : $s < 0 ? '-' : '';
 
     my $src = escape($self->source->name);
-    my $url = "../../gbrowse/$src?name=$ref:$start..$end";
+    my $url = "../gbrowse/$src?name=$ref:$start..$end";
     return a({-href=>$url},$strand ? "$ref:$start..$end ($strand strand)" 
 	                           : "$ref:$start..$end");
 }

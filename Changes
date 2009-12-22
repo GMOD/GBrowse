@@ -1,3 +1,6 @@
+1.9984  * gbrowse_img now shows karyotype display when multiple regions are selected.
+	* Fixed install paths and verified that you can install into home directory.
+1.9983  * Not released.
 1.9982  * Undid some of the damage left by the upload code cleanup.
 	* Can now upload gzipped and bzipp2ed files for all file types.
 	* SAM and BAM file uploading supported, provided Bio::DB::BAM library is installed

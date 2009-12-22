@@ -238,7 +238,13 @@ sub chromosomes {
 }
 
 sub generate_panels {
-  my $self = shift;
+  my $self   = shift;
+  my $format = shift || 'GD';
+
+  my $image_class = $format;
+  $image_class   .= '::Image' unless $image_class =~ /::Image/;
+  eval "require $image_class" unless $image_class->can('new');
+
   my $chrom_type  = $self->chrom_type;
   my $chrom_width = $self->chrom_width;
 
@@ -271,7 +277,8 @@ sub generate_panels {
 					   -pad_bottom=>10,
 					   -pad_right => 0,
 					   -bgcolor   => $self->data_source->global_setting('overview bgcolor')
-					    || 'wheat:0.5'
+					    || 'wheat:0.5',
+					   -image_class => $format,
 	);
 
     my @hits  = $self->hits($chrom->seq_id);
@@ -290,7 +297,9 @@ sub generate_panels {
 		      -bump    => -1,
 	);
 
-    my $method = $panel->can('rotate') ? 'add_track' : 'unshift_track';
+    my $rotate = $panel->can('rotate') && $image_class->can('copyRotate90');
+
+    my $method = $rotate ? 'add_track' : 'unshift_track';
 
     $panel->$method($chrom,
 		    -glyph      => 'ideogram',                   # not an error, will rotate image later
@@ -300,7 +309,7 @@ sub generate_panels {
 		    -label    => 0,
 		    -description => 0);
 
-    $panel->rotate(1) if $panel->can('rotate');      # need bioperl-live from 20 August 2008 for this to work
+    $panel->rotate(1) if $rotate;      # need bioperl-live from 20 August 2008 for this to work
     $results{$chrom->seq_id}{chromosome} = $chrom;
     $results{$chrom->seq_id}{panel}      = $panel;
   }

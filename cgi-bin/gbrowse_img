@@ -174,6 +174,7 @@ sub render_image {
 	$format = 'GD::SVG';
     }
 
+    $format = 'GD::SVG' if $format eq 'SVG';
     $format      = 'GD' if $embed;
 
     my ($img_data,$map) = $render->region->feature_count > 1 
@@ -233,7 +234,7 @@ sub render_multiple {
     my $karyotype = Bio::Graphics::Karyotype->new(source   => $self->render->data_source,
 						  language => $self->render->language);
     $karyotype->add_hits($features);
-    my $panels = $karyotype->generate_panels;
+    my $panels = $karyotype->generate_panels($format);
     my (@gds,@seqids);
     for my $seqid (keys %$panels) {
 	push @gds,$panels->{$seqid}{panel}->gd;
@@ -282,7 +283,7 @@ sub render_tracks {
     my @map_data        = map {$_->{map}} @image_data;
 
     my $img_data  = $self->consolidate_images(\@gds);
-    my $map    = $self->consolidate_maps  (\@map_data, \@gds) if $embed;
+    my $map       = $self->consolidate_maps  (\@map_data, \@gds) if $embed;
 
     return ($img_data,$map);
 
@@ -336,18 +337,23 @@ sub _consolidate_gd {
     my $self = shift;
     my ($width,$height,$gds,$orientation,$labels) = @_;
 
-    my $lineheight = GD->gdMediumBoldFont->height;
-    my $charwidth  = GD->gdMediumBoldFont->width;
+    my $class     = ref($gds->[0]);
+    (my $fontclass = $class)=~s/::Image//;
+
+    my $lineheight = $fontclass->gdMediumBoldFont->height;
+    my $charwidth  = $fontclass->gdMediumBoldFont->width;
     $height += $lineheight if $orientation eq 'horizontal';
 
-    my $gd = GD::Image->new($width,$height);
+    my $gd = $class->new($width,$height);
     my $white = $gd->colorAllocate(255,255,255);
     my $black = $gd->colorAllocate(0,0,0);
 
-    my $bg = $gds->[0]->getPixel(0,0);
-    my @bg = $gds->[0]->rgb($bg);
-    my $i  = $gd->colorAllocate(@bg);
-    $gd->filledRectangle(0,0,$width,$height,$i);
+    eval {
+	my $bg = $gds->[0]->getPixel(0,0);
+	my @bg = $gds->[0]->rgb($bg);
+	my $i  = $gd->colorAllocate(@bg);
+	$gd->filledRectangle(0,0,$width,$height,$i);
+    };
 
     my $offset = 0;
     if ($orientation eq 'vertical') {
@@ -362,7 +368,7 @@ sub _consolidate_gd {
 	    $gd->copy($g,$offset,$height-($g->getBounds)[1]-$lineheight,0,0,$g->getBounds);
 	    if ($labels) {
 		my $l = shift @$labels;
-		$gd->string(GD->gdMediumBoldFont,
+		$gd->string($fontclass->gdMediumBoldFont,
 			    $offset+(($g->getBounds)[0]-$charwidth*length $l)/2,
 			    $height-$lineheight,$l,$black);
 	    }
@@ -376,31 +382,74 @@ sub _consolidate_gd {
 # because the GD::SVG copy() method is broken
 sub _consolidate_svg {
     my $self = shift;
-    my ($width,$height,@gds) = @_;
+    my ($width,$height,$gds,$orientation,$labels) = @_;
+
+    my $image_height = $height;
+
+    if ($labels) {
+	my $font = GD::SVG->gdMediumBoldFont;
+	my $charwidth = $font->width;
+	my $lineheight=$font->height;
+	$image_height += $lineheight;
+	for my $gd (@$gds) {
+	    my $l     = shift @$labels;
+	    my $black = $gd->colorAllocate(0,0,0);
+	    $gd->string($font,
+			(($gd->getBounds)[0]-$charwidth*length $l)/2,
+			($gd->getBounds)[1],
+			$l,$black);
+	}
+    }
 
     my $svg = qq(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n\n);
-    $svg   .= qq(<svg height="$height" width="$width" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n);
+    $svg   .= qq(<svg height="$image_height" width="$width" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n);
 
-    my $offset = 0;
-    for my $g (@gds) {
-	my $s              = $g->svg;
-	my $current_height = 0;
-	foreach (split "\n",$s) {
-	    if (m!</svg>!) {
-		last;
+    if ($orientation eq 'vertical') {
+	my $offset = 0;
+	for my $g (@$gds) {
+	    my $s              = $g->svg;
+	    my $current_height = 0;
+	    foreach (split "\n",$s) {
+		if (m!</svg>!) {
+		    last;
+		}
+		elsif (/<svg.+height="([\d.]+)"/) {
+		    $current_height = int($1+0.5);
+		    $svg .= qq(<g transform="translate(0,$offset)">\n);
+		}
+		elsif ($current_height) {
+		    $svg .= "$_\n";
+		}
 	    }
-	    elsif (/<svg height="([\d.]+)"/) {
-		$current_height = int($1+0.5);
-		$svg .= qq(<g transform="translate(0,$offset)">\n);
-	    }
-	    elsif ($current_height) {
-		$svg .= "$_\n";
-	    }
+	    $svg .= "</g>\n" if $current_height;
+	    $offset += $current_height;
 	}
-	$svg .= "</g>\n" if $current_height;
-	$offset += $current_height;
+	$svg   .= qq(</svg>\n);
+ 
+
+   } else {
+	my $offset = 0;
+	for my $g (@$gds) {
+	    my $s              = $g->svg;
+	    my $current_width = 0;
+	    foreach (split "\n",$s) {
+		if (m!</svg>!) {
+		    last;
+		}
+		elsif (/<svg.+width="([\d.]+)"/) {
+		    $current_width = int($1+0.5);
+		    my $height     = $height - ($g->getBounds)[1];
+		    $svg .= qq(<g transform="translate($offset,$height)">\n);
+		}
+		elsif ($current_width) {
+		    $svg .= "$_\n";
+		}
+	    }
+	    $svg .= "</g>\n" if $current_width;
+	    $offset += $current_width;
+	}
+	$svg   .= qq(</svg>\n);
     }
-    $svg   .= qq(</svg>\n);
 
     # munge fonts slightly for systems that don't have Helvetica installed
     $svg    =~ s/font="Helvetica"/font="san-serif"/gi;

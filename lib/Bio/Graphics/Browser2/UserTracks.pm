@@ -11,6 +11,8 @@ use IO::File;
 use IO::String;
 use Carp 'croak';
 
+use constant DEBUG => 0;
+
 # The intent of this is to provide a single unified interface for managing
 # a user's uploaded and shared tracks.
 
@@ -132,7 +134,7 @@ sub description {
     my $track = shift;
     my $desc  = File::Spec->catfile($self->path,$track,"$track.desc");
     if (@_) {
-	warn "setting desc to @_";
+	warn "setting desc to @_" if DEBUG;
 	open my $f,">",$desc or return;
 	print $f join("\n",@_);
 	close $f;

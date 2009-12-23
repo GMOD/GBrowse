@@ -387,7 +387,7 @@ $render->update_coordinates;
 $r = $render->region;
 ok(my $f = $r->features);
 ok($s    = $r->segments);
-ok(scalar @$f,12,"Finder plugin should have found 12 motifs, but didn't");
+ok(scalar @$f,11,"Finder plugin should have found 11 motifs, but didn't");
 ok(scalar @$s,11,"Finder plugin should have found 11 unique motif segments, but didn't");
 
 # The finder plugin creates a "My Tracks" track, which then interferes with

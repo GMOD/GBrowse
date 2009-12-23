@@ -128,6 +128,7 @@ sub render_navbar {
                     
       ),
       hidden(-name=>'force_submit',-value=>0),
+      hidden(-name=>'plugin_find', -value=>0),
       div({ -id   => 'search_form_objects' },
 	  $self->render_search_form_objects(),
       ),
@@ -1338,12 +1339,13 @@ sub plugin_menu {
   return join(
     '',
     popup_menu(
-      -name       => 'plugin',
-      -values     => \@plugins,
-      -labels     => $labels,
-      -attributes => \%attributes,
-      -default    => $settings->{plugin},
-    ),
+	-name       => 'plugin',
+	-id       => 'plugin',
+	-values     => \@plugins,
+	-labels     => $labels,
+	-attributes => \%attributes,
+	-default    => $settings->{plugin},
+      ),
     '&nbsp;',
     button(
       -name     => 'plugin_action',

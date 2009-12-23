@@ -729,7 +729,10 @@ var GBrowseController = Class.create({
       return false; 
     }
     else if (plugin_type == 'finder'){
-        alert("Not Implemented Yet");
+        alert('Searching for ' + $F('landmark_search_field') + ' via ' + $F('plugin'));
+	document.searchform.plugin_find.value  = $F('plugin');
+	document.searchform.force_submit.value = 1;
+	document.searchform.submit();
     }
   }, // end plugin_go
 

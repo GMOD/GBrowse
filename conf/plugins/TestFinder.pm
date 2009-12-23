@@ -4,15 +4,23 @@ use strict;
 use warnings;
 use base 'Bio::Graphics::Browser2::Plugin';
 
-sub name { 'TypeFinder'}
+sub name { 'Features by type'}
 
-# return all objects of type 'motif'
+sub type { 'finder' }
+
+# return all objects of type given in the search field
 sub find {
   my $self     = shift;
-  my $db       = $self->database;
   my $query    = $self->page_settings->{name} or return;
-  my @features = $db->features(-type=>$query);
-  return \@features;
+  return $self->auto_find($query);
+}
+
+sub auto_find {
+    my $self  = shift;
+    my $query = shift;
+    my $search = $self->db_search;
+    my $features = $search->search_features({-type=>$query});
+    return @$features ? $features : undef;
 }
 
 1;

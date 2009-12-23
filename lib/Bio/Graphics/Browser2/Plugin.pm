@@ -279,11 +279,16 @@ maintain the plugin's persistent configuration information.
 
 =item $database = $self->database
 
-This method returns a copy of the sequence database.  Depending on the
+This method returns a copy of the default database.  Depending on the
 data source chosen by the gbrowse administrator, this may be a
 Bio::DB::GFF database, a Bio::DB::Das::Chado database, a Bio::Das
 database, a Bio::DB::Das::BioSQL database, or any of the other
 Das-like databases that gbrowse supports.
+
+=item @dbs   = $self->all_databases
+
+This method returns copies of all the databases defined for this data
+source. Most useful for Finder plugins.
 
 =item @track_names = $self->selected_tracks
 
@@ -338,7 +343,7 @@ This facility is intended to be used for any settings that should not
 be changed by the end user.  Persistent user preferences should be
 stored in the hash returned by configuration().
 
-=item $search = $self->region_search
+=item $search = $self->db_search
 
 This method returns a Bio::Graphics::Browser2::RegionSearch object,
 which you can use to search all local and remote databases. The
@@ -486,8 +491,8 @@ case, a gene ontology term:
      my $segment  = shift;  # we ignore this!
      my $config   = $self->configuration;
      my $query    = $config->{query} or return undef;  # PROMPT FOR INPUT
-     my $database = $self->database;
-     my @features = $database->features(-attributes=>{GO_Term => $query});
+     my $search   = $self->db_search;
+     my @features = $search->features(-attributes=>{GO_Term => $query});
      return (\@features,$query); 
   }
 
@@ -519,6 +524,27 @@ stanza [YourPlugin:plugin]:
       my $blast_path = $self->browser_config->plugin_setting('blast_path');
       # etc etc etc  
    }
+
+=item $features = $self->auto_find($search_string)
+
+If the plugin has an "auto_find" method, then the method will be
+invoked whenever the user types a string into GBrowse's search
+box. The plugin may search any of the current data source's databases
+(which you can get using $self->all_databases), or its own databases.
+
+Return an arrayref containing the features found. Return an empty
+arrayref to indicate that no features were found. Return undef to
+indicate that the plugin declines to perform the search, in which case
+GBrowse will default to its own search algorithm.
+
+You may also choose to merge your search results with GBrowse's. To do
+this, you can initiate the default search by calling:
+
+ $default_features 
+    = $self->db_search->search_features({-search_term => 'searchterm'})
+
+Then do what you need to do to merge your customized search with the
+default terms.
 
 =back
 
@@ -794,6 +820,13 @@ sub database {
   $d;
 }
 
+sub all_databases {
+    my $self = shift;
+    my $source       = $self->browser_config;
+    my @db_labels    = $source->databases;
+    return map {$source->open_database($_)} @db_labels;
+}
+
 # get/store language
 sub language {
   my $self = shift;
@@ -837,10 +870,10 @@ sub segments {
 }
 
 # get/store a RegionSearch object (see Bio::Graphics::Browser2::RegionSearch)
-sub region_search {
+sub db_search {
   my $self = shift;
-  my $d = $self->{region_search};
-  $self->{region_search} = shift if @_;
+  my $d = $self->{db_search};
+  $self->{db_search} = shift if @_;
   $d;
 }
 

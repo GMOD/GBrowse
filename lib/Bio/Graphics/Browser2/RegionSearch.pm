@@ -231,11 +231,12 @@ This method will search all the databases for features matching the
 search term and will return the results as an array ref of
 Bio::SeqFeatureI objects. The arguments are a hash ref containing the
 various options passed to the db adaptors' features() method
-(e.g. "-type"), or a hashref with the key "-search", in which case the
-search term is parsed as any of gbrowse's heuristic keyword searches.
+(e.g. "-type"), or a hashref with the key "-search_term", in which
+case the search term is parsed as any of gbrowse's heuristic keyword
+searches. 
 
-If no search term is provided, then it is taken from the "name" field
-of the settings object.
+If no args are provided, then the search term is taken from the "name"
+field of the settings object.
 
 =cut
 

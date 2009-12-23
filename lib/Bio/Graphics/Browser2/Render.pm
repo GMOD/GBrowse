@@ -974,12 +974,16 @@ sub region {
     # run any "find" plugins
     my $plugin_action  = $self->plugin_action || '';
     my $current_plugin = $self->current_plugin;
-    if ($current_plugin && $plugin_action eq $self->tr('Find') || 
-	$plugin_action eq 'Find') {
+    if ($current_plugin 
+	&& $plugin_action eq $self->tr('Find')
+	|| lc $plugin_action eq 'find') {
 	$region->features($self->plugin_find($current_plugin,$self->state->{name}));
     }
     elsif ($self->state->{ref}) { # a known region
 	$region->set_features_by_region(@{$self->state}{'ref','start','stop'});
+    }
+    elsif (my $features = $self->plugin_auto_find($self->state->{name})) {  # plugins with the auto_find() method defined
+	$region->features($features);
     }
     else { # a feature search
 	my $search   = $self->get_search_object();
@@ -1082,14 +1086,15 @@ sub init_plugins {
 
   my $plugins = $PLUGINS{$source} 
     ||= Bio::Graphics::Browser2::PluginSet->new($self->data_source,
-					       $self->state,
-					       $self->language,
-					       @plugin_path);
+						$self->state,
+						$self->language,
+						@plugin_path);
   $self->fatal_error("Could not initialize plugins") unless $plugins;
   $plugins->configure($self->db,
 		      $self->state,
 		      $self->language,
-		      $self->session);
+		      $self->session,
+		      $self->get_search_object);
   $self->plugins($plugins);
   $self->load_plugin_annotators();
 
@@ -1106,21 +1111,39 @@ sub plugin_action {
   if (param('plugin_do')) {
     $action = $self->tr(param('plugin_do')) || $self->tr('Go');
   }
-  $action ||= param('plugin_action');
+
+  $action   ||=  param('plugin_action');
+  $action   ||= 'find' if param('plugin_find');
+
   return $action;
 }
 
 sub current_plugin {
   my $self = shift;
-  my $plugin_base = param('plugin') or return;
+  my $plugin_base = param('plugin') || param('plugin_find') or return;
   $self->plugins->plugin($plugin_base);
+}
+
+sub plugin_auto_find {
+    my $self = shift;
+    my $search_string = shift;
+    my (@results,$found_one);
+
+    for my $plugin ($self->plugins->plugins) {  # not a typo
+	next unless $plugin->type eq 'finder' && $plugin->can('auto_find');
+	my $f = $plugin->auto_find($search_string);
+	next unless $f;
+	$found_one++;
+	push @results,@$f;
+    }
+    return $found_one ? \@results : undef;
 }
 
 sub plugin_find {
   my $self = shift;
   my ($plugin,$search_string) = @_;
 
-  my $settings = $self->state;
+  my $settings    = $self->state;
   my $plugin_name = $plugin->name;
   my ($results,$keyword) = $plugin->can('auto_find') && defined $search_string
                              ? $plugin->auto_find($search_string)
@@ -1135,7 +1158,8 @@ sub plugin_find {
   # Write informative information into the search box - not sure if this is the right thing to do.
   $settings->{name} = defined($search_string) ? $self->tr('Plugin_search_1',$search_string,$plugin_name)
                                               : $self->tr('Plugin_search_2',$plugin_name);
-  $self->write_auto($results);
+  # do we really want to do this?!!
+  #  $self->write_auto($results);
   return $results;
 }
 

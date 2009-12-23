@@ -5,7 +5,7 @@
 use strict;
 
 use Bio::Graphics::Browser2;
-use Bio::Graphics::Browser2::Render;
+use Bio::Graphics::Browser2::Render::HTML;
 use Bio::Graphics::Browser2::Util;
 use Bio::Graphics::Karyotype;
 use Digest::MD5 'md5_hex';
@@ -70,7 +70,7 @@ use constant PANEL_GAP         => 3;
 sub new {
     my $class   = shift;
     my $globals = shift;
-    my $render  = Bio::Graphics::Browser2::Render->new($globals);
+    my $render  = Bio::Graphics::Browser2::Render::HTML->new($globals);
     return bless {render => $render},ref $class || $class;
 }
 
@@ -187,10 +187,17 @@ sub render_image {
 
     if ($embed) {
         my $url    = $renderer->source->generate_image($img_data);
+	my $js = $render->data_source->globals->js_url;
+	my @scripts = map { {src=>"$js/$_"} }
+	                  qw(balloon.js balloon.config.js yahoo-dom-event.js);
 	print $self->header(-type=>'text/html');
-	print start_html(),
-	      img({-src=>$url,
-		   -usemap=>"#gbrowse2_img_map"}),
+	print start_html(-script=>\@scripts),
+	      $render->render_balloon_settings,
+	      img(
+		  {
+		      -src    => $url,
+		      -usemap => "#gbrowse2_img_map"}
+		  ),
 	      $map,
 	      end_html();
     }

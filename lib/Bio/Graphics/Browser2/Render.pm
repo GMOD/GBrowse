@@ -1159,7 +1159,7 @@ sub plugin_find {
   $settings->{name} = defined($search_string) ? $self->tr('Plugin_search_1',$search_string,$plugin_name)
                                               : $self->tr('Plugin_search_2',$plugin_name);
   # do we really want to do this?!!
-  #  $self->write_auto($results);
+  $self->write_auto($results);
   return $results;
 }
 

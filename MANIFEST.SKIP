@@ -4,6 +4,7 @@
 ~$
 \.bak$
 ^MANIFEST\.SKIP$
+^INSTALL\.SKIP$
 CVS
 \.svn
 ^\.
@@ -64,3 +65,4 @@ dummy_form.html
 debug_alignment.pl
 htdocs/databases/
 track001.ctgA.1202327456.wig
+CAlign\.c

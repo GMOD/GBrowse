@@ -2,6 +2,8 @@
 	* Fixed bug in which database ID was not filled in on the clickable imagemap when
 	  multiple features are shown.
 	* Implemented the Finder plugin interface.
+	* Balloon popups now work when gbrowse_img is embedded (from Xiaoqi Shi's patch).
+	* Fixed track sharing client functionality.
 1.9984  * gbrowse_img now shows karyotype display when multiple regions are selected.
 	* Fixed install paths and verified that you can install into home directory.
 1.9983  * Not released.

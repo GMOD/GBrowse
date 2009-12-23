@@ -504,6 +504,7 @@ lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
 lib/Bio/Graphics/Browser2/DataLoader/sam.pm
 lib/Bio/Graphics/Browser2/DataLoader/wiggle.pm
 lib/Bio/Graphics/Browser2/DataSource.pm
+lib/Bio/Graphics/Browser2/ExternalData.pm
 lib/Bio/Graphics/Browser2/GFFhelper.pm
 lib/Bio/Graphics/Browser2/GFFPrinter.pm
 lib/Bio/Graphics/Browser2/I18n.pm
@@ -515,6 +516,7 @@ lib/Bio/Graphics/Browser2/PluginSet.pm
 lib/Bio/Graphics/Browser2/Realign.pm
 lib/Bio/Graphics/Browser2/Region.pm
 lib/Bio/Graphics/Browser2/RegionSearch.pm
+lib/Bio/Graphics/Browser2/RemoteSet.pm
 lib/Bio/Graphics/Browser2/Render.pm
 lib/Bio/Graphics/Browser2/Render/HTML.pm
 lib/Bio/Graphics/Browser2/Render/Slave.pm

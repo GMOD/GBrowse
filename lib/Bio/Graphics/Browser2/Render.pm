@@ -17,6 +17,7 @@ use Bio::Graphics::Browser2::Action;
 use Bio::Graphics::Browser2::Region;
 use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::Browser2::RenderPanels;
+use Bio::Graphics::Browser2::RemoteSet;
 use Bio::Graphics::Browser2::GFFPrinter;
 use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
 use Bio::Graphics::Browser2::UserTracks;
@@ -96,6 +97,13 @@ sub user_tracks {
        ||= Bio::Graphics::Browser2::UserTracks->new($self->data_source,
 						   $self->state,
 						   $self->language);
+}
+
+sub remote_sources {
+  my $self = shift;
+  my $d = $self->{remote_sources};
+  $self->{remote_sources} = shift if @_;
+  $d;
 }
 
 sub db {
@@ -208,6 +216,8 @@ sub init {
     $self->init_database();
     warn "init_plugins()" if DEBUG;
     $self->init_plugins();
+    warn "init_remote_sources()" if DEBUG;
+    $self->init_remote_sources();
     warn "init done" if DEBUG;
 }
 
@@ -324,6 +334,7 @@ sub background_track_render {
     $self->session->unlock(); # don't hold session captive on renderers!
     
     $self->init_plugins();
+    $self->init_remote_sources();
 
     $self->segment or return;
     my $cache_extra = $self->create_cache_extra;
@@ -394,7 +405,13 @@ sub add_tracks {
     my %track_data;
     my $segment = $self->segment;
     
-    $self->add_track_to_state($_) foreach @$track_names;
+    my $remote;
+    foreach (@$track_names) {
+	$self->add_track_to_state($_);
+	$remote++ if /http|ftp|das/;
+    }
+    $self->init_remote_sources if $remote;
+    
     if ($segment) {
 	foreach my $track_name ( @$track_names ) {
 
@@ -1372,6 +1389,17 @@ sub do_plugin_dump {
     return 1;
 }
 
+#======================== remote sources ====================
+sub init_remote_sources {
+  my $self = shift;
+  my $remote_sources   = Bio::Graphics::Browser2::RemoteSet->new($self->data_source,
+                                                                $self->state,
+                                                                $self->language);
+  $remote_sources->add_files_from_state;
+  $self->remote_sources($remote_sources);
+  return $remote_sources;
+}
+
 # this generates the form that is sent to Galaxy
 # defined in HTML.pm
 sub render_galaxy_form {
@@ -2255,6 +2283,7 @@ sub asynchronous_update_element {
     }
     elsif ( $element eq 'detail_panels' ) {
         $self->init_plugins();
+	$self->init_remote_sources();
         return join ' ',
             $self->render_detailview_panels( $self->region->seg );
     }
@@ -3248,10 +3277,10 @@ sub external_data {
 	my $rel2abs      = $search->coordinate_mapper($segment,1);
 	my $rel2abs_slow = $search->coordinate_mapper($segment,0);
 	eval {
-	    $self->plugins->annotate($meta_segment,$f,
-				     $rel2abs,$rel2abs_slow,$max_segment,
-				     $self->whole_segment,$self->region_segment);
-	} if $self->plugins;
+	    $_->annotate($meta_segment,$f,
+			 $rel2abs,$rel2abs_slow,$max_segment,
+			 $self->whole_segment,$self->region_segment);
+	} foreach ($self->plugins,$self->remote_sources);
     }
 
     warn "FEATURE files = ",join ' ',%$f if DEBUG;

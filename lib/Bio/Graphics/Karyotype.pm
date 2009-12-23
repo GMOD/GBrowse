@@ -187,7 +187,7 @@ sub feature2link {
                                ? "id:$match_id"
  	           : $class    ? "$class:$name" 
  		   : $name;
-    my $dbid  = $_->gbrowse_dbid if $_ && $_->can('gbrowse_dbid');
+    my $dbid  = $feature->gbrowse_dbid if $feature && $feature->can('gbrowse_dbid');
     $dbid   ||= '';
     return "$url$fid;dbid=$dbid";
 }

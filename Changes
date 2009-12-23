@@ -1,4 +1,4 @@
-1.9985  * Re-added the ability to group tracks into NxM tables.
+1.9990  * Re-added the ability to group tracks into NxM tables.
 	* Fixed bug in which database ID was not filled in on the clickable imagemap when
 	  multiple features are shown.
 	* Implemented the Finder plugin interface.

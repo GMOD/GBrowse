@@ -726,6 +726,9 @@ sub render_track_table {
   my $settings = $self->state;
   my $source   = $self->data_source;
 
+  # read category table information
+  my $category_table_labels = $self->category_table();
+
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
   my @labels     = $self->potential_tracks;
@@ -790,8 +793,11 @@ sub render_track_table {
 
       $settings->{sk} ||= 'sorted'; # get rid of annoying warning
 
-      @track_labels = sort {lc ($labels{$a}) cmp lc ($labels{$b})} @track_labels
-        if ($settings->{sk} eq "sorted");
+      # if these tracks are in a grid, then don't sort them
+      if (!defined $category_table_labels->{$category}) {
+	  @track_labels = sort {lc ($labels{$a}) cmp lc ($labels{$b})} @track_labels
+	      if ($settings->{sk} eq 'sorted');
+      }
 
       my %ids        = map {$_=>{id=>"${_}_check"}} @track_labels;
 
@@ -803,7 +809,7 @@ sub render_track_table {
 				      -attributes => \%ids,
 				      -override   => 1,
 				     );
-      $table = $self->tableize(\@checkboxes);
+      $table = $self->tableize(\@checkboxes,$category);
       my $visible = exists $settings->{section_visible}{$id} 
                     ? $settings->{section_visible}{$id} : 1;
 
@@ -837,6 +843,24 @@ sub render_track_table {
 	       end_form,
 	       $self->html_frag('html5',$settings),
 	       );
+}
+
+sub category_table {
+    my $self   = shift;
+    my $tabledata  = $self->data_source->setting('category tables');
+    my @tabledata  = shellwords($tabledata||'');
+    my %categorytable=();
+    while (@tabledata) {
+	my $category=shift(@tabledata);
+	my $rows=shift(@tabledata);
+	my @rows=split(/\s+/,$rows);
+	my $cols=shift(@tabledata);
+	my @cols=split(/\s+/,$cols);
+	$categorytable{$category}{row_labels}=\@rows;
+	$categorytable{$category}{col_labels}=\@cols;
+    }
+    
+    return \%categorytable; 
 }
 
 sub indent_categories {
@@ -1237,19 +1261,39 @@ sub segment2link {
 }
 
 sub tableize {
-  my $self  = shift;
-  my $array = shift;
+  my $self              = shift;
+  my ($array,$category) = @_;
   return unless @$array;
 
   my $columns = $self->data_source->global_setting('config table columns') || 3;
   my $rows    = int( @$array/$columns + 0.99 );
 
+  # gets the data for the defined 'category table(s)'
+  my (@column_labels,@row_labels);
+  my $categorytable = $self->category_table();
+  if (defined $category and exists $categorytable->{$category} ) {
+      @column_labels = @{$categorytable->{$category}{row_labels}};
+      @row_labels    = @{$categorytable->{$category}{col_labels}};
+      $rows          = @row_labels;
+      $columns       = @column_labels;
+  }
+
   my $cwidth = int(100/$columns+0.5) . '%';
 
   my $html = start_table({-border=>0,-width=>'100%'});
+
+  if (@column_labels) {
+      $html.="<tr><td></td>";
+      for (my $column=0;$column<$columns;$column++) {
+	  $html .= "<td><b>$column_labels[$column]</b></td>";
+      }
+      $html.="</tr>";
+  }
+
   for (my $row=0;$row<$rows;$row++) {
     # do table headers
     $html .= qq(<tr class="searchtitle">);
+    $html .= "<td><b>$row_labels[$row]</b></td>" if @row_labels;
     for (my $column=0;$column<$columns;$column++) {
       $html .= td({-width=>$cwidth},$array->[$column*$rows + $row] || '&nbsp;');
     }

@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 1.9983
+version: 1.9984
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -57,7 +57,7 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser2:
     file: lib/Bio/Graphics/Browser2.pm
-    version: 1.9983
+    version: 1.9984
   Bio::Graphics::Browser2::Action:
     file: lib/Bio/Graphics/Browser2/Action.pm
   Bio::Graphics::Browser2::AuthorizedFeatureFile:
@@ -80,6 +80,8 @@ provides:
     file: lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
   Bio::Graphics::Browser2::DataLoader::sam:
     file: lib/Bio/Graphics/Browser2/DataLoader/sam.pm
+  Bio::Graphics::Browser2::DataLoader::wiggle:
+    file: lib/Bio/Graphics/Browser2/DataLoader/wiggle.pm
   Bio::Graphics::Browser2::DataSource:
     file: lib/Bio/Graphics/Browser2/DataSource.pm
   Bio::Graphics::Browser2::GFFPrinter:
@@ -133,6 +135,8 @@ provides:
     file: lib/Bio/Graphics/GBrowseFeature.pm
   Bio::Graphics::Karyotype:
     file: lib/Bio/Graphics/Karyotype.pm
+  Bio::Graphics::Wiggle::Loader::Nosample:
+    file: lib/Bio/Graphics/Browser2/DataLoader/wiggle.pm
   CGI::Toggle:
     file: lib/CGI/Toggle.pm
   FakeHomol:

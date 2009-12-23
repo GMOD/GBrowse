@@ -1,3 +1,4 @@
+1.9985  * Re-added the ability to group tracks into NxM tables.
 1.9984  * gbrowse_img now shows karyotype display when multiple regions are selected.
 	* Fixed install paths and verified that you can install into home directory.
 1.9983  * Not released.

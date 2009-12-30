@@ -15,28 +15,58 @@ use strict;
 use strict;
 use DBI;
 use Bio::DB::GFF::Util::Binning 'bin';
-use constant MINBIN=>1000;
+use Getopt::Long;
 
-# Edit these constants as required
-use constant USERNAME => 'root';
-use constant PASSWORD => undef;
+use constant MINBIN   => 1000;
 
+use vars qw/$create $user $pass $dsn $verbose $create $aln_idx/;
 
-my $dsn = shift or die <<END;
+$| = 1;
+GetOptions(
+           'user=s'      => \$user,
+           'pass=s'      => \$pass,
+           'dsn=s'       => \$dsn,
+           'verbose'     => \$verbose,
+           'create'      => \$create
+           );
 
-Usage: ./load_alignment_database.pl dsn alignment_file
+my $usage = "Usage: load_alignment_database.pl -u username -p password -d database [-v, -c] file1, file2 ... filen\n\n";
 
-END
+$dsn     || die "Error: no database name\n$usage";
+$user    || die "Error: no user name\n$usage";
+
+if ($create && $verbose) {
+  print STDERR "Note: a new database $dsn will be initialized\n EXISTING DATA WILL BE DELETED\n\n";
+}
+elsif ($verbose) {
+  print STDERR "Note: data will be appended to the existing database $dsn\n";
+}
 
 
 $dsn = "dbi:mysql:$dsn" unless $dsn =~ /^dbi/;
-my $dbh = DBI->connect($dsn, USERNAME, PASSWORD) or die DBI->errstr;
+my $dbh = DBI->connect($dsn, $user, $pass);
+unless ($dbh) {
+  $dsn =~ s/\S+\:([^:]+)$/$1/;
+  my $error = DBI->errstr;
+  die <<END;
 
-$dbh->do('drop table if exists alignments') or die DBI->errstr;
-$dbh->do('drop table if exists map') or die DBI->errstr;
+ Error: $error
 
-$dbh->do(<<END) or die DBI->errstr;
-create table alignments (
+ There was a problem opening a connection to database $dsn.
+ Make sure you have used the correct username ($user), password ($pass) and that you have 
+ created the database $dsn via your mysql client. 
+ 
+ Consult the error message above for more information.
+END
+;
+}
+
+if ($create) {
+  $dbh->do('drop table if exists alignments') or die DBI->errstr;
+  $dbh->do('drop table if exists map') or die DBI->errstr;
+
+  $dbh->do(<<END) or die DBI->errstr;
+  create table alignments (
 			 hit_id    int not null auto_increment,
 			 hit_name  varchar(100) not null,
 			 src1      varchar(100) not null,
@@ -58,8 +88,8 @@ create table alignments (
 END
 ;
 
-$dbh->do(<<END) or die DBI->errstr;
-create table map (
+  $dbh->do(<<END) or die DBI->errstr;
+  create table map (
 		  map_id int not null auto_increment,
 		  hit_name  varchar(100) not null,
                   src1 varchar(100),
@@ -70,7 +100,7 @@ create table map (
 		  )
 END
 ;
-
+}
 
 $dbh->do('alter table alignments disable keys');
 $dbh->do('alter table map');
@@ -80,11 +110,10 @@ values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 END
 ;
 
-my $sth2=$dbh->prepare('insert into map (hit_name,src1,pos1,pos2) values(?,?,?,?)');
+my $sth2 = $dbh->prepare('insert into map (hit_name,src1,pos1,pos2) values(?,?,?,?)');
 
 my $hit_idx;
 while (<>) {
-  s/Contig/Supercontig/;
   chomp;
   my ($src1,$ref1,$start1,$end1,$strand1,$seq1,$src2,$ref2,$start2,$end2,$strand2,$seq2,@maps) = split "\t";
 
@@ -133,7 +162,7 @@ while (<>) {
     $sth2->execute($hit1,$src2,$pos,$map2{$pos}) or die $sth->errstr;
   }
 
-  print STDERR " processed $hit1!\r";
+  print STDERR " processed $hit1!\r" if $verbose;
 }
 
 

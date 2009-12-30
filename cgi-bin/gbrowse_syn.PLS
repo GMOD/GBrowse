@@ -1122,40 +1122,41 @@ sub options_table {
   my @onclick = ();
   my $radio_style = {-style=>"background:lightyellow;border:5px solid lightyellow", @onclick};
   my $space = '&nbsp;&nbsp';
+  my @grid = (span($radio_style, option_check('Grid lines', 'pgrid'))) unless $SYNTENY_IO->nomap;
 
-  print toggle( $CONF->tr('Display_settings'), 
-		table({-cellpadding => 5, -width => '100%', -border => 0, -class => 'searchtitle'},
-		      TR(
-			 td(
-			    b(wiki_help('Image Widths',$CONF->tr('Image widths')), ': '),
-			    span( $radio_style, radio_group( -name   => 'imagewidth',
-							     -values => [640,768,800,1024,1280],
-							     -default=>$CONF->page_settings('imagewidth'),
-							     @onclick ))
-			    ),
-			 td(
-			     expand_display() 
-			     ),
-			 td(
-			    submit(-name => 'Update Image')
-			    )
-			 ),
-		      TR(
-			 td( {-colspan => 3},
-			     b(wiki_help('Image Options',$CONF->tr('Image options')), ': '),
-			     div(
-				 span($radio_style, option_check('Chain alignments', 'aggregate')),$space,
-				 span($radio_style, option_check('Flip minus strand panels', 'pflip')),$space,
-				 #span($radio_style, 'Tiny alignments ', option_check('tiny')),$space,
-				 span($radio_style, option_check('Grid lines', 'pgrid')),$space,
-				 span($radio_style, option_check('Edges', 'edge')), $space,
-				 span($radio_style, option_check('Shading', 'shading')),
-				 )
-			     )
-			 )
-		      )
-		);
+  print toggle( $CONF->tr('Display_settings'),
+                table({-cellpadding => 5, -width => '100%', -border => 0, -class => 'searchtitle'},
+                      TR(
+                         td(
+                            b(wiki_help('Image Widths',$CONF->tr('Image widths')), ': '),
+                            span( $radio_style, radio_group( -name   => 'imagewidth',
+                                                             -values => [640,768,800,1024,1280],
+                                                             -default=>$CONF->page_settings('imagewidth'),
+                                                             @onclick ))
+                            ),
+                         td(
+                             expand_display()
+                             ),
+                         td(
+                            submit(-name => 'Update Image')
+                            )
+                         ),
+                      TR(
+                         td( {-colspan => 3},
+                             b(wiki_help('Image Options',$CONF->tr('Image options')), ': '),
+                             div(
+                                 span($radio_style, option_check('Chain alignments', 'aggregate')),$space,
+                                 span($radio_style, option_check('Flip minus strand panels', 'pflip')),$space,
+                                 @grid,
+                                 span($radio_style, option_check('Edges', 'edge')), $space,
+                                 span($radio_style, option_check('Shading', 'shading')),
+                                 )
+                             )
+                         )
+                      )
+                );
 }
+
 
 sub option_check {
   my $label = shift;
@@ -1479,6 +1480,9 @@ sub locations2pixels {
 
 sub grid_coords {
   my ($hit,$refbox,$hitbox,$flip,$segment) = @_;
+  
+  # don't bother if there are no coords in the database
+  return () if $SYNTENY_IO->nomap;
 
   # exact coordinates if configured
   my $gcoords = $CONF->setting('grid coordinates') || 'AUTO';

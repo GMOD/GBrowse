@@ -24,10 +24,14 @@ sub new {
     $dbh       = DBI->connect($dsn,@_) or die "$dsn: Can't open; ",DBI->errstr;
   }
 
-  return bless {dbh=>$dbh},$class;
+  my $self = {dbh=>$dbh};
+  $self->{nomap} = 1 unless _has_map($dbh);
+  return bless $self, $class;
 }
 
 sub dbh { shift->{dbh} }
+
+sub nomap { shift->{nomap} }
 
 # a method to get the nearest residue position match
 # (for truncating hits and gridlines).  Return the nearest mapped 
@@ -79,6 +83,17 @@ sub grid_coords_by_range {
   return @pairs;
 }
 
+
+# Check to see of grid-lines are possible.  Some data sources
+# may lack the grid coordinate data (not that there is anything
+# wrong with that).
+sub _has_map {
+  my $dbh = shift;
+  my $sth = $dbh->prepare('SELECT count(*) FROM map');
+  $sth->execute;
+  my ($count) = $sth->fetchrow_array;
+  return $count;
+}
 
 
 sub position_handle {

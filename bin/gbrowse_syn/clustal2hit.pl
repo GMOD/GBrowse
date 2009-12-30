@@ -25,6 +25,7 @@ while (my $file = shift) {
 
   while (my $aln = $str->next_aln) {
     $idx++;
+
     next if $aln->num_sequences < 2;
     my %seq;
     my $map = {};

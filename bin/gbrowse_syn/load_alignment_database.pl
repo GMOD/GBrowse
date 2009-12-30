@@ -9,8 +9,6 @@ use strict;
 # the coordinate format: pos1_species1 pos1_species2 ... posn_species1 posn_species2 | pos1_species2 pos1_species1 ... posn_species2 posn_species1, 
 # where pos is the matching sequence coordinate (ungapped) in each species.
 #
-# See clustal2hits.pl or aln2hit.pl for info on how this format can be created from
-# multiple sequence anlignment formats
 
 use strict;
 use DBI;
@@ -36,10 +34,10 @@ $dsn     || die "Error: no database name\n$usage";
 $user    || die "Error: no user name\n$usage";
 
 if ($create && $verbose) {
-  print STDERR "Note: a new database $dsn will be initialized\n EXISTING DATA WILL BE DELETED\n\n";
+  print STDERR "\nNote: a new database $dsn will be initialized\n EXISTING DATA WILL BE DELETED\n\n";
 }
 elsif ($verbose) {
-  print STDERR "Note: data will be appended to the existing database $dsn\n";
+  print STDERR "\nNote: data will be appended to the existing database $dsn\n\n";
 }
 
 

@@ -10,11 +10,13 @@
 }
 .searchtitle      { background-color: #E6EBF0;
 	            font-size: small;
-		    margin-left: 1em;
+		    margin-left: 1em
+;		    margin-right: 1em;
 }
 .searchbody       { background-color: #E6EBF0;
 	            font-size: small;
 		    margin-left: 1em;
+		    margin-right: 1em;
 		    margin-bottom: 3px;
 }
 .settingstitle    { background-color: #E6EBF0;

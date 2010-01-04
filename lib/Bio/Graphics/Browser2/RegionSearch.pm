@@ -57,7 +57,7 @@ Create a new RegionSearch object. Required parameters are:
 
         state         The page_settings document describing the
                       current state of the user session (for
-                      looking up search options and the like in the
+                      looking up search_options and the like in the
                       future).
 
 =cut
@@ -113,8 +113,11 @@ sub init_databases {
 	    $remote = $slave_status->select(@remotes);
 	}
 	my ($dbid)         = $source->db_settings($l);
-	next if $state->{dbid} && $state->{dbid} ne $dbid;
-	my $search_options = $source->setting($dbid => 'search options') || '';
+
+	# this should already be handled by get_search_object() in Render.pm
+	# next if $state->{dbid} && $state->{dbid} ne $dbid;
+
+	my $search_options = $source->search_options($dbid);
 
 	# this can't be right - we need to do id searches
 	# next if $search_options eq 'none';  
@@ -292,6 +295,7 @@ sub search_features_locally {
     ref $args && %$args or return;
 
     my $state       = $self->state;
+    my $source      = $self->source;
 
     my @found;
 
@@ -321,9 +325,10 @@ sub search_features_locally {
 	# allow explicit db_id to override cached list of local dbs
 	my $region   = $local_dbs->{$db} || 
 	    Bio::Graphics::Browser2::Region->new(
-						{ source  => $self->source,
-						  state   => $self->state,
-						  db      => $db,
+						{ source     => $self->source,
+						  state      => $self->state,
+						  db         => $db,
+						  searchopts => $self->source->search_options($dbid),
 						  }
 						); 
  	my $features = $region->search_features($args);

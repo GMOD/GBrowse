@@ -470,10 +470,11 @@ sub type2label {
 
   my @labels;
 
-  @labels =  @{$self->{_type2labelmemo}{$type,$length,$dbid}}
-    if defined $self->{_type2labelmemo}{$type,$length,$dbid};
+  if (exists $self->{_type2labelmemo}{$type,$length,$dbid}) {
+      @labels =  @{$self->{_type2labelmemo}{$type,$length,$dbid}};
+  }
 
-  unless (@labels) {
+  else {
       my @main_labels = $self->_type2label($self,
 					   $type,
 					   $dbid);
@@ -488,9 +489,26 @@ sub type2label {
 	  $label_groups{$label_base}++;
       }
       @labels = keys %label_groups;
-      $self->{_type2labelmemo}{$type,$length} = \@labels;
+      $self->{_type2labelmemo}{$type,$length,$dbid} = \@labels;
   }
+
   return wantarray ? @labels : $labels[0];
+}
+
+sub metadata {
+    my $self = shift;
+    my $metadata = $self->fallback_setting(general => 'metadata');
+    return unless $metadata;
+
+    my %a = $metadata =~ m/-(\w+)\s+([^-].+?(?= -[a-z]|$))/g;
+
+    my %metadata;
+    for (keys %a) { 
+	$a{$_} =~ s/\s+$// ;
+	$metadata{lc $_} = $a{$_};
+    }; # trim
+    
+    return \%metadata;
 }
 
 sub _type2label {
@@ -531,9 +549,13 @@ sub invert_types {
   my %inverted;
   for my $label (keys %{$config}) {
     my $feature = $config->{$label}{'feature'} or next;
-    my $dbid    = $config->{$label}{'database'} ||
-	$self->fallback_setting(TRACK_DEFAULTS => 'database');
-    $dbid ||= '';
+
+    my $dbid;
+    $dbid   = $label if $config->{$label}{'db_adaptor'}; # inline database definition
+    $dbid ||= $config->{$label}{'database'};             # 'database' option explicitly defined
+    $dbid ||= $self->fallback_setting(TRACK_DEFAULTS => 'database');  # default database
+    $dbid ||= '';                                        # give up
+
     foreach (shellwords($feature||'')) {
       $inverted{lc $_}{$dbid}{$label}++;
     }
@@ -724,6 +746,14 @@ sub open_database {
   $self->{db2track}{$db}{$dbid}++;
 
   return $db;
+}
+
+sub search_options {
+    my $self = shift;
+    my $dbid = shift;
+    return $self->setting($dbid => 'search options')
+	|| $self->setting($dbid => 'search_options')
+	|| 'default';
 }
 
 =item @ids   = $dsn->db2id($db)

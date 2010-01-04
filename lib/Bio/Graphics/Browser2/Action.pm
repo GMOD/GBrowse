@@ -555,6 +555,117 @@ sub ACTION_modifyUserData {
     return (200,'application/json',{tracks=>\@tracks});
 }
 
+sub ACTION_about_gbrowse {
+    my $self = shift;
+    my $q    = shift;
+
+    my $html = $q->div(
+	$q->img({-src=>'http://phenomics.cs.ucla.edu/GObase/images/gmod.gif',
+		 -align=>'right',
+		 -width=>'100',
+		}),
+	$q->p(
+	    $q->b(
+		"This is the Generic Genome Browser version $Bio::Graphics::Browser2::VERSION"
+	    )
+	    ),
+	$q->p(
+	    'It is part of the',$q->a({-href=>'http://www.gmod.org'},'Generic Model Organism (GMOD)'),
+	    'suite of genome analysis software tools.'),
+	$q->p(
+	    'The software is copyright 2002-2010 Cold Spring Harbor Laboratory,',
+	    'Ontario Institute for Cancer Research,',
+	    'and the University of California, Berkeley.')
+	);
+    return (200,'text/html',$html)
+}
+
+sub ACTION_about_dsn {
+    my $self = shift;
+    my $q    = shift;
+
+    my $source = $self->data_source;
+    my $html;
+
+    if (my $metadata = $source->metadata) {
+	my $taxid    = $metadata->{taxid} || $metadata->{species};
+	$taxid    =~ tr/ /+/;
+
+	my $coordinates = $metadata->{coordinates};
+	my $build       = $metadata->{authority} . '_' . $metadata->{coordinates_version};
+	my $build_link  = $coordinates  ? $q->a({-href=>$coordinates},$build)
+	                 :$build ne '_' ? $q->b($build)
+			 :'';
+
+	$html     = $q->h1($self->render->tr('ABOUT_NAME',$source->description));
+	$html    .= $q->p({-style=>'margin-left:1em'},$metadata->{description});
+	my @lines;
+	push @lines,(
+	    $q->dt($q->b('Species:')),
+	    $q->dd($q->a({-href=>"http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?name=$taxid"},
+			 $q->i($metadata->{species})))
+	) if $metadata->{species};
+
+	push @lines,(
+	    $q->dt($q->b('Build:')),
+	    $q->dd($build_link)
+	) if $build_link;
+
+	$html    .= $q->h1('Species and Build Information').
+	    $q->div({-style=>'margin-left:1em'},$q->dl(@lines)) if @lines;
+
+	my $attribution = '';
+
+	if (my $maintainer = $metadata->{maintainer}) {
+	    $maintainer    =~ s!<(.+)>!&lt;<a href="$1">$1</a>&gt;!;
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Maintained by $maintainer");
+	}
+        if (my $created    = $metadata->{created}) {
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Created $created");
+        }
+	
+        if (my $modified   = $metadata->{modified}) {
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Modified $modified");
+        }
+	$html .= "<hr>$attribution" if $attribution;
+	
+    } else {
+	$html = $q->i('No further information on',$q->b($source->name),'is available.');
+    }
+    return (200,'text/html',$html)
+}
+
+sub ACTION_list {
+    my $self = shift;
+    my $q    = shift;
+    my $globals = $self->render->globals;
+    my @sources = grep {$globals->data_source_show($_)} $globals->data_sources;
+    my $text = '# '.join ("\t",
+			  'Name',
+			  'Description',
+			  'Species',
+			  'TaxID',
+			  'CoordinateType',
+			  'BuildAuthority',
+			  'BuildVersion',
+			  'BuildURL')."\n";
+    for my $src (@sources) {
+	my $dsn = $globals->create_data_source($src) or next;
+	my $description = $globals->data_source_description($src);
+	my $meta        = $dsn->metadata || {};
+	$text .= join ("\t",
+		       $src,
+		       $description,
+		       $meta->{species},
+		       $meta->{taxid},
+		       $meta->{source},
+		       $meta->{authority},
+		       $meta->{coordinates_version},
+		       $meta->{coordinates})."\n";
+    }
+    return (200,'text/plain',$text);
+}
+
 1;
 
 __END__

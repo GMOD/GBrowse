@@ -144,7 +144,7 @@ sub run {
        url(-path=>1),' ',
        query_string() if $debug;
 
-  $self->set_source();
+  $self->set_source() && return;
 
   warn "[$$] add_user_tracks()" if $debug;
   # This guarantees that all user-specific tracks
@@ -197,10 +197,7 @@ sub set_source {
 	my $url  = CGI::url(-absolute=>1,-path_info=>0);
 	$url     =~ s!(gbrowse[^/]*)(?\!.*gbrowse)/.+$!$1!;  # fix CGI/Apache bug
 	$url    .= "/$source/";
-	# clear out some of the session variables that shouldn't transfer
-	# delete $self->state->{name};
-	# delete $self->state->{q};
-	# $url .= "?$args" if $args;
+	$url .= "?$args" if $args;
 	print CGI::redirect($url);
 	return 1;
     }
@@ -844,6 +841,7 @@ sub render_panels {
 						      'detail');
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
         my $details_msg    = span({ -id => 'details_msg', },'');
+	my $clear_hilites  = $self->clear_highlights;
         $html .= div(
             $self->toggle({tight=>1},
                 'Details',
@@ -854,11 +852,13 @@ sub render_panels {
 		    div({-align=>'left'},$self->html_frag('html4',$self->state))
                 )
             )
-        ) . $drag_script;
+        ) . $drag_script . $clear_hilites;
     }
 
     return $html;
 }
+
+sub clear_highlights { croak 'implement in subclass' }
 
 sub scale_bar {
     my $self         = shift;
@@ -980,12 +980,16 @@ sub region {
 
     return $self->{region} if exists $self->{region};
 
-    my $db = $self->data_source->open_database();
+    my $source = $self->data_source;
+    my $db     = $source->open_database();
+    my $dbid   = $source->db2id($db);
 
     my $region   = Bio::Graphics::Browser2::Region->new(
- 	{ source => $self->data_source,
- 	  state  => $self->state,
- 	  db     => $db }
+ 	{ source     => $self->data_source,
+ 	  state      => $self->state,
+ 	  db         => $db,
+	  searchopts => $source->search_options($dbid),
+	}
  	) or die;
 
     # run any "find" plugins
@@ -1088,7 +1092,7 @@ sub get_search_object {
 	  state  => $self->state,
 	});
     $search->init_databases(
-	$self->state->{dbid} ? [$self->state->{dbid}]
+	param('dbid') ? [param('dbid')]
 	:()
 	);
     return $self->{searchobj} = $search;
@@ -2072,7 +2076,7 @@ sub update_coordinates {
       undef $state->{start};
       undef $state->{stop};
       $state->{name} = param('name');
-      $state->{dbid} = param('dbid') if param('dbid'); # get rid of this
+      $state->{dbid} = param('dbid'); # get rid of this
   }
 }
 

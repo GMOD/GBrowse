@@ -32,6 +32,7 @@ sub searchopts { shift->{searchopts}  }
 sub parse_searchopts {
     my $self      = shift;
     my $optstring = shift;
+
     my @default   = qw(exact wildcard stem fulltext heuristic);
     my %all       = map {$_=>1} qw(exact wildcard stem fulltext heuristic autocomplete);
 
@@ -231,6 +232,8 @@ sub lookup_features {
 
  SEARCHING:
   {
+
+      warn "searchopts = ",join ',',%$searchopts if DEBUG;
       last SEARCHING unless %$searchopts;
 
       for my $n ([$name,$class,$start,$stop],

@@ -372,7 +372,7 @@ sub hits_table {
     return 
 	b($count),
 	div({-id=>'scrolling_table',-style=>'cursor:default'},
-	    table({-class=>'searchbody',-style=>'width:98.8%'}, #firefox display problems
+	    table({-class=>'searchbody',-style=>'width:95%'}, #firefox display problems
 		  TR(
 		      th({-align=>'left'},
 			 [$self->trans('NAME'),

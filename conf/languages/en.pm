@@ -167,7 +167,7 @@ END
 
    CANCEL   => 'Cancel',
 
-   ABOUT    => 'About...',
+   ABOUT    => 'About GBrowse...',
 
    REDISPLAY   => 'Redisplay',
 
@@ -468,7 +468,7 @@ END
 
  KILL_THIS_TRACK    => '<b>Turn off this track.</b>',
 
- CONFIGURE_THIS_TRACK   => '<b class="error">Configure this track.</b>',
+ CONFIGURE_THIS_TRACK   => '<b>Click to configure this track.</b>',
 
  SUBTRACKS_SHOWN    => 'This track contains selectable subtracks:',
 

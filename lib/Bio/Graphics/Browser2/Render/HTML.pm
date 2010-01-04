@@ -146,7 +146,7 @@ sub render_navbar {
 
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
-			   table({-border=>0},
+			   table({-border=>0,-width=>'100%'},
 				 TR(td($search),td($plugin_form)),
 				 TR(td({-align=>'left'},
 				       $source_form,
@@ -593,7 +593,18 @@ sub render_actionmenu {
 			   -onMouseDown => "GBox.showTooltip(event,'url:?action=share_track;track=all')"},
 			  ($self->tr('SHARE_ALL') || "Share These Tracks" )),
 
-    my $help_link     = a({-href=>$self->general_help(),-target=>'help'},$self->tr('Help'));
+    my $help_link     = a({-href=>$self->general_help(),
+			   -target=>'_new'},$self->tr('HELP_WITH_BROWSER'));
+    my $about_gb_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_gbrowse')",
+			   -href        => 'javascript:void(0)',
+			   -style       => 'cursor:pointer'
+			  },
+			  $self->tr('ABOUT'));
+    my $about_dsn_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_dsn')",
+			       -href        => 'javascript:void(0)',
+			       -style       => 'cursor:pointer'
+			      },
+			      $self->tr('ABOUT_DSN'));
     my $plugin_link   = $self->plugin_links($self->plugins);
     my $reset_link    = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
 
@@ -610,8 +621,13 @@ sub render_actionmenu {
 			     li($reset_link)
 			  )
 		       ),
-		       li({-class=>'dir'},'About',
-			  ul(li($help_link))),
+		       li({-class=>'dir'},$self->tr('HELP'),
+			  ul({-class=>'dropdown'},
+			     li($help_link),
+			     li({-class=>'divider'},''),
+			     li($about_gb_link),
+			     li($about_dsn_link),
+			  )),
 	);
     return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));
 }
@@ -1074,6 +1090,15 @@ sub render_global_config {
 	       )
 	) . end_form();
     return div($content);
+}
+
+sub clear_highlights {
+    my $self = shift;
+    my $link = a({-style   => 'font-size:9pt',
+		  -href    => 'javascript:void(0)',
+		  -onClick => 'Controller.set_display_option("h_feat","_clear_");Controller.set_display_option("h_region","_clear_")'
+		 },
+		 $self->tr('CLEAR_HIGHLIGHTING'));
 }
 
 sub render_toggle_userdata_table {

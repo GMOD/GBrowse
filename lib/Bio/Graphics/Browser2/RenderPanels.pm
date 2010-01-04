@@ -414,7 +414,7 @@ sub wrap_rendered_track {
     my $configure_this_track = $citation || '';
     $configure_this_track .= '<br>' if $citation;
     $configure_this_track .= $self->language->tr('CONFIGURE_THIS_TRACK')
-        || "Configure this Track";
+        || "Click to configure this Track";
 
     my $escaped_label = CGI::escape($label);
 

@@ -15,7 +15,6 @@ use Bio::Graphics::Browser2::DataSource;
 use Bio::Graphics::Browser2::Session;
 use GBrowse::ConfigData;
 use Carp 'croak','carp';
-use CGI 'redirect','url';
 
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 

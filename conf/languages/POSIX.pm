@@ -163,11 +163,17 @@ END
 
    HELP     => 'Help',
 
-   HELP_FORMAT => 'Help with File Format',
+   HELP_WITH_BROWSER     => 'Help with navigation',
+
+   HELP_FORMAT => 'Help with uploading',
 
    CANCEL   => 'Cancel',
 
-   ABOUT    => 'About...',
+   ABOUT    => 'About GBrowse...',
+
+   ABOUT_DSN    => 'About this database...',
+
+   ABOUT_NAME   => 'About <i>%s</i>...',
 
    REDISPLAY   => 'Redisplay',
 
@@ -474,7 +480,7 @@ END
 
  KILL_THIS_TRACK    => '<b>Turn off this track.</b>',
 
- CONFIGURE_THIS_TRACK   => '<b class="error">Configure this track.</b>',
+ CONFIGURE_THIS_TRACK   => '<b>Click to configure this track.</b>',
 
  SUBTRACKS_SHOWN    => 'This track contains selectable subtracks:',
 

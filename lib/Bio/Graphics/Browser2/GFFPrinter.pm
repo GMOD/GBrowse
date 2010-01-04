@@ -64,8 +64,6 @@ sub print_stylesheet {
 sub print_gff3 {
     my $self = shift;
 
-    warn "print_gff3()";
-
     my $segment= $self->get_segment;
     my $labels = $self->get_labels;
     my $types  = $labels ? $self->labels_to_types($labels,eval{$segment->length}) : undef;

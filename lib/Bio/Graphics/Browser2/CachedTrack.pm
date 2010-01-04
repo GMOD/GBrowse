@@ -141,8 +141,13 @@ sub errstr {
     my $self = shift;
     my $errorfile = $self->errorfile;
     open my $fh,'<',$errorfile or return;
-    chomp (my $msg = <$fh>);
-    return $msg;
+    while (my $msg = <$fh>) {
+	chomp $msg;
+	next if $msg =~ /EXCEPTION/; # bioperl error header
+	$msg =~ s/MSG://;            # more bioperl cruft
+	return $msg if $msg;
+    }
+    return 'unknown';
 }
 
 sub put_data {

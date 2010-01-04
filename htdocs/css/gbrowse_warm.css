@@ -14,11 +14,13 @@ BODY              { background-color: #F7FBFF;
 .searchtitle      { background-color: beige;
 	            font-size: small;
 		    margin-left: 1em;
+		    margin-right: 1em;
 }
 .searchbody       { background-color: khaki;
 	            font-size: small;
 		    margin-left: 1em;
 		    margin-bottom: 3px;
+		    margin-right: 1em;
 }
 .settingstitle    { background-color: #E6EBF0;
 	            font-size: small;

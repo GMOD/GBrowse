@@ -165,7 +165,7 @@ END
 
    HELP     => 'Help',
 
-   HELP_WITH_BROWSER     => 'Help with navigation',
+   HELP_WITH_BROWSER     => 'Help with this browser',
 
    HELP_FORMAT => 'Help with uploading',
 

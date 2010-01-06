@@ -107,6 +107,7 @@ function completeAjaxUpload(response,upload_id,field_type) {
     if (r.success) {
 
         var fields = field_type == 'upload' ? new Array(track_listing_id,userdata_table_id)
+                    :field_type == 'edit'   ? new Array(track_listing_id,userdata_table_id,userimport_table_id)
                                             : new Array(track_listing_id,userimport_table_id);
 
 	if (r.tracks != null && r.tracks.length > 0) {
@@ -234,7 +235,8 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field
                                              name:'name', 
                                             value:upload_tag}));
        paragraph.insert(new Element('textarea',{name:'data', id:'edit_field',
-       			    		        rows:20, cols:120, wrap:'off'})); 
+       			    		        rows:20, cols:100, wrap:'off'})); 
+       paragraph.insert(new Element('br'));
     }
 
     else {

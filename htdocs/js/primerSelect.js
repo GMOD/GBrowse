@@ -12,7 +12,7 @@ var primersObject;
 
 // Constructor
 var Primers = function () {
-  this.imageId    = 'detail_image';
+  this.imageId    = 'composite_track';
   this.marginTop  = '35px';
   this.background = 'gray';
   this.fontColor  = 'blue';

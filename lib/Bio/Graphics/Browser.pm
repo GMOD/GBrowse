@@ -1115,7 +1115,7 @@ sub render_composite_track {
   my ($width,$height,$url,$map,$gd,$boxes) = @{$panel}{qw/width height image map gd boxes/};
 
   # doesn't work
-  #   my $css_map = $self->map_css($boxes,$section) if $section eq 'detail';
+  my $css_map = $self->map_css($boxes,$section) if $section eq 'detail';
 
   if ($args->{image_and_map}) {
     return $gd, $boxes;
@@ -1125,9 +1125,7 @@ sub render_composite_track {
   my $map_name = param('hmap') || "${section}_map";
 
   # The javascript functions for rubber-band selection
-  # need this ID as a hook, please do not change it
-
-  # rubberbanding doesn't work with composite track
+  # need this ID as a hook, please DO NOT CHANGE THE IMAGE ID!
   my $id = $section eq 'detail' ? 'composite_track' : "${section}_image";
 
   my $img = $button
@@ -1148,7 +1146,7 @@ sub render_composite_track {
 
   my $html    = div({-align=>'center'},
 		    $img,
-#		    $css_map,
+		    $css_map,
 		    qq(<map name="$map_name">$map</map>)
       );
 

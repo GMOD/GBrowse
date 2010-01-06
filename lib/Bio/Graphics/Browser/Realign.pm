@@ -1,12 +1,12 @@
-package Bio::Graphics::Browser::Realign;
+package Bio::Graphics::Browser2::Realign;
 
 =head1 NAME
 
-Bio::Graphics::Browser::Realign - Perl extension for Smith-Waterman alignments
+Bio::Graphics::Browser2::Realign - Perl extension for Smith-Waterman alignments
 
 =head1 SYNOPSIS
 
-  use Bio::Graphics::Browser::Realign 'align';
+  use Bio::Graphics::Browser2::Realign 'align';
   my ($top,$middle,$bottom) = align('gattttttc','gattttccc');
   print join "\n",$top,$middle,$bottom,"\n";
 
@@ -23,7 +23,7 @@ It uses slow Smith-Waterman, so is only appropriate for short segments
 that are mostly aligned already.
 
 It can be speeded up significantly by compiling
-Bio::Graphics::Browser::CAlign, an XS extension.  To do this, build
+Bio::Graphics::Browser2::CAlign, an XS extension.  To do this, build
 gbrowse with the DO_XS=1 option:
 
   cd Generic-Genome-Browser
@@ -49,7 +49,7 @@ require Exporter;
 @EXPORT    = ();
 @EXPORT_OK = qw(align align_segs);
 
-# The default scoring matrix introduces a penalty of -1 for opening
+# The default scoring matrix introduces a penalty of -2 for opening
 # a gap in the sequence, but no penalty for extending an already opened
 # gap.  A nucleotide mismatch has a penalty of -1, and a match has a
 # positive score of +1.  An ambiguous nucleotide ("N")  can match
@@ -57,7 +57,7 @@ require Exporter;
 use constant DEFAULT_MATRIX => { 'wildcard_match'  => 0,
 				 'match'           => 1,
 				 'mismatch'        => -1,
-				 'gap'             => -1,
+				 'gap'             => -2,
 				 'gap_extend'      => 0,
 				 'wildcard'        => 'N',
 				 };
@@ -70,7 +70,7 @@ use constant GAP_TGT => 2;
 
 my @EVENTS = qw(extend gap_src gap_tgt);
 
-=item $aligner = Bio::Graphics::Browser::Realign->new($src,$target [,\%matrix])
+=item $aligner = Bio::Graphics::Browser2::Realign->new($src,$target [,\%matrix])
 
 The new() method takes two the two sequence strings to be aligned and
 an optional weight matrix.  Legal weight matrix keys and their default
@@ -101,8 +101,8 @@ sub new {
 		      matrix => $matrix || {},
 		      },$class;
     my $implementor = $class;
-    if (eval {require Bio::Graphics::Browser::CAlign}) {
-      $implementor = 'Bio::Graphics::Browser::CAlign';
+    if (eval {require Bio::Graphics::Browser2::CAlign}) {
+      $implementor = 'Bio::Graphics::Browser2::CAlign';
     }
     my ($score,$alignment) = $implementor->_do_alignment($src,$tgt,$self->{matrix});
     $self->{score}     = $score;
@@ -196,6 +196,7 @@ Will produce this output:
 # return the alignment as three padded strings for pretty-printing, etc.
 sub pads {
     my ($align,$src,$tgt) = @{shift()}{'alignment','src','target'};
+    warn join ',',@$align;
     my ($ps,$pt,$last);
     $ps = '-' x ($align->[0])        if defined $align->[0];  # pad up the source
     $pt = substr($tgt,0,$align->[0]) if defined $align->[0];
@@ -238,7 +239,7 @@ can be imported explicitly.
 Align the source and target sequences and return the padded strings
 representing the alignment.  It is exactly equivalent to calling:
 
-  Bio::Graphics::Browser::Realign->new($source,$target)->pads;
+  Bio::Graphics::Browser2::Realign->new($source,$target)->pads;
 
 =cut
 
@@ -318,21 +319,23 @@ sub _do_alignment {
                                               $matrix{mismatch};
 
         # what happens if we extend the src strand one character, gapping the tgt?
-	my $gap_tgt  = $row[$#row][SCORE] + (($row[$#row][EVENT]>EXTEND) ? $matrix{gap_extend}
+	my $gap_tgt  = $row[$#row][SCORE] + (($row[$#row][EVENT]==GAP_TGT) ? $matrix{gap_extend}
 	                                                                 : $matrix{gap});
 
         # what happens if we extend the tgt strand one character, gapping the src?
-	my $gap_src  = $scores->[$col+1][SCORE] + (($scores->[$col+1][EVENT] > EXTEND) ? $matrix{gap_extend}
+	my $gap_src  = $scores->[$col+1][SCORE] + (($scores->[$col+1][EVENT] == GAP_SRC) ? $matrix{gap_extend}
 	                                                                               : $matrix{gap});
 
 	# find the best score among the possibilities
 	my $score;
-	if ($extend >= $gap_src && $extend >= $gap_tgt) {
-	    $score = [$extend,EXTEND];
-	} elsif ($gap_src >= $gap_tgt) {
+	if ($gap_src >= $gap_tgt && $gap_src >= $extend) {
 	    $score = [$gap_src,GAP_SRC];
-	} else {
+	}
+	elsif ($gap_tgt >= $extend) {
 	    $score = [$gap_tgt,GAP_TGT];
+	}
+	else {
+	    $score = [$extend,EXTEND];
 	}
 
 	# save it for posterity
@@ -382,11 +385,9 @@ Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
 
 Copyright (c) 2003 Cold Spring Harbor Laboratory
 
-This package and its accompanying libraries is free software; you can
-redistribute it and/or modify it under the terms of the GPL (either
-version 1, or at your option, any later version) or the Artistic
-License 2.0.  Refer to LICENSE for the full license text. In addition,
-please see DISCLAIMER.txt for disclaimers of warranty.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.  See DISCLAIMER.txt for
+disclaimers of warranty.
 
 =head1 SEE ALSO
 

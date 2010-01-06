@@ -585,7 +585,7 @@ sub parse_feature_str {
   }
   return unless $reference;
 
-  $type = 'Your Features'              unless defined $type;
+  $type = 'Your_Features'              unless defined $type;
   $name = "Feature ".++$ADDED_FEATURES unless defined $name;
 
   my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split ','} @position;

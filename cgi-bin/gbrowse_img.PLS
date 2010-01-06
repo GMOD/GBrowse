@@ -208,10 +208,20 @@ if (@segments > 1 or $show_overview or
   my %seenit;
   my @whole_segments = grep {!$seenit{$_}++} map {$CONFIG->whole_segment($_)} @segments;
 
+  my $hits = Bio::Graphics::FeatureFile->new;
+  $hits->add_type(HIT => {bgcolor=>'red',fgcolor=>'red',glyph=>'box',key=>'Hits'});
+  for my $f (map {Bio::Graphics::Feature->new(-type  =>'HIT',
+					      -start => $_->start,
+					      -end   => $_->end,
+					      -seq_id=> $_->seq_id)} @segments) {
+      $hits->add_feature($f => 'HIT');
+  }
+  my $feature_list = { HIT=>$hits };
+  push @labels,'HIT';
+
   # trying to use new API here...
   for my $segment (@whole_segments) {
 
-    my $feature_list = {};
     add_features('overview',$labels,$segment,\@add_features,\@add_style,$feature_list) if @add_features;
     my @cache_extra = map {$_->mtime} values %$feature_list;
 
@@ -231,6 +241,7 @@ if (@segments > 1 or $show_overview or
 				  settings      => $page_settings,
 				  drag_n_drop   => 0,
 				  cache_extra   => \@cache_extra,
+				  featurefile_select => sub { 1 },
 				  -truecolor    => $CONFIG->setting('truecolor') || 0,
 				  -grid         => 0,   # $grid,
 				  -bgcolor      => $CONFIG->setting("overview bgcolor") || DEFAULT_OVERVIEW_BGCOLOR,
@@ -243,7 +254,6 @@ if (@segments > 1 or $show_overview or
   # generate one big image to return
   my ($gd,$width,$height,$map) = consolidate_images($image_class,\%list_of_panels);
   my ($image_uri,$image_file)  = $CONFIG->generate_image($gd);
-#  warn "map = $map";
   $panel = {file=>$image_file,image=>$image_uri,width=>$width,height=>$height,map=>$map};
 }
 
@@ -419,6 +429,11 @@ sub add_features {
 
   for my $f (@features) {
     my ($reference,$type,$name,@segments) = parse_feature_str($f);
+    if ($type eq 'Your_Features') {
+	(my $key = $type) =~ tr/_/ /;
+	push @styles,"$type key=\"$key\"";
+    }
+    warn "@styles";
 
     $mappers{$reference} ||= $master_mapper;
 
@@ -442,7 +457,6 @@ sub add_features {
     $feature_list->add_feature($feature);
   }
   push @$labels,'add' unless grep {$_ eq 'add'} @$labels;
-
   foreach (@styles) {
     my ($type,@options) = shellwords($_);
     my %options = map {split '='} @options;
@@ -915,9 +929,9 @@ lengths.
   <dd>The style argument can be used to control the rendering of additional features added
       with "add".  It is a flattened version of the style configuration sections described
       in <a href="http://www.wormbase.org/db/seq/gbrowse?help=annotation">this document</a>
-      For example, if you have added a "Blast Hit" annotation, then you can tell the
+      For example, if you have added a Blast_Hit annotation, then you can tell the
       renderer to use a red arrow for this glyph in this way:
-      style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
+      style=Blast_Hit+glyph=arrow+fgcolor=red
       <p>
   <dt><b>keystyle</b> (Alias: <b>k</b>)
   <dd>Controls the positioning of the track key. One of "right", "left", "between" (default) 
@@ -987,7 +1001,7 @@ lengths.
 </dl>
 <p>
 Putting it all together, here's a working (very long) URL:
-<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
+<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
 <p>

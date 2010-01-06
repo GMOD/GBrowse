@@ -42,7 +42,7 @@ $startperl -w
 \$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
 #
 ###################################################################
-\$VERSION   = "$OPTIONS{VERSION}";
+\$VERSION   = \"$OPTIONS{VERSION}\";
 
 !GROK!THIS!
 
@@ -67,7 +67,7 @@ use vars qw($DB $DSN $TRACK $HEADER %ERRCODES $CONFIG
 use constant SO => 'http://song.cvs.sourceforge.net/viewvc/*checkout*/song/ontology/so.obo';
 use constant DEBUG => 0;
 
-#$Id: das.PLS,v 1.6.8.1.2.18 2009-07-09 19:19:07 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.12 2009/03/03 23:51:54 lstein Exp $
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -99,7 +99,6 @@ warn "[$$] RUN(): ",
     CGI::url(-path=>1),' ',
     CGI::query_string() if DEBUG;
 
-
 my ($junk,$dsn,$operation) = split '/',path_info();
 
 $DSN = $dsn;
@@ -121,13 +120,13 @@ $CONFIG->source($DSN);
 do { error_header('invalid data source; use the sources or dsn command to get a list',401); exit 0}
      if $TRACK && !$CONFIG->setting($TRACK=>'das category');
 
+
 do { error_header('Could not open database',500); exit 0 }
      unless $DB = open_database();
-
+do { stylesheet();   exit 0 }      if $operation eq 'stylesheet';
 do { entry_points(); exit 0 }      if $operation eq 'entry_points';
 do { types();        exit 0 }      if $operation eq 'types';
 do { features();     exit 0 }      if $operation eq 'features';
-do { stylesheet();   exit 0 }      if $operation eq 'stylesheet';
 do { dna();          exit 0 }      if $operation eq 'dna';
 
 error_header('invalid request; please append a command such as /types to this URL',400);
@@ -498,6 +497,8 @@ sub _print_feature {
   my @notes       = $f->notes if $f->can('notes');
   my %attributes  = $f->attributes if $f->can('attributes');
 
+  my $das_version = $CONFIG->setting('das version') || 1.5;
+
   my $gclass;
   if ($f->can('group')) { # Bio::DB::GFF feature
     $gclass      = (ref($group) && $group->can('class')) 
@@ -565,6 +566,9 @@ sub _print_feature {
 
   $start ||= '';  $end ||= '';
 
+  # suppress printing parent features for earlier versions of DAS
+  return if $das_version < 1.6 and @child_ids;
+
   print <<END;
    <FEATURE id="$id" label="$flabel">
       <TYPE id="$type" category="$category"$map>$typelabel</TYPE>
@@ -576,8 +580,12 @@ sub _print_feature {
       <PHASE>$phase</PHASE>
 END
 ;
-  print qq(      <PARENT id="$pid"/>\n)  if defined $pid;
-  print qq(      <PART   id="$_"/>\n)    foreach @child_ids;
+
+  if ($das_version >= 1.6) {
+      print qq(      <PARENT id="$pid"/>\n)  if defined $pid;
+      print qq(      <PART   id="$_"/>\n)    foreach @child_ids;
+  }
+
   print qq(      $link\n)                if $link;
   print qq(      $target_info\n)         if $target_info;
 
@@ -810,14 +818,37 @@ END
 }
 
 sub stylesheet {
+    my $config     = $CONFIG;
+    my $cache_file = File::Spec->catfile(File::Spec->tmpdir,'gbrowse_'.$config->source.'.stylesheet');
+    if (-e $cache_file) {
+	my $cache_mtime = (stat(_))[9];
+	if ($cache_mtime >= $config->mtime) {
+	    open my $f,$cache_file or die "$cache_file: $!";
+	    ok_header();
+	    print while <$f>;
+	    close $f;
+	    return;
+	}
+    }
+
+    my $stylesheet = _stylesheet();
+    if (open my $f,'>',$cache_file) {
+	print $f $stylesheet;
+	close $f;
+    }
+    ok_header();
+    print $stylesheet;
+}
+
+sub _stylesheet {
   my $config = $CONFIG;
   my ($category2type,$type2category) = categories($config);
 
   my %default_style       = $config->config->default_style;
   $default_style{-link} ||= $config->setting(general=>'link');
 
-  ok_header();
-  print <<END;
+
+  my $stylesheet =  <<END;
 <?xml version="1.0" standalone="yes"?>
 <!DOCTYPE DASSTYLE SYSTEM "http://www.biodas.org/dtd/dasstyle.dtd">
 <DASSTYLE>
@@ -826,10 +857,14 @@ END
 ;
 
   local $^W=0;
+  my %valid_attributes = map {$_=>1}
+                      qw(height fgcolor bgcolor label bump parallel linewidth style font
+                         fontsize linewidth direction);
+  my %boolean_attributes = map {$_=>1} qw(label bump parallel);
 
   for my $cat ('default',keys %{$category2type}) {
 
-    print qq(  <CATEGORY id="$cat">\n);
+    $stylesheet .= qq(  <CATEGORY id="$cat">\n);
 
     my (%seenit,%doneit);
 
@@ -855,54 +890,66 @@ END
 	    my ($glyph,%style);
 
 	    my %type_style = $config->config->style($label);
+
 	    %style = (%default_style,map {ref $type_style{$_}
-					  ?()
-					      :($_=>$type_style{$_})
+					  ? ($_=>1)
+					  : ($_=>$type_style{$_})
 		      } keys %type_style);
+
 	    delete $style{-feature};
 	    delete $style{-feature_low};
 	    delete $style{-link} if $style{-link} eq 'AUTO';
 
 	    my $parts = $subtypemap->{$type};
 
+	    my %style_hint;
+
 	    if ($parts > 0) { # a group!
 		next unless $cat eq 'group';
-		$glyph = guess_glyph($style{-glyph},1);
+		($glyph,%style_hint) = guess_glyph($style{-glyph},1);
 		if ($style{-glyph} eq 'gene' && $type eq $toplevel) {
 		    $glyph = 'HIDDEN' ;
 		    %style = ();
 		}
+		%style = (%style,%style_hint);
 	    }
 	    else {
 		next if $cat eq 'group';
-		$glyph = $style{'-das glyph'} || guess_glyph($style{-glyph} || 'box');
+		($glyph,%style_hint) = $style{'-das glyph'} ? ($style{'-das glyph'})
+                                                            : guess_glyph($style{-glyph});
+		$glyph ||= 'box';
 	    }
 
-	    print qq(     <TYPE id="$typeid" label="$type">\n);
+	    $stylesheet .= qq(     <TYPE id="$typeid" label="$type">\n);
 
-	    print qq(        <GLYPH>\n);
-	    print qq(           <\U$glyph\E>\n);
+	    $stylesheet .= qq(        <GLYPH>\n);
+	    $stylesheet .= qq(           <\U$glyph\E>\n);
 	    for my $attribute (keys %style) {
 		(my $name = $attribute) =~ s/^-//;
 		$name =~ s/\s/_/g;
 		next if $name =~ /glyph|category|das/;
-		my $value = escapeHTML($style{$attribute});
-		print qq(              <\U$name\E>$value<\U/$name\E>\n);
+		next unless $valid_attributes{lc $name};
+		my $value = $boolean_attributes{lc $name}
+		            ? ($style{$attribute} ? 'yes' : 'no')
+                            : escapeHTML($style{$attribute});
+		$stylesheet .= qq(              <\U$name\E>$value<\U/$name\E>\n);
 	    }
-	    print qq(           </\U$glyph\E>\n);
-	    print qq(        </GLYPH>\n);
-	    print qq(     </TYPE>\n);
+	    $stylesheet .= qq(           </\U$glyph\E>\n);
+	    $stylesheet .= qq(        </GLYPH>\n);
+	    $stylesheet .= qq(     </TYPE>\n);
 	}
     }
 
-    print qq(  </CATEGORY>\n);
+    $stylesheet .= qq(  </CATEGORY>\n);
   }
   
-  print <<END;
+  $stylesheet .= <<END;
 </STYLESHEET>
 </DASSTYLE>
 END
 ;
+
+  return $stylesheet;
 }
 
 sub guess_glyph {
@@ -910,11 +957,12 @@ sub guess_glyph {
     my $group           = shift;
 
     my $class = "Bio::Graphics::Glyph::$suggested_glyph";
+    my %style;
 
     eval "require $class" unless $class->can('new');
     if ($group) {
-	return $class->isa('Bio::Graphics::Glyph::transcript') ? 'HAT'
-	      : $class->isa('Bio::Graphics::Glyph::cds')       ? 'HAT'
+	return $class->isa('Bio::Graphics::Glyph::transcript') ? ('LINE',-style=>'hat')
+	      : $class->isa('Bio::Graphics::Glyph::cds')       ? ('LINE',-style=>'hat')
 	      : 'LINE';
     } else {
 	return $class->isa('Bio::Graphics::Glyph::arrow')        ? 'ARROW'
@@ -1121,7 +1169,7 @@ sub categories {
       push @types,@composite_types;
       my $t   = Bio::DB::GFF->parse_types(@composite_types);
 
-      if ($DB->can('aggregators')) {
+      if ($DB && $DB->can('aggregators')) {
 	  $_->disaggregate($t,$DB) foreach $DB->aggregators;
       }
       my @t = map {defined($_->[1]) ? join(':',@$_) : $_->[0]} @$t;

@@ -8,7 +8,7 @@ use IO::File;
 use Cwd;
 require 5.005003;
 
-my $VERSION     = '1.71b';
+my $VERSION     = '1.71';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN GBROWSE_ROOT INSTALL_BASE

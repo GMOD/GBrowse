@@ -1945,7 +1945,13 @@ sub share_track {
     else {
         $gbgff = url( -full => 1, -path_info => 1 );
         $gbgff .= "?gbgff=1;q=$segment;t=$labels;s=1";
-        $gbgff .= ";id=$upload_id" if $labels =~ /file(:|%3A)/;
+	# BUG:
+	# Temporary hack here to allow people to share their uploaded tracks with
+	# others. It relies on the fact that uploaded tracks have a very specific
+	# type of label.
+	# This needs to be replaced with a completely different mechanism
+	# for flagging when a track is shared.
+        $gbgff .= ";uuid=$upload_id" if $labels =~ /track_[a-z0-9]{6}/;
     }
 
     my $das_types = join( ';',

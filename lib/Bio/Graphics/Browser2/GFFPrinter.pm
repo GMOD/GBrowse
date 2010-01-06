@@ -34,7 +34,6 @@ sub new {
     my $self    = bless {
         data_source => $options{-data_source},
         stylesheet  => $options{-stylesheet},
-        id          => $options{-id},
         'dump'      => $options{'-dump'},  # in quotes because "dump" is a perl keyword
         labels      => $options{-labels},
 	mimetype    => $options{-mimetype},

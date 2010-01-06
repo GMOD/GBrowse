@@ -34,12 +34,14 @@ sub sources_dir_name   { 'SOURCES'   }
 
 sub new {
     my $self = shift;
-    my ($config,$state,$lang) = @_;
+    my ($config,$state,$lang,$uuid) = @_;
+    $uuid ||= $state->{uploadid};
 
     return bless {
 	config   => $config,
 	state    => $state,
 	language => $lang,
+	uuid     => $uuid,
     },ref $self || $self;
 }
 
@@ -49,7 +51,8 @@ sub language { shift->{language}  }
 
 sub path {
     my $self   = shift;
-    $self->config->userdata($self->state->{uploadid}||'');
+    my $uploadid = $self->{uuid} || '';
+    $self->config->userdata($uploadid);
 }
 
 sub tracks {

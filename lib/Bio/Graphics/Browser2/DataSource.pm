@@ -994,8 +994,9 @@ sub usertype2label {
 
 sub _setting {
     my $self = shift;
-    if (@_ == 2 && (my $base = $self->{_user_tracks})) {
-	return $base->{config}{$_[0]}{$_[1]} if exists $base->{config}{$_[0]};
+    if (my $base = $self->{_user_tracks}) {
+	return $base->{config}{$_[0]}{$_[1]}  if @_ == 2 && exists $base->{config}{$_[0]};
+	return keys %{$base->{config}{$_[0]}} if @_ == 1;
     }
     return $self->SUPER::_setting(@_);
 }

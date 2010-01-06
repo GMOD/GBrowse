@@ -7,7 +7,8 @@ use Carp 'croak';
 use File::Basename 'basename';
 use base 'Bio::Graphics::Browser2::DataLoader';
 
-my @COLORS = qw(blue red orange brown mauve peach green cyan black ivory beige);
+my @COLORS = qw(blue red orange brown mauve peach green cyan 
+                black yellow cyan papayawhip coral);
 
 sub start_load {
     my $self = shift;

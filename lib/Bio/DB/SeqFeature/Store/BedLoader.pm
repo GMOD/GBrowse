@@ -11,8 +11,9 @@ sub create_load_data { #overridden
   my $self = shift;
   $self->SUPER::create_load_data;
   $self->{load_data}{IndexSubfeatures}    = $self->index_subfeatures();
-    $self->{load_data}{TemporaryLoadID} ||= "F0000";
-    $self->{load_data}{track_conf}{name}||= 'Feature0000';
+  $self->{load_data}{TemporaryLoadID} ||= "F0000";
+  $self->{load_data}{track_conf}{name}||= 'Feature0000';
+  $self->{load_data}{LoadedTypes}       = {};
     
 
   $self->{load_data}{Helper}           = 
@@ -77,12 +78,14 @@ sub handle_feature {
     my $method = $isGene ? 'mRNA' : 'region';
     my $source = $ld->{track_conf}{name};  # bogus, but works
 
+    $ld->{LoadedTypes}{"$method:$source"}++;
+
     my $strand = $Strand && $Strand eq '-' ? -1 : +1;
     my $start  = $chromStart+1;
     my $end    = $chromEnd;
 
     my %attributes;
-    %attributes = (itemRGB => $itemRGB) if $itemRGB && $itemRGB =~ /^\d+,\d+,\d+$/;
+    %attributes = (RGB => $itemRGB) if $itemRGB && $itemRGB;
 
     # create parent feature
     my @args = (-display_name => $name,
@@ -122,8 +125,10 @@ sub handle_feature {
 					-end    => $u->[1],
 					-strand => $strand,
 					-source => $source,
-					
-					-primary_tag => $u->[2]);
+					-score  => $score,
+					-primary_tag => $u->[2],
+					-attributes  => \%attributes,
+		);
 	    my $id = $ld->{TemporaryLoadID}++;
 	    $ld->{CurrentFeature} = $f;
 	    $ld->{CurrentID}      = $id;
@@ -195,6 +200,12 @@ sub split_gene_bits {
     }
 
     return \@bits;
+}
+
+sub loaded_types {
+    my $self = shift;
+    my $ld   = $self->{load_data};
+    return keys %{$ld->{LoadedTypes}};
 }
 
 1;

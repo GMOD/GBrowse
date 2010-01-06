@@ -1226,11 +1226,13 @@ sub handle_gff_dump {
     my $dumper = Bio::Graphics::Browser2::GFFPrinter->new(
         -data_source => $self->data_source(),
         -stylesheet  => $actions{trackdef}   ||  'no',
-        -id          => param('id')          || undef,         
         '-dump'      => param('d')           || undef,
         -labels      => [ param('type'), param('t') ],
         -mimetype    => param('m')           || undef,
     ) or return 1;
+
+    # so that another user's tracks are added if requested
+    $self->add_user_tracks($self->data_source,param('uuid')) if param('uuid');
 
     if ($actions{scan}) {
 	print header('text/plain');
@@ -3294,10 +3296,12 @@ sub external_data {
 # Supplement data source with user uploads
 sub add_user_tracks {
     my $self        = shift;
-    my $data_source = shift;
+    my ($data_source,$uuid) = @_;
+
     my $userdata = Bio::Graphics::Browser2::UserTracks->new($data_source,
 							    $self->state,
-							    $self->language);
+							    $self->language,
+							    $uuid);
     my @user_tracks = $userdata->tracks;
     for my $track (@user_tracks) {
 	my $config_path = $userdata->track_conf($track);

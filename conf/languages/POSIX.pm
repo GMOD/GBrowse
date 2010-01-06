@@ -55,10 +55,12 @@ END
    SVG_LINK   => '...high-res image',
 
    PDF_LINK   => '...PDF',
-
+   
    DUMP_GFF   => '...GFF annotation table',
 
    DUMP_SEQ   => '...FASTA sequence file',
+
+   FILTER     => 'Filter',
 
    SVG_DESCRIPTION => <<END,
 <p>

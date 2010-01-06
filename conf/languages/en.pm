@@ -60,6 +60,8 @@ END
 
    DUMP_SEQ   => '...FASTA sequence file',
 
+   FILTER     => 'Filter',
+
    SVG_DESCRIPTION => <<END,
 <p>
 The following link will generate this image in Scalable Vector

@@ -274,12 +274,15 @@ htdocs/images/help/numeric+data.gif
 htdocs/images/help/overview+detail.gif
 htdocs/images/help/overview+detail.png
 htdocs/images/help/overview.gif
+htdocs/images/help/remote.png
 htdocs/images/help/search+settings.gif
 htdocs/images/help/track+settings.gif
 htdocs/images/help/upload+edit.gif
 htdocs/images/help/upload+remote.gif
 htdocs/images/help/upload.gif
 htdocs/images/help/upload.png
+htdocs/images/help/upload_field.png
+htdocs/images/help/upload_list.png
 htdocs/images/help/worm_exons_spec.png
 htdocs/images/help/worm_telomeric_spec.png
 htdocs/images/help/yeast_I_genes_spec.png

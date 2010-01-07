@@ -27,7 +27,7 @@ site-specific customization the local administrators may have applied.
 
 <p>
 
-<img src="images/help/landmark.png" align="RIGHT">
+<img src="images/help/landmark.png" align="RIGHT" class="figure">
 
 To select a region of the genome to view, enter its name in the text
 field labeled "Landmark or Region".  Recognized types of names are
@@ -79,7 +79,7 @@ graphical panels:
 <p>
 
 <center>
-<img src="images/help/overview+detail.png" align="CENTER">
+<img src="images/help/overview+detail.png" class="figure">
 </center>
 
 <p>
@@ -164,7 +164,7 @@ landmarks in either the graphical display or the table in order to
 view it in the detail view:
 
 <center>
-<img src="images/help/multiple_hits.png" align="CENTER">
+<img src="images/help/multiple_hits.png" class="figure">
 </center>
 
 <h3>Autocompletion</h3>
@@ -179,7 +179,7 @@ search even if no autocomplete matches are recommended.
 
 <h2><a name="navigation">Navigation</a></h2>
 
-<img src="images/help/navbar.png" align="RIGHT">
+<img src="images/help/navbar.png" class="figure">
 
 <p>
 
@@ -255,7 +255,7 @@ distinguished by a distinctive graphical shape and color.
 <p>
 
 <center>
-<img src="images/help/detail.png" align="CENTER">
+<img src="images/help/detail.png" class="figure">
 </center>
 
 <p>
@@ -276,7 +276,7 @@ desired position.</li>
     the track table described below.</li>
 <li><b>To share a track</b> such that the track data can be imported
     into another instance of the browser, click on the icon that looks
-    like a set of radio waves. This will pop up a window containing a
+    like a set of radio waves (<img src="images/buttons/share.png" />. This will pop up a window containing a
     link that you can cut and paste into another instance of the
     Generic Genome Browser. Please see <a href="#importing">Importing
     Tracks</a> for more details.</li>
@@ -299,69 +299,204 @@ desired position.</li>
 This browser supports uploading your own data set tracks. You can then
 share these tracks with other individuals and groups.
 
-<h3>Uploading New Data Sets</h3>
+<h3>Entering New Data Sets</h3>
 
 <p>
 
-To upload tracks to the browser, click on the link labeled "Upload and
-Share Tracks" located towards the top of the screen. This will open a
-section similar to the one shown here:</p>
-
-<img src="images/help/upload.png">
+<img src="images/help/upload.png" class="figure">
 
 <p>
 
-Click on the link marked "[From text]". This will open a text editing
-field. Type in one or more lines like the following and press the
-"Upload" button.
+To upload a custom track to the browser, click on the link labeled
+"Upload and Share Tracks" located towards the top of the screen. This
+will open a new text editing area. Type in one or more lines of
+genomic feature information following the example in the screenshot
+below. The simplest upload format is called BED, and takes three
+space-separated fields:
 
+<blockquote>
 <pre>
-chrI 10000 20000
-chrI 12000 21000
-chrII 8000 20000
+&lt;chromosome&gt; &lt;start&gt; &lt;end&gt;
 </pre>
+</blockquote>
 
-<img src="images/help/upload_field.png">
-
-<p>
-
-<img src="images/help/upload+edit.gif">
-
-<p>
-
-The date at which the uploaded file was created or last modified is
-printed next to its name.  If there are a manageable number of
-annotated areas, GBrowse will create links that allow you to jump
-directly to them.
+<p>Where &lt;chromosome&gt; is the name of the chromosome that the
+feature lives on, and &lt;start&gt; and &lt;end&gt; indicates the
+range that the feature spans. (<i>The BED format uses zero-based
+coordinates, so the first base of the chromosome is actually position
+0. Other formats accepted by GBrowse use the more familiar one-base
+coordinates.</i>).
 
 <p>
 
-You may upload as many files as you wish, but be advised that the
-performance of the browser may decrease if there are many large
-uploads to process.
-
-<h3>Viewing 3d Party Annotations</h3>
+<img src="images/help/upload_field.png" class="figure" />
 
 <p>
 
-To view 3d party annotations, the annotations must be published on a
-reachable web server and you must know the annotation file's URL.
-<p>
-
-<img src="images/help/upload+remote.gif">
+Press the "Upload" button. The indicated features will be uploaded to
+GBrowse and information about the upload set will be displayed in a
+new section similar to this one:
 
 <p>
 
-At the bottom of the browser window is a text box labeled "Enter
-Remote Annotation URL".  Type in the URL and then press "Update URLs".
-The system will attempt to upload the indicated URL.  If successful,
-the data will appear as one or more new tracks.  Otherwise you will
-be alerted with an error message.
+<img src="images/help/upload_list.png" class="figure" />
 
 <p>
 
-You may add as many remote URLs as you wish.  To delete one, simply
-erase it and press "Update URLs" again.
+To <b>view</b> your uploaded annotations in a new browser track, click on the
+"View track" link. Note that you may need to navigate to the region of
+the genome containing the annotations in order to see them. To edit
+the annotations, click the "edit" link to the right of the name of the
+upload file (in this example "upload_24561").
+
+<p> To <a href="annotation_help.html#customize">customize the
+appearance</a> of the track, press the "edit" link to the right of the
+"Configuration" line. Note that this involves editing a configuration
+file that has many <a href="annotation_help.html">options</a>. You can
+perform all basic customization tasks such as changing the height and
+color of your uploaded features, much more conveniently by clicking
+the "?"  icon next to the track itself.
+
+<p>
+
+To <b>add a description</b> to the uploaded set, click on the line
+that reads "Click to add a description" and type in a one-line
+description of the data. Press the escape key to undo the
+changes. Press return or mouse out of the description area to accept
+the change.
+
+<p>
+
+To <b>delete</b> the uploaded annotation data completely, click the trash can
+icon.
+
+<p>
+
+To <b>share</b> an uploaded track with another person, go to the main
+browser tab 
+
+<h4>Uploading Files </h4>
+
+<p>
+
+For anything more than a short list of annotations, you will want to
+prepare your custom track(s) in a file on your local machine and
+upload the file to GBrowse. This is also mandatory for file formats
+that require fields to be separated by tabs rather than spaces. Use a
+text editor to prepare the track definitions and data and be sure to
+save <b>as text only</b>. Now click on the "From a file" link in the
+upload area, and follow the prompts to upload the file.
+
+<p>
+
+You can upload or type in as many annotation files as you desire. If
+you upload a new file with exactly the same name as an old one, it
+GBrowse will rename the new file by appending a "-1" to its end to
+avoid your inadvertently overwriting the old file. To replace an
+existing file, delete the old one before you upload the new one.
+
+<h4>Annotation File Formats</h4>
+
+<p>
+
+GBrowse accepts custom track data in a variety of formats including <a
+href="http://genome.ucsc.edu/FAQ/FAQformat#format1"
+target="_blank">BED</a>, <a
+href="http://genome.ucsc.edu/FAQ/FAQformat#format3"
+target="_blank">GFF</a>, and <a
+href="http://www.sequenceontology.org/gff3.shtml"
+target="_blank">GFF3</a>. For dense quantitative data use <a
+href="http://genome.ucsc.edu/goldenPath/help/wiggle.html"
+target="_blank">Wiggle (WIG)</a> format.
+
+<p>
+
+GBrowse also accepts a simple internal format called <a
+href="annotation_help.html" target="_blank">feature file format
+(FFF)</a>. The main advantage of this format is that it allows for
+extensive customization of the appearance of each track and feature.
+
+<p>
+
+In most cases, you can define multiple tracks in a single file by
+creating several "track" definition lines in BED or WIG format files,
+or by defining several track configuration sections in FFF format
+files. See the documentation of each format for assistance.
+
+<p>
+
+In addition to these genomic formats, you can upload dense genomic
+sequencing data in <a href="http://samtools.sourceforge.net/"
+target="_blank">BAM or SAM</a> format. This feature requires the
+administrator of the particular database on which GBrowse is running
+to have installed the BAM support libraries and to have initialized a
+genomic sequence track. At low magnifications, uploaded BAM/SAM tracks
+will show a coverage graph of the data. At higher magnifications, they
+will show individual reads and the alignment between the reads and the
+genome.
+
+<hr>
+
+<h2 name="importing">Importing tracks from Remote Sources</h2>
+
+<p>
+
+GBrowse allows you to import track data from a variety of remote
+locations, including:
+
+<ol>
+  <li>A track from another GBrowse instance that shares the same
+  chromosomal coordinates.
+
+  <li>A track definition file that someone has placed on an
+  internet-accessible web or FTP server.
+      
+  <li>A track defined by a <a
+  href="http://www.dasregistry.org/">Distributed Annotation Server
+  (DAS)</a> server.
+</ol>
+
+<p>
+
+To import a track from a remote source, you must know its URL.
+
+<p>
+
+<b>To import a track from another GBrowse instance</b>, click on the
+radio wave (<img src="images/buttons/share.png" />) icon in the track
+title and then copy the URL that appears there. Go to the "Upload and
+Share Tracks" panel, and click on the "Import a track" link. This
+will open up a new text field. Paste in the copied URL and press
+"Upload".
+
+<p>
+
+<img src="images/help/remote.png" class="figure">
+
+<p>
+
+If the remote track was successfully imported, a description of the
+remote track similar to the previous section's listing of uploaded
+tracks will appear.
+
+<p>
+
+<b>To import a track from a Web or FTP file</b>, make sure that the
+web or FTP server is accessible to the machine on which the GBrowse
+instance is running, and that file is in one of the upload formats
+recognized by GBrowse (e.g. BED or GFF3). Then click the "Import a
+track" and paste in the annotation file's URL as before.
+
+<b>To import a track from a DAS server</b>, identify the URL used by
+the DAS server for the desired track. The <a
+href="http://www.dasregistry.org/">DAS registry</a> will help you
+locate DAS servers with useful genomic data. Then cut and paste the
+DAS server URL into the remote track URL box as before.
+
+<p>
+
+You may add as many remote tracks as you wish.  To delete one, simply
+click on the trash icon next to its name in the remote track listing.
 
 <hr>
 
@@ -369,23 +504,32 @@ erase it and press "Update URLs" again.
 
 <p>
 
-Another way to upload your own features is by adding an "add" argument
-to the gbrowse URL. For example, this URL will create a track named
-"MyDeletions" containing a feature named "Deletion3". Deletion3
-occupies the region on chromosome 3 between 10,050,000 and 10,051,000:
+A quick way to upload one or two features is by adding an "add"
+argument to the gbrowse URL. For example, this URL will create a track
+named "MyDeletions" containing a feature named "Deletion3". Deletion3
+occupies the region on chromosome chrI between 100,000 and 150,000:
 
 </p>
 
 <blockquote>
-$GBROWSE?add=chr3+MyDeletions+Deletion3+10050000..10051000
+http://gbrowse_url/source/?add=chrI:100000..150000
 </blockquote>
 
 <p>
-You can have as many "add" options as you like:
-</p>
+
+or a multipart feature with segments at 100000..110000 and
+120000..130000:
 
 <blockquote>
-$GBROWSE?add=chr3+MyDeletions+Deletion3+10050000..10051000;add=chr3+MyDeletions+Deletion4+950000..960000
+http://gbrowse_url/source/?add=chrI:100000..110000,120000..130000
+</blockquote>
+
+<p>
+
+You can have as many "add" options as you like:
+
+<blockquote>
+http://gbrowse_url/source/?add=chrI:100000..110000,120000..130000;add=chrI:80000..90000
 </blockquote>
 
 <p>The format is:</p>

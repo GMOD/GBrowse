@@ -94,3 +94,14 @@ span.tctl         { cursor: pointer }
 .menutitle:hover {
     text-decoration: underline;
 }
+img.figure {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-bottom: 6px;
+    background-color: lightgray;
+    border: double;
+}

@@ -1152,6 +1152,15 @@ sub list_userdata {
     my $count = 0;
     my @rows = map {
 	my $name          = $_;
+	my $short_name    = $name;
+
+	if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
+	    my @tracks = split /\+/,$2;
+	    $short_name = "Shared track from $1 (@tracks)";
+	} elsif (length $short_name > 40) {
+	    $short_name       =~ s/^(.{40}).+/$1.../;
+	}
+
 	my $description   = div(
 	    {
 		-id              => "${name}_description",
@@ -1160,6 +1169,8 @@ sub list_userdata {
 	    },
 	    $userdata->description($_) || 'Click to add a description'
 	    );
+	my @track_labels        = $userdata->labels($name);
+	my $track_labels        = join '+',map {CGI::escape($_)} @track_labels;
 
 	my $status    = $userdata->status($name) || 'complete';
 	my $random_id = 'upload_'.int rand(9999);
@@ -1194,16 +1205,20 @@ sub list_userdata {
 
 	div({-style=>"background-color:$color"},
 	    div({-id=>"${name}_stat"},''),
-#	    img({-src=>$share,
-#		 -onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
-#		 -onClick     => 'GBubble.showTooltip(event,"Sorry, not yet implemented",0)',
-#		}),
 	    img({-src     => $delete,
 		 -style   => 'cursor:pointer',
 		 -onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
 		 -onClick     => "deleteUploadTrack('$name')"
-		}
-	    ),'&nbsp;',b($name),$go_there,br(), 
+		},'&nbsp;',
+	    ($type eq 'uploaded') 
+		? img({-src=>$share,
+		 -style   => 'cursor:pointer',
+		 -onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
+		 -onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
+		})
+	        : '',
+	    ),'&nbsp;',
+	    b($short_name),$go_there,br(), 
 	    i($description),
 	    div({-style=>'padding-left:10em'},
 		b('Source files:'),
@@ -1883,6 +1898,7 @@ sub select_subtracks {
 
     my $select_options = $data_source->setting($label=>'select');
     my ($method,@values) = shellwords($select_options);
+    foreach (@values) {s/#.+$//}  # get rid of comments
 
     my $filter = $state->{features}{$label}{filter};
 
@@ -1939,7 +1955,7 @@ sub share_track {
                  :$label =~  /:overview$/ ? '$overview'
                  :'$segment';
     my $upload_id = $state->{uploadid} || $state->{userid};
-    if ( $label =~ /^(http|ftp):/ ) {    # reexporting and imported track!
+    if ( $label =~ /^(http|ftp)/ ) {    # reexporting and imported track!
         $gbgff = $label;
     }
     else {

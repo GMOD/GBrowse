@@ -1243,6 +1243,8 @@ sub select_features_menu {
     my $settings=$self->settings;
 
     my ($method,@values) = shellwords $source->setting($label=>'select');
+    foreach    (@values) {s/#.+$//}  # get rid of comments
+
     return unless @values;
 
     my $buttons = $self->source->globals->button_url;
@@ -2024,7 +2026,7 @@ sub make_title {
 	  || $source->code_setting(general=>'title');
       if (defined $link && ref($link) eq 'CODE') {
 	$title       = eval {$link->($feature,$panel,$track)};
-	$self->_callback_complain($label=>'title') if $@;
+	$source->_callback_complain($label=>'title') if $@;
 	return $title if defined $title;
       }
       return $source->link_pattern($link,$feature) if $link && $link ne 'AUTO';

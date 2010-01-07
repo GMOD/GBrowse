@@ -1488,10 +1488,9 @@ sub write_auto {
     }
 
     my ($result,$msg,$tracks) 
-	= $user_tracks->upload_data('My Track',$feature_file,'overwrite');
+	= $user_tracks->upload_data('My Track',$feature_file,'text/plain','overwrite');
     warn $msg unless $result;
 
-    local $self->data_source->{_user_tracks} = {};
     $self->add_user_tracks($self->data_source);
     $self->add_track_to_state($_) foreach @$tracks;
 }
@@ -1564,7 +1563,7 @@ sub parse_feature_str {
     }
     return unless $reference;
 
-    $type = 'Your Features' unless defined $type;
+    $type = 'region' unless defined $type;
     $name = "Feature " . ++$self->{added_features} unless defined $name;
 
     my @segments
@@ -1871,6 +1870,7 @@ sub filter_subtrack {
 
     my %filters     = map {$_=>1} @$subtracks;
     my ($method,@values) = shellwords $self->data_source->setting($label=>'select');
+    foreach (@values) {s/#.+$//}  # get rid of comments
     $state->{features}{$label}{filter}{values} = {map {$_=>$filters{$_}} @values};
     $state->{features}{$label}{filter}{method} = $method;
 }
@@ -1968,6 +1968,11 @@ sub update_options {
 sub update_tracks {
   my $self  = shift;
   my $state = shift;
+
+  if (my @add = param('add')) {
+      my @style = param('style');
+      $self->handle_quickie(\@add,\@style);
+  }
 
   # selected tracks can be set by the 'label' parameter
   if (my @l = param('label')) {
@@ -2731,7 +2736,8 @@ sub set_tracks {
     for my $label (@labels) {
 	my ($main,$subtracks) = split '/',$label;
 	$subtracks ||= '';
-	my @subtracks         = split ' ',$subtracks;
+	my @subtracks         = shellwords($subtracks);
+	foreach (@subtracks) {s/#.+$//}  # get rid of comments
 	push @main,$main;
 	if (@subtracks) {
 	    $self->filter_subtrack($main,\@subtracks);

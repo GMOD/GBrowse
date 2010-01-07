@@ -170,8 +170,7 @@ sub trackname_from_url {
     my $url      = shift;
 
     my $uniquefy = shift;
-
-    (my $track_name = $url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
+    (my $track_name=$url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
 
     my $unique = 0;
     while ($uniquefy && !$unique) {

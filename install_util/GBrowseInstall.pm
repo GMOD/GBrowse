@@ -449,8 +449,8 @@ sub process_conf_files {
 	    $skip ||= IO::File->new('>>INSTALL.SKIP');
 	    (my $new = $base) =~ s/^conf\///;
 	    my $installed = File::Spec->catfile($install_path,$new);
-	    if (-e $installed && (compare($base,$installed) != 0)) {
-		warn "$installed is already installed. New version will be installed as $installed.new\n";
+	    if (-e $installed && $base =~ /\.conf$/ && (compare($base,$installed) != 0)) {
+		warn "$installed conf file is already installed. New version will be installed as $installed.new\n";
 		copy ("blib/$base","blib/$base.new");
 		print $skip '^',"blib/",quotemeta($base),'$',"\n";
 	    }

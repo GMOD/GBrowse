@@ -1,11 +1,12 @@
 <html>
 <head>
 <link type="text/css" media="all" rel="stylesheet" href="/gbrowse2/css/gbrowse.css" />
+<link type="text/css" media="all" rel="stylesheet" href="/gbrowse2/css/gbrowse_warm.css" />
 </head>
 <body>
 
 
-<table width="100%">
+<table width="100%"  style="border:ridge">
   <tr class="searchtitle">
     <th><a href="#selecting">Selecting Regions</a></th>
     <th><a href="#navigation">Overview Panel</a></th>
@@ -512,7 +513,7 @@ occupies the region on chromosome chrI between 100,000 and 150,000:
 </p>
 
 <blockquote>
-http://gbrowse_url/source/?add=chrI:100000..150000
+http://gbrowse_url/?add=chrI:100000..150000
 </blockquote>
 
 <p>
@@ -521,7 +522,7 @@ or a multipart feature with segments at 100000..110000 and
 120000..130000:
 
 <blockquote>
-http://gbrowse_url/source/?add=chrI:100000..110000,120000..130000
+http://gbrowse_url/?add=chrI:100000..110000,120000..130000
 </blockquote>
 
 <p>
@@ -529,27 +530,28 @@ http://gbrowse_url/source/?add=chrI:100000..110000,120000..130000
 You can have as many "add" options as you like:
 
 <blockquote>
-http://gbrowse_url/source/?add=chrI:100000..110000,120000..130000;add=chrI:80000..90000
+http://gbrowse_url/?add=chrI:100000..110000,120000..130000;add=chrI:80000..90000
 </blockquote>
 
-<p>The format is:</p>
+<p>To label the track and the features within the track, you may use
+the extended format shown here:</p>
 
 <blockquote>
 reference+trackName+featureName+start..stop,start..stop,start..stop ...
 </blockquote>
 
-<p>where "reference" is the name of the landmark that start and stop are
-relative to. You can use a chromosome name, a contig name, a gene
-name, or anything else that this browser recognizes in the search
-box. "trackName" is the name of the track to upload, "featureName" is
-the name of the feature you are uploading, and "start..stop" are the
-start and end coordinates relative to "reference". For multisegmented
-features, specify multiple start..stop pairs separated by commas.</p>
+<p>where "reference" is the name of the chromosome or contig,
+"trackName" is the name of the new track you wish to place the feature
+in, and "featureName" is the name of the feature you are uploading. As
+before, the list of "start..stop" coordinates are the start and end
+coordinates relative to "reference". For multisegmented features,
+specify multiple start..stop pairs separated by commas.</p>
 
-<p>For more control over the way quick upload features appear, specify the "style" option to the URL:</p>
+<p>For more control over the way quick upload features appear, specify
+the "style" option to the URL:</p>
 
 <blockquote>
-$GBROWSE?style=MyDeletions+glyph=arrow+double=1+fgcolor=blue
+http://gbrowse_url/?style=MyDeletions+glyph=arrow+double=1+fgcolor=blue
 </blockquote>
 
 <p>This says to configure the "MyDeletions" track with the following options:
@@ -560,8 +562,12 @@ double=1
 fgcolor=blue
 </pre></blockquote>
 
-<p>See <a href="$GBROWSE?help=annotation">the uploaded annotation help
+<p>See <a href="annotation_help.html">the uploaded annotation help
 file</a> for more details</p>.
+
+<hr>
+
+$Id$
 
 </body>
 </html>

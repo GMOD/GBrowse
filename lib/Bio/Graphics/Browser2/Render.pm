@@ -1429,6 +1429,7 @@ sub delete_uploads {
 	$userdata->delete_file($file);
 	$self->remove_track_from_state($_) foreach @tracks;
     }
+    $self->data_source->clear_usertracks();
 }
 
 sub cleanup {

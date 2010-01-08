@@ -333,7 +333,7 @@ ok($panel_renderer->make_link($feature),
    "../../gbrowse_details/volvox?ref=A;start=1;end=1000;name=fred;class=Sequence");
 
 $ENV{REQUEST_URI} = 'http://localhost/cgi-bin/gbrowse/volvox';
-$ENV{PATH_INFO}   = '/volvox';
+$ENV{PATH_INFO}   = '/volvox/';
 $ENV{REQUEST_METHOD} = 'GET';
 
 ok($panel_renderer->make_link($feature),

@@ -1,116 +1,69 @@
 <html>
 <head>
 <link type="text/css" media="all" rel="stylesheet" href="/gbrowse2/css/gbrowse.css" />
+<link type="text/css" media="all" rel="stylesheet" href="/gbrowse2/css/gbrowse_warm.css" />
 </head>
 <body>
 
-<table width="100%">
+<table width="100%"  style="border:ridge">
   <tr class="searchtitle">
-    <th><a href="#upload">Uploading</a></th>
-    <th><a href="#edit">Editing</a></th>
-    <th><a href="#other">Deleting</a></th>
-    <th><a href="#other">Downloading</a></th>
-    <th><a href="#format">File Format</a></th>
+    <th><a href="#format">File Formats</a></th>
+    <th><a href="#featurefile format">Feature File Formats</a></th>
     <th><a href="#customize">Customizing Appearance</a></th>
     <th><a href="#numeric">Displaying Intensity Plots &amp; Other Numeric Data</a></th>
-    <th><a href="#remote">Publishing</a></th>
   </tr>
 </table>
 
 <A NAME="intro"></A>
-<H1>Adding Annotations to the Genome</H1>
-
-<P>You can upload your own list of sequence annotations to this page
-and view them in the context of the genome.  Uploaded annotations will
-persist until you edit them or delete them.  Your annotations are
-private and will not be seen by other individuals.  If you choose to,
-you can publish your annotations and share them with your
-colleagues.</P>
 
 <p>
 
-<A NAME="upload"></A>
-<h2>To upload annotations:</h2>
-
-<ol>
-  <li>Create a text file using the format described below.  The file
-      must be <i>text only</i>.
-  <li>Use the <b>Browse...</b> button to select the file.
-  <li>Press the <b>Upload</b> button to upload the file.
-</ol>
+As described in <a href="general_help.html">GBrowse help</a> this
+genome browser allows you to upload track data in a variety of
+quantitative and non-quantitative formats.
 
 <p>
 
-The browser should now show a line of text that identifies the date
-you uploaded this file, and links to the sequence(s) which you have
-annotated:
+Accepted formats include:
 
-<blockquote>
-<font color="blue"><u>[your_file.txt]</u></font> <i>Last modified Mon Dec 17 08:43:36 2001. Annotated sequences:</i>
-<font color="blue"><u>T22A3</u></font>
-</blockquote>
+<ul>
+  <li><a href="http://genome.ucsc.edu/FAQ/FAQformat#format1"  target="_blank">BED</a>
 
-<P>From now on, whenever you browse a region covered by your
-annotations they will appear on the display. To quickly go to an
-annotated region, click on its link.  (If your file contains too many
-annotated regions they will not be shown as individual links.)</p>
+  <li> <a href="http://genome.ucsc.edu/FAQ/FAQformat#format3" target="_blank">GFF</a>
 
-<hr>
-<a name="edit"></a>
-<h2>To edit annotations:</h2>
+  <li><a href="http://www.sequenceontology.org/gff3.shtml" target="_blank">GFF3</a>
+
+  <li> <a href="http://genome.ucsc.edu/goldenPath/help/wiggle.html" target="_blank">Wiggle (WIG)</a> (for dense quantitative data)
+
+  <li><a href="http://samtools.sourceforge.net/"
+target="_blank">BAM or SAM</a> (for sequence alignment data)
+</ul>
 
 <p>
 
-Your annotations will persist until you delete them, or until they are
-not accessed for a long period of time, typically 60 days.  To modify
-them, you can upload a new file, replacing the old one.
-Alternatively, you can edit them on-line.
+Please see the links above for descriptions of how to create and
+format these data files.
 
 <p>
 
-<ol>
-  <li>Press the <b>Edit Data...</b> button. This will display a text field containing
-      your uploaded annotations.
-  <li>Make the changes you want.
-  <li>Press <b>Submit Changes...</b>
-</ol>
+In addition, GBrowse supports an internal genome annotation file
+format that is unimaginatively called "Feature File Format" (FFF). It
+is a relatively simple format that allows you to create features, name
+them, group them together, and tweak their display in various ways.
 
 <p>
 
-You can use the edit button to create an annotation file from scratch.
-Just type the annotation data into the text field or cut and paste
-from your favorite word processor.
+Both the FFF and GFF3 formats allow you to customize the display using
+GBrowse's track configuration sections, which are described later in
+this document. When uploading WIG or BED files, GBrowse will convert
+the UCSC track definition line into an equivalent GBrowse
+configuration section.
 
-<hr>
+<a name="featurefile format"></a>
 
-<a name="other"></a>
-<h2>To Download or Delete Annotations</h2>
-
-<ol>
-  <li>To <b>delete</b> your annotations, press the <b>Delete Data</b> button.
-  <li>To <b>download</b> your annotations as a text file, press the
-      <b>Download Data</b> button.
-  <li>Turn the display of your annotations on and off by setting the
-      <i>Uploaded Annotations</i> checkbox.
-  <li>Change the relative
-      position of your annotations using the <b>Set Track Options...</b>
-      button.
-</ol>
-
-<hr>
-
-<a name="format"></a>
-
-<h2>Annotation File Format</h2>
+<h2>Feature File Format</h2>
 
 <p>
-
-For quantitative data (such as microarray expression levels), please
-use <a
-href="http://genome.ucsc.edu/google/goldenPath/help/wiggle.html">"WIG"
-format</a>.
-
-</p>
 
 For qualitative data, use the simple "Feature File format" described
 here, or the <a href="http://www.sequenceontology.org/gff3.shtml">GFF3
@@ -328,12 +281,12 @@ pound sign (#).  Everything following the pound sign is ignored:
 <P>
 
 The browser will generate a reasonable display of your annotations by
-default.  However, you can customize the appearance extensively by
-including one or more configuration sections in the annotation file.
-In addition to changing the size, color and shape of the graphical
-elements, you can attach URLs to them so that the user will be taken
-to a web page of your choice when he clicks on the feature.
-<p>
+default.  However, when using either FFF or GFF3 formats, you can
+customize the appearance extensively by including one or more
+configuration sections in the annotation file.  In addition to
+changing the size, color and shape of the graphical elements, you can
+attach URLs to them so that the user will be taken to a web page of
+your choice when he clicks on the feature.  <p>
 
 Here is an example configuration section.  It can appear at the top of
 xthe file, at the bottom, or interspersed among data sections:
@@ -682,10 +635,20 @@ the value you wish to chart, add a score=XXXX note to the description section:
     See <a href="#numeric">Displaying Intensity Plots &amp; Other
     Numeric Data</a> for full details.  <td> </tr>
 
+<tr class="searchbody"> <th>wiggle_xyplot</th> <td>Similar to the
+    xyplot glyph, but specialized for displaying very dense
+    quantitative data. When you upload a WIG file, this glyph is
+    automatically chosen for you.<td> </tr>
+
 <tr class="searchbody"> <th>graded_segments</th> <td>A set of connected segments
     whose colors change intensity according to a score indicated by a "score=XXX" tag.
     The low and high scores are indicated by "min_score" and "max_score" options
     in the configuration stanza, and the basic color is indicated by "bgcolor."</td></tr>
+
+<tr class="searchbody"> <th>wiggle_density</th> <td>Similar to the
+    graded_segments glyph, but specialized for displaying very dense
+    quantitative data. When you upload a WIG file, this glyph is
+    automatically chosen for you as an alternative to wiggle_xyplot.<td> </tr>
 
 <tr class="searchbody"> <th>heat_map</th> <td>A set of connected segments
     whose colors change hue according to a score indicated by a "score=XXX" tag.
@@ -824,7 +787,7 @@ location indicated by a "trace" tag:
 </tr>
 
 <tr class="searchbody">
-  <th class="searchtitle">xyplot</th>
+  <th class="searchtitle">xyplot, wiggle_xyplot</th>
   <td>graph_type</td>
   <td>Type of graph
       (histogram, boxes, line, points, linepoints)
@@ -863,7 +826,30 @@ location indicated by a "trace" tag:
 </tr>
 
 <tr class="searchbody">
-<th class="searchtitle">graded_segments</th>
+    <td>&nbsp;</td>
+  <td>bicolor_pivot</td>
+  <td>This is a numeric option, which, if specified, causes the
+      histogram to be drawn in two colors, one for values above the
+      limit specified by the "pos_color" option and one for values below the
+      limit specified by the "neg_color" option.</td>
+</tr>
+
+<tr class="searchbody">
+    <td>&nbsp;</td>
+  <td>pos_color</td>
+  <td>The color to draw values which are above bicolor_pivot, if
+    bicolor_pivot is specified.</td>
+</tr>
+
+<tr class="searchbody">
+    <td>&nbsp;</td>
+  <td>neg_color</td>
+  <td>The color to draw values which are below bicolor_pivot, if
+    bicolor_pivot is specified.</td>
+</tr>
+
+<tr class="searchbody">
+<th class="searchtitle">graded_segments, wiggle_density</th>
 <td>min_score</td>
 <td>Minimum score for the feature (will be drawn as a white segment)</td>
 </tr>
@@ -896,6 +882,29 @@ location indicated by a "trace" tag:
   <td>&nbsp;</td>
   <td>end_color</td>
   <td>Color for segments with the maximum score</td>
+</tr>
+
+<tr class="searchbody">
+    <td>&nbsp;</td>
+  <td>bicolor_pivot</td>
+  <td>This is a numeric option, which, if specified, causes the
+      histogram to be drawn in two colors, one for values above the
+      limit specified by the "pos_color" option and one for values below the
+      limit specified by the "neg_color" option.</td>
+</tr>
+
+<tr class="searchbody">
+    <td>&nbsp;</td>
+  <td>pos_color</td>
+  <td>The color to draw values which are above bicolor_pivot, if
+    bicolor_pivot is specified.</td>
+</tr>
+
+<tr class="searchbody">
+    <td>&nbsp;</td>
+  <td>neg_color</td>
+  <td>The color to draw values which are below bicolor_pivot, if
+    bicolor_pivot is specified.</td>
 </tr>
 
 <tr class="searchbody">
@@ -966,15 +975,16 @@ location indicated by a "trace" tag:
 
 <hr>
 
-<H2><a name="numeric">Displaying Intensity Plots &amp; Other Numeric Data</a></H2>
+<H2><a name="numeric">Displaying Intensity Plots &amp; Other Numeric
+Data</a></H2>
 
 <p>
 
-
-You can upload microarray intensity data sets and other numeric data.
-The plot of the data will be displayed as a histogram or line chart
-superimposed on the genomic annotations.
-
+For large data sets such as chromosome-wide tiling arrays, please use
+<a href="http://genome.ucsc.edu/goldenPath/help/wiggle.html"
+target="_blank">Wiggle (WIG)</a> format. However, for smaller data
+sets (1-10,000 points), you can use FFF format to achieve a quick and
+dirty display.
 <p>
 
 Here is a simple template for you to follow. The result is shown on
@@ -998,7 +1008,7 @@ label=1
 key=Expression Level
 
 
-reference=B0019
+reference=chr1
 expression       liver   10000..12000    score=10
 expression       liver   12001..19999    score=50
 expression       liver   20000..25000    score=100
@@ -1038,28 +1048,8 @@ See the <a href="#glyph_specific">chart in the previous section</a>
 for the xyplot glyph options.
 
 <hr>
-<H2><A NAME="remote">Publishing Annotations</A></H2>
 
-<p>
-
-If you have access to a web server, you can easily publish your
-annotations.  Simply take the annotation data file and place it on a
-Web server that is accessible to the Internet (or at least to the
-server on which the Genome Browser runs).
-
-<p>
-
-Type the URL of your annotation file into the <b>Enter remote track URL</b>
-text field of the genome browser screen.  Your
-annotation file be will accessed by the web server on which the genome
-browser runs, loaded and displayed.  Repeat this process to add more
-external annotation tracks to the display.  To remove a URL, just
-delete the contents of the field.
-
-<p>
-
-Right-click on the <b>bookmark this link</b> link in order to save the
-information to a URL that you can bookmark or mail to your colleagues.
+$Id$
 
 </body>
 </html>

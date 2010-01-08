@@ -164,7 +164,7 @@ ok($source->setting(general => 'plugins'),'Aligner RestrictionAnnotator ProteinD
 ok($source->setting('plugins'),'Aligner RestrictionAnnotator ProteinDumper TestFinder');
 ok($source->semantic_setting(Alignments=>'glyph'),'segments');
 ok($source->semantic_setting(Alignments=>'glyph',30000),'box');
-ok($source->type2label('alignment',0),'Alignments');
+ok($source->type2label('alignment',0,'Alignments'),'Alignments');
 
 # Do callbacks work (or at least, do we get a CODE reference back)?
 ok(ref($source->code_setting(EST=>'bgcolor')),'CODE');

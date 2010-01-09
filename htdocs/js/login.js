@@ -187,7 +187,10 @@ function load_login_balloon(event,session,username,openid) {
                      'Don\'t have an OpenID? <a href=#noopenid onClick=login_page_openid(false)>' +
                        'Go Back</a>.</td></tr>' +
                  '</tbody>' +
-               '</table></font></form>';
+               '</table></font>'+
+	       '&nbsp;<a style="float:right;font-size:90%" href="javascript:void(0)" '+
+	                'onClick="Balloon.prototype.hideTooltip(1)">[Close]</a>' +
+	       '</form>';
 
     GBox.showTooltip(event,html,1,320);
     $('loginMain').style.width = '268px';

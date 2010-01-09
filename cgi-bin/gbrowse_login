@@ -1,7 +1,6 @@
 #!/usr/bin/perl -w
 
 use strict;
-use lib '~/Generic-Genome-Browser/lib';
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::Render;
 use CGI qw(:standard);
@@ -9,13 +8,23 @@ use DBI;
 use Digest::SHA qw(sha1);
 use JSON;
 use LWP::UserAgent;
-#use LWPx::ParanoidAgent; (Better, but currently broken, try installing when a bug fix is released)
-use Mail::SendEasy;
+#use LWPx::ParanoidAgent; (Better, but currently broken)
+use Net::SMTP;
 use Net::OpenID::Consumer;
 use Text::ParseWords 'quotewords';
 
-# Required installation of Crypt::SSLeay and libssl-dev
-# If you dont have Math::BigInt, then Crypt::DH (installed with Net::OpenID::Consumer) will complain on every run.
+# Required modules:
+#    1. Net::SMTP
+#    1. Crypt::SSLeay & libssl-dev
+#    2. Net::OpenID::Consumer
+#    3. Math::BigInt
+#
+# If you need to sendmail via an SMTP server that requires
+# SASL and SSL authentication, you will need
+#
+#    1. Net::SMTP::SSL
+#    2. Authen::SASL
+
 
 our $VERSION = '$Id: gbrowse_login,v 1.1 2009-08-27 20:33:23 idavies Exp $';
 
@@ -288,21 +297,16 @@ sub do_send_confirmation {
        $message .= "on the following link:\n    $link\n\n\n";
        $message .= get_footer();
 
-    my $mail = Mail::SendEasy->new(smtp=>$smtp);
-    my $status = $mail->send(
-        from       => $ReturnAddress,
-        from_title => $AppName,
-        to         => $email,
-        subject    => "$AppName Account Activation",
-        msg        => $message);
-
-    if(!$status) {
-        if($mail->error =~ m/ERROR: Can't connect to/) {
-            print "Error: Unable to send e-mail message, please check your internet connection.";}
-        else {print "Error: ",$mail->error;}
-        die "Error: ",$mail->error;
+    my ($status,$err) = do_sendmail({smtp => $smtp,
+				     from       => $ReturnAddress,
+				     from_title => $AppName,
+				     to         => $email,
+				     subject    => "$AppName Account Activation",
+				     msg        => $message});
+    unless ($status) {
+	print $err;
+	die   "Error while sending outgoing email: $err";
     }
-
     return;
 }
 
@@ -444,19 +448,17 @@ sub do_email_info {
        $message .= "Password: $pass\n\n    OpenIDs: $openid\n\n";
        $message .= get_footer();
 
-    my $mail = Mail::SendEasy->new(smtp=>$smtp);
-    my $status = $mail->send(
-        from       => $ReturnAddress,
-        from_title => $AppName,
-        to         => $email,
-        subject    => "$AppName Account Information",
-        msg        => $message);
+    my ($status,$err) = do_sendmail({smtp => $smtp,
+				     from       => $ReturnAddress,
+				     from_title => $AppName,
+				     to         => $email,
+				     subject    => "$AppName Account Information",
+				     msg        => $message
+				    });
 
     if(!$status) {
-        if($mail->error =~ m/ERROR: Can't connect to/) {
-            print "Error: Unable to send e-mail message, please check your internet connection.";}
-        else {print "Error: ",$mail->error;}
-        die "Error: ",$mail->error;
+        print "Error: ",$err;
+        die "Error while sending outgoing email: ",$err;
     }
 
     my $secret = sha1($pass);
@@ -810,6 +812,73 @@ sub do_list_openid {
     }
     my @results = sort {$a->{name} cmp $b->{name}} @openids;
     print JSON::to_json(\@results);
+}
+
+# This handles outgoing email using either Net::SMTP or Net::SMTP::SSL
+# as required.
+# format of smtp argument is:
+#
+#      smtp.server.com:port:encryption:username:password
+#
+# This has up to five fields. Only the first field is required.
+#    The port is assumed to be 25 unless ssl encryption is specified, in
+#               which case it defaults to 465.
+#    protocol is either "clear" or "ssl", "plain" assumed.
+#    username and password may be required by the SMTP server to send 
+#               outgoing mail.
+sub do_sendmail {
+    my $args = shift;
+
+    eval {
+	my $smtp_info = $args->{smtp} or die "need SMTP argument";
+
+	my ($server,$port,$protocol,$username,$password) = split ':',$smtp_info;
+	$protocol ||= 'clear';
+	$port     ||= $protocol eq 'clear' ? 25 : 465;
+	$protocol =~ /clear|ssl/ or die 'encryption must be either "clear" or "ssl"';
+	
+	# At least some SMTP servers will refuse to accept mail
+	# unless From matches the authentication username.
+	my $smtp_from   = $username ? $username : $args->{from};
+
+	my $smtp_sender;
+	if ($protocol eq 'clear') {
+	    eval "require Net::SMTP" unless Net::SMTP->can('new');
+	    $smtp_sender = 'Net::SMTP';
+	} else {
+	    eval "require Net::SMTP::SSL" unless Net::SMTP::SSL->can('new');
+	    $smtp_sender = 'Net::SMTP::SSL';
+	}
+
+	my $smtp = $smtp_sender->new($server,
+				     Port    => $port,
+				     Debug  => 1,
+	    )
+	    or die "Could not connect to outgoing mail server $server";
+
+	if ($username) {
+	    $smtp->auth($username,$password) 
+		or die "Could not authenticate with outgoing mail server $server"
+	}
+
+	$smtp->mail("$smtp_from\n")                    or die $smtp->message;
+	$smtp->to("$args->{to}\n")                     or die $smtp->message;
+	$smtp->data()                                  or die $smtp->message;
+	$smtp->datasend("From: \"$args->{from_title}\" <$args->{from}>\n")
+	                                               or die $smtp->message;
+	$smtp->datasend("To: $args->{to}\n")           or die $smtp->message;
+	$smtp->datasend("Reply-to: $args->{from}\n")   or die $smtp->message;
+	$smtp->datasend("Subject: $args->{subject}\n") or die $smtp->message;
+	$smtp->datasend("\n")                          or die $smtp->message;
+	$smtp->datasend($args->{msg})                  or die $smtp->message;
+	$smtp->datasend("\n")                          or die $smtp->message;
+	$smtp->dataend()                               or die $smtp->message;
+	$smtp->quit();
+	
+    };
+    warn "\$@ is not happy: $@" if $@;
+    return (0,$@) if $@;
+    return (1,'');
 }
 
 __END__

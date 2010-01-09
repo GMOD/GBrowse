@@ -695,7 +695,7 @@ sub render_login_section {
 
     if (param('confirm') && param('code') && param('id')) {
 	$output .= $self->render_login_account_confirm(param('code'));
-    }elsif (param('openid_confirm') && param('page') && param('s')) {
+    } elsif (param('openid_confirm') && param('page') && param('s')) {
 	$output .= $self->render_login_openid_confirm(param('page'),param('s'));
     }
     return $output;

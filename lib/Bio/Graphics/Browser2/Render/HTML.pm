@@ -488,10 +488,9 @@ sub render_login {
 		       span({-style=>'float:right;font-weight:bold;color:black;'}, '&nbsp; &nbsp;');
 
         $title  = 'Click here to change your account settings';
-	warn "using openid = ",$session->using_openid;
         $text   = 'My Account';
         $click .= 'load_login_balloon(event,\''.$session->id.'\',\'';
-        $click .= $session->username.'\','.($session->using_openid?'true':'false').');';
+        $click .= $session->username.'\','.$session->using_openid.');';
     } else {
         $title  = 'Click here to log in or create a new account. This will allow you to access your settings and uploaded tracks from multiple computers.';
         $text   = 'Log in / create account';

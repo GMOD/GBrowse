@@ -276,6 +276,12 @@ sub upload_file {
 sub delete_file {
     my $self = shift;
     my $track_name  = shift;
+    my $loader = Bio::Graphics::Browser2::DataLoader->new($track_name,
+							  $self->track_path($track_name),
+							  $self->track_conf($track_name),
+							  $self->config,
+							  $self->state->{uploadid});
+    $loader->drop_databases($self->track_conf($track_name));
     rmtree($self->track_path($track_name));
 }
 

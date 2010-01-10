@@ -6,7 +6,8 @@ use IO::File;
 use Carp 'croak';
 
 # for mysql to work, you must do something like this:
-# grant create on `userdata_%`.* to www-data@localhost
+# grant create on `userdata\_%`.* to 'www-data'@localhost
+# NOTICE the backticks around `userdata\_%` !!
 
 sub new {
     my $class = shift;
@@ -206,24 +207,20 @@ sub create_database {
     if ($backend eq 'DBI::mysql') {
 	my @components = split '/',$data_path;
 	my $db_name    = 'userdata_'.join '_',@components[-3,-2,-1];
+	$db_name       =~ s/[^a-zA-Z0-9_]/_/g;
 	$data_path     = $db_name;
 	$self->dsn($db_name);
-	my $db_host    = $self->setting('userdb_host') || 'localhost';
-	my $db_user    = $self->setting('userdb_user') || '';
-	my $db_pass    = $self->setting('userdb_pass') || '';
-	eval "require DBI" unless DBI->can('connect');
-	my $dsn        = 'DBI:mysql:';
-	$dsn          .= 'host=$db_host' if $db_host;
+	my $mysql_admin = $self->mysql_admin;
 
 	my $mysql_usage = <<END;
 For mysql to work as a backend to stored user data, you must set up the server
 so that the web server user (e.g. "www-data") has the privileges to create databases
 named "userdata_*". The usual way to do this is with the mysql shell:
 
- mysql> grant create on `userdata_%`.* to www-data\@localhost
+ mysql> grant create on `userdata\_%`.* to www-data\@localhost
 END
 
-	my $dbh = DBI->connect($dsn)
+	my $dbh = DBI->connect($mysql_admin)
 	    or die DBI->errstr,'  ',$mysql_usage;
 	$dbh->do("create database $data_path")
 	    or die "Could not create $data_path:",DBI->errstr,'. ',$mysql_usage,;
@@ -237,6 +234,44 @@ END
     return Bio::DB::SeqFeature::Store->new(-adaptor=> $backend,
 					   -dsn    => $self->dsn,
 					   -create => 1);
+}
+
+sub drop_databases {
+    my $self = shift;
+    my $conf_path = shift;
+    # hacky job here - just drop anything that looks like a mysql database
+    my (@dsns,$using_mysql);
+    open my $f,$conf_path or die "Couldn't open $conf_path: $!";
+    while (<$f>) {
+	if (/-adaptor/) {
+	    $using_mysql = /DBI::mysql/;
+	}
+	push @dsns,$1 if /-dsn\s+(.+)/i && $using_mysql;
+    }
+    close $f;
+    
+    for my $dsn (@dsns) {
+	eval "require DBI" unless DBI->can('connect');
+	my $mysql_admin  = $self->mysql_admin;
+	my $dbh = DBI->connect($mysql_admin)
+	    or die DBI->errstr;
+	$dbh->do("drop database $dsn")
+	    or die "Could not drop $dsn:",DBI->errstr;
+    }
+}
+
+sub mysql_admin {
+    my $self = shift;
+    my $db_host    = $self->setting('userdb_host') || 'localhost';
+    my $db_user    = $self->setting('userdb_user') || '';
+    my $db_pass    = $self->setting('userdb_pass') || '';
+    eval "require DBI" unless DBI->can('connect');
+    my $dsn        = 'DBI:mysql:';
+    my @options;
+    push @options,"host=$db_host"     if $db_host;
+    push @options,"user=$db_user"     if $db_user;
+    push @options,"password=$db_pass" if $db_pass;
+    return $dsn . join ';',@options;
 }
 
 1;

@@ -212,7 +212,7 @@ sub create_database {
 	my $db_user    = $self->setting('userdb_user') || '';
 	my $db_pass    = $self->setting('userdb_pass') || '';
 	eval "require DBI" unless DBI->can('connect');
-	my $dsn        = 'dbi:mysql:';
+	my $dsn        = 'DBI:mysql:';
 	$dsn          .= 'host=$db_host' if $db_host;
 
 	my $mysql_usage = <<END;

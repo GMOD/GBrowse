@@ -32,7 +32,7 @@ function load_login_balloon(event,session,username,openid) {
     LoginPage   = 'main';
     UsingOpenID = openid;
 
-    var html = '<form id=loginMain method=post action=\'return false;\'>' +
+    var html = '<form id=loginMain method=post onSubmit=\'return false;\'>' +
 
                //Title at top of GBox
                '<div style=border-bottom-style:solid;border-width:1px;padding-left:3px>' +
@@ -67,7 +67,7 @@ function load_login_balloon(event,session,username,openid) {
                    '<tr id=loginURow><td>Username:</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
                        'id=loginUser type=text maxlength=32 style=font-size:9pt size=20></td></tr>' +
-                   '<tr id=loginERow style=display:none><td>E-mail:</td>' +
+                   '<tr id=loginERow style=display:none><td>E-mail (to validate your registration):</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
                        'id=loginEmail type=text maxlength=64 style=font-size:9pt size=20></td></tr>' +
                    '<tr id=loginPRow><td>Password:</td>' +
@@ -188,6 +188,7 @@ function load_login_balloon(event,session,username,openid) {
                        'Go Back</a>.</td></tr>' +
                  '</tbody>' +
                '</table></font>'+
+	       '<img id="loginBusy" src="/gbrowse2/images/spinner.gif" style="display:none;float:left" />' +
 	       '&nbsp;<a style="float:right;font-size:90%" href="javascript:void(0)" '+
 	                'onClick="Balloon.prototype.hideTooltip(1)">[Close]</a>' +
 	       '</form>';
@@ -231,8 +232,8 @@ function login_page_change(page) {
         $('loginP2Row').hide(); $('loginDSelect').hide();
         break;
     case 'create':
-        $('loginTitle').innerHTML = 'Sign up';
-        $('loginSubmit').value    = 'Sign up';
+        $('loginTitle').innerHTML = 'Register';
+        $('loginSubmit').value    = 'Register';
         $('loginERow').show();
         $('loginP2Row').show();
         break;
@@ -385,6 +386,7 @@ function add_user() {
     var username = $('loginUser').getValue();
     var password = $('loginPass').getValue();
     var email    = $('loginEmail').getValue();
+    $('loginBusy').show();
 
     new Ajax.Request(LoginScript,{
         method:      'post',
@@ -395,6 +397,7 @@ function add_user() {
                       session:  SessionID
                      },
         onSuccess: function (transport) {
+	    $('loginBusy').hide();
             var results = transport.responseText;
 
             if(results == '') {
@@ -450,6 +453,7 @@ function edit_confirmation(resend) {
     login_loading(true);
 
     var email = $('loginEmail').getValue();
+    $('loginBusy').show();
     new Ajax.Request(LoginScript,{
         method:      'post',
         parameters:  {action: ['edit_confirmation'],
@@ -457,6 +461,7 @@ function edit_confirmation(resend) {
                       option: resend
                      },
         onSuccess: function (transport) {
+	    $('loginBusy').hide();
             $('loginWarning').innerHTML = transport.responseText;
             login_user(email);
         }
@@ -472,6 +477,7 @@ function add_openid_user(openid,html) {
     $('loginWarning').hide();
     if($('loginRemember').checked) {remember=1;}
     else {remember=0;}
+    $('loginBusy').show();
 
     new Ajax.Request(LoginScript,{
         method:      'post',
@@ -483,6 +489,7 @@ function add_openid_user(openid,html) {
                      },
         onSuccess: function (transport) {
             var results = transport.responseText;
+	    $('loginBusy').hide();
             if(results == 'Session Error') {
                 login_loading(false);
                 $('loginCancel').value      = 'Back';
@@ -527,6 +534,7 @@ function login_validation() {
         else {remember=0;}
     }
 
+    $('loginBusy').show();
     new Ajax.Request(LoginScript,{
         method:      'post',
         parameters:  {action: ['validate'],
@@ -535,6 +543,7 @@ function login_validation() {
                       remember: remember
                      },
         onSuccess: function (transport) {
+	    $('loginBusy').hide();
             var results = transport.responseText;
             if(results.indexOf('session')!=-1) {
                 session = results.slice(7);
@@ -583,6 +592,7 @@ function login_user(username,session,remember) {
 
 //Refresh the page with the user logged in
 function login_get_account(username,session,remember,openid) {
+    $('loginBusy').show();
     new Ajax.Request(document.URL,{
         method:      'post',
         parameters: {action:   'authorize_login',
@@ -592,6 +602,7 @@ function login_get_account(username,session,remember,openid) {
                      openid:   UsingOpenID
                     },
         onSuccess: function(transport) {
+	    $('loginBusy').hide();
             var results = transport.responseJSON;
             if(results.id != null) {
                 if(results.id == 'error') {
@@ -650,6 +661,7 @@ function login_load_account(to,p) {
 //E-mails the user their account information
 function email_user_info() {
     var email = $('loginEmail').getValue();
+    $('loginBusy').show();
 
     new Ajax.Request(LoginScript,{
         method:      'post',
@@ -657,6 +669,7 @@ function email_user_info() {
                       email: email
                      },
         onSuccess: function (transport) {
+	    $('loginBusy').hide();
             var result = transport.responseText;
             if(result != 'Success') {
                 if(result == '') {
@@ -874,6 +887,7 @@ function edit_details_verify() {
 
 //Updates either the user's e-mail or password
 function edit_details_submit(username,column,old_val,new_val) {  
+    $('loginBusy').show();
     new Ajax.Request(LoginScript,{
         method:      'post',
         parameters:  {action: ['edit_details'],
@@ -883,6 +897,7 @@ function edit_details_submit(username,column,old_val,new_val) {
                       new_val: new_val
                      },
         onSuccess: function (transport) {
+	    $('loginBusy').hide();
             $('loginWarning').innerHTML = transport.responseText;
             edit_details_confirm();
         }
@@ -925,6 +940,7 @@ function login_openid_html(html,start,strLength) {
 
 //Send the user to their openid provider to be authenticated
 function check_openid(openid) {
+    $('loginBusy').show();
     new Ajax.Request(LoginScript,{
         method:      'post',
         parameters:  {action: ['check_openid'],
@@ -933,6 +949,7 @@ function check_openid(openid) {
                       option:  LoginPage
         },
         onSuccess: function (transport) {
+	    $('loginBusy').hide();
             var results = transport.responseText;
             if(results.indexOf('Location:')!=-1) {
                 document.location.href = results.slice(10);
@@ -1090,6 +1107,7 @@ function confirm_openid_error(session,page,logged_in,error,openid,only) {
 
 //Adds or Removes an openid from an account
 function change_openid(user,pass,openid,option) {
+    $('loginBusy').show();
     new Ajax.Request(LoginScript,{
         method:      'post',
         parameters:  {action: ['change_openid'],
@@ -1099,6 +1117,7 @@ function change_openid(user,pass,openid,option) {
                       option: option
         },
         onSuccess: function (transport) {
+	    $('loginBusy').hide();
             var results = transport.responseText;
             if(results.indexOf('Location:')!=-1) {
                 document.location.href = results.slice(10);
@@ -1115,12 +1134,14 @@ function change_openid(user,pass,openid,option) {
 function list_openid() {
     $('loginWarning').innerHTML = 'Loading...';
     $('loginWarning').show();
+    $('loginBusy').show();
     new Ajax.Request(LoginScript,{
         method:      'post',
         parameters:  {action: ['list_openid'],
                       user:   CurrentUser
         },
         onSuccess: function (transport) {
+	    $('loginBusy').hide();
             var results = transport.responseJSON;
             if(results[0].error != null) {
                 $('loginWarning').innerHTML = results[0].error;
@@ -1177,7 +1198,7 @@ function confirm_screen(confirm) {
     UsingOpenID = false;
     var html = '<div style=border-bottom-style:solid;border-width:1px;' +
                  'padding-left:3px;padding-top:8px><b>Account Creation Confirmation</b></div>' +
-               '<form id=loginMain method=post action=\'return false;\'>' +
+               '<form id=loginMain method=post onSubmit=\'return false;\'>' +
                '<table id=loginTable cellspacing=0 cellpadding=3 align=center width=100%>' +
                  '<tr><td id=loginError colspan=3 align=center style=color:red;' +
                    'padding-bottom:3px>&nbsp; &nbsp;</td>' +
@@ -1197,7 +1218,9 @@ function confirm_screen(confirm) {
                        'onClick=this.disabled=true;' +
                        'confirm_update($(\'loginUser\').getValue(),\'' + confirm + '\'); />' +
                  '</td></tr>' +
-               '</table></font></form>';
+               '</table></font>' +
+	       '<img id="loginBusy" src="/gbrowse2/images/spinner.gif" style="display:none;float:left" />' +
+	       '</form>';
 
     login_blackout(true,html);
     return;
@@ -1210,6 +1233,7 @@ function confirm_update(username, confirm) {
         $('loginSubmit').disabled = false;
     } else {
         $('loginError').innerHTML = '&nbsp; &nbsp;';
+	$('loginBusy').show();
         new Ajax.Request(LoginScript,{
             method:      'post',
             parameters:  {action: ['confirm_account'],
@@ -1217,6 +1241,7 @@ function confirm_update(username, confirm) {
                           confirm: confirm
             },
             onSuccess: function (transport) {
+	        $('loginBusy').hide();
                 var session = transport.responseText;
                 if(session==''){session='Error: An error occurred while sending your request, please try again.';}
                 confirm_check(username,session);
@@ -1260,6 +1285,7 @@ function reload_login_script() {
 
 //Deletes a user from an account provided the username and pass are correct
 function login_delete_user(username,pass) {
+    $('loginBusy').show();
     new Ajax.Request(LoginScript,{
         method:      'post',
         parameters:  {action: ['delete_user'],
@@ -1267,6 +1293,7 @@ function login_delete_user(username,pass) {
                       pass:    pass
                      },
         onSuccess: function (transport) {
+	    $('loginBusy').hide();
             $('loginWarning').innerHTML = transport.responseText;
             if($('loginWarning').innerHTML=='Success') {
                 if(Logged) {

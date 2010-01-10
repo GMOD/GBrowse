@@ -209,7 +209,9 @@ sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')      
 sub application_name       { shift->setting(general=>'application_name')      || 'GBrowse'                    }
 sub application_name_long  { shift->setting(general=>'application_name_long') || 'The Generic Genome Browser' }
 sub email_address          { shift->setting(general=>'email_address')         || 'noreply@gbrowse.com'        }
-sub smtp                   { shift->setting(general=>'smtp')                  || 'smtp.res.oicr.on.ca'        }
+sub smtp                   { shift->setting(general=>'smtp_gateway')          || 'smtp.res.oicr.on.ca'        }
+sub user_account_db        { shift->setting(general=>'user_account_db')       
+				   || 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse'  }
 
 sub session_driver         { shift->setting(general=>'session driver') 
 				 || 'driver:file;serializer:default' }

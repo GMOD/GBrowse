@@ -268,7 +268,7 @@ sub render_html_head {
       foreach qw(controls.js autocomplete.js);
   }
 
-  if ($self->setting('login script')) {
+  if ($self->setting('user accounts')) {
     push @scripts,{src=>"$js/$_"}
       foreach qw(login.js);
   }
@@ -479,7 +479,7 @@ sub render_login {
 
     if ($session->private) {
         $html .= span({-style=>'float:right;font-weight:bold;color:black;'},
-                      'Welcome, '.$session->username.'.') . br() .
+                      'Welcome, '.$session->username) . br() .
                  span({-style       => $style,
 		       -title       => 'Click here to log out from '.$session->username.'',
 		       -onMouseDown => 'location.href=\'?id=logout\';',
@@ -490,9 +490,9 @@ sub render_login {
         $title  = 'Click here to change your account settings';
         $text   = 'My Account';
         $click .= 'load_login_balloon(event,\''.$session->id.'\',\'';
-        $click .= $session->username.'\','.$session->using_openid.');';
+        $click .= $session->username.'\','.($session->using_openid?'true':'false').');';
     } else {
-        $title  = 'Click here to log in or create a new gbrowse account';
+        $title  = 'Click here to log in or create a new account. This will allow you to access your settings and uploaded tracks from multiple computers.';
         $text   = 'Log in / create account';
         $click .= 'load_login_balloon(event,\''.$session->id.'\',false,false);';
     }
@@ -608,7 +608,7 @@ sub render_actionmenu {
     my $plugin_link   = $self->plugin_links($self->plugins);
     my $reset_link    = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
 
-    my $login = $self->setting('login script') ? $self->render_login : '';
+    my $login = $self->setting('user accounts') ? $self->render_login : '';
 
     my $file_menu = ul({-id    => 'actionmenu',
 			-class => 'dropdown downdown-horizontal'},

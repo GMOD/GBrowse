@@ -41,9 +41,13 @@ my $url   = substr($ENV{'HTTP_REFERER'},0,$index);
    $url  .= '/'  if $index == -1;
 
 my $smtp  = $globals->smtp;
-my $login = DBI->connect("DBI:mysql:gbrowse_login", 'login')
-    or (print "Error: Could not open login database."
-    and die "Could not open login database");
+my $dbi   = $globals->user_account_db;
+my $login = DBI->connect($dbi);
+unless ($login) {
+    print header();
+    print "Error: Could not open login database.";
+    die "Could not open login database $dbi";
+}
 
 my %actions  = map {$_=>1} param('action');
 my %callback;
@@ -163,8 +167,9 @@ sub check_user {
 ##################################################################################
 sub check_old_confirmations {
     my $login  = shift;
+    my $nowfun = nowfun();
     my $delete = $login->prepare(
-        "DELETE FROM users WHERE confirmed=0 AND (now() - last_login) >= 7000000");
+        "DELETE FROM users WHERE confirmed=0 AND ($nowfun - last_login) >= 7000000");
     $delete->execute()
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
     return;
@@ -183,18 +188,20 @@ sub do_validate {
         print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
     }
 
+    my $nowfun = nowfun();
     if($remember != 2) {
         $update = $login->prepare(
-            "UPDATE users SET last_login=now(),remember=$remember WHERE username=? AND pass=? AND confirmed=1");
+            "UPDATE users SET last_login=$nowfun,remember=$remember WHERE username=? AND pass=? AND confirmed=1");
     } else {
         $update = $login->prepare(
-            "UPDATE users SET last_login=now() WHERE username=? AND pass=? AND confirmed=1");
+            "UPDATE users SET last_login=$nowfun WHERE username=? AND pass=? AND confirmed=1");
     }
 
     $pass = sha1($pass);
     $update->execute($user,$pass)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
+    $update->fetch; # needed by some drivers
     my $rows = $update->rows;
     if($rows == 1) {
         check_old_confirmations($login);
@@ -258,13 +265,13 @@ sub do_add_user {
     $select->execute($userid,$user,$email)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
+    $select->fetch;
     if($select->rows == 0) {
         do_send_confirmation($smtp,$url,$email,$confirm,$user,$pass);
     }
 
-    my $insert = $login->prepare(
-        "INSERT INTO users VALUES (?,?,?,?,0,0,0,?,now(),now())"
-    );
+    my $nowfun = nowfun();
+    my $insert = $login->prepare ("INSERT INTO users VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)");
 
     $pass = sha1($pass);
     if($insert->execute($userid,$user,$email,$pass,$confirm)) {
@@ -352,6 +359,7 @@ sub do_confirm_account {
     $select->execute($confirm)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
+    $select->fetch;
     my $rows = $select->rows;
     if($rows != 1) {print "Already Active"; return;}
 
@@ -360,6 +368,7 @@ sub do_confirm_account {
     $update->execute($new_confirm,$user,$confirm)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
+    $update->fetch;
     $rows = $update->rows;
     if($rows == 1) {
         my $query = $login->prepare(
@@ -409,6 +418,7 @@ sub do_edit_details {
     if(DBI->errstr =~ m/for key 3$/) {
         print "New e-mail already in use, please try another.";}
 
+    $update->fetch;
     my $rows = $update->rows;
     if($rows == 1) {
         print "Success";
@@ -483,6 +493,7 @@ sub do_retrieve_user {
     $select->execute($email)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
+    $select->fetch;
     my $rows = $select->rows;
     if($rows == 1) {
         my $user  = $select->fetchrow_array();
@@ -523,6 +534,8 @@ sub do_delete_user {
     my $delete = $login->prepare($sql);
     $delete->execute(@bind)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    $delete->fetch;
     my $rows = $delete->rows;
     if($rows != 1) {
         if($rows != 0) {
@@ -595,6 +608,7 @@ sub do_confirm_openid {
         $select->execute($userid)
             or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
             and print JSON::to_json(\@results) and return);
+	$select->fetch;
         if($select->rows == 0) {
             push @results,{error=>"Error: Wrong session ID provided, please try again."};
             print JSON::to_json(\@results);
@@ -653,6 +667,7 @@ sub do_get_openid {
         or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
         and return \@results);
 
+    $select->fetch;
     my $rows = $select->rows;
     if($rows != 1) {
         if($rows != 0) {
@@ -666,8 +681,9 @@ sub do_get_openid {
     }
 
     my @info = $select->fetchrow_array;
+    my $nowfun = nowfun();
     my $update = $login->prepare(
-        "UPDATE users SET last_login=now() WHERE username=? AND userid=? AND confirmed=1");
+        "UPDATE users SET last_login=$nowfun WHERE username=? AND userid=? AND confirmed=1");
     $update->execute($info[0],$info[1])
         or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
         and return \@results);
@@ -697,6 +713,7 @@ sub do_change_openid {
     $select->execute(@bind)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
+    $select->fetch;
     my $rows = $select->rows;
     if($rows != 1) {
         if($rows != 0) {
@@ -761,8 +778,9 @@ sub do_add_openid_user {
     my $pass    = sha1(create_key('32'));
     my $email   = create_key('64');
 
+    my $nowfun = nowfun();
     my $query = $login->prepare(
-        "INSERT INTO users VALUES (?,?,?,?,?,1,1,?,now(),now())"
+        "INSERT INTO users VALUES (?,?,?,?,?,1,1,?,$nowfun,$nowfun)"
     );
 
     $pass = sha1($pass);
@@ -803,6 +821,7 @@ sub do_list_openid {
         or ($error = DBI->errstr and push @openids,{error=>"Error: $error."}
         and print JSON::to_json(\@openids) and die "Error: ",DBI->errstr);
 
+    $select->fetch;
     if($select->rows == 0) {
         push @openids,{error=>"There are no OpenIDs currently associated with this account."}
     }
@@ -852,7 +871,7 @@ sub do_sendmail {
 
 	my $smtp = $smtp_sender->new($server,
 				     Port    => $port,
-				     Debug  => 1,
+				     Debug  => 0,
 	    )
 	    or die "Could not connect to outgoing mail server $server";
 
@@ -876,9 +895,13 @@ sub do_sendmail {
 	$smtp->quit();
 	
     };
-    warn "\$@ is not happy: $@" if $@;
     return (0,$@) if $@;
     return (1,'');
+}
+
+# return the database-dependent function for determining current date & time
+sub nowfun {
+    return $dbi =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
 }
 
 __END__
@@ -896,7 +919,7 @@ CREATE DATABASE gbrowse_login;
 
 GRANT ALL PRIVILEGES 
 ON gbrowse_login.* 
-TO 'login'@'localhost'
+TO 'gbrowse'@'localhost' identified by "gbrowse"
 WITH GRANT OPTION;
 
 use gbrowse_login;

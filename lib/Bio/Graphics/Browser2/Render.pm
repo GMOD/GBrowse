@@ -297,17 +297,17 @@ sub authorize_user {
     my ($session,$error);
     my ($username,$id,$remember,$using_openid) = @_;
 
-	warn "Checking current session";
+    warn "Checking current session" if DEBUG;
     my $current = $self->session->id;
     if($current eq $id) {
-        warn "Using current session";
+        warn "Using current session" if DEBUG;
         $session = $self->session;
     } elsif($self->session->private) {
         warn "Another account is currently in use";
         return ("error");
     } else {
-        warn "Retrieving old session";
-	    $session = $self->globals->session($id);  # create/retrieve session
+        warn "Retrieving old session" if DEBUG;
+	$session = $self->globals->session($id);  # create/retrieve session
     }
     
     my $nonce = Bio::Graphics::Browser2::Util->generate_id;
@@ -674,6 +674,8 @@ sub render_body {
 
   $output .= $self->render_tabbed_pages($main_page,$upload_share,$global_config);
   $output .= $self->render_bottom($features);
+
+  $output .= $self->render_login_section;
 
   print $output;
 }

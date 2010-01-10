@@ -1,5 +1,6 @@
 bin/auto_install_databases.pl
 bin/bp_load_gff.pl
+bin/create_useraccount_db.pl
 bin/gbrowse_clean.pl
 bin/gbrowse_netinstall.pl
 bin/gbrowse_netinstall2.pl
@@ -147,6 +148,7 @@ docs/example_remote_configs/volvox_local.conf
 docs/example_remote_configs/volvox_remote.conf
 docs/example_remote_configs/volvox_slave.conf
 docs/Gbrowse_Color_Palette.pdf
+docs/login.sql
 docs/pod/BIOSQL_ADAPTER_HOWTO.pod
 docs/pod/CONFIGURE_HOWTO.pod
 docs/pod/CONTROLLER.pod

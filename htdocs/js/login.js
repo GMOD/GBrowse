@@ -592,7 +592,7 @@ function login_user(username,session,remember) {
 
 //Refresh the page with the user logged in
 function login_get_account(username,session,remember,openid) {
-    $('loginBusy').show();
+    if ($('loginBusy') != null) $('loginBusy').show();
     new Ajax.Request(document.URL,{
         method:      'post',
         parameters: {action:   'authorize_login',
@@ -602,7 +602,7 @@ function login_get_account(username,session,remember,openid) {
                      openid:   UsingOpenID
                     },
         onSuccess: function(transport) {
-	    $('loginBusy').hide();
+	    if ($('loginBusy') != null) $('loginBusy').hide();
             var results = transport.responseJSON;
             if(results.id != null) {
                 if(results.id == 'error') {

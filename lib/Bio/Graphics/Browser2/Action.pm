@@ -344,8 +344,9 @@ sub ACTION_authorize_login {
     my $username = $q->param('username') or croak;
     my $session  = $q->param('session')  or croak;
     my $openid   = $q->param('openid')   or croak;
+    my $remember = $q->param('remember') or croak;
 
-    my ($id,$nonce) = $self->render->authorize_user($username,$session,$openid);
+    my ($id,$nonce) = $self->render->authorize_user($username,$session,$remember,$openid);
     return (200,'application/json',{id=>$id,authority=>$nonce});
 }
 

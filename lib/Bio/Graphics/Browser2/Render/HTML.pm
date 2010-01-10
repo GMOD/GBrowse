@@ -488,6 +488,7 @@ sub render_login {
 		       span({-style=>'float:right;font-weight:bold;color:black;'}, '&nbsp; &nbsp;');
 
         $title  = 'Click here to change your account settings';
+	warn "using openid = ",$session->using_openid;
         $text   = 'My Account';
         $click .= 'load_login_balloon(event,\''.$session->id.'\',\'';
         $click .= $session->username.'\','.($session->using_openid?'true':'false').');';

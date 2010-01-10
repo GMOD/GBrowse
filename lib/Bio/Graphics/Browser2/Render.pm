@@ -296,7 +296,7 @@ sub authorize_user {
     my $self = shift;
     my ($session,$error);
     my ($username,$id,$remember,$using_openid) = @_;
-
+    
     warn "Checking current session" if DEBUG;
     my $current = $self->session->id;
     if($current eq $id) {
@@ -315,6 +315,7 @@ sub authorize_user {
 
     $session->set_nonce($nonce,$ip,$remember);
     $session->username($username);
+
     $session->using_openid($using_openid);
 
     $session->flush();

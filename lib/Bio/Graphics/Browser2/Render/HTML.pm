@@ -581,7 +581,7 @@ sub render_actionmenu {
     my   @export_links=a({-href=>'?make_image=GD', -target=>'_blank'},     $self->tr('IMAGE_LINK'));
     push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->tr('SVG_LINK'))
 	if HAVE_SVG;
-    push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->tr('PDF_LINK'))
+    push @export_links,a({-href=>'?make_image=PDF',-target=>'_blank'}, $self->tr('PDF_LINK'))
 	if HAVE_SVG && $self->can_generate_pdf;
 
     push @export_links,a({-href=>$self->gff_dump_link},                    $self->tr('DUMP_GFF'));

@@ -13,7 +13,7 @@ var detailBalloon;
 
 // Constructor
 var Details = function () {
-  this.imageId    = 'composite_track';
+  this.imageId    = 'detail_image';
   this.marginTop  = '35px';
   this.background = 'blue';
   this.fontColor  = 'white';
@@ -29,6 +29,10 @@ Details.prototype.initialize = function() {
   var self = new Details;
   
   var i = document.getElementById(self.imageId);
+  if (!i) {
+    i = document.getElementById('composite_track');
+  }
+
   if (!i) return false;
 
   i = self.replaceImage(i);

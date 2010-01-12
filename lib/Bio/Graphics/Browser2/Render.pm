@@ -278,6 +278,11 @@ sub asynchronous_event {
 	return @result;
     }
 
+    if ( my $track_name = param('display_citation') ) {
+         my $html = $self->display_citation($track_name);
+         return ( 200, 'text/html', $html );
+    }
+
     elsif (my $action = param('action')) {
 	my $dispatch = Bio::Graphics::Browser2::Action->new($self);
 	my $method   = "ACTION_${action}";

@@ -751,7 +751,43 @@ sub render_track_table {
   my @labels     = $self->potential_tracks;
 
   warn "potential tracks = @labels" if DEBUG;
-  my %labels     = map {$_ => $self->label2key($_)}              @labels;
+  my $length   = $self->thin_segment->length;
+  # add citation link and markup
+  my %labels;
+  for my $label (@labels) {
+   my $key = $self->label2key($label);
+   my ($link,$mouseover);
+   if ($label =~ /^plugin:/) {
+       $labels{$label} = $key;
+       next;
+       }
+   elsif ($label =~ /^file:/){
+       $link = "?Download%20File=$key";
+       }
+   else {
+       $link = "?display_citation=$label";#;source=" . $settings->{source};
+       my $cit_txt = citation( $source, $label, $self->language ) || '';
+       if ( length $cit_txt > 100) {
+   	$cit_txt =~ s/\<[^\>]+\>//g;     # truncate and strip tags for preview
+   	$cit_txt =~ s/(.{100}).+/$1/; 
+   	$cit_txt =~ s/\s+\S+$//; 
+   	$cit_txt =~ s/\'/\&\#39;/g;
+   	$cit_txt =~ s/\"/\&\#34;/g;
+        $cit_txt .= '... <i>Click for more</i>';
+        }
+        $mouseover = "<b>$key</b>: $cit_txt";
+        }
+   
+  my $balloon = $source->setting('balloon style') || 'GBubble';
+   
+  my @args = ( -href => $link, -target => 'citation');
+      push @args, -style => 'Font-style: italic' if $label =~ /^(http|ftp|file):/;
+      push @args, -onmouseover => "$balloon.showTooltip(event,'$mouseover')" if $mouseover;
+   
+  $labels{$label} = a({@args},$key);
+  }
+   
+  #my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 
   if (my $filter = $self->track_filter_plugin) {
@@ -1336,7 +1372,12 @@ sub tableize {
     $html .= qq(<tr class="searchtitle">);
     $html .= "<td><b>$row_labels[$row]</b></td>" if @row_labels;
     for (my $column=0;$column<$columns;$column++) {
-      $html .= td({-width=>$cwidth},$array->[$column*$rows + $row] || '&nbsp;');
+      my $checkbox = $array->[$column*$rows + $row] || '&nbsp;';
+
+      # de-couple the checkbox and label click behaviors
+      $checkbox =~ s/\<\/?label\>//gi;
+
+      $html .= td({-width=>$cwidth},$checkbox);
     }
     $html .= "</tr>\n";
   }
@@ -1710,15 +1751,32 @@ sub track_config {
     my $override = $state->{features}{$slabel}{override_settings}||{};
     my $return_html = start_html();
 
-    # truncate too-long citations
-    my $cit_txt = citation( $data_source, $slabel, $self->language ) || ''; #$self->tr('NO_CITATION');
-
-    if (my ($lim) = $slabel =~ /\:(\d+)$/) {
-	$key .= " (at >$lim bp)";
+    # citation info:
+    my $cit_txt = citation( $data_source, $slabel, $self->language ) || '';
+    my $cit_html;
+    my $cit_link = '';
+     
+    # For verbose citations, add a link to a new window
+    if (length $cit_txt > 512) {
+       $cit_link = "?display_citation=$label";
+       $cit_link =~ s!gbrowse\?!gbrowse/$state->{source}/\?!;
+       $cit_link = a(
+    	    {
+    	      -href    => $cit_link, 
+    	      -target  => "citation", #'_NEW',
+    	      -onclick => 'GBox.hideTooltip(1)'
+    		},
+    	    'Click here to display in new window...');    
+       $cit_link = p($cit_link);
+                               }
+    if ( length $cit_txt > 70 ) {
+       $cit_html = $self->toggle_section({on => undef},'citation_text','Track Information',$cit_link||br,$cit_txt);
+                                }
+    else {
+      $cit_html = $cit_txt;
     }
 
-    $cit_txt =~ s/(.{512}).+/$1\.\.\./;
-    my $citation = h4($key) . p($cit_txt);
+    $cit_html = div({-style => 'background:gainsboro;padding:5px'},$cit_html);
 
     my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 5;
     my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
@@ -1763,6 +1821,7 @@ END
 
     $form .= table(
         { -border => 0 },
+        TR( td( {-colspan => 2}, $cit_html)),
         TR( th( { -align => 'right' }, $self->tr('Show') ),
             td( checkbox(
                     -name     => 'show_track',
@@ -1882,7 +1941,7 @@ END
     $form .= end_form();
 
     $return_html
-        .= table( TR( td( { -valign => 'top' }, [ $citation, $form ] ) ) );
+        .= table( TR( td( { -valign => 'top' }, [ $form ] ) ) );
     $return_html .= end_html();
     return $return_html;
 }
@@ -2164,6 +2223,44 @@ sub format_autocomplete {
     }
     $html .= "</ul>\n";
     return $html;
+}
+
+## Truncated version (of track_config) to for displaying citation only:
+sub display_citation {
+    my $self        = shift;
+    my $label       = shift;
+    my $state       = $self->state();
+    my $data_source = $self->data_source();
+    my $length      = $self->thin_segment->length;
+    my $slabel      = $data_source->semantic_label($label,$length);
+ 
+    my $key = $self->label2key($slabel);
+ 
+    my @stylesheets;
+    my @style = shellwords($self->setting('stylesheet') || '/gbrowse2/gbrowse.css');
+     for my $s (@style) {
+      my ($url,$media) = $s =~ /^([^\(]+)(?:\((.+)\))?/;
+      $media ||= 'all';
+      push @stylesheets, CGI::Link({-rel=>'stylesheet',
+ 				    -type=>'text/css',
+ 				    -href=>$self->globals->resolve_path($url,'url'),
+ 				    -media=>$media});
+     }
+ 				
+   my $return_html = start_html(-title => $key, -head => \@stylesheets);
+   my $cit_txt = citation( $data_source, $label, $self->language ) || $self->tr('NO_CITATION');
+     
+   if (my ($lim) = $slabel =~ /\:(\d+)$/) {
+        $key .= " (at >$lim bp)";
+   }
+     
+   my $citation = div({-class => 'searchbody', -style => 'padding:10px;width:70%'}, h4($key), $cit_txt);
+     
+ 
+   $return_html
+           .= table( TR( td( { -valign => 'top' }, $citation ) ) );
+   $return_html .= end_html();
+   return $return_html;
 }
 
 1;

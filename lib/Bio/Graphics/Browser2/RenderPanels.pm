@@ -8,7 +8,7 @@ use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
 use Bio::Graphics::Browser2::Render;
 use Bio::Graphics::Browser2::CachedTrack;
-use Bio::Graphics::Browser2::Util qw[citation shellwords url_label];
+use Bio::Graphics::Browser2::Util qw[shellwords url_label];
 use Bio::Graphics::Browser2::Render::Slave::Status;
 use IO::File;
 use Time::HiRes 'sleep';
@@ -406,13 +406,8 @@ sub wrap_rendered_track {
 	|| "Turn off this track.";
     my $share_this_track = $self->language->tr('SHARE_THIS_TRACK')
         || "Share This Track";
-    my $citation = $self->plain_citation( $label, 512 );
 
-    #$citation            =~ s/"/&quot;/g;
-    #$citation            =~ s/'/&#39;/g;
-
-    my $configure_this_track = $citation || '';
-    $configure_this_track .= '<br>' if $citation;
+    my $configure_this_track = '';
     $configure_this_track .= $self->language->tr('CONFIGURE_THIS_TRACK')
         || "Click to configure this Track";
 
@@ -2131,17 +2126,6 @@ sub make_postgrid_callback {
 
     return unless @h_regions;
     return hilite_regions_closure(@h_regions);
-}
-
-sub plain_citation {
-    my ( $self, $label, $truncate ) = @_;
-    my $text = citation( $self->source(), $label, $self->language ) || '';
-    $text =~ s/\<a/<span/gi;
-    $text =~ s/\<\/a/\<\/span/gi;
-    if ($truncate) {
-        $text =~ s/^(.{$truncate}).+/$1\.\.\./;
-    }
-    CGI::escape($text);
 }
 
 # this subroutine generates a Bio::Graphics::Panel callback closure 

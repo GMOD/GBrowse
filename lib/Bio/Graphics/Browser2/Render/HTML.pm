@@ -629,7 +629,7 @@ sub render_actionmenu {
 			     li($about_dsn_link),
 			  )),
 	);
-    return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));
+    return div({-class=>'datatitle',-style=>'height:26px'},$file_menu.$login.br({-clear=>'all'}));
 }
 
 # for the subset of plugins that are named in the 'quicklink plugins' option, create

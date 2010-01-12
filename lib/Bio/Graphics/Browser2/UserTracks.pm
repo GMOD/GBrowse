@@ -65,7 +65,9 @@ sub tracks {
     while (my $dir = readdir(D)) {
 	next if $dir =~ /^\.+$/;
 
-	my $is_imported   = (-e File::Spec->catfile($path,$dir,$self->imported_file_name))||0;
+	my $is_imported   = (-e File::Spec->catfile($path,
+						    $dir,
+						    $self->imported_file_name))||0;
 	next if defined $imported && $imported != $is_imported;
 
 	push @result,$dir;
@@ -177,7 +179,7 @@ sub trackname_from_url {
 	my $path = $self->track_path($track_name);
 	if (-e $path) {
 	    $track_name .= "-0" unless $track_name =~ /-\d+$/;
-	    $track_name  =~ s/-(\d+)$/'-'.($1+1)/e;
+	    $track_name  =~ s/-(\d+)$/'-'.($1+1)/e; # add +1 to the trackname
 	} else {
 	    $unique++;
 	}

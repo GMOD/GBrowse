@@ -852,10 +852,11 @@ sub render_panels {
                     $details_msg,
 		    $scale_bar_html, 
 		    $panels_html,
+		    div({-align=>'center'},$clear_hilites),
 		    div({-align=>'left'},$self->html_frag('html4',$self->state))
                 )
             )
-        ) . $drag_script . $clear_hilites;
+        ) . $drag_script;
     }
 
     return $html;

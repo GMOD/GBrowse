@@ -36,15 +36,18 @@ sub setting {
 }
 sub busy_path {
     my $self = shift;
-    return File::Spec->catfile($self->data_path,Bio::Graphics::Browser2::UserTracks->busy_file_name);
+    return File::Spec->catfile($self->data_path,
+			       Bio::Graphics::Browser2::UserTracks->busy_file_name);
 }
 sub status_path {
     my $self = shift;
-    return File::Spec->catfile($self->data_path,Bio::Graphics::Browser2::UserTracks->status_file_name);
+    return File::Spec->catfile($self->data_path,
+			       Bio::Graphics::Browser2::UserTracks->status_file_name);
 }
 sub sources_path {
     my $self = shift;
-    return File::Spec->catfile($self->data_path,Bio::Graphics::Browser2::UserTracks->sources_dir_name);
+    return File::Spec->catfile($self->data_path,
+			       Bio::Graphics::Browser2::UserTracks->sources_dir_name);
 }
 
 sub set_status {
@@ -207,7 +210,7 @@ sub create_database {
     if ($backend eq 'DBI::mysql') {
 	my @components = split '/',$data_path;
 	my $db_name    = 'userdata_'.join '_',@components[-3,-2,-1];
-	$db_name       =~ s/[^a-zA-Z0-9_]/_/g;
+	$db_name       =~ s/[^a-zA-Z0-9_-]/_/g;
 	$data_path     = $db_name;
 	$self->dsn($db_name);
 	my $mysql_admin = $self->mysql_admin;
@@ -222,7 +225,7 @@ END
 
 	my $dbh = DBI->connect($mysql_admin)
 	    or die DBI->errstr,'  ',$mysql_usage;
-	$dbh->do("create database $data_path")
+	$dbh->do("create database `$data_path`")
 	    or die "Could not create $data_path:",DBI->errstr,'. ',$mysql_usage,;
 		 
     } elsif ($backend eq 'DBI::SQLite') {
@@ -255,7 +258,7 @@ sub drop_databases {
 	my $mysql_admin  = $self->mysql_admin;
 	my $dbh = DBI->connect($mysql_admin)
 	    or die DBI->errstr;
-	$dbh->do("drop database $dsn")
+	$dbh->do("drop database `$dsn`")
 	    or die "Could not drop $dsn:",DBI->errstr;
     }
 }

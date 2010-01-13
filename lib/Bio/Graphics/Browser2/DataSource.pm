@@ -483,7 +483,7 @@ sub type2label {
 					   $dbid);
       my %label_groups;
       for my $label (@main_labels,@user_labels) {
-	  my ($label_base,$minlength) = $label =~ /(.+)(?::(\d+))?/;
+	  my ($label_base,$minlength) = $label =~ /([^:]+)(?::(\d+))?/;
 	  $minlength ||= 0;
 	  next if defined $length && $minlength > $length;
 	  $label_groups{$label_base}++;
@@ -547,12 +547,17 @@ sub invert_types {
   return unless $config;
 
   my %inverted;
+  my %base_db;	 # label=>db hash for base stanza (semantic stanza will inherit db from base stanza if there's an alternative feature in semantic stanza but no db stated)
+  map{$base_db{$_} = $config->{$_}{'database'}} grep {!/\:/} (keys %{$config});
+
   for my $label (keys %{$config}) {
     my $feature = $config->{$label}{'feature'} or next;
 
     my $dbid;
     $dbid   = $label if $config->{$label}{'db_adaptor'}; # inline database definition
     $dbid ||= $config->{$label}{'database'};             # 'database' option explicitly defined
+    # For semantic Zoom stanza inherit the db from base, if available
+    $dbid ||= $label =~/(\:\d+)$/ ? $base_db{$`} : undef;
     $dbid ||= $self->fallback_setting(TRACK_DEFAULTS => 'database');  # default database
     $dbid ||= '';                                        # give up
 

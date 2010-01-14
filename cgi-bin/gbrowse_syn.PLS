@@ -1305,6 +1305,12 @@ sub overview {
 						  }
 						  );
 
+  #make sure overview is busy with redirects
+  my $server =$ENV{SERVER_NAME};
+  if ($server) {
+    $overview =~ s/src="/src="http:\/\/$server\//;
+  }
+
   return div({-id=>'overview',-class=>'track'},'Reference genome: ',i($ref),$overview);
 }
 

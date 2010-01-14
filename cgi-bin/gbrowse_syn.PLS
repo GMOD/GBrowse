@@ -1305,10 +1305,6 @@ sub overview {
 						  }
 						  );
 
-  # Sorry for the hack -- some naughty person has changed the API
-  $overview =~ s/<area/<map name="overview_map" id="overview_map">\n<area/i;
-  $overview .= "</map>\n";
-
   return div({-id=>'overview',-class=>'track'},'Reference genome: ',i($ref),$overview);
 }
 

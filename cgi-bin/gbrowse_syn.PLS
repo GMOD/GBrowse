@@ -111,6 +111,20 @@ use vars qw($INVALID_SRC $CONF_DIR $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSI
 # initialization
 $CONF_DIR   = conf_dir($CONF_DIR);
 
+# error is no data sources socnfiguredmy 
+my $go;
+while (<$CONF_DIR/*.synconf>) {
+  $go++;
+}
+unless ($go) {
+  print header,  start_html('Error');
+  print warning("No data source configured for GBrowse_syn\n"); 
+  print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
+  end_html;
+  exit;
+}
+
+
 # search soure (general) configuration
 $CONF       = Bio::Graphics::Browser::Synteny->new();
 $CONF->read_configuration($CONF_DIR,'synconf');

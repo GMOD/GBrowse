@@ -111,7 +111,7 @@ use vars qw($INVALID_SRC $CONF_DIR $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSI
 # initialization
 $CONF_DIR   = conf_dir($CONF_DIR);
 
-# error is no data sources socnfiguredmy 
+# error if no data sources configured 
 my $go;
 while (<$CONF_DIR/*.synconf>) {
   $go++;

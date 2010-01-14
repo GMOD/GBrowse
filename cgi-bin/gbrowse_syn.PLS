@@ -79,7 +79,7 @@ use constant ALIGN_HEIGHT       => 6;
 use constant MAX_SPAN           => 0.3;     # largest gap allowed for merging inset panels
 use constant TOO_SMALL          => 0.02;    # minimum span for displayed alignments
 use constant MAX_GAP            => 50_001;  # maximum gap for chaining
-use constant MAX_SEGMENT        => 400_001; 
+use constant MAX_SEGMENT        => 2_000_001; 
 use constant EXTENSION          => 'syn';   # extension for species conf files
 use constant DEBUG              => 0;
 use constant HELP               => 'http://gmod.org/wiki/GBrowse_syn_Help';
@@ -202,6 +202,8 @@ if ($segment) {
   # make sure no hits go off-screen
   remap_coordinates($_) for @hits;
   
+  segment_info($page_settings,$segment);
+
   my %species = map {$_->src2 => 1} @hits;  
   my @species = sort keys %species;
 
@@ -1262,8 +1264,10 @@ sub overview_panel {
   my ($whole_segment,$segment) = @_;
   return '' if $SCONF->section_setting('overview') eq 'hide';
   my $image = overview($whole_segment,$segment);
+  my $ref = $segment->ref;
   return toggle('Overview',
                 table({-border=>0,-width=>'100%'},
+		      TR(th("<center>Reference genome: <i>$ref</i></center>")),
                       TR({-class=>'databody'},
                          td({-align=>'center'},$image)
                         )
@@ -1311,7 +1315,7 @@ sub overview {
     $overview =~ s/src="/src="http:\/\/$server\//;
   }
 
-  return div({-id=>'overview',-class=>'track'},'Reference genome: ',i($ref),$overview);
+  return div({-id=>'overview',-class=>'track'},$overview);
 }
 
 sub toggle {
@@ -1475,7 +1479,7 @@ sub locations2pixels {
   my $ref_pixels = $refbox->[2] - $refbox->[0];
   my $hit_pixels = $hitbox->[2] - $hitbox->[0];
   my $ref_conversion = $ref_length/$ref_pixels;
-  my $hit_conversion = $hit_length/$hit_pixels;
+  my $hit_conversion = $hit_length/$hit_pixels || return 0;
   my $ref_pixel = $refbox->[0] + int($ref_location/$ref_conversion + 0.5);
   my $hit_pixel;
 
@@ -1726,6 +1730,32 @@ sub wiki_help {
 	-onmouseover => "balloon.showTooltip(event,'Click for more information about <b><i>$blabel</i></b>')"},
 	@body);
 }
+
+sub segment_info {
+  my ($settings,$segment) = @_;
+  my $whole_segment = $CONF->whole_segment($segment);
+  my $padl   = $CONF->setting('pad_left')  || $CONF->image_padding;
+  my $padr   = $CONF->setting('pad_right') || $CONF->image_padding;
+  my $max    = $CONF->setting('max segment') || MAX_SEGMENT;
+  my $width  = ($settings->{width} * OVERVIEW_RATIO);
+
+  hide(image_padding        => $padl);
+  hide(max_segment          => $max);
+  hide(overview_start       => $whole_segment->start);
+  hide(overview_stop        => $whole_segment->end);
+  hide(overview_pixel_ratio => $whole_segment->length/$width);
+  hide(overview_width       => $width + $padl + $padr);
+}
+
+sub hide {
+  my ($name,$value) = @_;
+  print hidden( -name     => $name,
+                -value    => $value,
+                -override => 1 ), "\n";
+}
+
+
+
 
 
 !NO!SUBS!

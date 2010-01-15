@@ -58,13 +58,19 @@ BODY              { background: url(../images/backgrounds/lrock005.jpg);
 }
 .tabmenu_active   { cursor: pointer;
 			color: black;
-			background-color: rgba(240,240,240,0.4);
+			background-color: rgba(224,224,224,0.4);
 			font-size: 10pt;
 			font-weight: bold;
                         font-family: sans-serif;
 			padding-top: 5px;
 			padding-left: 5px;
 			padding-right: 5px;
+			border-top:  thin solid;
+			border-left: thin solid;
+			border-right: thin solid;
+			border-bottom: thin solid;
+			border-bottom-color: beige;
+			z-index: 10;
 		      }
 .tabmenu_inactive { cursor: pointer;
 			color: blue;
@@ -80,8 +86,13 @@ BODY              { background: url(../images/backgrounds/lrock005.jpg);
     text-decoration: underline;
 }
 .tabbed {
-    background-color: rgba(240,240,240,0.4);
+    background-color: transparent;
 }
 .tabmenu {
     background-color: transparent;
+}
+.tabbody {
+    background-color: rgba(224,224,224,0.4);
+    padding-top: 5px;
+    border:   thin solid;
 }

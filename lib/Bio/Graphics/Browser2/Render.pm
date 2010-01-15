@@ -817,8 +817,8 @@ sub render_panels {
         my $panels_html    = $self->get_blank_panels( [$self->overview_tracks],
 						      'overview' );
 	my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
- 	$html .= div(
- 	    $self->toggle({tight=>1},
+	$html .= div(
+	    $self->toggle({tight=>1},
  			  'Overview',
  			  div({ -id => 'overview_panels', -class => 'track', -style=>'padding-bottom:3px' },
  			      $scale_bar_html, $panels_html,
@@ -857,7 +857,7 @@ sub render_panels {
                     $details_msg,
 		    $scale_bar_html, 
 		    $panels_html,
-		    div({-align=>'center'},$clear_hilites),
+		    div({-align=>'right'},$clear_hilites),
 		    div({-align=>'left'},$self->html_frag('html4',$self->state))
                 )
             )

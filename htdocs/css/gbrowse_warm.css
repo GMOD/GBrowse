@@ -47,6 +47,12 @@ BODY              { background-color: #F7FBFF;
 			padding-top: 5px;
 			padding-left: 5px;
 			padding-right: 5px;
+			border-top:  1px solid;
+			border-left: 1px solid;
+			border-right: 1px solid;
+			border-bottom: 1px solid;
+			border-bottom-color: beige;
+			z-index: 10;
 		      }
 .tabmenu_inactive { cursor: pointer;
 			color: blue;
@@ -59,11 +65,17 @@ BODY              { background-color: #F7FBFF;
 			padding-right: 5px;
 		      }
 .tabmenu_inactive:hover {
-    text-decoration: underline;
+     text-decoration: none;
+     background-color: #F5F5BF;
 }
 .tabbed {
-    background-color: beige;
+    background-color: transparent;
 }
 .tabmenu {
-    background-color: white;
+    background-color: transparent;
+}
+.tabbody {
+    background-color: beige;
+    padding-top: 5px;
+    border:   1px solid;
 }

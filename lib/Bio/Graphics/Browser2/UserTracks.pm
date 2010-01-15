@@ -242,7 +242,7 @@ sub upload_file {
     } elsif ($content_type eq 'application/bzip2' or $file_name =~ /\.bz2$/) {
 	$fh = $self->install_filter($fh,'bunzip2 -c');
     }
-
+    
     # guess the file type from the first non-blank line
     my ($type,$lines)   = $self->guess_upload_type($file_name,$fh);
     $lines            ||= [];

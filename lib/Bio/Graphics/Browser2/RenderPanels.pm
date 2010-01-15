@@ -523,7 +523,8 @@ sub wrap_rendered_track {
     # Add arrows for pannning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
-	$style      .= ';filter:alpha(opacity=70);moz-opacity:0.35';
+# works with IE7, but looks awful. IE8 should support standard css opacity.
+#	$style      .= ';filter:alpha(opacity=30);moz-opacity:0.35';
         my $pan_left   =  img({
 	    -style   => $style . ';left:10px',
 	    -class   => 'panleft',
@@ -531,13 +532,14 @@ sub wrap_rendered_track {
 	    -onClick => "Controller.scroll('left',0.5)"
 			      },
 	    );
-	my $pan_left2  =  img({
-            -style   => $style . ';left:-3px',
-            -class   => 'panleft',
-            -src     => "$buttons/panleft2.png",
-            -onClick => "Controller.scroll('left',1)",
-                              },
-            );
+ 	my $pan_left2  =  img({
+             -style   => $style . ';left:-3px',
+             -class   => 'panleft',
+             -src     => "$buttons/panleft2.png",
+             -onClick => "Controller.scroll('left',1)",
+                               },
+             );
+
 	my $pan_right  = img({ -style   => $style . ';right:10px',
 			       -class   => 'panright',
 			       -src     => "$buttons/panright.png",
@@ -553,10 +555,11 @@ sub wrap_rendered_track {
 
 	$img = $pan_left2 . $pan_left . $img . $pan_right . $pan_right2;
     }
-    return div({-class=>'centered_block',
-		-style=>"width:${width}px;position:relative"},
-	       ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
-        . ( $map_html || '' );
+     return div({-class=>'centered_block',
+ 		-style=>"width:${width}px;position:relative"
+		},
+ 	       ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
+         . ( $map_html || '' );
 
 }
 

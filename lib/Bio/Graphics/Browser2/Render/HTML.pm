@@ -72,15 +72,15 @@ sub render_tabbed_pages {
     my $settings_title      = $self->tr('SETTINGS_PAGE');
 
     my $html = '';
-    $html   .= div({-id=>'tabbed_section',-class=>'tabbed'},
+    $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
 		   div({-id=>'tabbed_menu',-class=>'tabmenu'},
 		       span({id=>'main_page_select'},    $main_title),
 		       span({id=>'custom_tracks_page_select'},$custom_tracks_title),
 		       span({id=>'settings_page_select'},$settings_title)
 		   ),
-		   div({-id=>'main_page'},         $main_html),
-		   div({-id=>'custom_tracks_page'},$custom_tracks_html),
-		   div({-id=>'settings_page'},     $settings_html)
+		   div({-id=>'main_page',         -class=>'tabbody'}, $main_html),
+		   div({-id=>'custom_tracks_page',-class=>'tabbody'}, $custom_tracks_html),
+		   div({-id=>'settings_page',     -class=>'tabbody'}, $settings_html)
 	);
     return $html;
 }
@@ -1014,9 +1014,9 @@ sub render_global_config {
                              grep {defined $_ && $_ > 0} ($region_size,@region_size);
     my $content
         = start_form( -name => 'display_settings', -id => 'display_settings' )
-        . div( {-class=>'searchbody'},
+        . div(
 	       table ({-border => 0, -cellspacing=>0, -width=>'100%'},
-		      TR( { -class => 'searchtitle' },
+		      TR(
 			  td( b(  checkbox(
 				      -name     => 'grid',
 				      -label    => $self->tr('SHOW_GRID'),
@@ -1054,7 +1054,7 @@ sub render_global_config {
 			      ),
 			  ),
 		      ),
-		      TR( { -class => 'searchtitle' },
+		      TR(
 			  td( $self->data_source->cache_time
 			      ? ( b(  checkbox(
 					  -name     => 'cache',
@@ -1089,7 +1089,7 @@ sub render_global_config {
 			      ),
 			  ),
 		      ),
-		      TR( { -class => 'searchtitle' },
+		      TR(
 			  td( { -align => 'left' },
 			      b(  checkbox(
 				      -name     => 'show_tooltips',
@@ -1116,7 +1116,7 @@ sub render_global_config {
 			      : (),
 			  ),
 		      ),
-		      TR( { -class => 'searchtitle' },
+		      TR(
 			  td( {   -colspan => 3,
 				  -align   => 'right'
 			      },
@@ -1139,9 +1139,10 @@ sub clear_highlights {
 
 sub render_toggle_userdata_table {
     my $self = shift;
-    return h2('Uploaded Tracks').
-	div($self->render_userdata_table(),
-	    $self->userdata_upload()
+    return div(
+	h2({-style=>'margin: 0px 0px 0px 0px;padding:5px 0px 5px 0px'},'Uploaded Tracks'),
+	$self->render_userdata_table(),
+	$self->userdata_upload()
 	);
 }
 

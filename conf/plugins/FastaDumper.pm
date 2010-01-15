@@ -117,7 +117,7 @@ sub dump {
     # HTML formatting
     if ($config->{format} eq 'html') {
 	
-      print start_html($segment),h1($label);
+      print start_html($segment); #,h1($label);
       print pre(">$label\n$dna");
       print end_html;
     }

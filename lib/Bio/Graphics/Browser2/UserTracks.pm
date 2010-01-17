@@ -245,6 +245,7 @@ sub upload_file {
     
     # guess the file type from the first non-blank line
     my ($type,$lines,$eol)   = $self->guess_upload_type($file_name,$fh);
+    warn "type=$type, lines=",scalar @$lines,"eol=.$eol.";
     $lines                 ||= [];
     my (@tracks,$fcgi);
 
@@ -374,7 +375,8 @@ sub guess_upload_type {
     read($fh,$buffer,1024);
     
     # first check for binary upload; currently only BAM
-    return ('bam',[$buffer],"undef")  if substr($buffer,0,6) eq "\x1f\x8b\x08\x04\x00\x00";
+    return ('bam',[$buffer],undef)
+	if substr($buffer,0,6) eq "\x1f\x8b\x08\x04\x00\x00";
     
     # everything else is text (for now)
     my $eol = $buffer =~ /\015\012/ ? "\015\012"  # MS-DOS

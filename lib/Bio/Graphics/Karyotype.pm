@@ -355,7 +355,7 @@ sub hits_table {
 	    -onMouseOut =>"k_unhilite_feature(this)",
 	   },
 	   th({-align=>'left'},a({-href=>$link},$name)),
-	   td($_->method),
+	   td(eval{$_->method} || 'region'),
 	   td($desc),
 	   td(a({-href=>"$url$pos"},$pos)),
 	   td($_->score || $na)

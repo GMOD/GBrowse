@@ -1517,7 +1517,7 @@ sub handle_download_userdata {
     my $is_text = -T $file;
 
     print CGI::header(-attachment   => $fname,
-		      -charset      => $self->tr('CHARSET'),
+		      -charset      => $self->tr('CHARSET'), # 'US-ASCII' ?
 		      -type         => $is_text ? 'text/plain' : 'application/octet-stream');
 
     my $f = $ftype eq 'conf' ? $userdata->conf_fh($track)
@@ -1529,9 +1529,9 @@ sub handle_download_userdata {
 	# not necessary?
 	# my $eol = $self->guess_eol();
 	while (<$f>) {
+	    print;
          #	chomp;
 	 #      print $_,$eol;
-	    print;
 	}
     } else {
 	my $buffer;

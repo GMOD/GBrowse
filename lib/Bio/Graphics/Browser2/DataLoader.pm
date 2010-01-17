@@ -111,20 +111,25 @@ sub load {
 	$self->start_load;
 
 	$self->set_status('load data');
-	foreach (@$initial_lines) {
-	    $source_file->print($_) if $source_file;
-	    $self->load_line($_);
+
+	my $eol   = $self->eol_char;
+	{
+	    local $/  = $eol if $eol;
+
+	    foreach (@$initial_lines) {
+		$source_file->print($_) if $source_file;
+		$self->load_line($_);
+	    }
+
+	    my $count = @$initial_lines;
+	    while (<$fh>) {
+		$source_file->print($_) if $source_file;
+		$self->load_line($_);
+		$self->set_status("loaded $count lines") if $count++ % 1000;
+	    }
+	    $source_file->close;
 	}
 
-	my $count = @$initial_lines;
-	my $eol   = $self->eol_char;
-	local $/  = $eol if $eol;
-	while (<$fh>) {
-	    $source_file->print($_) if $source_file;
-	    $self->load_line($_);
-	    $self->set_status("loaded $count lines") if $count++ % 1000;
-	}
-	$source_file->close;
 	$self->finish_load;
 	$self->close_conf;
     };

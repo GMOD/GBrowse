@@ -42,10 +42,6 @@ provides:
   Bio::DB::GFF::Aggregator::wormbase_gene:
     file: lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
     version: 0.30
-  Bio::DB::GFF::SyntenyBlock:
-    file: lib/Bio/DB/GFF/SyntenyBlock.pm
-  Bio::DB::GFF::SyntenyIO:
-    file: lib/Bio/DB/GFF/SyntenyIO.pm
   Bio::DB::Tagger:
     file: lib/Bio/DB/Tagger.pm
     version: 1.00

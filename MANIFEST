@@ -496,8 +496,6 @@ lib/Bio/DB/GFF/Aggregator/match_gap.pm
 lib/Bio/DB/GFF/Aggregator/reftranscript.pm
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
-lib/Bio/DB/GFF/SyntenyBlock.pm
-lib/Bio/DB/GFF/SyntenyIO.pm
 lib/Bio/DB/SeqFeature/Store/BedLoader.pm
 lib/Bio/DB/Tagger.pm
 lib/Bio/DB/Tagger/mysql.pm

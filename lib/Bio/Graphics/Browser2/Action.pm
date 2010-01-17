@@ -510,7 +510,6 @@ sub ACTION_cancel_upload {
 	delete $state->{uploads}{$upload_id};
 	return (200,'text/html',"<div class='error'><b>$file_name:</b> <i>Cancelling</i></div>");
     } else {
-	warn "here I am";
 	return (200,'text/html','<div class="error"><i>Not found</i></div>');
     }
     

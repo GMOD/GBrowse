@@ -244,8 +244,8 @@ sub upload_file {
     }
     
     # guess the file type from the first non-blank line
-    my ($type,$lines)   = $self->guess_upload_type($file_name,$fh);
-    $lines            ||= [];
+    my ($type,$lines,$eol)   = $self->guess_upload_type($file_name,$fh);
+    $lines                 ||= [];
     my (@tracks,$fcgi);
 
     my $result= eval {
@@ -260,6 +260,7 @@ sub upload_file {
 				  $self->config,
 				  $self->state->{uploadid},
 	    );
+	$load->eol_char($eol);
 	@tracks = $load->load($lines,$fh);
 	1;
     };
@@ -362,33 +363,64 @@ sub get_loader {
     return $module;
 }
 
+# guess the file type and eol based on its name and the first 1024 bytes
+# of the file. The @$lines will contain the lines that were consumed
+# during this operation so that the info isn't lost.
 sub guess_upload_type {
     my $self = shift;
     my ($filename,$fh) = @_;
 
+    my $buffer;
+    read($fh,$buffer,1024);
+    
+    # first check for binary upload; currently only BAM
+    return ('bam',[$buffer],"undef")  if substr($buffer,0,6) eq "\x1f\x8b\x08\x04\x00\x00";
+    
+    # everything else is text (for now)
+    my $eol = $buffer =~ /\015\012/ ? "\015\012"  # MS-DOS
+	     :$buffer =~ /\015/     ? "\015"      # Macintosh
+	     :$buffer =~ /\012/     ? "\012"      # Unix
+	     :"\012";  # default to Unix
+
+    local $/ = $eol;
+    my @lines     = map {$_.$eol} split $eol,$buffer;
+    my $remainder = <$fh>;
+    $lines[-1]   .= $remainder;
+
     # first guess based on file names
-    return ('gff')          if $filename =~ /\.gff(\.(gz|bz2|Z))?$/i;
-    return ('gff3')         if $filename =~ /\.gff3(\.(gz|bz2|Z))?$/i;
-    return ('bed')          if $filename =~ /\.bed(\.(gz|bz2|Z))?$/i;
-    return ('wiggle')       if $filename =~ /\.wig(\.(gz|bz2|Z))?$/i;
-    return ('featurefile')  if $filename =~ /\.fff(\.(gz|bz2|Z))?$/i;
-    return ('bam')          if $filename =~ /\.bam(\.gz)?$/i;
-    return ('sam')          if $filename =~ /\.sam(\.gz)?$/i;
+    my $ftype = $filename =~ /\.gff(\.(gz|bz2|Z))?$/i  ? 'gff'
+	       :$filename =~ /\.gff3(\.(gz|bz2|Z))?$/i ? 'gff3'
+	       :$filename =~ /\.bed(\.(gz|bz2|Z))?$/i  ? 'bed'
+	       :$filename =~ /\.wig(\.(gz|bz2|Z))?$/i  ? 'wiggle'
+	       :$filename =~ /\.fff(\.(gz|bz2|Z))?$/i  ? 'featurefile'
+	       :$filename =~ /\.bam(\.gz)?$/i          ? 'bam'
+	       :$filename =~ /\.sam(\.gz)?$/i          ? 'sam'
+	       :undef;
+    
+    return ($ftype,\@lines,$eol) if $ftype;
 
-    my @lines;
-    while (my $line = <$fh>) {
-	push @lines,$line;
-	return ('featurefile',\@lines) if $line =~ /^reference/i;
-	return ('featurefile',\@lines) if $line =~ /\w+:\d+\.\.\d+/i;
-	return ('gff2',\@lines)        if $line =~ /^\#\#gff-version\s+2/;
-	return ('gff3',\@lines)        if $line =~ /^\#\#gff-version\s+3/;
-	return ('wiggle',\@lines)      if $line =~ /type=wiggle/;
-	return ('bed',\@lines)         if $line =~ /^\w+\s+\d+\s+\d+/;
-	return ('sam',\@lines)         if $line =~ /^\@[A-Z]{2}/;
-	return ('sam',\@lines)         if $line =~ /^[^ \t\n\r]+\t[0-9]+\t[^ \t\n\r@=]+\t[0-9]+\t[0-9]+\t(?:[0-9]+[MIDNSHP])+|\*/;
-	return ('bam',\@lines)         if substr($line,0,6) eq "\x1f\x8b\x08\x04\x00\x00";
+    # otherwise scan the thing until we find a pattern we know about
+    # or hit the end of the file. Extra lines that we read are 
+    # accumulated into the @lines array.
+    my $i = 0;
+    while (1) {
+	my $line;
+	if ($i < $#lines) {
+	    $line = $lines[$i++];
+	} else {
+	    my $line = <$fh>;
+	    last unless $line;
+	    push @lines,$line;
+	}
+	return ('featurefile',\@lines,$eol) if $line =~ /^reference/i;
+	return ('featurefile',\@lines,$eol) if $line =~ /\w+:\d+\.\.\d+/i;
+	return ('gff2',\@lines,$eol)        if $line =~ /^\#\#gff-version\s+2/;
+	return ('gff3',\@lines,$eol)        if $line =~ /^\#\#gff-version\s+3/;
+	return ('wiggle',\@lines,$eol)      if $line =~ /type=wiggle/;
+	return ('bed',\@lines,$eol)         if $line =~ /^\w+\s+\d+\s+\d+/;
+	return ('sam',\@lines,$eol)         if $line =~ /^\@[A-Z]{2}/;
+	return ('sam',\@lines,$eol)         if $line =~ /^[^ \t\n\r]+\t[0-9]+\t[^ \t\n\r@=]+\t[0-9]+\t[0-9]+\t(?:[0-9]+[MIDNSHP])+|\*/;
     }
-
     return;
 }
 

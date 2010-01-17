@@ -29,6 +29,12 @@ sub conf_path  { shift->{conf} }
 sub conf_fh    { shift->{conf_fh}  }
 sub settings   { shift->{settings} }
 sub loadid     { shift->{loadid}   }
+sub eol_char   {
+    my $self = shift;
+    my $d    = $self->{eol_char};
+    $self->{eol_char} = shift if @_;
+    return $d;
+}
 sub setting {
     my $self   = shift;
     my $option = shift;
@@ -111,6 +117,8 @@ sub load {
 	}
 
 	my $count = @$initial_lines;
+	my $eol   = $self->eol_char;
+	local $/  = $eol if $eol;
 	while (<$fh>) {
 	    $source_file->print($_) if $source_file;
 	    $self->load_line($_);

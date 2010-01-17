@@ -852,18 +852,17 @@ sub render_panels {
 	my $clear_hilites  = $self->clear_highlights;
         $html .= div(
             $self->toggle({tight=>1},
-                'Details',
-                div({ -id => 'detail_panels', -class => 'track'},
-                    $details_msg,
-		    $scale_bar_html, 
-		    $panels_html,
-		    div({-align=>'right'},$clear_hilites),
-		    div({-align=>'left'},$self->html_frag('html4',$self->state))
-                )
+			  'Details',
+			  div({ -id => 'detail_panels', -class => 'track'},
+			      $details_msg,
+			      $scale_bar_html, 
+			      $panels_html
+			  ),
+			  div({-style=>'text-align:right'},$clear_hilites),
+			  div($self->html_frag('html4',$self->state))
             )
-        ) . $drag_script;
+	    ) . $drag_script;
     }
-
     return $html;
 }
 
@@ -1513,18 +1512,44 @@ sub handle_download_userdata {
     my $userdata = $self->user_tracks;
     my $file = $ftype eq 'conf' ? $userdata->track_conf($track)
 	                        : $userdata->data_path($track,$ftype);
+
     my $fname = basename($file);
+    my $is_text = -T $file;
 
     print CGI::header(-attachment   => $fname,
 		      -charset      => $self->tr('CHARSET'),
-		      -type         => -T $file ? 'text/plain' : 'application/octet-stream');
+		      -type         => $is_text ? 'text/plain' : 'application/octet-stream');
 
     my $f = $ftype eq 'conf' ? $userdata->conf_fh($track)
 	                     : IO::File->new($file);
     $f or croak "$file: $!";
-    print $_ while <$f>;
+
+    if ($is_text) {
+	# try to make the file match the native line endings
+	# not necessary?
+	# my $eol = $self->guess_eol();
+	while (<$f>) {
+         #	chomp;
+	 #      print $_,$eol;
+	    print;
+	}
+    } else {
+	my $buffer;
+	while (read($f,$buffer,1024)) {
+	    print $buffer;
+	}
+    }
     close $f;
     return 1;
+}
+
+sub guess_eol {
+    my $self = shift;
+    my $agent = CGI->user_agent;
+    return "\012"     if $agent =~ /linux/i;
+    return "\015"     if $agent =~ /macintosh/i;
+    return "\015\012" if $agent =~ /windows/i;
+    return "\n"; # default
 }
 
 sub handle_quickie {

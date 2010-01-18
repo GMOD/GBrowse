@@ -237,9 +237,10 @@ named "userdata_*". The usual way to do this is with the mysql shell:
 END
 
 	my $dbh = DBI->connect($mysql_admin)
-	    or die DBI->errstr,'  ',$mysql_usage;
+	    or die DBI->errstr,".\n",$mysql_usage;
+	$dbh->do("drop database if exists `$data_path`");
 	$dbh->do("create database `$data_path`")
-	    or die "Could not create $data_path:",DBI->errstr,'. ',$mysql_usage,;
+	    or die "Could not create $data_path:",DBI->errstr,".\n",$mysql_usage,;
 		 
     } elsif ($backend eq 'DBI::SQLite') {
 	$self->dsn(File::Spec->catfile($data_path,'index.SQLite'));

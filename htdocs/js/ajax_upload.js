@@ -100,7 +100,8 @@ function completeAjaxUpload(response,upload_id,field_type) {
 
   try {
     r = response.evalJSON(true);
-  } catch(e) { r = {success:     false, 
+  } catch(e) { 
+               r = {success:     false, 
                     upload_name: 'Uploaded file',
                     error_msg:   'The server returned an error during upload'}}
 

@@ -404,6 +404,8 @@ sub ACTION_upload_file {
 
     # simplify the message if it is coming from BioPerl
     $msg = $1 if $msg =~ /MSG:\s+(.+?)\nSTACK/s;
+    $msg =~ s/\n.+\Z//s;
+    $msg =~ s/[\n"]/ /g;
 
     my $return_object        = { success   => $result||0,
 				 error_msg => CGI::escapeHTML($msg),

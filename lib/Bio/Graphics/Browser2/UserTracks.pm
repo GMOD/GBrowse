@@ -272,9 +272,9 @@ sub upload_file {
     }
 
     my $msg = $@;
-    warn $msg if $msg;
+    warn "UPLOAD ERROR: ",$msg if $msg;
     $self->delete_file($track_name) unless $result;
-    return ($result,"$msg",\@tracks);
+    return ($result,$msg,\@tracks);
 }
 
 sub delete_file {

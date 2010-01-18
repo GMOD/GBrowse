@@ -159,9 +159,10 @@ sub source_files {
     my @files;
     if (opendir my $dir,$path) {
 	while (my $f = readdir($dir)) {
-	    next unless -f File::Spec->catfile($path,$f);
+	    my $path = File::Spec->catfile($path,$f);
+	    next unless -f $path;
 	    my ($size,$mtime) = (stat(_))[7,9];
-	    push @files,[$f,$size,$mtime];
+	    push @files,[$f,$size,$mtime,$path];
 	}
     }
     return @files;
@@ -245,7 +246,6 @@ sub upload_file {
     
     # guess the file type from the first non-blank line
     my ($type,$lines,$eol)   = $self->guess_upload_type($file_name,$fh);
-    warn "type=$type, lines=",scalar @$lines,"eol=.$eol.";
     $lines                 ||= [];
     my (@tracks,$fcgi);
 
@@ -386,6 +386,7 @@ sub guess_upload_type {
 
     local $/ = $eol;
     my @lines     = map {$_.$eol} split $eol,$buffer;
+    $lines[-1]    =~ s/$eol$// unless $buffer =~ /$eol$/;
     my $remainder = <$fh>;
     $lines[-1]   .= $remainder;
 

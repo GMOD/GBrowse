@@ -15,6 +15,7 @@ use Text::Tabs;
 use constant JS    => '/gbrowse/js';
 use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
+use constant MAXIMUM_EDITABLE_UPLOAD => 1_000_000; # bytes
 use constant DEBUG => 0;
 
 use constant HAVE_SVG => eval "require GD::SVG; 1";
@@ -1217,6 +1218,18 @@ sub list_userdata {
 	my @source_files  = $userdata->source_files($name);
 	my $download_data = 
 	    table({-class=>'padded-table'},
+		  TR([map {
+		      th({-align=>'left'},
+			 a({-href=>"?userdata_download=$_->[0];track=$name"},$_->[0])).
+			     td(scalar localtime($_->[2])).
+			     td($_->[1],'bytes').
+			     td(
+				 ($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3])
+				 ? a({-href    => "javascript:void(0)",
+				      -onClick => "editUploadData('$name','$_->[0]')"},'[edit]')
+				 : '&nbsp;'
+			     )
+		      } @source_files]),
 		  TR(th({-align=>'left'},
 			(a({-href=>"?userdata_download=conf;track=$name"},'Configuration'))),
 		     td(scalar localtime $conf_modified),
@@ -1224,14 +1237,7 @@ sub list_userdata {
 		     td(a({-href    => "javascript:void(0)",
 			   -onClick => "editUploadConf('$name')"},'[edit]'))
 		  ),
-		  TR([map { th({-align=>'left'},
-			       a({-href=>"?userdata_download=$_->[0];track=$name"},$_->[0])).
-				td(scalar localtime($_->[2])).
-				td($_->[1],'bytes').
-				td(a({-href    => "javascript:void(0)",
-				      -onClick => "editUploadData('$name','$_->[0]')"},'[edit]'))
-				,
-		      } @source_files]));
+	    );
 		  
 	my $go_there      = a({-href    => 'javascript:void(0)',
 			       -onClick => 

@@ -341,10 +341,10 @@ sub ACTION_reset_dsn {
 sub ACTION_authorize_login {
     my $self = shift;
     my $q    = shift;
-    my $username = $q->param('username') or croak;
-    my $session  = $q->param('session')  or croak;
-    my $openid   = $q->param('openid')   or croak;
-    my $remember = $q->param('remember') or croak;
+    my $username = $q->param('username') or croak "no username provided";
+    my $session  = $q->param('session')  or croak "no session ID provided";
+    my $openid   = $q->param('openid');   # or croak;
+    my $remember = $q->param('remember'); # or croak;
 
     my ($id,$nonce) = $self->render->authorize_user($username,$session,$remember,$openid);
     return (200,'application/json',{id=>$id,authority=>$nonce});

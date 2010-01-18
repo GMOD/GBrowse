@@ -10,7 +10,7 @@ my ($dsn,$admin,$pprompt);
 GetOptions('dsn=s'   => \$dsn,
            'admin=s' => \$admin,
            'p'       => \$pprompt) or die <<EOF;
-Usage: $0
+Usage: $0 [options] <optional path to GBrowse.conf>
 
 Initializes an empty GBrowse user accounts database. Options:
 
@@ -19,16 +19,26 @@ Initializes an empty GBrowse user accounts database. Options:
    -admin     DB admin user and password in format "user:password" [default "root:<empty>"]
    -p         Prompt for password
 
-Currently mysql and SQLite databases are supported. When creating a mysql database
-you must provide the -admin option to specify a user and password that has database create
-privileges on the server.
+Currently mysql and SQLite databases are supported. When creating a
+mysql database you must provide the -admin option to specify a user
+and password that has database create privileges on the server.
 
-When creating a SQLite database, the script will use the -admin option to set the user and
-group ownership of the created database. The web user must have read/write privileges to this 
-database.
+When creating a SQLite database, the script will use the -admin option
+to set the user and group ID ownership of the created database in the
+format "uid:gid". The web user must have read/write privileges to this
+database. The user running this script must have "sudo" privileges for
+this to work. Otherwise, you may set the ownership of the SQLite
+database file manually after the fact.
+
+Instead of providing the -dsn option, you may provide an optional path
+to your installed GBrowse.conf file, in which case the value of
+"user_account_db" will be used. If the config path and -dsn options
+are both provided, then the latter overrides the former.
 EOF
     ;
 
+my $conf = shift;
+$dsn         ||= get_dsn_from_conf($conf) if -e $conf;
 $dsn         ||= 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse';
 
 my ($admin_user,$admin_pass) = split ':',$admin;
@@ -42,11 +52,12 @@ if ($pprompt) {
     print STDERR "\n";
 }
 
-my ($db) =~ $dsn =~ /DBI:[^:]+:([^;]+)/;
-print STDERR "Warning: This will (re)initialize the database named $db, erasing all\n";
-print STDERR "data that may have been there. Press \"Y\" to continue: ";
+my ($driver,$db) = $dsn =~ /DBI:([^:]+):([^;]+)/;
+print STDERR "Warning: This will (re)initialize the $driver user account database\n";
+print STDERR "named $db, erasing all data that may have been there.\n";
+print STDERR "Press \"Y\" to continue: ";
 
-exit 0 unless <STDIN> =~ /^[Yy]/;
+die "Aborted" unless <STDIN> =~ /^[Yy]/;
 
 # Try to create the indicated database
 if ($dsn =~ /^DBI:mysql:([^;]+)/) {
@@ -109,6 +120,17 @@ sub load_schema {
 	next unless /\S/;
 	$dbh->do($_) or die $dbh->errstr;
     }
+}
+
+sub get_dsn_from_conf {
+    my $path = shift;
+    open my $f,$path or die "Couldn't open $path: $!";
+    while (<$f>) {
+	if (/^user_account_db\s*=\s*(.+)/) {
+	    return $1;
+	}
+    }
+    return;
 }
 
 __END__

@@ -258,7 +258,7 @@ sub drop_databases {
     my $conf_path = shift;
     # hacky job here - just drop anything that looks like a mysql database
     my (@dsns,$using_mysql);
-    open my $f,$conf_path or die "Couldn't open $conf_path: $!";
+    open my $f,$conf_path or (warn "Couldn't open $conf_path: $!" && return);
     while (<$f>) {
 	if (/-adaptor/) {
 	    $using_mysql = /DBI::mysql/;

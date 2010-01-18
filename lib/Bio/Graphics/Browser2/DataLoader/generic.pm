@@ -10,6 +10,8 @@ use base 'Bio::Graphics::Browser2::DataLoader';
 my @COLORS = qw(blue red orange brown mauve peach green cyan 
                 black yellow cyan papayawhip coral);
 
+my $DUMPING_FIXED;  # flag that we patched Bio::SeqFeature::Lite
+
 sub start_load {
     my $self = shift;
     my $track_name = $self->track_name;
@@ -45,6 +47,8 @@ sub finish_load {
     my $trackname = $self->track_name;
     my $dsn       = $self->dsn;
     my $backend   = $self->backend;
+
+    $self->write_gff3($db,$dsn) if $backend eq 'memory';
 
     my $trackno   = 0;
     my $loadid    = $self->loadid;
@@ -156,6 +160,67 @@ sub load_line {
 	# ignore it
     }
     $self->state($state) if $state ne $old_state;
+}
+
+# This is called to save out the feature file in GFF3 format,
+# which is needed when using the memory backend.
+sub write_gff3 {
+    my $self = shift;
+    my ($db,$path) = @_;
+    $self->fix_memory_dumping;
+    $self->set_status('writing GFF3 file');
+    $path .= "/data.gff3";
+    open my $f,">",$path or die "Can't open $path: $!";
+    print $f "##gff-version 3\n";
+    print $f "##Index-subfeatures 0\n\n";
+    my $i = $db->get_seq_stream;
+    while (my $feature = $i->next_seq) {
+	print $f $feature->gff3_string(1),"\n";
+    }
+    close $f;
+}
+
+# This is a hack to patch errors in bioperl feature file loading
+sub fix_memory_dumping {
+    my $self = shift;
+    return if $DUMPING_FIXED++;
+    *Bio::SeqFeature::Lite::gff3_string = eval <<'END';
+sub {
+    my ($self,$recurse,$parent_tree,$seenit,$force_id) = @_;
+    $parent_tree ||= {};
+    $seenit      ||= {};
+    my @rsf      =   ();
+    my @parent_ids;
+
+    if ($recurse) {
+	$self->_traverse($parent_tree) unless %$parent_tree;  # this will record parents of all children
+	my $primary_id = defined $force_id ? $force_id : $self->_real_or_dummy_id;
+
+	@rsf = $self->get_SeqFeatures;
+	return if $seenit->{$primary_id}++;
+	@parent_ids = keys %{$parent_tree->{$primary_id}};
+    }
+
+    my $group      = $self->format_attributes(\@parent_ids,$force_id);
+    my $name       = $self->name;
+
+    my $class = $self->class;
+    my $strand = ('-','.','+')[$self->strand+1];
+    my $p = join("\t",
+		 $self->seq_id||'.',
+		 $self->source||'.',
+		 $self->method||'.',
+		 $self->start||'.',
+		 $self->stop||'.',
+		 defined($self->score) ? $self->score : '.',
+		 $strand||'.',
+		 defined($self->phase) ? $self->phase : '.',
+		 $group||'');
+    return join("\n",
+		$p,
+		map {$_->gff3_string(1,$parent_tree,$seenit)} @rsf);
+}
+END
 }
 
 # shamelessly copied from Bio::Graphics:;FeatureFile.

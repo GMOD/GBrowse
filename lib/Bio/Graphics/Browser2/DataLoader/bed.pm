@@ -35,6 +35,8 @@ sub finish_load {
     my $dsn       = $self->dsn;
     my $backend   = $self->backend;
 
+    $self->write_gff3($db,$dsn) if $backend eq 'memory';
+
     my $trackno   = 0;
     my $loadid    = $self->loadid;
     $self->set_status('creating configuration');

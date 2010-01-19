@@ -67,6 +67,18 @@ case "$1" in
         fi
 	echo "."
 	;;
+  status)
+       for port in $PORT; do
+               if test -e $RUNDIR/$NAME.$port.pid ; then
+                       kill -0 `cat $RUNDIR/$NAME.$port.pid`
+                       if [ "$?" -eq 0 ]; then
+                               echo "$NAME is running on port $port."
+                       fi
+               else
+                       echo "$NAME is not running on port $port."
+               fi
+       done
+       ;;
   restart|force-reload)
 	$0 stop
 	sleep 3
@@ -74,7 +86,7 @@ case "$1" in
 	;;
   *)
 	N=/etc/init.d/$NAME
-	echo "Usage: $N {start|stop|restart|force-reload}" >&2
+	echo "Usage: $N {start|stop|restart|force-reload|status}" >&2
 	exit 1
 	;;
 esac

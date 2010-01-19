@@ -6,30 +6,25 @@
 </head>
 
 <body>
-<h1>Generic Genome Browser: A Tutorial for Administrators</h1>
+<h1>Generic Genome Browser Version 2: A Tutorial for Administrators</h1>
 
-<h2>Author: Lincoln Stein, 12 December 2008</h2>
+<h2>Author: Lincoln Stein, 20 January 2010</h2>
 
 <p>
 
 This is an extensive tutorial to take you through the main features
 and gotchas of configuring GBrowse as a server.  This tutorial assumes
-that you have successfully setup Perl, GD, BioPerl and the other
-GBrowse dependencies.  During most of the tutorial, we will be using
-the "in-memory" GBrowse database (no relational database required!)
-Later we will show how to set up a genome size database using the
-berkeleydb and MySQL adaptors.
+that you have successfully set up Perl, GD, BioPerl and the other
+GBrowse dependencies. If you haven't, please see the <a
+href="http://gmod.org/wiki/GBrowse_2.0_HOWTO">GBrowse HOWTO</a> During
+most of the tutorial, we will be using the "in-memory" GBrowse
+database (no relational database required!)  Later we will show how to
+set up a genome size database using the berkeleydb and MySQL adaptors.
 
 <p>
 
-<b>Important:</b>This tutorial is designed for GBrowse 1.69, which is
-expected to be released in late May. This version is currently
-available from <a
-href="http://gmod.org/wiki/index.php/CVS_Access">CVS</a>. It uses GFF3
-format files (.gff3), not the GFF version 2 (.gff) files used by
-version 1.68 and earlier. For a tutorial that uses the older
-Bio::DB::GFF adaptor, see <a href="dbgff/tutorial.html">Using GBrowse
-with Bio::DB::GFF.</a></p>
+<b>Important:</b>This tutorial is designed for GBrowse 2.00 and will
+not work with earlier versions of the software.</b>
 
 <h2>Table of Contents</h2>
 
@@ -110,7 +105,7 @@ database will be named "volvox" and GBrowse will be invoked with this
 URL:
 
 <blockquote
-class="example"><pre>http://localhost/cgi-bin/gbrowse/volvox</pre></blockquote>
+class="example"><pre>http://localhost/cgi-bin/gbrowse2/gbrowse/volvox</pre></blockquote>
 
 <p>
 
@@ -131,13 +126,14 @@ which allows GBrowse to run directly off text files.  To prepare this
 database for use, find the GBrowse databases directory which was
 created in your Apache web server directory at the time of
 installation.  It should be located at
-<b>$HTDOCS/gbrowse/databases</b>, but check to make sure.
+<b>$HTDOCS/databases</b>, but check to make sure.
 
 <p>
 
 Similarly, check that you can find the gbrowse.conf configuration
-directory.  It should be located at <b>$CONF/gbrowse.conf</b> and
-contain the configuration file "yeast.conf."
+directory.  It should be located at <b>$CONF</b> and contain the main
+configuration file "GBrowse.conf" and the example yeast genome
+datasource file "yeast_simple.conf" (among several others).
 
 <p>
 
@@ -149,8 +145,8 @@ ignore this step.
 <blockquote class="example"><pre>
 % <b>su</b>
 Password: <b>*********</b>
-# <b>chown my_user_name $HTDOCS/gbrowse/databases</b>
-# <b>chown my_user_name $CONF/gbrowse.conf</b>
+# <b>chown my_user_name $HTDOCS/databases</b>
+# <b>chown my_user_name $CONF</b>
 # <b>exit</b>
 %
 </pre></blockquote>
@@ -171,7 +167,7 @@ You will create an empty volvox subdirectory, and make it world
 writable.  On Unix systems:
 
 <blockquote class="example"><pre>
-% <b>cd $HTDOCS/gbrowse/databases</b>
+% <b>cd $HTDOCS/databases</b>
 % <b>mkdir volvox</b>
 % <b>chmod go+rwx volvox</b>
 </pre></blockquote>
@@ -181,7 +177,7 @@ writable.  On Unix systems:
 <blockquote> <i>NOTE: The "%" sign in these examples is the
 command-line prompt.  On Windows systems, the command-line prompt is
 something like C:\Program Files\Apache
-Group\Apache2\htdocs\gbrowse\databases&gt;.  Unix systems are more
+Group\Apache2\htdocs\databases&gt;.  Unix systems are more
 variable, but the prompt usually ends with a "%" or a "#".  In all the
 examples in this tutorial, what you type is rendered in
 <b>boldface</b>, while prompts and command-line results are shown in
@@ -203,7 +199,7 @@ volvox database directory.  On Unix systems:
 
 <blockquote class="example">
 <pre>
-% <b>cd $HTDOCS/gbrowse</b>
+% <b>cd $HTDOCS</b>
 % <b>cp tutorial/data_files/volvox1.gff3 databases/volvox</b>
 </pre>
 </blockquote>
@@ -217,17 +213,35 @@ database directory.
 
 Now we will need a GBrowse config file to tell GBrowse how to render
 this data set.  In the subdirectory <a
-href="conf_files">conf_files</a>, you will find a sample configuration
+href="conf_files">$HTDOCS/tutorial/conf_files</a>, you will find a sample configuration
 file named <a href="conf_files/volvox.conf">volvox.conf</a>.  Copy
-this into your GBrowse configuration directory ($CONF/gbrowse.conf).
+this into your GBrowse configuration directory ($CONF).
 
 <p>
+
+You'll now edit the main GBrowse.conf configuration file to tell it
+about the new data source. Open <b>$CONF/GBrowse.conf</b> with a text
+editor, scroll to the bottom, and add this stanza to the bottom of the
+file:
+
+<blockquote><pre>
+
+[volvox]
+description  = Tutorial database
+path         = volvox.conf
+</pre></blockquote>
+
+<p>
+
+Be sure to leave a blank line between the bottom of the previous
+stanza and the top of the new one (i.e., there should be a blank line
+above "[volvox]").
 
 <p>
 
 You should now be able to view the data set.  Point your web browser
 at <a
-href="/cgi-bin/gbrowse/volvox">http://localhost/cgi-bin/gbrowse/volvox</a>
+href="/cgi-bin/gb2/gbrowse/volvox">http://localhost/cgi-bin/gb2/gbrowse/volvox</a>
 and type in "ctgA" in the search box.  The result is shown in Figure
 1.
 
@@ -250,7 +264,7 @@ database directory in this section is correct:
 <pre>
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor memory
-		-dir     '$HTDOCS/gbrowse/databases/volvox'
+		-dir     '$HTDOCS/databases/volvox'
 </pre>
 
 <p>
@@ -576,7 +590,7 @@ The attribute named <i>Note</i> is automatically displayed and made
 searchable.  To see this work, add <a
 href="data_files/volvox2.gff3">volvox2.gff3</a> to the volvox database.
 You can do this just by copying the file into
-<b>$HTDOCS/gbrowse/databases/volvox</b> so that the directory contains
+<b>$HTDOCS/databases/volvox</b> so that the directory contains
 both the original volvox1.gff3 and the new volvox2.gff3 files.
 
 <p>
@@ -1836,7 +1850,7 @@ We want it to live in the volvox database directory, so we
 have to specify this path when creating it:
 
 <blockquote class="example"><pre>
-% wiggle2gff3.pl --path=$HTDOCS/gbrowse/databases/volvox volvox_microarray.wig \
+% wiggle2gff3.pl --path=$HTDOCS/databases/volvox volvox_microarray.wig \
                  > volvox_microarray.gff3
 </pre></blockquote>
 
@@ -1849,7 +1863,7 @@ we save to volvox_microarray.gff3. This file will look like this:
 <blockquote class="example"><pre>
 ##gff-version 3
 
-ctgA . microarray_oligo 1 50000 . . . Name=example;Note=20%20degrees%2C%202%20hr;wigfile=$HTDOCS/gbrowse/databases/volvox/track001.ctgA.1200440492.wig
+ctgA . microarray_oligo 1 50000 . . . Name=example;Note=20%20degrees%2C%202%20hr;wigfile=$HTDOCS/databases/volvox/track001.ctgA.1200440492.wig
 </pre></blockquote>
 
 <p>
@@ -1947,7 +1961,7 @@ unix systems, or "dir/w" on Windows systems) it should look like
 this:
 
 <blockquote class="example"><pre>
-% <b>ls $HTDOCS/gbrowse/databases/volvox/</b>
+% <b>ls $HTDOCS/databases/volvox/</b>
 track001.ctgA.1202327456.wig  volvox2.gff3   volvox4.gff3  volvox.fa
 volvox1.gff3		      volvox3.gff3   volvox5.gff3  
 volvox2b.gff3		      volvox4b.gff3  volvox7.gff3
@@ -2422,7 +2436,7 @@ modification date.  This tells GBrowse that it is new and needs to be
 reindexed.  In Unix:
 
 <blockquote class="example"><pre>
-% <b>touch $HTDOCS/gbrowse/databases/volvox/ests.fa</b>
+% <b>touch $HTDOCS/databases/volvox/ests.fa</b>
 </pre></blockquote>
 
 <p>If you are still having problems, remove the directory.index file
@@ -2463,7 +2477,7 @@ ctgA	example	trace	44401	45925	.	+	.	Name=trace;trace=volvox_trace.scf
 
 This aligns the full trace sequence to the reference sequence.  The
 trace file in this case is named "volvox_trace.scf", and it is located
-in <a href="data_files/volvox_trace.scf">$HTDOCS/gbrowse/tutorial/data_files/volvox_trace.scf</a>.
+in <a href="data_files/volvox_trace.scf">$HTDOCS/tutorial/data_files/volvox_trace.scf</a>.
 
 <p>
 
@@ -3187,7 +3201,7 @@ see how it affects the display (Figure 27).
 
 <p>
 
-Plugin files live in $CONF/gbrowse.conf/plugins. To view plugin
+Plugin files live in $CONF/plugins. To view plugin
 documentation, find the plugin file, which usually lives under
 gbrowse.conf/plugins, and run the perldoc command with the -F ("file")
 option:
@@ -3375,7 +3389,7 @@ copy <a href="data_files/elegans_core.gff3">elegans_core.gff3</a>, and
 <a href="data_files/elegans.fa">elegans.fa</a> into it.  The
 configuration file to use is <a
 href="conf_files/elegans_core.conf">elegans_core.conf</a>.  Place it
-in <a href="file:///$CONF/gbrowse.conf">$CONF/gbrowse.conf/</a>.
+in <a href="file:///$CONF">$CONF/</a>.
 
 <p>
 
@@ -3668,7 +3682,7 @@ respectively.
 <p>
 
 Open up the GBrowse configuration file,
-"$CONF/gbrowse.conf/elegans_core.conf", and insert the following
+"$CONF/elegans_core.conf", and insert the following
 lines right after the "plugins =" line:
 
 <blockquote><pre>
@@ -3904,14 +3918,14 @@ data.  This new database will be used as a DAS source.
 <p>
 
 Create a new database directory called <i>elegans_extra</i> in the
-"$HTDOCS/gbrowse/databases" directory, and add to it a copy of the
+"$HTDOCS/databases" directory, and add to it a copy of the
 file <a href="data_files/elegans_extra.gff3">elegans_extra.gff3</a>.
 This GFF file is simply the result of concatenating together the
 individual annotation files we looked at earlier (elegans_sts.gff3,
 etc), and removing the redundant comment lines from the top of the
 file.  Now copy the configuration file <a
 href="conf_files/elegans_extra.conf">elegans_extra.conf</a> into the
-$CONF/gbrowse.conf/ directory.  Have a look at this config file, and
+$CONF/ directory.  Have a look at this config file, and
 note that it contains the appropriate "das mapmaster" and "das
 category" configuration objects.
 
@@ -3991,7 +4005,7 @@ http://localhost/cgi-bin/das/elegans_extra?category=transcription.
 
 We can take advantage of this feature to add a menu of external DAS
 annotations to the browser.  Open
-"$CONF/gbrowse.conf/elegans_core.conf" and insert the following
+"$CONF/elegans_core.conf" and insert the following
 section right after the "plugins =" line:
 
 <blockquote><pre>
@@ -4161,7 +4175,7 @@ time <b>redirect</b> its output into a new configuration file named
 "ucsc_hg16.conf":
 
 <blockquote><pre>
-% <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das/hg16 &gt;$CONF/gbrowse.conf/ucsc_hg16.conf</b>
+% <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das/hg16 &gt;$CONF/ucsc_hg16.conf</b>
 </pre></blockquote>
 
 That should be all you need to do, unless you are behind a firewall
@@ -4329,7 +4343,7 @@ this:</p>
 description   = Volvox Berkeleydb Database
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor berkeleydb
-	        -dir     '$HTDOCS/gbrowse/databases/volvox'
+	        -dir     '$HTDOCS/databases/volvox'
 </pre></blockquote>
 
 <p> We made just two changes. First, we changed the description of the
@@ -4377,11 +4391,11 @@ in more detail in <a href="#mysql">The MySQL Backend</a>. It
 takes as its input a series of GFF and FASTA files and creates the
 appropriate database files. To see how to use it, we will create a
 fresh database directory. Go to the GBrowse database located at
-<b>$HTDOCS/gbrowse/databases</b> and create a new subdirectory called
+<b>$HTDOCS/databases</b> and create a new subdirectory called
 "volvox_bdb:"</p>
 
 <blockquote class="example"><pre>
- % cd $HTDOCS/gbrowse/databases
+ % cd $HTDOCS/databases
  % mkdir volvox_berkeley
 </pre></blockquote>
 
@@ -4395,11 +4409,11 @@ folder.
 You do <b>not</b> have to make this directory world writeable, but it
 should be readable and executable by the user that the web server runs
 as. Now enter the tutorial data files directory
-($HTDOCS/gbrowse/tutorial/data_files) and load the GFF and sequence
+($HTDOCS/tutorial/data_files) and load the GFF and sequence
 files using the following command:</p>
 
 <blockquote class="example"><pre>
-<b>% bp_seqfeature_load.pl -c -a berkeleydb -f -d $HTDOCS/gbrowse/databases/volvox_berkeley volvox_all.fa volvox_all.gff</b>
+<b>% bp_seqfeature_load.pl -c -a berkeleydb -f -d $HTDOCS/databases/volvox_berkeley volvox_all.fa volvox_all.gff</b>
 loading volvox_all.fa...
                                                                                 
 Building object tree... 0.00s
@@ -4428,7 +4442,7 @@ The arguments to <i>bp_load_gff.pl</i> are:
     <td>use the <b>f</b>ast loading option
   </tr>
   <tr>
-    <td><b>-d $HTDOCS/gbrowse/databases/volvox_berkeley</b></td>
+    <td><b>-d $HTDOCS/databases/volvox_berkeley</b></td>
     <td>Load the data into the indicated <b>d</b>atabase directory.
   </tr>
   <tr>
@@ -4438,7 +4452,7 @@ The arguments to <i>bp_load_gff.pl</i> are:
 </table>
 
 <p> If all goes well, this will create the index files in
-<tt>$HTDOCS/gbrowse/databases/volvox_bdb</tt>. If you look in that
+<tt>$HTDOCS/databases/volvox_bdb</tt>. If you look in that
 directory now, you'll see a series of index files.</p>
 
 <p>
@@ -4452,7 +4466,7 @@ looks like this:
 description   = Volvox Berkeleydb Database
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor berkeleydb
-	        -dsn    '$HTDOCS/gbrowse/databases/volvox_berkeley'
+	        -dsn    '$HTDOCS/databases/volvox_berkeley'
 </pre></blockquote>
 
 <p>The change here is to replace the <b>-dir</b> argument with
@@ -4740,6 +4754,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Dec  9 15:19:50 EST 2008
+Last modified: Tue Jan 19 15:55:00 EST 2010
 <!-- hhmts end -->
 </body> </html>

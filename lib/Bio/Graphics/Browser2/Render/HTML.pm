@@ -752,7 +752,7 @@ sub render_track_table {
   my @labels     = $self->potential_tracks;
 
   warn "potential tracks = @labels" if DEBUG;
-  my $length   = $self->thin_segment->length;
+
   # add citation link and markup
   my %labels;
   for my $label (@labels) {

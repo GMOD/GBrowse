@@ -388,6 +388,7 @@ sub guess_upload_type {
     my @lines     = map {$_.$eol} split $eol,$buffer;
     $lines[-1]    =~ s/$eol$// unless $buffer =~ /$eol$/;
     my $remainder = <$fh>;
+    $remainder   ||= '';
     $lines[-1]   .= $remainder;
 
     # first guess based on file names

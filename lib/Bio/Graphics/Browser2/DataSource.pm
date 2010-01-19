@@ -483,7 +483,7 @@ sub type2label {
 					   $dbid);
       my %label_groups;
       for my $label (@main_labels,@user_labels) {
-	  my ($label_base,$minlength) = $label =~ /([^:]+)(?::(\d+))?/;
+	  my ($label_base,$minlength) = $label =~ /(.+)(?::(\d+))?/;
 	  $minlength ||= 0;
 	  next if defined $length && $minlength > $length;
 	  $label_groups{$label_base}++;

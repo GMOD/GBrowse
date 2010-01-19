@@ -5,14 +5,19 @@ use strict;
 use base 'Bio::Graphics::Browser2::DataLoader::generic';
 
 sub Loader {
-    return 'Bio::DB::SeqFeature::Store::FeatureFileLoader';
+#    return 'Bio::DB::SeqFeature::Store::FeatureFileLoader';
+    return 'MyFeatureFileLoader';
 }
 
 sub do_fast {0}
 
+package MyFeatureFileLoader;
+use Text::ParseWords 'shellwords','quotewords';
+use base 'Bio::DB::SeqFeature::Store::FeatureFileLoader';
+
 # Fix a bioperl error. Fix this when a new release of Bioperl
 # comes out.
-sub Bio::DB::SeqFeature::Store::FeatureFileLoader::handle_feature {
+sub handle_feature {
     my $self     = shift;
     local $_     = shift;
 

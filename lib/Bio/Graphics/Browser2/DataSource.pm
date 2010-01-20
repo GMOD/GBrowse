@@ -705,7 +705,7 @@ sub db_settings {
   }
 
   if (defined (my $a = 
-	       $self->fallback_setting($section => 'aggregators'))) {
+	       $self->semantic_fallback_setting($section => 'aggregators',$length))) {
     my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }

@@ -112,6 +112,7 @@ sub init_databases {
 	    my @remotes  = shellwords($remote);
 	    $remote = $slave_status->select(@remotes);
 	}
+
 	my ($dbid)         = $source->db_settings($l);
 
 	my $search_options = $source->search_options($dbid);
@@ -262,12 +263,14 @@ sub search_features {
 
     @found = grep {
 	defined $_ 
-	    && !$seenit{($_->name||''),
-			$_->primary_tag,
-			$_->seq_id,
-			$_->start,
-			$_->end,
-			$_->strand}++} @found;
+	    && !$seenit{
+		((lc $_->seq_id eq $state->{name}) # this hack gives special privileges to matches to seq_ids
+		 ? 'region' 
+		 : $_->primary_tag),
+		 $_->seq_id,
+		 $_->start,
+		 $_->end,
+		 $_->strand}++} @found;
     return wantarray ? @found : \@found;
 }
 
@@ -306,13 +309,16 @@ sub search_features_locally {
                   :0} @dbids;
 
     warn "dbs = @dbids" if DEBUG;
+    my %seenit;
 
     for my $dbid (@dbids) {
 	warn "searching in ",$dbid if DEBUG;
+	my $db = $self->source->open_database($dbid);
+	next if $seenit{$db}++;
 	my $region   = Bio::Graphics::Browser2::Region->new(
 	    { source     => $self->source,
 	      state      => $self->state,
-	      db         => $self->source->open_database($dbid),
+	      db         => $db,
 	      searchopts => $self->source->search_options($dbid),
 	    }
 	    ); 
@@ -324,7 +330,7 @@ sub search_features_locally {
 	if ($dbid eq $default_dbid) {
 	    warn "hit @found in the default database, so short-circuiting" if DEBUG;
 	    $self->{shortcircuit}++;
-	    last;
+#	    last;
 	}
     }
 

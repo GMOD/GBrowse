@@ -142,6 +142,8 @@ sub run {
 	exit 0;
     }
 
+    warn "search term = $search_term" if DEBUG;
+
     my $features = eval {$search->search_features({-search_term=>$search_term})} || [];
     warn "search_features(-search_term=>$search_term): $@" if $@;
 

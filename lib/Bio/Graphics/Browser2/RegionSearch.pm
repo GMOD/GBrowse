@@ -114,9 +114,6 @@ sub init_databases {
 	}
 	my ($dbid)         = $source->db_settings($l);
 
-	# this should already be handled by get_search_object() in Render.pm
-	# next if $state->{dbid} && $state->{dbid} ne $dbid;
-
 	my $search_options = $source->search_options($dbid);
 
 	# this can't be right - we need to do id searches
@@ -126,9 +123,9 @@ sub init_databases {
 	$dbs{$dbid}{remotes}{$remote}++ if $remote;
     }
 
-    my $default_dbid = $self->source->global_setting('database');
-    $default_dbid  ||= '';
-    $default_dbid   .= ":database" unless $default_dbid =~ /:database$/;
+    # slightly roundabout way to get the default dbid, but this allows you
+    # to handle anonymous (unnamed) databases consistently.
+    my $default_dbid = $self->source->db2id($self->source->open_database);
 
     # try to spread the work out as much as possible among the remote renderers
     my %remotes;
@@ -303,24 +300,17 @@ sub search_features_locally {
     my $local_dbs = $self->local_dbs;
     return unless $local_dbs;
 
-    my @dbs = keys %{$local_dbs};
+    warn "dbs = ",join ' ',keys %{$local_dbs};
+
+    my @dbs = $state->{dbid} ? $self->source->open_database($state->{dbid}) 
+                             : keys %{$local_dbs};
 
     # the default database is treated slightly differently - it is searched
     # first, and finding a hit in it short-circuits other hits
-    my $default_dbid = $self->source->global_setting('database');
-    $default_dbid  ||= '';
-    $default_dbid   .= ":database" unless $default_dbid =~ /:database$/;
-
-    warn "default_dbid = $default_dbid" if DEBUG;
-
-    my %is_default = map {
-	$_=>($self->source->db2id($_) eq $default_dbid)
-    } @dbs;
-    @dbs           = sort {$is_default{$b} cmp $is_default{$a}} @dbs;
+    my $default_db = $self->source->open_database();
 
     for my $db (@dbs) {
 	my $dbid = $self->source->db2id($db);
-	next if ($state->{dbid} && $state->{dbid} ne $dbid); #if we have dbid param, search only that database 
 	warn "searching in ",$dbid if DEBUG;
 	# allow explicit db_id to override cached list of local dbs
 	my $region   = $local_dbs->{$db} || 
@@ -336,7 +326,7 @@ sub search_features_locally {
 	$self->add_dbid_to_features($db,$features);
 	push @found,@$features;
 
-	if ($is_default{$db}) {
+	if ($db eq $default_db) {
 	    warn "hit @found in the default database, so short-circuiting" if DEBUG;
 	    $self->{shortcircuit}++;
 	    last;

@@ -676,17 +676,10 @@ ctgA example polypeptide                        1800 2900 . - . Name=Protein:HGB
 
 <p>
 
-Copy this file into the databases/volvox folder. Note that as you add
-new files to the database folder, you may need to disable caching in
-to see the new features show up immediately. To do this, simply scroll
-down to the "Display Settings" portion of the GBrowse display and
-unselect "Cache tracks."
-
-<p>
-
-Now add the following configuration stanza to volvox.conf to create a
-track that displays both protein_coding_primary_transcript and
-polypeptide features:
+Copy <a href="data_files/volvox2b.gff3">volvox2b.gff3</a> into the
+databases/volvox folder. Now add the following configuration stanza to
+volvox.conf to create a track that displays both
+protein_coding_primary_transcript and polypeptide features:
 
 <blockquote class="example"><pre>
 [NameTest]
@@ -718,7 +711,7 @@ create later on in this tutorial.</i>)
 
 To see how GBrowse searches for names, type "HGA" (either
 upper or lowercase) in the search textbox and press "Search." Because
-the search term matches the remark whose unqualified name is HGA,
+the search term matches three remark whose unqualified name is HGA,
 GBrowse will bring up the region between 1000..2000 and highlight the
 HGA remark.
 
@@ -758,8 +751,8 @@ attribute. For example:
 ctgA example remark                             1000 2000 . . . Name=Remark:HGA;Alias=hga
 ctgA example protein_coding_primary_transcript  1100 2000 . + . Name=Gene:hga;Alias=hga
 ctgA example polypeptide                        1200 1900 . + . Name=Protein:HGA;Alias=hga
-ctgA example protein_coding_primary_transcript  1600 3000 . - . Name=Gene:hgb;Alias=hga
-ctgA example polypeptide                        1800 2900 . - . Name=Protein:HGB;Alias=hga
+ctgA example protein_coding_primary_transcript  1600 3000 . - . Name=Gene:hgb;Alias=hgb
+ctgA example polypeptide                        1800 2900 . - . Name=Protein:HGB;Alias=hgb
 </pre></blockquote>
 
 <p>
@@ -775,6 +768,11 @@ you search with "hga", GBrowse will now offer you three matches:
 <img src="figures/aliases.gif"><br>
 <i>Figure 5: Searching for aliases</i>
 </blockquote>
+
+<p>
+
+To try this out, simply open the installed volvox2b.gff3 file with a
+text editor and edit it to match the example above.
 
 <h3><a name="linking">1.5. Linking</a></h3>
 
@@ -4754,6 +4752,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Jan 20 11:20:43 EST 2010
+Last modified: Wed Jan 20 11:42:20 EST 2010
 <!-- hhmts end -->
 </body> </html>

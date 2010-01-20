@@ -726,6 +726,7 @@ sub open_database {
   $track  ||= 'general';
 
   my ($dbid,$adaptor,@argv) = $self->db_settings($track);
+  warn "track = $track, dbid = $dbid";
   my $db                    = Bio::Graphics::Browser2::DataBase->open_database($adaptor,@argv);
 
   # do a little extra stuff the first time we see a new database

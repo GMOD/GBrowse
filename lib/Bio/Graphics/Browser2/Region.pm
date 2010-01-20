@@ -142,9 +142,11 @@ sub search_features {
       $args->{-search_term} = $state->{name};
   }
 
-  warn "SEARCHING FOR ",join ' ',%$args if DEBUG; 
+  warn "SEARCHING FOR ",join ' ',%$args," in $db" if DEBUG; 
 
   my $features = $self->search_db($args);
+
+  warn "FOUND @$features " if $features && DEBUG;
   $self->features($features);
   return $features;
 }

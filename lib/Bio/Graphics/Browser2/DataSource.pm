@@ -663,23 +663,34 @@ sub db_settings {
   # if the track contains the "database" option, then it is a symbolic name
   # that indicates a [symbolic_name:database] section in this file or the globals
   # file.
-  my ($symbolic_db_name,$section);
+  my ($symbolic_db_name,$section,$basename,$length);
 
-  if ($track =~ /:database$/) {
-      $section = $symbolic_db_name = $track;
-  } elsif ($self->setting($track=>'db_adaptor')) {
-      $section = $track;
+  if ($track =~ /(.+):(\d+)$/) {
+      $basename = $1;
+      $length   = $2;
   } else {
-      $symbolic_db_name   = $self->setting($track => 'database');
-      $symbolic_db_name ||= $self->fallback_setting('TRACK DEFAULTS' => 'database');
-      $section          = $symbolic_db_name   ? "$symbolic_db_name:database"   : $track;
+      $basename = $track;
+      $length   = 1;
   }
 
-  my $adaptor = $self->fallback_setting($section => 'db_adaptor')
+
+  if ($basename =~ /:database$/) {
+      $section = $symbolic_db_name = $basename;
+  } elsif ($self->semantic_setting($basename=>'db_adaptor',$length)) {
+      $section = $basename;
+  } else {
+      $symbolic_db_name  = $self->semantic_setting($basename => 'database', $length);
+      $symbolic_db_name ||= $self->fallback_setting('TRACK DEFAULTS' => 'database');
+      $section          = $symbolic_db_name   
+	                    ? "$symbolic_db_name:database" 
+                            : $basename;
+  }
+
+  my $adaptor = $self->semantic_fallback_setting($section => 'db_adaptor', $length)
       or die "Unknown database defined for $section";
   eval "require $adaptor; 1" or die $@;
 
-  my $args    = $self->fallback_setting($section => 'db_args');
+  my $args    = $self->semantic_fallback_setting($section => 'db_args', $length);
   my @argv    = ref $args eq 'CODE'
         ? $args->()
 	: shellwords($args||'');
@@ -693,7 +704,8 @@ sub db_settings {
       s/\$ROOT/Bio::Graphics::Browser2->url_base/ge;
   }
 
-  if (defined (my $a = $self->fallback_setting($section => 'aggregators'))) {
+  if (defined (my $a = 
+	       $self->fallback_setting($section => 'aggregators'))) {
     my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
@@ -726,7 +738,6 @@ sub open_database {
   $track  ||= 'general';
 
   my ($dbid,$adaptor,@argv) = $self->db_settings($track);
-  warn "track = $track, dbid = $dbid";
   my $db                    = Bio::Graphics::Browser2::DataBase->open_database($adaptor,@argv);
 
   # do a little extra stuff the first time we see a new database
@@ -743,6 +754,12 @@ sub open_database {
 
   return $db;
 }
+
+sub default_dbid {
+    my $self = shift;
+    return $self->db2id($self->open_database);
+}
+
 
 sub search_options {
     my $self = shift;

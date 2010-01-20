@@ -460,7 +460,7 @@ directory).
 
 <p>
 
-Ignore all the stuff in the top 90% of the file, and focus on the last
+Ignore all the stuff at the top of the file, and focus on the last
 little bit, which starts with the line: <code>### TRACK CONFIGURATION
 ###</code>:
 
@@ -545,14 +545,14 @@ GBrowse distribution.  Or for the gory and bleeding edge details, run
 the command:
 
 <blockquote class="example"><pre>
- % <b>perldoc Bio::Graphics::Panel</b>
+ % <b>glyph_help.pl -l</b>
 </pre></blockquote>
 
 <p>
 
-This produces copious documentation on the Perl interface to all the
-glyphs, including some amazingly obscure ones, from which you should
-be able to deduce the GBrowse equivalents.
+This will give you a list of all the glyphs. Running the command with
+the name of the glyph will give you copious documentation on all the
+options the glyph recognizes.
 
 <h3><a name="descriptions">1.3. Adding Descriptions to a Feature</a></h3>
 
@@ -588,10 +588,10 @@ is a name=value pair separated by semicolons.
 
 The attribute named <i>Note</i> is automatically displayed and made
 searchable.  To see this work, add <a
-href="data_files/volvox2.gff3">volvox2.gff3</a> to the volvox database.
-You can do this just by copying the file into
-<b>$HTDOCS/databases/volvox</b> so that the directory contains
-both the original volvox1.gff3 and the new volvox2.gff3 files.
+href="data_files/volvox2.gff3">volvox2.gff3</a> to the volvox database
+directory.  You can do this just by copying the file into
+<b>$HTDOCS/databases/volvox</b> so that the directory contains both
+the original volvox1.gff3 and the new volvox2.gff3 files.
 
 <p>
 
@@ -4754,6 +4754,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Jan 19 15:55:00 EST 2010
+Last modified: Wed Jan 20 11:20:43 EST 2010
 <!-- hhmts end -->
 </body> </html>

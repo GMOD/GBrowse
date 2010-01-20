@@ -49,6 +49,7 @@ my $build = GBrowseInstall->new(
 	'bin/make_das_conf.pl',
 	'bin/gbrowse_clean.pl',
 	'bin/gbrowse_create_useraccount_db.pl',
+	'bin/wiggle2gff3.pl',
 # not sure if these still work
 #	'bin/register_moby_services.pl',
 #	'bin/process_wormbase.pl',

@@ -42,11 +42,18 @@ The following options are accepted:
                            simplified format used for GBrowse uploads. This
                            option is incompatible with the --gff3 option.
 
+ --sample                 If true, then very large files (>5 MB) will be sampled
+                           to obtain minimum, maximum and standard deviation; otherwise
+                           the entire file will be scanned to obtain these statistics. 
+                           This will process the files faster but may miss outlier
+                           values.
+
  --path=<path>            Specify the directory in which to place the binary wiggle
                            files. The default is the current temporary directory
                            (/tmp or whatever is appropriate for your operating system).
 
  --base=<path>            Same as "--path".
+
 
  --trackname              specify the trackname base for the wigfile creation
 
@@ -177,13 +184,14 @@ use File::Spec;
 use File::Temp 'tempfile',':seekable';
 
 my ($show_help, $method, $source, $use_gff3, $use_featurefile, 
-    $base_directory, $trackname);
+    $base_directory, $trackname,$sample);
 
 GetOptions(
 	   'h|help'              => \$show_help,             # Show help and exit	
 	   'method=s'            => \$method,
 	   'source=s'            => \$source,
 	   'gff3'                => \$use_gff3,
+	   'sample'              => \$sample,
 	   'featurefile'         => \$use_featurefile,
 	   'base|path=s'         => \$base_directory,
 	   't|trackname:s'       => \$trackname,
@@ -204,6 +212,8 @@ unless (defined $base_directory) {
 
 my $loader = Bio::Graphics::Wiggle::Loader->new($base_directory)
   or die "could not create loader";
+$loader->allow_sampling(1) if $sample && $loader->can('allow_sampling');  # newish feature
+
 # specify the trackname base if provided
 $loader->{trackname} = $trackname if defined $trackname;
 my $type = $use_featurefile ? 'featurefile' : 'gff3';

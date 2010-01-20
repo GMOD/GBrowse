@@ -360,6 +360,7 @@ sub background_track_render {
     else{
         $display_details = 0;
         $details_msg = h1(
+	    br(),
             $self->tr(
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label($self->get_max_segment),

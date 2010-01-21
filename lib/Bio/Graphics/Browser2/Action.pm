@@ -77,7 +77,7 @@ sub ACTION_navigate {
 
     my $segment_info_object = $render->segment_info_object();
 
-    warn "navigate() returning track keys = ",join ' ',%$track_keys;# if DEBUG;
+    warn "navigate() returning track keys = ",join ' ',%$track_keys if DEBUG;
 
     my $return_object = {
 	segment            => $settings->{name},

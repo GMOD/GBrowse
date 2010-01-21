@@ -1194,27 +1194,38 @@ sub run_local_requests {
 		}
 	    }
 	    else {
+
+		my ($gd,$map);
+
+		if (my $hide = $source->semantic_setting($label=>'hide',$self->segment_length)) {
+		    $gd  = $self->render_hidden_track($hide,$args);
+		    $map = [];
+		}
+
+		else {
 		
-		my $track_args = $requests->{$label}->track_args;
-		my $track      = $panel->add_track(@$track_args);
+		    my $track_args = $requests->{$label}->track_args;
+		    my $track      = $panel->add_track(@$track_args);
 
-		# == populate the tracks with feature data ==
-		$self->add_features_to_track(
-		    -labels    => [ $label, ],
-		    -tracks    => { $label => $track },
-		    -filters   => $filters,
-		    -segment   => $segment,
-		    -fsettings => $settings->{features},
-		    );
-		%trackmap = ($track=>$label);
+		    # == populate the tracks with feature data ==
+		    $self->add_features_to_track(
+			-labels    => [ $label, ],
+			-tracks    => { $label => $track },
+			-filters   => $filters,
+			-segment   => $segment,
+			-fsettings => $settings->{features},
+			);
+		    %trackmap = ($track=>$label);
+		    
+		    # == generate the maps ==
+		    $gd  = $panel->gd;
+		    $map = $self->make_map( scalar $panel->boxes,
+					    $panel, $label,
+					    \%trackmap, 0 );
+		}
+
+		$requests->{$label}->put_data($gd, $map );
 	    }
-	    # == generate the maps ==
-	    my $gd  = $panel->gd;
-	    my $map = $self->make_map( scalar $panel->boxes,
-				       $panel, $label,
-				       \%trackmap, 0 );
-
-	    $requests->{$label}->put_data($gd, $map );
 	    
 	};
 
@@ -1229,6 +1240,19 @@ sub run_local_requests {
 	    next;
 	}
     }
+}
+
+sub render_hidden_track {
+    my $self    = shift;
+    my ($message,$args) = @_;
+    $message    = 'Track not shown at this magnification' if $message eq '1';
+    my $gd     = $self->render_image_pad($args->{section});
+    my $font   = GD->gdMediumBoldFont;
+    my $len    = $font->width * length($message);
+    my ($wid)  = $gd->getBounds;
+    my $black  = $gd->colorClosest(0,0,0);
+    $gd->string(GD->gdMediumBoldFont,($wid-$len)/2,0,$message,$black);
+    return $gd;
 }
 
 # this method is a little unconventional; it modifies the title in-place
@@ -2004,6 +2028,8 @@ sub make_title {
   local $^W = 0;  # tired of uninitialized variable warnings
   my $source = $self->source;
 
+  my $length = eval {$self->segment->length} || 0;
+
   my ($title,$key) = ('','');
 
  TRY: {
@@ -2019,15 +2045,15 @@ sub make_title {
       $key         =~ s/s$//;
       $key         = $feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
 
-      my $link     = $source->code_setting($label,'title')
-	|| $source->code_setting('TRACK DEFAULTS'=>'title')
-	  || $source->code_setting(general=>'title');
+      my $length   = $self->segment_length($label);
+
+      my $link     = $source->semantic_fallback_setting($label,'title',$length);
       if (defined $link && ref($link) eq 'CODE') {
 	$title       = eval {$link->($feature,$panel,$track)};
 	$source->_callback_complain($label=>'title') if $@;
 	return $title if defined $title;
       }
-      return $source->link_pattern($link,$feature) if $link && $link ne 'AUTO';
+      return $source->link_pattern($link,$feature) if defined $link && $link ne 'AUTO';
     }
   }
 
@@ -2061,6 +2087,18 @@ sub make_title {
   return $title;
 }
 
+sub segment_length {
+    my $self    = shift;
+    my $label   = shift;
+    my $section = $label 
+	           ? Bio::Graphics::Browser2::Render->get_section_from_label($label) 
+		   : 'detail';
+    return eval {$section eq 'detail'   ? $self->segment->length
+	        :$section eq 'region'   ? $self->region_segment->length
+		:$section eq 'overview' ? $self->whole_segment->length
+		: 0} || 0;
+}
+
 sub make_link_target {
   my $self = shift;
   my ($feature,$panel,$label,$track) = @_;
@@ -2085,9 +2123,10 @@ sub make_link_target {
 sub balloon_tip_setting {
   my $self = shift;
   my ($option,$label,$feature,$panel,$track) = @_;
+  my $length = $self->segment_length($label);
   $option ||= 'balloon tip';
   my $source = $self->source;
-  my $value  = $source->code_setting($label=>$option);
+  my $value  = $source->semantic_setting($label=>$option,$length||0);
   $value     = $source->code_setting('TRACK DEFAULTS' => $option) unless defined $value;
   $value     = $source->code_setting('general' => $option)        unless defined $value;
 

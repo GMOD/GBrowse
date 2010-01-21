@@ -1161,6 +1161,8 @@ glyph              = gene
 bgcolor            = peachpuff
 label_transcripts  = 1
 draw_translation   = 1
+category           = Genes
+label_transcripts  = 1
 key                = Protein-coding genes
 </pre></blockquote>
 
@@ -1169,7 +1171,10 @@ key                = Protein-coding genes
 The new Genes track associates "gene" features with the "gene" glyph,
 sets its background color to peachpuff (yes, there really is a color
 by this name!), turns on the description lines, and sets the human
-readable track name to "Protein-coding genes."  <p>
+readable track name to "Protein-coding genes."  Also, since our track
+table is starting to get a little crowded, this stanza uses the
+"category" option to start a separate section in the track table for
+tracks having to do with genes.<p>
 
 <p>
 
@@ -1218,15 +1223,17 @@ Browser (Figure 8).
 
 <blockquote class="example"><pre>
 [Genes]
-feature      = gene
-glyph        = gene
-height       = 7
-bgcolor      = black
-utr_color    = black
-thin_utr     = 1
+feature          = gene
+glyph            = gene
+height           = 9
+bgcolor          = black
+utr_color        = black
+thin_utr         = 1
 decorate_introns = 1
-description  = 1
-key          = Protein-coding genes
+description      = 1
+label_transcripts= 1
+category         = Genes
+key              = Protein-coding genes
 </pre></blockquote>
 
 <p>
@@ -1276,12 +1283,6 @@ key                = Predicted genes
 </pre></blockquote>
 
 <p>
-
-We are still using the gene glyph. However, be aware that this depends
-on a recent (as of January 2008) enhancement to bioperl-live. If the
-gene does not display properly for you, then either install a newer
-version of bioperl (for example, the SVN "bioperl-live" version), or
-use the older "transcript" glyph instead of the gene glyph.
 
 <p>
 
@@ -1343,12 +1344,6 @@ After making this addition to the configuration file, reload the page
 and turn on "Exonerate predictions." You will see a display that is
 similar to the gene track, but treats each transcript as a separate
 feature.
-
-<p>
-
-As with the previous example, this depends on a recent (as of January
-2008) change to bioperl. If it doesn't work for you, either update
-bioperl, or use the "so_transcript" glyph.
 
 
 <h3><a name="cds">2.3. Reading Frames</a></h3>
@@ -1435,6 +1430,7 @@ bgcolor      = yellow
 connector    = dashed
 strand_arrow = 1
 description  = 1
+category     = Clones
 key          = Fingerprinted BACs
 </pre></blockquote>
 
@@ -1520,15 +1516,15 @@ configuration stanza will do this:
 [TransChip]
 feature        = microarray_oligo
 glyph          = xyplot
-graph_type     = boxes
-fgcolor        = orange
-bgcolor        = orange
+graph_type     = line
+fgcolor        = black
+bgcolor        = black
 height         = 50
 min_score      = 0
 max_score      = 1000
 scale          = right
-category       = Genes
 group_on       = display_name
+category       = Quantitative Data
 key            = Transcriptional Profile
 </pre></blockquote>
 
@@ -1748,8 +1744,8 @@ glyph          = wiggle_xyplot
 graph_type     = boxes
 height         = 50
 scale          = right
-category       = Genes
 description    = 1
+category       = Quantitative Data
 key            = Transcriptional Profile
 </pre></blockquote>
 
@@ -1769,8 +1765,8 @@ feature        = microarray_oligo
 glyph          = wiggle_density
 height         = 30
 bgcolor        = blue
-category       = Genes
 description    = 1
+category       = Quantitative Data
 key            = Transcriptional Profile
 </pre></blockquote>
 
@@ -1798,8 +1794,8 @@ GBrowse can take advantage of DNA sequence data in several ways:
   <li>It can display the protein translation of coding regions.
   <li>It can display aligned nucleotide sequences, creating a poor
       man's multiple alignment.
-</ol>
-
+  <li>It can directly display next generation sequencing data that has
+      been stored in <a href="http://samtools.sourceforge.net">SAM or BAM</a> format (see the <a href="http://gmod.org/wiki/GBrowse_NGS_Tutorial">GBrowse NGS Tutorial</a>).  </ol>
 <p>
 
 So we've been working with feature coordinates, but no actual DNA
@@ -1843,6 +1839,7 @@ gc_window      = auto
 fgcolor        = red
 axis_color     = blue
 strand         = both
+category       = DNA
 key            = DNA/GC Content
 
 [Translation]
@@ -1853,6 +1850,7 @@ fgcolor        = purple
 start_codons   = 0
 stop_codons    = 1
 translation    = 6frame
+category       = DNA
 key            = 6-frame translation
 </pre></blockquote>
 
@@ -1884,10 +1882,10 @@ and whether to generate a 3frame or 6frame translation.
 
 <p>
 
-Figures 13a and 13b show the browser at low and high magnification, with
-both tracks activated.  Notice that the coding track ("cds" glyph)
-notices that the DNA is available and generates the transcripts'
-protein translations automatically!
+Figures 13a and 13b show the browser at low and high magnification,
+with both tracks activated.  Notice that the coding track (the "cds"
+glyph) detects that the DNA is available and generates the
+transcripts' protein translations automatically.
 
 <blockquote>
 <b>(14A)</b><br>
@@ -4606,6 +4604,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Jan 20 17:02:26 EST 2010
+Last modified: Thu Jan 21 10:56:17 EST 2010
 <!-- hhmts end -->
 </body> </html>

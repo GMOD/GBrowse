@@ -443,9 +443,15 @@ sub section_setting {
   my $self = shift;
   my $section = shift;
   my $config_setting = "\L$section\E section";
-  my $s = $self->global_setting($config_setting);
+  my $s = $self->setting(general => $config_setting);
   return 'open' unless defined $s;
   return $s;
+}
+
+sub show_section {  # one of instructions, upload_tracks, search, overview, region, detail, tracks, or display_settings
+    my $self    = shift;
+    my $setting = $self->section_setting(@_);
+    return $setting eq 'hide' || $setting eq 'off' ? 0 : 1;
 }
 
 sub get_ranges {

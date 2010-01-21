@@ -651,6 +651,7 @@ sub render_body {
   my $region   = $self->region;
   my $features = $region->features;
   my $settings = $self->state;
+  my $source   = $self->data_source;
 
   my $title    = $self->generate_title($features);
 
@@ -668,7 +669,9 @@ sub render_body {
   }
 
   elsif (my $seg = $region->seg) {
-      $main_page .= $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
+      $main_page .= $self->render_panels($seg,{overview   => $source->show_section('overview'),
+					       regionview => $source->show_section('region'),
+					       detailview => $source->show_section('detail')});
       $main_page .= $self->render_toggle_track_table;
       $main_page .= $self->render_galaxy_form($seg);
   }

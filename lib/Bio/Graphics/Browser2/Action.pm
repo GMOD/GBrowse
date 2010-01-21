@@ -53,6 +53,7 @@ sub ACTION_navigate {
     my $q      = shift;
 
     my $render   = $self->render;
+    my $source   = $self->data_source;
     my $settings = $self->settings;
 
     my $action = $q->param('navigate') 
@@ -65,18 +66,18 @@ sub ACTION_navigate {
 	= $render->background_track_render();
 
     my $overview_scale_return_object
-	= $render->asynchronous_update_overview_scale_bar();
+	= $render->asynchronous_update_overview_scale_bar() if $source->show_section('overview');
 
     my $region_scale_return_object
 	= $render->asynchronous_update_region_scale_bar()
-            if ( $settings->{region_size} );
+            if ( $settings->{region_size} && $source->show_section('region'));
 
     my $detail_scale_return_object
-	= $render->asynchronous_update_detail_scale_bar();
+	= $render->asynchronous_update_detail_scale_bar() if $source->show_section('detail');
 
     my $segment_info_object = $render->segment_info_object();
 
-    warn "navigate() returning track keys = ",join ' ',%$track_keys if DEBUG;
+    warn "navigate() returning track keys = ",join ' ',%$track_keys;# if DEBUG;
 
     my $return_object = {
 	segment            => $settings->{name},

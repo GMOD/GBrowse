@@ -457,7 +457,7 @@ sub region_segment {
 
     $whole     ||= $self->whole_segment($segment) or return;
 
-    my $regionview_length = $settings->{region_size};
+    my $regionview_length = $settings->{region_size}||0;
     my $detail_start      = $segment->start;
     my $detail_end        = $segment->end;
     my $whole_start       = $whole->start;

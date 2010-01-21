@@ -137,7 +137,7 @@ sub reconfigure {
   my $target_region = param('target_region');
   my ($target, $lb,$rb);
   if ($target_region) {
-    ($lb,$rb) = $target_region =~ /^\S+\:(-?\d+)\.\.(-?\d+)$/;
+    ($lb,$rb) = sort {$a <=> $b} $target_region =~ /^\S+\:(-?\d+)\.\.(-?\d+)$/;
   }
   else {
     $lb     = param('lb') || $self->config_param('lb');
@@ -213,6 +213,7 @@ sub configure_form {
 
   my $start  = $segment->start;
   my $end    = $segment->end;
+  ($start,$end) = ($end,$start) if $end < $start;
   my $ref    = $segment->ref;
   my $name   = $conf->{name} || "$ref:$start..$end";
 
@@ -234,27 +235,6 @@ sub configure_form {
   my $map_text = $self->map_header;
 
   my $on = $feats ? 0 : 1;
-#  my $no_target = li("There currently is no target region selected.")
-#      if ($rb - $lb) < 3;
-#  my $has_buttons = li("The size of potential PCR products can be adjusted via the 'Product size range' option below")
-#      unless $no_buttons;
-#  my $flanked = $no_target ? 'red line' : 'shaded region';
-#  my $boundaries = li("The boundaries of the shaded target region can be adjusted by clicking on the lower scalebar")
-#      unless $no_target;
-#  my $click_feat = $no_target ? li("Click on a sequence feature to select")
-#      : li("Click on a different sequence feature to change the selection");
-      
-
-#  my $zone = $self->toggle( { on => $on, override => 0 },
-#		     'Targetting information',
-#		     font( {-size => -1},
-#			   ul( $no_target || '', 
-#			       li("PCR primers will flank the $flanked."),
-#			       $click_feat || '',
-#			       $boundaries || '',
-#			       $has_buttons || ''
-#			   ) )
-#		     ) . br;
 
   my $rows;
   if ($map_text) {
@@ -1043,7 +1023,7 @@ sub segment_info {
   my $pad_left   = $config->setting('pad_left')  || $config->image_padding;
   my $pad_right  = $config->setting('pad_right') || $config->image_padding;
 
-  _hide(segment              => $segment->ref .':'. $segment->start .'..'. $segment->end);
+  _hide(segment              => $segment->ref .':'. int($segment->start) .'..'. (int $segment->end));
   _hide(image_padding        => $pad_left);
   _hide(details_pixel_ratio  => $segment->length/$conf->{width});
   _hide(detail_width         => $conf->{width} + $pad_left + $pad_right);

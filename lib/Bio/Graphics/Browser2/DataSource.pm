@@ -443,7 +443,7 @@ sub section_setting {
   my $self = shift;
   my $section = shift;
   my $config_setting = "\L$section\E section";
-  my $s = $self->setting(general => $config_setting);
+  my $s = $self->global_setting($config_setting);
   return 'open' unless defined $s;
   return $s;
 }

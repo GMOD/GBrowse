@@ -113,7 +113,6 @@ sub annotate {
       $feature_list->add_feature($feature,$type);
     }
   }
-
   return $feature_list;
 }
 

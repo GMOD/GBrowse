@@ -290,7 +290,7 @@ sub ACTION_change_track_order {
     my $self = shift;
     my $q    = shift;
 
-    warn "change_track_order()";
+    warn "change_track_order()" if DEBUG;
 
     my $settings = $self->state;
     my @labels   = $q->param('label[]') or return;

@@ -1176,32 +1176,32 @@ sub run_local_requests {
 	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" };
 	    alarm($timeout);
 
-	    if ( my $file = ($feature_files->{$base}) ) {
-		
-		# Add feature files, including remote annotations
-		my $featurefile_select = $args->{featurefile_select}
-                || $self->feature_file_select($section);
-
-		if ( ref $file and $panel ) {
-		    $self->add_feature_file(
-			file     => $file,
-			panel    => $panel,
-			position => $feature_file_offsets{$label} || 0,
-			options  => {},
-			select   => $featurefile_select,
-			);
-		    %trackmap = map { $_ => $file } @{ $panel->{tracks} || [] };
-		}
+	    my ($gd,$map);
+	    
+	    if (my $hide = $source->semantic_setting($label=>'hide',$self->segment_length)) {
+		$gd  = $self->render_hidden_track($hide,$args);
+		$map = [];
 	    }
+
 	    else {
 
-		my ($gd,$map);
+		if ( my $file = ($feature_files->{$base}) ) {
+		
+		    # Add feature files, including remote annotations
+		    my $featurefile_select = $args->{featurefile_select}
+		    || $self->feature_file_select($section);
 
-		if (my $hide = $source->semantic_setting($label=>'hide',$self->segment_length)) {
-		    $gd  = $self->render_hidden_track($hide,$args);
-		    $map = [];
+		    if ( ref $file and $panel ) {
+			$self->add_feature_file(
+			    file     => $file,
+			    panel    => $panel,
+			    position => $feature_file_offsets{$label} || 0,
+			    options  => {},
+			    select   => $featurefile_select,
+			    );
+			%trackmap = map { $_ => $file } @{ $panel->{tracks} || [] };
+		    }
 		}
-
 		else {
 		
 		    my $track_args = $requests->{$label}->track_args;
@@ -1216,16 +1216,18 @@ sub run_local_requests {
 			-fsettings => $settings->{features},
 			);
 		    %trackmap = ($track=>$label);
-		    
-		    # == generate the maps ==
-		    $gd  = $panel->gd;
-		    $map = $self->make_map( scalar $panel->boxes,
-					    $panel, $label,
-					    \%trackmap, 0 );
+
 		}
 
-		$requests->{$label}->put_data($gd, $map );
+		    
+		# == generate the maps ==
+		$gd  = $panel->gd;
+		$map = $self->make_map( scalar $panel->boxes,
+					$panel, $label,
+					\%trackmap, 0 );
 	    }
+
+	    $requests->{$label}->put_data($gd, $map );
 	    
 	};
 

@@ -207,6 +207,7 @@ sub render_track_images {
     while (%still_pending) {
 	for my $label (keys %$requests) {
 	    my $data = $requests->{$label};
+	    $data->cache_time(0) if $data->cache_time < 0;
 	    next if $data->status eq 'PENDING';
 	    next if $data->status eq 'EMPTY';
 	    if ($data->status eq 'AVAILABLE') {
@@ -1177,7 +1178,7 @@ sub run_local_requests {
 	    alarm($timeout);
 
 	    my ($gd,$map);
-	    
+
 	    if (my $hide = $source->semantic_setting($label=>'hide',$self->segment_length)) {
 		$gd  = $self->render_hidden_track($hide,$args);
 		$map = [];
@@ -1203,7 +1204,6 @@ sub run_local_requests {
 		    }
 		}
 		else {
-		
 		    my $track_args = $requests->{$label}->track_args;
 		    my $track      = $panel->add_track(@$track_args);
 
@@ -1219,7 +1219,6 @@ sub run_local_requests {
 
 		}
 
-		    
 		# == generate the maps ==
 		$gd  = $panel->gd;
 		$map = $self->make_map( scalar $panel->boxes,
@@ -2009,8 +2008,9 @@ sub make_link {
     my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape(eval{$feature->source} || '');
     my $url   = CGI->request_uri || '../..';
-    my $dbid  = eval {CGI::escape($feature->gbrowse_dbid)};
     my $id    = eval {CGI::escape($feature->primary_id)};
+    my $dbid  = eval {$feature->gbrowse_dbid} || ($data_source->db_settings($label))[0];
+    $dbid     = CGI::escape($dbid);
     warn $@ if $@;
     $url      =~ s!/gbrowse.*!!;
     $url      .= "/gbrowse_details/$ds_name?ref=$ref;start=$start;end=$end";

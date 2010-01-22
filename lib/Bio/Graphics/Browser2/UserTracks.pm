@@ -293,6 +293,8 @@ sub merge_conf {
     my $self       = shift;
     my ($track_name,$new_data) = @_;
 
+    warn "merge_conf: new_data = $new_data";
+
     my $path = $self->track_conf($track_name) or return;
 
     my @lines = split /\r\n|\r|\n/,$new_data;

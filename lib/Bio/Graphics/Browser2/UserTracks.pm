@@ -373,7 +373,7 @@ sub guess_upload_type {
 
     my $buffer;
     read($fh,$buffer,1024);
-    
+
     # first check for binary upload; currently only BAM
     return ('bam',[$buffer],undef)
 	if substr($buffer,0,6) eq "\x1f\x8b\x08\x04\x00\x00";
@@ -409,7 +409,7 @@ sub guess_upload_type {
     my $i = 0;
     while (1) {
 	my $line;
-	if ($i < $#lines) {
+	if ($i <= $#lines) {
 	    $line = $lines[$i++];
 	} else {
 	    my $line = <$fh>;

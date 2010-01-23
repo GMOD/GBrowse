@@ -382,10 +382,7 @@ sub ACTION_upload_file {
     my $state    = $self->state;
     my $session  = $render->session;
 
-    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
-							      $render->state,
-							      $render->language);
-
+    my $usertracks = $render->user_tracks;
     my $name = $fh ? File::Basename::basename($fh) : $q->param('name');
     $name ||= 'New track definition';
 
@@ -429,10 +426,7 @@ sub ACTION_import_track {
     my $state    = $self->state;
     my $session  = $render->session;
 
-    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
-							      $render->state,
-							      $render->language);
-
+    my $usertracks = $render->user_tracks;
     $state->{current_upload} = $url;
     $session->flush();
     $session->unlock();
@@ -458,9 +452,7 @@ sub ACTION_delete_upload {
     my $file   = $q->param('file') or croak;
     my $render = $self->render;
 
-    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
-							    $render->state,
-							    $render->language);
+    my $usertracks = $render->user_tracks;
     my @tracks     = $usertracks->labels($file);
     
     foreach (@tracks) {
@@ -486,9 +478,7 @@ sub ACTION_upload_status {
     my $render     = $self->render;
 
     if ($file_name = $state->{uploads}{$upload_id}[0]) {
-	my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
-								  $render->state,
-								  $render->language);
+	my $usertracks = $render->user_tracks;
 	$status      = $usertracks->status($file_name);
 	return (200,'text/html',"<b>$file_name:</b> <i>$status</i>");
     } else {
@@ -505,9 +495,7 @@ sub ACTION_cancel_upload {
     my $render     = $self->render;
 
     if ($state->{uploads}{$upload_id} && (my ($file_name,$pid) = @{$state->{uploads}{$upload_id}})) {
-	my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
-								  $render->state,
-								  $render->language);
+	my $usertracks = $render->user_tracks;
 	kill TERM=>$pid;
 	$usertracks->delete_file($file_name);
 	delete $state->{uploads}{$upload_id};
@@ -527,9 +515,7 @@ sub ACTION_set_upload_description {
     my $upload_name = $q->param('upload_name') or croak;
     my $upload_desc = $q->param('description') or croak;
 
-    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($render->data_source,
-							      $render->state,
-							      $render->language);
+    my $usertracks = $render->usertracks;
     $usertracks->description($upload_name,$upload_desc);
     return (204,'text/plain',undef);
 }

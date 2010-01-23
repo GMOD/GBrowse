@@ -93,10 +93,14 @@ sub state {
 
 sub user_tracks {
     my $self = shift;
-    return $self->{usertracks} 
+    my $uuid = shift;
+    $uuid  ||= $self->state->{upload_id} || '';
+    return $self->{usertracks}{$uuid} 
        ||= Bio::Graphics::Browser2::UserTracks->new($self->data_source,
-						   $self->state,
-						   $self->language);
+						    $self->state,
+						    $self->language,
+						    $uuid,
+	   );
 }
 
 sub remote_sources {
@@ -1432,9 +1436,7 @@ sub galaxy_form { }
 
 sub delete_uploads {
     my $self = shift;
-    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
-							    $self->state,
-							    $self->language);
+    my $userdata = $self->user_tracks;
     my @files  = $userdata->tracks();
     for my $file (@files) {
 	my @tracks = $userdata->labels($file);
@@ -1818,9 +1820,7 @@ sub cleanup_dangling_uploads {
     }
 
 
-    my $usertracks = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
-							      $state,
-							      $self->language);
+    my $usertracks = $self->user_tracks;
     my %tracks = map {$_=>1} $usertracks->tracks();
 
     for my $k (keys %name_to_id) {
@@ -3343,11 +3343,10 @@ sub add_user_tracks {
     my $self        = shift;
     my ($data_source,$uuid) = @_;
 
-    my $userdata = Bio::Graphics::Browser2::UserTracks->new($data_source,
-							    $self->state,
-							    $self->language,
-							    $uuid);
+    my $userdata = $self->user_tracks($uuid);
     my @user_tracks = $userdata->tracks;
+
+#    warn "adding usertracks for $uuid, getting @user_tracks";
     for my $track (@user_tracks) {
 	my $config_path = $userdata->track_conf($track);
 	eval {$data_source->parse_user_file($config_path)};

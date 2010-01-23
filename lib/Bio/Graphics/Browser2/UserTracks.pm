@@ -59,6 +59,7 @@ sub tracks {
     my $self     = shift;
     my $path     = $self->path;
     my $imported = shift;
+    return unless $self->{uuid};
 
     my @result;
     opendir D,$path;

@@ -149,14 +149,14 @@ CREATE TABLE users (
     cnfrm_code    varchar(32) not null,
     last_login      timestamp not null,
     created          datetime not null
-) ENGINE=InnoDB;
+);
 
 DROP TABLE IF EXISTS openid_users;
 CREATE TABLE openid_users (
     userid        varchar(32) not null,
     username      varchar(32) not null,
     openid_url   varchar(128) not null PRIMARY key
-) ENGINE=InnoDB;
+);
 
 ** SQLite **
 DROP TABLE IF EXISTS users;

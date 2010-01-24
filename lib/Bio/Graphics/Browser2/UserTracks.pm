@@ -63,6 +63,7 @@ sub tracks {
 
     my @result;
     opendir D,$path;
+    warn "reading from $path";
     while (my $dir = readdir(D)) {
 	next if $dir =~ /^\.+$/;
 
@@ -294,8 +295,6 @@ sub merge_conf {
     my $self       = shift;
     my ($track_name,$new_data) = @_;
 
-    warn "merge_conf: new_data = $new_data";
-
     my $path = $self->track_conf($track_name) or return;
 
     my @lines = split /\r\n|\r|\n/,$new_data;
@@ -492,5 +491,21 @@ sub READLINE {
 }
 
 sub CLOSE { close shift->{fh} } 
+
+# this is for the administrator-uploaded tracks.
+# we simply change the location of the uploads
+package Bio::Graphics::Browser2::AdminTracks;
+use base 'Bio::Graphics::Browser2::UserTracks';
+
+sub path {
+    my $self    = shift;
+    my $globals   = $self->config->globals;
+    my $admin_dbs = $globals->admin_dbs 
+	or return $self->SUPER::path;
+    my $source    = $self->config->name;
+    my $path      = File::Spec->catfile($admin_dbs,$source);
+    warn "using $path";
+    return $path;
+}
 
 1;

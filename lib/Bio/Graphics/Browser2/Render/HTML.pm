@@ -1174,9 +1174,7 @@ sub list_userdata {
     my $self = shift;
     my $type = shift;
 
-    my $userdata = Bio::Graphics::Browser2::UserTracks->new($self->data_source,
-							   $self->state,
-							   $self->language);
+    my $userdata = $self->user_tracks();
 
     my $imported = $type eq 'imported' ? 1 : 0;
     my @tracks   = $userdata->tracks($imported);

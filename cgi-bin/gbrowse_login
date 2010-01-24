@@ -33,18 +33,18 @@ our $VERSION = '$Id: gbrowse_login,v 1.1 2009-08-27 20:33:23 idavies Exp $';
 
 umask 022;
 
-my $globals = Bio::Graphics::Browser2->open_globals;
+our $Globals = Bio::Graphics::Browser2->open_globals;
 
-our $AppName       = $globals->application_name;
-our $AppNameLong   = $globals->application_name_long;
-our $ReturnAddress = $globals->email_address;
+our $AppName       = $Globals->application_name;
+our $AppNameLong   = $Globals->application_name_long;
+our $ReturnAddress = $Globals->email_address;
 
 my $index = index($ENV{'HTTP_REFERER'},'?');
 my $url   = substr($ENV{'HTTP_REFERER'},0,$index);
    $url  .= '/'  if $index == -1;
 
-my $smtp  = $globals->smtp;
-my $dbi   = $globals->user_account_db;
+my $smtp  = $Globals->smtp;
+my $dbi   = $Globals->user_account_db;
 my $login = DBI->connect($dbi);
 unless ($login) {
     print header();
@@ -165,6 +165,13 @@ sub check_user {
     }
 }
 
+sub check_admin {
+    my $login = shift;
+    my $admin_name = $Globals->admin_account;
+    return unless $admin_name;
+    return $login eq $admin_name;
+}
+
 ##################################################################################
 # Check Old Confirmations - Deletes any unconfirmed accounts more than 7 days old.
 ##################################################################################
@@ -188,7 +195,8 @@ sub do_validate {
     my $update;
 
     if(check_user($user)==0) {
-        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";
+	return;
     }
 
     my $nowfun = nowfun();
@@ -200,6 +208,7 @@ sub do_validate {
             "UPDATE users SET last_login=$nowfun WHERE username=? AND pass=? AND confirmed=1");
     }
 
+    # BUG: we should salt the password
     $pass = sha1($pass);
     $update->execute($user,$pass)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
@@ -258,7 +267,12 @@ sub do_add_user {
     my ($login,$smtp,$url,$user,$email,$pass,$userid) = @_;
     if(check_email($email)==0) {print "Invalid e-mail address provided.";return;}
     if(check_user($user)==0) {
-        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";
+	return;
+    }
+    if(check_admin($user)) {
+	print "Invalid username. Try a different one."; 
+	return;
     }
 
     my $confirm = create_key('32');
@@ -274,15 +288,16 @@ sub do_add_user {
     my $nowfun = nowfun();
     my $insert = $login->prepare ("INSERT INTO users VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)");
 
+    # BUG: we should salt the password
     $pass = sha1($pass);
     if($insert->execute($userid,$user,$email,$pass,$confirm)) {
         print "Success";
     } else {
-        if(DBI->errstr =~ m/for key 1$/) {
+        if(DBI->errstr =~ m/for key 1$/      || DBI->errstr =~ m/username is not unique/) {
             print "Username already in use, please try another.";
-        } elsif(DBI->errstr =~ m/for key 3$/) {
+        } elsif(DBI->errstr =~ m/for key 3$/ || DBI->errstr =~ m/email is not unique/) {
             print "E-mail address already in use, please provide another.";
-        } elsif(DBI->errstr =~ m/for key 2$/) {
+        } elsif(DBI->errstr =~ m/for key 2$/ || DBI->errstr =~ m/userid is not unique/) {
             print "Session Error";
         } else {
             print "Error: ",DBI->errstr,".";
@@ -353,6 +368,8 @@ sub do_edit_confirmation {
 ##################################################################################
 sub do_confirm_account {
     my ($login,$user,$confirm) = @_;
+
+    # BUG: we should salt the password
     my $new_confirm = sha1($confirm);
 
     my ($rows) = $login->selectrow_array(
@@ -392,6 +409,7 @@ sub do_edit_details {
             print "New e-mail address is invalid, please try another.";return;}
     }
 
+    # BUG: we should salt the password
     $old = sha1($old) if($column eq 'pass');
     $new = sha1($new) if($column eq 'pass');
 
@@ -466,6 +484,7 @@ sub do_email_info {
         die "Error while sending outgoing email: ",$err;
     }
 
+    # BUG: we should salt the password
     my $secret = sha1($pass);
     my $update = $login->prepare(
         "UPDATE users SET pass=? WHERE username=? AND email=? AND confirmed=1");
@@ -515,6 +534,8 @@ sub do_retrieve_user {
 sub do_delete_user {
     my ($login,$user,$pass) = @_;
     my $unseqpass = $pass;
+
+    # BUG we should salt the password
     $pass = sha1($pass);
 
     my ($sql,@bind);
@@ -699,6 +720,8 @@ END
 sub do_change_openid {
     my ($login,$url,$user,$pass,$openid,$option) = @_;
     my $unseqpass = $pass;
+
+    # BUG: we should salt the password
     $pass = sha1($pass);
 
     my ($sql,@bind);
@@ -779,12 +802,13 @@ sub do_add_openid_user {
 
     my $nowfun = nowfun();
     my $query = $login->prepare(
-        "INSERT INTO users VALUES (?,?,?,?,?,1,1,?,$nowfun,$nowfun)"
+        "INSERT INTO users (userid,username,email,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created) VALUES (?,?,?,?,?,1,1,?,$nowfun,$nowfun)"
     );
 
+    # BUG: we should salt the password
     $pass = sha1($pass);
     if($query->execute($userid,$user,$email,$pass,$remember,$confirm)) {
-        my $insert = $login->prepare("INSERT INTO openid_users VALUES (?,?,?)");
+        my $insert = $login->prepare("INSERT INTO openid_users (userid,username,openid_url) VALUES (?,?,?)");
         if($insert->execute($userid,$user,$openid)) {
             print "Success";
         } else {

@@ -64,7 +64,6 @@ db_args    = -adaptor $backend
 END
 
     if (my @lines = @{$self->{conflines}}) {  # good! user has provided some config hints
-	my $in_sub;
 	my ($old_trackname,$seen_feature);
 	for my $line (@lines) {
 	    chomp $line;
@@ -78,14 +77,7 @@ END
 		print $conf "[$trackname]\n";
 		print $conf "database = $loadid\n" ;
 		print $conf "category = My Tracks:Uploaded Tracks:",$self->track_name,"\n";
-	    } elsif ($line =~ s/(=\s*)(sub .*)/$1 1 # no user subs allowed! $2/) {
-		$in_sub++;
-		print $conf $line,"\n";
-	    } elsif ($in_sub && $line =~ /^\s+/) { # continuation line
-		$line =~ s/^/# /;                  # continuation line of
-		print $conf $line,"\n";
-	    }
-	    elsif ($line =~ /^feature/) {
+	    } elsif ($line =~ /^feature/) {
 		$seen_feature++;
 		print $conf $line,"\n";
 	    } elsif (!$line && $old_trackname && !$seen_feature) {
@@ -93,7 +85,6 @@ END
 		undef $old_trackname;
 		undef $seen_feature;
 	    } else {
-		undef $in_sub;
 		print $conf $line,"\n";
 	    }
 	}

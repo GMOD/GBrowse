@@ -91,15 +91,29 @@ sub state {
   $d;
 }
 
-sub user_tracks {
+sub is_admin {
     my $self = shift;
-    my $uuid = shift;
+    my $login = $self->session->username      or return;
+    my $admin = $self->globals->admin_account or return;
+    return $login eq $admin;
+}
+
+
+sub user_tracks {
+    my $self  = shift;
+    my $uuid  = shift;
+
+    # note: Bio::Graphics::Browser2::AdminTracks is a subclass of UserTracks
+    # that is defined within the UserTracks.pm file.
+    my $class = $self->is_admin ? 'Bio::Graphics::Browser2::AdminTracks'
+                                : 'Bio::Graphics::Browser2::UserTracks';
+    
     $uuid  ||= $self->state->{upload_id} || '';
     return $self->{usertracks}{$uuid} 
-       ||= Bio::Graphics::Browser2::UserTracks->new($self->data_source,
-						    $self->state,
-						    $self->language,
-						    $uuid,
+       ||= $class->new($self->data_source,
+		       $self->state,
+		       $self->language,
+		       $uuid,
 	   );
 }
 

@@ -53,10 +53,19 @@ $dsn         ||= $globals->user_account_db;
 $name        ||= $globals->admin_account;
 
 unless ($pass) {
-    print STDERR "new password for $name: ";
+    print STDERR "New password for $name: ";
+    system "stty -echo";
     $pass = <STDIN>;
     chomp($pass);
     print STDERR "\n";
+
+    my $newpass;
+    print STDERR "Confirm password for $name: ";
+    $newpass = <STDIN>;
+    chomp($newpass);
+    print STDERR "\n";
+    system "stty echo";
+    die "Passwords don't match!\n" unless $pass eq $newpass;
 }
 
 my $dbh = DBI->connect($dsn) or die DBI->errstr;
@@ -64,7 +73,7 @@ my $session     = $globals->session;
 my $userid      = $session->id;
 $session->flush();
 
-warn "userid = $userid";
+warn "admin userid set to $userid\n";
 my $email       = 'nobody@nowhere.net';
 my $hash_pass   = sha1($pass);
 my $remember    = 1;

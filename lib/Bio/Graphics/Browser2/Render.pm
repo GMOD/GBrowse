@@ -732,10 +732,7 @@ sub render_login_section {
 }
 
 sub render_upload_share_section {
-    my $self = shift;
-    return div($self->render_toggle_userdata_table,
-	       $self->render_toggle_import_table,
-	);
+    croak "implement in subclass";
 }
 
 
@@ -3356,6 +3353,8 @@ sub external_data {
 sub add_user_tracks {
     my $self        = shift;
     my ($data_source,$uuid) = @_;
+
+    return if $self->is_admin;  # admin user's tracks are already in main config file.
 
     my $userdata = $self->user_tracks($uuid);
     my @user_tracks = $userdata->tracks;

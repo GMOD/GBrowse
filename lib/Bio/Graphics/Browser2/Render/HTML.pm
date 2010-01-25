@@ -1138,6 +1138,17 @@ sub clear_highlights {
 		 $self->tr('CLEAR_HIGHLIGHTING'));
 }
 
+sub render_upload_share_section {
+    my $self = shift;
+    return $self->is_admin
+	? div(h2({-style=>'font-style:italic;background-color:yellow'}, # BUG: this is HTML - should not be here!!!
+		 'Admin mode: Uploaded tracks are public'),
+	      $self->render_toggle_userdata_table,
+	      $self->render_toggle_import_table)
+	: div($self->render_toggle_userdata_table,
+	      $self->render_toggle_import_table);
+}
+
 sub render_toggle_userdata_table {
     my $self = shift;
     return div(

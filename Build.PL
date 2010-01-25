@@ -39,16 +39,18 @@ my $build = GBrowseInstall->new(
 	'GD::SVG'                  => 0,
 	'Safe::World'              => 0,
 	'FCGI'                     => 0,
-	'Mail::SendEasy'           => 0,
-	'Net::OpenID::Consumer'    => 0,
 	'Math::BigInt'             => 0,
+	'Digest::SHA1'             => 0,	
+	'Net::OpenID::Consumer'    => 0,
 	'Crypt::SSLeay'            => 0,
+	'Net::SMTP::SSL'           => 0,
     },
     script_files => [
 	'bin/gbrowse_slave',
 	'bin/make_das_conf.pl',
 	'bin/gbrowse_clean.pl',
 	'bin/gbrowse_create_useraccount_db.pl',
+	'bin/gbrowse_set_admin_passwd.pl',
 	'bin/wiggle2gff3.pl',
 # not sure if these still work
 #	'bin/register_moby_services.pl',
@@ -104,6 +106,7 @@ Now run:
   ./Build install_slave (optional, for slave installations)
 
 Other useful targets:
+  ./Build register      (to register your copy of GBrowse)
   ./Build reconfig      (to reconfigure install locations)
   ./Build demostop      (to stop the demo)
 END

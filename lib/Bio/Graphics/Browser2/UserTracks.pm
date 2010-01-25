@@ -225,6 +225,23 @@ END
     return (1,'',[$track_name]);
 }
 
+sub reload_file {
+    my $self  = shift;
+    my $track   = shift;
+    my @sources = $self->source_files($track);
+    for my $s (@sources) {
+	my ($name,$size,$mtime,$path) = @$s;
+	rename $path,"$path.bak"            or next;
+	my $io = IO::File->new("$path.bak") or next;
+	my ($result) = $self->upload_file($name,$io,'',1);
+	if ($result) {
+	    unlink "$path.bak";
+	} else {
+	    rename "$path.bak",$path;
+	}
+    }
+}
+
 sub upload_data {
     my $self = shift;
     my ($file_name,$data,$content_type,$overwrite) = @_;

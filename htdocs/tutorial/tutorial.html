@@ -73,7 +73,8 @@ not work with earlier versions of the software.</b>
   <li><a href="#external">Adding Features from External Sources</a>
       <ol>
 	<li><a href="#upload">Uploading an Annotation File</a>
-	<li><a href="#sharing">Sharing an Annotation File</a>	    
+	<li><a href="#sharing">Sharing an Annotation File</a>
+<!--  DAS SERVER SUPPORT NOT SUPPORTED AS OF JANUARY 2010	   
 	<li><a href="#DAS">Using GBrowse as a DAS Server or Client</a>
 	    <ol>
 	      <li><a href="#das_combining">Combining Databases with
@@ -82,6 +83,7 @@ not work with earlier versions of the software.</b>
       Ensembl and other Genome Browsers<a>
 	      <li><a href="#das_entire">Running GBrowse off DAS Entirely<a>
 	    </ol>
+-->
       </ol>
 
   <li><a href="#other_backends">Using Other Backends</a>
@@ -3229,12 +3231,23 @@ href="data_files/elegans.fa">elegans.fa</a>.
 <p>
 
 Refer back to the <a href="#basics">beginning of the tutorial</a> now
-and create a GBrowse database directory named "elegans_core".  Then
-copy <a href="data_files/elegans_core.gff3">elegans_core.gff3</a>, and
-<a href="data_files/elegans.fa">elegans.fa</a> into it.  The
-configuration file to use is <a
-href="conf_files/elegans_core.conf">elegans_core.conf</a>.  Place it
-in <a href="file:///$CONF">$CONF/</a>.
+and create a GBrowse database directory named "elegans_core".  Copy <a
+href="data_files/elegans_core.gff3">elegans_core.gff3</a>, and <a
+href="data_files/elegans.fa">elegans.fa</a> into it. Remember to make
+this directory writable by the web server user!
+
+<p>
+
+Copy the data source configuration file <a
+href="conf_files/elegans_core.conf">elegans_core.conf</a> into <a
+href="file:///$CONF">$CONF/</a>, and create a suitable stanza in
+GBrowse.conf to describe this new data source:
+
+<blockquote><pre>
+[elegans_core]
+description = Core C. elegans annotations
+path        = elegans_core.conf
+</pre></blockquote>
 
 <p>
 
@@ -3562,6 +3575,12 @@ to give everyone write access to the web server's $HTDOCS directory.
 
 To remove a URL from the list of loaded URLs, just delete it from its
 text field and reload.
+
+<!--
+
+January 2010: DAS SUPPORT IS CURRENTLY PENDING PORTING OF THE DAS
+SCRIPT TO THE 2.0 MULTI-DATABASE ARCHITECTURE, SO THIS PART OF THE
+TUTORIAL IS COMMENTED OUT.
 
 <h3><a name="DAS">4.3 Using GBrowse as a DAS Server or Client</a></h3>
 
@@ -4113,6 +4132,8 @@ More information about using aggregators can be found in the GFF2
 tutorial located at <a href="dbgff/tutorial.html">Using GBrowse
 with Bio::DB::GFF.</a>
 
+-->
+
 <hr>
 
 
@@ -4599,6 +4620,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Thu Jan 21 14:59:19 EST 2010
+Last modified: Mon Jan 25 16:42:30 EST 2010
 <!-- hhmts end -->
 </body> </html>

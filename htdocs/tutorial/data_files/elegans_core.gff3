@@ -1,5 +1,4 @@
 ##gff-version 3
-##sequence-region C01F4 1 40000
 #source gbrowse GFFDumper plugin
 C01F4	sequenced	contig	1	40000	.	+	.	Name=C01F4
 C01F4	curated	gene	27922	33389	.	-	.	ID=flt-1;Name=flt-1

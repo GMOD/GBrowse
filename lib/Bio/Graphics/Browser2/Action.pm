@@ -515,7 +515,7 @@ sub ACTION_set_upload_description {
     my $upload_name = $q->param('upload_name') or croak;
     my $upload_desc = $q->param('description') or croak;
 
-    my $usertracks = $render->usertracks;
+    my $usertracks = $render->user_tracks;
     $usertracks->description($upload_name,$upload_desc);
     return (204,'text/plain',undef);
 }

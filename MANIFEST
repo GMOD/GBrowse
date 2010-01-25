@@ -2,9 +2,9 @@ bin/auto_install_databases.pl
 bin/bp_load_gff.pl
 bin/gbrowse_clean.pl
 bin/gbrowse_create_useraccount_db.pl
-bin/gbrowse_set_admin_passwd.pl
 bin/gbrowse_netinstall.pl
 bin/gbrowse_netinstall2.pl
+bin/gbrowse_set_admin_passwd.pl
 bin/gbrowse_slave
 bin/gtf2gff3.pl
 bin/load_genbank.pl
@@ -556,6 +556,7 @@ README.fedora_and_selinux
 README.GBrowse-2.00
 README.gff3
 README.IF.GBROWSE.ISNT.WORKING
+sample_data/admin_uploads/README
 sample_data/ideograms/human_cytobands.gff
 sample_data/ideograms/mouse_cytobands.gff
 sample_data/ideograms/rat_cytobands.gff

@@ -16,6 +16,8 @@ use File::Compare 'compare';
 use File::Copy    'copy';
 use GBrowseGuessDirectories;
 
+use constant REGISTRATION_SERVER => 'http://modencode.oicr.on.ca/cgi-bin/gbrowse_registration';
+
 my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
 		htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
 		tmp           => 'Directory for GBrowse\'s temporary data',
@@ -167,6 +169,7 @@ sub ACTION_realclean {
 sub ACTION_build {
     my $self = shift;
     $self->depends_on('config');
+    $self->depends_on('register') unless $self->registration_done;
     $self->SUPER::ACTION_build;
     mkdir './htdocs/tmp';
     chmod 0777,'./htdocs/tmp';
@@ -245,6 +248,47 @@ sub ACTION_config {
 
     print STDERR "\n**Interactive configuration done. Run './Build reconfig' to reconfigure**\n";
 }
+
+sub ACTION_register {
+    my $self = shift;
+    return unless -t STDIN;
+    print STDERR "\n**Registration**\nGBrowse2 registration is optional, but will help us maintain funding for this project.\n";
+    if (Module::Build->y_n("Do you wish to register your installation?",'y')) {
+	print STDERR "All values are optional, but appreciated.\n";
+	my $user  = prompt('Your name:');
+	my $email = prompt('Your email address:');
+	my $org   = prompt('Your organization:');
+	my $organism = prompt('Organisms you will be using GBrowse for (one line):');
+	my $site  = prompt('If GBrowse will be public, the URL of your web site:');
+	my $result = eval {
+	    eval "use HTTP::Request::Common";
+	    eval "use LWP::UserAgent";
+	    my $ua = LWP::UserAgent->new;
+	    my $response = $ua->request(POST(REGISTRATION_SERVER,
+					     [user=>$user,email=>$email,
+					      org=>$org,organism=>$organism,
+					      site=>$site]
+					));
+	    die $response->status_line unless $response->is_success;
+	    my $content = $response->decoded_content;
+	    $content eq 'ok';
+	};
+	if ($@) {
+	    print STDERR "An error occurred during registration: $@\n";
+	    print STDERR "If you are able to fix the error, you can register later ";
+	    print STDERR "using \"./Build register\"\n";
+	} else {
+	    print STDERR $result ? "Thank you. Your registration was sent successfully.\n"
+		                 : "An error occurred during registration. Thanks anyway.\n";
+	}
+    } else {
+	print STDERR "If you wish to register at a later time please \"./Build register\"\n";
+    }
+    $self->registration_done(1);
+    print STDERR "Print any key to continue\n";
+    my $h = <STDIN>;
+}
+
 
 sub ACTION_config_data {
     my $self = shift;
@@ -742,6 +786,13 @@ sub config_done {
     my $done = $self->config_data('config_done');
     $self->config_data(config_done=>shift) if @_;
     warn "NOTE: Run ./Build reconfig to change existing configuration.\n" if $done;
+    return $done;
+}
+
+sub registration_done {
+    my $self = shift;
+    my $done = $self->config_data('registration_done');
+    $self->config_data(registration_done=>shift) if @_;
     return $done;
 }
 

@@ -252,7 +252,16 @@ sub create_data_source {
   my $self = shift;
   my $dsn  = shift;
   my $path = $self->data_source_path($dsn) or return;
-  return Bio::Graphics::Browser2::DataSource->new($path,$dsn,$self->data_source_description($dsn),$self);
+  my $source = Bio::Graphics::Browser2::DataSource->new($path,
+							$dsn,
+							$self->data_source_description($dsn),
+							$self) or return;
+  if (my $adbs = $self->admin_dbs) {
+      my $path  = File::Spec->catfile($adbs,$dsn);
+      my $expr = "$path/*/*.conf";
+      $source->add_conf_files($expr);
+  }
+  return $source;
 }
 
 sub default_source {

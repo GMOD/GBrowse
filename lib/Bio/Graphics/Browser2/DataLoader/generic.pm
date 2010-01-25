@@ -65,6 +65,7 @@ END
 
     if (my @lines = @{$self->{conflines}}) {  # good! user has provided some config hints
 	my ($old_trackname,$seen_feature);
+	my $category = $self->category;
 	for my $line (@lines) {
 	    chomp $line;
 	    if ($line =~ /^\s*database/) {
@@ -76,7 +77,7 @@ END
 		my $trackname = $self->new_track_label;
 		print $conf "[$trackname]\n";
 		print $conf "database = $loadid\n" ;
-		print $conf "category = My Tracks:Uploaded Tracks:",$self->track_name,"\n";
+		print $conf "category = $category\n";
 	    } elsif ($line =~ /^feature/) {
 		$seen_feature++;
 		print $conf $line,"\n";
@@ -110,6 +111,7 @@ END
 	    }
 
 	    my $color = $COLORS[rand @COLORS];
+	    my $category  = $self->category;
 	    print $conf <<END;
 [$trackname]
 database = $loadid
@@ -121,7 +123,7 @@ label     = 1
 stranded  = $stranded
 connector = solid
 balloon hover = \$description
-category    = My Tracks:Uploaded Tracks:$filename
+category    = $category
 key         = $t
 
 END

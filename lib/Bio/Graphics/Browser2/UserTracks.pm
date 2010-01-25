@@ -63,7 +63,6 @@ sub tracks {
 
     my @result;
     opendir D,$path;
-    warn "reading from $path";
     while (my $dir = readdir(D)) {
 	next if $dir =~ /^\.+$/;
 
@@ -256,13 +255,7 @@ sub upload_file {
 	croak "Could not guess the type of the file $file_name"
 	    unless $type;
 
-	my $loader = $self->get_loader($type);
-	my $load   = $loader->new($track_name,
-				  $self->track_path($track_name),
-				  $self->track_conf($track_name),
-				  $self->config,
-				  $self->state->{uploadid},
-	    );
+	my $load = $self->get_loader($type,$track_name);
 	$load->eol_char($eol);
 	@tracks = $load->load($lines,$fh);
 	1;
@@ -359,11 +352,17 @@ sub status {
 
 sub get_loader {
     my $self   = shift;
-    my $type   = shift;
+    my ($type,$track_name) = @_;
+
     my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";
     die $@ if $@;
-    return $module;
+    return $module->new($track_name,
+			$self->track_path($track_name),
+			$self->track_conf($track_name),
+			$self->config,
+			$self->state->{uploadid},
+	);
 }
 
 # guess the file type and eol based on its name and the first 1024 bytes
@@ -504,8 +503,14 @@ sub path {
 	or return $self->SUPER::path;
     my $source    = $self->config->name;
     my $path      = File::Spec->catfile($admin_dbs,$source);
-    warn "using $path";
     return $path;
+}
+
+sub get_loader {
+    my $self = shift;
+    my $loader = $self->SUPER::get_loader(@_);
+    $loader->force_category('General');
+    return $loader;
 }
 
 1;

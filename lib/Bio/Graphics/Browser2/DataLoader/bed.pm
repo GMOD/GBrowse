@@ -60,10 +60,11 @@ END
        my $bgcolor     = $COLORS[rand @COLORS];
        my $glyph       = 'gene';
        my @types       = $self->loader->loaded_types;
+       my $category = $self->category;
        print $conf <<END;
 [$track_label]
 database = $loadid
-category = My Tracks:Uploaded Tracks:$track_name
+category = $category
 glyph    = $glyph
 feature  = @types
 key      = $key

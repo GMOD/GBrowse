@@ -330,14 +330,14 @@ my $feature = Bio::Graphics::Feature->new(-name=>'fred',
 my $panel_renderer = $render->get_panel_renderer($segment);
 ok($panel_renderer);
 ok($panel_renderer->make_link($feature),
-   "../../gbrowse_details/volvox?ref=A;start=1;end=1000;name=fred;class=Sequence");
+   "../../gbrowse_details/volvox?ref=A;start=1;end=1000;name=fred;class=Sequence;db_id=general");
 
 $ENV{REQUEST_URI} = 'http://localhost/cgi-bin/gbrowse/volvox';
 $ENV{PATH_INFO}   = '/volvox/';
 $ENV{REQUEST_METHOD} = 'GET';
 
 ok($panel_renderer->make_link($feature),
-   "http://localhost/cgi-bin/gbrowse_details/volvox?ref=A;start=1;end=1000;name=fred;class=Sequence");
+   "http://localhost/cgi-bin/gbrowse_details/volvox?ref=A;start=1;end=1000;name=fred;class=Sequence;db_id=general");
 
 # try automatic class munging
 $CGI::Q = new CGI('name=f13');

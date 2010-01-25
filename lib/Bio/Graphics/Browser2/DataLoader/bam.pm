@@ -18,6 +18,7 @@ sub create_conf_file {
 
     # find a fasta file to use
     my $fasta  = $self->get_fasta_file || '';
+    my $category = $self->category;
 
     print $conf <<END;
 [$loadid:database]
@@ -50,7 +51,7 @@ bgcolor        = blue
 fgcolor        = blue
 height         = 3
 label          = sub {shift->display_name}
-category       = My Tracks:Uploaded Tracks
+category       = $category
 label density = 50
 bump          = fast
 key           = $filename

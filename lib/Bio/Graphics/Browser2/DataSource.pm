@@ -104,6 +104,14 @@ sub config_file {
   $d;
 }
 
+sub add_conf_files {
+    my $self        = shift;
+    my $expression  = shift;
+    while (my $conf = glob($expression)) {
+	$self->parse_file($conf);
+    }
+}
+
 sub globals {
   my $self = shift;
   my $d    = $self->{globals};

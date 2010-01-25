@@ -29,6 +29,12 @@ sub conf_path  { shift->{conf} }
 sub conf_fh    { shift->{conf_fh}  }
 sub settings   { shift->{settings} }
 sub loadid     { shift->{loadid}   }
+sub force_category {
+    my $self = shift;
+    my $d    = $self->{category};
+    $self->{category} = shift if @_;
+    return $d;
+}
 sub eol_char   {
     my $self = shift;
     my $d    = $self->{eol_char};
@@ -190,6 +196,11 @@ sub new_track_label {
 
 sub load_line {
     croak "virtual base class";
+}
+
+sub category {
+    my $self = shift;
+    return $self->force_category || "My Tracks:Uploaded Tracks:".$self->track_name;
 }
 
 sub backend {

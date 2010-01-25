@@ -586,6 +586,7 @@ sub substitute_in_place {
     my $perl5lib = $self->perl5lib || '';
     my $installscript = $self->scriptdir;
     (my $cgiurl = $cgibin) =~ s!^.+/cgi-bin!/cgi-bin!;
+    ($cgiurl    = $cgibin) =~ s!^.+/CGI-Executables!/cgi-bin!; #Macs and their crazy paths
 
     while (<$in>) {
 	s/\$INSTALLSCRIPT/$installscript/g;

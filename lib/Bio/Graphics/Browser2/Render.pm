@@ -1426,6 +1426,7 @@ sub do_plugin_dump {
 #======================== remote sources ====================
 sub init_remote_sources {
   my $self = shift;
+  warn "init_remote_sources()";
   my $remote_sources   = Bio::Graphics::Browser2::RemoteSet->new($self->data_source,
                                                                 $self->state,
                                                                 $self->language);
@@ -1475,6 +1476,22 @@ sub fatal_error {
 sub zoomBar {
     my $self = shift;
     croak 'Please define zoomBar() in a subclass of Bio::Graphics::Browser2::Render';
+}
+
+sub add_remote_tracks {
+    my $self        = shift;
+    my $urls        = shift;
+    my $user_tracks = $self->user_tracks;
+    my %tracks;
+    for my $url (@$urls) {
+	my ($result,$msg,$tracks) 
+	    = $user_tracks->import_url($url,1);
+	next unless $result;
+	$tracks{$_}++ foreach @$tracks;
+    }
+    $self->add_user_tracks($self->data_source);
+    $self->add_track_to_state($_) foreach keys %tracks;
+    $self->init_remote_sources();
 }
 
 sub write_auto {
@@ -2023,6 +2040,12 @@ sub update_tracks {
   if (my @add = param('add')) {
       my @style = param('style');
       $self->handle_quickie(\@add,\@style);
+  }
+
+  if (my @url = param('eurl')) {
+      my $group_separator = GROUP_SEPARATOR;
+      my @unescaped = map {s/$group_separator/;/g;$_} @url;
+      $self->add_remote_tracks(\@unescaped);
   }
 
   # selected tracks can be set by the 'label' parameter
@@ -2577,10 +2600,10 @@ sub update_section_visibility {
   }
 }
 
-sub update_external_sources {
-  my $self = shift;
-  $self->remote_sources->set_sources([param('eurl')]) if param('eurl');
-}
+#sub update_external_sources {
+#  my $self = shift;
+#  $self->remote_sources->set_sources([param('eurl')]) if param('eurl');
+#}
 
 sub update_galaxy_url {
     my $self  = shift;
@@ -3427,9 +3450,6 @@ sub bookmark_link {
   $q->param(-name=>'id',   -value=>$settings->{userid});  # slight inconsistency here
   $q->param(-name=>'label',-value=>$self->join_selected_tracks);
 
-  # handle external urls
-  my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
-  $q->param(-name=>'eurl',    -value=>\@url);
   $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
   my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
   $q->param(-name=>'h_feat',  -value=>\@h_feat) if @h_feat;

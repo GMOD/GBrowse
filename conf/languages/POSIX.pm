@@ -496,22 +496,27 @@ END
 
  SHARE              => 'Share %s',
 
+ SHARE_INSTRUCTIONS_BOOKMARK => <<END,
+To <b>share</b this track with another user, copy the URL below and
+send it to him or her.
+END
+
  SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
-To share this track with another GBrowse genome browser,
+To <b>export</b> this track to a different GBrowse genome browser,
 first copy the URL below, then go to the other GBrowse, 
 select the "Upload and Share Tracks" tab and
 paste the URL into the "Import tracks" section at the bottom.
 END
 
  SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
-To share all currently selected tracks with another GBrowse genome
+To export all currently selected tracks to another GBrowse genome
 browser, first copy the URL below, then go to the other GBrowse,
 select the "Upload and Share Tracks" tab and
 paste the URL into the "Import tracks" section at the bottom.
 END
 
  SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,
-To share this track with another genome browser using 
+To export this track with another genome browser using 
 the <a href="http://www.biodas.org" target="_new">
 Distributed Annotation System (DAS)</a> first copy the URL below, 
 then go to the other browser and enter it as a new DAS source.
@@ -520,7 +525,7 @@ be shared using DAS.</i>
 END
 
  SHARE_DAS_INSTRUCTIONS_ALL_TRACKS => <<END,
-To share all currently selected tracks with another genome browser
+To export all currently selected tracks with another genome browser
 using the <a href="http://www.biodas.org" target="_new"> Distributed
 Annotation System (DAS)</a> first copy the URL below, then go to the
 other browser and enter it as a new DAS source. <i>Quantitative tracks

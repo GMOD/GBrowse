@@ -804,9 +804,9 @@ var GBrowseController = Class.create({
 	      backgroundColor:'beige',
 	      padding:'5px 5px 5px 5px'
 		  });
-      // var r = document.createRange();
-      // r.selectNodeContents(container_element);
-      // window.getSelection().addRange(r);
+      var r = document.createRange();
+      r.selectNodeContents(container_element);
+      window.getSelection().addRange(r);
       Event.observe(container_element,'keypress',this.set_upload_description);
       Event.observe(container_element,'blur',this.set_upload_description);
   },

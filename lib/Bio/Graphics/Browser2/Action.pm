@@ -246,6 +246,7 @@ sub ACTION_rerender_track {
 
     $render->init_database();
     $render->init_plugins();
+    $render->init_remote_sources if $track_id =~ /http|ftp|das/;
 
     my ( $track_keys, $display_details, $details_msg )
 	= $render->background_individual_track_render($track_id,$nocache);

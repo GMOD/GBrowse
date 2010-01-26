@@ -172,7 +172,6 @@ sub get_segment {
 	}
 	);
     $search->init_databases();
-    warn "segment = $segment";
     my ($f) = $search->search_features({-search_term=>$segment});
     unless ($f) {
 	print header('text/plain'), "# The landmark named $segment was not found.\n";

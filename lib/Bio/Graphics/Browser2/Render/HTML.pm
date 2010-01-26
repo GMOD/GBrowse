@@ -1247,11 +1247,19 @@ sub list_userdata {
 			   -onClick => "editUploadConf('$name')"},'[edit]'))
 		  ),
 	    );
-		  
-	my $go_there      = a({-href    => 'javascript:void(0)',
-			       -onClick => 
-				   qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$name"))},
-			      '[View track]');
+
+
+	my $go_there = join(' ',
+			    map {
+				my $label = $_;
+				my $key   = $self->data_source->setting($label=>'key');
+				'['
+				    .a({-href    => 'javascript:void(0)',
+					-onClick => 
+					    qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))},
+				       b($key))
+				    .']'
+			    } @track_labels);
 	
 	my $color         = $count++%2 ? 'paleturquoise': 'lightblue';
 
@@ -2012,6 +2020,8 @@ sub share_track {
     my $state = $self->state();
     my $source = $self->data_source;
 
+    (my $lbase = $label) =~ s/:\w+$//;
+
     my $description;
     my $labels;
     my $usertracks_present;
@@ -2028,21 +2038,26 @@ sub share_track {
         $description = 'all selected tracks';
     }
     else {
-        $description = $self->setting( $label => 'key' ) || $label;
+        $description = $self->setting( $label => 'key' ) 
+	    || $self->setting( $lbase => 'key')
+	    || $label;
 	$usertracks_present ||= $source->is_usertrack($label);
         $labels = $label;
     }
+
+    my $base = url(-full=>1,-path_info=>1);
 
     my $gbgff;
     my $segment = $label =~  /:region$/   ? '$region'
                  :$label =~  /:overview$/ ? '$overview'
                  :'$segment';
     my $upload_id = $state->{uploadid} || $state->{userid};
-    if ( $label =~ /^(http|ftp)/ ) {    # reexporting and imported track!
-        $gbgff = $label;
+    if ( $label =~ /^(http|ftp)/ ) {    # reexporting an imported track!
+        $gbgff   = $source->setting($label=>'remote feature');
+        $gbgff ||= $source->setting($lbase=>'remote feature');
     }
     else {
-        $gbgff = url( -full => 1, -path_info => 1 );
+        $gbgff  = $base;
         $gbgff .= "?gbgff=1;q=$segment;t=$labels;s=1";
         $gbgff .= ";uuid=$upload_id" if $usertracks_present;
     }
@@ -2061,25 +2076,43 @@ sub share_track {
     $das .= "?$das_types";
 
     my $return_html = start_html();
-    $return_html .= h1( $self->tr( 'SHARE', $description ) )
-        . p(
-        $self->tr(
-            $label eq 'all'
-            ? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
-            : 'SHARE_INSTRUCTIONS_ONE_TRACK'
-        )
-        )
-        . br()
-	. b('GBrowse URL: ') 
-	. br()
-	. p( textfield(
-            -style    => 'background-color: wheat',
-            -readonly => 1,
-            -value    => $gbgff,
-            -size     => 56,
-            -onFocus  => 'this.select()',
-            -onSelect => 'this.select()' )
-	);
+    $return_html .= h1( $self->tr( 'SHARE', $description ) );
+
+    if ($label ne 'all' && $label !~ /^(http|ftp)/) {
+	
+	my $shared;
+	if ($source->is_usertrack($label)) {
+	    (my $escaped = $gbgff) =~ s/;/%251D/g;
+	    $shared = "$base?eurl=$escaped";
+	} else {
+	    $shared="$base?label=$label";
+	}
+
+	$return_html .= p(
+	    $self->tr('SHARE_INSTRUCTIONS_BOOKMARK'),br(),
+	    textfield(
+		-style    => 'background-color: wheat',
+		-readonly => 1,
+		-value    => $shared,
+		-size     => 65,
+		-onClick  => 'this.select()'
+	    )
+	    )
+    }
+
+    $return_html .=
+	p(
+	    $self->tr(
+		$label eq 'all'
+		? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
+		: 'SHARE_INSTRUCTIONS_ONE_TRACK'
+	    ),br(),
+	    textfield(
+		-style    => 'background-color: wheat',
+		-readonly => 1,
+		-value    => $gbgff,
+		-size     => 65,
+		-onClick  => 'this.select()'));
 
     if ($das_types) {
         $return_html .= p(

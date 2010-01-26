@@ -285,7 +285,7 @@ sub ACTION_register {
 	print STDERR "If you wish to register at a later time please \"./Build register\"\n";
     }
     $self->registration_done(1);
-    print STDERR "Print any key to continue\n";
+    print STDERR "Press any key to continue\n";
     my $h = <STDIN>;
 }
 

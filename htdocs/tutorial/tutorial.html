@@ -3465,11 +3465,16 @@ might want to share it with others. This is easily done by going to
 the main GBrowse tab, finding the track you want to share, and
 clicking on the icon that looks like an RSS feed (<img
 src="../images/buttons/share.png">). This will pop up a balloon
-containing a URL. Cut and paste this URL into an email message 
+containing a URL. Cut and paste this URL into an email message. When
+the recipient clicks on it, he will be taken to GBrowse with your
+track displayed. You can do this for several tracks.
 
-You can do this easily if you
-have access to an anonymous FTP or web server (if you are reading this
-tutorial, it is fair to assume that you do!)
+<p>
+
+Another way to load a file into GBrowse is to put a copy of it on a
+local web or FTP server and then <b>import</b> it by URL. This
+requires that you have access to a web or FTP server, but if you are
+working with GBrowse, then we can assume you do!
 
 <p>
 
@@ -3482,15 +3487,11 @@ across the world.
 
 <p>
 
-We will demonstrate using the elegans_sts.gff3 file.  Please use a
-version that has been edited to place the [reagent] configuration
-stanza at the top.  Then copy this file to the directory "$HTDOCS".
+We will demonstrate using a new version of the elegans_sts.gff3 file.
+Create a file named "test_annotations.gff3" in the directory "$HTDOCS".
 This will place it at the top of the Web server document tree, but
-<b>outside</b> the location of GBrowse databases.  Check that the file
-is correctly installed on your web server by fetching this URL: <a
-href="elegans_sts.gff3"
-target="_new">http://localhost/elegans_sts.gff3</a>.  If the file is
-correctly installed on the Web server, you will see this:
+<b>outside</b> the location of GBrowse databases.  This file should
+contain these lines:
 
 <blockquote><pre>
 [Orfeome Primers]
@@ -3500,9 +3501,6 @@ height  = 6
 key     = ORFeome project primer pairs
 
 ##gff-version 3
-##date Tue Feb 24 06:39:41 2004
-##source gbrowse GFFDumper plugin
-##NOTE: Selected features dumped.
 C01F4	Orfeome_project	reagent	3319	17668	.	+	.	Name=mv_ZK783.1;amplified=0
 C01F4	Orfeome_project	reagent	18584	20445	.	-	.	Name=mv_G_YK5686;amplified=1
 C01F4	Orfeome_project	reagent	24509	25425	.	-	.	Name=mv_ZK783.3;amplified=1
@@ -3510,74 +3508,29 @@ C01F4	Orfeome_project	reagent	26525	33359	.	-	.	Name=mv_ZK783.4;amplified=0
 C01F4	Orfeome_project	reagent	38660	49506	.	+	.	Name=mv_C18H2.1;amplified=1
 </pre></blockquote>
 
-<p>
-
-Now go back to your browser, and <b>delete</b> all the uploaded files.
-(This is to prevent the list of tracks from getting too long!)  You
-can do this by scrolling to the bottom of the browser window and
-pressing "Delete File" for each of the annotation files that you
-previously uploaded.  This should return you to the display of the
-core gene models and EST alignments that we began with.
+<i><b>NOTE:</b> The fields must be separated by tabs, not spaces.</i>
 
 <p>
 
-Now we'll reload the STS annotations by using their URL.  Scroll to
-the bottom of the window, find the text field labeled "Enter Remote
-Annotation URL", type in <b>http://localhost/elegans_sts.gff3</b>, and
-press "Update URLs."  The "ORFeome project primer pairs" track will
-reappear.
+Confirm that the file is correctly installed by fetching the URL
+"http://<i>your.web.server</i>/gbrowse2/test_annotations.gff3".
 
 <p>
 
-In order to make this process even simpler, you can create a popup
-menu containing the URLs of frequently-accessed remote annotation
-files.  To make this more interesting, first copy the
-elegans_expression.gff3 file to the "$HTDOCS" directory in the way
-described earlier.  Now elegans_sts.gff3 and elegans_expression.gff3
-will be available as the URLs <a
-href="/elegans_sts.gff3">http://localhost/elegans_sts.gff3</a>
-and <a
-href="/elegans_expression.gff3">http://localhost/elegans_expression.gff3</a>,
-respectively.
+Now go back to your browser, open the "Upload and Share Tracks" tab,
+and click on "[Import a track]" at the bottom of the page. This will
+open up a text field. Type in the URL you used above and click
+"Upload." The contents of the file will now be visible as a new
+"ORFeome project primer pairs" track on the browser. The neat thing
+about this is that whenever you change the file on the web server, the
+track changes as well.
 
 <p>
 
-Open up the GBrowse configuration file,
-"$CONF/elegans_core.conf", and insert the following
-lines right after the "plugins =" line:
-
-<blockquote><pre>
-# remote GFF files to make available for optional loading
-remote sources = "ORFeome STSs"      http://localhost/elegans_sts.gff3
-	         "Expression probes" http://localhost/elegans_expression.gff3
-
-</pre></blockquote>
-
-<p>
-
-When you reload the web page, you will see a popup menu appear next to
-the remote annotation URL textfield (Figure 32).  The menu will
-contain options to load "ORFeome STSs" and "Expression probes", and
-selecting a menu item will have exactly the same effect as typing in
-the URL manually.
-
-<blockquote class="center">
-<img  style="border:solid;border-width:1px" src="figures/third_party5.gif"><br>
-<i>Figure 32:</i> The preset remote annotation URL popup menu.
-</blockquote>
-
-The neat thing about all this is that it works across the
-Internet. Send the URL of the annotation files to your colleagues
-(being sure to replace "localhost" with the hostname of your web
-server!) and they'll be able to load this URL into any GBrowse that
-uses the same core annotations. You can also use this mechanism within
-your laboratory or department to share annotation sets without having
-to give everyone write access to the web server's $HTDOCS directory.
-
-<p>
-
-To remove a URL from the list of loaded URLs, just delete it from its
-text field and reload.
+You can use this feature to share custom tracks without uploading your
+data to the browser. Simply send the URL of the file to your
+colleagues, and instruct them to import them into GBrowse in the way
+you just did yourself.
 
 <!--
 
@@ -4350,58 +4303,185 @@ scratch, erasing whatever was there before. Without this flag, the
 provided GFF and/or sequence data will be incrementally added to the
 indexes.</p>
 
-<h3><a name="mysql">5.2. The MySQL Backend</a></h3>
+
+<h3><a name="SQLite">5.2. The SQLite Backend</a></h3>
+
+<p>
+
+The Bio::SeqFeature::Store SQLite adaptor is an interface to the open
+source SQLite database management system. Its performance is
+significantly better than that of the Berkeleydb adaptor, and is
+highly recommended for production environments. This section describes
+how to set up GBrowse to use this adaptor.
+
+<p>
+
+First you'll need to confirm that SQLite is installed. It is installed
+by default on most Linux systems, but will not be present on Windows
+or Macintosh OSX. Go to <a
+href="http://www.sqlite.org/download.html">The SQLite Home Page</a>
+and download and install the source code or binary package that is
+most suitable to you.
+
+<p>
+
+Next, you'll need to install the Perl interface to SQLite. Again, this
+is preinstalled on many systems, but if you need to install it, you
+can get it via the CPAN installer (Linux, OSX), or PPM (Windows).
+
+<p>
+
+Via CPAN:
+
+<blockquote><pre>
+% <b>perl -MCPAN -e shell</b>
+cpan&gt; <b>install DBD::SQLite</b>
+cpan&gt; <b>quit</b>
+</pre></blockquote>
+
+Via PPM:
+
+<blockquote><pre>
+C:\Windows&gt; <b>ppm</b>
+ppm&gt; <b>install DBD::SQLite</b>
+ppm&gt; <b>quit</b>
+</pre></blockquote>
+
+Users of Debian systems can simply install the package
+libdbd-sqlite3-perl.
+
+<p>
+
+You'll now load the .gff3 and .fa files into a new SQLite database.
+There are actually two steps needed.  The first is to "initialize" the
+database with all the data definitions needed to hold genomic feature
+data, and the second is to actually load the data.  Fortunately, both
+these steps are handled by the same command-line tool,
+<i>bp_seqfeature_load.pl</i>, which is part of the BioPerl suite.
+
+<p>
+
+Copy the files <a
+href="data_files/volvox_all.gff3">volvox_all.gff3</a> and <a
+href="data_files/volvox_all.fa">volvox_all.fa</a> to some convenient
+place. Now choose a location for the database on the local
+filesystem. In this example we will use
+$HTDOCS/databases/Volvox.sqlite. Then run the following command from
+the command line:
+
+<blockquote class="example"><pre>
+% <b>bp_seqfeature_load.pl -a DBI::SQLite -c -f -d $HTDOCS/databases/Volvox.sqlite volvox_all.fa volvox_all.gff3</b>
+loading volvox_all.fa...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.00s
+load time:  0.02s
+loading volvox_all.gff3...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.02s
+load time:  0.23s
+</pre></blockquote>
+
+<p>
+
+The arguments to <i>bp_seqfeature_load.pl</i> are:
+
+<table width="50%">
+  <tr>
+    <td><b>-c</b></td>
+    <td><b>c</b>lear (initialize) the database
+  </tr>
+  <tr>
+    <td><b>-d $HTDOCS/databases/Volvox.sqlite</b></td>
+    <td>Load into the <b>d</b>atabase at the given path
+  </tr>
+  <tr>
+    <td><b>-f</b></td>
+    <td>Use the <b>f</b>ast loading algorithm.
+  </tr>
+  <tr>
+    <td><b>volvox_all.fa volvox_all.gff3</b></td>
+    <td>The data files to load.
+  </tr>
+  
+</table>
+
+The SQLite database is all ready to go.  Now, in order to tell GBrowse
+to start using the SQLite database rather than the in-memory database,
+you need to make a small change to the volvox.conf configuration
+file.  Find the few lines of the file and change them to look like
+this:
+
+<blockquote class="example"><pre>
+[GENERAL]
+description   = Volvox Example Database
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor DBI::SQLite
+	        -dsn     $HTDOCS/databases/Volvox.sqlite
+</pre></blockquote>
+
+<p>
+
+The <b>-adaptor</b> argument is telling GBrowse to use the DBI::mysql"
+database adaptor, which is the BioPerl interface to SQLite databases.
+The <b>-dsn</b> argument tells GBrowse to use the <b>d</b>ata
+<b>s</b>ource <b>n</b>ame "volvox". The <b>-fast</b> option turns on
+some optimizations that will make features load faster.
+
+<p>
+
+When you reload the web page, GBrowse will now be using SQLite.
+Depending on the speed of your CPU and disk, you might notice that it
+seems a bit snappier than the in-memory version.  See <a
+href="../CONFIGURE_HOWTO.txt">CONFIGURE_HOWTO.txt</a> for more
+information on configuring GBrowse to use relational databases.
+
+<p>
+
+To add more data to an existing SQLite database, simply run the
+bp_seqfeature_load.pl command without the <b>-c</b> switch. This will
+load additional GFF3 and FASTA files into the database.
+
+<p>
+
+To delete data from the database, use the
+<b>bp_seqfeature_delete.pl</b> script. To dump out the contents of the
+database, run <b>bp_seqfeature_gff3.pl</b>
+
+<h3><a name="mysql">5.3. The MySQL Backend</a></h3>
 
 <p>
 
 The Bio::SeqFeature::Store MySQL adaptor is an interface to the open
-source MySQL database management system. Its performance is similar to
-that of the Berkeleydb adaptor, but it has better provisions for error
-recovery and is safe to use in environments where multiple users write
-to the database simultaneously. In addition, the MySQL adaptor has
-been tested much more extensively than the Berkeleydb adaptor and is
-highly recommended for production environments. This section describes
-how to set up GBrowse to use the MySQL adaptor. If you are not
-interested in this, you may skip to the next section that describes
-loading third-party annotations.
+source MySQL database management system. Its performance is equal to
+that of the SQLite adaptor, but it has better provisions for error
+recovery and is safe to use in environments where multiple users read
+and write to the database simultaneously. Because it runs as a server,
+it is particularly useful in high-performance GBrowse <a
+href="http://gmod.org/wiki/Running_a_GBrowse2_render_farm">render farm
+environments.</a>
 
 <p>
 
-First you'll have to install MySQL.  Although it is installed by
-default in most Linux systems, it will not be present on Windows or
-Macintosh OSX systems.  Go to <a
-href="http://www.mysql.com">www.mysql.com</a> and follow the
-instructions to download and install the database.  Come back here
-when this is done.
+You'll have to install MySQL if it is not installed already. MySQL's
+home page for source code and binaries is <a
+href="http://www.mysql.com">www.mysql.com</a>.
 
 <p>
 
-Next, you'll need to install the Perl interface to MySQL.  On a
-Windows system using ActiveState Perl, use the ppm tool:
-
-<blockquote><pre>
-C:\Windows&gt; <b>ppm</b>
-ppm&gt; <b>install DBD::mysql</b>
-ppm&gt; <b>quit</b>
-</pre></blockquote>
+Next, you'll need to install the Perl interface to MySQL.  The module
+is called "DBD::mysql". Install it using the PPM or CPAN shells as
+described in the SQLite section. On Debian systems, you may install
+the package "libdbd-mysql-perl".
 
 <p>
 
-On a Unix, Linux or Mac OSX system, use the perl CPAN installer (this
-may need to be done with root/superuser privileges):
-
-<blockquote><pre>
-% <b>perl -MCPAN -e shell</b>
-cpan&gt; <b>install DBD::mysql</b>
-cpan&gt; <b>quit</b>
-</pre></blockquote>
-
-<p>
-
-Now you're ready to create the MySQL version of the volvox database.
-First you'll set up a new empty database named "volvox."  Using the
-<b>mysql</b> command-line tool, create the database, grant yourself
-read/write privileges, and grant the "nobody" user read privileges:
+Setting up a new MySQL database is just a bit more complicated than
+setting up a SQLite database. First you'll set up a new empty
+database named "volvox."  Using the <b>mysql</b> command-line tool,
+create the database, grant yourself read/write privileges, and grant
+the "nobody" user read privileges:
 
 <blockquote class="example"><pre>
 % <b>mysql -uroot -p</b>
@@ -4431,22 +4511,10 @@ to skip this step entirely.
 <p>
 
 You'll now load the .gff3 and .fa files into this newly created
-database.  There are actually two steps needed.  The first is to
-"initialize" the database with all the data definitions needed to hold
-genomic feature data, and the second is to actually load the data.
-Fortunately, both these steps are handled by the same command-line
-tool, <i>bp_seqfeature_load.pl</i>, which is part of the BioPerl
-suite.
-
-<p>
-
-Copy the files <a href="data_files/volvox_all.gff3">volvox_all.gff3</a>
-and <a href="data_files/volvox_all.fa">volvox_all.fa</a> to some
-convenient place.  Then run the following command from the command
-line:
+database.  Again, you'll use the <i>bp_seqfeature_load.pl</i>.
 
 <blockquote class="example"><pre>
-% <b>bp_seqfeature_load.pl -c -f -d volvox volvox_all.fa volvox_all.gff3</b>
+% <b>bp_seqfeature_load.pl -c -f -a DBI::mysql -d volvox volvox_all.fa volvox_all.gff3</b>
 loading volvox_all.fa...
                                                                                 
 Building object tree... 0.00s
@@ -4459,37 +4527,14 @@ Loading bulk data into database... 0.02s
 load time:  0.23s
 </pre></blockquote>
 
-<p>
+<p> The invocation of the script is identical except that we specify
+the DBI::mysql adaptor, and use the mysql server's database name of
+"volvox" rather than a specific path.  <p>
 
-The arguments to <i>bp_seqfeature_load.pl</i> are:
-
-<table>
-  <tr>
-    <td><b>-c</b></td>
-    <td><b>c</b>lear (initialize) the database
-  </tr>
-  <tr>
-    <td><b>-d volvox</b></td>
-    <td>Load into the <b>d</b>atabase named volvox
-  </tr>
-  <tr>
-    <td><b>-f</b></td>
-    <td>Use the <b>f</b>ast loading algorithm.
-  </tr>
-  <tr>
-    <td><b>volvox_all.fa volvox_all.gff3</b></td>
-    <td>The data files to load.
-  </tr>
-  
-</table>
-
-<p>
-
-The MySQL database is all ready to go.  Now, in order to tell GBrowse
-to start using the MySQL database rather than the in-memory database,
-you need to make a small change to the volvox.conf configuration
-file.  Find the few lines of the file and change them to look like
-this:
+Change the [GENERAL] section of the volvox configuration file to use
+the DBI::mysql adaptor and to specify the user that has access to the
+database (in this case the "nobody" user that you granted permission
+to earlier).
 
 <blockquote class="example"><pre>
 [GENERAL]
@@ -4502,19 +4547,12 @@ db_args       = -adaptor DBI::mysql
 
 <p>
 
-The <b>-adaptor</b> argument is telling GBrowse to use the DBI::mysql"
-database adaptor, which is the BioPerl interface to MySQL databases.
-The <b>-dsn</b> argument tells GBrowse to use the <b>d</b>ata
-<b>s</b>ource <b>n</b>ame "volvox". The <b>-fast</b> option turns on
-some optimizations that will make features load faster.
-
-<p>
-
-When you reload the web page, GBrowse will now be using MySQL.
-Depending on the speed of your CPU and disk, you might notice that it
-seems a bit snappier than the in-memory version.  See <a
-href="../CONFIGURE_HOWTO.txt">CONFIGURE_HOWTO.txt</a> for more
-information on configuring GBrowse to use relational databases.
+Reload the browser to confirm that it is working as expected (check
+the server error log if there is a problem). As with the SQLite
+adaptor, you may use <b>bp_seqfeature_delete.pl</b> to delete
+features, <b>bp_seqfeature_gff3.pl</b> to list the contents of the
+database, and <b>bp_seqfeature_load.pl</b> to load in additional GFF3
+files.
 
 <h3><a name="other_backends">5.3. Other backends</a></h3>
 
@@ -4586,10 +4624,20 @@ backends.
       <p>
 </dl>
 
+<hr>
+
+<h2><a name="multiple_databases">6. Multiple Database Backends</a></h2>
+
+<p>
+
+As your GBrowse configuration grows, you may find that it makes sense
+to divide the datasets among multiple databases for ease of updating
+and maintenance. Fortunately this is easy to do with a small bit of
+extra syntax in the configuration file.
 
 <hr>
 
-<h2><a name="conclusion">6. Conclusion</a></h2>
+<h2><a name="conclusion">7. Conclusion</a></h2>
 
 <p>
 
@@ -4623,6 +4671,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Jan 26 07:26:31 EST 2010
+Last modified: Tue Jan 26 16:37:19 EST 2010
 <!-- hhmts end -->
 </body> </html>

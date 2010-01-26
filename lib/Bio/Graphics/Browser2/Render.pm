@@ -1426,7 +1426,7 @@ sub do_plugin_dump {
 #======================== remote sources ====================
 sub init_remote_sources {
   my $self = shift;
-  warn "init_remote_sources()";
+  warn "init_remote_sources()" if DEBUG;
   my $remote_sources   = Bio::Graphics::Browser2::RemoteSet->new($self->data_source,
                                                                 $self->state,
                                                                 $self->language);

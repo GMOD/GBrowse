@@ -334,7 +334,6 @@ sub ACTION_autocomplete {
 
 sub ACTION_reset_dsn {
     my $self = shift;
-    warn "here I am";
     $self->data_source->clear_cached_config();
     return (204,'text/plain',undef);
 }

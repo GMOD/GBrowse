@@ -1190,7 +1190,7 @@ sub list_userdata {
     my $imported = $type eq 'imported' ? 1 : 0;
     my @tracks   = $userdata->tracks($imported);
     my %modified = map {$_ => $userdata->modified($_) } @tracks;
-    @tracks      = sort {$modified{$a}<=>$modified{$b}} @tracks;
+    @tracks      = sort @tracks;
 
     my $buttons = $self->data_source->globals->button_url;
     my $share   = "$buttons/share.png";
@@ -2010,19 +2010,26 @@ sub share_track {
     my $label = shift;
 
     my $state = $self->state();
+    my $source = $self->data_source;
 
     my $description;
     my $labels;
+    my $usertracks_present;
+
     my @visible
         = grep { $state->{features}{$_}{visible} && !/:(overview|region)$/ }
         @{ $state->{tracks} };
 
     if ( $label eq 'all' ) {
+	for my $l (@visible) {
+	    $usertracks_present ||= $source->is_usertrack($l);
+	}
         $labels = join '+', map { CGI::escape($_) } @visible;
         $description = 'all selected tracks';
     }
     else {
         $description = $self->setting( $label => 'key' ) || $label;
+	$usertracks_present ||= $source->is_usertrack($label);
         $labels = $label;
     }
 
@@ -2037,13 +2044,7 @@ sub share_track {
     else {
         $gbgff = url( -full => 1, -path_info => 1 );
         $gbgff .= "?gbgff=1;q=$segment;t=$labels;s=1";
-	# BUG:
-	# Temporary hack here to allow people to share their uploaded tracks with
-	# others. It relies on the fact that uploaded tracks have a very specific
-	# type of label.
-	# This needs to be replaced with a completely different mechanism
-	# for flagging when a track is shared.
-        $gbgff .= ";uuid=$upload_id" if $labels =~ /track_[a-z0-9]{6}/;
+        $gbgff .= ";uuid=$upload_id" if $usertracks_present;
     }
 
     my $das_types = join( ';',

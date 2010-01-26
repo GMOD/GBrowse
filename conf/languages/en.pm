@@ -486,20 +486,16 @@ END
 
  SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
 To share this track with another GBrowse genome browser,
-first copy the URL below, then go to the other GBrowse and
-paste the URL into the "Enter remote track URL" field at
-the bottom of the page. If this track is from an uploaded file,
-then be aware that sharing this URL with another user potentially
-allows <b>all</b> your uploaded data to be viewable by that user.
+first copy the URL below, then go to the other GBrowse, 
+select the "Upload and Share Tracks" tab and
+paste the URL into the "Import tracks" section at the bottom.
 END
 
  SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
 To share all currently selected tracks with another GBrowse genome
-browser, first copy the URL below, then go to the other GBrowse and
-paste the URL into the "Enter remote track URL" field at
-the bottom of the page. If any of the selected tracks are from an uploaded file,
-then be aware that sharing this URL with another user potentially
-allows <b>all</b> your uploaded data to be viewable by that user.
+browser, first copy the URL below, then go to the other GBrowse,
+select the "Upload and Share Tracks" tab and
+paste the URL into the "Import tracks" section at the bottom.
 END
 
  SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,

@@ -364,6 +364,17 @@ sub clear_usertracks {
     delete $self->{_user_tracks};
 }
 
+sub usertrack_labels {
+    my $self = shift;
+    return keys %{$self->{_user_tracks}{config}};
+}
+
+sub is_usertrack {
+    my $self  = shift;
+    my $label = shift;
+    return exists $self->{_user_tracks}{config}{$label};
+}
+
 sub user_style {
     my $self = shift;
     my $type = shift;

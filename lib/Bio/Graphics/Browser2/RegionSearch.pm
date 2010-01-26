@@ -323,6 +323,7 @@ sub search_features_locally {
 	    }
 	    ); 
  	my $features = $region->search_features($args);
+	warn $features ? "got @$features" : "got no features" if DEBUG;
 	next unless $features && @$features;
 	$self->add_dbid_to_features($dbid,$features);
 	push @found,@$features;

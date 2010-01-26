@@ -1266,6 +1266,7 @@ sub handle_gff_dump {
 	$dumper->print_scan();
     }
     else {
+	$dumper->state($self->state);
 	$dumper->get_segment($segment) or return 1;
 	if ($actions{save} && $actions{gff3}) {
 	    print header( -type                => $dumper->get_mime_type,

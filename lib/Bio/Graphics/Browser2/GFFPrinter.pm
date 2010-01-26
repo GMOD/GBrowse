@@ -165,18 +165,28 @@ sub get_segment {
     my $tracks     = $self->get_labels;
     $tracks        = $self->all_databases unless $tracks;
 
-    # Find the segment - it may be hiding in any of the databases.
-    my (%seenit,$s,$db);
-    for my $track ('general',@$tracks) {
-	$db = $datasource->open_database($track) or next;
-	next if $seenit{$db}++;
-	($s) = $db->segment(-name  => $seqid,
-			    -start => $start,
-			    -stop  => $end);
-	last if $s;
+    my $search = Bio::Graphics::Browser2::RegionSearch->new(
+	{
+	    source => $datasource,
+	    state  => $self->state || {},
+	}
+	);
+    $search->init_databases();
+    warn "segment = $segment";
+    my ($f) = $search->search_features({-search_term=>$segment});
+    unless ($f) {
+	print header('text/plain'), "# The landmark named $segment was not found.\n";
+	return;
     }
-    $self->segment($s);
-    return $s;
+    $self->segment($f);
+    return $f;
+}
+
+sub state {
+    my $self = shift;
+    my $d    = $self->{state};
+    $self->{state} = shift if @_;
+    $d;
 }
 
 sub all_databases {
@@ -260,7 +270,7 @@ sub labels_to_files {
     my $search = Bio::Graphics::Browser2::RegionSearch->new(
 	{
 	    source => $data_source,
-	    state  => { },
+	    state  => $self->state || {},
 	}
 	);
     $search->init_databases();

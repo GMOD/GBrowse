@@ -66,3 +66,5 @@ debug_alignment.pl
 htdocs/databases/
 track001.ctgA.1202327456.wig
 CAlign\.c
+\.diff$
+\.sqlite3

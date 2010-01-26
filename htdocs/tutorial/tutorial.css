@@ -41,3 +41,8 @@ TD.pre {
 I.code {
    font-family: sans-serif;
 }
+BLOCKQUOTE.center {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+}

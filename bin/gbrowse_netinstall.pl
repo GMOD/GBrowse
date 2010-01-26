@@ -219,6 +219,10 @@ unless ( eval "use GD 2.31; 1" ) {
 
 print STDERR "\n*** Installing prerequisites for BioPerl ***\n";
 
+if (!( eval "require Module::Build; 1") or $windows ) {
+    CPAN::Shell->force('install','Module::Build');
+}
+
 if ($windows and !eval "use DB_File; 1") {
   print STDERR "Installing DB_File for BioPerl.\n";
 
@@ -226,6 +230,7 @@ if ($windows and !eval "use DB_File; 1") {
   system("ppm install http://ppm.tcool.org/archives/DB_File.ppd");
 }
 system("ppm install SVG") if $windows;
+CPAN::Shell->install('Test::Harness');
 CPAN::Shell->install('GD::SVG');
 CPAN::Shell->install('IO::String');
 CPAN::Shell->install('Text::Shellwords');
@@ -254,7 +259,7 @@ unless ($skip_bioperl) {
     #  system("ppm install --force $bioperl_index");
     #} else {
         # recent versions of Module::Build fail to install without force!
-        CPAN::Shell->force('Module::Build') unless eval "require Module::Build; 1";
+        #CPAN::Shell->force('Module::Build') unless eval "require Module::Build; 1";
         do_install(BIOPERL,
                    'bioperl.tgz',
                    BIOPERL_VERSION,

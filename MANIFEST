@@ -343,7 +343,9 @@ htdocs/tutorial/conf_files/HEADER.html
 htdocs/tutorial/conf_files/volvox.conf
 htdocs/tutorial/conf_files/volvox_final.conf
 htdocs/tutorial/conf_files/volvox_final_withPhylo.conf
+htdocs/tutorial/conf_files/volvox_halfway.conf
 htdocs/tutorial/conf_files/volvox_Phylo.conf
+htdocs/tutorial/conf_files/volvox_quarter.conf
 htdocs/tutorial/data_files/dog1_1700.wig
 htdocs/tutorial/data_files/elegans.fa
 htdocs/tutorial/data_files/elegans_acceptor.gff3

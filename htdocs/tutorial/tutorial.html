@@ -263,6 +263,7 @@ pico or vi on Unix systems) and confirm that the path to the volvox
 database directory in this section is correct:
 
 <pre>
+[GENERAL]
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor memory
 		-dir     '$HTDOCS/databases/volvox'
@@ -461,9 +462,36 @@ directory).
 
 <p>
 
-Ignore all the stuff at the top of the file, and focus on the last
-little bit, which starts with the line: <code>### TRACK CONFIGURATION
-###</code>:
+At the top is a [GENERAL] section which defines basic things such as
+the database backend to use, the path to the database files, which
+plugins to activate, and which tracks to show by default. In the
+volvox.conf example:
+
+<blockquote class="example"><pre>
+[GENERAL]
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor memory
+		-dir '$HTDOCS/databases/volvox'
+
+# just the basic track dumper plugin
+plugins     = TrackDumper
+
+# list of tracks to turn on by default
+default features = ExampleFeatures
+
+# size of the region
+region segment         = 10000
+
+# examples to show in the introduction
+examples = ctgA
+
+# feature to show on startup
+initial landmark = ctgA:5000..10000
+</pre></blockquote>
+
+We'll discuss how to customize these options later. For now, focus on
+the section at the bottom of the file, which starts with the line:
+<code>### TRACK CONFIGURATION ###</code>:
 
 <blockquote class="example"><pre>
 [ExampleFeatures]
@@ -2374,7 +2402,7 @@ g_color      = black
 t_color      = red
 show_border  = 1
 trace_height = 80
-trace_prefix = http://localhost/gbrowse/tutorial/data_files/
+trace_prefix = http://localhost/gbrowse2/tutorial/data_files/
 key          = Traces
 </pre></blockquote>
 
@@ -2930,10 +2958,11 @@ href="data_files/volvox_all.gff3">volvox_all.gff3</a> and <a
 href="data_files/volvox_all.fa">volvox_all.fa</a>.  <p>
 
 Now find the option "plugins=" at the top of volvox.conf, and modify
-it to activate the Aligner and RestrictionAnnotator plugins:
+it to activate the Aligner and RestrictionAnnotator plugins (the
+TrackDumper plugin is already turned on):
 
 <blockquote class="example"><pre>
-plugins = Aligner RestrictionAnnotator
+plugins = TrackDumper Aligner RestrictionAnnotator
 </pre></blockquote>
 
 <p>
@@ -4642,13 +4671,142 @@ We will illustrate using the in-memory adaptor. (In real life, you
 will most likely want to do this with database backends such as
 SQLite.) In $HTDOCS/databases, create three new directories named
 "volvox_scaffold", "volvox_alignments" and "volvox_genes". Make them
-writable by the web user, as usual. Now distribute the various volvox
+writable by the web user, as usual. Distribute the various volvox
 database files among them as follows:
 
 <blockquote class="example"><pre>
-volvox_scaffold/
-    
+volvox_basic/
+      volvox_remarks.gff3
+      volvox_bacs.gff3
+      volvox.fa
+
+volvox_genes/
+      volvox_genes.gff3
+      volvox_genes_simple.gff3
+      volvox_geneproducts.gff3
+      volvox_domains.gff3
+
+volvox_alignments/
+      volvox_matches.gff3
+      volvox_est_targets.gff3
+      volvox_trace.gff3
+      ests.fa
+
+volvox_expression/
+      volvox_microarray.gff3
+      volvox_microarray.wig
+      track001.ctgA.1202327456.wig
 </pre></blockquote>
+
+<p>
+
+Copy the configuration file <a
+href="conf_files/volvox_refactored.conf">volvox_refactored.conf</a>
+into <b>$CONF</b>, and edit GBrowse.conf to point to it:
+
+<blockquote class="example"><pre>
+[volvox]
+description = Refactored Volvox Tutorial
+path        = volvox_refactored.conf
+</pre></blockquote>
+
+<p>
+
+When you reload the tutorial datasource, it should look and act just
+like the original version. Now let's take a peek at the
+volvox_refactored.conf configuration file and see what has changed:
+
+<blockquote class="example"><pre>
+[GENERAL]
+database      = basic
+
+plugins     = Aligner RestrictionAnnotator BatchDumper TrackDumper
+default features = ExampleFeatures
+...
+</pre></blockquote>
+
+The first thing you may notice is that the <b>db_adaptor</b> and <b>db_args</b>
+options, which specify the type and location of the backend database,
+have been replaced by a single line "database = basic". This is
+because the refactored version of this example uses multiple
+databases, each with a different symbolic name. The <b>database</b> option
+in the [GENERAL] section simply sets up the default backend to use if
+others are not specified.
+
+<p>
+
+Now moving down in the configuration file, you will see a new section
+consisting of a series of new database sections. There are four of
+them:
+
+<blockquote class="example"><pre>
+[basic:database]
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor memory
+		-dir '$HTDOCS/databases/volvox_basic'
+
+[genes:database]
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor memory
+		-dir '$HTDOCS/databases/volvox_genes'
+
+[alignments:database]
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor memory
+		-dir '$HTDOCS/databases/volvox_alignments'
+
+[expression:database]
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor memory
+		-dir '$HTDOCS/databases/volvox_expression'
+</pre></blockquote>
+
+Each section begins with a stanza header of the form
+[<i>database_name</i>:database]. Each one has the <b>db_adaptor</b>
+and <b>db_args</b> options. In this example, we are using the
+in-memory adaptor for each of the databases, but the nice thing about
+this system is that you are free to mix and match any of the backends
+that GBrowse supports, for example using in-memory adaptors for small,
+rapidly-changing data sets, and the MySQL or Oracle adaptors for
+larger datasets.
+
+<p>
+
+Now look at a few track stanzas:
+
+<blockquote class="example"><pre>
+[Motifs:overview]
+database     = genes
+feature      = polypeptide_domain
+glyph        = span
+height       = 5
+description  = 1
+label        = 1
+key          = Motifs
+
+[ExampleFeatures]
+feature      = remark
+glyph        = generic
+stranded     = 1
+bgcolor      = orange
+height       = 10
+key          = Example Features
+
+[Alignments]
+database     = alignments
+feature      = match
+glyph        = segments
+category     = Alignments
+key          = Example alignments
+</pre></blockquote>
+
+Notice the <b>database</b> option in most of them. This option is
+telling GBrowse to fetch the data from the indicated database when it
+goes to display each track. The name given in the database option must
+match the name in the corresponding [...:database] stanza, or you will
+get an error. If no database option appears, then GBrowse will use the
+<b>database</b> option given in either the [TRACK DEFAULTS] or
+[GENERAL] section, looking in TRACK DEFAULTS first and then GENERAL.
 
 <hr>
 
@@ -4686,6 +4844,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Jan 26 22:06:26 EST 2010
+Last modified: Wed Jan 27 07:41:15 EST 2010
 <!-- hhmts end -->
 </body> </html>

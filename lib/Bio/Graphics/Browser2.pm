@@ -18,8 +18,8 @@ use Carp 'croak','carp';
 
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 
-my %CONFIG_CACHE;
-our $VERSION = 1.9990;
+my (%CONFIG_CACHE,$HAS_DBFILE,$HAS_STORABLE);
+our $VERSION = '2.00';
 
 sub open_globals {
     my $self = shift;
@@ -215,8 +215,22 @@ sub user_account_db        { shift->setting(general=>'user_account_db')
 sub admin_account          { shift->setting(general=>'admin_account') }
 sub admin_dbs              { shift->setting(general=>'admin_dbs')     }
 
-sub session_driver         { shift->setting(general=>'session driver') 
-				 || 'driver:file;serializer:default' }
+sub session_driver {
+    my $self = shift;
+    my $driver = $self->setting(general=>'session driver');
+    return $driver if $driver;
+
+    $HAS_DBFILE = eval "require DB_File; 1" || 0
+	unless defined $HAS_DBFILE;
+    $HAS_STORABLE = eval "require Storable; 1" || 0
+	unless defined $HAS_STORABLE;
+
+    my $sdriver    = $HAS_DBFILE ? 'db_file' : 'file';
+    my $serializer = $HAS_STORABLE ? 'storable' : 'default';
+
+    return "driver:$sdriver;serializer:$serializer";
+}
+
 sub session_args    {
   my $self = shift;
   my %args = shellwords($self->setting(general=>'session args')||'');

@@ -342,7 +342,7 @@ sub get_seq {
 
     # the sequence must live in the database flagged in the [GENERAL] section
     my $db    = $self->source->open_database() or return; 
-    my $seg   = $db->segment($ref,$start,$end) or return;
+    my ($seg) = $db->segment($ref,$start,$end) or return;
     return $strand >= 0 ? $seg->seq : $seg->seq->revcom;
 }
 

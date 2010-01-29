@@ -1,5 +1,10 @@
 2.0     * The "admin" user can upload public tracks. Use gbrowse_set_admin_passwd.pl to
 	  initialize the account.
+	* If session arguments not specified in GBrowse.conf, software will pick the fastest
+	  version.
+        * Brought tutorial into synch with new features and syntax.
+        * "Build demo" now works correctly.
+        * Install registration feature activated.
 1.9990  * Re-added the ability to group tracks into NxM tables.
 	* Fixed bug in which database ID was not filled in on the clickable imagemap when
 	  multiple features are shown.

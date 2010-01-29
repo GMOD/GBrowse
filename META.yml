@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 1.999
+version: 2.00
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -22,13 +22,18 @@ requires:
   Storable: 0
   perl: 5.008
 recommends:
+  Crypt::SSLeay: 0
   DBD::Pg: 0
   DBD::mysql: 0
   DBI: 0
   DB_File::Lock: 0
+  Digest::SHA1: 0
   FCGI: 0
   File::NFSLock: 0
   GD::SVG: 0
+  Math::BigInt: 0
+  Net::OpenID::Consumer: 0
+  Net::SMTP::SSL: 0
   Safe::World: 0
 provides:
   Bio::DB::GFF::Aggregator::match_gap:
@@ -42,6 +47,8 @@ provides:
   Bio::DB::GFF::Aggregator::wormbase_gene:
     file: lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
     version: 0.30
+  Bio::DB::SeqFeature::Store::BedLoader:
+    file: lib/Bio/DB/SeqFeature/Store/BedLoader.pm
   Bio::DB::Tagger:
     file: lib/Bio/DB/Tagger.pm
     version: 1.00
@@ -53,9 +60,11 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser2:
     file: lib/Bio/Graphics/Browser2.pm
-    version: 1.999
+    version: 2.00
   Bio::Graphics::Browser2::Action:
     file: lib/Bio/Graphics/Browser2/Action.pm
+  Bio::Graphics::Browser2::AdminTracks:
+    file: lib/Bio/Graphics/Browser2/UserTracks.pm
   Bio::Graphics::Browser2::AuthorizedFeatureFile:
     file: lib/Bio/Graphics/Browser2/AuthorizedFeatureFile.pm
   Bio::Graphics::Browser2::CAlign:
@@ -68,6 +77,8 @@ provides:
     file: lib/Bio/Graphics/Browser2/DataLoader.pm
   Bio::Graphics::Browser2::DataLoader::bam:
     file: lib/Bio/Graphics/Browser2/DataLoader/bam.pm
+  Bio::Graphics::Browser2::DataLoader::bed:
+    file: lib/Bio/Graphics/Browser2/DataLoader/bed.pm
   Bio::Graphics::Browser2::DataLoader::featurefile:
     file: lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
   Bio::Graphics::Browser2::DataLoader::generic:
@@ -143,6 +154,8 @@ provides:
     file: lib/Bio/Graphics/Browser2/GFFhelper.pm
   LRUCache:
     file: lib/Bio/Graphics/Browser2/DataBase.pm
+  MyFeatureFileLoader:
+    file: lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
 generated_by: Module::Build version 0.3
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

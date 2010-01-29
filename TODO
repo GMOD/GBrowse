@@ -1,9 +1,8 @@
-* Document the action=list and action=scan commands.
-* Document other aspects of the REST API.
-* Rewrite DAS server to work with 2.0.
-* Add a feature that adds an imported track via a URL, so that people
-  can mail uploaded track URLs to each other and have them appear with
-  a single click.
+* Document the REST API; in particular the action=list and action=scan commands.
+* DAS Server support.
+* Download underlying track data via single click on track title.
+* Bring internationalization support up to date.
+* Support for BigWig and remote BAM files.
 
 $Id: TODO,v 1.15 2006-12-02 21:34:26 lstein Exp $
 

@@ -37,7 +37,6 @@ sub ACTION_demo {
     my $self = shift;
     $self->depends_on('config_data');
 
-    my $home = File::Spec->catfile($self->base_dir(),'blib');
     my $dir  = tempdir(
 	'GBrowse_demo_XXXX',
 	TMPDIR=>1,
@@ -47,6 +46,7 @@ sub ACTION_demo {
 	|| GBrowseGuessDirectories->portdemo();
     my $modules = $self->config_data('apachemodules')
 	|| GBrowseGuessDirectories->apachemodules;
+    my $cgiurl  = $self->cgiurl;
 
     mkdir "$dir/conf";
     mkdir "$dir/htdocs";
@@ -61,9 +61,12 @@ sub ACTION_demo {
     my $f    = IO::File->new('MANIFEST');
     while (<$f>) {
 	chomp;
-	if (m!^(conf|htdocs|cgi-bin)!) {
+	if (m!^(conf|htdocs)!) {
 	    $self->copy_if_modified($_ => $dir);
+	} elsif (m!cgi-bin!) {
+	    $self->copy_if_modified(from => $_,to_dir => "$dir/cgi-bin/gb2",flatten=>1);
 	} elsif (m!^sample_data!) {
+	    chdir $self->base_dir();
 	    my ($subdir) = m!^sample_data/([^/]+)/!;
 	    $self->copy_if_modified(from    => $_,
 				    to_dir  => "$dir/htdocs/databases/$subdir",
@@ -72,27 +75,30 @@ sub ACTION_demo {
 	}
     }
     close $f;
+    chdir $self->base_dir;
     open STDOUT,"<&",$saveout;
 
     # fix GBrowse.conf to point to correct directories
-    for my $f ('GBrowse.conf',
-	       'yeast_simple.conf',
-	       'yeast_chr1+2.conf',
-	       'pop_demo.conf',
-	       'yeast_renderfarm.conf') {
-	my $in  = IO::File->new("$dir/conf/$f")         or die $!;
-	my $out = IO::File->new("$dir/conf/$f.new",'>') or die $!;
+    for my $f ("$dir/conf/GBrowse.conf",
+	       "$dir/conf/yeast_simple.conf",
+	       "$dir/conf/yeast_chr1+2.conf",
+	       "$dir/conf/pop_demo.conf",
+	       "$dir/conf/yeast_renderfarm.conf",
+	       "$dir/htdocs/index.html") {
+	my $in  = IO::File->new($f)         or die "$dir/conf/$f: $!";
+	my $out = IO::File->new("$f.new",'>') or die $!;
 	while (<$in>) {
 	    s!\$CONF!$dir/conf!g;
 	    s!\$HTDOCS!$dir/htdocs!g;
 	    s!\$DATABASES!$dir/htdocs/databases!g;
 	    s!\$TMP!$dir/tmp!g;
+	    s/\$CGIURL/$cgiurl/g;
 	    s!\$VERSION!$self->dist_version!eg;
 	    s!^url_base\s*=.+!url_base               = /!g;
 	    $out->print($_);
 	}
 	close $out;
-	rename "$dir/conf/$f.new","$dir/conf/$f";
+	rename "$f.new",$f;
     }
     
     my $conf_data = $self->httpd_conf($dir,$port);
@@ -629,8 +635,7 @@ sub substitute_in_place {
     my $wwwuser  = $self->config_data('wwwuser');
     my $perl5lib = $self->perl5lib || '';
     my $installscript = $self->scriptdir;
-    (my $cgiurl = $cgibin) =~ s!^.+/cgi-bin!/cgi-bin!;
-    ($cgiurl    = $cgibin) =~ s!^.+/CGI-Executables!/cgi-bin!; #Macs and their crazy paths
+    my $cgiurl   = $self->cgiurl;
 
     while (<$in>) {
 	s/\$INSTALLSCRIPT/$installscript/g;
@@ -731,7 +736,8 @@ END
 sub gbrowse_demo_conf {
     my $self = shift;
     my ($port,$dir) = @_;
-    my $inc  = "$dir/blib/lib:$dir/blib/arch:$dir/lib";
+    my $blib = File::Spec->catfile($self->base_dir(),$self->blib);
+    my $inc  = "$blib/lib:$blib/arch";
     my $more = $self->added_to_INC;
     $inc    .= ":$more" if $more;
 
@@ -824,6 +830,14 @@ sub ownership_warning {
     my $self = shift;
     my ($path,$owner) = @_;
     warn "*** WARNING: Could not change ownership of $path to '$owner'.\n\tPlease change manually using 'sudo chown -R $owner $path' ***\n";
+}
+
+sub cgiurl {
+    my $self = shift;
+    my $cgibin  = $self->config_data('cgibin');
+    (my $cgiurl = $cgibin) =~ s!^.+/cgi-bin!/cgi-bin!;
+    $cgiurl =~ s!^.+/CGI-Executables!/cgi-bin!; #Macs and their crazy paths
+    return $cgiurl;
 }
 
 1;

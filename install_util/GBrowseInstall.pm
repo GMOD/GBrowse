@@ -856,11 +856,12 @@ configuration files, and static image/support files will be installed.
 One or more of the config options can be set on the command 
 line when first running perl Build.PL:
 
-  perl Build.PL --conf=/etc/growse2 \            # config files
-                --htdocs=/var/www/gbrowse2   \   # static files
-                --cgibin=/usr/lib/cgi-bin/gb2 \  # CGI directory
-                --wwwuser=www-data \             # apache user
-                --portdemo=8000 \                # demo web site port
+  perl Build.PL --conf=/etc/gbrowse2          \  # config files
+                --htdocs=/var/www/gbrowse2    \  # static files
+                --cgibin=/usr/lib/cgi-bin/gb2 \  # CGI executables
+                --wwwuser=www-data            \  # apache user
+                --tmp=/var/tmp/gbrowse2       \  # temporary data
+                --portdemo=8000               \  # demo web site port
                 --apachemodules=/usr/lib/apache2/modules  # apache loadable modules
 
 =item reconfig

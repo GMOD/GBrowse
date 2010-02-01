@@ -336,7 +336,11 @@ END
 
   # Make room if target region is not too close to the ends
   my ($new_start,$new_end);
+
   my ($edge)  = sort {$a <=> $b} (500,$segment->length/10);
+  # round it off if it happens to be a non-integer
+  $edge = int($edge + 0.5);
+
   if ($rb >= $segment->end - $edge) {
     $new_end = $rb + $edge;
   }

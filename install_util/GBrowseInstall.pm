@@ -328,7 +328,6 @@ sub apache_conf {
     my $cgibin  = $self->config_data('cgibin');
     my $tmp     = $self->config_data('tmp');
     my $cgiroot = basename($cgibin);
-    my $docs    = basename($dir);
     my $perl5lib= $self->added_to_INC;
     my $inc      = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
     my $fcgi_inc = $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
@@ -338,8 +337,8 @@ sub apache_conf {
         : '';
 
     return <<END;
-Alias        "/$docs/i/" "$tmp/images/"
-Alias        "/$docs"    "$dir"
+Alias        "/gbrowse2/i/" "$tmp/images/"
+Alias        "/gbrowse2"    "$dir"
 ScriptAlias  "/gb2"      "$cgibin"
 
 <Directory "$dir">

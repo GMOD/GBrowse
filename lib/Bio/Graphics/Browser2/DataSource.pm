@@ -679,25 +679,26 @@ by the given track label. If no track label is given then the
 sub db_settings {
   my $self  = shift;
   my $track = shift;
+  my $length= shift;
 
   $track ||= 'general';
 
   # caching to avoid calling setting() too many times
-  return @{$DB_SETTINGS{$self,$track}} if $DB_SETTINGS{$self,$track};
+  my $label = $self->semantic_label($track,$length);
+  return @{$DB_SETTINGS{$self,$label}} if $DB_SETTINGS{$self,$label};
 
   # if the track contains the "database" option, then it is a symbolic name
   # that indicates a [symbolic_name:database] section in this file or the globals
   # file.
-  my ($symbolic_db_name,$section,$basename,$length);
+  my ($symbolic_db_name,$section,$basename);
 
   if ($track =~ /(.+):(\d+)$/) {
       $basename = $1;
       $length   = $2;
   } else {
       $basename = $track;
-      $length   = 1;
+      $length   ||= 1;
   }
-
 
   if ($basename =~ /:database$/) {
       $section = $symbolic_db_name = $basename;
@@ -743,7 +744,7 @@ sub db_settings {
   my @result = ($self->{arg2dbid}{$key},$adaptor,@argv);
 
   # cache settings
-  $DB_SETTINGS{$self,$track} = \@result;
+  $DB_SETTINGS{$self,$label} = \@result;
 
   return @result;
 }
@@ -758,11 +759,12 @@ call repeatedly.
 
 sub open_database {
   my $self  = shift;
-  my $track = shift;
+  my $track  = shift;
+  my $length = shift;
 
   $track  ||= 'general';
 
-  my ($dbid,$adaptor,@argv) = $self->db_settings($track);
+  my ($dbid,$adaptor,@argv) = $self->db_settings($track,$length);
   my $db                    = Bio::Graphics::Browser2::DataBase->open_database($adaptor,@argv);
 
   # do a little extra stuff the first time we see a new database

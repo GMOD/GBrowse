@@ -1,3 +1,4 @@
+* Fix all /gbrowse2 hard-coded instances.
 * Document the REST API; in particular the action=list and action=scan commands.
 * DAS Server support.
 * Download underlying track data via single click on track title.

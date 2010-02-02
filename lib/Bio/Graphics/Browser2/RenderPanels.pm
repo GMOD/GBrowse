@@ -1383,7 +1383,8 @@ sub add_features_to_track {
   # sort tracks by the database they come from
   my (%db2label,%db2db);
   for my $label (@$labels) {
-    my $db = eval { $source->open_database($label)};
+      warn "opening $label @ $length";
+    my $db = eval { $source->open_database($label,$length)};
     unless ($db) { warn "Couldn't open database for $_: $@"; next; }
     $db2label{$db}{$label}++;
     $db2db{$db}  =  $db;  # cache database object
@@ -1796,7 +1797,7 @@ sub create_track_args {
   my @args;
   if ($source->semantic_setting($label=>'global feature',$length)) {
       eval { # honor the database indicated in the track config
-	  my $db    = $self->source->open_database($label);
+	  my $db    = $self->source->open_database($label,$length);
 	  my $class = eval {$segment->seq_id->class} || eval{$db->refclass};
 	  $segment  = $db->segment(-name  => $segment->seq_id,
 				   -start => $segment->start,

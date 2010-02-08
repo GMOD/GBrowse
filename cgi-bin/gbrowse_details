@@ -343,6 +343,7 @@ sub get_seq {
     # the sequence must live in the database flagged in the [GENERAL] section
     my $db    = $self->source->open_database() or return; 
     my ($seg) = $db->segment($ref,$start,$end) or return;
+    return $seg->seq if eval {$f->target && $f->strand < 0 && $f->target->strand < 0};
     return $strand >= 0 ? $seg->seq : $seg->seq->revcom;
 }
 
@@ -404,6 +405,7 @@ sub print_matches {
 
     my $sdna = $src->dna or return '';
     my $tdna = $tgt->dna or return '';
+
     my $top_label = $src->seq_id;
     my $bot_label = $tgt->seq_id;
 
@@ -417,10 +419,10 @@ sub print_matches {
     ($tgt_x,$tgt_y) = ($tgt_y,$tgt_x) if $tgt->strand < 0;
 
     if ($bug) { # correct for buggy data files that show -/- alignments; really -/+
-	$tdir = +1;
-	($tgt_x,$tgt_y) = ($tgt_y,$tgt_x);
-	$tdna =~ tr/gatcGATC/ctagCTAG/;
-	$tdna = reverse $tdna;
+	$tdir = -1;
+	$sdir = 1;
+	$tgt_x = $tgt_y;
+	$tdna = reversec($tdna);
     }
     warn ("sdir = $sdir, $src_x -> $src_y / $tgt_x -> $tgt_y") if DEBUG;
     my ($top,$middle,$bottom) = do_align($src,$sdna,$tdna);
@@ -464,7 +466,7 @@ sub do_align {
 		$pad_match  .= ' ' x $count;
 	    }
 	    elsif ($op eq 'D' || $op eq 'N' || $op eq 'P') {
-		$pad_source .= substr($tdna,0,$count,'');
+		$pad_source .= substr($sdna,0,$count,'');
 		$pad_target .= '-' x $count;
 		$pad_match  .= ' ' x $count;
 	    } else {  # everything else is assumed to be a match -- revisit
@@ -715,6 +717,13 @@ sub remote_content {
 	$args{$arg} = $val;
     }
     return $contents->(\%args);
+}
+
+sub reversec {
+    my $dna = shift;
+    $dna =~ tr/gatcGATC/ctagCTAG/;
+    $dna = reverse $dna;
+    return $dna;
 }
 
 __END__

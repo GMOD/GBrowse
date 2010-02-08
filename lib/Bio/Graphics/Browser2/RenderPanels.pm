@@ -1383,7 +1383,6 @@ sub add_features_to_track {
   # sort tracks by the database they come from
   my (%db2label,%db2db);
   for my $label (@$labels) {
-      warn "opening $label @ $length";
     my $db = eval { $source->open_database($label,$length)};
     unless ($db) { warn "Couldn't open database for $_: $@"; next; }
     $db2label{$db}{$label}++;

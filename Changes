@@ -1,6 +1,9 @@
 2.01    * Fixed "multiple segment" exception in gbrowse_detail.
 	* gbrowse_details now draws alignments correctly when both reference and target
 	  report "-" strand. This happens in samtools.
+	* Fixed default location of users sqlite database; it now lives in /var/www/gbrowse2/databases
+	* Fixed SMTP configuration for login script so that unencrypted connections to gateway now
+	  work.
 2.00    * The "admin" user can upload public tracks. Use gbrowse_set_admin_passwd.pl to
 	  initialize the account.
 	* If session arguments not specified in GBrowse.conf, software will pick the fastest

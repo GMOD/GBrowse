@@ -875,7 +875,7 @@ sub do_sendmail {
 	my $smtp_info = $args->{smtp} or die "need SMTP argument";
 
 	my ($server,$port,$protocol,$username,$password) = split ':',$smtp_info;
-	$protocol ||= 'clear';
+	$protocol ||= 'plain';
 	$port     ||= $protocol eq 'plain' ? 25 : 465;
 	$protocol =~ /plain|ssl/ or die 'encryption must be either "plain" or "ssl"';
 	
@@ -884,7 +884,7 @@ sub do_sendmail {
 	my $smtp_from   = $username ? $username : $args->{from};
 
 	my $smtp_sender;
-	if ($protocol eq 'clear') {
+	if ($protocol eq 'plain') {
 	    eval "require Net::SMTP" unless Net::SMTP->can('new');
 	    $smtp_sender = 'Net::SMTP';
 	} else {

@@ -19,7 +19,7 @@ use Carp 'croak','carp';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 my (%CONFIG_CACHE,$HAS_DBFILE,$HAS_STORABLE);
-our $VERSION = '2.00';
+our $VERSION = '2.01';
 
 sub open_globals {
     my $self = shift;

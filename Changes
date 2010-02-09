@@ -1,3 +1,5 @@
+2.02    * Fixed bug in parsing of configuration lines from cut-and-paste uploads
+	* Added ability to look at current session's user and upload IDs.
 2.01    * Fixed "multiple segment" exception in gbrowse_detail.
 	* gbrowse_details now draws alignments correctly when both reference and target
 	  report "-" strand. This happens in samtools.

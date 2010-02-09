@@ -68,6 +68,7 @@ END
 	my $category = $self->category;
 	for my $line (@lines) {
 	    chomp $line;
+	    warn $line;
 	    if ($line =~ /^\s*database/) {
 		next;   # disallowed
 	    }
@@ -81,7 +82,7 @@ END
 	    } elsif ($line =~ /^feature/) {
 		$seen_feature++;
 		print $conf $line,"\n";
-	    } elsif (!$line && $old_trackname && !$seen_feature) {
+	    } elsif ($line !~ /\S/ && $old_trackname && !$seen_feature) {
 		print $conf "feature = $old_trackname\n\n";
 		undef $old_trackname;
 		undef $seen_feature;

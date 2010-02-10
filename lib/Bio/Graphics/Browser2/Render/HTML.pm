@@ -606,6 +606,11 @@ sub render_actionmenu {
 			       -style       => 'cursor:pointer'
 			      },
 			      $self->tr('ABOUT_DSN'));
+    my $about_me_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_me')",
+			       -href        => 'javascript:void(0)',
+			       -style       => 'cursor:pointer'
+			      },
+			      $self->tr('ABOUT_ME'));
     my $plugin_link   = $self->plugin_links($self->plugins);
     my $reset_link    = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
 
@@ -628,6 +633,7 @@ sub render_actionmenu {
 			     li({-class=>'divider'},''),
 			     li($about_gb_link),
 			     li($about_dsn_link),
+			     li($about_me_link),
 			  )),
 	);
     return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));

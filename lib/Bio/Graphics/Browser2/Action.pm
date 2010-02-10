@@ -624,6 +624,20 @@ sub ACTION_about_dsn {
     return (200,'text/html',$html)
 }
 
+sub ACTION_about_me {
+    my $self = shift;
+    my $q    = shift;
+    my $state = $self->state;
+
+    my $html = $q->div(
+	$q->h2('Session IDs'),
+	$q->p('If you wish to use a script to upload or download browser data from this session',
+	      'you will need the user and/or upload IDs for the currently active session.'),
+	$q->p("Your   userID is",$q->b($state->{userid})),
+	$q->p("Your uploadID is",$q->b($state->{uploadid})));
+    return (200,'text/html',$html);
+}
+
 sub ACTION_list {
     my $self = shift;
     my $q    = shift;

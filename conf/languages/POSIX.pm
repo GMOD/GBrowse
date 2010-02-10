@@ -175,6 +175,8 @@ END
 
    ABOUT_DSN    => 'About this database...',
 
+   ABOUT_ME    => 'Show my user ID...',
+
    ABOUT_NAME   => 'About <i>%s</i>...',
 
    REDISPLAY   => 'Redisplay',

@@ -12,7 +12,7 @@ use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
 use Text::Tabs;
 
-use constant JS    => '/gbrowse/js';
+use constant JS    => '/gbrowse2/js';
 use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
 use constant MAXIMUM_EDITABLE_UPLOAD => 1_000_000; # bytes
@@ -295,7 +295,7 @@ sub render_html_head {
 
   # pick stylesheets;
   my @extra_headers;
-  my @style = shellwords($self->setting('stylesheet') || '/gbrowse/gbrowse.css');
+  my @style = shellwords($self->setting('stylesheet') || '/gbrowse2/css/gbrowse.css');
   for my $s (@style) {
       my ($url,$media) = $s =~ /^([^(]+)(?:\((.+)\))?/;
       $media ||= 'all';
@@ -308,7 +308,7 @@ sub render_html_head {
 
   my @stylesheets;
   my $titlebar   = 'css/titlebar-default.css';
-  my $stylesheet = $self->setting('stylesheet')||'/gbrowse/gbrowse.css';
+  my $stylesheet = $self->setting('stylesheet')||'/gbrowse2/css/gbrowse.css';
   push @stylesheets,{src => $self->globals->resolve_path('css/tracks.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/karyotype.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/dropdown.css','url')};
@@ -346,7 +346,7 @@ sub render_balloon_settings {
 
     my $default_style   = $source->setting('balloon style') || 'GBubble';;
     my $custom_balloons = $source->setting('custom balloons') || "";
-    my $balloon_images  = $self->globals->balloon_url() || '/gbrowse/images/balloons';
+    my $balloon_images  = $self->globals->balloon_url() || '/gbrowse2/images/balloons';
     my %config_values   = $custom_balloons =~ /\[([^\]]+)\]([^\[]+)/g;
 
     # default image path is for the default balloon set

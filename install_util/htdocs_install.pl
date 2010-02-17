@@ -18,7 +18,7 @@ foreach (@ARGV) {
 }
 
 my %options = map {split /=/} @ARGV;
-my $root      =  $options{GBROWSE_ROOT} || 'gbrowse';
+my $root      =  $options{GBROWSE_ROOT} || 'gbrowse2';
 my $ht_target = "$options{HTDOCS}/$root";
 
 print "Installing stylesheet and images...\n";

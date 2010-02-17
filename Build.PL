@@ -52,6 +52,8 @@ my $build = GBrowseInstall->new(
 	'bin/gbrowse_create_useraccount_db.pl',
 	'bin/gbrowse_set_admin_passwd.pl',
 	'bin/wiggle2gff3.pl',
+        'bin/gbrowse_syn_load_alignment_database.pl',
+        'bin/gbrowse_syn_load_alignments_msa.pl',
 # not sure if these still work
 #	'bin/register_moby_services.pl',
 #	'bin/process_wormbase.pl',

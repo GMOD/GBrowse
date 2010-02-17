@@ -108,7 +108,9 @@ SelectArea.prototype.recenter = function(event) {
   }
     
   self.currentSegment = self.ref + ':' + start + '..' + end;
-  document.searchform.name.value = self.currentSegment;
+  if (document.searchform) {
+    document.searchform.name.value = self.currentSegment;
+  }
   self.submit();
 }
 
@@ -271,7 +273,9 @@ SelectArea.prototype.moveRubber = function(event) {
 
   // reset the value of the 'name' input box
   self.currentSegment = self.ref +':'+self.selectSequenceStart+'..'+(self.selectSequenceEnd-1);
-  document.searchform.name.value = self.currentSegment;
+  if (document.searchform) {
+    document.searchform.name.value = self.currentSegment;
+  } 
 
   // size and appearance of the "rubber band" select box
   YAHOO.util.Dom.setStyle(self.selectBox,'width','1px');
@@ -538,7 +542,10 @@ SelectArea.prototype.setOpacity = function(el,opc,bgColor) {
 
 SelectArea.prototype.submit = function() {
   var self = currentSelectArea;
-  if (self.currentSegment) {
+  if (Controller.gbrowse_syn) {
+    Controller.update_coordinates(self.currentSegment);
+  }
+  else if (self.currentSegment) {
     Controller.update_coordinates("set segment " + self.currentSegment);
   }  
 }

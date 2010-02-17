@@ -87,10 +87,36 @@ Overview.prototype.startSelection = function(event) {
   SelectArea.prototype.startRubber(self,event);
 }
 
+
+Overview.prototype.getSegment = function(i) {
+  this.ref          = document.mainform.ref.value;
+  this.segmentStart = parseInt(document.mainform.overview_start.value);
+  this.segmentEnd   = parseInt(document.mainform.overview_stop.value);
+  this.detailStart  = parseInt(document.mainform.detail_start.value);
+  this.detailEnd    = parseInt(document.mainform.detail_stop.value);
+  this.padLeft      = parseInt(document.mainform.image_padding.value);
+  this.pixelToDNA   = parseFloat(document.mainform.overview_pixel_ratio.value);
+  this.flip         = 0;
+
+  var actualWidth   = this.elementLocation(i,'width');
+  var expectedWidth = parseInt(document.mainform.overview_width.value);
+  if (actualWidth > expectedWidth) {
+    this.padLeft     += actualWidth - expectedWidth;
+  }
+  this.pixelStart   = this.left  + this.padLeft;
+}
+
 Overview.prototype.loadSegmentInfo = function() {
   // get the segment info from gbrowse CGI parameters
   
   var i = document.getElementById(self.imageId);
+
+  // Uh oh! We must be in GBrowse_syn!
+  if (Controller.gbrowse_syn) {
+    this.getSegment(i);
+    return true;
+  }
+
 
   var segment_info = Controller.segment_info;
 

@@ -151,12 +151,12 @@ false (collapsed).
 =item b<plus_img>
 
 URL of the icon to display next to the section title when the section
-is collapsed.  The default is /gbrowse/images/plus.png.
+is collapsed.  The default is /gbrowse2/images/plus.png.
 
 =item b<minus_img>
 
 URL of the icon to display next to the section title when the section
-is expanded..  The default is /gbrowse/images/minus.png.
+is expanded..  The default is /gbrowse2/images/minus.png.
 
 =item b<override>
 

@@ -1,0 +1,70 @@
+<html>
+<head>
+</head>
+<body>
+
+
+<h1>Generic Synteny Browser: Example Data</h1>
+
+These are instructions for setting up the example databases
+ provided for GBrowse_syn in the GBrowse distribution.
+
+<h2>Data Files</h2>
+The oryza data source contains genome annotations in GFF3 flat files
+for two rice species and blastz-derived whole genome aligment data between
+ the two species.
+<ul>
+<li>$HTDOCS/databases/gbrowse_syn/rice/rice.gff3
+<li>$HTDOCS/databases/gbrowse_syn/wild_rice/wild_rice.gff3
+<li>$HTDOCS/databases/gbrowse_syn/alignments/rice.aln
+</ul>
+
+
+<h2>Configuration files</h2>
+Configuration files for the two species can be found at the locations
+ below.  The oryza.synconf file is disabled pending installation of the joining database.
+ rice_synteny.conf and wild_rice_synteny.conf are the configuration files for the individual
+ species. They are already set up to use the in-memory adapter and the GFF3 flat files listed
+ above.
+<ul>
+<li>$CONF/synteny/oryza.synconf.disabled</li>
+<li>$CONF/synteny/rice_synteny.conf</li>
+<li>$CONF/synteny/wild_rice_synteny.conf</li>
+</ul>
+
+<h2>Activate the Example Data Source</h2>
+The joining database for the aligments currently only supports MySQL.  To install the database:
+<p>
+1: create the database rice_synteny (you will need a MySQL account with CREATE and GRANT privileges).  
+ substitute your own user name and password for 'user' and 'pass'. 
+<pre>
+$ mysql -uuser -ppass 
+mysql> create database rice_synteny;
+Query OK, 1 row affected (0.00 sec)
+
+mysql> grant SELECT on rice_synteny.* to 'www-data'@'localhost';
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> quit
+Bye
+</pre>
+
+2: populate the database using the <a href="http://gmod.org/wiki/GBrowse_syn_Scripts#load_alignments_msa.pl">
+ gbrowse_syn_load_alignments_msa.pl script</a> (pre-installed with GBrowse).  This will load the 
+ CLUSTALW-formated alignment file above into the database.
+
+<pre>
+$ gbrowse_syn_load_alignments_msa.pl -u user -p pass -d rice_synteny -c $HTDOCS/databases/gbrowse_syn/alignments/rice.aln
+</pre>
+
+3: active the oryza gbrwose_syn configuration file by renaming it (root-level acess required).
+
+<pre>
+# as a sudoer
+$ sudo mv $CONF/synteny/oryza.synconf.disabled $CONF/synteny/oryza.synconf
+
+# or as root
+% mv $CONF/synteny/oryza.synconf.disabled $CONF/synteny/oryza.synconf
+</pre>
+
+

@@ -27,6 +27,7 @@ cgi-bin/gbrowse_details
 cgi-bin/gbrowse_gmap
 cgi-bin/gbrowse_img
 cgi-bin/gbrowse_login
+cgi-bin/gbrowse_syn
 Changes
 conf/detail_select_menu.conf
 conf/enzymes.txt
@@ -82,6 +83,9 @@ conf/plugins/TrackDumper.pm
 conf/pop_demo.conf
 conf/slave_preload.conf
 conf/submitter_plugin.conf
+conf/synteny/oryza.synconf.disabled
+conf/synteny/rice_synteny.conf
+conf/synteny/wild_rice_synteny.conf
 conf/themes/solid_gray_colors
 conf/themes/transparent_colors
 conf/themes/warm_colors
@@ -202,6 +206,7 @@ htdocs/css/tracks.css
 htdocs/gbrowse_karyotype_help.html
 htdocs/general_help.html
 htdocs/general_help.html.zh
+htdocs/gbrowse_syn_help.html
 htdocs/gmod_cog.jpeg
 htdocs/images/backgrounds/cloud.jpg
 htdocs/images/backgrounds/lrock005.jpg
@@ -539,6 +544,13 @@ lib/Bio/Graphics/Browser2/Util.pm
 lib/Bio/Graphics/GBrowseFeature.pm
 lib/Bio/Graphics/Karyotype.pm
 lib/CGI/Toggle.pm
+lib/Legacy/DB/SyntenyBlock.pm
+lib/Legacy/DB/SyntenyIO.pm
+lib/Legacy/Graphics/Browser.pm
+lib/Legacy/Graphics/Browser/I18n.pm
+lib/Legacy/Graphics/Browser/PageSettings.pm
+lib/Legacy/Graphics/Browser/Synteny.pm
+lib/Legacy/Graphics/Browser/Util.pm
 libalign/CAlign.pm
 libalign/CAlign.xs
 libalign/Changes
@@ -558,6 +570,9 @@ sample_data/ideograms/human_cytobands.gff
 sample_data/ideograms/mouse_cytobands.gff
 sample_data/ideograms/rat_cytobands.gff
 sample_data/pop_demo/pop_demo.gff3
+sample_data/gbrowse_syn/alignments/rice.aln
+sample_data/gbrowse_syn/rice/rice.gff3
+sample_data/gbrowse_syn/wild_rice/wild_rice.gff3
 sample_data/yeast_chr1+2/yeast_chr1+2.gff3
 sample_data/yeast_scaffolds/chr1.fa
 sample_data/yeast_scaffolds/chr2.fa

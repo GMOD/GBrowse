@@ -337,7 +337,7 @@ Balloon.prototype.doShowTooltip = function() {
   
   // get the preloaded balloon contents
   var helpText = self.container.innerHTML;
-  self.actualWidth = self.getLoc(self.container,'width') + 10;
+  self.actualWidth = self.getLoc(self.container,'width') + 20;
   self.parent.removeChild(self.container);
   var wrapper = document.createElement('div');
   wrapper.id = 'contentWrapper';

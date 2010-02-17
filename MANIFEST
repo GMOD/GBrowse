@@ -570,7 +570,7 @@ sample_data/ideograms/human_cytobands.gff
 sample_data/ideograms/mouse_cytobands.gff
 sample_data/ideograms/rat_cytobands.gff
 sample_data/pop_demo/pop_demo.gff3
-sample_data/gbrowse_syn/alignments/rice.aln
+sample_data/gbrowse_syn/alignments/rice.aln.gz
 sample_data/gbrowse_syn/rice/rice.gff3
 sample_data/gbrowse_syn/wild_rice/wild_rice.gff3
 sample_data/yeast_chr1+2/yeast_chr1+2.gff3

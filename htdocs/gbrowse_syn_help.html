@@ -54,6 +54,8 @@ Bye
  CLUSTALW-formated alignment file above into the database.
 
 <pre>
+# we have to uncompress the alignment data
+$ sudo gunzip $HTDOCS/databases/gbrowse_syn/alignments/rice.aln.gz
 $ gbrowse_syn_load_alignments_msa.pl -u user -p pass -d rice_synteny -c $HTDOCS/databases/gbrowse_syn/alignments/rice.aln
 </pre>
 

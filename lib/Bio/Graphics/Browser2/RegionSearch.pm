@@ -280,7 +280,6 @@ Search only the local databases for the term.
 
 =cut
 
-
 sub search_features_locally {
     my $self        = shift;
     my $args        = shift;
@@ -581,6 +580,15 @@ sub features_by_prefix {
     return \@f;
 }
 
+sub get_seq_stream {
+    my $self = shift;
+
+    my @search_args = @_;
+    my $local_dbs = $self->local_dbs;
+    my @dbs       = map {$self->source->open_database($_)}keys %$local_dbs;
+    return Bio::Graphics::Browser2::MetaDB->new(\@search_args,\@dbs);
+}
+
 ##################################################################33
 # META SEGMENT DEFINITIONS
 ##################################################################33
@@ -640,6 +648,31 @@ sub new {
 sub next_seq {
     my $f = shift->{f};
     return shift @$f;
+}
+
+package Bio::Graphics::Browser2::MetaDB;
+
+sub new {
+    my $self = shift;
+    my ($search_args,$dbs) = @_;
+    return bless {
+	dbs     => $dbs,
+	args    => $search_args,
+	current => undef
+    },ref $self || $self;
+}
+
+sub next_seq {
+    my $self = shift;
+    while (1) {
+	if (my $iterator = $self->{current}) {
+	    my $f = $iterator->next_seq;
+	    return $f if defined $f;
+	}
+
+	my $next_db = shift @{$self->{dbs}} or return;
+	$self->{current} = $next_db->get_seq_stream(@{$self->{args}});
+    }
 }
 
 1;

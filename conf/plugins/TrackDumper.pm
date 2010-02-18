@@ -7,7 +7,7 @@ use Bio::Graphics::Browser2::GFFPrinter;
 use CGI qw(:standard *sup);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.90';
+$VERSION = '1.00';
 
 @ISA = qw/ Bio::Graphics::Browser2::Plugin /;
 
@@ -24,8 +24,9 @@ sub config_defaults {
   return { 
 	  version     => 3,
 	  mode        => 'selected',
-	  disposition => 'view',
+	  disposition => 'save',
 	  coords      => 'absolute',
+	  region      => 'selected',
 	  embed       => 0,
 	  print_config=> 1,
 	 };
@@ -56,7 +57,16 @@ sub configure_form {
                                        2.5 => '2.5*',
 				       3   => '3'},
 			  -default => $current_config->{version},
-			  -override => 1));
+			  -override => 1),
+  
+	       popup_menu(-name=>$self->config_name('region'),
+			  -default=>$current_config->{region},
+			  -override=>1,
+			  -values => ['selected','all'],
+			  -labels=>{all      => 'Across entire genome',
+				    selected => 'Across currently visible region'})
+      );      
+
   autoEscape(0);
   $html .= p(
 	     radio_group(-name=>$self->config_name('disposition'),
@@ -117,11 +127,14 @@ sub dump {
   my $config        = $self->configuration;
   my $version       = $config->{version} || 3;
   my $mode          = $config->{mode}    || 'selected';
+  my $entire_genome = $config->{region} && $config->{region} eq 'all';
   my $db            = $self->database;
   my $whole_segment = $db->segment(Accession => $segment->seq_id) ||
                       $db->segment($segment->seq_id);
   my $coords        = $config->{coords};
   my $embed         = $config->{embed};
+
+  my $thing_to_dump = $entire_genome ? $segment->db : $segment;
 
   # safest thing to do is to use embedded logic
   if ($version == 3 && $config->{print_config}) {
@@ -141,14 +154,14 @@ sub dump {
 	  ($self->browser_config,
 	   $mode eq 'selected' ? [$self->selected_tracks] : ()
 	  );
-      $self->print_gff($segment,@more_feature_sets);
+      $self->print_gff($thing_to_dump,@more_feature_sets);
   }
 
   else {
-      $self->print_gff($segment,@more_feature_sets);
+      $self->print_gff($thing_to_dump,@more_feature_sets);
   }
 
-  if ( $embed ) {
+  if ( $embed && !$entire_genome) {
     my $dna = $segment->dna;
     $dna =~ s/(\S{60})/$1\n/g;
     print ">$segment\n$dna\n" if $dna;
@@ -165,7 +178,7 @@ sub print_gff {
     my $date = localtime;
     print "##gff-version $version\n";
     print "##date $date\n";
-    print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
+    eval {print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n"};
     print "##source gbrowse GFFDumper plugin\n";
     print $mode eq 'selected' ? "##NOTE: Selected features dumped.\n"
 	: "##NOTE: All features dumped.\n";

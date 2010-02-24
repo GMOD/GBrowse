@@ -515,6 +515,7 @@ lib/Bio/Graphics/Browser2/DataLoader/bam.pm
 lib/Bio/Graphics/Browser2/DataLoader/bed.pm
 lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
 lib/Bio/Graphics/Browser2/DataLoader/generic.pm
+lib/Bio/Graphics/Browser2/DataLoader/gff.pm
 lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
 lib/Bio/Graphics/Browser2/DataLoader/sam.pm
 lib/Bio/Graphics/Browser2/DataLoader/wiggle.pm

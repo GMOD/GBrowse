@@ -606,7 +606,7 @@ sub ACTION_about_dsn {
 	my $attribution = '';
 
 	if (my $maintainer = $metadata->{maintainer}) {
-	    $maintainer    =~ s!<(.+)>!&lt;<a href="$1">$1</a>&gt;!;
+            $maintainer    =~ s!<(.+)>!&lt;<a href="mailto:$1">$1</a>&gt;!;
 	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Maintained by $maintainer");
 	}
         if (my $created    = $metadata->{created}) {

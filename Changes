@@ -3,6 +3,7 @@
 	* Added ability to look at current session's user and upload IDs.
 	* Track dumper now accepts option to dump all chromosomes; however only works with
 	  local databases.
+	* Fixed display of hard-clipped sequences in gbrowse_details.
 2.01    * Fixed "multiple segment" exception in gbrowse_detail.
 	* gbrowse_details now draws alignments correctly when both reference and target
 	  report "-" strand. This happens in samtools.

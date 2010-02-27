@@ -575,6 +575,14 @@ sub render_instructions {
   : '';
 }
 
+sub render_busy_signal {
+    my $self = shift;
+    return img({-id=>'busy_indicator',
+		-src=>'/gbrowse2/images/spinner.gif',
+		-style=>'position:absolute;top:5px;left:5px;display:none',
+		-alt=>"Working..."});
+}
+
 sub render_actionmenu {
     my $self  = shift;
     my $settings = $self->state;

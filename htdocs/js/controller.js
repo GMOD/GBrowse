@@ -326,6 +326,8 @@ var GBrowseController = Class.create({
         document.searchform.submit(); 
     }
 
+    this.busy();
+
     //Grey out image
     this.each_track(function(gbtrack) {
          if ($(gbtrack.track_image_id) != null)
@@ -334,6 +336,7 @@ var GBrowseController = Class.create({
 	 //  alert('REPORT THIS BUG: element '+gbtrack.track_image_id+' should not be null');
     });
     
+
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: {action:   'navigate',  // 'action'   triggers an async call
@@ -365,6 +368,7 @@ var GBrowseController = Class.create({
         if (results.display_details == 0){
           Controller.hide_detail_tracks();
         }
+	this.idle();
       } // end onSuccess
       
     }); // end Ajax.Request
@@ -448,6 +452,21 @@ var GBrowseController = Class.create({
     return true;
   },
 
+  busy:
+  function() {
+    var bi = $('busy_indicator');
+    var top  = document.body.scrollTop||document.documentElement.scrollTop;
+    bi.style.top=top+"px";
+    bi.style.left=5+"px";
+    bi.show();
+  },
+
+  idle:
+  function() {
+    var bi = $('busy_indicator');
+    bi.hide();
+  },
+
   rerender_track:
   function(track_id,scroll_there,nocache) {
 
@@ -455,6 +474,8 @@ var GBrowseController = Class.create({
       scroll_there = false;
     if (nocache == null)
       nocache = false;
+
+    this.busy();
 
     this.each_track(track_id,function(gbtrack) {
 
@@ -549,7 +570,10 @@ var GBrowseController = Class.create({
       }
     );
 
-    if (finished) return;
+    if (finished) {
+      this.idle();
+      return;
+    }
 
     new Ajax.Request(document.URL,{
       method:     'post',
@@ -601,7 +625,9 @@ var GBrowseController = Class.create({
           setTimeout( function() {
             Controller.get_remaining_tracks(track_keys,time_out*decay,decay,time_key)
           } ,time_out);
-        }
+        } else {
+	    Controller.idle();
+	}
       } // end onSuccess
     }); // end new Ajax.Request
 

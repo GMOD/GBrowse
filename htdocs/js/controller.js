@@ -682,7 +682,10 @@ var GBrowseController = Class.create({
       onSuccess: function(transport) {
         Balloon.prototype.hideTooltip(1);
         Controller.rerender_track(track_id,true);
-      } // end onSuccess
+      }, // end onSuccess
+      onFailure: function(transport) {
+        Balloon.prototype.hideTooltip(1);
+      }
     });
   },
 

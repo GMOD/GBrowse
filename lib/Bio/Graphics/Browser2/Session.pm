@@ -11,6 +11,7 @@ use Fcntl 'LOCK_EX','LOCK_SH';
 use File::Spec;
 use File::Path 'mkpath';
 use Digest::MD5 'md5_hex';
+use Carp 'carp';
 
 my $HAS_NFSLOCK;
 my $HAS_MYSQL;
@@ -47,6 +48,8 @@ sub new {
 
   $self->{session}    = CGI::Session->new($driver,$id,$session_args);
 
+  # never expire private (authenticated) sessions
+  $expire_time = 0 if $self->private;
   $self->{session}->expire($expire_time) 
       if defined $expire_time;
 
@@ -235,6 +238,7 @@ sub source {
 
 sub private {
     my $self = shift;
+    if (@_) { carp @_ }
     my $private = $self->{session}->param('.private');
     $self->{session}->param('.private' => shift()) if @_;
     return $private;

@@ -370,6 +370,7 @@ sub authorized_session {
 
   $id       ||= undef;
   my $session = $self->session($id);
+
   return $session unless $session->private;
 
   if ($session->match_nonce($authority,CGI::remote_addr())) {

@@ -341,6 +341,8 @@ sub authorize_user {
 
     $session->using_openid($using_openid);
 
+    warn "id=$id, username =",$session->username;
+
     $session->flush();
     return ($id,$nonce);
 }

@@ -5,6 +5,7 @@
 	  local databases.
 	* Fixed display of hard-clipped sequences in gbrowse_details.
 	* Added a spinner that displays when tracks are updating.
+	* Fixed appearance of subtrack selector.
 2.01    * Fixed "multiple segment" exception in gbrowse_detail.
 	* gbrowse_details now draws alignments correctly when both reference and target
 	  report "-" strand. This happens in samtools.

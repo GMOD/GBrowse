@@ -1382,7 +1382,6 @@ sub tableize {
 
   my $columns = $cols || 
        $self->data_source->global_setting('config table columns') || 3;
-  warn "columns = $columns";
   my $rows    = int( @$array/$columns + 0.99 );
 
   # gets the data for the defined 'category table(s)'

@@ -11,6 +11,7 @@
     <th><a href="#featurefile format">Feature File Formats</a></th>
     <th><a href="#customize">Customizing Appearance</a></th>
     <th><a href="#numeric">Displaying Intensity Plots &amp; Other Numeric Data</a></th>
+    <th><a href="#remote">Importing Annotations via the Internet</a></th>
   </tr>
 </table>
 
@@ -20,7 +21,9 @@
 
 As described in <a href="general_help.html">GBrowse help</a> this
 genome browser allows you to upload track data in a variety of
-quantitative and non-quantitative formats.
+quantitative and non-quantitative formats. You can also <a
+href="#remote">import data sets</a> that reside on network-connected
+servers by referring to their URLs.
 
 <p>
 
@@ -1048,6 +1051,46 @@ See the <a href="#glyph_specific">chart in the previous section</a>
 for the xyplot glyph options.
 
 <hr>
+
+<H2><a name="remote">Importing Annotations via the Internet</a></H2>
+
+<p>
+
+GBrowse can display annotation files that are physically located on
+internet-connected sites. Use the "Import a track" section to paste in
+the URL of an annotation file. The following URL types are allowed:
+
+<p>
+
+<dl>
+  <dt><b>The URL of a BED, GFF3, or FFF file.</b>
+  <dd>If a BED, GFF3 or FFF file is located on an internet-accessible
+      FTP or web server, paste its URL into the "remote URL" text
+      field. It will be mirrored to the GBrowse server and
+      displayed. When you update the file, the updated version will be
+      mirrored automatically.
+
+  <dt><b>The URL of a sorted, indexed BAM file.</b>
+  <dd>Sort a BAM sequence alignment file and index it with
+      SamTools. Place the BAM file and its associated .bai index file on
+      a web or FTP-accessible server and paste its URL into the field. The information in the file
+      will be retrieved as needed in a network-efficient manner. It is up to
+      you to ensure that the chromosome coordinates of the BAM file match the
+      build of the genome used by this instance of the browser, or nothing will
+      show up (you'll get blank tracks).
+
+  <dt><b>A GBrowse or DAS URL</b>
+  <dd>You can share tracks from one GBrowse
+      server to another by clicking on the <img
+      src="images/buttons/share.png"> icon. This will give you a URL
+      that you can paste into the URL import field. Alternatively, you
+      can view a large variety of annotations using the distributed
+      annotation system (DAS) protocol. The <a
+      href="http://www.dasregistry.org/">DAS registry</a> will help you
+      locate DAS servers with useful genomic data. Then cut and paste the
+      DAS server URL into the remote track URL box as before.
+</dl>
+  <hr>
 
 $Id$
 

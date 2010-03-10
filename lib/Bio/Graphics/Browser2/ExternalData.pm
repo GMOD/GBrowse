@@ -85,6 +85,7 @@ sub maybe_unzip {
     # If the file is in gzip format,
     # try to intercept and decompress the file
     if ($filename =~ /^(.+)\.gz$/) {
+	warn "WHY AM I HERE?";
 	$fh ||= IO::File->new($filename);
 	$fh->binmode(1) if $fh->can('binmode');
 	require File::Temp;

@@ -422,18 +422,21 @@ sub ACTION_import_track {
 					      error_msg=>'no URL provided'}
 	       ));
 
+    my $upload_id = $q->param('upload_id');
+
     my $render   = $self->render;
     my $state    = $self->state;
     my $session  = $render->session;
 
     my $usertracks = $render->user_tracks;
-    $state->{current_upload} = $url;
+    (my $track_name = $url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
+    $state->{uploads}{$upload_id} = [$track_name,$$];
     $session->flush();
     $session->unlock();
     
     my ($result,$msg,$tracks) = $usertracks->import_url($url);
     $session->lock('exclusive');
-    $state->{current_upload} = '';
+    delete $state->{uploads}{$upload_id};
     $session->flush();
     $session->unlock();
 

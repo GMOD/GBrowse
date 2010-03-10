@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 2.01
+version: 2.02
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -60,7 +60,7 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser2:
     file: lib/Bio/Graphics/Browser2.pm
-    version: 2.01
+    version: 2.02
   Bio::Graphics::Browser2::Action:
     file: lib/Bio/Graphics/Browser2/Action.pm
   Bio::Graphics::Browser2::AdminTracks:
@@ -83,6 +83,8 @@ provides:
     file: lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
   Bio::Graphics::Browser2::DataLoader::generic:
     file: lib/Bio/Graphics/Browser2/DataLoader/generic.pm
+  Bio::Graphics::Browser2::DataLoader::gff:
+    file: lib/Bio/Graphics/Browser2/DataLoader/gff.pm
   Bio::Graphics::Browser2::DataLoader::gff3:
     file: lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
   Bio::Graphics::Browser2::DataLoader::sam:
@@ -101,6 +103,8 @@ provides:
     file: lib/Bio/Graphics/Browser2/I18n.pm
   Bio::Graphics::Browser2::Markup:
     file: lib/Bio/Graphics/Browser2/Markup.pm
+  Bio::Graphics::Browser2::MetaDB:
+    file: lib/Bio/Graphics/Browser2/RegionSearch.pm
   Bio::Graphics::Browser2::MetaSegment:
     file: lib/Bio/Graphics/Browser2/RegionSearch.pm
   Bio::Graphics::Browser2::MetaSegment::Iterator:
@@ -154,6 +158,25 @@ provides:
     file: lib/Bio/Graphics/Browser2/GFFhelper.pm
   LRUCache:
     file: lib/Bio/Graphics/Browser2/DataBase.pm
+  Legacy::DB::SyntenyBlock:
+    file: lib/Legacy/DB/SyntenyBlock.pm
+  Legacy::DB::SyntenyIO:
+    file: lib/Legacy/DB/SyntenyIO.pm
+  Legacy::Graphics::Browser:
+    file: lib/Legacy/Graphics/Browser.pm
+    version: 1.17
+  Legacy::Graphics::Browser::I18n:
+    file: lib/Legacy/Graphics/Browser/I18n.pm
+    version: 1.01
+  Legacy::Graphics::Browser::PageSettings:
+    file: lib/Legacy/Graphics/Browser/PageSettings.pm
+  Legacy::Graphics::Browser::Synteny:
+    file: lib/Legacy/Graphics/Browser/Synteny.pm
+    version: 0.01
+  Legacy::Graphics::Browser::Util:
+    file: lib/Legacy/Graphics/Browser/Util.pm
+  Legacy::Graphics::BrowserConfig:
+    file: lib/Legacy/Graphics/Browser.pm
   MyFeatureFileLoader:
     file: lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
 generated_by: Module::Build version 0.3

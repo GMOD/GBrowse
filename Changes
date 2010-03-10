@@ -1,3 +1,4 @@
+2.03	* Can now paste BAM URLs into "import a track" field.
 2.02    * Sheldon McKay rolled gbrowse_syn back into gbrowse2
 	* Fixed bug in parsing of configuration lines from cut-and-paste uploads
 	* Added ability to look at current session's user and upload IDs.

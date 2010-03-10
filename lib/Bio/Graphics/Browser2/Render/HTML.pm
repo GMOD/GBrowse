@@ -1262,17 +1262,19 @@ sub list_userdata {
 		  ),
 	    );
 
-
 	my $go_there = join(' ',
 			    map {
 				my $label = $_;
 				my $key   = $self->data_source->setting($label=>'key');
-				'['
+				$key ? (
+				    '['
 				    .a({-href    => 'javascript:void(0)',
 					-onClick => 
 					    qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))},
 				       b($key))
 				    .']'
+				    )
+				    : ''
 			    } @track_labels);
 	
 	my $color         = $count++%2 ? 'paleturquoise': 'lightblue';

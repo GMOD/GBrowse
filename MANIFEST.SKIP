@@ -68,3 +68,4 @@ track001.ctgA.1202327456.wig
 CAlign\.c
 \.diff$
 \.sqlite3
+bin/register_moby_services.pl

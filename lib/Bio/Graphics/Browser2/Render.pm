@@ -2683,35 +2683,6 @@ sub label2key {
   $key;
 }
 
-####################################
-# Unit conversion
-####################################
-# convert bp into nice Mb/Kb units
-sub unit_label {
-  my $self = shift;
-  my $value = shift;
-  my $unit     = $self->setting('units')        || 'bp';
-  my $divider  = $self->setting('unit_divider') || 1;
-  $value /= $divider;
-  my $abs = abs($value);
-
-  my $label;
-  $label = $abs >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
-         : $abs >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
-         : $abs >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
-	 : $abs >= 1    ? sprintf("%.4g %s", $value,    $unit)
-	 : $abs >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
-	 : $abs >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
-	 : $abs >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
-	 : $abs >= 1e-9 ? sprintf("%.4g n%s",$value*1e9,$unit)
-         : sprintf("%.4g p%s",$value*1e12,$unit);
-  if (wantarray) {
-    return split ' ',$label;
-  } else {
-    return $label;
-  }
-}
-
 # convert Mb/Kb back into bp... or a ratio
 sub unit_to_value {
   my $self = shift;

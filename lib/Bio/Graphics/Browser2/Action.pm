@@ -327,6 +327,10 @@ sub ACTION_autocomplete {
 
     my $match  = $q->param('prefix') or croak;
 
+    if ($match =~ /^\w+:\d+/) { # region search, give up
+	return(200,'text/html',$render->format_autocomplete([],''));
+    }
+
     my $search = $render->get_search_object;
     my $matches= $search->features_by_prefix($match,100);
     my $autocomplete = $render->format_autocomplete($matches,$match);

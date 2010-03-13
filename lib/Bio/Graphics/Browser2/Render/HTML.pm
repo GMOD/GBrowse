@@ -1670,8 +1670,8 @@ sub slidertable {
 
   my $buttonsDir    = $self->globals->button_url;
 
-  my $half_title = $self->unit_label(int $span/2);
-  my $full_title = $self->unit_label($span);
+  my $half_title = $self->data_source->unit_label(int $span/2);
+  my $full_title = $self->data_source->unit_label($span);
   my $half       = int $span/2;
   my $full       = $span;
   my $fine_zoom  = $self->get_zoomincrement();
@@ -1732,7 +1732,7 @@ sub zoomBar {
   my @r         = sort {$a<=>$b} $self->data_source->get_ranges();
   my @ranges	= grep {!$seen{$_}++ && $_<=$max} sort {$b<=>$a} @r,$length;
 
-  my %labels    = map {$_=>$show.' '.$self->unit_label($_)} @ranges;
+  my %labels    = map {$_=>$show.' '.$self->data_source->unit_label($_)} @ranges;
   return popup_menu(-class   => 'searchtitle',
 		    -name    => 'span',
 		    -values  => \@ranges,

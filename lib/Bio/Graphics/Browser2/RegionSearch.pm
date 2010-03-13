@@ -130,7 +130,7 @@ sub init_databases {
 
     # try to spread the work out as much as possible among the remote renderers
     my %remotes;
-    for my $dbid (keys %dbs) {
+    for my $dbid ($default_dbid,keys %dbs) {
 
 	my $can_remote  = keys %{$dbs{$dbid}{remotes}} && ($dbid ne $default_dbid);
 
@@ -311,7 +311,7 @@ sub search_features_locally {
     my %seenit;
 
     for my $dbid (@dbids) {
-	warn "searching in ",$dbid if DEBUG;
+	warn "searching in ",$dbid; # if DEBUG;
 	my $db = $self->source->open_database($dbid);
 	next if $seenit{$db}++;
 	my $region   = Bio::Graphics::Browser2::Region->new(
@@ -322,15 +322,14 @@ sub search_features_locally {
 	    }
 	    ); 
  	my $features = $region->search_features($args);
-	warn $features ? "got @$features" : "got no features" if DEBUG;
+	warn $features ? "got @$features" : "got no features"; # if DEBUG;
 	next unless $features && @$features;
 	$self->add_dbid_to_features($dbid,$features);
 	push @found,@$features;
 
 	if ($dbid eq $default_dbid) {
 	    warn "hit @found in the default database, so short-circuiting" if DEBUG;
-	    $self->{shortcircuit}++;
-#	    last;
+	    last;
 	}
     }
 

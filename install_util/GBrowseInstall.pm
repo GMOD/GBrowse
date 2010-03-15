@@ -609,20 +609,10 @@ sub process_database_files {
     while (<$f>) {
 	next unless m!^sample_data/!;
 	chomp;
-	my ($subdir,$subsubdir) = m!^sample_data/([^/]+)/?([^/]*)!;
-	if ($subsubdir) {
-          $self->copy_if_modified(from    => $_,
-                                  to_dir  => "blib/databases/$subdir/$subsubdir",
-                                  flatten => 1,
-              );
-
-	}
-	else {
-	  $self->copy_if_modified(from    => $_,
-				  to_dir  => "blib/databases/$subdir",
-				  flatten => 1,
-	      );
-	}
+        my $dest = $_;  $dest =~ s|^sample_data/||;
+        $self->copy_if_modified(from => $_,
+                                to   => "blib/databases/$dest",
+                               );
     }
 }
 

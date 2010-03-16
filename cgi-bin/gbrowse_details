@@ -36,7 +36,9 @@ if ($fcgi) {
 	$FCGI_DONE = 1;
     };
 
+    my %sys_env = %ENV;
     while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
+        %ENV = ( %sys_env, %ENV );
 	CGI->initialize_globals();
 	DetailRenderer->new($conf)->run();
 	$fcgi->Finish();

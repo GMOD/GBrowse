@@ -40,7 +40,9 @@ if ($fcgi) {
 	$FCGI_DONE = 1;
     };
 
+    my %sys_env = %ENV;
     while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
+        %ENV = ( %sys_env, %ENV );
 	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
 	GBrowse_img->new($globals)->run();

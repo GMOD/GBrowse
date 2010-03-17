@@ -2057,7 +2057,7 @@ sub make_link {
     my $id    = eval {CGI::escape($feature->primary_id)};
     my $dbid  = eval {$feature->gbrowse_dbid} || ($data_source->db_settings($label))[0];
     $dbid     = CGI::escape($dbid);
-    $url      =~ s!/gbrowse.*!!;
+    $url      =~ s! /gbrowse[^/]* / [^/]+ /? [^/]*  $!!x;
     $url      .= "/gbrowse_details/$ds_name?ref=$ref;start=$start;end=$end";
     $url      .= ";name=$name"     if defined $name;
     $url      .= ";class=$class"   if defined $class;

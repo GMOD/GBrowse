@@ -567,7 +567,7 @@ accession numbers and functional descriptions of gene products.
 
 For configuration files that will work with each of these databases,
 look in contrib/conf_files (or in
-http://localhost/gbrowse/contrib/conf_files).  Simply copy the
+http://localhost/gbrowse/tutorial/conf_files).  Simply copy the
 appropriate configuration file into your gbrowse.conf directory, and
 edit the database name as appropriate.
 

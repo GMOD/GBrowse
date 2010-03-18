@@ -324,7 +324,7 @@ sub render_html_head {
       $set_dragcolors = "set_dragcolors('$fill')";
   }
 
-  push @extra_headers,$self->setting('head')  if $self->setting('head');
+  push @extra_headers, $self->render_user_head;
 
   # put them all together
   my @args = (-title    => $title,

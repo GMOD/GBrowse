@@ -579,20 +579,27 @@ sub process_etc_files {
 
     # generate the apache config data
     my $includes = GBrowseGuessDirectories->apache_includes || '';
-    my $target   = "blib${includes}/gbrowse2.conf";
+
+    # the following workaround checks for perl.conf (which must load before gbrowse.conf on modperl envs)
+    # and renames the file so that it is loaded after perl.conf
+    my $file     = -e "${includes}/perl.conf"   
+	           ? 'z_gbrowse2.conf' 
+                   : 'gbrowse2.conf';
+
+    my $target   = "blib${includes}/$file";
     if ($includes && !$self->up_to_date('_build/config_data',$target)) {
-	if ($self->config_data('installconf') =~ /^[yY]/ && !-e "${includes}/gbrowse2.conf") {
+	if ($self->config_data('installconf') =~ /^[yY]/ && !-e "${includes}/$file") {
 	    warn "Creating include file for Apache config: $target\n";
 	    my $dir = dirname($target);
 	    mkpath([$dir]);
-	    if (my $f = IO::File->new("blib${includes}/gbrowse2.conf",'>')) {
+	    if (my $f = IO::File->new("blib${includes}/$file",'>')) {
 		$f->print($self->apache_conf);
 		$f->close;
 	    }
 	} else {
 	    print STDERR 
-		-e "${includes}/gbrowse2.conf"
-		? "${includes}/gbrowse2.conf is already installed. " 
+	       -e "${includes}/$file"
+		? "${includes}/$file is already installed. " 
 		: "Automatic Apache config disabled. ";
 	    print STDERR "Please run ./Build apache_conf to see this file's recommended contents.\n";
 	}

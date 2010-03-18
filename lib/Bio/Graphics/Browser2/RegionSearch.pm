@@ -278,12 +278,24 @@ sub search_features {
 
 Search only the local databases for the term.
 
+$Args is a hashref:
+
+   Key             Value
+   ---             -----
+   -search_term    term to search for
+   -shortcircuit   stop searching if term is found in default db
+
+If -shortcircuit is not provided, it defaults to true.
+
 =cut
 
 sub search_features_locally {
     my $self        = shift;
     my $args        = shift;
     ref $args && %$args or return;
+
+    my $shortcircuit = $args->{-shortcircuit};
+    $shortcircuit    = 1 unless defined $shortcircuit;
 
     my $state       = $self->state;
     my $source      = $self->source;
@@ -311,7 +323,7 @@ sub search_features_locally {
     my %seenit;
 
     for my $dbid (@dbids) {
-	warn "searching in ",$dbid; # if DEBUG;
+	warn "searching in ",$dbid if DEBUG;
 	my $db = $self->source->open_database($dbid);
 	next if $seenit{$db}++;
 	my $region   = Bio::Graphics::Browser2::Region->new(
@@ -322,12 +334,12 @@ sub search_features_locally {
 	    }
 	    ); 
  	my $features = $region->search_features($args);
-	warn $features ? "got @$features" : "got no features"; # if DEBUG;
+	warn $features ? "got @$features" : "got no features" if DEBUG;
 	next unless $features && @$features;
 	$self->add_dbid_to_features($dbid,$features);
 	push @found,@$features;
 
-	if ($dbid eq $default_dbid) {
+	if ($dbid eq $default_dbid && $shortcircuit) {
 	    warn "hit @found in the default database, so short-circuiting" if DEBUG;
 	    last;
 	}

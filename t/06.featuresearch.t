@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 25;
+use constant TEST_COUNT => 26;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -144,6 +144,9 @@ $features    = $search->search_features_locally({-search_term => 'Binding_site:B
 ok(scalar @$features,1);
 
 $features    = $search->search_features_locally({-search_term => 'My_feature:f12'});
+ok(scalar @$features,1);
+
+$features    = $search->search_features_locally({-search_term => 'My_feature:f12',-shortcircuit=>0});
 ok(scalar @$features,2);
 my @dbids = sort map {$_->gbrowse_dbid} @$features;
 ok("@dbids","Linkage general");

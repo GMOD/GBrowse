@@ -308,8 +308,10 @@ sub _feature_get {
   push @argv,(-end   => $stop)  if defined $stop;
 
   my @features;
-  @features  = grep {$_->length} $db->get_feature_by_name(@argv)   
+  @features  = grep {$_->length} $db->get_feature_by_name(@argv)   #misnomer -- should be get_features_by_name!
       if !defined($start) && !defined($stop);
+
+  warn "name => @features" if DEBUG;
 
 
   @features  = grep {$_->length} $db->get_features_by_alias(@argv) 
@@ -318,12 +320,15 @@ sub _feature_get {
       && !defined($stop) 
       && $db->can('get_features_by_alias');
 
+  warn "alias => @features" if DEBUG;
+
 #  warn "get_feature_by_alias(@argv) => @features";
 
   @features  = grep {$_->length} $db->segment(@argv)               
       if !@features && $name !~ /[*?]/;
   return [] unless @features;
 
+  warn "segment => @features" if DEBUG;
 
   # Deal with multiple hits.  Winnow down to just those that
   # were mentioned in the config file.
@@ -343,11 +348,15 @@ sub _feature_get {
   } @features;
 
   # remove duplicate features -- same name, source, method and position
+  warn "before duplicate removal features = @features" if DEBUG;
+
   my %seenit;
   @features = grep {
-      my $key = eval{$_->gff_string} || "$_";
+      my $key = eval{$_->gff_string} || join (':',$_->type,$_->seq_id,$_->start,$_->end);
       !$seenit{$key}++;
   } @features;
+
+  warn "after duplicate removal features = @features" if DEBUG;
 
   return \@features;
 }

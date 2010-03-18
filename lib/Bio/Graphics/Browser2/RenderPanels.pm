@@ -1220,7 +1220,7 @@ sub run_local_requests {
 	my $timeout         = $source->global_setting('global_timeout');
 
 	eval {
-	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" };
+	    local $SIG{ALRM}    = sub { warn "timeout"; die "timeout" };
 	    alarm($timeout);
 
 	    my ($gd,$map);

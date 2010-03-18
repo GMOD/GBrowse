@@ -212,7 +212,6 @@ sub import_url {
 							  $self->track_conf($track_name),
 							  $self->config,
 							  $self->state->{uploadid});
-    warn "SET STATUS starting import";
     $loader->set_status('starting import');
 
     my $conf = $self->track_conf($track_name);
@@ -227,7 +226,6 @@ sub import_url {
     open my $i,">",$self->import_flag($track_name);
     close $i;
 
-    warn "SET STATUS processing complete";
     $loader->set_processing_complete;
 
     return (1,'',[$track_name]);

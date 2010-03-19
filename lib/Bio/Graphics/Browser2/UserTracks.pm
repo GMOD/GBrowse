@@ -177,6 +177,10 @@ sub trackname_from_url {
     my $uniquefy = shift;
     (my $track_name=$url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
 
+    if (length $track_name > $self->max_filename) {
+	$track_name = substr($track_name,0,$self->max_filename);
+    }
+
     my $unique = 0;
     while ($uniquefy && !$unique) {
 	my $path = $self->track_path($track_name);
@@ -189,18 +193,15 @@ sub trackname_from_url {
     }
 
     my $path = $self->track_path($track_name);
-    if (length $path > $self->max_path) {
-	$path = substr($path,0,$self->max_path-1);
-    }
-
     rmtree($path) if -e $path;  # only happens if uniquefy = 0
     mkpath $path;
     return $track_name;
 }
 
-sub max_path {
+sub max_filename {
     my $self = shift;
-    return POSIX::pathconf($self->path,&POSIX::_PC_PATH_MAX) || 1024;
+    my $length = POSIX::pathconf($self->path,&POSIX::_PC_NAME_MAX) || 255;
+    return $length - 4; # give enough room for the suffix
 }
 
 sub import_url {

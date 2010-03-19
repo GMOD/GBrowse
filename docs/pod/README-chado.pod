@@ -30,14 +30,13 @@ to stdout and pipe that to a psql command:
   % cat sequence-gff-views.sql   | psql <Chado-database-name>
   % cat sequence-gff-funcs.pgsql | psql <Chado-database-name>
 
-A sample Chado configuration file is included in contrib/conf_files/
-(installed in $HTDOCS/tutorial/conf_files). Since Chado uses the
-Sequence Ontology for its controlled vocabulary, it is quite likely
-that this configuration file should work for any instance of Chado
-once the database-specific parameters are set.  Also, depending on
-what the "reference type" is (usually something like 'chromosome' or
-'contig'), the line in the configuration for reference class will need
-to be modified to agree with your data.
+A sample Chado configuration file is included in contrib/conf_files/.  
+Since Chado uses the Sequence Ontology for its controlled vocabulary, it
+is quite likely that this configuration file should work for any
+instance of Chado once the database-specific parameters are set.
+Also, depending on what the "reference type" is (usually something
+like 'chromosome' or 'contig'), the line in the configuration for 
+reference class will need to be modified to agree with your data.
 
 After the tables are created, the user that is running Apache must
 be granted privileges to select on several tables.  Usually that
@@ -67,7 +66,7 @@ The GBrowse configuration file for a Chado database is the same format
 as for any other data source, but there are a few notes specific to
 Chado for GBrowse configuration files.  A sample configuration file
 called 07.Chado.conf is included in the contrib/conf_files directory
-of this distribution, and is installed in $HTDOCS/gbrowse/tutorial/conf_files.
+of this distribution, and is installed in $HTDOCS/gbrowse/contrib/conf_files.
 
 Two items specific to Chado that must go into the configuration file:
 

@@ -1869,13 +1869,13 @@ sub add_track_to_state {
   my $label = shift;
   my $state = $self->state;
 
-  warn "add_track_to_state($label)" if DEBUG;
+  cluck "add_track_to_state($label)" if DEBUG;
 
   return unless length $label; # refuse to add empty tracks!
 
   # don't add invalid track
   my %potential_tracks = map {$_=>1} $self->potential_tracks;
-  warn "invalid track $label" unless $potential_tracks{$label};
+#  warn "invalid track $label" unless $potential_tracks{$label};
   return unless $potential_tracks{$label};
 
   my %current = map {$_=> 1} @{$state->{tracks}};
@@ -3066,7 +3066,10 @@ sub get_image_width {
     my $self = shift;
     my $state = $self->state;
     my $source = $self->data_source;
-    my $renderer  = $self->get_panel_renderer();
+    my $renderer  = $self->get_panel_renderer($self->thin_segment,
+					      $self->thin_whole_segment,
+					      $self->thin_region_segment,
+					      );
     my $padl      = $source->global_setting('pad_left');
     my $padr      = $source->global_setting('pad_right');
     my $image_pad = $renderer->image_padding;
@@ -3123,7 +3126,10 @@ sub render_grey_track {
     my $image_element_id = $args{'image_element_id'};
     my $track_id         = $args{'track_id'};
 
-    my $renderer = $self->get_panel_renderer();
+    my $renderer = $self->get_panel_renderer($self->thin_segment,
+					      $self->thin_whole_segment,
+					      $self->thin_region_segment,
+					     );
     my $url      = $renderer->source->globals->button_url() . "/grey.png";
 
     my $html = $renderer->wrap_rendered_track(
@@ -3200,6 +3206,7 @@ sub render_deferred_track {
         $result_html = $result->{$track_id};
     }
     elsif ($cache->status eq 'ERROR') {
+	warn "[$$] rendering error track" if DEBUG;
         my $image_width = $self->get_image_width;
         $result_html   .= $self->render_error_track(
 						  track_id       => $track_id,
@@ -3217,6 +3224,7 @@ sub render_deferred_track {
 						 );
     }
     $result_html .= '';   # to prevent uninit warning
+    warn "[$$] $track_id=>",$cache->status if DEBUG;
     return $status_html . $result_html;
 }
 

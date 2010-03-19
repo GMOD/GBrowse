@@ -61,7 +61,7 @@ sub extra_args { shift->{extra_args} }
 sub max_time {
     my $self = shift;
     $self->{max_time} = shift if @_;
-    return $self->{max_time}   || DEFAULT_REQUEST_TIME;
+    return $self->{max_time} || DEFAULT_REQUEST_TIME;
 }
 sub cache_time {
     my $self = shift;
@@ -230,7 +230,8 @@ sub status {
 	$f->close;
 	return 'DEFUNCT' unless $timestamp;
 	return 'PENDING' if time()-$timestamp < $self->max_time;
-	return 'DEFUNCT';
+	$self->flag_error('timeout; try viewing a smaller region');
+	return 'ERROR';
     } elsif (-e $datafile) {
 	return $self->expired($datafile) ? 'EXPIRED' : 'AVAILABLE';
     } elsif (-e $errorfile) {

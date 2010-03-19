@@ -18,6 +18,7 @@ use CGI qw(:standard param escape unescape);
 
 use constant TRUE  => 1;
 use constant DEBUG => 0;
+use constant BENCHMARK => 0;
 
 use constant DEFAULT_EMPTYTRACKS => 0;
 use constant PAD_DETAIL_SIDES    => 10;
@@ -1218,9 +1219,20 @@ sub run_local_requests {
         my %trackmap;
 
 	my $timeout         = $source->global_setting('global_timeout');
+	
+	my $has_sigset = $] >= 5.008;
+	my $oldaction;
+	if ($has_sigset) {
+	    eval "use POSIX ':signal_h'" unless defined &SIGALRM;
+	    my $mask = POSIX::SigSet->new(SIGALRM());
+	    my $action = POSIX::SigAction->new(sub {die "timeout"},$mask);
+	    $oldaction = POSIX::SigAction->new();
+	    sigaction(SIGALRM(),$action,$oldaction);
+	}
 
+	my $time = time();
 	eval {
-	    local $SIG{ALRM}    = sub { warn "timeout"; die "timeout" };
+	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" } unless $has_sigset;
 	    alarm($timeout);
 
 	    my ($gd,$map);
@@ -1273,10 +1285,14 @@ sub run_local_requests {
 	    }
 
 	    $requests->{$label}->put_data($gd, $map );
-	    
+	    alarm(0);
 	};
-
 	alarm(0);
+	sigaction(SIGALRM(),$oldaction) if $has_sigset;
+
+	my $elapsed = time()-$time;
+	warn "render($label): $elapsed seconds ", ($@ ? "(error)" : "(ok)") if BENCHMARK;
+
 	if ($@) {
 	    warn $@;
 	    if ($@ =~ /timeout/) {

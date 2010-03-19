@@ -4,6 +4,9 @@
 	* Added a scalebar on top of the details ruler.
         * Fixed bug in installation paths of example databases (rbuels)
         * Bugfix to support for subroutines in user-defined 'head' configuration options (rbuels)
+	* Bug fix to avoid hitting database each time the client checks on the status of a render request.
+	* Bug fix to treat timed-out cache operations the same as timed-out render operations.
+	* Bug fix to interrupt long system operations, like MySQL queries.
 2.02    * Sheldon McKay rolled gbrowse_syn back into gbrowse2
 	* Fixed bug in parsing of configuration lines from cut-and-paste uploads
 	* Added ability to look at current session's user and upload IDs.

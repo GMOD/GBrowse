@@ -9,6 +9,7 @@ use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
 use IO::File;
 use IO::String;
+use POSIX ();
 use Carp 'croak';
 
 use constant DEBUG => 0;
@@ -188,9 +189,18 @@ sub trackname_from_url {
     }
 
     my $path = $self->track_path($track_name);
+    if (length $path > $self->max_path) {
+	$path = substr($path,0,$self->max_path-1);
+    }
+
     rmtree($path) if -e $path;  # only happens if uniquefy = 0
     mkpath $path;
     return $track_name;
+}
+
+sub max_path {
+    my $self = shift;
+    return POSIX::pathconf($self->path,&POSIX::_PC_PATH_MAX) || 1024;
 }
 
 sub import_url {

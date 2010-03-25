@@ -473,10 +473,10 @@ sub do_align {
 		$pad_match  .= ' ' x $count;
 	    } elsif ($op eq 'H') {
 		# nothing needs to be done for hard clipping
-	    } else {  # everything else is assumed to be a match -- revisit
+	    } else {
+		$pad_match  .= join '',map {substr($sdna,$_,1) eq substr($tdna,$_,1) ? '|' : ' '} (0..$count-1);
 		$pad_source .= substr($sdna,0,$count,'');
 		$pad_target .= substr($tdna,0,$count,'');
-		$pad_match  .= '|' x $count;
 	    }
 	}
 	return ($pad_source,$pad_match,$pad_target);

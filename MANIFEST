@@ -16,7 +16,6 @@ bin/process_gadfly.pl
 bin/process_ncbi_human.pl
 bin/process_sgd.pl
 bin/process_wormbase.pl
-bin/register_moby_services.pl
 bin/report_missing_language_tags.pl
 bin/scan_gbrowse.pl
 bin/ucsc_genes2gff.pl
@@ -70,6 +69,7 @@ conf/plugins/FBTableDumper.pm
 conf/plugins/FilterTest.pm
 conf/plugins/GeneFinder.pm
 conf/plugins/OligoFinder.pm
+conf/plugins/PrimerDesigner.pm
 conf/plugins/ProteinDumper.pm
 conf/plugins/RandomGene.pm
 conf/plugins/RestrictionAnnotator.pm
@@ -206,9 +206,9 @@ htdocs/css/titlebar-default.css
 htdocs/css/titlebar-safari.css
 htdocs/css/tracks.css
 htdocs/gbrowse_karyotype_help.html
+htdocs/gbrowse_syn_help.html
 htdocs/general_help.html
 htdocs/general_help.html.zh
-htdocs/gbrowse_syn_help.html
 htdocs/gmod_cog.jpeg
 htdocs/images/backgrounds/cloud.jpg
 htdocs/images/backgrounds/lrock005.jpg
@@ -569,13 +569,13 @@ README.GBrowse-2.00
 README.gff3
 README.IF.GBROWSE.ISNT.WORKING
 sample_data/admin_uploads/README
+sample_data/gbrowse_syn/alignments/rice.aln.gz
+sample_data/gbrowse_syn/rice/rice.gff3
+sample_data/gbrowse_syn/wild_rice/wild_rice.gff3
 sample_data/ideograms/human_cytobands.gff
 sample_data/ideograms/mouse_cytobands.gff
 sample_data/ideograms/rat_cytobands.gff
 sample_data/pop_demo/pop_demo.gff3
-sample_data/gbrowse_syn/alignments/rice.aln.gz
-sample_data/gbrowse_syn/rice/rice.gff3
-sample_data/gbrowse_syn/wild_rice/wild_rice.gff3
 sample_data/yeast_chr1+2/yeast_chr1+2.gff3
 sample_data/yeast_scaffolds/chr1.fa
 sample_data/yeast_scaffolds/chr2.fa

@@ -1,3 +1,4 @@
+2.04 ?  * GBrowse_details: display of aligned sequences improved.
 2.03	* Can now paste BAM URLs into "import a track" field.
 	* Private (authenticated) sessions never expire.
 	* Fixed bug that led to a keyword search always returning multiple hits

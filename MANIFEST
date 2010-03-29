@@ -64,6 +64,9 @@ conf/plugins/Spectrogram.pm
 conf/plugins/Submitter.pm
 conf/plugins/test.pm
 conf/plugins/TextDumper.pm
+conf/synteny/rice_synteny.conf
+conf/synteny/oryza.synconf.disabled
+conf/synteny/wild_rice_synteny.conf
 conf/yeast.conf
 contrib/ace2gff.pl
 contrib/blast2gff.pl
@@ -335,10 +338,14 @@ docs/tutorial/tutorial.css
 docs/tutorial/tutorial.html
 docs/tutorial/tutorial.txt
 htdocs/annotation_help.html
+htdocs/databases/alignments
+htdocs/databases/rice
+htdocs/databases/wild_rice
 htdocs/databases/yeast_chr1+2/chr1.fa
 htdocs/databases/yeast_chr1+2/chr2.fa
 htdocs/databases/yeast_chr1+2/yeast_chr1+2.gff3
 htdocs/gbrowse.css
+htdocs/gbrowse_syn_help.html
 htdocs/general_help.html
 htdocs/general_help.html.zh
 htdocs/gmod_cog.jpeg

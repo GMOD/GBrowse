@@ -31,6 +31,7 @@ my $startperl = $Config{startperl} ne '#!perl'
   ? $Config{startperl}
   : "#!$Config{perlpath}";
 
+
 print OUT <<"!GROK!THIS!";
 $startperl -w
 
@@ -38,12 +39,12 @@ $startperl -w
 # Non-modperl users should change this variable if needed to point
 # to the directory in which the configuration files are stored.
 #
-\$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
+\$CONF_DIR  = '$OPTIONS{SYNCONF}';
 #
 ###################################################################
 \$VERSION   = "$OPTIONS{VERSION}";
 \$BIOGRAPHICS_VERSION   = $OPTIONS{BIOGRAPHICS_VERSION};
-
+my \$HTDOCS = "$OPTIONS{GBROWSE_ROOT}";
 
 !GROK!THIS!
 
@@ -120,7 +121,12 @@ unless ($go) {
   print header,  start_html('Error');
   print warning("No data source configured for GBrowse_syn\n"); 
   print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
-  end_html;
+
+  print <<END;
+<iframe style="frameborder:0;width:1000px;height:2000px" src="/$HTDOCS/gbrowse_syn_help.html">
+</iframe>
+END
+  print end_html;
   exit;
 }
 

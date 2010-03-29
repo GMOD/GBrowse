@@ -12,7 +12,7 @@ my $VERSION     = '1.71';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN GBROWSE_ROOT INSTALL_BASE
-		 LIB BIN YES PREFIX PACKAGE_DIR
+		 LIB BIN YES PREFIX PACKAGE_DIR SYNCONF
 		 DO_XS NONROOT SELINUX COURSE);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
@@ -208,6 +208,7 @@ if ($OPTIONS{YES}) {
   $OPTIONS{HTDOCS} ||= GuessDirectories->htdocs($OPTIONS{APACHE});
   $OPTIONS{CGIBIN} ||= GuessDirectories->cgibin($OPTIONS{APACHE});
   $OPTIONS{GBROWSE_ROOT}   ||= 'gbrowse';
+  $OPTIONS{SYNCONF}||= "$OPTIONS{CONF}/gbrowse.conf/synteny";
 }
 else {
   $OPTIONS{APACHE} ||= prompt('Apache root directory (enter \'\' for none)?',
@@ -220,6 +221,7 @@ else {
 			    GuessDirectories->cgibin($OPTIONS{APACHE}));
   $OPTIONS{GBROWSE_ROOT}   ||= prompt('GBrowse root for static files?',
 			    'gbrowse');
+  $OPTIONS{SYNCONF}||= "$OPTIONS{CONF}/gbrowse.conf/synteny";
 }
 unless (defined $OPTIONS{DO_XS}) {
   $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? 0 : 1;

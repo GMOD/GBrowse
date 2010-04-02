@@ -1070,5 +1070,19 @@ sub parse_user_fh {
     $self->SUPER::parse_fh(@_);
 }
 
+sub subtrack_select_list {
+    my $self  = shift;
+    my $label = shift;
+    my ($method,@values) = grep {!/^#/} shellwords $self->setting($label=>'select') or return;
+    foreach    (@values) {s/#.+$//}  # get rid of comments
+    return ($method,@values);
+}
+
+sub subtrack_select_default {
+    my $self = shift;
+    my $label = shift;
+    return shellwords $self->setting($label=>'select default');
+}
+
 1;
 

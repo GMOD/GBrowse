@@ -1,5 +1,6 @@
-2.04 ?  * GBrowse_details: display of aligned sequences improved.
-2.03	* Can now paste BAM URLs into "import a track" field.
+2.04    * Can set the subtracks to be displayed by default using the new "select default" option.
+2.03    * GBrowse_details: display of aligned sequences improved.
+	* Can now paste remote BAM URLs into "import a track" field.
 	* Private (authenticated) sessions never expire.
 	* Fixed bug that led to a keyword search always returning multiple hits
 	* Added a scalebar on top of the details ruler.

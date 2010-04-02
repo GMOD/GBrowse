@@ -1940,8 +1940,7 @@ sub filter_subtrack {
     }
 
     my %filters     = map {$_=>1} @$subtracks;
-    my ($method,@values) = shellwords $self->data_source->setting($label=>'select');
-    foreach (@values) {s/#.+$//}  # get rid of comments
+    my ($method,@values) = $self->data_source->subtrack_select_list($label);
     $state->{features}{$label}{filter}{values} = {map {$_=>$filters{$_}} @values};
     $state->{features}{$label}{filter}{method} = $method;
 }
@@ -2528,8 +2527,17 @@ sub zoom {
   my $range	    = int($span * (1-$zoom_distance)/2);
   $range            = 1 if $range < 1;
 
-  $state->{start}   = $center - $range;
-  $state->{stop}    = $center + $range - 1;
+  my $newstart      = $center - $range;
+  my $newstop       = $center + $range - 1;
+  
+  if ($newstart==$state->{start} && $newstop==$state->{stop}) {
+      if ($zoom_distance < 0) {$newstart--;$newstop++};
+      if ($zoom_distance > 0) {$newstart++;$newstop--};
+  }
+  if ($newstop-$newstart <=2) {$newstop++}  # don't go down to 2 bp level!
+
+  $state->{start}   = $newstart;
+  $state->{stop}    = $newstop;
 }
 
 sub position_from_overview {

@@ -243,9 +243,11 @@ sub make_requests {
     my @cache_extra = @{ $args->{cache_extra} || [] };
     my %d;
     foreach my $label ( @{ $labels || [] } ) {
+
+	$self->set_subtrack_defaults($label);
+
         my @track_args = $self->create_track_args( $label, $args );
 	my (@filter_args,@featurefile_args,@segment_args);
-
 
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
@@ -1327,19 +1329,17 @@ sub select_features_menu {
     my $source = $self->source;
     my $settings=$self->settings;
 
-    my ($method,@values) = shellwords $source->setting($label=>'select');
-    foreach    (@values) {s/#.+$//}  # get rid of comments
-
-    return unless @values;
+    my ($method,@values) = $self->source->subtrack_select_list($label) or return;
+    my @defaults         = $self->source->subtrack_select_default($label);
 
     my $buttons = $self->source->globals->button_url;
     my $escaped_label = CGI::escape($label);
 
     my $filter = $settings->{features}{$label}{filter};
 
-    $filter->{values} ||= {map {$_=>1} @values};
+    @defaults = @values unless @defaults;
+    $filter->{values} ||= {map {$_=>1} @defaults};
     $filter->{method} ||= $method;
-
 
     my @showing = grep {
  	$filter->{values}{$_}
@@ -1392,6 +1392,19 @@ sub generate_filters {
 	}
     }
     return \%filters;
+}
+
+sub set_subtrack_defaults {
+    my $self = shift;
+    my $label = shift;
+    my $settings = $self->settings;
+    my $source   = $self->source;
+
+    if (my @defaults = $source->subtrack_select_default($label)) {
+	my ($method) = $source->subtrack_select_list($label);
+	$settings->{features}{$label}{filter}{values} ||= {map {$_=>1} @defaults};
+	$settings->{features}{$label}{filter}{method} ||= $method;
+    }
 }
 
 sub subtrack_select_filter {

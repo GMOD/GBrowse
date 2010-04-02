@@ -1997,16 +1997,16 @@ sub select_subtracks {
     my $state       = $self->state();
     my $data_source = $self->data_source();
 
-    my $select_options = $data_source->setting($label=>'select');
-    my ($method,@values) = shellwords($select_options);
-    foreach (@values) {s/#.+$//}  # get rid of comments
+    my ($method,@values)   = $data_source->subtrack_select_list($label);
     @values = sort @values;
 
     my $filter = $state->{features}{$label}{filter};
 
     unless (exists $filter->{method} && $filter->{method} eq $method) {
 	$filter->{method} = $method;
-	$filter->{values} = { map {$_=>1} @values }; # all on
+	my @defaults      = $data_source->subtrack_select_default($label);
+	@defaults         = @values unless @defaults;
+	$filter->{values} = { map {$_=>1} @defaults };
     }
 
     my @turned_on = grep {$filter->{values}{$_}} @values;

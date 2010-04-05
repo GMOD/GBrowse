@@ -409,14 +409,14 @@ sub get_scan {
 	next if        $config->code_setting($l=>'global feature');
 	my $key      = $config->code_setting($l => 'key');
 	my $citation = $config->code_setting($l => 'citation');
-	my (undef,@subtracks) = shellwords($config->code_setting($l => 'select'));
+	my $subtracks = $config->subtrack_scan_list($l);
 	$result .=  <<END;
 [$l]
 key      = $key
 END
     ;
-    $result .=  "select   = @subtracks\n" if @subtracks;
-    $result .=  "citation = $citation\n"  if $citation;
+    $result .=  "select   = @$subtracks\n" if $subtracks;
+    $result .=  "citation = $citation\n"   if $citation;
     $result .=  "\n";
     }
 return $result;

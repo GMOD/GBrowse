@@ -1997,18 +1997,12 @@ sub select_subtracks {
     my $state       = $self->state();
     my $data_source = $self->data_source();
 
-    my ($method,@values)   = $data_source->subtrack_select_list($label);
-    @values = sort @values;
+    my ($method,$values,$labels)   = $data_source->subtrack_select_list($label);
+    my @values = sort @$values;
+    my %labels;
+    @labels{@$values} = @$labels;
 
     my $filter = $state->{features}{$label}{filter};
-
-    unless (exists $filter->{method} && $filter->{method} eq $method) {
-	$filter->{method} = $method;
-	my @defaults      = $data_source->subtrack_select_default($label);
-	@defaults         = @values unless @defaults;
-	$filter->{values} = { map {$_=>1} @defaults };
-    }
-
     my @turned_on = grep {$filter->{values}{$_}} @values;
 
     my $change_button = button(-name    => 
@@ -2035,6 +2029,7 @@ sub select_subtracks {
 				     -values    => \@values,
 				     -linebreak => 1,
 				     -class     => 'subtrack_checkbox',
+				     -labels    => \%labels,
 				     -defaults  => \@turned_on);
     $return_html   .= $self->tableize(\@checkboxes,undef,int sqrt(@values));
     $return_html .= $change_button;

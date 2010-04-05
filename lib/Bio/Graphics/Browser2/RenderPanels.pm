@@ -1329,34 +1329,31 @@ sub select_features_menu {
     my $source = $self->source;
     my $settings=$self->settings;
 
-    my ($method,@values) = $self->source->subtrack_select_list($label) or return;
-    my @defaults         = $self->source->subtrack_select_default($label);
-
     my $buttons = $self->source->globals->button_url;
     my $escaped_label = CGI::escape($label);
 
+    my ($method,$values,$labels)   = $source->subtrack_select_list($label) or return;
     my $filter = $settings->{features}{$label}{filter};
-
-    @defaults = @values unless @defaults;
-    $filter->{values} ||= {map {$_=>1} @defaults};
-    $filter->{method} ||= $method;
 
     my @showing = grep {
  	$filter->{values}{$_}
-    } @values;
+    } @$values;
 
     my @hidden = grep {
 	!$filter->{values}{$_}
-    } @values;
+    } @$values;
 
     my $showing = @showing;
     my $total   = @showing+@hidden;
 
+    my %labels;
+    @labels{@$values} = @$labels;
+
     my $select_features = $self->language->tr('SUBTRACKS_SHOWN');
     $select_features   .= ul({-style=>'list-style: none;margin:0,0,0,0'},
-			      map {$filter->{values}{$_} ? li($_)
-				                         : li({-style=>'color: gray'},$_)
-			      } @values);
+			      map {$filter->{values}{$_} ? li($labels{$_})
+				                         : li({-style=>'color: gray'},$labels{$_})
+			      } @$values);
 				 
 
     $select_features   .= $self->language->tr('SELECT_SUBTRACKS');
@@ -1431,7 +1428,6 @@ sub {
     return;
 }
 END
-
     my $cref = eval $sub;
     warn "failed compiling $sub: ",$@ if $@;
     return $cref;

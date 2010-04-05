@@ -1070,18 +1070,54 @@ sub parse_user_fh {
     $self->SUPER::parse_fh(@_);
 }
 
+
 sub subtrack_select_list {
     my $self  = shift;
     my $label = shift;
-    my ($method,@values) = grep {!/^#/} shellwords $self->setting($label=>'select') or return;
-    foreach    (@values) {s/#.+$//}  # get rid of comments
-    return ($method,@values);
+    my $select = $self->code_setting($label=>'select') or return;
+    my ($method,@values,@labels);
+    if ($select =~ /;/) { # new syntax
+	my @lines = split ';',$select; 
+	($method) = shellwords (shift @lines);
+	for my $l (@lines) {
+	    my ($name,$label) = grep {!/^[#=]/} shellwords($l);
+	    push @values,$name;
+	    push @labels,$label||$name;
+	}
+    } else {
+	($method,@values) = grep {!/^#/} shellwords $self->setting($label=>'select') or return;
+	foreach    (@values) {s/#.+$//}  # get rid of comments
+	@labels = @values;
+    }
+    return ($method,\@values,\@labels);
+}
+
+sub subtrack_scan_list {
+    my $self = shift;
+    my $label = shift;
+    my $select = $self->code_setting($label=>'select') or return;
+    my @results;
+    if ($select =~ /;/) { # new syntax
+	my @lines = split ';',$select;
+	my ($method) = shellwords (shift @lines);
+	for my $l (@lines) {
+	    my ($name,@args) = grep {!/^#/} shellwords($l);
+	    my @comments     = map {s/^=// && $_} grep {/^=/} @args;
+	    push @results,$name;
+	    push @results,'#'.$comments[0] if @comments;
+	}
+	return \@results;
+    } else {
+	my ($method,@values) = shellwords($select);
+	return \@values;
+    }
+
 }
 
 sub subtrack_select_default {
     my $self = shift;
     my $label = shift;
-    return shellwords $self->setting($label=>'select default');
+    return shellwords $self->code_setting($label=>'select default');
 }
 
 1;

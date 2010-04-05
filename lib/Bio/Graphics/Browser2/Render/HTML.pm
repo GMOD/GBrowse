@@ -727,7 +727,7 @@ sub render_track_filter {
 	  $form,
 	  button(
 	      -name    => 'plugin_button',
-	      -value   => $self->tr('Configure_plugin'),
+	      -value   => $self->tr('search'),
 	      -onClick => 'doPluginUpdate()',
 	  ),
 	  end_form(),
@@ -743,7 +743,7 @@ sub render_toggle_track_table {
 
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
-							    style=>"text-indent:2em"},$self->render_track_filter($filter)));
+							    style=>"text-indent:2em;padding-top:8px"},$self->render_track_filter($filter)));
   }
   $html .= $self->toggle('Tracks',$self->render_track_table);
 

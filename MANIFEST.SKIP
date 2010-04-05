@@ -71,3 +71,4 @@ CAlign\.c
 bin/register_moby_services.pl
 BUGS_TO_FIX
 ^[^/]+\.pl
+\.bz2

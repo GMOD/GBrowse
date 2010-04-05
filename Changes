@@ -6,7 +6,8 @@
                 pol2   'polymerase II' =103;
                 sdc-3  'sdc-3 chip'    =104;
           The =### is an optional comment. Old syntax works too.
-
+	* Added a TrackFinder plugin which will limit tracks according to their key,
+	  citation, or "keywords" option, based on keyword matches the user types in.
 2.03    * GBrowse_details: display of aligned sequences improved.
 	* Can now paste remote BAM URLs into "import a track" field.
 	* Private (authenticated) sessions never expire.

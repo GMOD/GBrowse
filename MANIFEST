@@ -81,6 +81,7 @@ conf/plugins/Submitter.pm
 conf/plugins/test.pm
 conf/plugins/TestFinder.pm
 conf/plugins/TrackDumper.pm
+conf/plugins/TrackFinder.pm
 conf/pop_demo.conf
 conf/slave_preload.conf
 conf/submitter_plugin.conf

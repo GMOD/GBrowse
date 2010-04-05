@@ -368,7 +368,7 @@ var GBrowseController = Class.create({
         if (results.display_details == 0){
           Controller.hide_detail_tracks();
         }
-	this.idle();
+	Controller.idle();
       } // end onSuccess
       
     }); // end Ajax.Request

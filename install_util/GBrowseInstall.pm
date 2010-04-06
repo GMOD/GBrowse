@@ -343,6 +343,13 @@ ScriptAlias  "/gb2"      "$cgibin"
 
 <Directory "$dir">
   Options -Indexes -MultiViews +FollowSymLinks
+  Order allow,deny
+  Allow from all
+</Directory>
+
+<Directory "$tmp/images/">
+  Order allow,deny
+  Allow from all
 </Directory>
 
 <Directory "$cgibin">

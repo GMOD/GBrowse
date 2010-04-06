@@ -294,18 +294,6 @@ sub render_html_head {
     );
 
   # pick stylesheets;
-  my @extra_headers;
-  my @style = shellwords($self->setting('stylesheet') || '/gbrowse2/css/gbrowse.css');
-  for my $s (@style) {
-      my ($url,$media) = $s =~ /^([^(]+)(?:\((.+)\))?/;
-      $media ||= 'all';
-      push @extra_headers,CGI::Link({-rel=>'stylesheet',
-				     -type=>'text/css',
-				     -href=>$self->globals->resolve_path($url,'url'),
-				     -media=>$media});
-  }
-
-
   my @stylesheets;
   my $titlebar   = 'css/titlebar-default.css';
   my $stylesheet = $self->setting('stylesheet')||'/gbrowse2/css/gbrowse.css';
@@ -314,6 +302,16 @@ sub render_html_head {
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/dropdown.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/default_theme.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path($titlebar,'url')};
+
+  my @theme_stylesheets = shellwords($self->setting('stylesheet') || '/gbrowse2/css/gbrowse.css');
+  for my $s ( @theme_stylesheets ) {
+      my ($url,$media) = $s =~ /^([^(]+)(?:\((.+)\))?/;
+      $media ||= 'all';
+      push @stylesheets, {
+          src   => $self->globals->resolve_path($url,'url'),
+          media => $media,
+      };
+  }
 
   # colors for "rubberband" selection 
   my $set_dragcolors = '';
@@ -324,6 +322,7 @@ sub render_html_head {
       $set_dragcolors = "set_dragcolors('$fill')";
   }
 
+  my @extra_headers;
   push @extra_headers, $self->render_user_head;
 
   # put them all together

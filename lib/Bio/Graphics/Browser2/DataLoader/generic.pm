@@ -68,7 +68,6 @@ END
 	my $category = $self->category;
 	for my $line (@lines) {
 	    chomp $line;
-	    warn $line;
 	    if ($line =~ /^\s*database/) {
 		next;   # disallowed
 	    }

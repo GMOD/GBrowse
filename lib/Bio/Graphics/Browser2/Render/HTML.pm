@@ -594,7 +594,8 @@ sub render_actionmenu {
 
     push @export_links,a({-href=>$self->gff_dump_link},                    $self->tr('DUMP_GFF'));
     push @export_links,a({-href=>$self->dna_dump_link},                           $self->tr('DUMP_SEQ'));
-    push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->tr('SEND_TO_GALAXY'));
+    push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->tr('SEND_TO_GALAXY'))
+	if $self->data_source->global_setting('galaxy outgoing');
 
     my $bookmark_link = a({-href=>'?action=bookmark'},$self->tr('BOOKMARK')),;
     my $share_link    = a({-href        => '#',
@@ -701,7 +702,7 @@ sub galaxy_form {
     $html .= hidden(-name=>'id',   -value=>$settings->{userid});
     $html .= hidden(-name=>'q',-value=>$seg);
     $html .= hidden(-name=>'t',-value=>$labels);
-    $html .= hidden(-name=>'s',-value=>'off');
+    $html .= hidden(-name=>'s',-value=>0);
     $html .= hidden(-name=>'d',-value=>'edit');
     $html .= hidden(-name=>'m',-value=>'application/x-gff3');
     $html .= endform();
@@ -789,7 +790,8 @@ sub render_track_table {
    	$cit_txt =~ s/\"/\&\#34;/g;
         $cit_txt .= '... <i>Click for more</i>';
         }
-        $mouseover = "<b>$key</b>: $cit_txt";
+        $mouseover = "<b>$key</b>";
+        $mouseover .= ": $cit_txt"                           if $cit_txt;
         }
    
   my $balloon = $source->setting('balloon style') || 'GBubble';
@@ -2329,7 +2331,7 @@ sub display_citation {
    if (my ($lim) = $slabel =~ /\:(\d+)$/) {
         $key .= " (at >$lim bp)";
    }
-     
+
    my $citation = div({-class => 'searchbody', -style => 'padding:10px;width:70%'}, h4($key), $cit_txt);
      
  

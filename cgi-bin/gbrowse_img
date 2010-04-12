@@ -12,6 +12,10 @@ use Bio::Graphics::Browser2::Render::HTML;
 use Bio::Graphics::Browser2::Util;
 use Bio::Graphics::Karyotype;
 use Digest::MD5 'md5_hex';
+use POSIX ":sys_wait_h";
+
+# something is generating zombies. This fixes the problem.
+$SIG{CHLD} = sub {my $kid; do {	$kid = waitpid(-1, WNOHANG) } while $kid > 0 };
 
 
 # call with following arguments:

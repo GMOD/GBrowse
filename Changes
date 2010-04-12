@@ -8,6 +8,9 @@
           The =### is an optional comment. Old syntax works too.
 	* Added a TrackFinder plugin which will limit tracks according to their key,
 	  citation, or "keywords" option, based on keyword matches the user types in.
+	* Prevent gbrowse_img zombie processes from accumulating under FastCGI.
+	* Generate correct Galaxy callback URL and inhibit menu item when Galaxy not configured.
+	* OligoFinder plugin now works with gbrowse2.
 2.03    * GBrowse_details: display of aligned sequences improved.
 	* Can now paste remote BAM URLs into "import a track" field.
 	* Private (authenticated) sessions never expire.

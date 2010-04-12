@@ -342,6 +342,7 @@ Alias        "/gbrowse2"    "$dir"
 ScriptAlias  "/gb2"      "$cgibin"
 
 <Directory "$dir">
+  AllowOverride Options
   Options -Indexes -MultiViews +FollowSymLinks
   Order allow,deny
   Allow from all

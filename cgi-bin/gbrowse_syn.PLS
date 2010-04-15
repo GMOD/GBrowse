@@ -1270,7 +1270,7 @@ sub overview_panel {
   my ($whole_segment,$segment) = @_;
   return '' if $SCONF->section_setting('overview') eq 'hide';
   my $image = overview($whole_segment,$segment);
-  my $ref = $segment->ref;
+  my $ref = $MAP->{$CONF->page_settings("search_src")}->{desc};
   return toggle('Overview',
                 table({-border=>0,-width=>'100%'},
 		      TR(th("<center>Reference genome: <i>$ref</i></center>")),

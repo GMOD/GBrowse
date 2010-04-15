@@ -7,8 +7,12 @@
 # $Id: mercatoraln_to_synhits.pl,v 1.1.2.3 2009-06-02 19:16:15 sheldon_mckay Exp $
 use strict;
 use Bio::AlignIO;
-use List::Util qw/min max/;
+use List::Util qw/min max sum/;
 use Getopt::Long;
+
+# coordinate mapping resolution is 100bp
+# by default.  This keeps track of indels
+use constant MAPRES   => 100;
 
 # The name parsing is for mercator.
 
@@ -20,12 +24,18 @@ my $mapfile    = 'map';
 my $genomefile = 'genomes';
 my $debug = 0;
 my $dir;
+my $mapres;
+my %map;
+
 GetOptions(
 	   'a|aln|i|input:s' => \$aln_name,
 	   'v|verbose!' => \$debug,
 	   'f|format:s' => \$format,
 	   'd|dir:s'    => \$dir,
+           'm|map:i'    => \$mapres
 	   );
+
+$mapres ||= MAPRES;
 
 $dir = shift @ARGV unless $dir;
 
@@ -56,7 +66,7 @@ while(<$mapfh>) {
 	$len = $aln->length;
 	for my $seq ( $aln->each_seq ) {
 	    $seq{$seq->id} = ['chrom','wholename','start','end','strand',
-			      $seq->seq]; 
+			      $seq->seq, $seq]; 
 	}
     }
     for( my $i =0; $i < scalar @genomes; $i++ ) {
@@ -75,6 +85,11 @@ while(<$mapfh>) {
 				     $start1,
 				     $end1,
 				     $strand1);
+
+        my $seq1 = $seq{$genomes[$i]}->[6];
+	$seq1->strand($strand1 eq '+' ? +1 : -1);
+	$seq1->start($start1);
+	$seq1->end($end1 - 1);
 	
 	for( my $j = 0; $j < scalar @genomes; $j++ ) {
 	    next if $i == $j;
@@ -96,10 +111,15 @@ while(<$mapfh>) {
 					 $end2,
 					 $strand2);
 	    $seq{$genomes[$j]}->[0] = $chrom2;
-	}
-    }
+	    my $seq2 = $seq{$genomes[$j]}->[6];
+	    $seq2->strand($strand2 eq '+' ? +1 : -1);
+	    $seq2->start($start2);
+	    $seq2->end($end2 - 1);
+	  }
+      }
+
     my @species = keys %seq;
-    map_coords($seq{$_},$map) for keys %seq;
+    #map_coords($seq{$_},$map) for keys %seq;
     my $seq_idx = scalar @species;
 
     # make all pairwise hits and grid coordinates
@@ -107,89 +127,29 @@ while(<$mapfh>) {
 	my ($s1,$s2) = @$p;
 	my $array1 = $seq{$s1};
 	my $array2 = $seq{$s2};
-	$array1->[6] = make_map($array1,$array2,$map);
-	$array2->[6] = make_map($array2,$array1,$map);
+	my $seq1   = $array1->[6];
+	my $seq2   = $array2->[6];
+	$array1->[7] = make_map($seq1,$seq2,$map);
+	$array2->[7] = make_map($seq2,$seq1,$map);
 	make_hit($s1 => $array1, $s2 => $array2);
     }
     
     # progress reporting
     warn( " Finished alignment $aln_id; length: $len; species: $seq_idx                   \n"); 
-    last if $debug;
-}
-
-
-sub make_map {
-  my ($s1,$s2,$map) = @_;
-  $s1 && $s2 || return [];
-  my $seq1 = $s1->[1];
-  my $seq2 = $s2->[1];
-  my $coord = nearest(100,$s1->[2]);
-  $coord += 100 if $coord < $s1->[2];
-  my @map;
-  
-  my $reverse = $s2->[4] ne $s1->[4];
-  my $strand2 = $reverse ? 'minus' : 'plus';
-  
-  while(1) {
-    last if $coord >= $s1->[3];
-    my $cols = $map->{$seq1}{pmap}{plus}{$coord};
-    my $start = min @$cols;
-    my $end   = max @$cols;
-    $start && $end || die $coord;
-    my $coord2 = $start == $end ? int($map->{$seq2}{cmap}{$start}{$strand2}) : int(($map->{$seq2}{cmap}{$start}{$strand2} + $map->{$seq2}{cmap}{$end}{$strand2})/2);
-    push @map, ($coord,$coord2);
-    $coord += 100;
-  }
-  
-  return \@map;
-}
-
-
-sub map_coords {
-  my ($s,$map) = @_;
-  my $forward_offset = $s->[2]-1;
-  my $reverse_offset = $s->[3];
-  my @chars = split '', $s->[5];
-  my $cmap  = {};
-  my $pmap = {};
-  
-  for my $col (1..@chars) {
-    # forward strand map
-    my $gap = $chars[$col-1] eq '-';
-    $forward_offset++ unless $gap;
-    $cmap->{$col}->{plus} = $forward_offset;
-    push @{$pmap->{plus}->{$forward_offset}}, $col;
-    # reverse strand map
-    $reverse_offset-- unless $gap;
-    $cmap->{$col}->{minus} = $reverse_offset;
-    push @{$pmap->{minus}->{$reverse_offset}}, $col;
-  }
-  
-  $map->{$s->[1]}{cmap} = $cmap;    
-  $map->{$s->[1]}{pmap} = $pmap;
+   last if $debug;
 }
 
 
 sub make_hit {
   my ($s1,$aln1,$s2,$aln2) = @_;
-  die "wrong number of keys @$aln1" unless @$aln1 == 7;
-  die "wrong number of keys @$aln2" unless @$aln2 == 7;
-  my $map1 = $aln1->[6];
-  my $map2 = $aln2->[6];
+  die "wrong number of keys @$aln1" unless @$aln1 == 8;
+  die "wrong number of keys @$aln2" unless @$aln2 == 8;
+  my $map1 = $aln1->[7];
+  my $map2 = $aln2->[7];
 
   # not using these yet
   my ($cigar1,$cigar2) = qw/. ./;
   print join("\t",$s1,@{$aln1}[0,2..4],$cigar1,$s2,@{$aln2}[0,2..4],$cigar2,@$map1,'|',@$map2), "\n";
-}
-
-sub map_pairwise {
-  my @out;
-  for my $i (0..$#_) {
-    for my $j ($i+1..$#_) {
-      push @out, [$_[$i], $_[$j]];
-    }
-  }
-  return @out;
 }
 
 # stolen from Math::Round
@@ -202,4 +162,77 @@ sub nearest {
   } @_;
 
   return (wantarray) ? @res : $res[0];
+}
+
+# Make coordinate maps at the specified resolution
+sub make_map {
+  my ($s1,$s2,$map) = @_;
+  $s1 && $s2 || return {};
+  unless (UNIVERSAL::can($s1,'isa')) {
+    #warn "WTF? $s1 $s2\n" and next;
+    warn Dumper $s1, $s2;
+  }
+  
+  column_to_residue_number($s1,$s2);
+  my $coord = nearest($mapres,$s1->start);
+  $coord += $mapres if $coord < $s1->start;
+  my @map;
+  
+  my $reverse = $s1->strand ne $s2->strand;
+ 
+  # have to get the column number from residue position, then
+  # the matching residue num from the column number 
+  while ($coord < $s1->end) {
+    my $col     = column_from_residue_number($s1,$coord);
+    my $coord2  = residue_from_column_number($s2,$col) if $col;
+    push @map, ($coord,$coord2) if $coord2;
+    $coord += $mapres;
+  }
+  return \@map;
+}
+
+sub column_to_residue_number {
+  for my $seq (@_) {
+    my $str = $seq->seq;
+    my $id  = $seq->id;
+    next if $map{$id};
+    my $rev = $seq->strand < 0;
+    my $res = $rev ? $seq->end - 1 : $seq->start + 1;
+    my @cols = split '', $str;
+    
+    my $pos;
+    my $col;
+    for my $chr (@cols) {
+      unless ($chr eq '-') {
+	$rev ? $res-- : $res++;
+      }
+
+      $col++;
+      $map{$id}{col}{$col} = $res;
+      $map{$id}{res}{$res} ||= $col;
+    }
+  }
+}
+
+sub column_from_residue_number {
+  my ($seq, $res) = @_;
+  my $id = $seq->id;
+  return $map{$id}{res}{$res};  
+}
+
+sub residue_from_column_number {
+  my ($seq, $col) = @_;
+  my $id = $seq->id;
+  print"WTF? $seq $id $col\n" unless $id &&$col;
+  return $map{$id}{col}{$col};
+}
+
+sub map_pairwise {
+  my @out;
+  for my $i (0..$#_) {
+    for my $j ($i+1..$#_) {
+      push @out, [$_[$i], $_[$j]];
+    }
+  }
+  return @out;
 }

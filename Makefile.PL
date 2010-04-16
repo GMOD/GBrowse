@@ -329,6 +329,11 @@ WriteMakefile(
 				 'bin/process_sgd.pl',
 #                                 'bin/load_genbank.pl',
                                  'bin/wiggle2gff3.pl',
+				 'bin/gbrowse_syn/load_alignment_database.pl',
+				 'bin/gbrowse_syn/aln2hit.pl',
+				 'bin/gbrowse_syn/clustal2hit.pl',
+				 'bin/gbrowse_syn/load_alignments_msa.pl',
+				 'bin/gbrowse_syn/mercatoraln_to_synhits.pl'
 				],
 	      'LIBS'	     => [''], # e.g., '-lm'
 	      'LIB'          => $OPTIONS{LIB}, # custom location for perl modules

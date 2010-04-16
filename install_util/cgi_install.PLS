@@ -44,7 +44,7 @@ my $cgidir = "cgi-bin";
 chdir $cgidir;
 foreach (glob('*')) {
   next if /README/;
-  next if /CVS/;
+  next if /.svn/;
   next if /^[.\#]/;
   next if /~$/;
   next if /\.PLS$/;

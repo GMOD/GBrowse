@@ -226,7 +226,7 @@ sub copy_tree {
   my $d = IO::Dir->new($src) or die "opendir($src): $!";
   while (my $item = $d->read) {
     # bunches of things to skip
-    next if $item eq 'CVS';
+    next if $item eq '.svn';
     next if $item =~ /^\./;
     next if $item =~ /~$/;
     next if $item =~ /^\#/;

@@ -73,7 +73,7 @@ sub installdir {
       print STDERR "    file $sourcefile -> $targetfile\n" if DEBUG;
       chmod(0444,$targetfile) unless $course;
     } elsif(-d $sourcefile && $recurse){
-      next if $file eq '.' or $file eq '..' or $file eq 'CVS';
+      next if $file eq '.' or $file eq '..' or $file eq '.svn';
       print STDERR "directory $sourcefile -> $targetfile\n" if DEBUG;
       installdir(source => $sourcefile, target => $targetfile, recurse => 1);
     }

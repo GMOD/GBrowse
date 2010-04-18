@@ -467,14 +467,18 @@ sub do_align {
 		$pad_target .= substr($tdna,0,$count,'');
 		$pad_match  .= ' ' x $count;
 	    }
-	    elsif ($op eq 'D' || $op eq 'N' || $op eq 'P') {
+	    elsif ($op eq 'D' || $op eq 'N') {
 		$pad_source .= substr($sdna,0,$count,'');
 		$pad_target .= '-' x $count;
 		$pad_match  .= ' ' x $count;
-	    } elsif ($op eq 'H') {
-		# nothing needs to be done for hard clipping
+	    } elsif ($op eq 'H' || $op eq 'P') {
+		# nothing needs to be done for hard clipping or pads
 	    } else {
-		$pad_match  .= join '',map {substr($sdna,$_,1) eq substr($tdna,$_,1) ? '|' : ' '} (0..$count-1);
+		$pad_match  .= join '',(
+		    map {substr($sdna,$_,1) eq substr($tdna,$_,1) 
+			     ? '|' 
+			     : ' '
+		    } (0..$count-1));
 		$pad_source .= substr($sdna,0,$count,'');
 		$pad_target .= substr($tdna,0,$count,'');
 	    }

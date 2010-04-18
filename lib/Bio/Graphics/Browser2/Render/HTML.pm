@@ -148,7 +148,7 @@ sub render_navbar {
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
 			   table({-border=>0,-width=>'100%'},
-				 TR(td($search),td($plugin_form)),
+				 TR(td({-width=>'50%'},$search),td($plugin_form)),
 				 TR(td({-align=>'left'},
 				       $source_form,
 				    ),

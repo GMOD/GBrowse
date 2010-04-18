@@ -2,6 +2,8 @@ package Bio::Graphics::Browser2;
 # $Id$
 # Globals and utilities for GBrowse and friends
 
+our $VERSION = '2.04';
+
 use strict;
 use warnings;
 use base 'Bio::Graphics::Browser2::AuthorizedFeatureFile';
@@ -19,7 +21,6 @@ use Carp 'croak','carp';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 my (%CONFIG_CACHE,$HAS_DBFILE,$HAS_STORABLE);
-our $VERSION = '2.03';
 
 sub open_globals {
     my $self = shift;

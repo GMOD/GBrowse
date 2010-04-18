@@ -338,9 +338,9 @@ docs/tutorial/tutorial.css
 docs/tutorial/tutorial.html
 docs/tutorial/tutorial.txt
 htdocs/annotation_help.html
-htdocs/databases/alignments
-htdocs/databases/rice
-htdocs/databases/wild_rice
+htdocs/databases/gbrowse_syn/alignments
+htdocs/databases/gbrowse_syn/rice
+htdocs/databases/gbrowse_syn/wild_rice
 htdocs/databases/yeast_chr1+2/chr1.fa
 htdocs/databases/yeast_chr1+2/chr2.fa
 htdocs/databases/yeast_chr1+2/yeast_chr1+2.gff3

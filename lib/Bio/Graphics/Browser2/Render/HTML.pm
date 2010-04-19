@@ -1794,7 +1794,7 @@ sub track_config {
     my $return_html = start_html();
 
     # citation info:
-    my $cit_txt = citation( $data_source, $slabel, $self->language ) || '';
+    my $cit_txt = citation( $data_source, $label, $self->language ) || '';
     my $cit_html;
     my $cit_link = '';
      

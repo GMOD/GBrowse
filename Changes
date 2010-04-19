@@ -1,3 +1,7 @@
+2.05	* Implemented a new caching scheme for communicating with renderfarm slaves. 
+	  This will improve performance, but requires Bio::Graphics version 1.05.
+	* Reverted to older versions of prototype and scriptaculous due to Google
+	  Chrome incompatibilities.
 2.04    * Can set the subtracks to be displayed by default using the new "select default" option.
 	* New syntax for select option:
           select   = type ;

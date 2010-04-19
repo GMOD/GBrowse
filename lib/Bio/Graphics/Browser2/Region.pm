@@ -38,6 +38,8 @@ sub parse_searchopts {
 
     my %opts;
     my @tokens    = split /[\s,]+/,lc $optstring;
+    @tokens = ('default') unless @tokens;
+
     for my $t (@tokens) {
 	my ($sign,$token) = $t =~ /([+-]?)(\w+)/;
 
@@ -61,6 +63,7 @@ sub parse_searchopts {
 
 	delete $opts{$token} if $sign eq '-';
     }
+
     return \%opts;
 }
 
@@ -210,11 +213,12 @@ sub lookup_features {
   my ($name,$start,$stop,$class,$literal_name,$id) = @_;
   my $source = $self->source;
 
-  warn "lookup_features($name)" if DEBUG;
+  warn "lookup_features(@_)" if DEBUG;
 
   my $refclass = $source->global_setting('reference class') || 'Sequence';
 
   my $db      = $self->db;
+
   my $divisor = $source->global_setting('unit_divider') || 1;
   $start *= $divisor if defined $start;
   $stop  *= $divisor if defined $stop;
@@ -312,7 +316,6 @@ sub _feature_get {
       if !defined($start) && !defined($stop);
 
   warn "name => @features" if DEBUG;
-
 
   @features  = grep {$_->length} $db->get_features_by_alias(@argv) 
       if !@features

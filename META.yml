@@ -1,6 +1,6 @@
 ---
 name: GBrowse
-version: 2.03
+version: 2.04
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 abstract: The GMOD Generic Genome Browser
@@ -60,7 +60,7 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser2:
     file: lib/Bio/Graphics/Browser2.pm
-    version: 2.03
+    version: 2.04
   Bio::Graphics::Browser2::Action:
     file: lib/Bio/Graphics/Browser2/Action.pm
   Bio::Graphics::Browser2::AdminTracks:

@@ -8,7 +8,7 @@ use lib "$Bin/../lib";
 use Bio::Graphics::Browser2::Render::Slave;
 use constant DEFAULT_PORT => 8101;
 
-my ($port,$debug,$logfile,$pidfile,$user,$kill,$preload);
+my ($port,$debug,$logfile,$pidfile,$user,$kill,$preload,$tmpdir);
 
 my $usage = <<USAGE;
 Usage: $0 [options]
@@ -23,6 +23,7 @@ Options:
     --kill     -k          Kill running server (use in conjunction with --pid).
     --preload  <path>      Path to a config file containing override information
                              and databases to preload
+    --tmp|-T   <path>      Override location of configuration file cache files.
 
 Bare-naked Gbrowse render server.  Launch with the port number to
 listen on.
@@ -52,6 +53,7 @@ GetOptions('port|p=i'       => \$port,
 	   'user|u=s'       => \$user,
 	   'kill|k'         => \$kill,
 	   'preload=s'      => \$preload,
+	   'tmp|T=s'        => \$tmpdir,
     ) or die $usage;
 
 if ($kill) {
@@ -65,6 +67,7 @@ my $server = Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>$port,
 							User     => $user,
 							LogFile  => $logfile,
 							PidFile  => $pidfile,
+							CCacheDir=> $tmpdir,
     )
     or die "Could not create server.\n";
 $server->preload_databases($preload) if $preload && -r $preload;

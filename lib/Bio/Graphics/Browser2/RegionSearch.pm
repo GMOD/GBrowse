@@ -264,7 +264,8 @@ sub search_features {
     @found = grep {
 	defined $_ 
 	    && !$seenit{
-		((lc $_->seq_id eq $state->{name}) # this hack gives special privileges to matches to seq_ids
+		(($state->{name} && 
+		  lc $_->seq_id eq $state->{name}) # this hack gives special privileges to matches to seq_ids
 		 ? 'region' 
 		 : $_->primary_tag),
 		 $_->seq_id,

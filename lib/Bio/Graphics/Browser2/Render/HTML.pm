@@ -1755,11 +1755,14 @@ sub source_menu {
   @sources         = grep {$globals->data_source_show($_)} @sources;
   my $sources = $show_sources && @sources > 1;
 
+  my %descriptions = map {$_=>$globals->data_source_description($_)} @sources;
+  @sources         = sort {$descriptions{$a} cmp $descriptions{$b}} @sources;
+
   return b($self->tr('DATA_SOURCE')).br.
     ( $sources ?
       popup_menu(-name   => 'source',
 		 -values => \@sources,
-		 -labels => { map {$_ => $globals->data_source_description($_)} @sources},
+		 -labels => \%descriptions,
 		 -default => $self->session->source,
 		 -onChange => 'this.form.submit()',
 		)

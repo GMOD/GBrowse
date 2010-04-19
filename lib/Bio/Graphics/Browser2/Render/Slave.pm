@@ -2,13 +2,14 @@ package Bio::Graphics::Browser2::Render::Slave;
 
 use strict;
 use HTTP::Daemon;
-use Storable qw(nfreeze thaw);
+use Storable qw(nfreeze thaw lock_store lock_retrieve);
 use CGI qw(header param escape unescape);
 use IO::File;
 use IO::String;
 use File::Spec;
 use Text::ParseWords 'shellwords';
 use File::Basename 'basename';
+use File::Path 'mkpath';
 use Bio::Graphics::GBrowseFeature;
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::I18n;
@@ -17,11 +18,15 @@ use Bio::Graphics::Browser2::RenderPanels;
 use Bio::Graphics::Browser2::Region;
 use Bio::Graphics::Browser2::RegionSearch; 
 use Bio::Graphics::Browser2::DataBase;
+use Time::HiRes 'time';
 use POSIX 'WNOHANG','setsid','setuid';
+use Fcntl ':flock';
 
 use Carp 'croak';
 
 use constant DEBUG => 0;
+
+our ($bench_message,$bench_time);
 
 BEGIN {
     use Storable qw(nfreeze thaw retrieve);
@@ -59,6 +64,7 @@ sub pidfile     { shift->{args}{PidFile}   }
 sub logfile     { shift->{args}{LogFile}   }
 sub user        { shift->{args}{User}      }
 sub pid         { shift->{pid}             }
+sub config_cache{ shift->{args}{CCacheDir} || File::Spec->catfile(File::Spec->tmpdir,'gbslave_ccache')}
 sub kill        {
     my $self = shift;
     my $pid  = $self->pid;
@@ -158,10 +164,15 @@ sub run {
 	    $self->Info("Forked child PID $child");
 	    $c->close();
 	} else {
+	    my $time = time();
 	    Bio::Graphics::Browser2::DataBase->clone_databases();
+	    $self->Debug("clone_database() time: ",time()-$time," s");
 	    $self->process_connection($c);
+	    $self->Debug("process_connection() time: ",time()-$time," s");
 	    $d->close();
 	    $c->close();
+	    my $elapsed = time() - $time;
+	    $self->Debug("Process time $elapsed seconds");
 	    exit 0;
 	}
     }
@@ -176,7 +187,10 @@ sub process_connection {
     $self->Debug("Connect from ",$c->peerhost);
 
     while (my $r = $c->get_request) {
+	my $time = time();
 	$self->process_request($r,$c);
+	my $elapsed = time() - $time;
+	$self->Debug("Process_request time: $elapsed s");
     }
 
     $self->Debug("Finished connection from ",$c->peerhost);
@@ -186,6 +200,8 @@ sub process_connection {
 sub process_request {
     my $self = shift;
     my ($r,$c) = @_;
+
+    $self->Bench('reading request');
 
     if ($r->method eq 'GET') {
 	$CGI::Q = CGI->new($r->uri->query);
@@ -203,6 +219,7 @@ sub process_request {
 
     $self->Debug("process_request(): setting environment");
 
+    $self->Bench('setting environment');
     $self->setup_environment(param('env'));
     my $operation = param('operation') || 'invalid';
 
@@ -213,9 +230,12 @@ sub process_request {
                                                     : 'Invalid request';
 
     my ($status_code,$status_text,$content_type) =
-	$content !~ /invalid/i
-	? (200 => 'Ok',          'application/gbrowse-encoded-genome')
-	: (400 => 'Bad request', 'text/plain');
+	 $content =~ /REQUEST DATASOURCE/ ? (403 => $content)
+        :$content !~ /invalid/
+	 ? (200 => 'Ok',          'application/gbrowse-encoded-genome')
+	 : (400 => 'Bad request', 'text/plain');
+
+    $self->Bench('creating response');
 
     my $response = HTTP::Response->new($status_code => $status_text,
 			      ['Content-type'   => $content_type,
@@ -223,40 +243,97 @@ sub process_request {
 			       $content
 			      );
 
+    $self->Bench('sending response');
     $c->send_response($response);
+
+    $self->Bench('cleaning up');
+
     $self->Info("host=",$c->peerhost,"; operation=$operation; response=$status_code; bytes=",length $content);
+}
+
+sub Bench {
+    my $self = shift;
+    my $msg = shift;
+
+    if ($bench_time && $bench_message) {
+	my $elapsed = time()-$bench_time;
+	$self->Debug("BENCH: $bench_message: $elapsed s");
+    }
+
+    $bench_message = $msg;
+    $bench_time    = time();
+}
+
+sub get_datasource {
+    my $self = shift;
+    my ($dsn,$name,$mtime)  = @_;
+
+    mkpath $self->config_cache unless -e $self->config_cache;
+
+    my $cachefile = File::Spec->catfile($self->config_cache,$name);
+
+    if (Storable::read_magic($dsn)) { # this is a storable image
+	my $source = Storable::thaw($dsn);
+	my $name   = $source->name;
+	$self->Debug("Using transmitted version of $name");
+	lock_store($source,$cachefile);
+	return $source;
+    } elsif (-e $cachefile && $mtime <= (stat(_))[9]) {
+	$self->Debug("Using cached version of $name config data");
+	my $source = lock_retrieve($cachefile);
+	return $source;
+    } else {
+	$self->Debug("Cache for $name missing or out of date; requesting frozen dsn");
+	return;
+    }
 }
 
 sub render_tracks {
     my $self = shift;
 
     $self->Debug("render_tracks(): thawing parameters");
-
+    $self->Bench('thawing parameters');
     my $tracks	        = thaw param('tracks');
     my $settings	= thaw param('settings');
-    my $datasource	= thaw param('datasource');
     my $language	= thaw param('language');
     my $panel_args      = thaw param('panel_args');
+    my $dsn             = param('datasource');
+    my $d_name          = param('data_name');
+    my $d_mtime         = param('data_mtime');
+
+    $self->Bench('getting datasource');
+
+    my $datasource	= $self->get_datasource($dsn,$d_name,$d_mtime);
+    unless ($datasource) {
+	return "REQUEST DATASOURCE: $d_name";
+    }
 
     $self->adjust_conf($datasource);
     $self->Debug("render_tracks(): Opening database...");
 
     # Find the segment - it may be hiding in any of the databases.
+    $self->Bench('searching for segment');
     my (%seenit,$segment,$db);
-    for my $track ('general',@$tracks) {
-	$db = $datasource->open_database($track) or next;
-	next if $seenit{$db}++;
-	($segment) = $db->segment(-name	=> $settings->{'ref'},
-				  -start=> $settings->{'start'},
-				  -stop	=> $settings->{'stop'});
-	last if $segment;
+    if ($panel_args->{section} eq 'detail') { # short cut
+	$segment = Bio::Graphics::Feature->new(-seq_id=>$settings->{'ref'},
+					       -start => $settings->{'start'},
+					       -end   =>$settings->{'stop'});
+    } else {
+	for my $track ('general',@$tracks) {
+	    $db = $datasource->open_database($track) or next;
+	    warn "looking in $track";
+	    next if $seenit{$db}++;
+	    ($segment) = $db->segment(-name	=> $settings->{'ref'},
+				      -start=> $settings->{'start'},
+				      -stop	=> $settings->{'stop'});
+	    last if $segment;
+	}
     }
 
     $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop} (1)")
 	unless $segment;
 
     $self->Debug("render_tracks(): Got database handle $db");
-    $self->Debug("rendering tracks @$tracks");
 
     # BUG: duplicated code from Render.pm -- move into a common place
     $panel_args->{section} ||= '';  # prevent uninit variable warnings
@@ -270,11 +347,12 @@ sub render_tracks {
 	unless $segment;
 	    
     # generate the panels
-    $self->Debug("Calling RenderPanels->new()");
+    $self->Bench('creating renderpanel');
+    $self->Debug("calling RenderPanels->new()");
     my $renderer = Bio::Graphics::Browser2::RenderPanels->new(-segment  => $segment,
-							     -source   => $datasource,
-							     -settings => $settings,
-							     -language => $language);
+							      -source   => $datasource,
+							      -settings => $settings,
+							      -language => $language);
     $self->Debug("Got renderer()");
 
     #FIX: this is a cut and paste, and isn't fully general!
@@ -288,10 +366,11 @@ sub render_tracks {
 	    };
     }
 
+    $self->Bench('calling make_requests');
     my $requests = $renderer->make_requests({labels => $tracks,%$panel_args});
 
     $self->Debug("Calling run_local_requests(tracks=@$tracks)");
-
+    $self->Bench('calling run_local_requests');
     $renderer->run_local_requests($requests,$panel_args);
 
     $self->Debug("Finished run_local_requests()");

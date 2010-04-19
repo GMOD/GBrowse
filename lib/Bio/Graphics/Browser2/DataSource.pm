@@ -43,18 +43,15 @@ sub new {
   my $config_file_path = shift;
   my ($name,$description,$globals) = @_;
 
-  # we expire what's in the config file path if a global timer
-  # has gone off OR the modification time of the path has changed
+  # we expire what's in the config file path if the global
+  # modification time of the path has changed
 
-  my $expire_time = $globals->time2sec($globals->datasources_expire);
   my $cache_age   = time() - ($CONFIG_CACHE{$config_file_path}{ctime}||0);
-  my $expired     = $expire_time < $cache_age;
 
   # this code caches the config info so that we don't need to 
   # reparse in persistent (e.g. modperl) environment
-  my $mtime            = (stat($config_file_path))[9] || 0;
-  if (!$expired
-      && exists $CONFIG_CACHE{$config_file_path}{mtime}
+  my $mtime            = $class->file_mtime($config_file_path);
+  if (exists $CONFIG_CACHE{$config_file_path}{mtime}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {
       my $object = $CONFIG_CACHE{$config_file_path}{object};
       $object->clear_cached_dbids;
@@ -62,8 +59,8 @@ sub new {
       return $object;
   }
 
-  my $self = $class->SUPER::new(-file=>$config_file_path,
-				-safe=>1);
+  my $self = $class->new_from_cache(-file=>$config_file_path,
+				    -safe=>1);
   $self->name($name);
   $self->description($description);
   $self->globals($globals);

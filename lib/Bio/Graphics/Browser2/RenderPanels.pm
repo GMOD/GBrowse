@@ -11,7 +11,7 @@ use Bio::Graphics::Browser2::CachedTrack;
 use Bio::Graphics::Browser2::Util qw[shellwords url_label];
 use Bio::Graphics::Browser2::Render::Slave::Status;
 use IO::File;
-use Time::HiRes 'sleep';
+use Time::HiRes 'sleep','time';
 use POSIX 'WNOHANG','setsid';
 
 use CGI qw(:standard param escape unescape);
@@ -24,6 +24,7 @@ use constant DEFAULT_EMPTYTRACKS => 0;
 use constant PAD_DETAIL_SIDES    => 10;
 use constant RULER_INTERVALS     => 20;
 use constant PAD_OVERVIEW_BOTTOM => 5;
+use constant TRY_CACHING_CONFIG  => 1;
 
 # when we load, we set a global indicating the LWP::UserAgent is available
 my $LPU_AVAILABLE;
@@ -162,12 +163,10 @@ sub request_panels {
           }
       }
       elsif ($do_local) {
-          $self->run_local_requests( $data_destinations, $args,
-              $local_labels );
+          $self->run_local_requests( $data_destinations, $args,$local_labels );
       }
       elsif ($do_remote) {
-          $self->run_remote_requests( $data_destinations, $args,
-              $remote_labels );
+          $self->run_remote_requests( $data_destinations, $args,$remote_labels );
       }
       CORE::exit 0;
   }
@@ -242,11 +241,13 @@ sub make_requests {
     my @panel_args  = $self->create_panel_args($args);
     my @cache_extra = @{ $args->{cache_extra} || [] };
     my %d;
+
     foreach my $label ( @{ $labels || [] } ) {
 
 	$self->set_subtrack_defaults($label);
 
         my @track_args = $self->create_track_args( $label, $args );
+
 	my (@filter_args,@featurefile_args,@segment_args);
 
 	my $filter     = $settings->{features}{$label}{filter};
@@ -291,8 +292,10 @@ sub make_requests {
             -extra_args => [ @cache_extra, @filter_args, @featurefile_args, $label ],
 	    -cache_time => $cache_time
         );
+
         $d{$label} = $cache_object;
     }
+
     return \%d;
 }
 
@@ -607,11 +610,21 @@ sub run_remote_requests {
   $args{$_}  = $args->{$_} foreach ('section','image_class','cache_extra');
 
   # serialize the data source and settings
-  my $s_dsn	= Storable::nfreeze($source);
   my $s_set	= Storable::nfreeze($settings);
   my $s_lang	= Storable::nfreeze($lang);
   my $s_env	= Storable::nfreeze(\%env);
   my $s_args    = Storable::nfreeze(\%args);
+  my $s_mtime   = 0;
+
+  my $frozen_source = Storable::nfreeze($source);
+  my $s_dsn;
+
+  if (TRY_CACHING_CONFIG) {
+      $s_dsn   = undef;
+      $s_mtime = $source->mtime;
+  } else {
+      $s_dsn = Storage::nfreeze($source);
+  }
 
   # sort requests by their renderers
   my $slave_status = Bio::Graphics::Browser2::Render::Slave::Status->new(
@@ -645,6 +658,8 @@ sub run_remote_requests {
       my $child   = Bio::Graphics::Browser2::Render->fork();
       next if $child;
 
+      my $total_time = time();
+
       # THIS PART IS IN THE CHILD
       my @labels   = keys %{$renderers{$url}};
       my $s_track  = Storable::nfreeze(\@labels);
@@ -658,13 +673,17 @@ sub run_remote_requests {
 				tracks     => $s_track,
 				settings   => $s_set,
 				datasource => $s_dsn,
+				data_name  => $source->name,
+				data_mtime => $s_mtime,
 				language   => $s_lang,
 				env        => $s_env,
 			    ]);
 
+	my $time = time();
 	my $response = $ua->request($request);
+	my $elapsed = time() - $time;
 
-	warn "$url=>@labels: ",$response->status_line if DEBUG;
+	warn "$url=>@labels: ",$response->status_line," ($elapsed s)" if DEBUG;
 
 	if ($response->is_success) {
 	    my $contents = Storable::thaw($response->content);
@@ -676,6 +695,12 @@ sub run_remote_requests {
 		$requests->{$label}->put_data($gd2,$map);
 	    }
 	    $slave_status->mark_up($url);
+	}
+	elsif ($response->status_line =~ /REQUEST DATASOURCE/) {
+	    warn "Sending full datasource for $source->name";
+	    $s_dsn	= Storable::nfreeze($source);
+	    $s_mtime    = 0;
+	    redo FETCH;
 	}
 	else {
 	    my $uri = $request->uri;
@@ -699,6 +724,10 @@ sub run_remote_requests {
 	    $requests->{$_}->flag_error($response_line) foreach keys %{$renderers{$uri}};
 	}
       }
+
+      my  $elapsed = time() - $total_time;
+      warn "[$$] total_time = $elapsed s" if DEBUG;
+
       CORE::exit(0);  # from CHILD
   }
 }
@@ -1147,6 +1176,8 @@ sub run_local_requests {
     my $args     = shift;
     my $labels   = shift;
 
+    my $time     = time();
+
     warn "[$$] run_local_requests" if DEBUG;
 
     $labels    ||= [keys %$requests];
@@ -1305,6 +1336,8 @@ sub run_local_requests {
 	    next;
 	}
     }
+    my $elapsed = time() - $time;
+    warn "[$$] run_local_requests (@$labels): $elapsed seconds" if DEBUG;
 }
 
 sub render_hidden_track {

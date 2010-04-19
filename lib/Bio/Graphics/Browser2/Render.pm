@@ -1043,7 +1043,6 @@ sub region {
     }
 
     $self->plugins->set_segments($region->segments) if $self->plugins;
-
     $self->state->{valid_region} = $region->feature_count > 0;
     return $self->{region} = $region;
 }

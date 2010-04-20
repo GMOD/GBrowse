@@ -26,6 +26,7 @@ sub render_html_start {
   my $title = shift;
   my $dsn   = $self->data_source;
   my $html  = $self->render_html_head($dsn,$title);
+  $html    .= $self->render_js_controller_settings();
   $html    .= $self->render_balloon_settings();
   $html    .= $self->render_select_menus();
   return $html;
@@ -235,9 +236,10 @@ sub render_search_form_objects {
 	-override=>1,
     );
     if ($self->setting('autocomplete')) {
+        my $spinner_url = $self->globals->button_url.'/spinner.gif';
 	$html .= <<END
 <span id="indicator1" style="display: none">
-  <img src="/gbrowse2/images/spinner.gif" alt="Working..." />
+  <img src="$spinner_url" alt="Working..." />
 </span>
 <div id="autocomplete_choices" class="autocomplete"></div>
 END
@@ -337,6 +339,30 @@ sub render_html_head {
   push @args,(-onLoad=>"initialize_page();$set_dragcolors;$autocomplete");
 
   return start_html(@args);
+}
+
+# renders a block of javascript that loads some of our global config
+# settings into the main controller object for use in client-side code
+sub render_js_controller_settings {
+    my ( $self ) = @_;
+
+    my @export_keys = qw(
+                         buttons
+                         balloons
+                         openid
+                         js
+                         gbrowse_help
+                         stylesheet
+                        );
+
+    my $controller_globals = JSON::to_json({
+        map { $_ => $self->globals->url_path($_) } @export_keys
+       });
+
+    return script({-type=>'text/javascript'}, <<EOS );
+  Controller.set_globals( $controller_globals );
+EOS
+
 }
 
 sub render_balloon_settings {
@@ -576,10 +602,12 @@ sub render_instructions {
 
 sub render_busy_signal {
     my $self = shift;
-    return img({-id=>'busy_indicator',
-		-src=>'/gbrowse2/images/spinner.gif',
-		-style=>'position:absolute;top:5px;left:5px;display:none',
-		-alt=>"Working..."});
+    return img({
+        -id    => 'busy_indicator',
+        -src   => $self->globals->button_url.'/spinner.gif',
+        -style => 'position: absolute; top: 5px; left: 5px; display: none',
+        -alt   => "Working..."
+       });
 }
 
 sub render_actionmenu {

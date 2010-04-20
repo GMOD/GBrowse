@@ -188,7 +188,7 @@ function load_login_balloon(event,session,username,openid) {
                        'Go Back</a>.</td></tr>' +
                  '</tbody>' +
                '</table></font>'+
-	       '<img id="loginBusy" src="/gbrowse2/images/spinner.gif" style="display:none;float:left" />' +
+               '<img id="loginBusy" src="'+Controller.button_url('spinner.gif')+'" style="display:none;float:left" />' +
 	       '&nbsp;<a style="float:right;font-size:90%" href="javascript:void(0)" '+
 	                'onClick="Balloon.prototype.hideTooltip(1)">[Close]</a>' +
 	       '</form>';
@@ -1219,7 +1219,7 @@ function confirm_screen(confirm) {
                        'confirm_update($(\'loginUser\').getValue(),\'' + confirm + '\'); />' +
                  '</td></tr>' +
                '</table></font>' +
-	       '<img id="loginBusy" src="/gbrowse2/images/spinner.gif" style="display:none;float:left" />' +
+               '<img id="loginBusy" src="'+Controller.button_url('spinner.gif') + '" style="display:none;float:left" />' +
 	       '</form>';
 
     login_blackout(true,html);

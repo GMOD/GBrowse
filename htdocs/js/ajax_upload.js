@@ -66,7 +66,7 @@ function startAjaxUpload(upload_id) {
   upload_form.hide();
   var cancel_script = 'Controller.cancel_upload("'+upload_id+'_status","'+upload_id+'");'
   
-  status.update("<image src='/gbrowse2/images/spinner.gif' />");
+    status.update( '<image src="' + Controller.button_url('spinner.gif') + '" />');
   status.insert(new Element('span').update('<b>Uploading...</b>'));
   status.insert(new Element('a',{   href: 'javascript:void(0)',
                                  onClick: cancel_script
@@ -149,7 +149,7 @@ function completeAjaxUpload(response,upload_id,field_type) {
 
 function deleteUploadTrack (fileName) {
    var indicator = fileName + "_stat";
-   $(indicator).innerHTML = "<image src='/gbrowse2/images/spinner.gif' />";
+   $(indicator).innerHTML = '<image src="' + Controller.button_url('spinner.gif') + '" />';
    new Ajax.Request(document.URL, {
         method:      'post',
         parameters:  {action: 'delete_upload',

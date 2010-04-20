@@ -52,6 +52,28 @@ var GBrowseController = Class.create({
     this.segment_info;
     this.last_update_key;
     this.tabs;
+
+    //global config variables
+    this.globals = new Hash();
+
+  },
+
+  set_globals:
+  function(obj) {
+    for(var name in obj) {
+      this.globals.set(name, obj[name])
+    }
+
+    //generate *_url accessors
+    var mk_url_accessor = function( conf_name, acc_name) {
+      this[acc_name] = function(relpath) { this.globals.get(conf_name) + '/' + relpath }
+    };
+    mk_url_accessor( 'buttons',      'button_url'     );
+    mk_url_accessor( 'balloons',     'balloon_url'    );
+    mk_url_accessor( 'openid',       'openid_url'     );
+    mk_url_accessor( 'js',           'js_url'         );
+    mk_url_accessor( 'gbrowse_help', 'help_url'       );
+    mk_url_accessor( 'stylesheet',   'stylesheet_url' );
   },
 
   reset_after_track_load:
@@ -241,7 +263,7 @@ var GBrowseController = Class.create({
     var request_str = "action=update_sections" + param_str;
     for (var i = 0; i < section_names.length; i++) {
       if (spin)
-         $(section_names[i]).innerHTML="<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
+        $(section_names[i]).innerHTML = '<img src="' + this.button_url('spinner.gif') + '" alt="Working..." />';
       request_str += "&section_names="+section_names[i];
     }
 
@@ -846,7 +868,7 @@ var GBrowseController = Class.create({
       if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
 	  var upload_name = el.id.sub('_description$','');
 	  var desc        = el.innerHTML;
-	  el.innerHTML  = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
+	  el.innerHTML  = '<img src="' + this.button_url('spinner.gif') + ' alt="Working..." />';
 	  new Ajax.Request(document.URL, {
 		      method:      'post',
 		      parameters:{  
@@ -864,7 +886,7 @@ var GBrowseController = Class.create({
 	  return true;
       }
       if (event.keyCode==Event.KEY_ESC) {
-	  el.innerHTML  = "<img src='/gbrowse2/images/spinner.gif' alt='loading...' />";
+          el.innerHTML  = '<img src="' + this.button_url('spinner.gif') + '" alt="Working..." />';
 	  Controller.update_sections(new Array(userdata_table_id,userimport_table_id));
 	  el.stopObserving('keypress');
 	  el.stopObserving('blur');

@@ -364,7 +364,7 @@ sub render_js_controller_settings {
                         );
 
     my $controller_globals = JSON::to_json({
-        map { $_ => $self->globals->url_path($_) } @export_keys
+        map { $_ => ( $self->globals->url_path($_) || undef ) } @export_keys
        });
 
     return script({-type=>'text/javascript'}, <<EOS );

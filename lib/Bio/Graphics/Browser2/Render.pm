@@ -91,6 +91,13 @@ sub state {
   $d;
 }
 
+sub error_message {
+    my $self = shift;
+    my $d = $self->{error_message};
+    $self->{error_message} = shift if @_;
+    $d;
+}
+
 sub is_admin {
     my $self = shift;
     my $login = $self->session->username      or return;
@@ -756,7 +763,7 @@ sub generate_title {
 					     $features->[0]->seq_id,
 					     $dsn->commas($features->[0]->start),
 					     $dsn->commas($features->[0]->end))
-	 : "$description: ".$self->tr('HIT_COUNT',scalar @$features);
+	 : $description;
 }
 
 # never called, method in HTML.pm with same name is run instead
@@ -1039,6 +1046,11 @@ sub region {
     else { # a feature search
 	my $search   = $self->get_search_object();
 	my $features = $search->search_features();
+	if ($@) {
+	    (my $msg = $@) =~ s/\sat.+line \d+//;
+	    $self->error_message($msg);
+	    $self->state->{name} = ''; # to avoid the error again
+	}
 	$region->features($features);
     }
 
@@ -1178,8 +1190,9 @@ sub plugin_auto_find {
     my $self = shift;
     my $search_string = shift;
     my (@results,$found_one);
+    my $plugins = $self->plugins or return;
 
-    for my $plugin ($self->plugins->plugins) {  # not a typo
+    for my $plugin ($plugins->plugins) {  # not a typo
 	next unless $plugin->type eq 'finder' && $plugin->can('auto_find');
 	my $f = $plugin->auto_find($search_string);
 	next unless $f;
@@ -1243,10 +1256,14 @@ sub handle_gff_dump {
     my $segment    = param('q') || param('segment') || undef;
     my @labels     = (param('type'),param('t'));
 
-    unless ($segment) {
-	my $s    = $self->segment;
-	$segment = $s->seq_id.':'.$s->start.'..'.$s->end;
-    }
+    my $title      = join('+',@labels);
+    $title        .= ":$segment" if $segment;
+
+#    unless ($segment) {
+#	my $s    = $self->segment;
+#	$segment = $s->seq_id.':'.$s->start.'..'.$s->end;
+#    }
+
 
     unless (@labels) {
 	@labels    = $self->visible_tracks;
@@ -1256,7 +1273,8 @@ sub handle_gff_dump {
         -data_source => $self->data_source(),
         -stylesheet  => $actions{trackdef}   ||  'no',
         '-dump'      => param('d')           || undef,
-        -labels      => [ param('type'), param('t') ],
+        -labels      => \@labels,
+	-segment     => $segment             || undef,
         -mimetype    => param('m')           || undef,
     ) or return 1;
 
@@ -1269,15 +1287,14 @@ sub handle_gff_dump {
     }
     else {
 	$dumper->state($self->state);
-	$dumper->get_segment($segment) or return 1;
 	if ($actions{save} && $actions{gff3}) {
 	    print header( -type                => $dumper->get_mime_type,
-			  -content_disposition => "attachment; filename=$segment.gff3");
-	    $dumper->print_gff3();
+			  -content_disposition => "attachment; filename=$title.gff3");
+	    $dumper->print_gff3() ;
 	}
 	elsif ($actions{fasta}) {
 	    print header( -type                => $dumper->get_mime_type,
-			  -content_disposition => "attachment; filename=$segment.fa");
+			  -content_disposition => "attachment; filename=$title.fa");
 	    $dumper->print_fasta();
 	}
 	elsif ($actions{gff3}) {

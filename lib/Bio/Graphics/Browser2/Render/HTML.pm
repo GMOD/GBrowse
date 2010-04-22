@@ -47,22 +47,28 @@ sub render_top {
 
 sub render_error_div {
     my $self   = shift;
+
+    my $error   = $self->error_message;
+    my $display = $error ? 'block' : 'none';
+
     my $button = button({-onClick=>'Controller.hide_error()',
 			 -name=>'Ok'});
-    return div({-class=>'errorpanel',
-		-style=>'display:none',
-		-id=>'errordiv'},
-	       table(
-		   TR(
-		       td(span({-id=>'errormsg'},'no error')),
-		       td({-align=>'right'},$button)
-		   ),
-	       ),
-	       div({-class=>'errorpanel',
-		    -style=>'display:none;margin: 6px 6px 6px 6px',
-		    -id   =>'errordetails'},
-		   'no details'
-	       )
+    return p(
+	div({-class=>'errorpanel',
+	     -style=>"display:${display}",
+	     -id=>'errordiv'},
+	    table(
+		TR(
+		    td(span({-class=>'error',-id=>'errormsg'},$error || 'no error')),
+		    td({-align=>'right'},$button)
+		),
+	    ),
+	    div({-class=>'errorpanel',
+		 -style=>"display:none;margin: 6px 6px 6px 6px",
+		 -id   =>'errordetails'},
+		       'no details'
+	    )
+	)
 	);
 }
 
@@ -253,6 +259,8 @@ sub render_html_head {
   my ($dsn,$title) = @_;
 
   return if $self->{started_html}++;
+
+  $title =~ s/<[^>]+>//g; # no markup in the head
 
   # pick scripts
   my $js       = $dsn->globals->js_url;
@@ -1824,32 +1832,7 @@ sub track_config {
     my $override = $state->{features}{$slabel}{override_settings}||{};
     my $return_html = start_html();
 
-    # citation info:
-    my $cit_txt = citation( $data_source, $label, $self->language ) || '';
-    my $cit_html;
-    my $cit_link = '';
-     
-    # For verbose citations, add a link to a new window
-    if (length $cit_txt > 512) {
-       $cit_link = "?display_citation=$label";
-       $cit_link =~ s!gbrowse\?!gbrowse/$state->{source}/\?!;
-       $cit_link = a(
-    	    {
-    	      -href    => $cit_link, 
-    	      -target  => "citation", #'_NEW',
-    	      -onclick => 'GBox.hideTooltip(1)'
-    		},
-    	    'Click here to display in new window...');    
-       $cit_link = p($cit_link);
-                               }
-    if ( length $cit_txt > 70 ) {
-       $cit_html = $self->toggle_section({on => undef},'citation_text','Track Information',$cit_link||br,$cit_txt);
-                                }
-    else {
-      $cit_html = $cit_txt;
-    }
-
-    $cit_html = div({-style => 'background:gainsboro;padding:5px'},$cit_html);
+    my $title   = div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key);
 
     my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 5;
     my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
@@ -1895,7 +1878,7 @@ END
 
     $form .= table(
         { -border => 0 },
-        TR( td( {-colspan => 2}, $cit_html)),
+        TR( td( {-colspan => 2}, $title)),
         TR( th( { -align => 'right' }, $self->tr('Show') ),
             td( checkbox(
                     -name     => 'show_track',
@@ -2018,6 +2001,69 @@ END
         .= table( TR( td( { -valign => 'top' }, [ $form ] ) ) );
     $return_html .= end_html();
     return $return_html;
+}
+
+sub track_citation {
+    my $self        = shift;
+    my $label       = shift;
+
+    my $state       = $self->state();
+    my $data_source = $self->data_source();
+
+    my $length      = $self->thin_segment->length;
+    my $slabel      = $data_source->semantic_label($label,$length);
+    my $key         = $self->label2key($slabel);
+
+    # citation info:
+    my $cit_txt = citation( $data_source, $label, $self->language ) 
+	|| 'There is no additional information about this track.';
+    my $cit_html;
+    my $cit_link = '';
+     
+    # For verbose citations, add a link to a new window
+    if (length $cit_txt > 512) {
+       $cit_link = "?display_citation=$label";
+       $cit_link =~ s!gbrowse\?!gbrowse/$state->{source}/\?!;
+       $cit_link = a(
+    	    {
+    	      -href    => $cit_link, 
+    	      -target  => "citation", #'_NEW',
+    	      -onclick => 'GBox.hideTooltip(1)'
+    		},
+    	    'Click here to display in new window...');    
+       $cit_link = p($cit_link);
+    }
+    $cit_html = p($cit_link||br,$cit_txt);
+    my $title   = div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key);
+    return  p($title,$cit_html);
+}
+
+sub download_track_menu {
+    my $self  = shift;
+    my $track = shift;
+
+    my $state       = $self->state();
+    my $data_source = $self->data_source();
+    my $segment     = $self->thin_segment;
+    my $seqid       = $segment->seq_id;
+    my $start       = $segment->start;
+    my $end         = $segment->end;
+    my $key         = $self->label2key($track);
+
+    my $byebye      = 'Balloon.prototype.hideTooltip(1)';
+
+    my $html = '';
+    $html   .= div({-align=>'center'},
+		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key),br(),
+		   button(-value   => "Download track data in region $seqid:$start..$end",
+			  -onClick => "location.href='?gbgff=1;q=$seqid:$start..$end;t=$track;s=0;f=save+gff3';$byebye",
+		   ),
+		   button(-value=>"Download ALL track data",
+			  -onClick => "location.href='?gbgff=1;t=$track;s=0;f=save+gff3';$byebye",
+		   )).
+		   a({-href=>'javascript:void(0)',-onClick=>$byebye},
+		     'Close');
+    return $html;
 }
 
 # this is the content of the popup balloon that allows the user to select

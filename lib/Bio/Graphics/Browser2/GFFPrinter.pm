@@ -37,6 +37,7 @@ sub new {
         'dump'      => $options{'-dump'},  # in quotes because "dump" is a perl keyword
         labels      => $options{-labels},
 	mimetype    => $options{-mimetype},
+	requested_segment     => $options{-segment},
         },
         ref $class || $class;
 
@@ -60,11 +61,47 @@ sub print_stylesheet {
     $self->print_configuration( $_, [ $_->labels ] ) for @$files;
 }
 
+sub dump_track {
+    my $self   = shift;
+    my $label  = shift;
+    my $date   = localtime;
+
+    my $source = $self->data_source;
+    my $key    = $source->setting($label=>'key');
+    my $db     = $source->open_database($label);
+    my @types  = shellwords($source->setting($label=>'feature'));
+
+    my $iterator = $db->get_seq_stream(-type=>\@types);
+
+    $self->print_gff3_header;
+    while (my $f = $iterator->next_seq) {
+	$self->print_feature($f);
+    }
+}
+
+sub print_gff3_header {
+    my $self = shift;
+    my $segment = shift;
+
+    my $date = localtime;
+    print "##gff-version 3\n";
+    print "##date $date\n";
+    print "##source gbrowse gbgff gff3 dumper\n";
+    if ($segment) {
+	print "##sequence-region ",$segment->seq_id,':',$segment->start,'..',$segment->end,"\n";
+    }
+}
+
 sub print_gff3 {
     my $self = shift;
 
-    my $segment= $self->get_segment;
     my $labels = $self->get_labels;
+    if (@$labels == 1 && !$self->{requested_segment}) {
+	$self->dump_track($labels->[0]);
+	return;
+    }
+
+    my $segment= $self->get_segment;
     my $types  = $labels ? $self->labels_to_types($labels,eval{$segment->length}) : undef;
     my $files  = $labels ? $self->labels_to_files($labels,eval{$segment->length}) : undef;
 
@@ -76,13 +113,8 @@ sub print_gff3 {
         = map { $_ => $self->data_source->setting( $_ => 'filter' ) || undef }
         @$labels;
 
-    my $date = localtime;
-    print "##gff-version 3\n";
-    print "##date $date\n";
-    print "##source gbrowse gbgff gff3 dumper\n";
-    print "##sequence-region ",$segment->seq_id,':',$segment->start,'..',$segment->end,"\n";
-
-    $self->print_gff3_data( $_, $types, \%filters ) for $self->db;
+    $self->print_gff3_header($segment);
+    $self->print_gff3_data($_, $types, \%filters ) for $self->db;
     $self->print_gff3_data($_) for @$files;
 }
 

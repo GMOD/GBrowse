@@ -291,6 +291,29 @@ If -shortcircuit is not provided, it defaults to true.
 =cut
 
 sub search_features_locally {
+    my $self = shift;
+    
+    my $timeout         = $self->source->global_setting('search_timeout') || 15;
+
+    my $to_sub = sub { die "The search timed out; try a more specific search" };
+    my $result;
+
+    my $status = eval {
+	local $SIG{ALRM} = $to_sub;
+	alarm($timeout);
+	$result = $self->_search_features_locally(@_);
+	1;
+    };
+    alarm(0);
+
+    unless ($status) {
+	warn $@;
+	return;
+    }
+    return $result;
+}
+
+sub _search_features_locally {
     my $self        = shift;
     my $args        = shift;
     ref $args && %$args or return;
@@ -434,7 +457,7 @@ sub search_features_remotely {
 	}
     }
 
-    eval {Bio::Graphics::Browser->fcgi_request()->Flush};
+    eval {Bio::Graphics::Browser2::Render->fcgi_request()->Flush};
 
     return \@found;
 }

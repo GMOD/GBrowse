@@ -413,7 +413,7 @@ $render      = Bio::Graphics::Browser2::Render::HTML->new($source,$session);
 }
 
 ok($data =~ /Set-Cookie/);
-ok($data =~ /the following 4 regions/i);
+ok($data =~ /m11/ && $data =~ /m14/ && $data =~ /m12/ && $data =~ /EDEN/);
 
 # try rendering a segment
 $CGI::Q = new CGI('name=ctgA:1..20000;label=Clones-Transcripts-Motifs');

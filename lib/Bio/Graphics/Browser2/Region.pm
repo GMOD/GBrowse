@@ -197,15 +197,17 @@ sub get_whole_segment {
 sub search_db {
   my $self = shift;
   my $args = shift;
-
+  my ($features);
   if (my $name = $args->{-search_term}) {
+      $name =~ tr/a-zA-Z0-9.'"_*?:+-//cd;  # remove rude characters
       my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
-      return $self->lookup_features($ref,$start,$stop,$class,$name,$id);
+      $features =  $self->lookup_features($ref,$start,$stop,$class,$name,$id);
   }
   else {
       my @features = $self->db->features(%$args);
-      return wantarray ? @features : \@features;
+      $features    = \@features;
   }
+  return wantarray ? @$features : $features;
 }
 
 sub lookup_features {

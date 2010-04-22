@@ -72,3 +72,5 @@ bin/register_moby_services.pl
 BUGS_TO_FIX
 ^[^/]+\.pl
 \.bz2
+^GBrowse-\d+
+slave\.pid

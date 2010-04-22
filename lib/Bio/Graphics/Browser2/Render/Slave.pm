@@ -270,20 +270,26 @@ sub get_datasource {
 
     mkpath $self->config_cache unless -e $self->config_cache;
 
-    my $cachefile = File::Spec->catfile($self->config_cache,$name);
-
     if (Storable::read_magic($dsn)) { # this is a storable image
 	my $source = Storable::thaw($dsn);
-	my $name   = $source->name;
+	$name   = $source->name;
+	$mtime  = $source->mtime;
+	my $cachefile = File::Spec->catfile($self->config_cache,$name);
 	$self->Debug("Using transmitted version of $name");
 	lock_store($source,$cachefile);
 	return $source;
-    } elsif (-e $cachefile && $mtime <= (stat(_))[9]) {
-	$self->Debug("Using cached version of $name config data");
-	my $source = lock_retrieve($cachefile);
-	return $source;
+    } elsif ($name) {
+	my $cachefile = File::Spec->catfile($self->config_cache,$name);
+	if (-e $cachefile && $mtime <= (stat(_))[9]) {
+	    $self->Debug("Using cached version of $name config data");
+	    my $source = lock_retrieve($cachefile);
+	    return $source;
+	} else {
+	    $self->Debug("Cache for $name missing or out of date; requesting frozen dsn");
+	    return;
+	}
     } else {
-	$self->Debug("Cache for $name missing or out of date; requesting frozen dsn");
+	$self->Debug("Datasource name missing; requesting frozen dsn");
 	return;
     }
 }
@@ -314,14 +320,13 @@ sub render_tracks {
     # Find the segment - it may be hiding in any of the databases.
     $self->Bench('searching for segment');
     my (%seenit,$segment,$db);
-    if ($panel_args->{section} eq 'detail') { # short cut
+    if ($panel_args->{section} and $panel_args->{section} eq 'detail') { # short cut
 	$segment = Bio::Graphics::Feature->new(-seq_id=>$settings->{'ref'},
 					       -start => $settings->{'start'},
 					       -end   =>$settings->{'stop'});
     } else {
 	for my $track ('general',@$tracks) {
 	    $db = $datasource->open_database($track) or next;
-	    warn "looking in $track";
 	    next if $seenit{$db}++;
 	    ($segment) = $db->segment(-name	=> $settings->{'ref'},
 				      -start=> $settings->{'start'},
@@ -333,7 +338,7 @@ sub render_tracks {
     $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop} (1)")
 	unless $segment;
 
-    $self->Debug("render_tracks(): Got database handle $db");
+    $self->Debug("render_tracks(): Got database handle $db") if $db;
 
     # BUG: duplicated code from Render.pm -- move into a common place
     $panel_args->{section} ||= '';  # prevent uninit variable warnings

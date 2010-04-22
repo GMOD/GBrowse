@@ -69,6 +69,7 @@ conf/plugins/FBTableDumper.pm
 conf/plugins/FilterTest.pm
 conf/plugins/GeneFinder.pm
 conf/plugins/OligoFinder.pm
+conf/plugins/PrimerDesigner.pm
 conf/plugins/ProteinDumper.pm
 conf/plugins/RandomGene.pm
 conf/plugins/RestrictionAnnotator.pm
@@ -228,6 +229,7 @@ htdocs/images/balloons/GPlain/up_left.png
 htdocs/images/balloons/GPlain/up_right.png
 htdocs/images/buttons/ajax-loader.gif
 htdocs/images/buttons/dark_0.4_pixel.png
+htdocs/images/buttons/download.png
 htdocs/images/buttons/ex.png
 htdocs/images/buttons/green.gif
 htdocs/images/buttons/green1.gif
@@ -268,6 +270,7 @@ htdocs/images/buttons/red6.gif
 htdocs/images/buttons/red7.gif
 htdocs/images/buttons/red8.gif
 htdocs/images/buttons/share.png
+htdocs/images/buttons/tools.png
 htdocs/images/buttons/trash.gif
 htdocs/images/buttons/trash.png
 htdocs/images/help/detail.gif

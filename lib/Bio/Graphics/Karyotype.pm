@@ -66,8 +66,12 @@ sub add_hits {
   for my $f (@$features) {
     my $ref = $f->seq_id;
     push @{$self->{hits}{$ref}},$f;
+    $self->{hit_count}++;
   }
+
 }
+
+sub hit_count { shift->{hit_count} }
 
 sub seqid_order {
     my $self = shift;
@@ -125,8 +129,12 @@ sub to_html {
 	         ? $self->chrom_height - $panel->gd->height
                  : 5;
 
+    my $hit_count = $self->hit_count;
+    my $message   = $self->language->tr('HIT_COUNT',$hit_count);
+
     my $imagemap  = $self->image_map(scalar $panel->boxes,"${seqid}.");
     $html     .= 
+	CGI::h2($message).
 	div(
 	    {-style=>"cursor:default;float:left;margin-top:${margin}px;margin-left:0.5em;margin-right;0.5em"},
 	    div({-style=>'position:relative'},

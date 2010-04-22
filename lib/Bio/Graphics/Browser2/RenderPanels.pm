@@ -373,12 +373,14 @@ sub wrap_rendered_track {
     my $track_type = $args{'track_type'} || 'standard';
     my $status = $args{'status'};    # for debugging
 
-    my $buttons = $self->source->globals->button_url;
-    my $plus    = "$buttons/plus.png";
-    my $minus   = "$buttons/minus.png";
-    my $kill    = "$buttons/ex.png";
-    my $share   = "$buttons/share.png";
-    my $help    = "$buttons/query.png";
+    my $buttons  = $self->source->globals->button_url;
+    my $plus     = "$buttons/plus.png";
+    my $minus    = "$buttons/minus.png";
+    my $kill     = "$buttons/ex.png";
+    my $share    = "$buttons/share.png";
+    my $help     = "$buttons/query.png";
+    my $download = "$buttons/download.png";
+    my $configure= "$buttons/tools.png";
 
     my $settings = $self->settings;
     my $source   = $self->source;
@@ -412,11 +414,19 @@ sub wrap_rendered_track {
     my $kill_this_track = $self->language->tr('KILL_THIS_TRACK')
 	|| "Turn off this track.";
     my $share_this_track = $self->language->tr('SHARE_THIS_TRACK')
-        || "Share This Track";
+        || "Share this track";
 
     my $configure_this_track = '';
     $configure_this_track .= $self->language->tr('CONFIGURE_THIS_TRACK')
-        || "Click to configure this Track";
+        || "Configure this track";
+
+    my $download_this_track = '';
+    $download_this_track .= $self->language->tr('DOWNLOAD_THIS_TRACK')
+        || "<b>Download this track</b>";
+
+    my $about_this_track = '';
+    $about_this_track .= $self->language->tr('ABOUT_THIS_TRACK')
+        || "<b>About this track</b>";
 
     my $escaped_label = CGI::escape($label);
 
@@ -425,9 +435,9 @@ sub wrap_rendered_track {
     # to fit if the contents are smaller than 500 x 500
     my $config_click;
     if ( $label =~ /^plugin:/ ) {
-        my $help_url = "url:?plugin=$escaped_label;plugin_do=Configure";
+        my $config_url = "url:?plugin=$escaped_label;plugin_do=Configure";
         $config_click
-            = "GBox.showTooltip(event,'$help_url',1,500,500)";
+            = "GBox.showTooltip(event,'$config_url',1,500,500)";
     }
 
     elsif ( $label =~ /^file:/ ) {
@@ -436,10 +446,15 @@ sub wrap_rendered_track {
     }
 
     else {
-        my $help_url = "url:?action=configure_track;track=$escaped_label";
+        my $config_url = "url:?action=configure_track;track=$escaped_label";
         $config_click
-            = "GBox.showTooltip(event,'$help_url',1,500,500)";
+            = "GBox.showTooltip(event,'$config_url',1,500,500)";
     }
+
+    my $help_url       = "url:?action=cite_track;track=$escaped_label";
+    my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
+
+    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label',1)";
 
     my $title;
     if ($label =~ /^file:/) {
@@ -480,12 +495,28 @@ sub wrap_rendered_track {
             }
         ),
 
-        img({   -src         => $help,
+        img({   -src         => $configure,
                 -style       => 'cursor:pointer',
                 -onmousedown => $config_click,
                 -onMouseOver =>
 	    "$balloon_style.showTooltip(event,'$configure_this_track')",
-		    
+            }
+        ),
+
+        img({   -src         => $download,
+                -style       => 'cursor:pointer',
+                -onmousedown => $download_click,
+                -onMouseOver =>
+	    "$balloon_style.showTooltip(event,'$download_this_track')",
+            }
+        ),
+
+
+        img({   -src         => $help,
+                -style       => 'cursor:pointer',
+                -onmousedown => $help_click,
+                -onMouseOver =>
+	    "$balloon_style.showTooltip(event,'$about_this_track')",
             }
         )
 	);
@@ -672,7 +703,7 @@ sub run_remote_requests {
 				panel_args => $s_args,
 				tracks     => $s_track,
 				settings   => $s_set,
-				datasource => $s_dsn,
+				datasource => $s_dsn||'',
 				data_name  => $source->name,
 				data_mtime => $s_mtime,
 				language   => $s_lang,

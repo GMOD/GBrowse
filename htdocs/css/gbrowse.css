@@ -66,7 +66,10 @@ TH.linkmenu       {
                   }
 .technicalinfo    { background-color: #FFFFFF; }
 .toggle           { color: #E0E0E0; }
-.error            { color: red; }
+.error            { color: red;
+		    font-size: 16pt;
+		    font-weight:bold;
+		  }
 .errorpanel       { background-color: lightyellow;    
 		    margin:   -8px 8px  8px  -8px;
 		  }

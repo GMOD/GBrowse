@@ -117,6 +117,24 @@ sub ACTION_configure_track {
     return ( 200, 'text/html', $html );
 }
 
+sub ACTION_cite_track {
+    my $self = shift;
+    my $q    = shift;
+
+    my $track_name = $q->param('track') or croak;
+
+    my $html = $self->render->track_citation($track_name);
+    return ( 200, 'text/html', $html );
+}
+
+sub ACTION_download_track_menu {
+    my $self = shift;
+    my $q    = shift;
+    my $track_name = $q->param('track') or croak;
+    my $html       = $self->render->download_track_menu($track_name);
+    return ( 200, 'text/html', $html );
+}
+
 
 sub ACTION_select_subtracks {
     my $self = shift;

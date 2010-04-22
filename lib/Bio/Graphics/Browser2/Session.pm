@@ -132,7 +132,7 @@ sub lock_nfs {
     my $lock     = File::NFSLock->new(
 	{file               => $lockpath,
 	 lock_type          => $type eq 'exclusive' ? LOCK_EX : LOCK_SH,
-	 blocking_timeout   => 10, # 10 sec
+	 blocking_timeout   => 5,  # 5 sec
 	 stale_lock_timeout => 60, # 1 min
 	});
     warn  "[$$] ...timeout waiting for lock" unless $lock;
@@ -189,7 +189,7 @@ sub mysql_lock_name {
 sub flush {
   my $self = shift;
   return unless $$ == $self->{pid};
-  warn "[$$] session flush for ",$self->id, " ($self)" if DEBUG;
+  carp "[$$] session flush for ",$self->id, " ($self)" if DEBUG;
   $self->{session}->flush if $self->{session};
   $self->unlock;
   warn "[$$] SESSION FLUSH ERROR: ",$self->{session}->errstr 

@@ -293,18 +293,21 @@ If -shortcircuit is not provided, it defaults to true.
 sub search_features_locally {
     my $self = shift;
     
-    my $timeout         = $self->source->global_setting('search_timeout') || 15;
+    my $timeout         = $self->source->global_setting('search_timeout') || 10;
 
-    my $to_sub = sub { die "The search timed out; try a more specific search" };
     my $result;
 
-    my $status = eval {
-	local $SIG{ALRM} = $to_sub;
+    warn "[$$] searching..." if DEBUG;
+
+    # My oh my. block eval is not working as expected here. Sometimes the die is not caught.
+    my $status = eval <<'END';
+	local $SIG{ALRM} = sub { warn "alarm clock" ; die "The search timed out; try a more specific search\n"; die; };
 	alarm($timeout);
 	$result = $self->_search_features_locally(@_);
 	1;
-    };
+END
     alarm(0);
+    warn "[$$] search done..." if DEBUG;
 
     unless ($status) {
 	warn $@;

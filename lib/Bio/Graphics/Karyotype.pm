@@ -115,6 +115,11 @@ sub to_html {
   my $panels     = $self->{panels} ||= $self->generate_panels or return;
 
   my $html;
+
+  my $hit_count = $self->hit_count;
+  my $message   = $self->language->tr('HIT_COUNT',$hit_count);
+  $html        .= CGI::h2($message);
+
   for my $seqid (
       sort {$sort_order->{$a} <=> $sort_order->{$b}} keys %$panels
       ) {
@@ -129,12 +134,8 @@ sub to_html {
 	         ? $self->chrom_height - $panel->gd->height
                  : 5;
 
-    my $hit_count = $self->hit_count;
-    my $message   = $self->language->tr('HIT_COUNT',$hit_count);
-
     my $imagemap  = $self->image_map(scalar $panel->boxes,"${seqid}.");
     $html     .= 
-	CGI::h2($message).
 	div(
 	    {-style=>"cursor:default;float:left;margin-top:${margin}px;margin-left:0.5em;margin-right;0.5em"},
 	    div({-style=>'position:relative'},
@@ -146,6 +147,7 @@ sub to_html {
   }
 
   my $table = $self->hits_table($terms2hilite);
+
   return $html.br({-clear=>'all'}).$table;
 }
 

@@ -1284,7 +1284,9 @@ sub run_local_requests {
 
 	my $timeout         = $source->global_setting('global_timeout');
 	
-	my $has_sigset = $] >= 5.008;
+# this was causing more problems than it was worth
+#	my $has_sigset = $] >= 5.008;
+	my $has_sigset = undef;
 	my $oldaction;
 	if ($has_sigset) {
 	    eval "use POSIX ':signal_h'" unless defined &SIGALRM;

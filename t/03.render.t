@@ -418,6 +418,7 @@ ok($data =~ /m11/ && $data =~ /m14/ && $data =~ /m12/ && $data =~ /EDEN/);
 # try rendering a segment
 $CGI::Q = new CGI('name=ctgA:1..20000;label=Clones-Transcripts-Motifs');
 $render->update_state;
+
 $r = $render->region;
 $s = $r->segments;
 ok($s && @$s==1);

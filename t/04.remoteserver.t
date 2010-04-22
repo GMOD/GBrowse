@@ -97,6 +97,7 @@ $render->segment;  # this sets the segment
 
 # this is what is needed to invoke the remote renderer, ok?
 my @labels   = $render->detail_tracks;
+# warn "labels = @labels";
 my $settings = $render->state;
 my $lang     = $render->language;
 

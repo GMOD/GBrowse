@@ -728,7 +728,6 @@ sub run_remote_requests {
 	    $slave_status->mark_up($url);
 	}
 	elsif ($response->status_line =~ /REQUEST DATASOURCE/) {
-	    warn "Sending full datasource for $source->name";
 	    $s_dsn	= Storable::nfreeze($source);
 	    $s_mtime    = 0;
 	    redo FETCH;

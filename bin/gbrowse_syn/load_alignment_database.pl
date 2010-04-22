@@ -114,21 +114,25 @@ my $hit_idx;
 while (<>) {
   chomp;
   my ($src1,$ref1,$start1,$end1,$strand1,$seq1,$src2,$ref2,$start2,$end2,$strand2,$seq2,@maps) = split "\t";
+  $src1 && $ref1 || die "\n\n\\BAD INE $_\n";
 
   # not using the cigar strings right now
    ($seq1,$seq2) = ('','');  
 
   # deal with coordinate maps
-  my ($switch,@map1,@map2);
-  for (@maps) {
-    if ($_ eq '|') {
-      $switch++;
-      next;
+  my (%map1, %map2, @map1, @map2);
+  if (@maps) {
+    my $switch;
+    for (@maps) {
+      if ($_ eq '|') {
+	$switch++;
+	next;
+      }
+      $switch ? push @map2, $_ : push @map1, $_;    
     }
-    $switch ? push @map2, $_ : push @map1, $_;    
+    %map1 = @map1;
+    %map2 = @map2;
   }
-  my %map1 = @map1;
-  my %map2 = @map2;
 
   # standardize hit names
   my $hit1 = 'H'.pad(++$hit_idx);

@@ -2763,7 +2763,7 @@ sub regionview_bounds {
 
 sub split_labels {
   my $self = shift;
-  my @results = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
+  my @results = map {/^(http|ftp|das)/ ? split /[+-]/ : $_} @_;
   my $group_separator = GROUP_SEPARATOR;
   foreach (@results) {
       s/$group_separator/-/g;  # unescape hyphens

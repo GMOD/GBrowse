@@ -15,7 +15,7 @@ use FindBin '$Bin';
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
-use constant TEST_COUNT => 138;
+use constant TEST_COUNT => 139;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -41,6 +41,7 @@ $SIG{SEGV} = $SIG{HUP} = $SIG{INT} = $SIG{TERM} = \&cleanup;
 
 %ENV = ();
 $ENV{GBROWSE_DOCS} = $Bin;
+$ENV{TMPDIR}       = '/tmp/gbrowse_testing';
 
 chdir $Bin;
 use lib "$Bin/../lib";
@@ -450,10 +451,18 @@ ok ($png);
 $png =~ s!/gbrowse/i!/tmp/gbrowse_testing/images!;
 ok (-e $png);
 
-($png)          = grep m!/gbrowse/i/!,$panels->{TransChip} =~ /src="([^"]+\.png)"/g;
-ok ($png);
-$png =~ s!/gbrowse/i!/tmp/gbrowse_testing/images!;
-ok (-e $png);
+# test different ways of splitting labels
+$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones Motifs BindingSites TransChip');
+$render->update_state;
+ok(join(' ',sort $render->detail_tracks),"BindingSites Clones Motifs TransChip");
+
+$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones+Motifs+BindingSites');
+$render->update_state;
+ok(join(' ',sort $render->detail_tracks),"BindingSites Clones Motifs");
+
+$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones%20Motifs%20BindingSites%20TransChip');
+$render->update_state;
+ok(join(' ',sort $render->detail_tracks),"BindingSites Clones Motifs TransChip");
 
 ### check user tracks
 my $usertracks = $render->user_tracks;

@@ -2780,12 +2780,33 @@ sub regionview_bounds {
 
 sub split_labels {
   my $self = shift;
-  my @results = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
+  my @results;
+
+  for (@_) {
+
+      # pass URLs through unmodified
+      if (/^(http|ftp|das)/) {
+	  push @results,$_;
+	  next;
+      }
+
+      # if the label contains a space, then split on the space
+      if (/\s/) {
+	  push @results, split /\s+/,$_;
+	  next;
+      }
+
+      # else split on "+" and "-" symbols
+      push @results, split /[+-]/;
+      
+  }
+
   my $group_separator = GROUP_SEPARATOR;
   foreach (@results) {
       s/$group_separator/-/g;  # unescape hyphens
       s/$;/-/g;                # unescape hyphens -backward compatibility
   }
+
   @results;
 }
 

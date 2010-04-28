@@ -27,6 +27,7 @@ BEGIN {
   if( $@ ) {
     use lib 't';
   }
+  rmtree '/tmp/gbrowse_testing';
   use Test;
   plan test => TEST_COUNT;
 }
@@ -34,6 +35,8 @@ BEGIN {
 chdir $Bin;
 use lib "$Bin/../lib";
 use Bio::Graphics::Browser2;
+
+$ENV{TMPDIR}       = '/tmp/gbrowse_testing';
 
 for ('volvox_final.conf','yeast_chr1.conf') {
     template_copy("testdata/conf/templates/$_",

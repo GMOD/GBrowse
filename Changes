@@ -2,6 +2,7 @@
 	  This will improve performance, but requires Bio::Graphics version 1.05.
 	* Reverted to older versions of prototype and scriptaculous due to Google
 	  Chrome incompatibilities.
+	* Can separate labels with ' ', '+' or "%20" when calling the URL via a label=label1+label2+label3.
 2.04    * Can set the subtracks to be displayed by default using the new "select default" option.
 	* New syntax for select option:
           select   = type ;

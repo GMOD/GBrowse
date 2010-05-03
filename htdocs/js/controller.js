@@ -66,7 +66,7 @@ var GBrowseController = Class.create({
 
     //generate *_url accessors
     var mk_url_accessor = function( conf_name, acc_name) {
-      this[acc_name] = function(relpath) { this.globals.get(conf_name) + '/' + relpath }
+      Controller[acc_name] = function(relpath) { this.globals.get(conf_name) + '/' + relpath }
     };
     mk_url_accessor( 'buttons',      'button_url'     );
     mk_url_accessor( 'balloons',     'balloon_url'    );

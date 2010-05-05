@@ -331,9 +331,9 @@ sub render_tracks {
     my $self     = shift;
     my $requests = shift;
     my $args     = shift;
-
+    
     my %result;
-
+    
     for my $label ( keys %$requests ) {
         my $data   = $requests->{$label};
         my $gd     = eval{$data->gd} or next;
@@ -1464,8 +1464,11 @@ sub set_subtrack_defaults {
 
     if (my @defaults = $source->subtrack_select_default($label)) {
 	my ($method) = $source->subtrack_select_list($label);
-	$settings->{features}{$label}{filter}{values} ||= {map {$_=>1} @defaults};
+        $settings->{features}{$label}{filter}{values} ||= {map {$_=>1} @defaults};
 	$settings->{features}{$label}{filter}{method} ||= $method;
+    } elsif (my ($method,$values,$labels) = $source->subtrack_select_list($label)) {
+        $settings->{features}{$label}{filter}{values} ||= {map {$_=>1} @$values};
+        $settings->{features}{$label}{filter}{method} ||= $method;
     }
 }
 
@@ -1476,7 +1479,7 @@ sub subtrack_select_filter {
     my $filter   = $settings->{features}{$label}{filter} or return;
     my $method   = $filter->{method};
     return unless $method;
-
+    
     my $code;
     my @values = grep {$filter->{values}{$_}} keys %{$filter->{values}};
     if (@values) {

@@ -238,7 +238,6 @@ sub source {
 
 sub private {
     my $self = shift;
-    if (@_) { carp @_ }
     my $private = $self->{session}->param('.private');
     $self->{session}->param('.private' => shift()) if @_;
     return $private;

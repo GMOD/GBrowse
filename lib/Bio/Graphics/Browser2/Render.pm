@@ -2639,7 +2639,7 @@ sub update_galaxy_url {
     my $self  = shift;
     my $state = shift;
     if (my $url = param('GALAXY_URL')) {
-	warn "setting galaxy" if DEBUG;
+	warn "[$$] setting galaxy" if DEBUG;
 	$state->{GALAXY_URL} = $url;
     } elsif (param('clear_galaxy')) {
 	warn "clearing galaxy" if DEBUG;
@@ -3514,10 +3514,12 @@ sub dna_dump_link {
 
 sub galaxy_link {
     my $self = shift;
+    my $settings   = shift || $self->state;
 
-    my $settings   = shift;
     my $galaxy_url = $settings->{GALAXY_URL} 
                      || $self->data_source->global_setting('galaxy outgoing');
+
+    warn "[$$] galaxy_link = $galaxy_url" if DEBUG;
     return '' unless $galaxy_url;
     my $clear_it  = $self->galaxy_clear;
     my $submit_it = q(document.galaxyform.submit());

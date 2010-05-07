@@ -3555,7 +3555,7 @@ sub image_link {
 	$settings->{features}{$_}{options}
     } @$tracks;
     $id        ||= ''; # to prevent uninit variable warnings
-    my $img_url  = "$url/?name=$name;label=$selected;width=$width;id=$id";
+    my $img_url  = "$url/?name=$name;l=$selected;width=$width;id=$id";
     $img_url    .= ";flip=$flip"         if $flip;
     $img_url    .= ";options=$options"   if $options;
     $img_url    .= ";format=$format"     if $format;

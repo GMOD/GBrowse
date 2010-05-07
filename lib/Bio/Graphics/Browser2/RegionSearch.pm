@@ -14,8 +14,6 @@ use Storable 'nfreeze','thaw';
 
 use constant DEBUG => 0;
 
-#local $SIG{CHLD} = 'IGNORE';
-
 # search multiple databases using crazy heuristics
 
 =head1 NAME
@@ -397,8 +395,6 @@ sub search_features_remotely {
 
     eval "require IO::Pipe;1;"   unless IO::Pipe->can('new');
     eval "require IO::Select;1;" unless IO::Select->can('new');
-
-    $SIG{CHLD} = 'IGNORE';  # for some reason local() does not work!
 
     my $select = IO::Select->new();
 

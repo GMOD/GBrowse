@@ -21,6 +21,7 @@ use Bio::Graphics::Browser2::RemoteSet;
 use Bio::Graphics::Browser2::GFFPrinter;
 use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
 use Bio::Graphics::Browser2::UserTracks;
+use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -68,7 +69,18 @@ sub new {
   $self->session($session);
   $self->state($session->page_settings);
   $self->set_language();
+  $self->set_signal_handlers();
   $self;
+}
+
+sub set_signal_handlers {
+    my $self = shift;
+    $SIG{CHLD} = sub{    my $kid; 
+			 do { 
+			     $kid = waitpid(-1, WNOHANG); 
+			 } 
+			 while $kid > 0;
+    };
 }
 
 sub data_source {

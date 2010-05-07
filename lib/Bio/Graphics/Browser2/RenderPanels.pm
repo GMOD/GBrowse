@@ -138,8 +138,6 @@ sub request_panels {
   # If both local and remote requests are needed, then we
   # fork a second time and process them in parallel.
   if ($args->{deferred}) {
-      $SIG{CHLD} = 'IGNORE';
-
       my $child = Bio::Graphics::Browser2::Render->fork();
 
       if ($child) {
@@ -1256,7 +1254,6 @@ sub run_local_requests {
     # create all the feature filters for each track
     my $filters = $self->generate_filters($settings,$source,\@labels_to_generate);
 
-    # == create whichever panels are not already cached ==
     for my $label (@labels_to_generate) {
 
         # this shouldn't happen, but let's be paranoid

@@ -1,5 +1,6 @@
 2.05	* Implemented a new caching scheme for communicating with renderfarm slaves. 
 	  This will improve performance, but requires Bio::Graphics version 1.05.
+        * Experimental local rendering code -- each track is rendered in a separate process.
 	* Reverted to older versions of prototype and scriptaculous due to Google
 	  Chrome incompatibilities.
 	* Preferred way to separate labels is now to use the "l" option and separate

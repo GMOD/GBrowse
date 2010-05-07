@@ -1262,6 +1262,12 @@ sub run_local_requests {
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
 
+	my $child = Bio::Graphics::Browser2::Render->fork();
+	croak "Can't fork: $!" unless defined $child;
+	next if $child;
+
+	warn "[$$] Background render";
+
 	(my $base = $label) =~ s/:(overview|region|details?)$//;
 	warn "label=$label, base=$base, file=$feature_files->{$base}" if DEBUG;
 
@@ -1345,7 +1351,7 @@ sub run_local_requests {
 
 		}
 
-		# == generate the maps ==
+		# == generate the images and maps in background==
 		$gd  = $panel->gd;
 		$map = $self->make_map( scalar $panel->boxes,
 					$panel, $label,
@@ -1368,8 +1374,8 @@ sub run_local_requests {
 	    } else {
 		$requests->{$label}->flag_error($@);
 	    }
-	    next;
 	}
+	exit 0; # in child;
     }
     my $elapsed = time() - $time;
     warn "[$$] run_local_requests (@$labels): $elapsed seconds" if DEBUG;
@@ -1960,7 +1966,6 @@ sub create_track_args {
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
 
   if ($source->show_summary($label,$length)) {
-      warn "HERE I AM";
       push @override,(-glyph     => 'wiggle_density',
 		      -height    => 14,
 		      -bgcolor => 'black',

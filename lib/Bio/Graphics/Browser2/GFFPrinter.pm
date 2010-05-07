@@ -100,7 +100,6 @@ sub print_gff3 {
 	$self->dump_track($labels->[0]);
 	return;
     }
-
     my $segment= $self->get_segment;
     my $types  = $labels ? $self->labels_to_types($labels,eval{$segment->length}) : undef;
     my $files  = $labels ? $self->labels_to_files($labels,eval{$segment->length}) : undef;

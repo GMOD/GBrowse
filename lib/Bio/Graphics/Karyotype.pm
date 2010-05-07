@@ -188,7 +188,7 @@ sub image_map {
 sub feature2link {
     my $self    = shift;
     my $feature = shift;
-    my $url      = url(-path_info=>1)."?name=";
+    my $url      = url(-absolute=>1,-path_info=>1)."?name=";
     my $match_id = eval {$feature->primary_id};
     my $class    = eval {$feature->class};
     my $name     = $feature->display_name || '';

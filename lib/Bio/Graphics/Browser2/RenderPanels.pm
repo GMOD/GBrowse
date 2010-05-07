@@ -877,7 +877,10 @@ sub render_scale_bar {
             -bgcolor => $source->global_setting('detail bgcolor') || 'wheat',
             -pad_bottom => 0,
             -label_font => $image_class->gdMediumBoldFont,
-	    -label      => $segment->seq_id.': '.$self->source->unit_label($segment->length),
+	    -label      => eval{$segment->seq_id.
+				    ': '
+				    .$self->source->unit_label($segment->length)
+	    }||'', # intermittent bug here with undefined $segment
         );
     }
 
@@ -1531,16 +1534,28 @@ sub add_features_to_track {
   my (%iterators,%iterator2dbid);
   for my $db (keys %db2db) {
       my @labels           = keys %{$db2label{$db}};
-      my @types_in_this_db = map { $source->label2type($_,$length) } @labels;
-      next unless @types_in_this_db;
 
-      warn "[$$] RenderPanels->get_iterator(@types_in_this_db)" if DEBUG;
-      my $iterator  = $self->get_iterator($db2db{$db},
-					  $segment,
-					  \@types_in_this_db)
-	  or next;
-      $iterators{$iterator}     = $iterator;
-      $iterator2dbid{$iterator} = $source->db2id($db);
+      my (@full_types,@summary_types);
+      for my $l (@labels) {
+	  my @types = $source->label2type($l,$length) or next;
+	  if ($source->show_summary($l,$length)) {
+	      push @summary_types,@types;
+	  } else {
+	      push @full_types,@types;
+	  }
+      }
+	  
+      warn "[$$] RenderPanels->get_iterator(@full_types)"  if DEBUG;
+      warn "[$$] RenderPanels->get_summary_iterator(@summary_types)" if DEBUG;
+      if (@summary_types && (my $iterator = $self->get_summary_iterator($db2db{$db},$segment,\@summary_types))) {
+	  $iterators{$iterator}     = $iterator;
+	  $iterator2dbid{$iterator} = $source->db2id($db);
+      }
+
+      if (@full_types && (my $iterator = $self->get_iterator($db2db{$db},$segment,\@full_types))) {
+	  $iterators{$iterator}     = $iterator;
+	  $iterator2dbid{$iterator} = $source->db2id($db);
+      }
   }
 
   my (%groups,%feature_count,%group_pattern,%group_field);
@@ -1745,6 +1760,25 @@ sub get_iterator {
   return $db_segment->get_feature_stream(-type=>$feature_types);
 }
 
+sub get_summary_iterator {
+  my $self = shift;
+  my ($db,$segment,$feature_types) = @_;
+
+  if (eval {$db->can_summarize}) {
+      my @args = (-type   => $feature_types,
+		  -seq_id => $segment->seq_id,
+		  -start  => $segment->start,
+		  -end    => $segment->end,
+		  -bins   => $self->settings->{width},
+		  -iterator=>1,
+	  );
+      return $db->feature_summary(@args);
+  } else {
+      return;
+  }
+}
+
+
 =head2 add_feature_file
 
 Internal use: render a feature file into a panel
@@ -1923,8 +1957,16 @@ sub create_track_args {
                         || {};   # user-set override settings for tracks
 
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
-
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
+
+  if ($source->show_summary($label,$length)) {
+      warn "HERE I AM";
+      push @override,(-glyph     => 'wiggle_density',
+		      -height    => 14,
+		      -bgcolor => 'black',
+		      -autoscale => 'local'
+      );
+  }
 
   my $hilite_callback = $args->{hilite_callback};
 

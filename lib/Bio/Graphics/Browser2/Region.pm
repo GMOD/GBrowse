@@ -199,7 +199,7 @@ sub search_db {
   my $args = shift;
   my ($features);
   if (my $name = $args->{-search_term}) {
-      $name =~ tr/a-zA-Z0-9.'"_*?:+-//cd;  # remove rude characters
+      $name =~ tr/a-zA-Z0-9.'"_*?: ;+-//cd;  # remove rude characters
       my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
       $features =  $self->lookup_features($ref,$start,$stop,$class,$name,$id);
   }
@@ -376,7 +376,7 @@ sub _feature_keyword_search {
 
   # Need to untaint the searchterm.  We are very lenient about
   # what is accepted here because we wil be quote-metaing it later.
-  $searchterm =~ /([\w .,~!@\#$%^&*()-+=<>?\/]+)/;
+  $searchterm =~ /([\w .,~!@\#$%^&*()-+=<>?:;\/]+)/;
   $searchterm = $1;
 
   my $db = $self->db;

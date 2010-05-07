@@ -33,6 +33,7 @@ use constant MAX_SEGMENT          => 1_000_000;
 use constant TOO_MANY_SEGMENTS    => 5_000;
 use constant OVERVIEW_RATIO       => 1.0;
 use constant GROUP_SEPARATOR      => "\x1d";
+use constant LABEL_SEPARATOR      => "\x1e";
 
 my %PLUGINS;       # cache initialized plugins
 my $FCGI_REQUEST;  # stash fastCGI request handle
@@ -1254,20 +1255,13 @@ sub handle_gff_dump {
     my %actions = map {$_=>1} split /\s+/,$gff_action;
 
     my $segment    = param('q') || param('segment') || undef;
-    my @labels     = (param('type'),param('t'));
+
+    my @labels     = $self->split_labels_correctly(param('l'));
+    @labels        = $self->split_labels((param('type'),param('t'))) unless @labels;
+    @labels        = $self->visible_tracks                           unless @labels;
 
     my $title      = join('+',@labels);
     $title        .= ":$segment" if $segment;
-
-#    unless ($segment) {
-#	my $s    = $self->segment;
-#	$segment = $s->seq_id.':'.$s->start.'..'.$s->end;
-#    }
-
-
-    unless (@labels) {
-	@labels    = $self->visible_tracks;
-    }
 
     my $dumper = Bio::Graphics::Browser2::GFFPrinter->new(
         -data_source => $self->data_source(),
@@ -2070,8 +2064,13 @@ sub update_tracks {
       $self->add_remote_tracks(\@unescaped);
   }
 
-  # selected tracks can be set by the 'label' parameter
-  if (my @l = param('label')) {
+  # selected tracks can be set by the 'l', 'label' or 't' parameter
+  # the preferred parameter is 'l', because it implements correct
+  # semantics for the label separator
+  if (my @l = param('l')) {
+      $self->set_tracks($self->split_labels_correctly(@l));
+  }
+  elsif (@l = param('label')) {
       $self->set_tracks($self->split_labels(@l));
   } #... the 't' parameter
   elsif (my @t = param('t')) {
@@ -2084,11 +2083,11 @@ sub update_tracks {
       $self->set_tracks($self->data_source->track_source_to_label(@ts));
   }
 
-  if (my @selected = $self->split_labels(param('enable'))) {
+  if (my @selected = $self->split_labels_correctly(param('enable'))) {
     $state->{features}{$_}{visible} = 1 foreach @selected;
   }
 
-  if (my @selected = $self->split_labels(param('disable'))) {
+  if (my @selected = $self->split_labels_correctly(param('disable'))) {
     $state->{features}{$_}{visible} = 0 foreach @selected;
   }
 
@@ -2778,6 +2777,14 @@ sub regionview_bounds {
   return ($regionview_start, $regionview_end);
 }
 
+# this version handles labels with embedded hyphens correctly
+sub split_labels_correctly {
+  my $self = shift;
+  return map {split LABEL_SEPARATOR,$_} @_;
+}
+
+# this version does not handle labels with embedded "+" or "-"
+# unless the hyphen is escaped with %01d
 sub split_labels {
   my $self = shift;
   my @results;
@@ -2789,16 +2796,7 @@ sub split_labels {
 	  push @results,$_;
 	  next;
       }
-
-      # if the label contains a space, then split on the space
-      if (/\s/) {
-	  push @results, split /\s+/,$_;
-	  next;
-      }
-
-      # else split on "+" and "-" symbols
       push @results, split /[+-]/;
-      
   }
 
   my $group_separator = GROUP_SEPARATOR;
@@ -3456,7 +3454,6 @@ sub general_help {
 sub join_selected_tracks {
     my $self = shift;
     my $state = $self->state;
-    my $group_separator = GROUP_SEPARATOR;
 
     my @selected = $self->visible_tracks;
     for (@selected) { # escape hyphens
@@ -3464,9 +3461,8 @@ sub join_selected_tracks {
 	    my @subtracks = grep {$filter->{$_}} keys %{$filter};
 	    $_ .= "/@subtracks";
 	}
-	s/-/$group_separator/g;
     }
-    return join '-',@selected;
+    return join LABEL_SEPARATOR,@selected;
 }
 
 sub bookmark_link {
@@ -3479,7 +3475,7 @@ sub bookmark_link {
     $q->param(-name=>$_,   -value=>$settings->{$_});
   }
   $q->param(-name=>'id',   -value=>$settings->{userid});  # slight inconsistency here
-  $q->param(-name=>'label',-value=>$self->join_selected_tracks);
+  $q->param(-name=>'l',    -value=>$self->join_selected_tracks);
 
   $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
   my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};

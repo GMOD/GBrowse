@@ -720,30 +720,30 @@ sub galaxy_form {
       $URL .= "/".$source->name;
     }
 
-    my $action = $galaxy_url =~ /\?/ ? "$galaxy_url&URL=$URL" : "$galaxy_url?URL=$URL";
+    
+    # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
+    # when Galaxy posts the URL.
+    my $dbkey  = $source->global_setting('galaxy build name') || $source->name;
+    my $labels = $self->join_selected_tracks;
 
+    my $seg = $segment->seq_id.':'.$segment->start.'..'.$segment->end;
+		      
+    my $action = $galaxy_url =~ /\?/ ? "$galaxy_url&URL=$URL" : "$galaxy_url?URL=$URL";
     my $html = start_multipart_form(-name  => 'galaxyform',
 				    -action => $action,
 				    -method => 'POST');
 
-    # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
-    # when Galaxy posts the URL.
-    my $dbkey  = $source->global_setting('galaxy build name') || $source->name;
-    my $labels = join('+',map {escape($_)} $self->detail_tracks);
-
-    my $seg = $segment->seq_id.':'.$segment->start.'..'.$segment->end;
-		      
     $html .= hidden(-name=>'dbkey',-value=>$dbkey);
-    $html .= hidden(-name=>'gbgff',-value=>1);
+    $html .= hidden(-name=>'gbgff',-value=>'save gff3');
     $html .= hidden(-name=>'id',   -value=>$settings->{userid});
     $html .= hidden(-name=>'q',-value=>$seg);
-    $html .= hidden(-name=>'t',-value=>$labels);
+    $html .= hidden(-name=>'l',-value=>$labels);
     $html .= hidden(-name=>'s',-value=>0);
     $html .= hidden(-name=>'d',-value=>'edit');
     $html .= hidden(-name=>'m',-value=>'application/x-gff3');
     $html .= endform();
 
-  return $html;
+    return $html;
 }
 
 sub render_track_filter {
@@ -906,7 +906,7 @@ sub render_track_table {
 
       my %ids        = map {$_=>{id=>"${_}_check"}} @track_labels;
 
-      my @checkboxes = checkbox_group(-name       => 'label',
+      my @checkboxes = checkbox_group(-name       => 'l',
 				      -values     => \@track_labels,
 				      -labels     => \%labels,
 				      -defaults   => \@defaults,

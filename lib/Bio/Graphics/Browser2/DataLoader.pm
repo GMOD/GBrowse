@@ -205,15 +205,20 @@ sub category {
 
 sub backend {
     my $self = shift;
-    my $backend   = $self->setting('userdb_adaptor') || $self->guess_backend;
+    my $backend   = $self->setting('userdb_adaptor');
+    $backend = $self->guess_backend if $backend && $backend eq 'auto';
+    unless ($backend) {
+	$backend = $self->guess_backend;
+	warn "No userdb_adaptor option set in GBrowse.conf. Will try to use $backend.";
+    }
     return $backend;
 }
 
 sub guess_backend {
     my $self = shift;
     my %db_drivers = map {$_=>1} DBI->available_drivers(1);
-    return 'DBI::SQLite' if $db_drivers{SQLite} && eval "require Bio::DB::SeqFeature::Store::DBI::SQLite";
-    return 'berkeleydb'  if eval "require Bio::DB::SeqFeature::Store::berkeleydb; 1";
+    return 'DBI::SQLite' if $db_drivers{SQLite} && eval "require Bio::DB::SeqFeature::Store::DBI::SQLite; 1";
+    return 'berkeleydb'  if                        eval "require Bio::DB::SeqFeature::Store::berkeleydb; 1";
     return 'DBI::mysql'  if $db_drivers{mysql};
     return 'memory';
 }

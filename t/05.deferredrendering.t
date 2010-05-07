@@ -30,13 +30,19 @@ BEGIN {
 
   $PID = $$;
 
+  use Bio::Graphics::FeatureFile;
   rmtree '/tmp/gbrowse_testing';
+  rmtree(Bio::Graphics::FeatureFile->cachedir);
 }
 END {
     rmtree '/tmp/gbrowse_testing' if $$ == $PID;
 }
 
 # %ENV = ();
+%ENV = ();
+$ENV{GBROWSE_DOCS} = $Bin;
+$ENV{TMPDIR}       = '/tmp/gbrowse_testing';
+
 
 chdir $Bin;
 use lib "$Bin/../lib";
@@ -110,7 +116,7 @@ while (time()-$time < 10) {
 	$status_counts{$requests->{$label}->status}++;
     }
     last if ($status_counts{AVAILABLE}||0) == 5;
-    usleep(0.1);
+    usleep(0.2);
 }
 
 # each track should start with either EMPTY or PENDING and end with AVAILABLE

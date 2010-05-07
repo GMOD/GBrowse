@@ -15,7 +15,7 @@ use FindBin '$Bin';
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
-use constant TEST_COUNT => 139;
+use constant TEST_COUNT => 138;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -25,13 +25,15 @@ BEGIN {
   # we include the t dir (where a copy of Test.pm is located)
   # as a fallback
   eval { require Test; };
+  use Bio::Graphics::FeatureFile;
   if( $@ ) {
     use lib 't';
   }
   use Test;
   plan test => TEST_COUNT;
   $PID = $$;
-  rmtree '/tmp/gbrowse_testing';
+  rmtree('/tmp/gbrowse_testing');
+  rmtree(Bio::Graphics::FeatureFile->cachedir);
 }
 END {
   rmtree '/tmp/gbrowse_testing' if $$ == $PID;
@@ -40,11 +42,8 @@ END {
 $SIG{SEGV} = $SIG{HUP} = $SIG{INT} = $SIG{TERM} = \&cleanup;
 
 %ENV = ();
-$ENV{GBROWSE_DOCS} = $Bin;
-$ENV{TMPDIR}       = '/tmp/gbrowse_testing';
-
-chdir $Bin;
 use lib "$Bin/../lib";
+
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::Render::HTML;
 use Bio::Graphics::Browser2::Render::Slave;
@@ -55,6 +54,10 @@ use Bio::Graphics::Browser2::Render::Slave;
 my @servers = (Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # alignments
 	       Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic'), # cleavage sites
     );
+
+chdir $Bin;
+$ENV{GBROWSE_DOCS} = $Bin;
+$ENV{TMPDIR}       = '/tmp/gbrowse_testing';
 
 # rewrite the template config files
 for ('volvox_final.conf','yeast_chr1.conf') {
@@ -452,17 +455,13 @@ $png =~ s!/gbrowse/i!/tmp/gbrowse_testing/images!;
 ok (-e $png);
 
 # test different ways of splitting labels
-$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones Motifs BindingSites TransChip');
+$CGI::Q         = new CGI('name=ctgA:1..20000;l=Clones%1EMotifs%1EBindingSites%1ETransChip');
 $render->update_state;
 ok(join(' ',sort $render->detail_tracks),"BindingSites Clones Motifs TransChip");
 
-$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones+Motifs+BindingSites');
+$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones-Motifs-BindingSites');
 $render->update_state;
 ok(join(' ',sort $render->detail_tracks),"BindingSites Clones Motifs");
-
-$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones%20Motifs%20BindingSites%20TransChip');
-$render->update_state;
-ok(join(' ',sort $render->detail_tracks),"BindingSites Clones Motifs TransChip");
 
 ### check user tracks
 my $usertracks = $render->user_tracks;

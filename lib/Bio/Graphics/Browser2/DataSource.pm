@@ -356,6 +356,19 @@ sub i18n_style {
   %lang_options;
 }
 
+# return true if we should show a coverage summary for this
+# track at the current length
+sub show_summary {
+    my $self = shift;
+    my ($label,$length) = @_;
+    my $c  = $self->semantic_fallback_setting($label=>'show_summary',$length);
+    return 0 unless defined $c;
+    return 0 unless $c <= $length;
+    my $db = $self->open_database($label,$length) or return;
+    return 0 unless $db->can('feature_summary');
+    return 1;
+}
+
 sub clear_usertracks {
     my $self = shift;
     delete $self->{_user_tracks};

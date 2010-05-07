@@ -1,11 +1,12 @@
-The Generic Genome Browser package and all associated files are
-Copyright (c) 2002 Cold Spring Harbor Laboratory and University of
-California, Berkeley.
+The Generic Genome Browser package versions between 1.0 and 1.8 and
+all associated files are Copyright (c) 2002 Cold Spring Harbor
+Laboratory and University of California, Berkeley. Versions 1.9 and
+higher are copyright (c) 2010 Ontario Institute for Cancer Research.
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.  See the Artistic License file
-in the main Perl distribution for specific terms and conditions of
-use.  In addition, the following disclaimers apply:
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text.
 
 CSHL makes no representations whatsoever as to the SOFTWARE contained
 herein.  It is experimental in nature and is provided WITHOUT WARRANTY
@@ -20,6 +21,6 @@ nature, which may arise from your Institution's respective use,
 handling or storage of the SOFTWARE.
 
 If publications result from research using this SOFTWARE, we ask that
-CSHL and University of California, Berkeley be acknowledged and/or
-credit be given to CSHL/Berkeley scientists, as scientifically
-appropriate.
+CSHL, University of California, Berkeley and the Ontario Institute for
+Cancer Research be acknowledged and/or credit be given to
+CSHL/Berkeley/OICR scientists, as scientifically appropriate.

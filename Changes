@@ -2,7 +2,10 @@
 	  This will improve performance, but requires Bio::Graphics version 1.05.
 	* Reverted to older versions of prototype and scriptaculous due to Google
 	  Chrome incompatibilities.
-	* Can separate labels with ' ', '+' or "%20" when calling the URL via a label=label1+label2+label3.
+	* Preferred way to separate labels is now to use the "l" option and separate
+	  labels with "%1E", as in "l=mdc-1%1Esma-23%1Eunknown genes"
+	* Work around race conditions in the 05.deferredrendering regression tests.
+	  May still fail if system is under lots of load during test.
 2.04    * Can set the subtracks to be displayed by default using the new "select default" option.
 	* New syntax for select option:
           select   = type ;

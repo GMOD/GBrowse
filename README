@@ -131,8 +131,18 @@ www.gmod.org.
 
 Lincoln Stein & the GMOD team
 lincoln.stein@gmail.com
-October 2008
+April 2010
 
+
+--- COPYRIGHT AND LICENSING ---
+
+Copyright (c) 2002 Cold Spring Harbor Laboratory and University of California, Berkeley
+Copyright (c) 2010 Ontario Institute for Cancer Research
+
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text.
 
 --- AUTHORS ---
 
@@ -147,6 +157,7 @@ Sheldon McKay <mckays@cshl.edu>
 Nathan O. Siemers <Nathan.Siemers@bms.com>
 Ian Davies <i.davies2@rogers.com>
 Lincoln Stein <lincoln.stein@gmail.com>
+Peter Ruzanov <peter.ruzanov@oicr.on.ca>
 
 Special thanks go to the authors of the translations, who include:
 

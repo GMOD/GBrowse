@@ -421,9 +421,8 @@ sub search_features_remotely {
 
     my @found;
     while ($select->count > 0) {
-	my @ready = $select->can_read(5);
 
-	unless (@ready) { warn "timeout\n"; next; }
+	my @ready = $select->can_read(5) or next;
 
       HANDLE:
 	for my $r (@ready) {

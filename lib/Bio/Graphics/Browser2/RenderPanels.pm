@@ -1263,7 +1263,7 @@ sub run_local_requests {
 	croak "Can't fork: $!" unless defined $child;
 	next if $child;
 
-	warn "[$$] Background render";
+	warn "[$$] Background render" if DEBUG;
 
 	(my $base = $label) =~ s/:(overview|region|details?)$//;
 	warn "label=$label, base=$base, file=$feature_files->{$base}" if DEBUG;

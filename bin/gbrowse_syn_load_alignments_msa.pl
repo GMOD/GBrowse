@@ -49,7 +49,7 @@ while (my $infile = shift) {
   while (my $aln = $alignIO->next_aln) {
     my $len = $aln->length;
     $pidx = 0;
-    print "Processing Multiple Sequence Alignment " . ++$aln_idx . " (length $len)\n" if $verbose; 
+    print STDERR "Processing Multiple Sequence Alignment " . ++$aln_idx . " (length $len)\t\t\t\r" if $verbose; 
     next if $aln->num_sequences < 2;
     my %seq;
     %map = ();

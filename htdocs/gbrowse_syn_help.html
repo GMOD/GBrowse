@@ -54,10 +54,11 @@ Bye
  CLUSTALW-formated alignment file above into the database.
 
 <pre>
-# we have to decompress the alignment data
-$ sudo gunzip $HTDOCS/databases/gbrowse_syn/alignments/rice.aln.gz
-$ gbrowse_syn_load_alignments_msa.pl -u user -p pass -d rice_synteny -c $HTDOCS/databases/gbrowse_syn/alignments/rice.aln
+$ cd $HTDOCS/databases/gbrowse_syn/alignments
+$ sudo gunzip rice.aln.gz
+$ gbrowse_syn_load_alignments_msa.pl -u user -p pass -d rice_synteny -c -v rice.aln
 </pre>
+<i>Where 'user' and 'pass' correspond to a mysql account with root-level privileges</i> 
 
 3: activate the oryza gbrwose_syn configuration file by renaming it (root-level acess required).
 

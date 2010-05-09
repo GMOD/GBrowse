@@ -155,6 +155,7 @@ exit 0;
 
 END {
     if ($PID == $$) {
+	$SIG{CHLD} = 'IGNORE'; # prevent error codes from children propagating to Test::Harness
 	foreach ($server,$alignment_server,$cleavage_server) { 
 	    kill TERM=>$_->pid if $_
 	}

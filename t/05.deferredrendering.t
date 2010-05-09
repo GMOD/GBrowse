@@ -172,6 +172,7 @@ sub usleep {
 
 END {
     if ($PID == $$) {
+	$SIG{CHLD} = 'IGNORE'; # prevent error codes from children propagating to Test::Harness
 	foreach (@servers) { $_->kill }
 	unlink 'testdata/conf/volvox_final.conf',
 	       'testdata/conf/yeast_chr1.conf';

@@ -11,6 +11,7 @@ use File::Path 'rmtree';
 use IO::String;
 use CGI;
 use FindBin '$Bin';
+use POSIX ":sys_wait_h";
 
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
@@ -68,7 +69,7 @@ for ('volvox_final.conf','yeast_chr1.conf') {
 }
 
 for my $s (@servers) {
-    $s->debug(0);
+    $s->debug(1);
     ok($s->run);
 }
 
@@ -500,14 +501,16 @@ sub check_multiple_renders {
 }
 
 sub cleanup {
-    if ($PID == $$) {
-	foreach (@servers) { $_->kill }
-	unlink 'testdata/conf/volvox_final.conf',
-     	       'testdata/conf/yeast_chr1.conf';
-    }
+    return unless $PID == $$;
+    foreach (@servers) { $_->kill }
+    unlink 'testdata/conf/volvox_final.conf',
+    'testdata/conf/yeast_chr1.conf';
 }
 
 END {
-    cleanup();
+    if ($PID == $$) {
+	$SIG{CHLD} = 'IGNORE'; # prevent error codes from children propagating to Test::Harness
+	cleanup();
+    }
 }
 

@@ -1390,10 +1390,9 @@ sub run_local_requests {
     my $elapsed = time() - $time;
     warn "[$$] run_local_requests (@$labels): $elapsed seconds" if DEBUG;
 
-    for my $l (keys %$requests) {  # make sure requests are populated
-	$requests->{$l}->get_data(1);  # the argument turns off expiration checking
-    }
-    
+    # make sure requests are populated
+    # the "1" argument turns off expiration checking
+    $requests->{$_}->get_data(1) foreach keys %$requests;  
 }
 
 sub render_hidden_track {

@@ -279,8 +279,8 @@ sub make_requests {
 	}
 
 	warn "[$$] creating CachedTrack for $label, nocache = $args->{nocache}" if DEBUG;
-	my $cache_time = $args->{nocache}    ? -1
-	                :$settings->{cache}  ? $source->cache_time
+	my $cache_time =  $args->{nocache}    ? -1
+	                : $settings->{cache}  ? $source->cache_time
                         : -1;
 
         my $cache_object = Bio::Graphics::Browser2::CachedTrack->new(
@@ -1254,6 +1254,15 @@ sub run_local_requests {
     # create all the feature filters for each track
     my $filters = $self->generate_filters($settings,$source,\@labels_to_generate);
 
+    my %children;
+
+    local $SIG{CHLD} = sub {
+	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {
+	    warn "[$$] reaped child $pid" if DEBUG;
+	    delete $children{$pid} if $children{$pid};
+	}
+    };
+
     for my $label (@labels_to_generate) {
 
         # this shouldn't happen, but let's be paranoid
@@ -1261,7 +1270,10 @@ sub run_local_requests {
 
 	my $child = Bio::Graphics::Browser2::Render->fork();
 	croak "Can't fork: $!" unless defined $child;
-	next if $child;
+	if ($child) {
+	    $children{$child}++;
+	    next;
+	}
 
 	warn "[$$] Background render" if DEBUG;
 
@@ -1374,8 +1386,14 @@ sub run_local_requests {
 	}
 	exit 0; # in child;
     }
+    sleep while %children;
     my $elapsed = time() - $time;
     warn "[$$] run_local_requests (@$labels): $elapsed seconds" if DEBUG;
+
+    for my $l (keys %$requests) {  # make sure requests are populated
+	$requests->{$l}->get_data(1);  # the argument turns off expiration checking
+    }
+    
 }
 
 sub render_hidden_track {

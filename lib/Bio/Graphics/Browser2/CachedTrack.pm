@@ -163,10 +163,21 @@ sub put_data {
 }
 
 sub get_data {
-    my $self      = shift;
+    my $self           = shift;
+    my $ignore_expires = shift;
     return $self->{data} if $self->{data};
-    return unless $self->status eq 'AVAILABLE';
 
+    my $status = $self->status;
+    if ( ($status eq 'AVAILABLE') or 
+	 ($status eq 'EXPIRED' && $ignore_expires)) {
+	return $self->_get_data();
+    } else {
+	return;
+    }
+}
+
+sub _get_data {
+    my $self = shift;
     my $datafile  = $self->datafile;
     $self->{data} = retrieve($datafile);
     return $self->{data};

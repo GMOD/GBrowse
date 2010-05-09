@@ -82,7 +82,7 @@ sleep 1; # give slave renderers a chance to settle down
 $ENV{REQUEST_URI}    = 'http://localhost/cgi-bin/gbrowse/volvox';
 $ENV{PATH_INFO}      = '/volvox';
 $ENV{REQUEST_METHOD} = 'GET';
-$CGI::Q    = new CGI('name=ctgA:1..20000;label=Clones-Motifs-Transcripts');
+$CGI::Q    = new CGI('name=ctgA:1..20000;label=Clones-Motifs-Transcripts;cache=1');
 
 # this is the standard initialization, ok?
 my $globals = Bio::Graphics::Browser2->new(CONF_FILE);

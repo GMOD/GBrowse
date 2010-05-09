@@ -1254,11 +1254,12 @@ sub run_local_requests {
     # create all the feature filters for each track
     my $filters = $self->generate_filters($settings,$source,\@labels_to_generate);
 
-    my %children;
+    my (%children,%reaped);
 
     local $SIG{CHLD} = sub {
 	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {
 	    warn "[$$] reaped child $pid" if DEBUG;
+	    $reaped{$pid}++;
 	    delete $children{$pid} if $children{$pid};
 	}
     };
@@ -1271,10 +1272,9 @@ sub run_local_requests {
 	my $child = Bio::Graphics::Browser2::Render->fork();
 	croak "Can't fork: $!" unless defined $child;
 	if ($child) {
-	    $children{$child}++;
+	    $children{$child}++ unless $reaped{$child}; # in case child was reaped before it was sown
 	    next;
 	}
-
 	warn "[$$] Background render" if DEBUG;
 
 	(my $base = $label) =~ s/:(overview|region|details?)$//;
@@ -1386,7 +1386,9 @@ sub run_local_requests {
 	}
 	exit 0; # in child;
     }
+    warn "waiting for children" if DEBUG;
     sleep while %children;
+    warn "done waiting" if DEBUG;
     my $elapsed = time() - $time;
     warn "[$$] run_local_requests (@$labels): $elapsed seconds" if DEBUG;
 

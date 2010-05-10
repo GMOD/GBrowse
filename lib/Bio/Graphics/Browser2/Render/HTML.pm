@@ -2386,9 +2386,8 @@ sub display_citation {
     my $label       = shift;
     my $state       = $self->state();
     my $data_source = $self->data_source();
-    my $segment     = $self->thin_segment || $self->segment; # this is failing sometimes
-    return '' unless $segment;
-    my $length      = $segment->length;
+    my $segment     = $self->thin_segment;
+    my $length      = $segment ? $segment->length : 0;
     my $slabel      = $data_source->semantic_label($label,$length);
  
     my $key = $self->label2key($slabel);

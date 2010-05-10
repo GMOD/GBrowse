@@ -7,6 +7,8 @@
 	  labels with "%1E", as in "l=mdc-1%1Esma-23%1Eunknown genes"
 	* Work around race conditions in the 05.deferredrendering regression tests.
 	  May still fail if system is under lots of load during test.
+	* Fixed bug in change_track_order javascript that prevented track order change from
+	  "sticking" when track labels contained underscores.
 2.04    * Can set the subtracks to be displayed by default using the new "select default" option.
 	* New syntax for select option:
           select   = type ;

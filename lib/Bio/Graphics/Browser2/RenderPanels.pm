@@ -366,7 +366,6 @@ sub render_tracks {
 }
 
 sub wrap_rendered_track {
-
     my $self   = shift;
     my %args   = @_;
     my $label  = $args{'label'};
@@ -600,7 +599,7 @@ sub wrap_rendered_track {
 	$img = $pan_left2 . $pan_left . $img . $pan_right . $pan_right2;
     }
      return div({-class=>'centered_block',
- 		-style=>"width:${width}px;position:relative"
+		 -style=>"width:${width}px;position:relative"
 		},
  	       ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
          . ( $map_html || '' );

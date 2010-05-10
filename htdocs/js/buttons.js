@@ -97,7 +97,10 @@ function create_drag (div_name) {
 		      handle:  'titlebar',
 		      scroll:   window,
 		      onUpdate: function() {
-		      var postData = Sortable.serialize(div_name,{name:'label'})+';action=change_track_order';
+		      var items   = $(div_name).select('[class="track"]');
+		      var ids     = items.map(function(e){return e.id});
+		      ids         = ids.map(function(i) {return 'label[]='+escape(i.sub(/^track_/,''))});
+		      var postData= ids.join('&')+';action=change_track_order';
 		      new Ajax.Request(document.URL,{method:'post',postBody:postData});
 		    }
 		  }

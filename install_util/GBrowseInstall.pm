@@ -449,6 +449,12 @@ sub ACTION_install {
 
     my $base = basename($self->install_path->{htdocs});
 
+    if (Module::Build->y_n(
+	    "It is recommended that you restart Apache. Shall I try this for you?",'y'
+	)) {
+	system "sudo /etc/init.d/apache2 restart";
+    }
+
     print STDERR "\n***INSTALLATION COMPLETE***\n";
     print STDERR "Load http://localhost/$base for demo and documentation\n";
 }

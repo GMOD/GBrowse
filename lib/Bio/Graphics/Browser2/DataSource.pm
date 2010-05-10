@@ -785,7 +785,6 @@ sub open_database {
       $db->absolute(1)               if $db->can('absolute');
   }
 
-
   # remember mapping of this database to this track
   $self->{db2track}{$db}{$dbid}++;
 

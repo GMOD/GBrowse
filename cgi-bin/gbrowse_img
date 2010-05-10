@@ -1,11 +1,5 @@
 #!/usr/bin/perl -w
 
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 # $Id: gbrowse_img,v 1.7 2009-08-31 19:46:38 lstein Exp $
 
 use strict;
@@ -43,14 +37,15 @@ if ($fcgi) {
     };
 
     my %sys_env = %ENV;
-    while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
+    while (!$FCGI_DONE) {
+	my $status = $fcgi->Accept;
+	next unless $status >= 0;
         %ENV = ( %sys_env, %ENV );
 	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
 	GBrowse_img->new($globals)->run();
 	$fcgi->Finish();
     }
-
 }
 
 else {

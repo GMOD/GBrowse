@@ -39,7 +39,8 @@ sub open_database {
   my $db    = $CACHE->get($key);
   return $db if defined $db;
 
-  warn "open database @argv" if DEBUG;
+  my @caller = caller(1);
+  warn "[$$] open database @argv from @caller" if DEBUG;
 
   $db = eval {$adaptor->new(@argv)};
   if (!$db && $@ =~ /too many open files/) {

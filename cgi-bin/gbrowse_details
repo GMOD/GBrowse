@@ -1,11 +1,5 @@
 #!/usr/bin/perl -w
 
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 use strict;
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::RegionSearch;
@@ -40,7 +34,9 @@ if ($fcgi) {
     };
 
     my %sys_env = %ENV;
-    while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
+    while (!$FCGI_DONE) {
+	my $status = $fcgi->Accept;
+	next unless $status >= 0;
         %ENV = ( %sys_env, %ENV );
 	CGI->initialize_globals();
 	DetailRenderer->new($conf)->run();

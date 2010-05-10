@@ -138,6 +138,14 @@ sub request_panels {
   # If both local and remote requests are needed, then we
   # fork a second time and process them in parallel.
   if ($args->{deferred}) {
+
+      # precache local databases into cache
+      my $length = $self->segment->length;
+      my $source = $self->source;
+      for my $l (@$local_labels) {
+	  my $db = eval { $source->open_database($l,$length)};
+      }
+
       my $child = Bio::Graphics::Browser2::Render->fork();
 
       if ($child) {

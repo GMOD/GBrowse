@@ -25,6 +25,7 @@ use constant PAD_DETAIL_SIDES    => 10;
 use constant RULER_INTERVALS     => 20;
 use constant PAD_OVERVIEW_BOTTOM => 5;
 use constant TRY_CACHING_CONFIG  => 1;
+use constant MAX_PROCESSES       => 4;
 
 # when we load, we set a global indicating the LWP::UserAgent is available
 my $LPU_AVAILABLE;
@@ -1271,18 +1272,28 @@ sub run_local_requests {
 	}
     };
 
+    my $max_processes = $self->source->global_setting('max_render_processes')
+	|| MAX_PROCESSES;
+
     for my $label (@labels_to_generate) {
 
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
 
+	# don't let there be more than this many processes 
+	# running simultaneously
+	while ((my $c = keys %children) >= $max_processes) {
+	    warn "[$$] too many processes ($c), sleeping" if DEBUG;
+	    sleep 1;
+	}
+
 	my $child = Bio::Graphics::Browser2::Render->fork();
 	croak "Can't fork: $!" unless defined $child;
 	if ($child) {
+	    warn "Launched rendering process $child for $label" if DEBUG;
 	    $children{$child}++ unless $reaped{$child}; # in case child was reaped before it was sown
 	    next;
 	}
-	warn "[$$] Background render" if DEBUG;
 
 	(my $base = $label) =~ s/:(overview|region|details?)$//;
 	warn "label=$label, base=$base, file=$feature_files->{$base}" if DEBUG;

@@ -1392,7 +1392,7 @@ sub run_local_requests {
 		$requests->{$label}->flag_error($@);
 	    }
 	}
-	exit 0; # in child;
+	CORE::exit 0; # in child;
     }
     warn "waiting for children" if DEBUG;
     sleep while %children;

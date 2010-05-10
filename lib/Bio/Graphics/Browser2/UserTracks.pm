@@ -488,7 +488,7 @@ sub install_filter {
 	$unzip->print($buffer);
     }
     close $unzip;
-    exit 0;
+    CORE::exit 0;
 }
 
 sub remote_mirror_conf {

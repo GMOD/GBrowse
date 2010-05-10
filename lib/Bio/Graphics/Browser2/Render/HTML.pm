@@ -2380,13 +2380,15 @@ sub format_autocomplete {
     return $html;
 }
 
-## Truncated version (of track_config) to for displaying citation only:
+## Truncated version (of track_config) for displaying citation only:
 sub display_citation {
     my $self        = shift;
     my $label       = shift;
     my $state       = $self->state();
     my $data_source = $self->data_source();
-    my $length      = $self->thin_segment->length;
+    my $segment     = $self->thin_segment || $self->segment; # this is failing sometimes
+    return '' unless $segment;
+    my $length      = $segment->length;
     my $slabel      = $data_source->semantic_label($label,$length);
  
     my $key = $self->label2key($slabel);

@@ -82,7 +82,9 @@ var Balloon = function () {
 // delay time to avoid balloons popping up on rapid mouseover events    //
 //////////////////////////////////////////////////////////////////////////
 Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
-  // If the objext is not configured by now, fall back to default
+			      
+	
+  // If the object is not configured by now, fall back to default
   if (!this.configured) {
     BalloonConfig(this,'GBubble');
   }

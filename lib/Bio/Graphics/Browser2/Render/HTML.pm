@@ -2050,16 +2050,17 @@ sub download_track_menu {
     my $end         = $segment->end;
     my $key         = $self->label2key($track);
 
+    my $unload      = 'window.onbeforeunload=void(0)';
     my $byebye      = 'Balloon.prototype.hideTooltip(1)';
 
     my $html = '';
     $html   .= div({-align=>'center'},
 		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key),br(),
 		   button(-value   => "Download track data in region $seqid:$start..$end",
-			  -onClick => "location.href='?gbgff=1;q=$seqid:$start..$end;t=$track;s=0;f=save+gff3';$byebye",
+			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid:$start..$end;l=$track;s=0;f=save+gff3';$byebye",
 		   ),
 		   button(-value=>"Download ALL track data",
-			  -onClick => "location.href='?gbgff=1;t=$track;s=0;f=save+gff3';$byebye",
+			  -onClick => "$unload;location.href='?gbgff=1;l=$track;s=0;f=save+gff3';$byebye",
 		   )).
 		   a({-href=>'javascript:void(0)',-onClick=>$byebye},
 		     'Close');
@@ -2162,7 +2163,7 @@ sub share_track {
     }
     else {
         $gbgff  = $base;
-        $gbgff .= "?gbgff=1;q=$segment;t=$labels;s=1";
+        $gbgff .= "?gbgff=1;q=$segment;t=$labels;s=1;format=gff3";
         $gbgff .= ";uuid=$upload_id" if $usertracks_present;
     }
 

@@ -18,7 +18,7 @@ use Bio::Graphics::Browser2::Region;
 use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::Browser2::RenderPanels;
 use Bio::Graphics::Browser2::RemoteSet;
-use Bio::Graphics::Browser2::GFFPrinter;
+use Bio::Graphics::Browser2::TrackDumper;
 use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
 use Bio::Graphics::Browser2::UserTracks;
 use POSIX ":sys_wait_h";
@@ -1255,12 +1255,12 @@ sub handle_gff_dump {
     # new API
     if (my $action = param ('f') || param('fetch')) {
 	$gff_action = $action;
-    } elsif ($action = param('gbgff')) {
-	$gff_action = 'scan'       if $action eq 'scan';
-	$gff_action = 'gff3'       if $action eq '1';
-	$gff_action = 'save gff3'  if $action =~ /save/i;
-	$gff_action = 'save fasta' if $action =~ /fasta/i;
-	$gff_action .= " trackdef" if param('s') or param('stylesheet');
+    } elsif ($action = param('gbgff')||param('download_track')) {
+	$gff_action = 'scan'           if $action eq 'scan';
+	$gff_action = 'datafile'       if $action eq '1';
+	$gff_action = 'save datafile'  if $action =~ /save/i;
+	$gff_action = 'save fasta'     if $action =~ /fasta/i;
+	$gff_action .= " trackdef"     if param('s') or param('stylesheet');
     }
     return unless $gff_action;
 
@@ -1274,14 +1274,16 @@ sub handle_gff_dump {
 
     my $title      = join('+',@labels);
     $title        .= ":$segment" if $segment;
+    $title         =~ s/\s/_/;
 
-    my $dumper = Bio::Graphics::Browser2::GFFPrinter->new(
+    my $dumper = Bio::Graphics::Browser2::TrackDumper->new(
         -data_source => $self->data_source(),
         -stylesheet  => $actions{trackdef}   ||  'no',
         '-dump'      => param('d')           || undef,
         -labels      => \@labels,
 	-segment     => $segment             || undef,
         -mimetype    => param('m')           || undef,
+	-format      => param('format')      || undef,
     ) or return 1;
 
     # so that another user's tracks are added if requested
@@ -1293,19 +1295,23 @@ sub handle_gff_dump {
     }
     else {
 	$dumper->state($self->state);
-	if ($actions{save} && $actions{gff3}) {
-	    print header( -type                => $dumper->get_mime_type,
-			  -content_disposition => "attachment; filename=$title.gff3");
-	    $dumper->print_gff3() ;
+	my $mime = $dumper->get_file_mime_type;
+	my $ext  = $dumper->get_file_extension;
+	warn "title = $title";
+
+	if ($actions{save} && ($actions{datafile}||$actions{gff3})) {
+	    print header( -type                => $mime,
+			  -content_disposition => "attachment; filename=$title.$ext");
+	    $dumper->print_datafile() ;
 	}
 	elsif ($actions{fasta}) {
-	    print header( -type                => $dumper->get_mime_type,
+	    print header( -type                => $mime =~ /x-/ ? 'application/x-fasta' : $mime,
 			  -content_disposition => "attachment; filename=$title.fa");
 	    $dumper->print_fasta();
 	}
-	elsif ($actions{gff3}) {
-	    print header( -type                => $dumper->get_mime_type);
-	    $dumper->print_gff3();
+	elsif ($actions{datafile}) {
+	    print header( -type                => $mime);
+	    $dumper->print_datafile();
 	} elsif ($actions{trackdef}) {
 	    print header( -type                => 'text/plain');
 	    $dumper->print_stylesheet();

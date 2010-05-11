@@ -527,7 +527,7 @@ lib/Bio/Graphics/Browser2/DataLoader/wiggle.pm
 lib/Bio/Graphics/Browser2/DataSource.pm
 lib/Bio/Graphics/Browser2/ExternalData.pm
 lib/Bio/Graphics/Browser2/GFFhelper.pm
-lib/Bio/Graphics/Browser2/GFFPrinter.pm
+lib/Bio/Graphics/Browser2/TrackDumper.pm
 lib/Bio/Graphics/Browser2/I18n.pm
 lib/Bio/Graphics/Browser2/Markup.pm
 lib/Bio/Graphics/Browser2/OptionPick.pm

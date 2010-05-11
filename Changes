@@ -9,6 +9,7 @@
 	  May still fail if system is under lots of load during test.
 	* Fixed bug in change_track_order javascript that prevented track order change from
 	  "sticking" when track labels contained underscores.
+	* Download icons now selectively download GFF3, SAM or WIG data.
 2.04    * Can set the subtracks to be displayed by default using the new "select default" option.
 	* New syntax for select option:
           select   = type ;

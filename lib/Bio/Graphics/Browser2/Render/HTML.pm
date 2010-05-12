@@ -613,7 +613,7 @@ sub render_busy_signal {
     return img({
         -id    => 'busy_indicator',
         -src   => $self->globals->button_url.'/spinner.gif',
-        -style => 'position: absolute; top: 5px; left: 5px; display: none',
+        -style => 'position: fixed; top: 5px; left: 5px; display: none',
         -alt   => "Working..."
        });
 }

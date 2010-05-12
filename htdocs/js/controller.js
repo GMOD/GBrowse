@@ -480,7 +480,7 @@ var GBrowseController = Class.create({
   function() {
     var bi = $('busy_indicator');
     var top  = document.body.scrollTop||document.documentElement.scrollTop;
-    bi.style.top=top+"px";
+    bi.style.top=5+"px";
     bi.style.left=5+"px";
     bi.show();
   },

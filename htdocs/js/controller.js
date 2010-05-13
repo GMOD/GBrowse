@@ -392,7 +392,7 @@ var GBrowseController = Class.create({
         if (results.display_details == 0){
           Controller.hide_detail_tracks();
         }
-	Controller.idle();
+//	Controller.idle();
       } // end onSuccess
       
     }); // end Ajax.Request
@@ -428,6 +428,7 @@ var GBrowseController = Class.create({
 
     if (!found_track) return false;
 
+    this.busy();
     new Ajax.Request(document.URL,{
       method:     'post',
       parameters: request_str,
@@ -480,8 +481,8 @@ var GBrowseController = Class.create({
   function() {
     var bi = $('busy_indicator');
     var top  = document.body.scrollTop||document.documentElement.scrollTop;
-    bi.style.top=5+"px";
-    bi.style.left=5+"px";
+    bi.style.top  =top+5+"px";
+    bi.style.left =5+"px";
     bi.show();
   },
 
@@ -582,6 +583,7 @@ var GBrowseController = Class.create({
     var track_ids = [];
     var finished = true;
     var track_key_str = '';
+    this.busy();
     this.retrieve_tracks.keys().each(
       function(track_id) {
         if(Controller.retrieve_tracks.get(track_id)){
@@ -595,7 +597,7 @@ var GBrowseController = Class.create({
     );
 
     if (finished) {
-      this.idle();
+//      this.idle();
       return;
     }
 

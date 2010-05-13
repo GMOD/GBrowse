@@ -10,6 +10,11 @@
 	* Fixed bug in change_track_order javascript that prevented track order change from
 	  "sticking" when track labels contained underscores.
 	* Download icons now selectively download GFF3, SAM or WIG data.
+	* Early support for a "show_summary" option in [TRACK DEFAULTS] and [TRACK] stanzas. If this
+	  is present and set to a length in bases, then when the user tries to display a region
+	  larger than the length the track will display feature density instead. For this to
+	  work, the database adaptor must support a feature_summary() method. This is being actively
+	  worked on in bioperl, but is not currently available.
 2.04    * Can set the subtracks to be displayed by default using the new "select default" option.
 	* New syntax for select option:
           select   = type ;

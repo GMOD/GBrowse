@@ -3446,20 +3446,6 @@ sub delete_stored_segments {
     delete $self->{whole_segment};
 }
 
-# I know there must be a more elegant way to insert commas into a long number...
-sub commas {
-    my $self = shift;
-    my $i    = shift;
-    return $i if $i=~ /\D/;
-
-    $i = reverse $i;
-    $i =~ s/(\d{3})/$1,/g;
-    chop $i if $i=~/,$/;
-
-    $i = reverse $i;
-    return $i;
-}
-
 ###################### link generation ##############
 sub annotation_help {
   return shift->globals->url_base."/annotation_help.html";

@@ -362,6 +362,8 @@ sub show_summary {
     my $self = shift;
     my ($label,$length) = @_;
     my $c  = $self->semantic_fallback_setting($label=>'show_summary',$length);
+    my $g  = $self->semantic_fallback_setting($label=>'glyph',$length);
+    return 0 if $g =~ /wiggle|xyplot|density/;  # don't summarize wiggles or xyplots
     return 0 unless defined $c;
     return 0 unless $c <= $length;
     my $db = $self->open_database($label,$length) or return;

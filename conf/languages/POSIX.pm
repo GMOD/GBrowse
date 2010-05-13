@@ -542,4 +542,8 @@ END
     CUSTOM_TRACKS_PAGE => 'Upload and Share Tracks',
     SETTINGS_PAGE      => 'Preferences',
 
+    DOWNLOAD_TRACK_DATA_REGION => 'Download track data across region %s',
+    DOWNLOAD_TRACK_DATA_CHROM => 'Download track data across ENTIRE chromosome %s',
+    DOWNLOAD_TRACK_DATA_ALL => 'Download ALL DATA for this track',
+
 };

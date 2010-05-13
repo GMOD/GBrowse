@@ -5,7 +5,7 @@ use warnings;
 use base 'Bio::Graphics::Browser2::Render';
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Karyotype;
-use Bio::Graphics::Browser2::Util qw[citation url_label];
+use Bio::Graphics::Browser2::Util qw[citation url_label segment_str];
 use JSON;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
@@ -1404,12 +1404,10 @@ sub segment2link {
     my $source = $self->data_source;
     return  a({-href=>"?name=$segment"},$segment) unless ref $segment;
 
-    my ($start,$stop) = ($segment->start,$segment->end);
     my $ref = $segment->seq_id;
+    my ($start,$stop) = ($segment->start,$segment->end);
     my $bp = $stop - $start;
-    my $s  = $self->commas($start) || '';
-    my $e  = $self->commas($stop)  || '';
-    $label ||= "$ref:$s..$e";
+    $label ||= segment_str($segment);
     $ref||='';  # get rid of uninit warnings
     return a({-href=>"?ref=$ref;start=$start;stop=$stop"},$label);
 }
@@ -2044,7 +2042,9 @@ sub download_track_menu {
 
     my $state       = $self->state();
     my $data_source = $self->data_source();
-    my $segment     = $self->thin_segment;
+    my $segment     = $track =~ /:overview$/ ? $self->thin_whole_segment
+                     :$track =~ /:region$/   ? $self->thin_region_segment
+                                             : $self->thin_segment;
     my $seqid       = $segment->seq_id;
     my $start       = $segment->start;
     my $end         = $segment->end;
@@ -2053,17 +2053,26 @@ sub download_track_menu {
     my $unload      = 'window.onbeforeunload=void(0)';
     my $byebye      = 'Balloon.prototype.hideTooltip(1)';
 
+    my $segment_str = segment_str($segment);
+
     my $html = '';
     $html   .= div({-align=>'center'},
 		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key),br(),
-		   button(-value   => "Download track data in region $seqid:$start..$end",
+
+		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_REGION',$segment_str),
 			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid:$start..$end;l=$track;s=0;f=save+gff3';$byebye",
 		   ),
-		   button(-value=>"Download ALL track data",
+
+		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_CHROM',$seqid),
+			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid;l=$track;s=0;f=save+gff3';$byebye",
+		   ),
+
+		   button(-value=> $self->tr('DOWNLOAD_TRACK_DATA_ALL'),
 			  -onClick => "$unload;location.href='?gbgff=1;l=$track;s=0;f=save+gff3';$byebye",
 		   )).
+
 		   a({-href=>'javascript:void(0)',-onClick=>$byebye},
-		     'Close');
+		     $self->tr('CLOSE_WINDOW'));
     return $html;
 }
 

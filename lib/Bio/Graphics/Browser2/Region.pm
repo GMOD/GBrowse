@@ -505,9 +505,11 @@ sub region_segment {
 
     my ($region_segment) = $db ? $db->segment(-class => $class,
 					      -name  => $segment->seq_id,
+					      -seq_id=>$segment->seq_id,
 					      -start => $regionview_start,
 					      -end   => $regionview_end)
                               :Bio::Graphics::Feature->new(-name  => $segment->seq_id,
+							   -seq_id => $segment->seq_id,
 							   -start => $regionview_start,
 							   -end   => $regionview_end);
     return $region_segment;

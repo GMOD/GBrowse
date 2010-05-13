@@ -29,7 +29,7 @@ use Carp 'carp','cluck';
 use Digest::MD5;
 
 our @EXPORT    = qw(modperl_request error citation shellwords url_label);
-our @EXPORT_OK = qw(modperl_request error citation shellwords url_label);
+our @EXPORT_OK = qw(modperl_request error citation shellwords url_label segment_str);
 
 use constant DEBUG => 0;
 
@@ -143,6 +143,21 @@ sub generate_id {
     $md5->add($$ , time() , rand(time) );
     return $md5->hexdigest();
 }
+
+=item $string = segment_str($segment)
+
+Returns a nicely formatted string in the format chr:start..stop with commas
+
+=cut
+
+sub segment_str {
+    my $segment = shift;
+    my $s  = 'Bio::Graphics::Browser2::DataSource';
+    return $segment->seq_id . ':' .
+	   $s->commas($segment->start) . '..' .
+	   $s->commas($segment->end);
+}
+
 
 =back
 

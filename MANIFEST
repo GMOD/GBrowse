@@ -270,6 +270,7 @@ htdocs/images/buttons/red6.gif
 htdocs/images/buttons/red7.gif
 htdocs/images/buttons/red8.gif
 htdocs/images/buttons/share.png
+htdocs/images/buttons/spinner.gif
 htdocs/images/buttons/tools.png
 htdocs/images/buttons/trash.gif
 htdocs/images/buttons/trash.png
@@ -304,7 +305,6 @@ htdocs/images/openid/livejournal-logo.png
 htdocs/images/openid/myopenid-logo.png
 htdocs/images/openid/openid-logo.gif
 htdocs/images/openid/yahoo-logo.png
-htdocs/images/buttons/spinner.gif
 htdocs/index.html
 htdocs/js/ajax_upload.js
 htdocs/js/animation.js
@@ -527,7 +527,6 @@ lib/Bio/Graphics/Browser2/DataLoader/wiggle.pm
 lib/Bio/Graphics/Browser2/DataSource.pm
 lib/Bio/Graphics/Browser2/ExternalData.pm
 lib/Bio/Graphics/Browser2/GFFhelper.pm
-lib/Bio/Graphics/Browser2/TrackDumper.pm
 lib/Bio/Graphics/Browser2/I18n.pm
 lib/Bio/Graphics/Browser2/Markup.pm
 lib/Bio/Graphics/Browser2/OptionPick.pm
@@ -545,6 +544,7 @@ lib/Bio/Graphics/Browser2/Render/Slave/Status.pm
 lib/Bio/Graphics/Browser2/RenderPanels.pm
 lib/Bio/Graphics/Browser2/Session.pm
 lib/Bio/Graphics/Browser2/Shellwords.pm
+lib/Bio/Graphics/Browser2/TrackDumper.pm
 lib/Bio/Graphics/Browser2/UserTracks.pm
 lib/Bio/Graphics/Browser2/Util.pm
 lib/Bio/Graphics/GBrowseFeature.pm

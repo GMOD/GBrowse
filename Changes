@@ -1,3 +1,8 @@
+2.06    Thu May 13 17:10:59 EDT 2010
+	* Fixed dangling references to GFFPrinter.pm module, which was renamed TrackDumper.pm
+	* Requires Bio::Graphics version 2.08, in order to fix the init_code option, which stopped
+	  working when config file caching was introduced in Bio::Graphics 2.07.
+ 
 2.05	* Implemented a new caching scheme for communicating with renderfarm slaves. 
 	  This will improve performance, but requires Bio::Graphics version 1.05.
         * Experimental local rendering code -- each track is rendered in a separate process.

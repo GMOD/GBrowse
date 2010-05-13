@@ -8,7 +8,7 @@ license: perl
 resources:
   license: http://dev.perl.org/licenses/
 requires:
-  Bio::Graphics: 2.05
+  Bio::Graphics: 2.07
   Bio::Root::Version: 1.005009001
   CGI::Session: 4.02
   Digest::MD5: 0
@@ -95,8 +95,6 @@ provides:
     file: lib/Bio/Graphics/Browser2/DataSource.pm
   Bio::Graphics::Browser2::ExternalData:
     file: lib/Bio/Graphics/Browser2/ExternalData.pm
-  Bio::Graphics::Browser2::GFFPrinter:
-    file: lib/Bio/Graphics/Browser2/GFFPrinter.pm
   Bio::Graphics::Browser2::GFFhelper:
     file: lib/Bio/Graphics/Browser2/GFFhelper.pm
   Bio::Graphics::Browser2::I18n:
@@ -140,6 +138,8 @@ provides:
     file: lib/Bio/Graphics/Browser2/Session.pm
   Bio::Graphics::Browser2::Shellwords:
     file: lib/Bio/Graphics/Browser2/Shellwords.pm
+  Bio::Graphics::Browser2::TrackDumper:
+    file: lib/Bio/Graphics/Browser2/TrackDumper.pm
   Bio::Graphics::Browser2::UserConf:
     file: lib/Bio/Graphics/Browser2/UserTracks.pm
   Bio::Graphics::Browser2::UserTracks:

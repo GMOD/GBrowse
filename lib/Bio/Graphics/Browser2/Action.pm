@@ -6,6 +6,7 @@ package Bio::Graphics::Browser2::Action;
 use strict;
 use Carp 'croak';
 use CGI();
+use Bio::Graphics::Browser2::TrackDumper;
 use constant DEBUG => 0;
 
 sub new {
@@ -149,7 +150,7 @@ sub ACTION_select_subtracks {
 sub ACTION_scan {
     my $self = shift;
     my $q    = shift;
-    my $dumper = Bio::Graphics::Browser2::GFFPrinter->new(
+    my $dumper = Bio::Graphics::Browser2::TrackDumper->new(
         -data_source => $self->data_source(),
     );
     return (200, 'text/plain', $dumper->get_scan);

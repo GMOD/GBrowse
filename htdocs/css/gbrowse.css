@@ -94,6 +94,9 @@ span.tctl         { cursor: pointer }
     padding-left:  5px;
     padding-right: 5px;
 }
+.datatitle {
+    height: 25px;
+}
 .menutitle:hover {
     text-decoration: underline;
 }

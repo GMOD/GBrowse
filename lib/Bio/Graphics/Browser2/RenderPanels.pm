@@ -1007,6 +1007,7 @@ sub label_density {
 sub make_scale_feature {
     my $self      = shift;
     my ($segment,$width) = @_;
+    return unless $segment;
     my $length = $segment->length;
 
     # how long is 1/5 of the width?

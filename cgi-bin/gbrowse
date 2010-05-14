@@ -35,6 +35,7 @@ if ($fcgi) {
 	Bio::Graphics::Browser2::Render::HTML->new($globals)->run();
     }
 } else {
+    $SIG{TERM} = sub { warn "gbrowse going down..."; CORE::exit 0 };
     my $globals = Bio::Graphics::Browser2->open_globals;
     Bio::Graphics::Browser2::Render::HTML->new($globals)->run();
 }

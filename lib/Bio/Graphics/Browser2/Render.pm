@@ -1297,7 +1297,6 @@ sub handle_gff_dump {
 	$dumper->state($self->state);
 	my $mime = $dumper->get_file_mime_type;
 	my $ext  = $dumper->get_file_extension;
-	warn "title = $title";
 
 	if ($actions{save} && ($actions{datafile}||$actions{gff3})) {
 	    print header( -type                => $mime,

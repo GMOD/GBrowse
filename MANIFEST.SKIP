@@ -74,3 +74,4 @@ BUGS_TO_FIX
 \.bz2
 ^GBrowse-\d+
 slave\.pid
+^MYMETA.yml$

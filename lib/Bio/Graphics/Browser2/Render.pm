@@ -5,7 +5,7 @@ use warnings;
 
 use JSON;
 use Digest::MD5 'md5_hex';
-use CGI qw(:standard param request_method header url iframe img span div br center);
+use CGI qw(:standard param request_method header url iframe img span div br center url_param);
 use Carp 'croak','cluck';
 use File::Basename 'dirname','basename';
 use Text::Tabs;
@@ -1028,7 +1028,7 @@ sub init_database {
 sub region {
     my $self     = shift;
 
-    return $self->{region} if exists $self->{region};
+    return $self->{region} if $self->{region};
 
     my $source = $self->data_source;
     my $db     = $source->open_database();
@@ -1069,7 +1069,7 @@ sub region {
 
     $self->plugins->set_segments($region->segments) if $self->plugins;
     $self->state->{valid_region} = $region->feature_count > 0;
-    return $self->{region} = $region;
+    return $self->{region}       = $region;
 }
 
 sub thin_segment {
@@ -2191,6 +2191,7 @@ sub update_coordinates {
   }
 
   elsif (param('name')) {
+      $state->{backup_region} = [$state->{ref},$state->{start},$state->{stop}] if $state->{ref};
       undef $state->{ref};  # no longer valid
       undef $state->{start};
       undef $state->{stop};
@@ -2495,11 +2496,16 @@ sub asynchronous_update_coordinates {
 	
 
 	unless (defined $state->{ref}) {
-	    warn "BUG: working around no ref defined bug; tell Lincoln bug is not fixed";
-	    if (my $seg = $self->segment) {
-		$state->{ref}   = $seg->seq_id;
-		$state->{start} = $seg->start;
-		$state->{stop}   = $seg->stop;
+	    warn "Reverting coordinates to last known good region (user probably hit 'back' button).";
+	    if ($state->{backup_region}) { # last known working region
+		@{$state}{'ref','start','stop'} = @{$state->{backup_region}};
+	    } else {
+		$state->{name} = param('name') || param('q') || url_param('name') || url_param('q'); # get the region somehow!!
+		if (my $seg = $self->segment) {
+		    $state->{ref}   = $seg->seq_id;
+		    $state->{start} = $seg->start;
+		    $state->{stop}  = $seg->stop;
+		}
 	    }
 	}
 

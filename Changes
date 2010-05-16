@@ -2,6 +2,9 @@
 	* Fixed dangling references to GFFPrinter.pm module, which was renamed TrackDumper.pm
 	* Requires Bio::Graphics version 2.08, in order to fix the init_code option, which stopped
 	  working when config file caching was introduced in Bio::Graphics 2.07.
+	* Tracked down the "let Lincoln know bug is not fixed" bug, and found a real workaround.
+	  This was happening when user presses "back" button on browser after an unsuccessful
+	  search.
  
 2.05	* Implemented a new caching scheme for communicating with renderfarm slaves. 
 	  This will improve performance, but requires Bio::Graphics version 1.05.

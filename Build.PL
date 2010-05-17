@@ -18,7 +18,7 @@ my $build = GBrowseInstall->new(
     requires     => {
 	'perl'                => '5.008',
 	'Bio::Root::Version'  => '1.005009001',
-	'Bio::Graphics'       => '2.08',
+	'Bio::Graphics'       => '2.09',
 	'GD'                  => '2.07',
 	'IO::String'          => 0,
 	'CGI::Session'        => '4.02',
@@ -36,14 +36,18 @@ my $build = GBrowseInstall->new(
 	'DBI'                      => 0,
 	'DBD::mysql'               => 0,
 	'DBD::Pg'                  => 0,
+	'DBD::SQLite'              => 0,
 	'GD::SVG'                  => 0,
-	'Safe::World'              => 0,
+	$] <= 5.008 ? ('Safe::World'  => 0)
+                    : ()               ,
 	'FCGI'                     => 0,
 	'Math::BigInt'             => 0,
 	'Digest::SHA'              => 0,	
 	'Net::OpenID::Consumer'    => 0,
 	'Crypt::SSLeay'            => 0,
 	'Net::SMTP::SSL'           => 0,
+	'Bio::DB::Sam'             => 1.19,
+	'Bio::DB::BigFile'         => 1.00,
     },
     script_files => [
 	'bin/gbrowse_slave',

@@ -148,8 +148,13 @@ sub dump_sam {
     # in the case of modperl, we revert to doing the conversion at the perl level
     # which may be slower
     if (modperl_request()) {
-	my $iterator = $db->features(@args,-iterator=>1);
-	print $_->tam_line,"\n" while $_ = $iterator->next_seq;
+	if (Bio::DB::Bam::AlignWrapper->can('tam_line')) {
+	    my $iterator = $db->features(@args,-iterator=>1);
+	    print $_->tam_line,"\n" while $_ = $iterator->next_seq;
+	} else {
+	    print "## Bio::DB::SamTools 1.19 or higher required for printing SAM data when running under mod_perl\n";
+	}
+	return;
     }
 
 

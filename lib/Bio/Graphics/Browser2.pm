@@ -2,7 +2,7 @@ package Bio::Graphics::Browser2;
 # $Id$
 # Globals and utilities for GBrowse and friends
 
-our $VERSION = '2.06';
+our $VERSION = '2.07';
 
 use strict;
 use warnings;

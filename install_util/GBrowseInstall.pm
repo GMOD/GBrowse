@@ -859,6 +859,22 @@ sub cgiurl {
     return $cgiurl;
 }
 
+sub check_prereq {
+    my $self   = shift;
+    my $result = $self->SUPER::check_prereq(@_);
+    unless ($result) {
+	$self->log_warn(<<END);
+  * Do not worry if some optional preqrequisites are missing. You can install *
+  * them later if you need the features they provide. Do not proceed with the *
+  * install if any of REQUIRED prerequisites are missing.                     *
+  *                                                                           *
+  * The optional Safe::World module does not currently run on Perl 5.10 or    *
+  * higher, and so cannot be installed.                                       *
+
+END
+    }
+}
+
 1;
 
 __END__

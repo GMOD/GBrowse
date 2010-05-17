@@ -1,10 +1,17 @@
+2.07 Mon May 17 10:27:56 EDT 2010
+`    	* Tracked down the "let Lincoln know bug is not fixed" bug, and found a real solution.
+	  This was happening when user presses "back" button on browser after an unsuccessful
+	  search. This still triggers a log message until we know the bug is really and truly
+	  fixed.
+	* BAM track download now works properly under both FastCGI and mod_perl. mod_perl
+	  download requires Bio-SamTools 1.19.
+	* Requires Bio::Graphics version 2.09, which addresses a bug in which subroutines
+	  defined in init_code could not be referenced within callbacks.
+
 2.06    Thu May 13 17:10:59 EDT 2010
 	* Fixed dangling references to GFFPrinter.pm module, which was renamed TrackDumper.pm
 	* Requires Bio::Graphics version 2.08, in order to fix the init_code option, which stopped
 	  working when config file caching was introduced in Bio::Graphics 2.07.
-	* Tracked down the "let Lincoln know bug is not fixed" bug, and found a real workaround.
-	  This was happening when user presses "back" button on browser after an unsuccessful
-	  search.
  
 2.05	* Implemented a new caching scheme for communicating with renderfarm slaves. 
 	  This will improve performance, but requires Bio::Graphics version 1.05.

@@ -878,6 +878,7 @@ sub render_track_table {
 		    ? () : ($self->tr('EXTERNAL')),
       );
 
+  my $c_default = $source->category_default;
 
   my @titles; # for sorting
 
@@ -916,7 +917,7 @@ sub render_track_table {
 				     );
       $table = $self->tableize(\@checkboxes,$category);
       my $visible = exists $settings->{section_visible}{$id} 
-                    ? $settings->{section_visible}{$id} : 1;
+                    ? $settings->{section_visible}{$id} : $c_default;
 
       my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
 						   $id,
@@ -1006,6 +1007,8 @@ sub nest_toggles {
     my $settings = $self->state;
 
     my $result = '';
+    my $default = $self->data_source->category_default;
+
     for my $key (sort { 
 	           ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b
 		      }  keys %$hash) {
@@ -1014,8 +1017,8 @@ sub nest_toggles {
 	} elsif ($key eq '__next__') {
 	    $result .= $self->nest_toggles($hash->{$key},$sort);
 	} elsif ($hash->{$key}{__next__}) {
-	    my $id =  "category-${key}";
-	    $settings->{section_visible}{$id} = 1 unless exists $settings->{section_visible}{$id};
+	    my $id =  "${key}_section";
+	    $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
  	    $result .= $self->toggle_section({on=>$settings->{section_visible}{$id}},
 					     $id,
 					     b($key),

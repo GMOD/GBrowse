@@ -1815,7 +1815,18 @@ sub default_state {
     if defined $self->setting('initial landmark');
 
   $self->default_tracks();
+  $self->default_category_open();
   $self->session->unlock();
+}
+
+sub default_category_open {
+    my $self = shift;
+    my $state = $self->state;
+
+    my $categories = $self->data_source->category_open;
+    for my $c (keys %$categories) {
+	$state->{section_visible}{$c} = $categories->{$c};
+    }
 }
 
 sub default_tracks {

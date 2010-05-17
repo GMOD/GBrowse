@@ -387,6 +387,26 @@ sub is_usertrack {
     return exists $self->{_user_tracks}{config}{$label};
 }
 
+sub category_open {
+    my $self = shift;
+    my $categories = $self->setting('category state') or return {};
+    my %settings   = shellwords($categories);
+    my %c;
+    while (my ($key,$value) = each %settings) {
+	$key  .= "_section" unless $key =~ /_section$/;
+	$value = 1 if $value eq 'open';
+	$value = 0 if $value eq 'closed';
+	$c{$key} = $value;
+    }
+    return \%c;
+}
+
+sub category_default {
+    my $self = shift;
+    my $open = $self->setting('category default state') || 'open';
+    return $open eq 'open' ? 1 : 0;
+}
+
 sub user_style {
     my $self = shift;
     my $type = shift;

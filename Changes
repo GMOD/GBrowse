@@ -1,3 +1,7 @@
+2.08
+	* Added the ability to control the toggle state of each category and subcategory at
+	  startup time.
+
 2.07 Mon May 17 10:27:56 EDT 2010
 `    	* Tracked down the "let Lincoln know bug is not fixed" bug, and found a real solution.
 	  This was happening when user presses "back" button on browser after an unsuccessful

@@ -1,6 +1,10 @@
-2.08
+2.08 Thu May 20 22:46:13 EDT 2010
 	* Added the ability to control the toggle state of each category and subcategory at
-	  startup time.
+	  startup time by using the "category state" and "category default state" options
+	  (see the GBROWSE2 HOWTO at http://gmod.org/wiki/GBrowse_2.0_HOWTO#Appearance_Settings)
+	* Fixed searches on Bio::DB::GFF databases so that exact searches work again.
+	* Fixed the busy spinner so that it doesn't stick in "on" state when region is empty
+	  and user turns on tracks.
 
 2.07 Mon May 17 10:27:56 EDT 2010
 `    	* Tracked down the "let Lincoln know bug is not fixed" bug, and found a real solution.

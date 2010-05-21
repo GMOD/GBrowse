@@ -471,6 +471,8 @@ var GBrowseController = Class.create({
         } // end for (var ret_track_name...
         if( get_tracks){
           Controller.get_multiple_tracks(track_keys);
+        } else {
+	  Controller.idle();
         }
       }
     });

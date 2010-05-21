@@ -244,10 +244,10 @@ sub lookup_features {
       warn "searchopts = ",join ',',%$searchopts if DEBUG;
       last SEARCHING unless %$searchopts;
 
-      for my $n ([$name,$class,$start,$stop],
-		 [$literal_name,$refclass,undef,undef]) {
+      for my $n ([$name,$start,$stop],
+		 [$literal_name,undef,undef]) {
 
-	  my ($name_to_try,$class_to_try,$start_to_try,$stop_to_try) = @$n;
+	  my ($name_to_try,$start_to_try,$stop_to_try) = @$n;
 
 	  $name_to_try =~ s/([*?])/\\$1/g 
 	      unless $searchopts->{wildcard};
@@ -255,10 +255,12 @@ sub lookup_features {
 	  if ($searchopts->{exact}) {
 
 	      # first try the non-heuristic search
-	      $features  = $self->_feature_get($db,
-					       $name_to_try,$class_to_try,
-					       $start_to_try,$stop_to_try);
-	      last SEARCHING if @$features;
+	      for my $class ($class,$refclass,@classes) {
+		  $features  = $self->_feature_get($db,
+						   $name_to_try,$class,
+						   $start_to_try,$stop_to_try);
+		  last SEARCHING if @$features;
+	      }
 	  }
 
 	  # heuristic fetch. Try various abbreviations and wildcards
@@ -317,7 +319,7 @@ sub _feature_get {
   @features  = grep {$_->length} $db->get_feature_by_name(@argv)   #misnomer -- should be get_features_by_name!
       if !defined($start) && !defined($stop);
 
-  warn "name => @features" if DEBUG;
+  warn "get_feature_by_name(@argv) => @features" if DEBUG;
 
   @features  = grep {$_->length} $db->get_features_by_alias(@argv) 
       if !@features
@@ -325,7 +327,7 @@ sub _feature_get {
       && !defined($stop) 
       && $db->can('get_features_by_alias');
 
-  warn "alias => @features" if DEBUG;
+  warn "get_features_by_alias(@argv) => @features" if DEBUG;
 
 #  warn "get_feature_by_alias(@argv) => @features";
 

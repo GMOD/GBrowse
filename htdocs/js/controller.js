@@ -874,7 +874,7 @@ var GBrowseController = Class.create({
       if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
 	  var upload_name = el.id.sub('_description$','');
 	  var desc        = el.innerHTML;
-	  el.innerHTML  = '<img src="' + this.button_url('spinner.gif') + ' alt="Working..." />';
+	  el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + ' alt="Working..." />';
 	  new Ajax.Request(document.URL, {
 		      method:      'post',
 		      parameters:{  
@@ -892,7 +892,7 @@ var GBrowseController = Class.create({
 	  return true;
       }
       if (event.keyCode==Event.KEY_ESC) {
-          el.innerHTML  = '<img src="' + this.button_url('spinner.gif') + '" alt="Working..." />';
+          el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
 	  Controller.update_sections(new Array(userdata_table_id,userimport_table_id));
 	  el.stopObserving('keypress');
 	  el.stopObserving('blur');

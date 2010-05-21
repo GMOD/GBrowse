@@ -2003,7 +2003,7 @@ sub create_track_args {
   if ($source->show_summary($label,$length)) {
       push @override,(-glyph     => 'wiggle_density',
 		      -height    => 14,
-		      -bgcolor => 'black',
+		      -bgcolor   => 'black',
 		      -autoscale => 'local'
       );
   }

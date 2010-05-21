@@ -874,7 +874,7 @@ var GBrowseController = Class.create({
       if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
 	  var upload_name = el.id.sub('_description$','');
 	  var desc        = el.innerHTML;
-	  el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + ' alt="Working..." />';
+	  el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
 	  new Ajax.Request(document.URL, {
 		      method:      'post',
 		      parameters:{  

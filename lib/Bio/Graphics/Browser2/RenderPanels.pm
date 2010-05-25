@@ -1567,7 +1567,7 @@ sub add_features_to_track {
   my (%db2label,%db2db);
   for my $label (@$labels) {
     my $db = eval { $source->open_database($label,$length)};
-    unless ($db) { warn "Couldn't open database for $_: $@"; next; }
+    unless ($db) { warn "Couldn't open database for $label: $@"; next; }
     $db2label{$db}{$label}++;
     $db2db{$db}  =  $db;  # cache database object
   }
@@ -1588,7 +1588,8 @@ sub add_features_to_track {
 	  
       warn "[$$] RenderPanels->get_iterator(@full_types)"  if DEBUG;
       warn "[$$] RenderPanels->get_summary_iterator(@summary_types)" if DEBUG;
-      if (@summary_types && (my $iterator = $self->get_summary_iterator($db2db{$db},$segment,\@summary_types))) {
+      if (@summary_types && 
+	  (my $iterator = $self->get_summary_iterator($db2db{$db},$segment,\@summary_types))) {
 	  $iterators{$iterator}     = $iterator;
 	  $iterator2dbid{$iterator} = $source->db2id($db);
       }
@@ -1805,18 +1806,14 @@ sub get_summary_iterator {
   my $self = shift;
   my ($db,$segment,$feature_types) = @_;
 
-  if (eval {$db->can_summarize}) {
-      my @args = (-type   => $feature_types,
-		  -seq_id => $segment->seq_id,
-		  -start  => $segment->start,
-		  -end    => $segment->end,
-		  -bins   => $self->settings->{width},
-		  -iterator=>1,
-	  );
-      return $db->feature_summary(@args);
-  } else {
-      return;
-  }
+  my @args = (-type   => $feature_types,
+	      -seq_id => $segment->seq_id,
+	      -start  => $segment->start,
+	      -end    => $segment->end,
+	      -bins   => $self->settings->{width},
+	      -iterator=>1,
+      );
+  return $db->feature_summary(@args);
 }
 
 
@@ -2004,6 +2001,7 @@ sub create_track_args {
       push @override,(-glyph     => 'wiggle_density',
 		      -height    => 14,
 		      -bgcolor   => 'black',
+		      -min_score => 0,
 		      -autoscale => 'local'
       );
   }

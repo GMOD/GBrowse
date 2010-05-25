@@ -23,7 +23,8 @@ sub start_load {
     eval "require $loader_class" unless $loader_class->can('new');
     my $loader = $loader_class->new(-store=> $db,
 				    -fast => $fast,
-				    -index_subfeatures=>0,
+				    -summary_stats    => 1,
+				    -index_subfeatures=> 0,
 	);
     $loader->start_load();
     $self->{loader}    = $loader;

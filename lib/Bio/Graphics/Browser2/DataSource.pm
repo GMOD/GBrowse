@@ -59,8 +59,11 @@ sub new {
       return $object;
   }
 
-  my $self = $class->new_from_cache(-file=>$config_file_path,
-				    -safe=>1);
+  my @args = (-file=>$config_file_path,-safe=>1);
+  my $self = $class->can('new_from_cache') && !$ENV{GBROWSE_NOCACHE}
+             ? $class->new_from_cache(@args)
+	     : $class->new(@args);
+
   $self->name($name);
   $self->description($description);
   $self->globals($globals);
@@ -364,7 +367,9 @@ sub show_summary {
     my $c  = $self->semantic_fallback_setting($label=>'show_summary',$length);
     my $g  = $self->semantic_fallback_setting($label=>'glyph',$length);
     return 0 if $g =~ /wiggle|xyplot|density/;  # don't summarize wiggles or xyplots
-    return 0 unless defined $c;
+    return 0 if $self->semantic_fallback_setting($label=>'global feature',$length);
+    return 0 unless $c;
+    $c =~ s/_//g;  
     return 0 unless $c <= $length;
     my $db = $self->open_database($label,$length) or return;
     return 0 unless $db->can('feature_summary');
@@ -743,9 +748,12 @@ sub db_settings {
 	                    ? "$symbolic_db_name:database" 
                             : $basename;
   }
-
-  my $adaptor = $self->semantic_fallback_setting($section => 'db_adaptor', $length)
-      or die "Unknown database defined for $section";
+  
+  my $adaptor = $self->semantic_fallback_setting($section => 'db_adaptor', $length);
+  unless ($adaptor) {
+      warn "Unknown database defined for $section";
+      return;
+  }
   eval "require $adaptor; 1" or die $@;
 
   my $args    = $self->semantic_fallback_setting($section => 'db_args', $length);

@@ -337,11 +337,11 @@ sub merge_conf {
 
     open my $fh,$path or croak "$path: $!";
     my $merged = '';
-    my $database;
+    my @database;
     # read header with the [database] definition
     while (<$fh>) {
 	$merged .= $_;
-	$database = $1 if /^\[(.+):database/;
+	push @database,$1 if /^\[(.+):database/;
 	last if /cut here/;
     }
 
@@ -355,7 +355,6 @@ sub merge_conf {
 	    $stanza =~ s/\]\n//;
 	    if (my $body = $stanzas{$stanza}) {
 		$merged .= $_;
-		$merged .= "database = $database\n";
 		$merged .= $body;
 		delete $stanzas{$stanza};
 	    }
@@ -367,6 +366,8 @@ sub merge_conf {
 	$merged .= "\n[$stanza]\n";
 	$merged .= $stanzas{$stanza};
     }
+
+    $merged =~ s/database_(\d+).+/$database[$1]/g;
 
     open $fh,'>',$path or croak "Can't open $path for writing: $!";
     print $fh $merged;
@@ -581,19 +582,23 @@ sub TIEHANDLE {
     return bless {
 	fh       => $f,
 	seen_cut => 0,
+	_db      => {},  # remember db names
+	-didx    => 0,   # db indexes
     },$class;
 }
 
 sub READLINE {
     my $self = shift;
     my $fh   = $self->{fh};
+
     while (my $line = <$fh>) {
+	$self->{_db}{$1} = $self->{_didx}++ if $line =~ /^\[(.+):database/;
 	if ($line =~ /cut here/i) {
 	    $self->{seen_cut}++;
 	    next;
 	}
 	next unless $self->{seen_cut};
-	next if $line =~ /^\s*database/;
+	$line =~ s/database\s*=\s*(.+)/database = database_$self->{_db}{$1} # do not change this!/;
 	$line =~ s/\[(\w+?)_.+_(\d+)(:\d+)?\]/[$1_$2$3]/;
 	return $line;
     }

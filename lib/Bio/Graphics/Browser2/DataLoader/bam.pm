@@ -5,9 +5,12 @@ use strict;
 use base 'Bio::Graphics::Browser2::DataLoader';
 use File::Basename 'basename','dirname';
 
+my $HASBIGWIG;
+
 sub create_conf_file {
     my $self     = shift;
-    my $bam_file = shift;
+    my $bam_file   = shift;
+    my $has_bigwig = shift;
 
     my $conf = $self->conf_fh;
 
@@ -20,26 +23,23 @@ sub create_conf_file {
     my $fasta  = $self->get_fasta_file || '';
     my $category = $self->category;
 
-    print $conf <<END;
+    my $sam_db =<<END;
 [$loadid:database]
 db_adaptor = Bio::DB::Sam
 db_args    = -bam    "$bam_file"
              -fasta  "$fasta"
 search options = none
+END
 
-#>>>>>>>>>> cut here <<<<<<<<
+    (my $bigwig = $bam_file) =~ s/\.bam$/.bw/;
 
-[$tracklabel:499]
-feature   = coverage:2000
-min_score = 0
-glyph     = wiggle_xyplot
-database  = $loadid
-height    = 50
-fgcolor   = blue
-bgcolor   = blue
-autoscale = local
-key       = $filename
+    my $bigwig_db = $has_bigwig ? <<BIGWIG : '';
+[${loadid}_bw:database]
+db_adaptor = Bio::DB::BigWig
+db_args    = -bigwig "$bigwig"
+BIGWIG
 
+    my $sam_track =<<END;
 [$tracklabel]
 feature       = match
 glyph         = segments
@@ -50,14 +50,50 @@ database       = $loadid
 bgcolor        = blue
 fgcolor        = blue
 height         = 3
-label          = sub {shift->display_name}
+label          = $filename
 category       = $category
 label density = 50
 bump          = fast
 key           = $filename
-
-
 END
+
+    my $semantic_track = $has_bigwig ? <<BIGWIG : <<ORDINARY;
+[$tracklabel:499]
+database = ${loadid}_bw
+feature  = summary
+glyph    = wiggle_whiskers
+max_color = lightgrey
+min_color = lightgrey
+mean_color = black
+stdev_color = grey
+stdev_color_neg = grey
+height   = 20
+BIGWIG
+[$tracklabel:499]
+database  = $loadid
+feature   = coverage:2000
+min_score = 0
+glyph     = wiggle_xyplot
+height    = 20
+fgcolor   = blue
+bgcolor   = blue
+autoscale = local
+key       = $filename
+ORDINARY
+
+
+    print $conf <<END;
+$sam_db
+
+$bigwig_db
+
+#>>>>>>>>>> cut here <<<<<<<<
+
+$semantic_track
+
+$sam_track
+END
+
 }
 
 sub get_fasta_file {
@@ -134,8 +170,33 @@ sub finish_load {
     $dest     .= '.bam';
     Bio::DB::Bam->index_build($dest);
 
+    my $bigwig_exists = 0;
+
+    if ($self->has_bigwig) {
+	$self->set_status('creating BigWig coverage file');
+	$bigwig_exists = $self->create_big_wig();
+    }
+
     $self->set_status('creating conf file');
-    $self->create_conf_file($dest);
+    $self->create_conf_file($dest,$bigwig_exists);
+}
+
+sub has_bigwig {
+    my $self = shift;
+    return $HASBIGWIG if defined $HASBIGWIG;
+    my $result = eval "require Bio::DB::Sam::SamToGBrowse;1";
+    $result  &&= eval "require Bio::DB::BigWig; 1";
+    warn "hasbigwig = $result";
+    return $HASBIGWIG = $result;
+}
+
+sub create_big_wig {
+    my $self   = shift;
+    my $dir    = $self->data_path;
+    my $fasta  = $self->get_fasta_file or return;
+    my $wigout = Bio::DB::Sam::SamToGBrowse->new($dir,$fasta,0);
+    $wigout->bam_to_wig;  # this creates the wig files
+    1;
 }
 
 1;

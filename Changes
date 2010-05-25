@@ -1,3 +1,10 @@
+2.09 Mon May 24 18:45:48 PDT 2010
+	* To turn off caching of the config file (which is causing deparse errors for some
+	  callbacks) set the environment variable GBROWSE_NOCACHE to a true value
+	  (like "1" or "yes"). This must be done in the Apache config.
+        * Fixed various bugs in the processing of SAM and BAM files.
+	* BAM parser now creates BigWig indexes if library is available.
+
 2.08 Thu May 20 22:46:13 EDT 2010
 	* Added the ability to control the toggle state of each category and subcategory at
 	  startup time by using the "category state" and "category default state" options

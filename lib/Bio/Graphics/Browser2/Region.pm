@@ -481,7 +481,7 @@ sub region_segment {
 
    # region can't be smaller than detail
     if ($detail_end - $detail_start + 1 > $regionview_length) { 
-	$regionview_length = $detail_end - $detail_start + 1;
+	$regionview_length = 3*($detail_end - $detail_start + 1);
     }
 
     my $midpoint = ($detail_end + $detail_start) / 2;

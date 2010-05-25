@@ -3041,6 +3041,8 @@ sub get_section_from_label {
     my $self   = shift;
     my $label  = shift;
 
+    return 'detail' if ref $label;  # work around a DAS bug
+
     if ($label eq 'overview' || $label =~ /:overview$/){
         return 'overview';
     }

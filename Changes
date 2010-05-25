@@ -4,6 +4,7 @@
 	  (like "1" or "yes"). This must be done in the Apache config.
         * Fixed various bugs in the processing of SAM and BAM files.
 	* BAM parser now creates BigWig indexes if library is available.
+	* Fixed "no overloaded magic in Bio::DAS::Segment" error.
 
 2.08 Thu May 20 22:46:13 EDT 2010
 	* Added the ability to control the toggle state of each category and subcategory at

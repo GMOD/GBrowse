@@ -149,6 +149,8 @@ END
 
    TRACKS   => 'Tracks',
 
+   SELECT_TRACKS   => 'Select Tracks',
+
    TRACK_SELECT   => 'Search for Specific Tracks',
 
    TRACK_NAME     => 'Track name',

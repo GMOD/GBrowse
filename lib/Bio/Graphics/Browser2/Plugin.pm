@@ -601,6 +601,10 @@ configuration form methods with calls to the javascript routine
 doPluginUpdate(). This causes GBrowse to update the plugin's
 configuration and refresh the tracks table as a side effect.
 
+=item @terms = $plugin->hilite_terms
+
+Returns a list of terms to hilight in the tracks table, or empty if none.
+
 =back
 
 =head2 METHODS TO BE IMPLEMENTED IN FEATURE HILITERS
@@ -905,6 +909,11 @@ sub filter_tracks {
     my $self = shift;
     my ($tracks,$source) = @_;
     return @$tracks;  # pass 'em all through
+}
+
+sub hilite_terms {
+    my $self = shift;
+    return;
 }
 
 sub pkg {

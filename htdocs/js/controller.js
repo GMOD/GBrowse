@@ -982,7 +982,7 @@ var Controller = new GBrowseController; // singleton
 function initialize_page() {
 
   // These statements initialize the tabbing
-  Controller.tabs = new TabbedSection(['main_page','custom_tracks_page','settings_page']);
+  Controller.tabs = new TabbedSection(['main_page','track_page','custom_tracks_page','settings_page']);
 
   //event handlers
     [page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {

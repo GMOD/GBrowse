@@ -74,19 +74,22 @@ sub render_error_div {
 
 sub render_tabbed_pages {
     my $self = shift;
-    my ($main_html,$custom_tracks_html,$settings_html) = @_;
+    my ($main_html,$tracks_html,$custom_tracks_html,$settings_html) = @_;
     my $main_title          = $self->tr('MAIN_PAGE');
+    my $tracks_title        = $self->tr('SELECT_TRACKS');
     my $custom_tracks_title = $self->tr('CUSTOM_TRACKS_PAGE');
     my $settings_title      = $self->tr('SETTINGS_PAGE');
 
     my $html = '';
     $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
 		   div({-id=>'tabbed_menu',-class=>'tabmenu'},
-		       span({id=>'main_page_select'},    $main_title),
+		       span({id=>'main_page_select'},         $main_title),
+		       span({id=>'track_page_select'},        $tracks_title),
 		       span({id=>'custom_tracks_page_select'},$custom_tracks_title),
-		       span({id=>'settings_page_select'},$settings_title)
+		       span({id=>'settings_page_select'},     $settings_title)
 		   ),
 		   div({-id=>'main_page',         -class=>'tabbody'}, $main_html),
+		   div({-id=>'track_page',        -class=>'tabbody'}, $tracks_html),
 		   div({-id=>'custom_tracks_page',-class=>'tabbody'}, $custom_tracks_html),
 		   div({-id=>'settings_page',     -class=>'tabbody'}, $settings_html)
 	);
@@ -777,11 +780,14 @@ sub render_toggle_track_table {
   my $self     = shift;
   my $html;
 
+  $html .= div({-style=>'font-weight:bold'},'<<',$self->render_select_browser_link('link'));
+
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
 							    style=>"text-indent:2em;padding-top:8px"},$self->render_track_filter($filter)));
   }
   $html .= $self->toggle('Tracks',$self->render_track_table);
+  $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));
 
   return $html;
 }
@@ -803,6 +809,14 @@ sub render_track_table {
 
   warn "potential tracks = @labels" if DEBUG;
 
+  my ($filter_active,@hilite);
+  if (my $filter = $self->track_filter_plugin) {
+      $filter_active++;
+      eval {@labels    = $filter->filter_tracks(\@labels,$source)};
+      eval {@hilite    = $filter->hilite_terms};
+      warn $@ if $@;
+  }
+
   # add citation link and markup
   my %labels;
   for my $label (@labels) {
@@ -811,41 +825,40 @@ sub render_track_table {
    if ($label =~ /^plugin:/) {
        $labels{$label} = $key;
        next;
-       }
+   }
    elsif ($label =~ /^file:/){
        $link = "?Download%20File=$key";
-       }
+   }
    else {
        $link = "?display_citation=$label";#;source=" . $settings->{source};
        my $cit_txt = citation( $source, $label, $self->language ) || '';
        if ( length $cit_txt > 100) {
-   	$cit_txt =~ s/\<[^\>]+\>//g;     # truncate and strip tags for preview
-   	$cit_txt =~ s/(.{100}).+/$1/; 
-   	$cit_txt =~ s/\s+\S+$//; 
-   	$cit_txt =~ s/\'/\&\#39;/g;
-   	$cit_txt =~ s/\"/\&\#34;/g;
-        $cit_txt .= '... <i>Click for more</i>';
-        }
-        $mouseover = "<b>$key</b>";
-        $mouseover .= ": $cit_txt"                           if $cit_txt;
-        }
+	   $cit_txt =~ s/\<[^\>]+\>//g;     # truncate and strip tags for preview
+	   $cit_txt =~ s/(.{100}).+/$1/; 
+	   $cit_txt =~ s/\s+\S+$//; 
+	   $cit_txt =~ s/\'/\&\#39;/g;
+	   $cit_txt =~ s/\"/\&\#34;/g;
+	   $cit_txt .= '... <i>Click for more</i>';
+       }
+       $mouseover = "<b>$key</b>";
+       $mouseover .= ": $cit_txt"                           if $cit_txt;
+   }
    
-  my $balloon = $source->setting('balloon style') || 'GBubble';
+   my $balloon = $source->setting('balloon style') || 'GBubble';
    
-  my @args = ( -href => $link, -target => 'citation');
-      push @args, -style => 'Font-style: italic' if $label =~ /^(http|ftp|file):/;
-      push @args, -onmouseover => "$balloon.showTooltip(event,'$mouseover')" if $mouseover;
-   
-  $labels{$label} = a({@args},$key);
-  }
-   
-  #my %labels     = map {$_ => $self->label2key($_)}              @labels;
-  my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
+   my @args = ( -href => $link, -target => 'citation');
+   push @args, -style => 'Font-style: italic' if $label =~ /^(http|ftp|file):/;
+   push @args, -onmouseover => "$balloon.showTooltip(event,'$mouseover')" if $mouseover;
 
-  if (my $filter = $self->track_filter_plugin) {
-      eval {@labels    = $filter->filter_tracks(\@labels,$source)};
-      warn $@ if $@;
+   # add hilighting if requested
+   for my $h (@hilite) {
+       $key =~ s!($h)!<span style="background-color:yellow">$1</span>!gi;
+   }
+   
+   $labels{$label} = a({@args},$key);
   }
+   
+  my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 
   # Sort the tracks into categories:
   # Overview tracks
@@ -916,8 +929,10 @@ sub render_track_table {
 				      -override   => 1,
 				     );
       $table = $self->tableize(\@checkboxes,$category);
-      my $visible = exists $settings->{section_visible}{$id} 
-                    ? $settings->{section_visible}{$id} : $c_default;
+      my $visible =  $filter_active ? 1
+                   : exists $settings->{section_visible}{$id} 
+                        ? $settings->{section_visible}{$id} 
+                        : $c_default;
 
       my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
 						   $id,
@@ -1190,6 +1205,32 @@ sub clear_highlights {
 		  -onClick => 'Controller.set_display_option("h_feat","_clear_");Controller.set_display_option("h_region","_clear_")'
 		 },
 		 $self->tr('CLEAR_HIGHLIGHTING'));
+}
+
+sub render_select_track_link {
+    my $self  = shift;
+    my $title = $self->tr('SELECT_TRACKS');
+    return button({-name=>$title,
+		   -onClick => "Controller.select_tab('track_page')"
+		  }
+	);
+		  
+}
+sub render_select_browser_link {
+    my $self  = shift;
+    my $style  = shift || 'button';
+
+    my $title = $self->tr('BACK_TO_BROWSER');
+    if ($style eq 'button') {
+	return button({-name=>$title,
+		       -onClick => "Controller.select_tab('main_page')"
+		      }
+	    );
+    } elsif ($style eq 'link') {
+	return a({-href=>'javascript:void(0)',
+		  -onClick => "Controller.select_tab('main_page')"},
+		 $title);
+    }
 }
 
 sub render_upload_share_section {

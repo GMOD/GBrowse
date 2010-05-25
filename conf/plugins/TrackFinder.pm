@@ -83,6 +83,13 @@ sub filter_tracks {
   return @result;
 }
 
+sub hilite_terms {
+    my $self = shift;
+  my $config  = $self->configuration;
+    my @keywords = map {quotemeta($_)} shellwords $config->{keywords};    
+    return @keywords;
+}
+
 1;
 
 __END__

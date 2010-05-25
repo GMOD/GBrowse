@@ -706,24 +706,23 @@ sub render_body {
 
   if ($region->feature_count > 1) {
       $main_page .= $self->render_multiple_choices($features,$self->state->{name});
-      $main_page .= $self->render_toggle_track_table;
+      $main_page .= $self->render_select_track_link;
   }
 
   elsif (my $seg = $region->seg) {
       $main_page .= $self->render_panels($seg,{overview   => $source->show_section('overview'),
 					       regionview => $source->show_section('region'),
 					       detailview => $source->show_section('detail')});
-      $main_page .= $self->render_toggle_track_table;
       $main_page .= $self->render_galaxy_form($seg);
-  }
-  else {
-      $main_page .= $self->render_toggle_track_table;
+  } else {
+      $main_page .= $self->render_select_track_link;
   }
 
+  my $tracks        = $self->render_tracks_section;
   my $upload_share  = $self->render_upload_share_section;
   my $global_config = $self->render_global_config;
 
-  $output .= $self->render_tabbed_pages($main_page,$upload_share,$global_config);
+  $output .= $self->render_tabbed_pages($main_page,$tracks,$upload_share,$global_config);
   $output .= $self->render_bottom($features);
 
   $output .= $self->render_login_section;
@@ -752,6 +751,15 @@ sub render_login_section {
 	$output .= $self->render_login_openid_confirm(param('page'),param('s'));
     }
     return $output;
+}
+
+sub render_select_track_link {
+    croak "implement in subclass";
+}
+
+sub render_tracks_section {
+    my $self = shift;
+    return $self->render_toggle_track_table;
 }
 
 sub render_upload_share_section {
@@ -898,9 +906,12 @@ sub render_panels {
 			  div({ -id => 'detail_panels', -class => 'track'},
 			      $details_msg,
 			      $scale_bar_html, 
-			      $panels_html
+			      $panels_html,
 			  ),
-			  div({-style=>'text-align:right'},$clear_hilites),
+			  div({-style=>'text-align:center'},
+			      $clear_hilites,
+			      $self->render_select_track_link
+			  ),
 			  div($self->html_frag('html4',$self->state))
             )
 	    ) . $drag_script;

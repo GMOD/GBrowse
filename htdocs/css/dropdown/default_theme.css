@@ -64,7 +64,7 @@ ul.dropdown {
 	 border-color: #f0f0f0 #666 #666 #f0f0f0;
 	 background-color: #fff;
 	 font-weight: bold;
-	 font-size: 12px;
+	 font-size: 14px;
 	}
 
 		ul.dropdown ul li {
@@ -79,6 +79,7 @@ ul.dropdown {
 
 
 ul.dropdown *.dir {
+ font-size: 14px;
  padding-right: 25px;
  background-image: url(images/nav-arrow-down.png);
  background-position: 95% 50%;

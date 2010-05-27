@@ -13,8 +13,8 @@ options:
  -h|--help                Show this message 
  -d|--dev                 Use the developement version of both GBrowse 
                             and bioperl from CVS
- --bioperl_dev            Use the development version of BioPerl from SVN
- --gbrowse_dev            Use the development version of GBrowse from CVS
+ --bioperl_dev            Use the development version of BioPerl from git
+ --gbrowse_dev            Use the development version of GBrowse from SVN
  --build_param_str=<args> Use this string to set Makefile.PL parameters
                             such as CONF or PREFIX for GBrowse 
                             installation
@@ -57,7 +57,7 @@ use CPAN '!get';
 use Config;
 use Getopt::Long;
 use Pod::Usage;
-use File::Copy 'cp';
+use File::Copy qw( cp move );
 use File::Temp qw(tempdir);
 use LWP::Simple;
 use Cwd;
@@ -183,7 +183,7 @@ $install_param_string ||="";
 
 use constant BIOPERL_VERSION      => 'BioPerl-1.6.1';
 use constant BIOPERL_REQUIRES     => '1.006001';  # sorry for the redundancy
-use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
+use constant BIOPERL_LIVE_URL     => 'http://github.com/bioperl/bioperl-live/tarball/master';
 use constant GBROWSE_DEFAULT      => '1.70';
 use constant SOURCEFORGE_MIRROR2  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_MIRROR1  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
@@ -374,6 +374,7 @@ sub do_get_distro {
 
             my $filename = 'bioperl-live.tar.gz'; # =determine_filename();
             my $url = BIOPERL_LIVE_URL."/$filename";
+
             my $rc = mirror($url, $filename); 
             unless ($rc == RC_OK or $rc == RC_NOT_MODIFIED){
                 print STDERR "Failed to get nightly bioperl-live file: $rc\n";
@@ -423,8 +424,15 @@ sub extract_tarball {
   print STDERR "Unpacking $local_name...\n";
   my $z = Archive::Tar->new($local_name,1)
         or die "Couldn't open $distribution archive: $@";
-  $z->extract()
+  my @extracted = $z->extract()
         or die "Couldn't extract $distribution archive: $@";
+
+  if (%{$extracted[0]}->{'name'} =~ /^(bioperl.*?)\//) {
+    my $bioperl_dir = $1;
+    warn $bioperl_dir;
+    move($bioperl_dir, $distribution) or die "couldn't move bioperl dir: $@"; 
+  }
+
   $distribution =~ s/--/-/;
   chdir $distribution
         or die "Couldn't enter $distribution directory: $@";

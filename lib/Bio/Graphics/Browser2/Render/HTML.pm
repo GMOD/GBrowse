@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use base 'Bio::Graphics::Browser2::Render';
 use Bio::Graphics::Browser2::Shellwords;
+use Bio::Graphics::Browser2::SubtrackTable;
 use Bio::Graphics::Karyotype;
 use Bio::Graphics::Browser2::Util qw[citation url_label segment_str];
 use JSON;
@@ -275,6 +276,7 @@ sub render_html_head {
         prototype.js 
         scriptaculous.js 
         yahoo-dom-event.js 
+        subtracktable.js
     );
 
   if ($self->setting('autocomplete')) {
@@ -311,6 +313,7 @@ sub render_html_head {
   my $titlebar   = 'css/titlebar-default.css';
   my $stylesheet = $self->setting('stylesheet')||'/gbrowse2/css/gbrowse.css';
   push @stylesheets,{src => $self->globals->resolve_path('css/tracks.css','url')};
+  push @stylesheets,{src => $self->globals->resolve_path('css/subtracktable.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/karyotype.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/dropdown.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/default_theme.css','url')};
@@ -874,8 +877,10 @@ sub render_track_table {
 
   autoEscape(0);
 
-  my %exclude = map {$_=>1} map {$self->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
 
+  my %exclude = map {$_=>1} map {$self->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
+  my ($user_tracks) = grep {/^My tracks/i} keys %track_groups;
+  $exclude{$user_tracks}++;
   my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
 
   my $all_on  = $self->tr('ALL_ON');
@@ -887,8 +892,7 @@ sub render_track_table {
 		    $self->tr('REGION'),
 		    @user_keys,
 		    $self->tr('ANALYSIS'),
-		    $source->section_setting('upload_tracks') eq 'off' 
-		    ? () : ($self->tr('EXTERNAL')),
+		    $user_tracks
       );
 
   my $c_default = $source->category_default;
@@ -897,7 +901,6 @@ sub render_track_table {
 
   foreach my $category (@categories) {
     next if $seenit{$category}++;
-    my $table;
     my $id = "${category}_section";
     my $category_title   = (split m/(?<!\\):/,$category)[-1];
     $category_title      =~ s/\\//g;
@@ -913,12 +916,14 @@ sub render_track_table {
       $settings->{sk} ||= 'sorted'; # get rid of annoying warning
 
       # if these tracks are in a grid, then don't sort them
-      if (!defined $category_table_labels->{$category}) {
-	  @track_labels = sort {lc ($labels{$a}) cmp lc ($labels{$b})} @track_labels
-	      if ($settings->{sk} eq 'sorted');
-      }
+      @track_labels = sort {lc ($labels{$a}) cmp lc ($labels{$b})} @track_labels
+	  if $settings->{sk} eq 'sorted' && !defined $category_table_labels->{$category};
 
       my %ids        = map {$_=>{id=>"${_}_check"}} @track_labels;
+
+      my %labels_with_subtracks = map {$_=>$source->setting($_=>'subtrack select')||0} 
+                                      @track_labels;
+      @track_labels             = grep {!$labels_with_subtracks{$_}} @track_labels;
 
       my @checkboxes = checkbox_group(-name       => 'l',
 				      -values     => \@track_labels,
@@ -928,7 +933,9 @@ sub render_track_table {
 				      -attributes => \%ids,
 				      -override   => 1,
 				     );
-      $table = $self->tableize(\@checkboxes,$category);
+      my $table      = $self->tableize(\@checkboxes,$category);
+      my $subtracks  = $self->subtrack_table([keys %labels_with_subtracks],\%ids);
+
       my $visible =  $filter_active ? 1
                    : exists $settings->{section_visible}{$id} 
                         ? $settings->{section_visible}{$id} 
@@ -938,8 +945,8 @@ sub render_track_table {
 						   $id,
 						   b(ucfirst $category_title),
 						   div({-style=>'padding-left:1em'},
-						       span({-id=>$id},$table))
-						  );
+						       span({-id=>$id},$table),
+						       $subtracks));
       $control .= '&nbsp;'.i({-class=>'nojs'},
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
 				      -label=>$all_on,-onClick=>"gbCheck(this,1)"),
@@ -1502,6 +1509,28 @@ sub tableize {
     $html .= "</tr>\n";
   }
   $html .= end_table();
+}
+
+sub subtrack_table {
+    my $self          = shift;
+    my ($labels,$ids) = @_;
+    my $source        = $self->data_source;
+
+    my $html;
+
+    for my $label (@$labels) {
+	my $dimensions     = $source->setting($label => 'subtrack select') or next;
+	my $rows           = $source->setting($label => 'subtrack table')  or next;
+	my $key            = $source->setting($label => 'key');
+	my @dimensions     = map {[shellwords($_)]}             split ';',$dimensions;
+	my @rows           = map {[grep {!/^=/} shellwords($_)]} split ';',$rows;
+	my $stt            = Bio::Graphics::Browser2::SubtrackTable->new(-columns=>\@dimensions,
+									 -rows   =>\@rows,
+									 -label  => $label,
+									 -key    => $key||$label);
+	$html .= $stt->selection_table;
+    }
+    return $html;
 }
 
 #### generate the fragment of HTML for printing out the examples

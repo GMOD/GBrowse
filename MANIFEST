@@ -203,6 +203,7 @@ htdocs/css/gbrowse_solid.css
 htdocs/css/gbrowse_transparent.css
 htdocs/css/gbrowse_warm.css
 htdocs/css/karyotype.css
+htdocs/css/subtracktable.css
 htdocs/css/titlebar-default.css
 htdocs/css/titlebar-safari.css
 htdocs/css/tracks.css
@@ -270,6 +271,9 @@ htdocs/images/buttons/red6.gif
 htdocs/images/buttons/red7.gif
 htdocs/images/buttons/red8.gif
 htdocs/images/buttons/share.png
+htdocs/images/buttons/sortable.gif
+htdocs/images/buttons/sorted_down.gif
+htdocs/images/buttons/sorted_up.gif
 htdocs/images/buttons/spinner.gif
 htdocs/images/buttons/tools.png
 htdocs/images/buttons/trash.gif
@@ -333,6 +337,8 @@ htdocs/js/rubber.js
 htdocs/js/scriptaculous.js
 htdocs/js/slider.js
 htdocs/js/sound.js
+htdocs/js/subtracktable.css
+htdocs/js/subtracktable.js
 htdocs/js/tabs.js
 htdocs/js/toggle.js
 htdocs/js/track.js
@@ -544,6 +550,7 @@ lib/Bio/Graphics/Browser2/Render/Slave/Status.pm
 lib/Bio/Graphics/Browser2/RenderPanels.pm
 lib/Bio/Graphics/Browser2/Session.pm
 lib/Bio/Graphics/Browser2/Shellwords.pm
+lib/Bio/Graphics/Browser2/SubtrackTable.pm
 lib/Bio/Graphics/Browser2/TrackDumper.pm
 lib/Bio/Graphics/Browser2/UserTracks.pm
 lib/Bio/Graphics/Browser2/Util.pm

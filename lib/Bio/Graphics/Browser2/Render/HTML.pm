@@ -425,6 +425,7 @@ var GBox = new Box;
 BalloonConfig(GBox,'GBox');
 GBox.images = "$balloon_images/GBubble";
 GBox.allowEventHandlers = true;
+GBox.evalScripts        = true;
 GBox.opacity = 1;
 GBox.fontFamily = 'sans-serif';
 GBox.stemHeight = 0;
@@ -859,6 +860,13 @@ sub render_track_table {
    }
    
    $labels{$label} = a({@args},$key);
+
+   if (my $subtracks = $self->has_subtracks($label)) {
+       $labels{$label} .= ' ['. a({-href=>'javascript:void(0)',
+				    -onMouseDown=>"GBox.showTooltip(event,'url:?action=select_subtracks;label=$label',true,800,800)"
+				   },i($self->tr('SELECT_SUBTRACKS',$subtracks))).']';
+   }
+
   }
    
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
@@ -880,7 +888,7 @@ sub render_track_table {
 
   my %exclude = map {$_=>1} map {$self->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
   my ($user_tracks) = grep {/^My tracks/i} keys %track_groups;
-  $exclude{$user_tracks}++;
+  $exclude{$user_tracks}++ if $user_tracks;
   my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
 
   my $all_on  = $self->tr('ALL_ON');
@@ -892,8 +900,8 @@ sub render_track_table {
 		    $self->tr('REGION'),
 		    @user_keys,
 		    $self->tr('ANALYSIS'),
-		    $user_tracks
       );
+  push @categories,$user_tracks if $user_tracks;
 
   my $c_default = $source->category_default;
 
@@ -921,10 +929,6 @@ sub render_track_table {
 
       my %ids        = map {$_=>{id=>"${_}_check"}} @track_labels;
 
-      my %labels_with_subtracks = map {$_=>$source->setting($_=>'subtrack select')||0} 
-                                      @track_labels;
-      @track_labels             = grep {!$labels_with_subtracks{$_}} @track_labels;
-
       my @checkboxes = checkbox_group(-name       => 'l',
 				      -values     => \@track_labels,
 				      -labels     => \%labels,
@@ -934,7 +938,6 @@ sub render_track_table {
 				      -override   => 1,
 				     );
       my $table      = $self->tableize(\@checkboxes,$category);
-      my $subtracks  = $self->subtrack_table([keys %labels_with_subtracks],\%ids);
 
       my $visible =  $filter_active ? 1
                    : exists $settings->{section_visible}{$id} 
@@ -945,8 +948,7 @@ sub render_track_table {
 						   $id,
 						   b(ucfirst $category_title),
 						   div({-style=>'padding-left:1em'},
-						       span({-id=>$id},$table),
-						       $subtracks));
+						       span({-id=>$id},$table)));
       $control .= '&nbsp;'.i({-class=>'nojs'},
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
 				      -label=>$all_on,-onClick=>"gbCheck(this,1)"),
@@ -1511,26 +1513,29 @@ sub tableize {
   $html .= end_table();
 }
 
+sub has_subtracks {
+    my $self  = shift;
+    my $label = shift;
+    my $rows  = $self->data_source->setting($label => 'subtrack table')  or return;
+    my @rows  = split ';',$rows;
+    return scalar @rows;
+}
+
 sub subtrack_table {
     my $self          = shift;
-    my ($labels,$ids) = @_;
+    my $label         = shift;
     my $source        = $self->data_source;
 
-    my $html;
-
-    for my $label (@$labels) {
-	my $dimensions     = $source->setting($label => 'subtrack select') or next;
-	my $rows           = $source->setting($label => 'subtrack table')  or next;
-	my $key            = $source->setting($label => 'key');
-	my @dimensions     = map {[shellwords($_)]}             split ';',$dimensions;
-	my @rows           = map {[grep {!/^=/} shellwords($_)]} split ';',$rows;
-	my $stt            = Bio::Graphics::Browser2::SubtrackTable->new(-columns=>\@dimensions,
-									 -rows   =>\@rows,
-									 -label  => $label,
-									 -key    => $key||$label);
-	$html .= $stt->selection_table;
-    }
-    return $html;
+    my $dimensions     = $source->setting($label => 'subtrack select') or next;
+    my $rows           = $source->setting($label => 'subtrack table')  or next;
+    my $key            = $source->setting($label => 'key');
+    my @dimensions     = map {[shellwords($_)]}             split ';',$dimensions;
+    my @rows           = map {[shellwords($_)]} split ';',$rows;
+    my $stt            = Bio::Graphics::Browser2::SubtrackTable->new(-columns=>\@dimensions,
+								     -rows   =>\@rows,
+								     -label  => $label,
+								     -key    => $key||$label);
+    return $stt->selection_table($self);
 }
 
 #### generate the fragment of HTML for printing out the examples

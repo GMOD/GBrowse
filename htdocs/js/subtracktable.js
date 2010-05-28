@@ -55,6 +55,13 @@ var Sort = (function(){
 		};
 	};
 
+	// Reverse alpha-numeric sort
+	// --------------------------
+	sort.numericdesc = function(a,b) {
+		return sort.numeric.convert(b)-sort.numeric.convert(a);
+	};
+	
+
 	// Numeric Sort	
 	// ------------
 	sort.numeric = function(a,b) {
@@ -896,6 +903,7 @@ var Table = (function(){
 	table.autosort = function(t,args) {
 		t = this.resolve(t,args);
 		var tdata = this.tabledata[t.id];
+		var default_sort_type;
 		this.processTableCells(t, "THEAD", function(c) {
 			var type = classValue(c,table.SortableColumnPrefix);
 			if (type!=null) {
@@ -906,12 +914,14 @@ var Table = (function(){
 				// If we are going to auto sort on a column, we need to keep track of what kind of sort it will be
 				if (args.col!=null) {
 					if (args.col==table.getActualCellIndex(c)) {
-						tdata.sorttype=Sort['"+type+"'];
+						default_sort_type  = type;
+						tdata.sorttype = Sort['"+type+"'];
 					}
 				}
 			}
 		} );
 		if (args.col!=null) {
+			args.sorttype = Sort[default_sort_type];
 			table.sort(t,args);
 		}
 	};
@@ -992,22 +1002,20 @@ var Table = (function(){
           var rows          = table.getElementsBySelector('TR');
           var selectedRows  = rows.findAll(function (a)  { 
 	      		      	            return a.hasClassName('selected') })
-          var result        = new Array;
-    	  var row           = 0;
-     	  selectedRows.each(function (a) {
-                  var cells = a.getElementsBySelector('TD');
-                  var i;
-                  var r = result[row++] = new Array;
-                  for (i=0;i<cells.length;i++)
-                    r[i] = cells[i].innerHTML;
-              });
-//    	  console.log('id='+id);
-//	  console.log(result);
+          var result        = selectedRows.map(function (a) { var i=a.id; return i.sub(/^track_select_/,'')});
+	  new Ajax.Request(document.URL, {
+	          method: 'post',
+		  asynchronous: false,
+		  parameters: {
+		        action: 'set_subtracks',
+			label:  id,
+			subtracks: Object.toJSON(result)
+	          }});
 	  };
 
          table.checkSelect = function (input,send_result) {
               var checked = input.checked;
-              if (send_result==null) send_result = true;
+              if (send_result==null) send_result = false;
               Element.extend(input);
               var row = input.ancestors().find(function(a) {return a.nodeName=='TR'});
 	      if (checked) {
@@ -1028,7 +1036,6 @@ var Table = (function(){
 		       });
    	    checkboxes.each(function (a) { a.checked=val        });
    	    checkboxes.each(function (a) { table.checkSelect(a,false) });
-   	    table.sendTableState(el);
 	 };
 
 

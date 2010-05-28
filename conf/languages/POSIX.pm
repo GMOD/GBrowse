@@ -187,7 +187,7 @@ END
 
    CONFIGURE_TRACKS   => 'Configure tracks...',
 
-   SELECT_SUBTRACKS   => 'Click to select subtracks...',
+   SELECT_SUBTRACKS   => 'Select from %d subtracks',
 
    EDIT       => 'Edit File...',
 

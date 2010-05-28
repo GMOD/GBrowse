@@ -23,7 +23,6 @@ sub new {
     # track key
     my $key       = $args{-key};
 
-
     return bless {
 	selectors => $selectors,
 	rows      => $rows,
@@ -45,20 +44,71 @@ sub rows {
     return $self->{rows};
 }
 
+# turn the unparsed rows into parsed elements
+# data structure = id => { index     => #sort position,
+#                          selected  => boolean,
+#                          fields    => [field1,field2,field3...] }
+sub elements {
+    my $self = shift;
+    return $self->{_elements} if exists $self->{_elements};
+    my $index = 0;
+    my %elements;
+
+    my $rows  = $self->rows;
+    for my $r (@$rows) {
+	my @data   = @$r;
+	my @fields      = grep {!/^[=*]/}        @data;
+	my ($id)        = grep {length} map {/^=([\d\w]+)/ && $1 } @data;
+	my ($selected)  = grep {$_ eq '*'}       @data;
+	$id           ||= join ';',@fields;
+	$elements{$id} = { index    => $index++,
+			   selected => $selected,
+			   fields   => \@fields };
+    }
+    return $self->{_elements}=\%elements;
+}
+
+sub set_order {
+    my $self          = shift;
+    my $new_id_order  = shift;
+
+    my $elements    = $self->elements;
+    my %all_ids     = map {$_=>1} keys %$elements;
+    my @ordered_ids = sort {$elements->{$a}{index}<=>$elements->{$b}{index}} keys %all_ids;
+
+    my $idx = 0;
+    my %seenit;
+
+    # reorder the elements that are named on the list
+    for my $e (@$new_id_order) {
+	next unless $elements->{$e};  # uh oh
+	$elements->{$e}{index} = $idx++;
+	$seenit{$e}++;
+    }
+
+    # everything else keeps the default order from the config file
+    for my $e (@ordered_ids) {
+	$elements->{$e}{index} = $idx++ unless $seenit{$e};
+    }
+}
+
 sub selection_table {
     my $self  = shift;
+    my $render = shift;
 
     my $label     = $self->track_label;
     my $key       = $self->track_key || $label;
     my @selectors = $self->selectors;
-    my $rows      = $self->rows;
+    my $elements  = $self->elements;
     my (@popups,@sort_type,@boolean);
+
+    my $table_id = "${label}_subtrack_id";
 
     # create the filter popups
     # by getting possible values for each selector
     for (my $i=0;$i<@selectors;$i++) {
 	my %seenit;
-	my @v       = sort grep {!$seenit{$_}++} map {$_->[$i]} @$rows;
+	my @v       = sort grep {!$seenit{$_}++} map {$elements->{$_}{fields}[$i]} keys %$elements;
 
 	my $is_numeric = 1;
 	for my $v (@v) {
@@ -77,14 +127,13 @@ sub selection_table {
 
 	$boolean[$i]   = $is_boolean;
 
-	$sort_type[$i] = $is_numeric &&!$is_boolean ? 'table-sortable:numeric'
-	                                            : 'table-sortable:default';
+	$sort_type[$i] = $is_numeric && !$is_boolean ? 'table-sortable:numeric'
+	                                             : 'table-sortable:default';
 	
     }
     my @table_rows;
     push @table_rows,TR(th({-colspan=>$#selectors+2},"Select $key Subtracks"));
-    push @table_rows,TR({-onClick=>'Table.sendTableState(this)'},
-			     th({-class=>'table-sortable:default'},'Select'),
+    push @table_rows,TR(     th({-class=>'table-sortable:numericdesc'},'Select'),
 			map {th({-class=>"filterable $sort_type[$_]"},$selectors[$_][0])} (0..$#selectors));
 			
     push @table_rows,TR(th(a({-href    => 'javascript:void(0)',
@@ -97,30 +146,42 @@ sub selection_table {
 
     @table_rows = ();
 
-    for my $r (@$rows) {
+    for my $e (sort {$elements->{$a}{index}<=>$elements->{$b}{index}} keys %$elements) {
+	my $r = $elements->{$e}{fields};
+	my @row_class   = $elements->{$e}{selected} ? (-class=> "selected") : ();
 	push @table_rows,
-	       TR(
-		   th(checkbox(-value=>-1,-class=>'rowSelect',-onChange=>'Table.checkSelect(this)')),
+	       TR({@row_class,-id=>"track_select_$e"},
+		   th(checkbox( -value    => +1,
+				-class   => 'rowSelect',
+				-checked => $elements->{$e}{selected},
+				-onChange=> 'Table.checkSelect(this)')
+		  ),
 		   td([
 		       map {$boolean[$_] ? $r->[$_] ?'Yes':'No'
 				         : $r->[$_]}(0..$#$r)
 		]));
     }
-    my $tbody = tbody({-id=>"${label}_subtrack_id",-class=>'sortable'},@table_rows);
+    my $tbody = tbody({-id=>$table_id,-class=>'sortable'},@table_rows);
+
+    my $tbottom = div(button(-name=>$render->tr('Cancel'),
+			     -onClick => 'Balloon.prototype.hideTooltip(1)'),
+		      button(-name    => $render->tr('Change'),
+			     -onclick => "Table.sendTableState(\$('$table_id'));Controller.rerender_track('$label',false,false);Balloon.prototype.hideTooltip(1);"));
+
     my $script = script({-type=>'text/javascript'},<<END);
 Position.includeScrollOffsets = true;
-Sortable.create('${label}_subtrack_id',
+Sortable.create('$table_id',
                 {tag:     'tr',
                  ghosting: true,
-                 scroll:   '${label}_subtrack_scroll',
-                 onUpdate:function(a){Table.stripe(a,'alternate');
-                                      Table.sendTableState(a)}
+		 onUpdate:function(a){Table.stripe(a,'alternate')}
                 });
+Table.auto();
 END
 
-    return div({-class=>'subtrack_table',-id=>"${label}_subtrack_scroll"},
-	       table({-class => "subtrack-table table-autosort:0 table-stripeclass:alternate"},
-		     $thead,$tbody)).$script;
+    return table({-width => 800,
+		  -class => "subtrack-table table-autosort:0 table-stripeclass:alternate",
+		 },
+		 $thead,$tbody,$tbottom).$script;
 }
 
 # turn array of features into an array of row identifiers

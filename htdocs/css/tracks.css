@@ -17,14 +17,14 @@ IMG.trackimg      {
                        text-align: center;
                   }
 .titlebar         {  background-color: #FFD39B;
-                     cursor: crosshair;
+                     cursor: move;
                      z-index: 10;
                      opacity: 1.0;
                      font-size: 9pt;
                      font-weight: bold;
                   }
 .titlebar_inactive { background-color: #E0E0E0;
-                     cursor: crosshair;
+                     cursor: move;
                      z-index: 10;
                      opacity: 1.0;
                      font-size: 9pt;

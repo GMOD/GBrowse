@@ -55,7 +55,7 @@ END
    SVG_LINK   => '...high-res image',
 
    PDF_LINK   => '...PDF',
-
+   
    DUMP_GFF   => '...GFF annotation table',
 
    DUMP_SEQ   => '...FASTA sequence file',
@@ -149,6 +149,8 @@ END
 
    TRACKS   => 'Tracks',
 
+   SELECT_TRACKS   => 'Select Tracks',
+
    TRACK_SELECT   => 'Search for Specific Tracks',
 
    TRACK_NAME     => 'Track name',
@@ -165,11 +167,19 @@ END
 
    HELP     => 'Help',
 
-   HELP_FORMAT => 'Help with File Format',
+   HELP_WITH_BROWSER     => 'Help with this browser',
+
+   HELP_FORMAT => 'Help with uploading',
 
    CANCEL   => 'Cancel',
 
    ABOUT    => 'About GBrowse...',
+
+   ABOUT_DSN    => 'About this database...',
+
+   ABOUT_ME    => 'Show my user ID...',
+
+   ABOUT_NAME   => 'About <i>%s</i>...',
 
    REDISPLAY   => 'Redisplay',
 
@@ -177,7 +187,7 @@ END
 
    CONFIGURE_TRACKS   => 'Configure tracks...',
 
-   SELECT_SUBTRACKS   => 'Click to select subtracks...',
+   SELECT_SUBTRACKS   => 'Select from %d subtracks',
 
    EDIT       => 'Edit File...',
 
@@ -227,9 +237,15 @@ END
 
    UPLOAD_TITLE=> 'Upload your own data',
 
-   UPLOAD_FILE => 'Upload a track',
+   UPLOAD_FILE => 'Upload a track file',
 
-   IMPORT_TRACK => 'Import a track',
+   IMPORT_TRACK => 'Import a track URL',
+
+   NEW_TRACK    => 'Create a new track',
+
+   FROM_TEXT    => 'From text',
+
+   FROM_FILE    => 'From a file',
 
    REMOVE       => 'Remove',
 
@@ -484,32 +500,31 @@ END
 
  SHARE_THIS_TRACK   => '<b>Share this track</b>',
 
- SHARE_ALL          => 'Share/Export these tracks',
+ SHARE_ALL          => 'Share these tracks',
 
- SHARE              => 'Share/Export %s',
+ SHARE              => 'Share %s',
 
  SHARE_INSTRUCTIONS_BOOKMARK => <<END,
-To <b>share</b> this track with another user, copy the URL below and
+To <b>share</b this track with another user, copy the URL below and
 send it to him or her.
 END
 
  SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
-To <b>export</b> this track to a GBrowse genome browser running on
-another server,
+To <b>export</b> this track to a different GBrowse genome browser,
 first copy the URL below, then go to the other GBrowse, 
 select the "Upload and Share Tracks" tab and
 paste the URL into the "Import tracks" section at the bottom.
 END
 
  SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
-To <b>export</b> all currently selected tracks to another GBrowse genome
+To export all currently selected tracks to another GBrowse genome
 browser, first copy the URL below, then go to the other GBrowse,
 select the "Upload and Share Tracks" tab and
 paste the URL into the "Import tracks" section at the bottom.
 END
 
  SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,
-To <b>export</b> this track with another genome browser using 
+To export this track with another genome browser using 
 the <a href="http://www.biodas.org" target="_new">
 Distributed Annotation System (DAS)</a> first copy the URL below, 
 then go to the other browser and enter it as a new DAS source.
@@ -518,7 +533,7 @@ be shared using DAS.</i>
 END
 
  SHARE_DAS_INSTRUCTIONS_ALL_TRACKS => <<END,
-To <b>export</b> all currently selected tracks with another genome browser
+To export all currently selected tracks with another genome browser
 using the <a href="http://www.biodas.org" target="_new"> Distributed
 Annotation System (DAS)</a> first copy the URL below, then go to the
 other browser and enter it as a new DAS source. <i>Quantitative tracks
@@ -528,5 +543,9 @@ END
     MAIN_PAGE          => 'Browser',
     CUSTOM_TRACKS_PAGE => 'Upload and Share Tracks',
     SETTINGS_PAGE      => 'Preferences',
+
+    DOWNLOAD_TRACK_DATA_REGION => 'Download track data across region %s',
+    DOWNLOAD_TRACK_DATA_CHROM => 'Download track data across ENTIRE chromosome %s',
+    DOWNLOAD_TRACK_DATA_ALL => 'Download ALL DATA for this track',
 
 };

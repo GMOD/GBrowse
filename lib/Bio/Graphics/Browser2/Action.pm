@@ -570,6 +570,23 @@ sub ACTION_modifyUserData {
     return (200,'application/json',{tracks=>\@tracks});
 }
 
+sub ACTION_select_subtracks {
+    my $self = shift;
+    my $q    = shift;
+    my $label= $q->param('label') or return (200,'text/plain','Programming error');
+    my $html = $self->render->subtrack_table($label);
+    return (200,'text/html',$html);
+}
+
+sub ACTION_set_subtracks {
+    my $self = shift;
+    my $q    = shift;
+    my $label= $q->param('label');
+    my $subtracks = JSON::from_json($q->param('subtracks'));
+    warn Data::Dumper::Dumper($subtracks);
+    return (204,'text/plain',undef);
+}
+
 sub ACTION_about_gbrowse {
     my $self = shift;
     my $q    = shift;

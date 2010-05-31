@@ -357,10 +357,9 @@ sub render_html_head {
 	      -head     => \@extra_headers,
 	     );
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
-  # add onload arguments, including ones used by plugins
-  my $autocomplete = '';
-  my @plugin_onloads = map ($_->onloads, @plugin_list);
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $autocomplete $_") foreach @plugin_onloads;
+
+  my $plugin_onloads  = join ';',map {eval{$_->onloads}} @plugin_list;
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $plugin_onloads");
 
   return start_html(@args);
 }

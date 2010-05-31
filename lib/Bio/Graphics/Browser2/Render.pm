@@ -2881,10 +2881,10 @@ sub set_tracks {
 	foreach (@subtracks) {s/#.+$//}  # get rid of comments
 	push @main,$main;
 	if (@subtracks) {
-	    warn "MUST FIX set_tracks() to HANDLE SUBTRACKS";
-#	    $self->filter_subtrack($main,\@subtracks);
+#	    warn "MUST FIX set_tracks() to HANDLE SUBTRACKS";
+	    $self->filter_subtrack($main,\@subtracks);
 	} else {
-#	    $self->filter_subtrack($main,undef);
+	    $self->filter_subtrack($main,undef);
 	}
     }
 
@@ -3492,7 +3492,7 @@ sub join_selected_tracks {
 
     my @selected = $self->visible_tracks;
     for (@selected) { # escape hyphens
-	warn "MUST FIX join_selected_tracks";
+#	warn "MUST FIX join_selected_tracks";
 	if ((my $filter = $state->{features}{$_}{filter}{values})) {
 	    my @subtracks = grep {$filter->{$_}} keys %{$filter};
 	    $_ .= "/@subtracks";

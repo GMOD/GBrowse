@@ -478,6 +478,8 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
     self.setStyle('contentWrapper','width',self.minWidth-fullPadding);
   }
 
+//  self.setStyle(balloon,'resize',1);
+
   self.setStyle('contents','z-index',2);
   self.setStyle('contents','color',self.fontColor);
   self.setStyle('contents','font-family',self.fontFamily);

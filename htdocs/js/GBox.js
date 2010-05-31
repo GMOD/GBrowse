@@ -58,7 +58,7 @@ Box.prototype.makeBalloon = function() {
   self.setStyle(contents,'font-size',self.fontSize);
 
   if (balloonIsSticky) {
-    self.setStyle(contents,'margin-right',10); 
+    self.setStyle(contents,'margin-top',self.closeButtonWidth);
   }
   else if (self.displayTime)  {
     self.timeoutAutoClose = window.setTimeout(this.hideTooltip,self.displayTime);

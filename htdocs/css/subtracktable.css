@@ -1,7 +1,7 @@
 div.subtrack_table {
     overflow:auto; 
+    width: auto;
     height:300px; 
-    width:500px; 
     border:1px solid black" 
 }
 

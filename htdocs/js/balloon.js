@@ -477,9 +477,7 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
     self.setStyle(balloon,'width',self.minWidth);
     self.setStyle('contentWrapper','width',self.minWidth-fullPadding);
   }
-
-//  self.setStyle(balloon,'resize',1);
-
+  
   self.setStyle('contents','z-index',2);
   self.setStyle('contents','color',self.fontColor);
   self.setStyle('contents','font-family',self.fontFamily);
@@ -877,7 +875,7 @@ Balloon.prototype.setStyle = function(el,att,val) {
   if (!el) {
     return false;
   }
-  
+
   if (val && att.match(/left|top|bottom|right|width|height|padding|margin/)) {
     val = new String(val);
     if (!val.match(/auto/)) {

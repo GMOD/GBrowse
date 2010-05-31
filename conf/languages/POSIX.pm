@@ -507,7 +507,7 @@ END
  SHARE              => 'Share %s',
 
  SHARE_INSTRUCTIONS_BOOKMARK => <<END,
-To <b>share</b this track with another user, copy the URL below and
+To <b>share</b> this track with another user, copy the URL below and
 send it to him or her.
 END
 

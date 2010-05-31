@@ -441,7 +441,7 @@ sub wrap_rendered_track {
     if ( $label =~ /^plugin:/ ) {
         my $config_url = "url:?plugin=$escaped_label;plugin_do=Configure";
         $config_click
-            = "GBox.showTooltip(event,'$config_url',1,500,500)";
+            = "GBox.showTooltip(event,'$config_url',true)";
     }
 
     elsif ( $label =~ /^file:/ ) {
@@ -452,13 +452,13 @@ sub wrap_rendered_track {
     else {
         my $config_url = "url:?action=configure_track;track=$escaped_label";
         $config_click
-            = "GBox.showTooltip(event,'$config_url',1,500,500)";
+            = "GBox.showTooltip(event,'$config_url',true)";
     }
 
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
     my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
 
-    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label',1)";
+    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label',true)";
 
     my $title;
     if ($label =~ /^file:/) {
@@ -495,7 +495,7 @@ sub wrap_rendered_track {
                 -onMouseOver =>
                     "$balloon_style.showTooltip(event,'$share_this_track')",
 		    -onMousedown =>
-                    "GBox.showTooltip(event,'url:?action=share_track;track=$escaped_label',1,500,500)",
+                    "GBox.showTooltip(event,'url:?action=share_track;track=$escaped_label',true)",
             }
         ),
 
@@ -1433,12 +1433,12 @@ sub select_features_menu {
     my $titleref = shift;
     my $stt      = $self->subtrack_manager($label) or return;
     my ($selected,$total) = $stt->counts;
-    my $subtrack_over  = "GBubble.showTooltip(event,'url:?action=show_subtracks;track=$label')";
-    my $subtrack_click = "GBox.showTooltip(event,'url:?action=select_subtracks;track=$label',true,800)";
+    my $subtrack_over  = "GBubble.showTooltip(event,'url:?action=show_subtracks;track=$label',false,1024)";
+    my $subtrack_click = "GBox.showTooltip(event,'url:?action=select_subtracks;track=$label',true)";
 
     # modify the title to show that some subtracks are hidden
     $$titleref .= " ".a({-href         => 'javascript:void(0)',
-			 -onMouseOver  => $subtrack_over,
+			 -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
 			 -onClick      => $subtrack_click,
 			},
 			$self->language->tr('SHOWING_SUBTRACKS',$selected,$total)

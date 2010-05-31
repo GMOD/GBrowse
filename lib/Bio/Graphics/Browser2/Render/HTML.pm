@@ -437,6 +437,7 @@ GBox.allowEventHandlers = true;
 GBox.evalScripts        = true;
 GBox.opacity = 1;
 GBox.fontFamily = 'sans-serif';
+GBox.maxWidth   = 1280;
 GBox.stemHeight = 0;
 END
 ;
@@ -2143,18 +2144,17 @@ sub download_track_menu {
 
 		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_REGION',$segment_str),
 			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid:$start..$end;l=$track;s=0;f=save+gff3';$byebye",
-		   ),
+		   ),br(),
 
 		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_CHROM',$seqid),
 			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid;l=$track;s=0;f=save+gff3';$byebye",
-		   ),
+		   ),br(),
 
 		   button(-value=> $self->tr('DOWNLOAD_TRACK_DATA_ALL'),
 			  -onClick => "$unload;location.href='?gbgff=1;l=$track;s=0;f=save+gff3';$byebye",
 		   )).
 
-		   a({-href=>'javascript:void(0)',-onClick=>$byebye},
-		     $self->tr('CLOSE_WINDOW'));
+		   button(-style=>"background:pink",-onClick=>"$byebye",-name=>$self->tr('CANCEL'));
     return $html;
 }
 
@@ -2224,6 +2224,8 @@ sub share_track {
     my $return_html = start_html();
     $return_html .= h1( $self->tr( 'SHARE', $description ) );
 
+    my $tsize = 72;
+
     if ($label ne 'all' && $label !~ /^(http|ftp)/) {
 	
 	my $shared;
@@ -2239,8 +2241,8 @@ sub share_track {
 	    textfield(
 		-style    => 'background-color: wheat',
 		-readonly => 1,
+		-size     => $tsize,
 		-value    => $shared,
-		-size     => 65,
 		-onClick  => 'this.select()'
 	    )
 	    )
@@ -2252,12 +2254,12 @@ sub share_track {
 		$label eq 'all'
 		? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
 		: 'SHARE_INSTRUCTIONS_ONE_TRACK'
-	    ),br(),
+	    ).br().
 	    textfield(
 		-style    => 'background-color: wheat',
 		-readonly => 1,
+		-size     => $tsize,
 		-value    => $gbgff,
-		-size     => 65,
 		-onClick  => 'this.select()'));
 
     if ($das_types) {
@@ -2274,8 +2276,8 @@ sub share_track {
 	    . p( textfield(
                 -style    => 'background-color: wheat',
                 -readonly => 1,
+		-size     => $tsize,
                 -value    => $das,
-                -size     => 56,
                 -onFocus  => 'this.select()',
                 -onSelect => 'this.select()')
              );
@@ -2287,7 +2289,7 @@ sub share_track {
 		 );
 
     $return_html .= end_html();
-    return $return_html;
+    return div({-style=>'width:600px'},$return_html);
 }
 
 

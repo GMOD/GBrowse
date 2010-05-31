@@ -909,8 +909,8 @@ sub render_panels {
 			      $panels_html,
 			  ),
 			  div({-style=>'text-align:center'},
+			      $self->render_select_track_link,
 			      $clear_hilites,
-			      $self->render_select_track_link
 			  ),
 			  div($self->html_frag('html4',$self->state))
             )
@@ -1863,13 +1863,6 @@ sub default_tracks {
 	                                      or $visibility eq 'collapse';
       $state->{features}{$label}{visible} = 0 if $visibility eq 'hide';
       $state->{track_collapsed}{$label}   = 1 if $visibility eq 'collapse';
-
-      if (my ($method,@values) = $source->subtrack_select_list($label)) {
-	  my @defaults         = $source->subtrack_select_default($label);
-	  my %turnon           = map {$_=>1} @defaults ? @defaults : @values;
-	  $state->{features}{$label}{filter}{method} = $method;
-	  $state->{features}{$label}{filter}{values} = {map {$_=>$turnon{$_}} @defaults};
-      }
   }
 }
 
@@ -1982,20 +1975,28 @@ sub update_state_from_cgi {
   $self->update_galaxy_url($state);
 }
 
-sub filter_subtrack {
-    my $self        = shift;
-    my $label       = shift;
-    my $subtracks   = shift;
+sub create_subtrack_manager {
+    my $self          = shift;
+    my $label         = shift;
+    my $source        = shift || $self->data_source;
+    my $state         = shift || $self->state;
+    
+    my ($dimensions,$rows,$aliases) 
+	= Bio::Graphics::Browser2::SubtrackTable->infer_settings_from_source($source,$label)
+	or return;
 
-    my $state       = $self->state;
+    my $key            = $source->setting($label => 'key');
+    my $selected       = $state->{features}{$label}{subtracks};
+    my $comment        = $source->setting($label => 'brief comment');
 
-    my ($method,$values) = $self->data_source->subtrack_select_list($label);
-    $state->{features}{$label}{filter}{method} = $method;
-    $state->{features}{$label}{filter}{values}{$_} = 0 foreach @$values;
-
-    # if undef passed, then turn off all filters
-    return unless $subtracks && @$subtracks;
-    $state->{features}{$label}{filter}{values}{$_} = 1 foreach @$subtracks;
+    my $stt            = Bio::Graphics::Browser2::SubtrackTable->new(-columns=>$dimensions,
+								     -rows   =>$rows,
+								     -label  => $label,
+								     -key    => $key||$label,
+								     -aliases => $aliases,
+								     -comment => $comment);
+    $stt->set_selected($selected) if $selected;
+    return $stt;
 }
 
 # Handle returns from the track configuration form
@@ -2880,9 +2881,10 @@ sub set_tracks {
 	foreach (@subtracks) {s/#.+$//}  # get rid of comments
 	push @main,$main;
 	if (@subtracks) {
-	    $self->filter_subtrack($main,\@subtracks);
+	    warn "MUST FIX set_tracks() to HANDLE SUBTRACKS";
+#	    $self->filter_subtrack($main,\@subtracks);
 	} else {
-	    $self->filter_subtrack($main,undef);
+#	    $self->filter_subtrack($main,undef);
 	}
     }
 
@@ -3490,6 +3492,7 @@ sub join_selected_tracks {
 
     my @selected = $self->visible_tracks;
     for (@selected) { # escape hyphens
+	warn "MUST FIX join_selected_tracks";
 	if ((my $filter = $state->{features}{$_}{filter}{values})) {
 	    my @subtracks = grep {$filter->{$_}} keys %{$filter};
 	    $_ .= "/@subtracks";

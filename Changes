@@ -9,6 +9,9 @@
 	  edit htdocs/css/dropdown/default-theme.css).
 	* Moved track table into its own tabbed section.
 	* TrackFinder plugin now hilights the matches in the track table.
+	* New "subtrack table" and "subtrack select" options allow you to create nice
+	  sortable tables of potential subtracks. The old "select" option is still
+	  supported, but deprecated.
 
 2.08 Thu May 20 22:46:13 EDT 2010
 	* Added the ability to control the toggle state of each category and subcategory at

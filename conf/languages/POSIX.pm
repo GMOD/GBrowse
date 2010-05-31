@@ -187,7 +187,9 @@ END
 
    CONFIGURE_TRACKS   => 'Configure tracks...',
 
-   SELECT_SUBTRACKS   => 'Select from %d subtracks',
+   SUBTRACK_INSTRUCTIONS   => 'Select the tracks you wish to display. Sort the tracks by clicking on the column headings, or by clicking and dragging rows into position.',
+
+   SELECT_SUBTRACKS   => '%d of %d subtracks selected',
 
    EDIT       => 'Edit File...',
 
@@ -492,7 +494,7 @@ END
 
  ABOUT_THIS_TRACK   => '<b>About this track</b>',
 
- SUBTRACKS_SHOWN    => 'This track contains selectable subtracks:',
+ SUBTRACKS_SHOWN    => 'This track contains selectable subtracks. Click to modify the selection or change subtrack order.',
 
  SHOW_SUBTRACKS     => '<b>Select subtracks</b>',
 

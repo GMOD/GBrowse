@@ -112,10 +112,8 @@ sub citation {
   $c ||= $data_source->setting($label=>'citation');
 
   my $keywords                 = $data_source->code_setting($label=>'keywords');
-  my ($method,$values,$labels) = $data_source->subtrack_select_list($label);
 
   $c          .= "<br><i>$keywords</i>"         if $keywords;
-  $c          .= "<br>Subtracks:<i> @$labels</i>" if $labels && @$labels;
   return $c;
 }
 

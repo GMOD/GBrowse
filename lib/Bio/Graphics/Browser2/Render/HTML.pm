@@ -871,10 +871,10 @@ sub render_track_table {
    
    $labels{$label} = a({@args},$key);
 
-   if (my $subtracks = $self->has_subtracks($label)) {
+   if (my ($selected,$total) = $self->subtrack_counts($label)) {
        $labels{$label} .= ' ['. a({-href=>'javascript:void(0)',
-				    -onMouseDown=>"GBox.showTooltip(event,'url:?action=select_subtracks;label=$label',true,800,800)"
-				   },i($self->tr('SELECT_SUBTRACKS',$subtracks))).']';
+				    -onMouseDown=>"GBox.showTooltip(event,'url:?action=select_subtracks;track=$label',true,1024)"
+				   },i($self->tr('SELECT_SUBTRACKS',$selected,$total))).']';
    }
 
   }
@@ -1523,28 +1523,17 @@ sub tableize {
   $html .= end_table();
 }
 
-sub has_subtracks {
+sub subtrack_counts {
     my $self  = shift;
     my $label = shift;
-    my $rows  = $self->data_source->setting($label => 'subtrack table')  or return;
-    my @rows  = split ';',$rows;
-    return scalar @rows;
+    my $stt   = $self->create_subtrack_manager($label) or return;
+    return $stt->counts;
 }
 
 sub subtrack_table {
     my $self          = shift;
     my $label         = shift;
-    my $source        = $self->data_source;
-
-    my $dimensions     = $source->setting($label => 'subtrack select') or next;
-    my $rows           = $source->setting($label => 'subtrack table')  or next;
-    my $key            = $source->setting($label => 'key');
-    my @dimensions     = map {[shellwords($_)]}             split ';',$dimensions;
-    my @rows           = map {[shellwords($_)]} split ';',$rows;
-    my $stt            = Bio::Graphics::Browser2::SubtrackTable->new(-columns=>\@dimensions,
-								     -rows   =>\@rows,
-								     -label  => $label,
-								     -key    => $key||$label);
+    my $stt           = $self->create_subtrack_manager($label);
     return $stt->selection_table($self);
 }
 
@@ -2089,6 +2078,12 @@ END
     return $return_html;
 }
 
+sub cit_link {
+    my $self        = shift;
+    my $label       = shift;
+    return "?display_citation=$label";
+}
+
 sub track_citation {
     my $self        = shift;
     my $label       = shift;
@@ -2162,56 +2157,6 @@ sub download_track_menu {
 		   a({-href=>'javascript:void(0)',-onClick=>$byebye},
 		     $self->tr('CLOSE_WINDOW'));
     return $html;
-}
-
-# this is the content of the popup balloon that allows the user to select
-# individual features by source or name
-sub select_subtracks {
-    my $self  = shift;
-    my $label = shift;
-
-    my $state       = $self->state();
-    my $data_source = $self->data_source();
-
-    my ($method,$values,$labels)   = $data_source->subtrack_select_list($label);
-    my @values = sort @$values;
-    my %labels;
-    @labels{@$values} = @$labels;
-
-    my $filter = $state->{features}{$label}{filter};
-    my @turned_on = grep {$filter->{values}{$_}} @values;
-
-    my $change_button = button(-name    => 
-			   $self->tr('Change'),
-			   -onClick => 
-			   "Controller.filter_subtrack('$label',\$('subtrack_select_form'))"
-	);
-
-    my $return_html = start_html();
-    $return_html   .= start_form(-name => 'subtrack_select_form',
-				 -id   => 'subtrack_select_form');
-    $return_html   .= p($self->language->tr('SHOW_SUBTRACKS')
-			||'Show subtracks');
-    $return_html   .= div(a({-href=>'javascript:void(0)',
-			     -onClick=>'$$(\'input.subtrack_checkbox\').each(function(t){t.checked=false})',
-			    },$self->tr('All_off')),
-			  a({-href=>'javascript:void(0)',
-			     -onClick=>'$$(\'input.subtrack_checkbox\').each(function(t){t.checked=true})',
-			    },$self->tr('All_on')),
-			  $change_button
-	);
-
-    my @checkboxes =  checkbox_group(-name      => "select",
-				     -values    => \@values,
-				     -linebreak => 1,
-				     -class     => 'subtrack_checkbox',
-				     -labels    => \%labels,
-				     -defaults  => \@turned_on);
-    $return_html   .= $self->tableize(\@checkboxes,undef,int sqrt(@values));
-    $return_html .= $change_button;
-    $return_html .= end_form();
-    $return_html .= end_html();
-    return $return_html;
 }
 
 # this is the content of the popup balloon that describes how to share a track

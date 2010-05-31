@@ -251,8 +251,6 @@ sub make_requests {
 
     foreach my $label ( @{ $labels || [] } ) {
 
-	$self->set_subtrack_defaults($label);
-
         my @track_args = $self->create_track_args( $label, $args );
 
 	my (@filter_args,@featurefile_args,@segment_args);
@@ -1429,57 +1427,23 @@ sub render_hidden_track {
     return $gd;
 }
 
-# this method is a little unconventional; it modifies the title in-place
 sub select_features_menu {
     my $self     = shift;
     my $label    = shift;
     my $titleref = shift;
-
-    my $source = $self->source;
-    my $settings=$self->settings;
-
-    my $buttons = $self->source->globals->button_url;
-    my $escaped_label = CGI::escape($label);
-
-    my ($method,$values,$labels)   = $source->subtrack_select_list($label) or return;
-    my $filter = $settings->{features}{$label}{filter};
-
-    my @showing = grep {
- 	$filter->{values}{$_}
-    } @$values;
-
-    my @hidden = grep {
-	!$filter->{values}{$_}
-    } @$values;
-
-    my $showing = @showing;
-    my $total   = @showing+@hidden;
-
-    my %labels;
-    @labels{@$values} = @$labels;
-
-    my $select_features = $self->language->tr('SUBTRACKS_SHOWN');
-    $select_features   .= ul({-style=>'list-style: none;margin:0,0,0,0'},
-			      map {$filter->{values}{$_} ? li($labels{$_})
-				                         : li({-style=>'color: gray'},$labels{$_})
-			      } @$values);
-				 
-
-    $select_features   .= $self->language->tr('SELECT_SUBTRACKS');
-
-    my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
-
-    my $select_features_click
-	= "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',1,500)";
-    my $select_features_over = "$balloon_style.showTooltip(event,'$select_features')";
+    my $stt      = $self->subtrack_manager($label) or return;
+    my ($selected,$total) = $stt->counts;
+    my $subtrack_over  = "GBubble.showTooltip(event,'url:?action=show_subtracks;track=$label')";
+    my $subtrack_click = "GBox.showTooltip(event,'url:?action=select_subtracks;track=$label',true,800)";
 
     # modify the title to show that some subtracks are hidden
-    $$titleref .= " ".a({-href       => 'javascript:void(0)',
-			 -onClick    => $select_features_click,
-			 -onMouseOver=> $select_features_over
+    $$titleref .= " ".a({-href         => 'javascript:void(0)',
+			 -onMouseOver  => $subtrack_over,
+			 -onClick      => $subtrack_click,
 			},
-			$self->language->tr('SHOWING_SUBTRACKS',$showing,$total)
+			$self->language->tr('SHOWING_SUBTRACKS',$selected,$total)
     );
+    
 }
 
 sub generate_filters {
@@ -1500,49 +1464,13 @@ sub generate_filters {
     return \%filters;
 }
 
-sub set_subtrack_defaults {
-    my $self = shift;
-    my $label = shift;
-    my $settings = $self->settings;
-    my $source   = $self->source;
-
-    if (my @defaults = $source->subtrack_select_default($label)) {
-	my ($method) = $source->subtrack_select_list($label);
-        $settings->{features}{$label}{filter}{values} ||= {map {$_=>1} @defaults};
-	$settings->{features}{$label}{filter}{method} ||= $method;
-    } elsif (my ($method,$values,$labels) = $source->subtrack_select_list($label)) {
-        $settings->{features}{$label}{filter}{values} ||= {map {$_=>1} @$values};
-        $settings->{features}{$label}{filter}{method} ||= $method;
-    }
-}
-
 sub subtrack_select_filter {
     my $self     = shift;
     my ($settings,$label) = @_;
 
-    my $filter   = $settings->{features}{$label}{filter} or return;
-    my $method   = $filter->{method};
-    return unless $method;
-    
-    my $code;
-    my @values = grep {$filter->{values}{$_}} keys %{$filter->{values}};
-    if (@values) {
-	my $regex  = join '|',@values;
-	$code .= "return 1 if \$f->$method =~ /($regex)/i;\n";
-    } else {
-	$code .= "return;\n";
-    }
-    return unless $code;
-    my $sub = <<END;
-sub {
-    my \$f = shift;
-    $code;
-    return;
-}
-END
-    my $cref = eval $sub;
-    warn "failed compiling $sub: ",$@ if $@;
-    return $cref;
+    # new method via SubtrackTable:
+    my $stt = $self->subtrack_manager($label) or return;
+    return $stt->filter_feature_sub;
 }
 
 sub add_features_to_track {
@@ -2012,6 +1940,10 @@ sub create_track_args {
   push @default_args,(-key   => $label)        unless $label =~ /^\w+:/;
   push @default_args,(-hilite => $hilite_callback) if $hilite_callback;
 
+  if (my $stt = $self->subtrack_manager($label)) {
+      push @default_args,(-sort_order => $stt->sort_feature_sub);
+  }
+
   my @args;
   if ($source->semantic_setting($label=>'global feature',$length)) {
       eval { # honor the database indicated in the track config
@@ -2041,6 +1973,14 @@ sub create_track_args {
   }
 
   return @args;
+}
+
+sub subtrack_manager {
+    my $self = shift;
+    my $label = shift;
+    return Bio::Graphics::Browser2::Render->create_subtrack_manager($label,
+								    $self->source,
+								    $self->settings);
 }
 
 =head2 create_cache_key()

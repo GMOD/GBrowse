@@ -1110,27 +1110,6 @@ sub parse_user_fh {
 }
 
 
-sub subtrack_select_list {
-    my $self  = shift;
-    my $label = shift;
-    my $select = $self->code_setting($label=>'select') or return;
-    my ($method,@values,@labels);
-    if ($select =~ /;/) { # new syntax
-	my @lines = split ';',$select; 
-	($method) = shellwords (shift @lines);
-	for my $l (@lines) {
-	    my ($name,$label) = grep {!/^[#=]/} shellwords($l);
-	    push @values,$name;
-	    push @labels,$label||$name;
-	}
-    } else {
-	($method,@values) = grep {!/^#/} shellwords $self->setting($label=>'select') or return;
-	foreach    (@values) {s/#.+$//}  # get rid of comments
-	@labels = @values;
-    }
-    return ($method,\@values,\@labels);
-}
-
 sub subtrack_scan_list {
     my $self = shift;
     my $label = shift;
@@ -1151,12 +1130,6 @@ sub subtrack_scan_list {
 	return \@values;
     }
 
-}
-
-sub subtrack_select_default {
-    my $self = shift;
-    my $label = shift;
-    return shellwords $self->code_setting($label=>'select default');
 }
 
 1;

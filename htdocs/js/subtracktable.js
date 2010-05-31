@@ -995,7 +995,7 @@ var Table = (function(){
 	};
 
 	/******** GBrowse Added Functions ********/
-        table.sendTableState = function (el) {
+        table.sendTableState = function (label,el) {
 	  var ancestors     = el.ancestors();
 	  var table         = ancestors.find(function (a) { return a.nodeName=='TABLE' });
     	  var id            = table.id;
@@ -1007,8 +1007,8 @@ var Table = (function(){
 	          method: 'post',
 		  asynchronous: false,
 		  parameters: {
-		        action: 'set_subtracks',
-			label:  id,
+		        action:    'set_subtracks',
+			'label':   label,
 			subtracks: Object.toJSON(result)
 	          }});
 	  };
@@ -1020,7 +1020,9 @@ var Table = (function(){
               var row = input.ancestors().find(function(a) {return a.nodeName=='TR'});
 	      if (checked) {
 	         row.addClassName('selected');
+	         row.removeClassName('unselected');
 	      } else {
+	         row.addClassName('unselected');
 	         row.removeClassName('selected');
 	      }
 	      if (send_result)

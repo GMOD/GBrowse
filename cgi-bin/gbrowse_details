@@ -1,11 +1,5 @@
 #!/usr/bin/perl -w
 
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 use strict;
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::RegionSearch;
@@ -66,6 +60,7 @@ use constant MAX_DNA => 500_000;
 
 use CGI qw(:standard *table *TR escape);
 use Bio::Graphics::Browser2::Realign 'align';
+use Data::Dumper 'Dumper';
 
 sub new {
     my $package = shift;
@@ -403,6 +398,7 @@ sub print_dna {
   my $position = $self->position($feature);
   my $name     = $feature->name;
   my $class    = $feature->class;
+  $name      ||= '';
   return pre(">$name class=$class position=$position\n".$dna);
 }
 
@@ -624,7 +620,10 @@ sub format_values {
     my ($feature,$tag,@values) = @_;
     my $formatter    = $self->get_formatter($feature,$tag);
 
-    return @values unless $formatter;
+    $Data::Dumper::Indent = 3;
+    $Data::Dumper::Terse  = 1;
+    return map {ref($_) ? "<pre>".Dumper($_)."</pre>" 
+		        : $_} @values unless $formatter;
     if (ref $formatter eq 'CODE') {
 	return map {$formatter->($_,$tag,$feature)} @values;
     }
@@ -680,9 +679,9 @@ sub get_formatter {
     }
 
     unless (defined $s) {
-	$s = sub {$self->format_position(@_)} if $tag eq 'Position';
+	$s = sub {$self->format_position(@_)}   if $tag eq 'Position';
 	# $s = sub {$self->format_position(@_)} if $tag eq 'Matches';
-	$s = sub {$self->format_name(@_)    } if $tag eq 'Name';
+	$s = sub {$self->format_name(@_)    }   if $tag eq 'Name';
     }
     return $self->{formatterCache}{$key} = $s;
 }

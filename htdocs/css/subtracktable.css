@@ -1,6 +1,5 @@
 div.subtrack_table {
     overflow:auto; 
-    resize: both; 
     height:300px; 
     width:500px; 
     border:1px solid black" 
@@ -45,10 +44,10 @@ tr.alternate {
 	background-color:#ffffcc;
 }
 tr.unselected {
-       background-color: transparent;
+        color: gray;
 }
 tr.selected {
-        background-color: orange;
+         color: black;
 }
 
 /* Sorting */

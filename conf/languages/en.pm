@@ -187,7 +187,7 @@ END
 
    CONFIGURE_TRACKS   => 'Configure tracks...',
 
-   SELECT_SUBTRACKS   => 'Select from %d subtracks',
+   SELECT_SUBTRACKS   => '%d of %d subtracks selected',
 
    EDIT       => 'Edit File...',
 
@@ -492,7 +492,7 @@ END
 
  ABOUT_THIS_TRACK   => '<b>About this track</b>',
 
- SUBTRACKS_SHOWN    => 'This track contains selectable subtracks:',
+#  SUBTRACKS_SHOWN    => 'This track contains selectable subtracks:',
 
  SHOW_SUBTRACKS     => '<b>Select subtracks</b>',
 

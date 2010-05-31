@@ -44,13 +44,15 @@ sub configure_form {
   my $source         = $self->browser_config;
   my $html = '';
 
-  $html .= b('Search: ').textfield(-id         => 'plugin_TrackFinderKeywords',
-				   -name       => $self->config_name('keywords'),
- 				   -onKeyPress => "if (typeof(timeOutID) != 'undefined') clearTimeout(timeOutID);timeOutID= setTimeout('doPluginUpdate()',1000)",
-				   -override   => 1,
-				   -value      => $current_config->{keywords},
-				   -onChange   => 'doPluginUpdate()',
-      );
+  $html .= div({-class=>'searchbody', -id=>'scrollfix'}, 
+	   	   b('Search: ').textfield(-id         => 'plugin_TrackFinderKeywords',
+					   -name       => $self->config_name('keywords'),
+ 					   -onKeyPress => "if (typeof(timeOutID) != 'undefined') clearTimeout(timeOutID);timeOutID= setTimeout('doPluginUpdate()',1000)",
+					   -override   => 1,
+					   -value      => $current_config->{keywords},
+					   -onChange   => 'doPluginUpdate()',
+      		)
+	);
   $html .= button(-value   => 'Clear',
 		  -onClick => "\$('plugin_TrackFinderKeywords').clear();doPluginUpdate()",
       );

@@ -961,7 +961,7 @@ sub selected_features {
 sub new_feature_list {
   my $self     = shift;
   return Bio::Graphics::FeatureFile->new(-smart_features=>1,
-					 -safe => 1);
+		-safe => 1);
 }
 
 # install the plugin but do not show it in the "Reports & Analysis" menu
@@ -970,6 +970,24 @@ sub hide {}
 
 sub config_hash {
   return md5_hex( Dumper( shift->configuration ) );
+}
+
+# A list of all extra scripts required by a plugin, defaults to nothing.
+sub scripts {
+  my $self = shift;
+  return;
+}
+
+# A list of all additional stylesheets required by a plugin, defaults to nothing.
+sub stylesheets {
+  my $self = shift;
+  return;
+}
+
+# A list of all Javascript commands to be run once the page is loaded (in the body's onLoad section).
+sub onloads {
+  my $self = shift;
+  return;
 }
 
 

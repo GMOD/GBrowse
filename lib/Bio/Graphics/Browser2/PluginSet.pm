@@ -53,11 +53,13 @@ sub plugins       {
   my $self = shift;
   return wantarray ? values %{$self->{plugins}} : $self->{plugins};
 }
+
 sub plugin        {
   my $self = shift;
   my $plugin_base = shift;
   $self->plugins->{$plugin_base};
 }
+
 sub language {
   my $self = shift;
   my $d = $self->{language};

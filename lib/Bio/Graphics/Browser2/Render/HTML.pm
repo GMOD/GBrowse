@@ -212,7 +212,7 @@ sub sliderform {
 	return
 	    join '',(
 		start_form(-name=>'sliderform',-id=>'sliderform',-onSubmit=>'return false'),
-		b($self->tr('Scroll').': '),
+		b($self->tr('Scroll'). ': '),
 		$self->slidertable($segment),
 		b(
 		    checkbox(-name=>'flip',
@@ -273,10 +273,10 @@ sub render_html_head {
   # drag-and-drop functions from scriptaculous
   push @scripts,{src=>"$js/$_"}
     foreach qw(
-        prototype.js 
-        scriptaculous.js 
-        yahoo-dom-event.js 
-        subtracktable.js
+      prototype.js 
+      scriptaculous.js 
+      yahoo-dom-event.js 
+      subtracktable.js
     );
 
   if ($self->setting('autocomplete')) {
@@ -289,25 +289,30 @@ sub render_html_head {
       foreach qw(login.js);
   }
 
-  # our own javascript
+  # our own javascript files
   push @scripts,{src=>"$js/$_"}
     foreach qw(
-               buttons.js 
-               toggle.js 
-               karyotype.js
-               rubber.js
-               overviewSelect.js
-               detailSelect.js
-               regionSelect.js
-               track.js
-               balloon.js
-               balloon.config.js
-               GBox.js
-               ajax_upload.js
-               tabs.js
-               controller.js
+      buttons.js 
+      toggle.js 
+      karyotype.js
+      rubber.js
+      overviewSelect.js
+      detailSelect.js
+      regionSelect.js
+      track.js
+      balloon.js
+      balloon.config.js
+      GBox.js
+      ajax_upload.js
+      tabs.js
+      controller.js
     );
 
+  # add scripts needed by plugins
+  my @plugin_list = $self->plugins->plugins;
+  my @plugin_scripts = map ($_->scripts, @plugin_list);
+  push @scripts,{src=>"$js/$_"} foreach @plugin_scripts;
+  
   # pick stylesheets;
   my @stylesheets;
   my $titlebar   = 'css/titlebar-default.css';
@@ -318,6 +323,10 @@ sub render_html_head {
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/dropdown.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/default_theme.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path($titlebar,'url')};
+  
+  # add stylesheets used by plugins
+  my @plugin_stylesheets = map ($_->stylesheets, @plugin_list);
+  push @stylesheets,{src => $self->globals->resolve_path("css/$_",'url')} foreach @plugin_stylesheets;
 
   my @theme_stylesheets = shellwords($self->setting('stylesheet') || '/gbrowse2/css/gbrowse.css');
   for my $s ( @theme_stylesheets ) {
@@ -337,11 +346,10 @@ sub render_html_head {
       $fill =~ s/^(\w+):[\d.]+$/$1/;
       $set_dragcolors = "set_dragcolors('$fill')";
   }
-
   my @extra_headers;
   push @extra_headers, $self->render_user_head;
 
-  # put them all together
+  # put all the html head arguments together
   my @args = (-title    => $title,
               -style    => \@stylesheets,
               -encoding => $self->tr('CHARSET'),
@@ -349,8 +357,10 @@ sub render_html_head {
 	      -head     => \@extra_headers,
 	     );
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
+  # add onload arguments, including ones used by plugins
   my $autocomplete = '';
-  push @args,(-onLoad=>"initialize_page();$set_dragcolors;$autocomplete");
+  my @plugin_onloads = map ($_->onloads, @plugin_list);
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $autocomplete $_") foreach @plugin_onloads;
 
   return start_html(@args);
 }

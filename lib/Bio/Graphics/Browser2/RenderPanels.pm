@@ -255,6 +255,8 @@ sub make_requests {
 
 	my (@filter_args,@featurefile_args,@segment_args);
 
+	my $format_option = $settings->{features}{$label}{options};
+
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
 	my $ff_error;
@@ -271,7 +273,7 @@ sub make_requests {
 		    -panel_args => \@panel_args,
 		    -track_args => \@track_args,
 		    -extra_args => [ @cache_extra, @filter_args, 
-				     @featurefile_args, @segment_args, $label ],
+				     @featurefile_args, @segment_args, $format_option, $label ],
 		    );
 		$cache_object->flag_error("Could not fetch data for $track");
 		$d{$track} = $cache_object;
@@ -294,7 +296,7 @@ sub make_requests {
             -cache_base => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
-            -extra_args => [ @cache_extra, @filter_args, @featurefile_args, $label ],
+            -extra_args => [ @cache_extra, @filter_args, @featurefile_args, $format_option, $label ],
 	    -cache_time => $cache_time
         );
 
@@ -1983,19 +1985,20 @@ sub subtrack_manager {
 								    $self->settings);
 }
 
-=head2 create_cache_key()
+# dead code - slate for removal
+# =head2 create_cache_key()
 
-  $cache_key = $self->create_cache_key(@args)
+#   $cache_key = $self->create_cache_key(@args)
 
-Create a unique cache key for the given args.
+# Create a unique cache key for the given args.
 
-=cut
+# =cut
 
-sub create_cache_key {
-  my $self = shift;
-  my @args = map {$_ || ''} grep {!ref($_)} @_;  # the map gets rid of uninit variable warnings
-  return md5_hex(@args);
-}
+# sub create_cache_key {
+#   my $self = shift;
+#   my @args = map {$_ || ''} grep {!ref($_)} @_;  # the map gets rid of uninit variable warnings
+#   return md5_hex(@args);
+# }
 
 sub get_cache_base {
     my $self = shift;

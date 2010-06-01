@@ -724,6 +724,7 @@ var GBrowseController = Class.create({
     var plugin_base  = document.pluginform.plugin.value;
     this.update_sections(new Array(div_id), '&plugin_base='+plugin_base,null,null,true);
     new Effect.ScrollTo(div_id);
+    new Effect.BlindDown(div_id);
   },
 
   reconfigure_plugin:

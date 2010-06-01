@@ -12,6 +12,7 @@
 	* New "subtrack table" and "subtrack select" options allow you to create nice
 	  sortable tables of potential subtracks. The old "select" option is still
 	  supported, but deprecated.
+	* Added "kewl" blinds down effect when changing tabs.
 
 2.08 Thu May 20 22:46:13 EDT 2010
 	* Added the ability to control the toggle state of each category and subcategory at

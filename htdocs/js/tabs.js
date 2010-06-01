@@ -36,13 +36,19 @@ var TabbedSection = Class.create( {
 	    if (this.tab_menus[i].id == tab_id)
 	    	 whichOne=i;
         }
+	var current = this.tab_divs.find(function (e) { 
+                                               return e.visible();
+                                             });
+
 	this.tab_menus.each(
 	       function(e) {
 	       	       e.className='tabmenu_inactive';
 		       });
-	this.tab_divs.each(function(e)  {e.hide()});
         this.tab_menus[whichOne].className='tabmenu_active';
-        this.tab_divs[whichOne].show();
+
+	if (current != null) current.hide();
+	Effect.BlindDown(this.tab_divs[whichOne],{duration:0.5});
+
   }
 
 });  // end Class.create

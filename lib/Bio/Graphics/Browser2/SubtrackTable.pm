@@ -249,8 +249,9 @@ sub preview_table {
 			 ]));
     }
     my $caption = $render->tr('SUBTRACKS_SHOWN');
+    my @style   = keys %$elements > 10 ? (-style => 'height:300px') : ();
     return p($caption).
-	div(table({-border=>1,-class=>'subtrack-table'},tbody(@rows)));
+	div(table({-border=>1,-class=>'subtrack-table',@style},tbody(@rows)));
 }
 
 sub feature_to_id_sub {

@@ -1,7 +1,6 @@
 div.subtrack_table {
-    overflow:auto; 
+    overflow:auto;
     width: auto;
-    border:1px solid black" 
 }
 
 tbody.sortable tr {
@@ -9,12 +8,9 @@ tbody.sortable tr {
 }
 
 table.subtrack-table {
-        width: 100%;
+	border: 1px solid black;
 	border-collapse:collapse;
 	font-size: 10pt;
-}
-table.subtrack-table th, table.subtrack-table td {
-	padding: 1px 10px 1px 10px;
 }
 table.subtrack-table thead th {
 	background-color:lightgoldenrodyellow;
@@ -28,6 +24,19 @@ table.subtrack-table tr.tbody_header {
 	text-align:center;
 	background-color:khaki;
 }
+
+table.subtrack-table tbody {
+	border: 1px solid black;
+}
+
+table.subtrack-table tbody td {
+	border: 1px solid black;
+}
+
+table.subtrack-table tbody th {
+	border: 1px solid black;
+}
+
 
 table.subtrack-table a.pagelink {
 	padding-left:5px;
@@ -53,23 +62,19 @@ tr.selected {
 th.table-sortable {
 	cursor:pointer;
 	background-image:url("../images/buttons/sortable.gif");
-	background-position:center left;
 	background-repeat:no-repeat;
 	padding-left:12px;
 }
 th.table-sorted-asc {
 	background-image:url("../images/buttons/sorted_up.gif");
-	background-position:center left;
 	background-repeat:no-repeat;
 }
 th.table-sorted-desc {
 	background-image:url("../images/buttons/sorted_down.gif");
-	background-position:center left;
 	background-repeat:no-repeat;
 }
 th.table-filtered {
 	background-image:url("../images/buttons/filter.gif");
-	background-position:center left;
 	background-repeat:no-repeat;
 }
 select.table-autofilter {

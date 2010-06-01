@@ -214,10 +214,16 @@ Sortable.create('$table_id',
 Table.auto();
 END
 
-    return div({-class=>'subtrack_table',-id=>'subtrack_table_scroller'},
-	    table({-width => 800,
+    my @style   = keys %$elements > 10 ? (-style => 'height:300px') : ();
+
+    my $width = (1+@selectors) *150;
+    $width    = 600 if $width > 600;
+
+    return div({-class=>'subtrack_table',
+		-id=>'subtrack_table_scroller'},
+	    table({-width=>$width,
 		   -class => "subtrack-table table-autosort table-autostripe table-stripeclass:alternate",
-		  },
+		   @style},
 		  $thead,$tbody)).$tbottom.$script;
 }
 
@@ -249,9 +255,12 @@ sub preview_table {
 			 ]));
     }
     my $caption = $render->tr('SUBTRACKS_SHOWN');
+
     my @style   = keys %$elements > 10 ? (-style => 'height:300px') : ();
+    push @style,@selectors < 2 ? (-style => 'max-width:100px') : ();
+
     return p($caption).
-	div(table({-border=>1,-class=>'subtrack-table',@style},tbody(@rows)));
+	div(table({-class=>'subtrack-table',@style},tbody(@rows)));
 }
 
 sub feature_to_id_sub {

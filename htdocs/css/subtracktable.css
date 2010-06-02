@@ -9,7 +9,6 @@ tbody.sortable tr {
 
 table.subtrack-table {
 	border: 1px solid black;
-	border-collapse:collapse;
 	font-size: 10pt;
 }
 table.subtrack-table thead th {
@@ -29,14 +28,16 @@ table.subtrack-table tbody {
 	border: 1px solid black;
 }
 
-table.subtrack-table tbody td {
-	border: 1px solid black;
+table.subtrack-table tbody tr:hover {
+	background:lightsteelblue; 
 }
 
 table.subtrack-table tbody th {
 	border: 1px solid black;
 }
-
+table.subtrack-table tbody td {
+	border: 1px solid black;
+}
 
 table.subtrack-table a.pagelink {
 	padding-left:5px;
@@ -56,6 +57,9 @@ tr.unselected {
 }
 tr.selected {
          color: black;
+}
+.dragging {
+     background-color: orange;
 }
 
 /* Sorting */

@@ -1,6 +1,11 @@
-//  DragDropExtra Scriptaculous Enhancement, version 0.2
+//  DragDropExtra Scriptaculous Enhancement, version 0.5
 //  (c) 2007-2008 Christopher Williams, Iterative Designs
 //
+// v0.5 release
+//      - Fixed bug where 2nd drag on an element in IE would result in funny placement of the
+//        element. [shammond42]
+// v0.4 release
+//		- Fixed issue with dragging and dropping in IE7 due to an exception being thrown and not properly reseting in FinishDrag.
 // v0.3 release
 //	  - Fixed bug found by Phillip Sauerbeck psauerbeck@gmail. Tests added based on Phillip's efforts.
 // v0.2 release
@@ -18,68 +23,75 @@
 // (http://www.oriontransfer.co.nz, sammi@oriontransfer.co.nz) and available under 
 // a MIT-style license.
 
-
 Draggable.prototype.startDrag = function(event) {
-    this.dragging = true;
-    if(!this.delta)
-      this.delta = this.currentDelta();
+  this.dragging = true;
+  if(!this.delta)
+    this.delta = this.currentDelta();
+  
+  if(this.options.zindex) {
+    this.originalZ = parseInt(Element.getStyle(this.element,'z-index') || 0);
+    this.element.style.zIndex = this.options.zindex;
+  }
+  
+  if(this.options.ghosting) {
+    console.log('ghosting');
+    this._clone = this.element.cloneNode(true);
+    this.element._originallyAbsolute = (this.element.getStyle('position') == 'absolute');
+    if (!this.element._originallyAbsolute)
+      Position.absolutize(this.element);
+    this.element.parentNode.insertBefore(this._clone, this.element);
+  }
+  
+	if(this.options.superghosting) {
+    		console.log('superghosting');
+		Position.prepare();
+		var pointer = [Event.pointerX(event), Event.pointerY(event)];
+		body = document.getElementsByTagName("body")[0];
+		me = this.element;
+		this._clone = me.cloneNode(true);
+		if (Prototype.Browser.IE) {
+ 			// Clear event handing from the clone
+			// Solves the second drag issue in IE
+			this._clone.clearAttributes();
+			this._clone.mergeAttributes(me.cloneNode(false));
+		}
+		me.parentNode.insertBefore(this._clone, me);
+		me.id = "clone_"+me.id;
+		me.hide();
 
-    if(this.options.zindex) {
-      this.originalZ = parseInt(Element.getStyle(this.element,'z-index') || 0);
-      this.element.style.zIndex = this.options.zindex;
-    }
-    
-    if(this.options.ghosting) {
-      this._clone = this.element.cloneNode(true);
-      this.element._originallyAbsolute = (this.element.getStyle('position') == 'absolute');
-      if (!this.element._originallyAbsolute)
-        Position.absolutize(this.element);
-      this.element.parentNode.insertBefore(this._clone, this.element);
-    }
-
-	
-    if(this.options.superghosting) {
-			Position.prepare();
-			var pointer = [Event.pointerX(event), Event.pointerY(event)];
-			body = document.getElementsByTagName("body")[0];
-			me = this.element;
-			this._clone = me.cloneNode(true);
-
-			me.parentNode.insertBefore(this._clone, me);
-			me.id = "clone_"+me.id;
-			me.hide();
-
-			Position.absolutize(me);
-			me.parentNode.removeChild(me);
-			body.appendChild(me);
-			//Retain height and width of object only if it has been nulled out.  -v0.3 Fix
-			if (me.style.width == "0px" || me.style.height == "0px")	{
-				me.style.width=Element.getWidth(this._clone)+"px";
-				me.style.height=Element.getHeight(this._clone)+"px";
-			}
-
-			//overloading in order to reduce repeated code weight.
-			this.originalScrollTop = (Element.getHeight(this._clone)/2);
-
-			this.draw(pointer);
-			me.show();
+		Position.absolutize(me);
+		me.parentNode.removeChild(me);
+		body.appendChild(me);
+		//Retain height and width of object only if it has been nulled out.  -v0.3 Fix
+		if (me.style.width == "0px" || me.style.height == "0px")	{
+		me.style.width=Element.getWidth(this._clone)+"px";
+		me.style.height=Element.getHeight(this._clone)+"px";
 		}
 
-		if(this.options.scroll) {
-		  if (this.options.scroll == window) {
-		    var where = this._getWindowScroll(this.options.scroll);
-		    this.originalScrollLeft = where.left;
-		    this.originalScrollTop = where.top;
-		  } else {
-		    this.originalScrollLeft = this.options.scroll.scrollLeft;
-		    this.originalScrollTop = this.options.scroll.scrollTop;
-		  }
-		}
-    
-    Draggables.notify('onStart', this, event);
-        
-    if(this.options.starteffect) this.options.starteffect(this.element);
+		//overloading in order to reduce repeated code weight.
+		this.originalScrollTop = (Element.getHeight(this._clone)/2);
+
+		this.draw(pointer);
+		me.show();
+	}
+
+  if(this.options.scroll) {
+    if (this.options.scroll == window) {
+      var where = this._getWindowScroll(this.options.scroll);
+      this.originalScrollLeft = where.left;
+      this.originalScrollTop = where.top;
+    } else {
+      this.originalScrollLeft = this.options.scroll.scrollLeft;
+      this.originalScrollTop = this.options.scroll.scrollTop;
+    }
+  }
+  
+  Draggables.notify('onStart', this, event);
+      
+  if(this.options.starteffect) this.options.starteffect(this.element);
 }
+
+
 
 
 Draggable.prototype.draw = function(point) {
@@ -131,6 +143,28 @@ Draggable.prototype.draw = function(point) {
     if(style.visibility=="hidden") style.visibility = ""; // fix gecko rendering
 }
 
+Draggable.prototype.initDrag = function(event) {
+  if(!Object.isUndefined(Draggable._dragging[this.element]) &&
+    Draggable._dragging[this.element]) return;
+  if(Event.isLeftClick(event)) {    
+    // abort on form elements, fixes a Firefox issue
+    var src = Event.element(event);
+    if((tag_name = src.tagName.toUpperCase()) && (
+      tag_name=='INPUT' ||
+      tag_name=='SELECT' ||
+      tag_name=='OPTION' ||
+      tag_name=='BUTTON' ||
+      tag_name=='TEXTAREA')) return;
+      
+    var pointer = [Event.pointerX(event), Event.pointerY(event)];
+    var pos     = Position.cumulativeOffset(this.element);
+    this.offset = [0,1].map( function(i) { return (pointer[i] - pos[i]) });
+    
+    Draggables.activate(this);
+    Event.stop(event);
+  }
+}
+
 Droppables.isAffected = function(point, element, drop) {
 	Position.prepare();
 	positioned_within = Position.withinIncludingScrolloffsets(drop.element, point[0], point[1])
@@ -145,8 +179,7 @@ Droppables.isAffected = function(point, element, drop) {
 
 }
 
-
-Draggable.prototype.finishDrag =  function(event, success) {
+Draggable.prototype.finishDrag = function(event, success) {
   this.dragging = false;
   
   if(this.options.quiet){
@@ -156,24 +189,12 @@ Draggable.prototype.finishDrag =  function(event, success) {
   }
 
   if(this.options.ghosting) {
-      if (!this.element._originallyAbsolute)
-        Position.relativize(this.element);
-      delete this.element._originallyAbsolute;
-      Element.remove(this._clone);
-      this._clone = null;
+    if (!this.element._originallyAbsolute)
+      Position.relativize(this.element);
+    delete this.element._originallyAbsolute;
+    Element.remove(this._clone);
+    this._clone = null;
   }
-
-	
-	
-  if(this.options.superghosting) {
-	  body = document.getElementsByTagName("body")[0];
-      Element.remove(this.element);
-/*
-	  me = this.element;
-	  body.removeChild(me);
-*/
-	  new Draggable(this._clone, this.options);
-	}
 
   var dropped = false; 
   if(success) { 
@@ -184,7 +205,7 @@ Draggable.prototype.finishDrag =  function(event, success) {
   Draggables.notify('onEnd', this, event);
 
   var revert = this.options.revert;
-  if(revert && typeof revert == 'function') revert = revert(this.element);
+  if(revert && Object.isFunction(revert)) revert = revert(this.element);
   
   var d = this.currentDelta();
   if(revert && this.options.reverteffect) {
@@ -201,6 +222,14 @@ Draggable.prototype.finishDrag =  function(event, success) {
   if(this.options.endeffect) 
     this.options.endeffect(this.element);
     
+
+	if(this.options.superghosting) {
+		body = document.getElementsByTagName("body")[0];
+	  Element.remove(this.element);
+		new Draggable(this._clone, this.options);
+	}
+
+
   Draggables.deactivate(this);
   Droppables.reset();
 }

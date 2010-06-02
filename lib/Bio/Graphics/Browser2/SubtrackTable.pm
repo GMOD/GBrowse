@@ -124,7 +124,7 @@ sub selection_table {
     my $elements  = $self->elements;
     my (@popups,@sort_type,@boolean);
 
-    my $table_id = "${label}_subtrack_id";
+    my $tbody_id = "${label}_subtrack_id";
 
     # create the filter popups
     # by getting possible values for each selector
@@ -168,10 +168,10 @@ sub selection_table {
     push @table_rows,TR(     th({-class=>'table-sortable:numericdesc'},'Select'),
 			map {th({-class=>"filterable $sort_type[$_]"},$selectors[$_][0])} (0..$#selectors));
 			
-    push @table_rows,TR(th(a({-href    => 'javascript:void(0)',
-			      -onClick => 'Table.checkAll(this,false)'},'All off'),
-			   a({-href    => 'javascript:void(0)',
-			      -onClick => 'Table.checkAll(this,true)'}, 'All on')),
+    push @table_rows,TR(th(span({-class => 'clickable',
+				 -onClick => 'Table.checkAll(this,false)'},'All off'),
+			   span({-class   => 'clickable',
+				 -onClick => 'Table.checkAll(this,true)'}, 'All on')),
 			th(\@popups));
 
     my $thead = thead(@table_rows);
@@ -196,18 +196,20 @@ sub selection_table {
 		       }(0..$#$r)
 		]));
     }
-    my $tbody = tbody({-id=>$table_id,-class=>'sortable'},@table_rows);
+    my $tbody = tbody({-id=>$tbody_id,-class=>'sortable'},@table_rows);
 
     my $tbottom = div(button(-name=>$render->tr('Cancel'),
 			     -onClick => 'Balloon.prototype.hideTooltip(1)'),
 		      button(-name    => $render->tr('Change'),
-			     -onclick => "Table.sendTableState('$label',\$('$table_id'));ShowHideTrack('$label',true);Controller.rerender_track('$label',false,true);Controller.update_sections(new Array(track_listing_id));Balloon.prototype.hideTooltip(1);"));
+			     -onclick => "Table.sendTableState('$label',\$('$tbody_id'));ShowHideTrack('$label',true);Controller.rerender_track('$label',false,true);Controller.update_sections(new Array(track_listing_id));Balloon.prototype.hideTooltip(1);"));
+
+
+    my $table_id = "${label}_subtrack_table";
 
     my $script = script({-type=>'text/javascript'},<<END);
 Position.includeScrollOffsets = true;
-Sortable.create('$table_id',
+Sortable.create('$tbody_id',
                 {tag:     'tr',
-                 ghosting: true,
                  scroll:   'subtrack_table_scroller',
 		 onUpdate:function(a){Table.stripe(a,'alternate')}
                 });
@@ -223,6 +225,9 @@ END
 		-id=>'subtrack_table_scroller'},
 	    table({-width=>$width,
 		   -class => "subtrack-table table-autosort table-autostripe table-stripeclass:alternate",
+		   -style => CGI->user_agent =~ /google/ ? "border-collapse:collapse" 
+		                                         : "border-collapse:separate",
+                   -id    => $table_id,
 		   @style},
 		  $thead,$tbody)).$tbottom.$script;
 }

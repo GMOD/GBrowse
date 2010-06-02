@@ -61,6 +61,13 @@ TH.linkmenu       {
                     padding: 0;
                     font-size: 9pt;
                   }
+span.clickable {
+    color: blue;
+    cursor: pointer;
+                  }
+span.clickable:hover {
+       text-decoration: underline;
+    }
 .reset_button     { color: red;           
 		    font-weight: bold;
                   }

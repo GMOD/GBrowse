@@ -1435,16 +1435,16 @@ sub select_features_menu {
     my $titleref = shift;
     my $stt      = $self->subtrack_manager($label) or return;
     my ($selected,$total) = $stt->counts;
-    my $subtrack_over  = "GBubble.showTooltip(event,'url:?action=show_subtracks;track=$label',false,1024)";
-    my $subtrack_click = "GBox.showTooltip(event,'url:?action=select_subtracks;track=$label',true)";
+    my $escaped_label = CGI::escape($label);
+    my $subtrack_over  = "GBubble.showTooltip(event,'url:?action=show_subtracks;track=$escaped_label',false)";
+    my $subtrack_click = "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)";
 
     # modify the title to show that some subtracks are hidden
-    $$titleref .= " ".a({-href         => 'javascript:void(0)',
-			 -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
-			 -onClick      => $subtrack_click,
-			},
-			$self->language->tr('SHOWING_SUBTRACKS',$selected,$total)
-    );
+    $$titleref .= " ".span({-class       =>'clickable',
+			   -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
+			   -onClick      => $subtrack_click
+			  },
+			  $self->language->tr('SHOWING_SUBTRACKS',$selected,$total));
     
 }
 

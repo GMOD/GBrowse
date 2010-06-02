@@ -872,8 +872,9 @@ sub render_track_table {
    $labels{$label} = a({@args},$key);
 
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
+       my $escaped_label = CGI::escape($label);
        $labels{$label} .= ' ['. a({-href=>'javascript:void(0)',
-				    -onMouseDown=>"GBox.showTooltip(event,'url:?action=select_subtracks;track=$label',true,1024)"
+				    -onMouseDown=>"GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
 				   },i($self->tr('SELECT_SUBTRACKS',$selected,$total))).']';
    }
 

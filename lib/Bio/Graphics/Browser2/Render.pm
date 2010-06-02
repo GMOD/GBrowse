@@ -2115,12 +2115,36 @@ sub update_tracks {
   } #... the 't' parameter
   elsif (my @t = param('t')) {
       $self->set_tracks($self->split_labels(@t));
-  } #... the 'ds' (data source) parameter
-  elsif (my @ds = shellwords param('ds')) {
-      $self->set_tracks($self->data_source->data_source_to_label(@ds));
-  } #... or the 'ts' (track source) parameter
-  elsif (my @ts = shellwords param('ts')) {
-      $self->set_tracks($self->data_source->track_source_to_label(@ts));
+  } #... the 'ds' (data source) or the 'ts' (track source) parameter
+  elsif ((my @ds = shellwords param('ds')) || (my @ts = shellwords param('ts'))) {
+      my @main_l = @ds ? $self->data_source->data_source_to_label(@ds) : $self->data_source->track_source_to_label(@ts);
+      if (!@ds && @ts) {
+       my %ds = ();
+       foreach my $label (@main_l) {
+        my @tracks = grep {!/^#/} shellwords $self->setting($label=>'track source');
+        my @datasr = grep {!/^#/} shellwords $self->setting($label=>'data source');
+
+        for (my $i = 0; $i <@tracks; $i++) {
+         map{$ds{$datasr[$i]}++ if $_ == $tracks[$i] && $datasr[$i]} (@ts);
+       }
+      }
+      @ds = keys %ds;
+      }
+
+      foreach my $label (@main_l) {
+      my @subs = grep {!/^#/} shellwords $self->setting($label=>'select');
+      shift @subs;
+
+      my @matched;
+       foreach my $s (@subs) {
+        map {push(@matched,$`) if ($s=~/\D(\d+)$/i && $1 == $_)} @ds;
+        map {s/\s.*//} @matched;
+       }
+       $label.="/".join("+",@matched) if @matched;
+       warn "Joined label: $label";
+      }
+
+    $self->set_tracks(@main_l);
   }
 
   if (my @selected = $self->split_labels_correctly(param('enable'))) {

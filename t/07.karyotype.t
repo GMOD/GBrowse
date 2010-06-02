@@ -2,7 +2,6 @@
 
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.t'
-use lib '/home/lstein/projects/bioperl-live';
 use strict;
 use warnings;
 use Module::Build;

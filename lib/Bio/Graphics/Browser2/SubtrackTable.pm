@@ -68,7 +68,7 @@ sub elements {
 	my @fields      = grep {!/^[=*]/}        @data;
 	my ($id)        = grep {length} map {/^=([\d\w]+)/ && $1 } @data;
 	my ($selected)  = grep {$_ eq '*'}       @data;
-	$id           ||= join ';',@fields;
+	$id           ||= join ';',map {/^~(.+)/ ? $1 : $_} @fields;
 	$elements{$id} = { index    => $index++,
 			   selected => $selected,
 			   fields   => \@fields };
@@ -225,8 +225,8 @@ END
 		-id=>'subtrack_table_scroller'},
 	    table({-width=>$width,
 		   -class => "subtrack-table table-autosort table-autostripe table-stripeclass:alternate",
-		   -style => CGI->user_agent =~ /google/ ? "border-collapse:collapse" 
-		                                         : "border-collapse:separate",
+		   -style => CGI->user_agent =~ /KHTML/ ? "border-collapse:collapse" 
+		                                        : "border-collapse:separate",
                    -id    => $table_id,
 		   @style},
 		  $thead,$tbody)).$tbottom.$script;

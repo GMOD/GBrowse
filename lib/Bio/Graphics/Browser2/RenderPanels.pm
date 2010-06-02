@@ -253,12 +253,14 @@ sub make_requests {
 
         my @track_args = $self->create_track_args( $label, $args );
 
-	my (@filter_args,@featurefile_args,@segment_args);
+	my (@filter_args,@featurefile_args,@subtrack_args);
 
 	my $format_option = $settings->{features}{$label}{options};
 
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
+	@subtrack_args = @{$settings->{features}{$label}{subtracks}} 
+	                 if $settings->{features}{$label}{subtracks};
 	my $ff_error;
 
         # get config data from the feature files
@@ -272,8 +274,12 @@ sub make_requests {
 		    -cache_base => $base,
 		    -panel_args => \@panel_args,
 		    -track_args => \@track_args,
-		    -extra_args => [ @cache_extra, @filter_args, 
-				     @featurefile_args, @segment_args, $format_option, $label ],
+		    -extra_args => [ @cache_extra, 
+				     @filter_args, 
+				     @featurefile_args, 
+				     @subtrack_args,
+				     $format_option, 
+				     $label ],
 		    );
 		$cache_object->flag_error("Could not fetch data for $track");
 		$d{$track} = $cache_object;
@@ -296,7 +302,12 @@ sub make_requests {
             -cache_base => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
-            -extra_args => [ @cache_extra, @filter_args, @featurefile_args, $format_option, $label ],
+            -extra_args => [ @cache_extra, 
+			     @filter_args, 
+			     @featurefile_args,  
+			     @subtrack_args, 
+			     $format_option, 
+			     $label ],
 	    -cache_time => $cache_time
         );
 

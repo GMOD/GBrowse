@@ -97,7 +97,8 @@ sub popup_menu {
   my $current = $args{-current};
   my $default = $args{-default};
   my $values  = $args{-values};
-  my $labels  = $args{-labels} || {};
+  my $labels  = $args{-labels}  || {};
+  my $scripts = $args{-scripts} || {};
 
   my $dynamic =  $self->translate('DYNAMIC_VALUE');
   my %seen;
@@ -112,6 +113,7 @@ sub popup_menu {
 			 -values  => \@values,
 			 -default => $current,
 			 -labels  => \%labels,
+                         %$scripts,
 			 -override=>1);
 }
 

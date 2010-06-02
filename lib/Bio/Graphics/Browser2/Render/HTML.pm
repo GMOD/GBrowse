@@ -54,23 +54,21 @@ sub render_error_div {
 
     my $button = button({-onClick=>'Controller.hide_error()',
 			 -name=>'Ok'});
-    return p(
-	div({-class=>'errorpanel',
-	     -style=>"display:${display}",
-	     -id=>'errordiv'},
-	    table(
-		TR(
-		    td(span({-class=>'error',-id=>'errormsg'},$error || 'no error')),
-		    td({-align=>'right'},$button)
-		),
-	    ),
-	    div({-class=>'errorpanel',
-		 -style=>"display:none;margin: 6px 6px 6px 6px",
-		 -id   =>'errordetails'},
-		       'no details'
-	    )
-	)
-	);
+    return div({-class=>'errorpanel',
+		-style=>"display:${display}",
+		-id=>'errordiv'},
+	       table(
+		   TR(
+		       td(span({-class=>'error',-id=>'errormsg'},$error || 'no error')),
+		       td({-align=>'right'},$button)
+		   ),
+	       ),
+	       div({-class=>'errorpanel',
+		    -style=>"display:none;margin: 6px 6px 6px 6px",
+		    -id   =>'errordetails'},
+		   'no details'
+	       )
+	).br();
 }
 
 sub render_tabbed_pages {
@@ -773,17 +771,18 @@ sub render_track_filter {
     my $name         = 'plugin:'.$plugin->name;
 
     return
- 	p({-id=>'track select'},
-	  start_form({-id      => 'track_filterform',
-		      -name    => 'configure_plugin',
-		      -onSubmit=> 'return false'}),
-	  $form,
-	  button(
-	      -name    => 'plugin_button',
-	      -value   => $self->tr('search'),
-	      -onClick => 'doPluginUpdate()',
-	  ),
-	  end_form(),
+ 	div({-id=>'track select'},
+		start_form({-id      => 'track_filterform',
+			    -name    => 'configure_plugin',
+			    -onSubmit=> 'return false'}),
+	    br(),
+	    $form,
+	    button(
+		-name    => 'plugin_button',
+		-value   => $self->tr('search'),
+		-onClick => 'doPluginUpdate()',
+	    ),
+	    end_form(),
 	  script({-type=>'text/javascript'},
 		 "function doPluginUpdate() { Controller.reconfigure_plugin('$action',null,null,'$plugin_type',\$('track_filterform')) }")
 	);
@@ -1899,7 +1898,8 @@ sub track_config {
 
     my $picker = Bio::Graphics::Browser2::OptionPick->new($self);
 
-    my $key = $self->label2key($slabel);
+    my $key = $self->label2key($label);
+    $key   .= " (>=$1 bp)" if $slabel=~ /:(\d+)/;
 
     if ( $revert_to_defaults ) {
         $state->{features}{$slabel}{override_settings} = {};
@@ -1909,25 +1909,36 @@ sub track_config {
     my $return_html = start_html();
 
     my $title   = div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key);
+    my $dynamic = $self->tr('DYNAMIC_VALUE');
 
     my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 5;
     my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
     my $glyph    = $data_source->semantic_fallback_setting( $label => 'glyph',          $length )   || 'box';
     my $stranded = $data_source->semantic_fallback_setting( $label => 'stranded',       $length);
     my $limit    = $data_source->semantic_fallback_setting( $label => 'feature_limit' , $length)    || 0;
-    my $dynamic = $self->tr('DYNAMIC_VALUE');
+    my $min_score= $data_source->semantic_fallback_setting( $label => 'min_score' ,     $length);
+    my $max_score= $data_source->semantic_fallback_setting( $label => 'max_score' ,     $length);
+    my $bicolor_pivot= $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,     $length);
+
+    $min_score = $dynamic unless defined $min_score;
+    $max_score = $dynamic unless defined $max_score;
+
 
     my @glyph_select = shellwords(
         $data_source->semantic_fallback_setting( $label => 'glyph select', $length )
 	);
 
-    @glyph_select = $glyph =~ /wiggle/ ? qw(wiggle_xyplot wiggle_density wiggle_box)
-                                       : qw(arrow anchored_arrow box crossbox dashed_line diamond 
-                                         dna dot dumbbell ellipse
-                                         ex gene line primers saw_teeth segments 
+    my $db           = $data_source->open_database($label,$length);
+    my $quantitative = $glyph =~ /wiggle/ || ref($db) =~ /bigwig/i;
+
+    @glyph_select = $quantitative ? qw(wiggle_xyplot wiggle_density wiggle_box wiggle_whiskers)
+                                     : qw(arrow anchored_arrow box crossbox dashed_line diamond 
+                                         dna dot dumbbell ellipse ex gene line primers saw_teeth segments 
                                          span splice_site translation transcript triangle
                                          two_bolts wave) unless @glyph_select;
     unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
+
+
 
     my %glyphs       = map { $_ => 1 } ( $glyph, @glyph_select );
     my @all_glyphs   = sort keys %glyphs;
@@ -1951,126 +1962,189 @@ END
         -id   => $form_name,
     );
 
+    my @rows;
+    push @rows, TR( td( {-colspan => 2}, $title));
 
-    $form .= table(
-        { -border => 0 },
-        TR( td( {-colspan => 2}, $title)),
-        TR( th( { -align => 'right' }, $self->tr('Show') ),
-            td( checkbox(
-                    -name     => 'show_track',
-                    -value    => $label,
-                    -override => 1,
-                    -checked  => $state->{features}{$label}{visible},
-                    -label    => ''
-                )
-            ),
-        ),
-        TR( th( { -align => 'right' }, $self->tr('Packing') ),
-            td( popup_menu(
-                    -name     => 'format_option',
-                    -values   => [ 0 .. 3 ],
-                    -override => 1,
-                    -default  => $state->{features}{$label}{options},
-                    -labels   => {
-                        0 => $self->tr('Auto'),
-                        1 => $self->tr('Compact'),
-                        2 => $self->tr('Expand'),
-                        3 => $self->tr('Expand_Label'),
-                    }
-                )
-            )
-        ),
-        TR( th( { -align => 'right' }, $self->tr('GLYPH') ),
-            td( $picker->popup_menu(
-                    -name    => 'glyph',
-                    -values  => \@all_glyphs,
-                    -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
-                    -current => $override->{'glyph'},
-                )
-            )
-        ),
-        TR( th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
-            td( $picker->color_pick(
-                    'bgcolor',
-                    $data_source->semantic_fallback_setting( $slabel => 'bgcolor', $length ),
-                    $override->{'bgcolor'}
-                )
-            )
-        ),
-        TR( th( { -align => 'right' }, $self->tr('FG_COLOR') ),
-            td( $picker->color_pick(
-                    'fgcolor',
-                    $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
-                    $override->{'fgcolor'}
-                )
-            )
-        ),
-        TR( th( { -align => 'right' }, $self->tr('LINEWIDTH') ),
-            td( $picker->popup_menu(
-                    -name    => 'linewidth',
-                    -current => $override->{'linewidth'},
-                    -default => $width || 1,
-                    -values  => [ sort { $a <=> $b } ( $width, 1 .. 5 ) ]
-                )
-            )
-        ),
-        TR( th( { -align => 'right' }, $self->tr('HEIGHT') ),
-            td( $picker->popup_menu(
-                    -name    => 'height',
-                    -current => $override->{'height'},
-                    -default => $height,
-                    -values  => [
-                        sort { $a <=> $b }
-                            ( $height, map { $_ * 5 } ( 1 .. 20 ) )
-                    ],
-                )
-            )
-        ),
-        TR( th( { -align => 'right' }, $self->tr('Limit') ),
-            td( $picker->popup_menu(
-                    -name     => 'feature_limit',
-                    -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
-                    -labels   => { 0 => $self->tr('NO_LIMIT') },
-		    -current  => $override->{feature_limit},
-                    -override => 1,
-                    -default  => $limit,
-                )
-            )
-        ),
-        TR( th( { -align => 'right' }, $self->tr('STRANDED') ),
-            td(checkbox(
-                    -name    => 'stranded',
-		    -override=> 1,
-		    -value   => 1,
-                    -checked => defined $override->{'stranded'} 
-		                  ? $override->{'stranded'} 
-                                  : $stranded,
-		    -label   => '',
-                )
-            )
-        ),
-        TR(td({-colspan=>2},
-	      button(
-                    -style   => 'background:pink',
-                    -name    => $self->tr('Revert'),
-                    -onClick => $reset_js
-	      ), br, 
-	      button(
-		  -name    => $self->tr('Cancel'),
-		  -onClick => 'Balloon.prototype.hideTooltip(1)'
-	      ),
-	      button(
-		  -name => $self->tr('Change'),
-		  -onClick =><<END
-	    Element.extend(this);
-	    var ancestors    = this.ancestors();
-	    var form_element = ancestors.find(function(el) {return el.nodeName=='FORM'; });
-	    Controller.reconfigure_track('$label',form_element,'$slabel')
+    push @rows, TR( th( { -align => 'right' }, $self->tr('Show') ),
+		    td( checkbox(
+			    -name     => 'show_track',
+			    -value    => $label,
+			    -override => 1,
+			    -checked  => $state->{features}{$label}{visible},
+			    -label    => ''
+			)
+		    ),
+        );
+
+    push @rows,TR( th( { -align => 'right' }, $self->tr('Packing') ),
+		   td( popup_menu(
+			   -name     => 'format_option',
+			   -values   => [ 0 .. 3 ],
+			   -override => 1,
+			   -default  => $state->{features}{$label}{options},
+			   -labels   => {
+			       0 => $self->tr('Auto'),
+			       1 => $self->tr('Compact'),
+			       2 => $self->tr('Expand'),
+			       3 => $self->tr('Expand_Label'),
+			   }
+		       )
+		   )
+        );
+
+    push @rows,TR( th( { -align => 'right' }, $self->tr('GLYPH') ),
+		   td( $picker->popup_menu(
+			   -name    => 'glyph',
+			   -values  => \@all_glyphs,
+			   -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
+			   -current => $override->{'glyph'},
+		       )
+		   )
+        );
+
+    push @rows,TR( th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
+		   td( $picker->color_pick(
+			   'bgcolor',
+			   $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
+			   $override->{'bgcolor'}
+		       )
+		   )
+        );
+
+    push @rows,TR( th( { -align => 'right' }, $self->tr('FG_COLOR') ),
+		   td( $picker->color_pick(
+			   'fgcolor',
+			   $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
+			   $override->{'fgcolor'}
+		       )
+		   )
+        ) if !$quantitative;
+
+    my $p = $override->{bicolor_pivot} || $bicolor_pivot;
+    warn "p=$p";
+
+    push @rows,TR( th( { -align => 'right' }, 'Switch colors when values cross' ),
+		   td( $picker->popup_menu(
+			   -name    => 'bicolor_pivot',
+			   -values  => [qw(none zero mean value)],
+			   -labels => {value => 'value entered below'},
+			   -default => $bicolor_pivot,
+			   -current => $p =~ /^[\d.-eE]+$/ ? 'value' : $p,
+			   -scripts => {-onChange => "var e=\$('switch_point_other'); if (this.value=='value'){e.show()}else{e.hide()}"},
+		       )
+		   )
+        ) if $quantitative;
+
+    my $pv    = $p =~ /^[\d.-eE]+$/ ? $p : 0.0;
+    push @rows,TR({-id=>'switch_point_other',-style=>$p!~/mean|zero/ ? 'display:table-row' : 'display:none'},
+		  th( {-align => 'right' },'Switch point value'),
+                  td( textfield(-name  => 'bicolor_pivot_value',
+				-value => $pv))) if $quantitative;
+    
+
+    push @rows,TR( th( { -align => 'right' }, 'Color above switch point' ),
+		   td( $picker->color_pick(
+			   'pos_color',
+			   $data_source->semantic_fallback_setting( $label => 'pos_color', $length ),
+			   $override->{'pos_color'}
+		       )
+		   )
+        ) if $quantitative;
+
+    push @rows,TR( th( { -align => 'right' }, 'Color below switch point' ),
+		   td( $picker->color_pick(
+			   'neg_color',
+			   $data_source->semantic_fallback_setting( $label => 'neg_color', $length ),
+			   $override->{'neg_color'}
+		       )
+		   )
+        ) if $quantitative;
+
+
+
+    push @rows,TR( th( { -align => 'right' },'Minimum scale value'),
+		   td( textfield(-name  => 'min_score',
+				 -value => defined $override->{min_score} ? $override->{min_score}
+				                                          : $min_score))) if $quantitative;
+
+    push @rows,TR( th( { -align => 'right' },'Maximum scale value'),
+		   td( textfield(-name  => 'max_score',
+				 -value => defined $override->{max_score} ? $override->{max_score}
+				                                          : $max_score))) if $quantitative;
+
+    push @rows,TR( th( { -align => 'right' }, $self->tr('LINEWIDTH') ),
+		   td( $picker->popup_menu(
+			   -name    => 'linewidth',
+			   -current => $override->{'linewidth'},
+			   -default => $width || 1,
+			   -values  => [ sort { $a <=> $b } ( $width, 1 .. 5 ) ]
+		       )
+		   )
+	) if !$quantitative;
+    
+    push @rows,TR( th( { -align => 'right' }, $self->tr('HEIGHT') ),
+		   td( $picker->popup_menu(
+			   -name    => 'height',
+			   -current => $override->{'height'},
+			   -default => $height,
+			   -values  => [
+				sort { $a <=> $b }
+				( $height, map { $_ * 5 } ( 1 .. 20 ) )
+			   ],
+		       )
+		   )
+        );
+    
+    push @rows,TR( th( { -align => 'right' }, $self->tr('Limit') ),
+		   td( $picker->popup_menu(
+			   -name     => 'feature_limit',
+			   -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
+			   -labels   => { 0 => $self->tr('NO_LIMIT') },
+			   -current  => $override->{feature_limit},
+			   -override => 1,
+			   -default  => $limit,
+		       )
+		   )
+        ) if !$quantitative;
+
+    push @rows,TR( th( { -align => 'right' }, $self->tr('STRANDED') ),
+		   td(checkbox(
+			  -name    => 'stranded',
+			  -override=> 1,
+			  -value   => 1,
+			  -checked => defined $override->{'stranded'} 
+			  ? $override->{'stranded'} 
+			  : $stranded,
+			  -label   => '',
+		      )
+		   )
+        ) if !$quantitative;
+
+    my $submit_script = <<END;
+Element.extend(this);
+var ancestors    = this.ancestors();
+var form_element = ancestors.find(function(el) {return el.nodeName=='FORM'; });
+Controller.reconfigure_track('$label',form_element,'$slabel')
 END
-	      )
-	   )
-	)
+
+    push @rows,TR(td({-colspan=>2},
+		     button(
+			 -style   => 'background:pink',
+			 -name    => $self->tr('Revert'),
+			 -onClick => $reset_js
+		     ), br, 
+		     button(
+			 -name    => $self->tr('Cancel'),
+			 -onClick => 'Balloon.prototype.hideTooltip(1)'
+		     ),
+		     button(
+			 -name    => $self->tr('Change'),
+			 -onClick => $submit_script
+		     )
+		  )
     );
+
+    $form .= table({ -border => 0 },@rows);
     $form .= end_form();
 
     $return_html

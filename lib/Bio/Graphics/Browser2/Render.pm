@@ -2010,14 +2010,20 @@ sub reconfigure_track {
     $state->{features}{$label}{options}          = param('format_option');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
 
-    for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 'linewidth', 'feature_limit' ) {
+    for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 
+		'linewidth', 'feature_limit', 'min_score', 'max_score' , 
+		'pos_color', 'neg_color', 'bicolor_pivot') {
         my $value = param($s);
+	next unless defined $value;
 	if ($value eq $dynamic) {
 	    delete $state->{features}{$semantic_label}{override_settings}{$s};
+	} elsif ($s eq 'bicolor_pivot' && $value eq 'value') {
+	    $state->{features}{$semantic_label}{override_settings}{$s} = param('bicolor_pivot_value');
 	} else {
 	    $state->{features}{$semantic_label}{override_settings}{$s} = $value;
 	}
     }
+    
 
     $state->{features}{$semantic_label}{override_settings}{stranded}   = param('stranded') || 0;
 }
@@ -2904,12 +2910,7 @@ sub set_tracks {
 	my @subtracks         = shellwords($subtracks);
 	foreach (@subtracks) {s/#.+$//}  # get rid of comments
 	push @main,$main;
-	if (@subtracks) {
-	    warn "MUST FIX set_tracks() to HANDLE SUBTRACKS";
-#	    $self->filter_subtrack($main,\@subtracks);
-	} else {
-#	    $self->filter_subtrack($main,undef);
-	}
+	$state->{features}{$main}{subtracks} = \@subtracks if @subtracks;
     }
 
     $state->{tracks} = [grep {$potential{$_}} @main];

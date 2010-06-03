@@ -259,6 +259,7 @@ END
 sub render_html_head {
   my $self = shift;
   my ($dsn,$title) = @_;
+  my @plugin_list = $self->plugins->plugins;
 
   return if $self->{started_html}++;
 
@@ -267,7 +268,22 @@ sub render_html_head {
   # pick scripts
   my $js       = $dsn->globals->js_url;
   my @scripts;
-
+  
+  # define onTabLoad functions for each tab, if any
+  my %plugin_onLoads = map ($_->onLoads, @plugin_list);
+  my $main_page_onLoads = (defined($plugin_onLoads{'main_page'})) ? $plugin_onLoads{'main_page'} : "return 0;";
+  my $track_page_onLoads = (defined($plugin_onLoads{'track_page'})) ? $plugin_onLoads{'track_page'} : "return 0;";
+  my $custom_track_page_onLoads = (defined($plugin_onLoads{'custom_track_page'})) ? $plugin_onLoads{'custom_track_page'} : "return 0;";
+  my $settings_page_onLoads = (defined($plugin_onLoads{'settings_page'})) ? $plugin_onLoads{'settings_page'} : "return 0;";
+  
+  my $onTabScript .= "function onTabLoad(tab_id) {\n";
+  $onTabScript .= "if (tab_id == 'main_page_select') $main_page_onLoads\n";
+  $onTabScript .= "if (tab_id == 'track_page_select') $track_page_onLoads\n";
+  $onTabScript .= "if (tab_id == 'custom_track_page_select') $custom_track_page_onLoads\n";
+  $onTabScript .= "if (tab_id == 'settings_page_select') $settings_page_onLoads\n";
+  $onTabScript .= "};";
+  push (@scripts,({type=>"text/javascript"}, $onTabScript));
+  
   # drag-and-drop functions from scriptaculous
   push @scripts,{src=>"$js/$_"}
     foreach qw(
@@ -306,12 +322,17 @@ sub render_html_head {
       controller.js
     );
 
-  # add scripts needed by plugins
-  my @plugin_list = $self->plugins->plugins;
+  # add scripts needed by plugins. Looks in /js folder unless specified.
   my @plugin_scripts = map ($_->scripts, @plugin_list);
-  push @scripts,{src=>"$js/$_"} foreach @plugin_scripts;
+  # add a path if one isn't specified.
+  foreach (@plugin_scripts) {
+    if ($_ !~ /^\.{0,2}[\/\\]/) {
+      $_ = "$js/$_";
+    }
+  };
+  push @scripts,{src=>"$_"} foreach @plugin_scripts;
   
-  # pick stylesheets;
+  # pick stylesheets.  Looks in /css folder unless specified.
   my @stylesheets;
   my $titlebar   = 'css/titlebar-default.css';
   my $stylesheet = $self->setting('stylesheet')||'/gbrowse2/css/gbrowse.css';
@@ -324,7 +345,13 @@ sub render_html_head {
   
   # add stylesheets used by plugins
   my @plugin_stylesheets = map ($_->stylesheets, @plugin_list);
-  push @stylesheets,{src => $self->globals->resolve_path("css/$_",'url')} foreach @plugin_stylesheets;
+  # add a path if one isn't specified.
+  foreach (@plugin_stylesheets) {
+    if ($_ !~ /^\.{0,2}[\/\\]/) {
+      $_ = $self->globals->resolve_path("css/$_",'url');
+    }
+  };
+  push @stylesheets,{src => $_} foreach @plugin_stylesheets;
 
   my @theme_stylesheets = shellwords($self->setting('stylesheet') || '/gbrowse2/css/gbrowse.css');
   for my $s ( @theme_stylesheets ) {
@@ -355,8 +382,18 @@ sub render_html_head {
 	      -head     => \@extra_headers,
 	     );
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
+  
+  # add body's onload arguments, including ones used by plugins
+  my $autocomplete = '';
+  my $body_onLoads = "initialize_page();$set_dragcolors;$autocomplete";
+  while(my($keys, $values) = each(%plugin_onLoads)) {
+    if ($keys eq "body") {
+      $body_onLoads .= $values;
+    }
+  }
+  push @args,(-onLoad => "$body_onLoads");
 
-  my $plugin_onloads  = join ';',map {eval{$_->onloads}} @plugin_list;
+  my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
   push @args,(-onLoad => "initialize_page(); $set_dragcolors; $plugin_onloads");
 
   return start_html(@args);

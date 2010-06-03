@@ -984,8 +984,10 @@ sub stylesheets {
   return;
 }
 
-# A list of all Javascript commands to be run once the page is loaded (in the body's onLoad section).
-sub onloads {
+# A list of all Javascript commands to be run once the page or tab is loaded (in either the body's onLoad section, or the callback event from the tab's rendering animation).
+# Should return a hash, key is the section which contains the elements plus "_select", value is the function (e.g. "track_page_select", "some.function();").
+# Will accet "main_page_select", "track_page_select", "custom_track_page_select", "settings_page_select" and "body" as keys.
+sub onLoads {
   my $self = shift;
   return;
 }

@@ -41,8 +41,14 @@ var GBrowseController = Class.create({
 
   // Class Utility Methods ******************************************
   
+  set_url:
+  function(url) {
+    this.url = url;
+  },
+
   initialize:
   function () {
+    this.url = document.URL;
     this.gbtracks                 = new Hash(); // maps track ids to gbtrack objects
     this.segment_observers        = new Hash();
     this.retrieve_tracks          = new Hash();
@@ -269,7 +275,7 @@ var GBrowseController = Class.create({
       request_str += "&section_names="+section_names[i];
     }
 
-    new Ajax.Request(document.URL,{
+    new Ajax.Request(Controller.url,{
       method:     'post',
       parameters: request_str,
       onSuccess: function(transport) {
@@ -298,7 +304,7 @@ var GBrowseController = Class.create({
 
      var param = {action: 'set_display_option'};
      param[option] = value;
-     new Ajax.Request(document.URL,
+     new Ajax.Request(Controller.url,
             {
 		    method: 'post', 
 		    parameters: param,
@@ -321,7 +327,7 @@ var GBrowseController = Class.create({
 
     this.each_track(track_id,function(gbtrack) {
 
-      new Ajax.Request(document.URL,{
+      new Ajax.Request(Controller.url,{
         method:     'post',
         parameters: {
 	  action:     'set_track_visibility',
@@ -361,7 +367,7 @@ var GBrowseController = Class.create({
     });
     
 
-    new Ajax.Request(document.URL,{
+    new Ajax.Request(Controller.url,{
       method:     'post',
       parameters: {action:   'navigate',  // 'action'   triggers an async call
                    navigate: action       // 'navigate' is an argument passed to the async routine
@@ -429,7 +435,7 @@ var GBrowseController = Class.create({
     if (!found_track) return false;
 
     this.busy();
-    new Ajax.Request(document.URL,{
+    new Ajax.Request(Controller.url,{
       method:     'post',
       parameters: request_str,
       onSuccess: function(transport) {
@@ -509,7 +515,7 @@ var GBrowseController = Class.create({
        $(gbtrack.track_image_id).setOpacity(0.3);
        Controller.set_last_update_key(gbtrack);
 
-       new Ajax.Request(document.URL,{
+       new Ajax.Request(Controller.url,{
          method:     'post',
          parameters: {
            action:          'rerender_track',
@@ -603,7 +609,7 @@ var GBrowseController = Class.create({
       return;
     }
 
-    new Ajax.Request(document.URL,{
+    new Ajax.Request(Controller.url,{
       method:     'post',
       parameters: $H({ action:        'retrieve_multiple', 
                        track_ids:     track_ids
@@ -674,7 +680,7 @@ var GBrowseController = Class.create({
     var show_box   = form_element['show_track'];
     var show_track = $(show_box).getValue();
 
-    new Ajax.Request(document.URL,{
+    new Ajax.Request(Controller.url,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
             action:         'reconfigure_track',
@@ -701,7 +707,7 @@ var GBrowseController = Class.create({
   filter_subtrack:
   function(track_id, form_element) {
 
-    new Ajax.Request(document.URL,{
+    new Ajax.Request(Controller.url,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
             action:  'filter_subtrack',
@@ -734,7 +740,7 @@ var GBrowseController = Class.create({
     else
        Element.extend(form_element);
 
-    new Ajax.Request(document.URL,{
+    new Ajax.Request(Controller.url,{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
             plugin_action: plugin_action,
@@ -876,7 +882,7 @@ var GBrowseController = Class.create({
 	  var upload_name = el.id.sub('_description$','');
 	  var desc        = el.innerHTML;
 	  el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
-	  new Ajax.Request(document.URL, {
+	  new Ajax.Request(Controller.url, {
 		      method:      'post',
 		      parameters:{  
 		          action: 'set_upload_description',
@@ -926,7 +932,7 @@ var GBrowseController = Class.create({
 
      var upload_id  = 'upload_' + Math.floor(Math.random() * 99999);
 
-     new Ajax.Request(document.URL, {
+     new Ajax.Request(Controller.url, {
      	 method:       'post',
 	 parameters:   { action:     'modifyUserData',
                          track:      fileName,
@@ -957,7 +963,7 @@ var GBrowseController = Class.create({
 // the idea is to register a new upload
   monitor_upload:
   function (upload_id,upload_name) {
-  	new Ajax.Request(document.URL, {
+  	new Ajax.Request(Controller.url, {
 	    method:     'post',
 	    parameters: {
 	    		action:      'register_upload',

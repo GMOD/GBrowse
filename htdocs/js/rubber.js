@@ -35,7 +35,7 @@ SelectArea.prototype.replaceImage = function(image) {
   image.setAttribute('name',name);
 
   // escape backslashes that may appear in the src attribute
-  src = src.replace(/\\/g,"\\\\");
+  src = escape(src.replace(/\\/g,"\\\\"));
 
   YAHOO.util.Dom.setStyle(image,'background', 'url('+src+') top left no-repeat');
   YAHOO.util.Dom.setStyle(image,'width', width+'px');

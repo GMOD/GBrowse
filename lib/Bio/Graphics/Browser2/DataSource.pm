@@ -60,9 +60,9 @@ sub new {
   }
 
   my @args = (-file=>$config_file_path,-safe=>1);
-  my $self = $class->can('new_from_cache') && !$ENV{GBROWSE_NOCACHE}
+  my $self = $class->can('new_from_cache') && !$ENV{GBROWSE_NOCACHE} && ($config_file_path !~ /\|$/)
              ? $class->new_from_cache(@args)
-	     : $class->new(@args);
+	     : $class->_new(@args);
 
   $self->name($name);
   $self->description($description);
@@ -916,9 +916,12 @@ sub generate_image {
   $signature =~ /^([0-9A-Fa-f]+)$/g or return;
   $signature = $1;
 
-  my $path        = $self->globals->tmpimage_dir($self->name);
+  my $self_name = $self->name;
+  $self_name =~ s/\\/_/g; # Because Safari and Chrome translate backslash to forward slash
+  my $path        = $self->globals->tmpimage_dir($self_name);
+
   my $image_url   = $self->globals->image_url;
-  my $url         = sprintf("%s/%s/%s.%s",$image_url,$self->name,$signature,$extension);
+  my $url         = sprintf("%s/%s/%s.%s",$image_url,$self_name,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
   open (my $f,'>',$imagefile) 
       || die("Can't open image file $imagefile for writing: $!\n");

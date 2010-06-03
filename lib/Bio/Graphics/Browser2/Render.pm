@@ -2011,10 +2011,9 @@ sub reconfigure_track {
     $state->{features}{$label}{options}          = param('format_option');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
 
-    for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 
-		'linewidth', 'feature_limit', 'min_score', 'max_score' , 
-		'pos_color', 'neg_color', 'bicolor_pivot') {
+    for my $s ( grep {/^conf_/} param()) {
         my $value = param($s);
+	$s =~ s/^conf_//;
 	next unless defined $value;
 	if ($value eq $dynamic) {
 	    delete $state->{features}{$semantic_label}{override_settings}{$s};
@@ -2527,6 +2526,10 @@ sub asynchronous_update_coordinates {
 	$position_updated++;
     }
     if ( $action =~ /flip (\S+)/ ) {
+    if ( $action =~ /name/) {
+        $self->move_to_name($state, $action);
+        $position_updated++;
+    }
         if ( $1 eq 'true' ) {
             $state->{'flip'} = 1;
         }
@@ -2576,6 +2579,22 @@ sub zoom_to_span {
   my ($state,$new_span) = @_;
 
   my ($span) = $new_span =~ /([\d+.-]+)/;
+
+sub move_to_name {
+  my $self = shift;
+  my ( $state, $new_name ) = @_;
+
+  if ( $new_name =~ /:(.*):([\d+.-]+)\.\.([\d+.-]+)/ ) {
+    my $new_chr   = $1;
+    my $new_start = $2;
+    my $new_stop  = $3;
+
+    $state->{ref} = $new_chr;
+    $state->{start} = $new_start;
+    $state->{stop}  = $new_stop;
+    $self->background_track_render();
+  }
+}
 
   my $current_span = $state->{stop} - $state->{start} + 1;
   my $center	    = int(($current_span / 2)) + $state->{start};

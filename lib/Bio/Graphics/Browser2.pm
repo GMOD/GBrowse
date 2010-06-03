@@ -260,6 +260,15 @@ sub data_source_show {
 sub data_source_path {
   my $self = shift;
   my $dsn  = shift;
+  my ($regex_key) = grep { $dsn =~ /^$_$/ } map { $_ =~ s/^=~//; $_ } grep { $_ =~ /^=~/ } keys(%{$self->{config}});
+  if ($regex_key) {
+    my $path = $self->resolve_path($self->setting("=~".$regex_key=>'path'),'config');
+    my @matches = ($dsn =~ /$regex_key/);
+    for (my $i = 1; $i <= scalar(@matches); $i++) {
+      $path =~ s/\$$i/$matches[$i-1]/;
+    }
+    return $self->resolve_path($path, 'config');
+  }
   $self->resolve_path($self->setting($dsn=>'path'),'config');
 }
 
@@ -267,6 +276,8 @@ sub create_data_source {
   my $self = shift;
   my $dsn  = shift;
   my $path = $self->data_source_path($dsn) or return;
+  my ($regex_key) = grep { $dsn =~ /^$_$/ } map { $_ =~ s/^=~//; $_ } grep { $_ =~ /^=~/ } keys(%{$self->{config}});
+  if ($regex_key) { $dsn = "=~".$regex_key; }
   my $source = Bio::Graphics::Browser2::DataSource->new($path,
 							$dsn,
 							$self->data_source_description($dsn),
@@ -289,6 +300,14 @@ sub default_source {
 sub valid_source {
   my $self            = shift;
   my $proposed_source = shift;
+
+  if (!exists($self->{config}{$proposed_source})) {
+    my ($regex_key) = grep { $proposed_source =~ /^$_$/ } map { $_ =~ s/^=~//; $_ } grep { $_ =~ /^=~/ } keys(%{$self->{config}});
+    return unless $regex_key;
+    my $path =  $self->data_source_path("=~" . $regex_key) or return;
+    return -e $path || $path =~ /\|\s*$/;
+  }
+
   return unless exists $self->{config}{$proposed_source};
   my $path =  $self->data_source_path($proposed_source) or return;
   return -e $path || $path =~ /\|\s*$/;

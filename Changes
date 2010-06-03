@@ -13,6 +13,12 @@
 	  sortable tables of potential subtracks. The old "select" option is still
 	  supported, but deprecated.
 	* Added "kewl" blinds down effect when changing tabs.
+	* From E.O. Stinson: added fixes for embedding GBrowse in other web pages.
+	* From E.O. Stinson: Added support for regex-style datasources that let you define
+	  one data source that will pass different options to a script-based config depending
+	  on the URL.
+	* From E.O. Stinson: Added a move_to_name function for navigating to a region in one step
+	  via a URL call.
 
 2.08 Thu May 20 22:46:13 EDT 2010
 	* Added the ability to control the toggle state of each category and subcategory at

@@ -1918,7 +1918,14 @@ sub source_menu {
       );
 }
 
-# this is the content of the popup balloon that describes the track and gives configuration settings
+# This is the content of the popup balloon that describes the track and gives configuration settings
+
+# This is currently very hacky, hard to extend and needs to be generalized.
+# The concept that SHOULD be implemented is that each table row element has a series of classes
+# describing the contexts in which it should appear, and that popup menus that select various
+# glyphs should turn on and off the rows according to their classes.
+# NOTE: to add new configuration rows, the name of the form element must begin with "conf_" and
+# the rest must correspond to a valid glyph option.
 sub track_config {
     my $self        = shift;
     my $label       = shift;
@@ -1956,6 +1963,7 @@ sub track_config {
     my $min_score= $data_source->semantic_fallback_setting( $label => 'min_score' ,     $length);
     my $max_score= $data_source->semantic_fallback_setting( $label => 'max_score' ,     $length);
     my $bicolor_pivot= $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,     $length);
+    my $graph_type = $data_source->semantic_fallback_setting( $label => 'graph_type' ,     $length);
 
     $min_score = $dynamic unless defined $min_score;
     $max_score = $dynamic unless defined $max_score;
@@ -1969,7 +1977,7 @@ sub track_config {
     my $quantitative = $glyph =~ /wiggle/ || ref($db) =~ /bigwig/i;
 
     @glyph_select = $quantitative ? qw(wiggle_xyplot wiggle_density wiggle_box wiggle_whiskers)
-                                     : qw(arrow anchored_arrow box crossbox dashed_line diamond 
+                                  : qw(arrow anchored_arrow box crossbox dashed_line diamond 
                                          dna dot dumbbell ellipse ex gene line primers saw_teeth segments 
                                          span splice_site translation transcript triangle
                                          two_bolts wave) unless @glyph_select;
@@ -2029,19 +2037,39 @@ END
 		   )
         );
 
+    my $glyph_script = <<END;
+var f=\$\$('tr.xyplot');
+if (this.value.match(/xyplot/)){
+   f.each(function(a){a.show()});
+} else {
+   f.each(function(a){a.hide()});
+}
+END
     push @rows,TR( th( { -align => 'right' }, $self->tr('GLYPH') ),
 		   td( $picker->popup_menu(
-			   -name    => 'glyph',
+			   -name    => 'conf_glyph',
 			   -values  => \@all_glyphs,
 			   -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
 			   -current => $override->{'glyph'},
+			   -scripts => {-onChange => $glyph_script}
 		       )
 		   )
         );
 
+    push @rows,TR({-class=>'xyplot',-style=>$glyph=~/xyplot/ ? 'display:table-row' : 'display:none'},
+		  th( { -align => 'right' }, 'xyplot subtype' ),
+		  td( $picker->popup_menu(
+			  -name    => 'conf_graph_type',
+			  -values  => [qw(histogram boxes line points linepoints)],
+			  -default => ref $graph_type eq 'CODE' ? $dynamic : $graph_type,
+			  -current => $override->{'graph_type'},
+		      )
+		  )
+        );
+
     push @rows,TR( th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
 		   td( $picker->color_pick(
-			   'bgcolor',
+			   'conf_bgcolor',
 			   $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
 			   $override->{'bgcolor'}
 		       )
@@ -2050,7 +2078,7 @@ END
 
     push @rows,TR( th( { -align => 'right' }, $self->tr('FG_COLOR') ),
 		   td( $picker->color_pick(
-			   'fgcolor',
+			   'conf_fgcolor',
 			   $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
 			   $override->{'fgcolor'}
 		       )
@@ -2058,39 +2086,55 @@ END
         ) if !$quantitative;
 
     my $p = $override->{bicolor_pivot} || $bicolor_pivot;
-    warn "p=$p";
+    my $pivot_script = <<END;
+var e=\$('switch_point_other');
+var f=\$\$('tr.switch_point_color');
+if (this.value=='value'){
+    e.show()
+} else{
+    e.hide();
+    if (this.value=='none') {
+	f.each(function(a){a.hide()});
+    } else {
+	f.each(function(a){a.show()});
+    }
+}
+END
+    ;
 
     push @rows,TR( th( { -align => 'right' }, 'Switch colors when values cross' ),
 		   td( $picker->popup_menu(
-			   -name    => 'bicolor_pivot',
+			   -name    => 'conf_bicolor_pivot',
 			   -values  => [qw(none zero mean value)],
 			   -labels => {value => 'value entered below'},
 			   -default => $bicolor_pivot,
 			   -current => $p =~ /^[\d.-eE]+$/ ? 'value' : $p,
-			   -scripts => {-onChange => "var e=\$('switch_point_other'); if (this.value=='value'){e.show()}else{e.hide()}"},
+			   -scripts => {-onChange => $pivot_script}
 		       )
 		   )
         ) if $quantitative;
 
     my $pv    = $p =~ /^[\d.-eE]+$/ ? $p : 0.0;
-    push @rows,TR({-id=>'switch_point_other',-style=>$p!~/mean|zero/ ? 'display:table-row' : 'display:none'},
+    push @rows,TR({-id=>'switch_point_other',-style=>$p!~/mean|zero|none/ ? 'display:table-row' : 'display:none'},
 		  th( {-align => 'right' },'Switch point value'),
-                  td( textfield(-name  => 'bicolor_pivot_value',
+                  td( textfield(-name  => 'conf_bicolor_pivot_value',
 				-value => $pv))) if $quantitative;
     
 
-    push @rows,TR( th( { -align => 'right' }, 'Color above switch point' ),
+    push @rows,TR({-class=>'switch_point_color', -style=>$p eq 'none' ? 'display:none': 'display:table-row'},
+		  th( { -align => 'right' }, 'Color above switch point' ),
 		   td( $picker->color_pick(
-			   'pos_color',
+			   'conf_pos_color',
 			   $data_source->semantic_fallback_setting( $label => 'pos_color', $length ),
 			   $override->{'pos_color'}
 		       )
 		   )
         ) if $quantitative;
 
-    push @rows,TR( th( { -align => 'right' }, 'Color below switch point' ),
+    push @rows,TR( {-class=>'switch_point_color', -style=>$p eq 'none' ? 'display:none': 'display:table-row'},
+		   th( { -align => 'right' }, 'Color below switch point' ),
 		   td( $picker->color_pick(
-			   'neg_color',
+			   'conf_neg_color',
 			   $data_source->semantic_fallback_setting( $label => 'neg_color', $length ),
 			   $override->{'neg_color'}
 		       )
@@ -2100,18 +2144,18 @@ END
 
 
     push @rows,TR( th( { -align => 'right' },'Minimum scale value'),
-		   td( textfield(-name  => 'min_score',
+		   td( textfield(-name  => 'conf_min_score',
 				 -value => defined $override->{min_score} ? $override->{min_score}
 				                                          : $min_score))) if $quantitative;
 
     push @rows,TR( th( { -align => 'right' },'Maximum scale value'),
-		   td( textfield(-name  => 'max_score',
+		   td( textfield(-name  => 'conf_max_score',
 				 -value => defined $override->{max_score} ? $override->{max_score}
 				                                          : $max_score))) if $quantitative;
 
     push @rows,TR( th( { -align => 'right' }, $self->tr('LINEWIDTH') ),
 		   td( $picker->popup_menu(
-			   -name    => 'linewidth',
+			   -name    => 'conf_linewidth',
 			   -current => $override->{'linewidth'},
 			   -default => $width || 1,
 			   -values  => [ sort { $a <=> $b } ( $width, 1 .. 5 ) ]
@@ -2121,7 +2165,7 @@ END
     
     push @rows,TR( th( { -align => 'right' }, $self->tr('HEIGHT') ),
 		   td( $picker->popup_menu(
-			   -name    => 'height',
+			   -name    => 'conf_height',
 			   -current => $override->{'height'},
 			   -default => $height,
 			   -values  => [
@@ -2134,7 +2178,7 @@ END
     
     push @rows,TR( th( { -align => 'right' }, $self->tr('Limit') ),
 		   td( $picker->popup_menu(
-			   -name     => 'feature_limit',
+			   -name     => 'conf_feature_limit',
 			   -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
 			   -labels   => { 0 => $self->tr('NO_LIMIT') },
 			   -current  => $override->{feature_limit},
@@ -2146,7 +2190,7 @@ END
 
     push @rows,TR( th( { -align => 'right' }, $self->tr('STRANDED') ),
 		   td(checkbox(
-			  -name    => 'stranded',
+			  -name    => 'conf_stranded',
 			  -override=> 1,
 			  -value   => 1,
 			  -checked => defined $override->{'stranded'} 

@@ -18,6 +18,7 @@ use Bio::Graphics::Browser2::Region;
 use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::Browser2::RenderPanels;
 use Bio::Graphics::Browser2::RemoteSet;
+use Bio::Graphics::Browser2::SubtrackTable;
 use Bio::Graphics::Browser2::TrackDumper;
 use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
 use Bio::Graphics::Browser2::UserTracks;

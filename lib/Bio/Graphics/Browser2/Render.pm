@@ -2147,7 +2147,6 @@ sub update_tracks {
         map {s/\s.*//} @matched;
        }
        $label.="/".join("+",@matched) if @matched;
-       warn "Joined label: $label";
       }
 
     $self->set_tracks(@main_l);

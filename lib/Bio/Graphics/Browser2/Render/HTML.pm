@@ -73,7 +73,7 @@ sub render_error_div {
 
 sub render_tabbed_pages {
     my $self = shift;
-    my ($main_html,$tracks_html,$custom_tracks_html,$settings_html) = @_;
+    my ($main_html,$tracks_html,$custom_tracks_html,$settings_html,) = @_;
     my $main_title          = $self->tr('MAIN_PAGE');
     my $tracks_title        = $self->tr('SELECT_TRACKS');
     my $custom_tracks_title = $self->tr('CUSTOM_TRACKS_PAGE');
@@ -85,12 +85,12 @@ sub render_tabbed_pages {
 		       span({id=>'main_page_select'},         $main_title),
 		       span({id=>'track_page_select'},        $tracks_title),
 		       span({id=>'custom_tracks_page_select'},$custom_tracks_title),
-		       span({id=>'settings_page_select'},     $settings_title)
+		       span({id=>'settings_page_select'},     $settings_title),
 		   ),
 		   div({-id=>'main_page',         -class=>'tabbody'}, $main_html),
 		   div({-id=>'track_page',        -class=>'tabbody'}, $tracks_html),
 		   div({-id=>'custom_tracks_page',-class=>'tabbody'}, $custom_tracks_html),
-		   div({-id=>'settings_page',     -class=>'tabbody'}, $settings_html)
+		   div({-id=>'settings_page',     -class=>'tabbody'}, $settings_html),
 	);
     return $html;
 }
@@ -269,18 +269,34 @@ sub render_html_head {
   my $js       = $dsn->globals->js_url;
   my @scripts;
   
-  # define onTabLoad functions for each tab, if any
+  # Set any onTabLoad functions
+  my $main_page_onLoads = "";
+  my $track_page_onLoads = "checkSummaries();";
+  my $custom_track_page_onLoads = "";
+  my $settings_page_onLoads = "";
+  
+  # Get plugin onTabLoad functions for each tab, if any
   my %plugin_onLoads = map ($_->onLoads, @plugin_list);
-  my $main_page_onLoads = (defined($plugin_onLoads{'main_page'})) ? $plugin_onLoads{'main_page'} : "return 0;";
-  my $track_page_onLoads = (defined($plugin_onLoads{'track_page'})) ? $plugin_onLoads{'track_page'} : "return 0;";
-  my $custom_track_page_onLoads = (defined($plugin_onLoads{'custom_track_page'})) ? $plugin_onLoads{'custom_track_page'} : "return 0;";
-  my $settings_page_onLoads = (defined($plugin_onLoads{'settings_page'})) ? $plugin_onLoads{'settings_page'} : "return 0;";
+  if (defined($plugin_onLoads{'main_page'})) {
+    $main_page_onLoads .= $plugin_onLoads{'main_page'};
+  }
+  if (defined($plugin_onLoads{'track_page'})) {
+    $track_page_onLoads .= $plugin_onLoads{'track_page'};
+  }
+  if (defined($plugin_onLoads{'custom_track_page'})) {
+    $custom_track_page_onLoads .= $plugin_onLoads{'custom_track_page'};
+  }
+  if (defined($plugin_onLoads{'settings_page'})) {
+    $settings_page_onLoads .= $plugin_onLoads{'settings_page'};
+  }
+  
+  
   
   my $onTabScript .= "function onTabLoad(tab_id) {\n";
-  $onTabScript .= "if (tab_id == 'main_page_select') $main_page_onLoads\n";
-  $onTabScript .= "if (tab_id == 'track_page_select') $track_page_onLoads\n";
-  $onTabScript .= "if (tab_id == 'custom_track_page_select') $custom_track_page_onLoads\n";
-  $onTabScript .= "if (tab_id == 'settings_page_select') $settings_page_onLoads\n";
+  $onTabScript .= "if (tab_id == 'main_page_select') {$main_page_onLoads}\n";
+  $onTabScript .= "if (tab_id == 'track_page_select') {$track_page_onLoads}\n";
+  $onTabScript .= "if (tab_id == 'custom_track_page_select') {$custom_track_page_onLoads}\n";
+  $onTabScript .= "if (tab_id == 'settings_page_select') {$settings_page_onLoads}\n";
   $onTabScript .= "};";
   push (@scripts,({type=>"text/javascript"}, $onTabScript));
   

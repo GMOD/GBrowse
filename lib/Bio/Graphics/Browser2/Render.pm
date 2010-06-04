@@ -1987,7 +1987,7 @@ sub create_subtrack_manager {
 	or return;
 
     my $key            = $source->setting($label => 'key');
-    my $selected       = $state->{features}{$label}{subtracks};
+    my $selected       = $state->{subtracks}{$label};
     my $comment        = $source->setting($label => 'brief comment');
 
     my $stt            = Bio::Graphics::Browser2::SubtrackTable->new(-columns=>$dimensions,
@@ -2004,38 +2004,25 @@ sub create_subtrack_manager {
 sub reconfigure_track {
     my $self  = shift;
     my $label = shift;
-    my $semantic_label = shift;
 
     my $state = $self->state();
     $state->{features}{$label}{visible}          = param('show_track') ? 1 : 0;
     $state->{features}{$label}{options}          = param('format_option');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
     my $mode    = param('mode');
-    my $override_key = $mode && $mode eq 'summary' ? 'override_summary' : 'override_settings';
 
     my $semantic_len    = param('apply_semantic')  || 0;
     my $delete_semantic = param('delete_semantic');
 
-    $state->{features}{$label}{override_settings}{'show summary'}  = param('conf_summary_mode')
-	if param('conf_summary_mode');
+    $state->{features}{$label}{summary_mode_len} = param('summary_mode') 
+	if param('summary_mode');
 
-    # old code
-    for my $s ( grep {/^conf_/} param()) {
-        my $value = param($s);
-	$s =~ s/^conf_//;
-	next unless defined $value;
-	if ($value eq $dynamic) {
-	    delete $state->{features}{$semantic_label}{$override_key}{$s};
-	} elsif ($s eq 'bicolor_pivot' && $value eq 'value') {
-	    $state->{features}{$semantic_label}{$override_key}{$s} = param('bicolor_pivot_value');
-	} else {
-	    $state->{features}{$semantic_label}{$override_key}{$s} = $value;
-	}
-    }
-    
-    # new code
-    my $o = $state->{features}{$label}{semantic_override}{$semantic_len}={};
-    delete $state->{features}{$label}{semantic_override}{$delete_semantic};
+    my $o = $mode eq 'summary' ? $state->{features}{$label}{summary_override}                ={}
+                               : $state->{features}{$label}{semantic_override}{$semantic_len}={};
+    delete $state->{features}{$label}{semantic_override}{$delete_semantic} if $delete_semantic;
+
+    my $glyph = param('conf_glyph') || '';
+  
     for my $s ( grep {/^conf_/} param()) {
         my $value = param($s);
 	$s =~ s/^conf_//;
@@ -2046,6 +2033,10 @@ sub reconfigure_track {
 	    $o->{$s} = param('bicolor_pivot_value');
 	} else {
 	    $o->{$s} = $value;
+	    if ($glyph eq 'wiggle_whiskers') {# workarounds for whisker options
+		$o->{"${s}_neg"}  = $value if $s =~ /^(mean_color|stdev_color)/; 
+		$o->{min_color}   = $value if $s eq 'max_color';
+	    }
 	}
     }
 }
@@ -2951,7 +2942,7 @@ sub set_tracks {
 	my @subtracks         = shellwords($subtracks);
 	foreach (@subtracks) {s/#.+$//}  # get rid of comments
 	push @main,$main;
-	$state->{features}{$main}{subtracks} = \@subtracks if @subtracks;
+	$state->{subtracks}{$main} = \@subtracks if @subtracks;
     }
 
     $state->{tracks} = [grep {$potential{$_}} @main];

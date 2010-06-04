@@ -572,7 +572,7 @@ sub ACTION_set_subtracks {
     my $label= $q->param('label');
     my $subtracks = JSON::from_json($q->param('subtracks'));
     my $settings  = $self->state;
-    $self->state->{features}{$label}{subtracks} = $subtracks;
+    $self->state->{subtracks}{$label} = $subtracks;
     return (204,'text/plain',undef);
 }
 

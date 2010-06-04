@@ -365,7 +365,7 @@ sub show_summary {
     my $self = shift;
     my ($label,$length,$settings) = @_;
     $settings ||= {};
-    my $c  = $settings->{features}{$label}{override_settings}{'summary_mode'}
+    my $c  = $settings->{features}{$label}{summary_mode_len}
           || $self->semantic_fallback_setting($label=>'show summary',$length);
     my $g  = $self->semantic_fallback_setting($label=>'glyph',$length);
     return 0 if $g =~ /wiggle|xyplot|density/;  # don't summarize wiggles or xyplots

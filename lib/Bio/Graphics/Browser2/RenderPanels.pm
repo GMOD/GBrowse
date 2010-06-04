@@ -259,8 +259,8 @@ sub make_requests {
 
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
-	@subtrack_args = @{$settings->{features}{$label}{subtracks}} 
-	                 if $settings->{features}{$label}{subtracks};
+	@subtrack_args = @{$settings->{subtracks}{$label}} 
+	                 if $settings->{subtracks}{$label};
 	my $ff_error;
 
         # get config data from the feature files
@@ -1932,25 +1932,19 @@ sub create_track_args {
 
   my $is_summary      = $source->show_summary($label,$length,$self->settings);
   
-  my $slabel          = $is_summary ? $label : $source->semantic_label($label,$length);
-#  my $override_key    = $is_summary ? 'override_summary' : 'override_settings';
-#
-#  my $override        = $self->settings->{features}{$slabel}{$override_key}
-#                        || {};   # user-set override settings for tracks
   my $state            = $self->settings;
   my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 
                     keys %{$state->{features}{$label}{semantic_override}};
   $semantic_override ||= 0;
-  my $override         = $is_summary ? $state->{features}{$label}{override_summary}
+  my $override         = $is_summary ? $state->{features}{$label}{summary_override}
                                      : $state->{features}{$label}{semantic_override}{$semantic_override};
-  warn "$label: semantic_override = $semantic_override";
 
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
 
   if ($is_summary) {
       unshift @override,(-glyph     => 'wiggle_density',
-			 -height    => 14,
+			 -height    => 15,
 			 -bgcolor   => 'black',
 			 -min_score => 0,
 			 -autoscale => 'local'

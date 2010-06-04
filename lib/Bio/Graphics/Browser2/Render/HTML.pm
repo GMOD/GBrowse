@@ -1960,30 +1960,38 @@ sub track_config {
     # summary options
     my $can_summarize = $data_source->can_summarize($label);
     my $summary_mode  = $data_source->show_summary($label,$length);
-    my $override_key  = $summary_mode ? 'override_summary' : 'override_settings';
 
     my $slabel           = $summary_mode ? $label : $data_source->semantic_label($label,$length);
 
-    my $key = $self->label2key($label);
-    $key .= $summary_mode      ? " (Feature Density Summary)" 
-           :$slabel=~ /:(\d+)/ ? " (>=$1 bp)"
-	   :'';
+    if ($revert_to_defaults) {
+	$state->{features}{$label}{summary_override}  = {} if $summary_mode;
+	$state->{features}{$label}{semantic_override} = {} unless $summary_mode;
+	delete $state->{features}{$label}{summary_mode_len};
+    }
 
-    $state->{features}{$slabel}{$override_key}    = {} if $revert_to_defaults;
-    $state->{features}{$label}{semantic_override} = {} if $revert_to_defaults;
-
-    my $override = $state->{features}{$slabel}{$override_key}||{};
     my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 
                   keys %{$state->{features}{$label}{semantic_override}};
+    $semantic_override   ||= 0;
+
     my ($semantic_level)   = $slabel =~ /(\d+)$/;
     $semantic_level      ||= 0;
+    my $level              = $semantic_override || $semantic_level;
+
+    my $key = $self->label2key($label);
+    $key .= $summary_mode      ? " (Feature Density Summary)" 
+           :$level             ? " (>=$level bp)"
+	   :'';
+
+    my $override = $summary_mode 
+	? $state->{features}{$label}{summary_override}                      ||= {}
+        : $state->{features}{$label}{semantic_override}{$semantic_override} ||= {};
 
     my $return_html = start_html();
 
     my $title   = div({-class=>'config-title'},$key);
     my $dynamic = $self->tr('DYNAMIC_VALUE');
 
-    my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 5;
+    my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 10;
     my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
     my $glyph    = $data_source->semantic_fallback_setting( $label => 'glyph',          $length )   || 'box';
     my $stranded = $data_source->semantic_fallback_setting( $label => 'stranded',       $length);
@@ -2008,7 +2016,7 @@ sub track_config {
 
     if ($summary_mode) {
 	$glyph        = $override->{glyph} || 'wiggle_density';
-	@glyph_select = qw(wiggle_xyplot wiggle_density wiggle_whiskers);
+	@glyph_select = qw(wiggle_xyplot wiggle_density);
     } else {
 	@glyph_select = shellwords(
 	    $data_source->semantic_fallback_setting( $label => 'glyph select', $length )
@@ -2018,13 +2026,15 @@ sub track_config {
 
     my $db           = $data_source->open_database($label,$length);
     my $quantitative = $glyph =~ /wiggle/ || ref($db) =~ /bigwig/i;
+    my $can_whisker  = $quantitative && ref($db) =~ /bigwig/i;
 
     unless (@glyph_select) { # reasonable defaults
-	@glyph_select = $quantitative ? qw(wiggle_xyplot wiggle_density wiggle_box wiggle_whiskers)
+	@glyph_select = $can_whisker  ? qw(wiggle_xyplot wiggle_density wiggle_whiskers)
+                       :$quantitative ? qw(wiggle_xyplot wiggle_density)
 	                              : qw(arrow anchored_arrow box crossbox dashed_line diamond 
                                          dna dot dumbbell ellipse gene line primers saw_teeth segments 
-                                         span splice_site translation transcript triangle
-                                         two_bolts wave) unless @glyph_select;
+                                         span site transcript triangle
+                                         two_bolts wave);
     }
 
 
@@ -2039,7 +2049,9 @@ new Ajax.Request('$url',
                   { method: 'get',
                     asynchronous: false,
                     parameters: 'action=configure_track&track=$label&track_defaults=1;mode=$mode',
-                    onSuccess: function(t) { document.getElementById('contents').innerHTML=t.responseText },
+                    onSuccess: function(t) { document.getElementById('contents').innerHTML=t.responseText;
+					     t.responseText.evalScripts();
+		                           },
                     onFailure: function(t) { alert('AJAX Failure! '+t.statusText)}
                   }
                 );
@@ -2053,55 +2065,55 @@ END
     );
 
     my @rows;
-    push @rows, TR( td( {-colspan => 2}, $title));
+    push @rows, TR({-class=>'general'},
+		   td( {-colspan => 2}, $title));
 
-    push @rows, TR( th( { -align => 'right' }, $self->tr('Show') ),
-		    td( checkbox(
-			    -name     => 'show_track',
-			    -value    => $label,
-			    -override => 1,
-			    -checked  => $state->{features}{$label}{visible},
-			    -label    => ''
-			)
-		    ),
+    push @rows, TR({-class=>'general'},
+		   th( { -align => 'right' }, $self->tr('Show') ),
+		   td( checkbox(
+			   -name     => 'show_track',
+			   -value    => $label,
+			   -override => 1,
+			   -checked  => $state->{features}{$label}{visible},
+			   -label    => ''
+		       )
+		   ),
         );
 
     my $glyph_script = <<END;
-var f=\$\$('tr.xyplot');
-if (this.value.match(/xyplot|density/)){
-   f.each(function(a){a.show()});
+var t   = \$('config_table');
+var all = t.select('tr').findAll(function(a){return !a.hasClassName('general')});
+all.each(function(a){a.hide()});
+
+if (this.value.match(/xyplot/)){
+   t.select('tr.xyplot').each(function(a){a.show()});
    \$('conf_bicolor_pivot').onchange();
-} else {
-   f.each(function(a){a.hide()});
 }
-f = \$\$('tr.wiggle_whiskers');
-if (this.value.match(/whiskers/)){
-   f.each(function(a){a.show()});
-   \$('bgcolor_picker').hide();
-} else {
-   f.each(function(a){a.hide()});
-   \$('bgcolor_picker').show();
+else if (this.value.match(/density/)){
+   t.select('tr.density').each(function(a){a.show()});
+   \$('conf_bicolor_pivot').onchange();
 }
-if (this.value.match(/xyplot|density|whiskers|wiggle/)) {
-  \$('packing').hide()
-} else {
-  \$('packing').show();
+else if (this.value.match(/whiskers/)){
+   t.select('tr.whiskers').each(function(a){a.show()});
+}
+else {
+   t.select('tr.features').each(function(a){a.show()});
 }
 END
-    push @rows,TR( th( { -align => 'right' }, $self->tr('GLYPH') ),
+    push @rows,TR( {-class=>'general'},
+		   th( { -align => 'right' }, $self->tr('GLYPH') ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_glyph',
 			   -values  => \@all_glyphs,
 			   -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
 			   -current => $override->{'glyph'},
-			   -scripts => {-onChange => $glyph_script}
+			   -scripts => {-id=>'glyph_picker_id',-onChange => $glyph_script}
 		       )
 		   )
         );
 
-    push @rows,TR( {-id    => 'packing',
-		    -style => !$quantitative ? 'display:table-row' : 'display:none'
-		   },
+    push @rows,TR( {-class => 'features',
+		    -id    => 'packing'},
 		   th( { -align => 'right' }, $self->tr('Packing') ),
 		   td( popup_menu(
 			   -name     => 'format_option',
@@ -2130,26 +2142,40 @@ END
 		  )
         );
 
+    push @rows,TR({-class=>'whiskers'},
+		  th( { -align => 'right' }, 'whiskers subtype' ),
+		  td( $picker->popup_menu(
+			  -name    => 'conf_graph_type_whiskers',
+			  -values  => [qw(whiskers boxes)],
+			  -default => ref $graph_type eq 'CODE' ? $dynamic : $graph_type,
+			  -current => $override->{'graph_type'},
+		      )
+		  )
+        );
+
     push @rows,TR( { -id    => 'bgcolor_picker',
-		     -style => $g =~ /whisker/ ? 'display:none' : 'display:table-row'
+		     -class => 'xyplot density features',
 		   },
 		   th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_bgcolor',
-			   $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
+			   $summary_mode ? 'black'
+                                         :
+			      $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
 			   $override->{'bgcolor'}
 		       )
 		   )
         );
 
-    push @rows,TR( th( { -align => 'right' }, $self->tr('FG_COLOR') ),
+    push @rows,TR( {-class=>'xyplot features'},
+		   th( { -align => 'right' }, $self->tr('FG_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_fgcolor',
 			   $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
 			   $override->{'fgcolor'}
 		       )
 		   )
-        ) if !$quantitative;
+        );
 
     #######################
     # bicolor pivot stuff
@@ -2173,8 +2199,8 @@ if (this.value=='none') {
 END
     ;
 
-     push @rows,TR( {-class=>'xyplot',
-	 	     -style =>  $has_pivot? 'display:table-row' : 'display:none'},
+     push @rows,TR( {-class=>'xyplot density',
+		     -id   =>'bicolor_pivot_id'},
                    th( { -align => 'right'}, 'Switch colors when values cross' ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_bicolor_pivot',
@@ -2185,19 +2211,17 @@ END
 			   -scripts => {-onChange => $pivot_script,-id=>'conf_bicolor_pivot'}
 		       )
 		   )
-        ) if $quantitative;
+        );
 
     my $pv    = $p =~ /^[\d.-eE]+$/ ? $p : 0.0;
-    push @rows,TR({-class =>'xyplot ',
-		   -id=>'switch_point_other',
-		   -style=>$has_pivot && $p!~/mean|zero|none/ ? 'display:table-row' : 'display:none'},
+    push @rows,TR({-class =>'xyplot density',
+		   -id=>'switch_point_other'},
 		  th( {-align => 'right' },'Switch point value'),
                   td( textfield(-name  => 'bicolor_pivot_value',
-				-value => $pv))) if $quantitative;
+				-value => $pv)));
     
 
-    push @rows,TR({-class=>'switch_point_color xyplot', 
-		   -style=>$has_pivot && $p ne 'none' ? 'display:table-row' : 'display:none'},
+    push @rows,TR({-class=>'switch_point_color xyplot density'}, 
 		  th( { -align => 'right' }, 'Color above switch point' ),
 		   td( $picker->color_pick(
 			   'conf_pos_color',
@@ -2205,10 +2229,9 @@ END
 			   $override->{'pos_color'}
 		       )
 		   )
-        ) if $quantitative;
+        );
 
-    push @rows,TR( {-class=>'switch_point_color xyplot', 
-		    -style=>$has_pivot && $p ne 'none' ? 'display:table-row' : 'display:none'},
+    push @rows,TR( {-class=>'switch_point_color xyplot density'}, 
 		   th( { -align => 'right' }, 'Color below switch point' ),
 		   td( $picker->color_pick(
 			   'conf_neg_color',
@@ -2216,15 +2239,14 @@ END
 			   $override->{'neg_color'}
 		       )
 		   )
-        ) if $quantitative;
+        );
 
 
 
     #######################
     # wiggle colors
     #######################
-    push @rows,TR( {-class=>'wiggle_whiskers', 
-		    -style=>$g eq 'wiggle_whiskers' ? 'display:table-row' : 'display:none' },
+    push @rows,TR( {-class=>'whiskers'}, 
 		   th( { -align => 'right' }, 'Color from 0 to mean value' ),
 		   td( $picker->color_pick(
 			   'conf_mean_color',
@@ -2232,10 +2254,9 @@ END
 			   $override->{'mean_color'}
 		       )
 		   )
-        ) if $quantitative;
+        );
 
-    push @rows,TR( {-class=>'wiggle_whiskers', 
-		    -style=>$g eq 'wiggle_whiskers' ? 'display:table-row' : 'display:none' },
+    push @rows,TR( {-class=>'whiskers'}, 
 		   th( { -align => 'right' }, 'Color from mean to stdev value' ),
 		   td( $picker->color_pick(
 			   'conf_stdev_color',
@@ -2243,10 +2264,9 @@ END
 			   $override->{'stdev_color'}
 		       )
 		   )
-        ) if $quantitative;
+        );
 
-    push @rows,TR( {-class=>'wiggle_whiskers', 
-		    -style=>$g eq 'wiggle_whiskers' ? 'display:table-row' : 'display:none' },
+    push @rows,TR( {-class=>'whiskers'}, 
 		   th( { -align => 'right' }, 'Color from stdev to max/min value' ),
 		   td( $picker->color_pick(
 			   'conf_max_color',
@@ -2254,19 +2274,22 @@ END
 			   $override->{'max_color'}
 		       )
 		   )
-        ) if $quantitative;
+        );
 
-    push @rows,TR( th( { -align => 'right' },'Minimum scale value'),
+    push @rows,TR( {-class=>'xyplot density whiskers'},
+		   th( { -align => 'right' },'Minimum scale value'),
 		   td( textfield(-name  => 'conf_min_score',
 				 -value => defined $override->{min_score} ? $override->{min_score}
-				                                          : $min_score))) if $quantitative;
+				                                          : $summary_mode ? 0 : $min_score))) if $quantitative;
 
-    push @rows,TR( th( { -align => 'right' },'Maximum scale value'),
-		   td( textfield(-name  => 'conf_max_score',
-				 -value => defined $override->{max_score} ? $override->{max_score}
-				                                          : $max_score))) if $quantitative;
+    push @rows,TR(  {-class=>'xyplot density whiskers'},
+		    th( { -align => 'right' },'Maximum scale value'),
+		    td( textfield(-name  => 'conf_max_score',
+				  -value => defined $override->{max_score} ? $override->{max_score}
+				  : $max_score)));
 
-    push @rows,TR( th( { -align => 'right' }, $self->tr('LINEWIDTH') ),
+    push @rows,TR( {-class=>'features'},
+		   th( { -align => 'right' }, $self->tr('LINEWIDTH') ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_linewidth',
 			   -current => $override->{'linewidth'},
@@ -2274,13 +2297,15 @@ END
 			   -values  => [ sort { $a <=> $b } ( $width, 1 .. 5 ) ]
 		       )
 		   )
-	) if !$quantitative;
-    
-    push @rows,TR( th( { -align => 'right' }, $self->tr('HEIGHT') ),
+	);
+
+    push @rows,TR( {-class=>'general'},
+		   th(
+		       { -align => 'right' }, $self->tr('HEIGHT') ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_height',
 			   -current => $override->{'height'},
-			   -default => $height,
+			   -default => $summary_mode ? 15 : $height,
 			   -values  => [
 				sort { $a <=> $b }
 				( $height, map { $_ * 5 } ( 1 .. 20 ) )
@@ -2289,57 +2314,62 @@ END
 		   )
         );
     
-    push @rows,TR( th( { -align => 'right' }, $self->tr('Limit') ),
-		   td( $picker->popup_menu(
-			   -name     => 'conf_feature_limit',
-			   -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
-			   -labels   => { 0 => $self->tr('NO_LIMIT') },
+    push @rows,TR({-class=>'features'},
+		  th( { -align => 'right' }, $self->tr('Limit') ),
+		  td( $picker->popup_menu(
+			  -name     => 'conf_feature_limit',
+			  -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
+			  -labels   => { 0 => $self->tr('NO_LIMIT') },
 			   -current  => $override->{feature_limit},
-			   -override => 1,
-			   -default  => $limit,
+			  -override => 1,
+			  -default  => $limit,
 		       )
-		   )
-        ) if !$quantitative;
+		  )
+        );
+    
+    push @rows,TR({-class=>'features'},
+		  th( { -align => 'right' }, $self->tr('STRANDED') ),
+		  td(checkbox(
+			 -name    => 'conf_stranded',
+			 -override=> 1,
+			 -value   => 1,
+			 -checked => defined $override->{'stranded'} 
+			 ? $override->{'stranded'} 
+			 : $stranded,
+			 -label   => '',
+		     )
+		  )
+        );
 
-    push @rows,TR( th( { -align => 'right' }, $self->tr('STRANDED') ),
-		   td(checkbox(
-			  -name    => 'conf_stranded',
-			  -override=> 1,
-			  -value   => 1,
-			  -checked => defined $override->{'stranded'} 
-			  ? $override->{'stranded'} 
-			  : $stranded,
-			  -label   => '',
-		      )
-		   )
-        ) if !$quantitative;
+    push @rows,TR({-class=>'general'},
+		  th( { -align => 'right' }, 'Apply this config when region >='),
+		  td(textfield(
+			 -name    => 'apply_semantic',
+			 -override=> 1,
+			 -value   => $semantic_override||$semantic_level),' bp',
+		     hidden(-name=>'delete_semantic',-value=>$semantic_override)
+		  ),
+		   ) unless $summary_mode;
 
-    push @rows,TR( th( { -align => 'right' }, 'Apply this config when region >='),
-		   td(textfield(
-			  -name    => 'apply_semantic',
-			  -override=> 1,
-			  -value   => $semantic_override||$semantic_level),' bp',
-		      hidden(-name=>'delete_semantic',-value=>$semantic_override)
-		      ),
-	) unless $summary_mode;
-
-    push @rows,TR( th( { -align => 'right' }, 'Summary mode when region >='),
-		   td(textfield(
-			  -name    => 'summary_mode',
-			  -override=> 1,
-			  -value   => $state->{features}{$label}{'override_settings'}{'show summary'} 
-			  || $summary_length),' bp'
-		      )
-	) if $can_summarize && $summary_length;
+    push @rows,TR({-class=>'general'},
+		  th( { -align => 'right' }, 'Show summary when region >='),
+		  td(textfield(
+			 -name    => 'summary_mode',
+			 -override=> 1,
+			 -value   => $state->{features}{$label}{summary_mode_len}
+			 || $summary_length),' bp'
+		  )
+		   ) if $can_summarize && $summary_length;
 
     my $submit_script = <<END;
 Element.extend(this);
 var ancestors    = this.ancestors();
 var form_element = ancestors.find(function(el) {return el.nodeName=='FORM'; });
-Controller.reconfigure_track('$label',form_element,'$slabel','$mode')
+Controller.reconfigure_track('$label',form_element,'$mode')
 END
 
-    push @rows,TR(td({-colspan=>2},
+    push @rows,TR({-class=>'general'},
+		  td({-colspan=>2},
 		     button(
 			 -style   => 'background:pink',
 			 -name    => $self->tr('Revert'),
@@ -2356,11 +2386,12 @@ END
 		  )
     );
 
-    $form .= table({ -border => 0 },@rows);
+    $form .= table({-id=>'config_table',-border => 0 },@rows);
     $form .= end_form();
 
     $return_html
         .= table( TR( td( { -valign => 'top' }, [ $form ] ) ) );
+    $return_html .= script({-type=>'text/javascript'},"var g = \$('glyph_picker_id');g.onchange(g);");
     $return_html .= end_html();
     return $return_html;
 }

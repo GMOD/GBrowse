@@ -670,7 +670,7 @@ var GBrowseController = Class.create({
   // Track Configure Methods ****************************************
 
   reconfigure_track:
-  function(track_id, form_element, semantic_label, mode) {
+  function(track_id, form_element, mode) {
 
     if (form_element==null)
        form_element = $("track_config_form");
@@ -688,7 +688,6 @@ var GBrowseController = Class.create({
       parameters: form_element.serialize() +"&"+ $H({
             action:         'reconfigure_track',
 	    track:          track_id,
-	    semantic_label: semantic_label,
 	    mode:           mode
           }).toQueryString(),
       onSuccess: function(transport) {

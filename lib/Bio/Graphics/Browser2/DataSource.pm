@@ -363,8 +363,10 @@ sub i18n_style {
 # track at the current length
 sub show_summary {
     my $self = shift;
-    my ($label,$length) = @_;
-    my $c  = $self->semantic_fallback_setting($label=>'show summary',$length);
+    my ($label,$length,$settings) = @_;
+    $settings ||= {};
+    my $c  = $settings->{features}{$label}{override_settings}{'summary_mode'}
+          || $self->semantic_fallback_setting($label=>'show summary',$length);
     my $g  = $self->semantic_fallback_setting($label=>'glyph',$length);
     return 0 if $g =~ /wiggle|xyplot|density/;  # don't summarize wiggles or xyplots
     return 0 if $self->semantic_fallback_setting($label=>'global feature',$length);
@@ -374,6 +376,15 @@ sub show_summary {
     my $db = $self->open_database($label,$length) or return;
     return 0 unless $db->can('feature_summary');
     return 1;
+}
+
+sub can_summarize {
+   my $self = shift;
+   my $label = shift;
+   my $g  = $self->fallback_setting($label=>'glyph');
+   return if $g =~ /wiggle|xyplot|density/;  # don't summarize wiggles or xyplots
+   my $db = $self->open_database($label) or return;
+   return unless $db->can('feature_summary');
 }
 
 sub clear_usertracks {

@@ -2010,22 +2010,44 @@ sub reconfigure_track {
     $state->{features}{$label}{visible}          = param('show_track') ? 1 : 0;
     $state->{features}{$label}{options}          = param('format_option');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
+    my $mode    = param('mode');
+    my $override_key = $mode && $mode eq 'summary' ? 'override_summary' : 'override_settings';
 
+    my $semantic_len    = param('apply_semantic')  || 0;
+    my $delete_semantic = param('delete_semantic');
+
+    $state->{features}{$label}{override_settings}{'show summary'}  = param('conf_summary_mode')
+	if param('conf_summary_mode');
+
+    # old code
     for my $s ( grep {/^conf_/} param()) {
         my $value = param($s);
 	$s =~ s/^conf_//;
 	next unless defined $value;
 	if ($value eq $dynamic) {
-	    delete $state->{features}{$semantic_label}{override_settings}{$s};
+	    delete $state->{features}{$semantic_label}{$override_key}{$s};
 	} elsif ($s eq 'bicolor_pivot' && $value eq 'value') {
-	    $state->{features}{$semantic_label}{override_settings}{$s} = param('bicolor_pivot_value');
+	    $state->{features}{$semantic_label}{$override_key}{$s} = param('bicolor_pivot_value');
 	} else {
-	    $state->{features}{$semantic_label}{override_settings}{$s} = $value;
+	    $state->{features}{$semantic_label}{$override_key}{$s} = $value;
 	}
     }
     
-
-    $state->{features}{$semantic_label}{override_settings}{stranded}   = param('stranded') || 0;
+    # new code
+    my $o = $state->{features}{$label}{semantic_override}{$semantic_len}={};
+    delete $state->{features}{$label}{semantic_override}{$delete_semantic};
+    for my $s ( grep {/^conf_/} param()) {
+        my $value = param($s);
+	$s =~ s/^conf_//;
+	next unless defined $value;
+	if ($value eq $dynamic) {
+	    delete $o->{$s};
+	} elsif ($s eq 'bicolor_pivot' && $value eq 'value') {
+	    $o->{$s} = param('bicolor_pivot_value');
+	} else {
+	    $o->{$s} = $value;
+	}
+    }
 }
 
 sub track_config {

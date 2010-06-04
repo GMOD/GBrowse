@@ -107,6 +107,11 @@ span.tctl         { cursor: pointer }
 .menutitle:hover {
     text-decoration: underline;
 }
+div.config-title {
+    background:gainsboro;
+    padding:5px;
+    font-weight:bold;
+}
 img.figure {
     display: block;
     margin-left: auto;

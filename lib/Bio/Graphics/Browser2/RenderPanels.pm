@@ -1520,7 +1520,7 @@ sub add_features_to_track {
       my (@full_types,@summary_types);
       for my $l (@labels) {
 	  my @types = $source->label2type($l,$length) or next;
-	  if ($source->show_summary($l,$length)) {
+	  if ($source->show_summary($l,$length,$self->settings)) {
 	      push @summary_types,@types;
 	  } else {
 	      push @full_types,@types;
@@ -1930,20 +1930,30 @@ sub create_track_args {
   my $source          = $self->source;
   my $lang            = $self->language;
 
-  my $slabel          = $source->semantic_label($label,$length);
-
-  my $override        = $self->settings->{features}{$slabel}{override_settings}
-                        || {};   # user-set override settings for tracks
+  my $is_summary      = $source->show_summary($label,$length,$self->settings);
+  
+  my $slabel          = $is_summary ? $label : $source->semantic_label($label,$length);
+#  my $override_key    = $is_summary ? 'override_summary' : 'override_settings';
+#
+#  my $override        = $self->settings->{features}{$slabel}{$override_key}
+#                        || {};   # user-set override settings for tracks
+  my $state            = $self->settings;
+  my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 
+                    keys %{$state->{features}{$label}{semantic_override}};
+  $semantic_override ||= 0;
+  my $override         = $is_summary ? $state->{features}{$label}{override_summary}
+                                     : $state->{features}{$label}{semantic_override}{$semantic_override};
+  warn "$label: semantic_override = $semantic_override";
 
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
 
-  if ($source->show_summary($label,$length)) {
-      push @override,(-glyph     => 'wiggle_density',
-		      -height    => 14,
-		      -bgcolor   => 'black',
-		      -min_score => 0,
-		      -autoscale => 'local'
+  if ($is_summary) {
+      unshift @override,(-glyph     => 'wiggle_density',
+			 -height    => 14,
+			 -bgcolor   => 'black',
+			 -min_score => 0,
+			 -autoscale => 'local'
       );
   }
 

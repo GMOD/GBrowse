@@ -1935,24 +1935,36 @@ sub track_config {
     my $data_source = $self->data_source();
 
     my $length      = $self->thin_segment->length;
-    my $slabel      = $data_source->semantic_label($label,$length);
 
     eval 'require Bio::Graphics::Browser2::OptionPick; 1'
         unless Bio::Graphics::Browser2::OptionPick->can('new');
 
     my $picker = Bio::Graphics::Browser2::OptionPick->new($self);
 
+    # summary options
+    my $can_summarize = $data_source->can_summarize($label);
+    my $summary_mode  = $data_source->show_summary($label,$length);
+    my $override_key  = $summary_mode ? 'override_summary' : 'override_settings';
+
+    my $slabel           = $summary_mode ? $label : $data_source->semantic_label($label,$length);
+
     my $key = $self->label2key($label);
-    $key   .= " (>=$1 bp)" if $slabel=~ /:(\d+)/;
+    $key .= $summary_mode      ? " (Feature Density Summary)" 
+           :$slabel=~ /:(\d+)/ ? " (>=$1 bp)"
+	   :'';
 
-    if ( $revert_to_defaults ) {
-        $state->{features}{$slabel}{override_settings} = {};
-    }
+    $state->{features}{$slabel}{$override_key}    = {} if $revert_to_defaults;
+    $state->{features}{$label}{semantic_override} = {} if $revert_to_defaults;
 
-    my $override = $state->{features}{$slabel}{override_settings}||{};
+    my $override = $state->{features}{$slabel}{$override_key}||{};
+    my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 
+                  keys %{$state->{features}{$label}{semantic_override}};
+    my ($semantic_level)   = $slabel =~ /(\d+)$/;
+    $semantic_level      ||= 0;
+
     my $return_html = start_html();
 
-    my $title   = div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key);
+    my $title   = div({-class=>'config-title'},$key);
     my $dynamic = $self->tr('DYNAMIC_VALUE');
 
     my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 5;
@@ -1960,40 +1972,57 @@ sub track_config {
     my $glyph    = $data_source->semantic_fallback_setting( $label => 'glyph',          $length )   || 'box';
     my $stranded = $data_source->semantic_fallback_setting( $label => 'stranded',       $length);
     my $limit    = $data_source->semantic_fallback_setting( $label => 'feature_limit' , $length)    || 0;
+    my $summary_length  = $data_source->semantic_fallback_setting( $label => 'show summary' , $length) || 0;
+
+    # options for wiggle & xy plots
     my $min_score= $data_source->semantic_fallback_setting( $label => 'min_score' ,     $length);
     my $max_score= $data_source->semantic_fallback_setting( $label => 'max_score' ,     $length);
-    my $bicolor_pivot= $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,     $length);
-    my $graph_type = $data_source->semantic_fallback_setting( $label => 'graph_type' ,     $length);
-
     $min_score = $dynamic unless defined $min_score;
     $max_score = $dynamic unless defined $max_score;
 
+    my $bicolor_pivot= $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,     $length);
+    my $graph_type = $data_source->semantic_fallback_setting( $label => 'graph_type' ,     $length);
 
-    my @glyph_select = shellwords(
-        $data_source->semantic_fallback_setting( $label => 'glyph select', $length )
-	);
+    # options for wiggle_whiskers
+    my $max_color   = $data_source->semantic_fallback_setting( $label => 'max_color' ,   $length);
+    my $mean_color  = $data_source->semantic_fallback_setting( $label => 'mean_color' ,  $length);
+    my $stdev_color = $data_source->semantic_fallback_setting( $label => 'stdev_color' , $length);
+
+    my @glyph_select;
+
+    if ($summary_mode) {
+	$glyph        = $override->{glyph} || 'wiggle_density';
+	@glyph_select = qw(wiggle_xyplot wiggle_density wiggle_whiskers);
+    } else {
+	@glyph_select = shellwords(
+	    $data_source->semantic_fallback_setting( $label => 'glyph select', $length )
+	    );
+	unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
+    }
 
     my $db           = $data_source->open_database($label,$length);
     my $quantitative = $glyph =~ /wiggle/ || ref($db) =~ /bigwig/i;
 
-    @glyph_select = $quantitative ? qw(wiggle_xyplot wiggle_density wiggle_box wiggle_whiskers)
-                                  : qw(arrow anchored_arrow box crossbox dashed_line diamond 
-                                         dna dot dumbbell ellipse ex gene line primers saw_teeth segments 
+    unless (@glyph_select) { # reasonable defaults
+	@glyph_select = $quantitative ? qw(wiggle_xyplot wiggle_density wiggle_box wiggle_whiskers)
+	                              : qw(arrow anchored_arrow box crossbox dashed_line diamond 
+                                         dna dot dumbbell ellipse gene line primers saw_teeth segments 
                                          span splice_site translation transcript triangle
                                          two_bolts wave) unless @glyph_select;
-    unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
-
+    }
 
 
     my %glyphs       = map { $_ => 1 } ( $glyph, @glyph_select );
     my @all_glyphs   = sort keys %glyphs;
+    my $g = $override->{'glyph'} || $glyph;
 
     my $url = url( -absolute => 1, -path => 1 );
+    my $mode = $summary_mode ? 'summary' : 'normal';
     my $reset_js = <<END;
 new Ajax.Request('$url',
                   { method: 'get',
                     asynchronous: false,
-                    parameters: 'action=configure_track&track=$label&track_defaults=1',
+                    parameters: 'action=configure_track&track=$label&track_defaults=1;mode=$mode',
                     onSuccess: function(t) { document.getElementById('contents').innerHTML=t.responseText },
                     onFailure: function(t) { alert('AJAX Failure! '+t.statusText)}
                   }
@@ -2021,7 +2050,43 @@ END
 		    ),
         );
 
-    push @rows,TR( th( { -align => 'right' }, $self->tr('Packing') ),
+    my $glyph_script = <<END;
+var f=\$\$('tr.xyplot');
+if (this.value.match(/xyplot|density/)){
+   f.each(function(a){a.show()});
+   \$('conf_bicolor_pivot').onchange();
+} else {
+   f.each(function(a){a.hide()});
+}
+f = \$\$('tr.wiggle_whiskers');
+if (this.value.match(/whiskers/)){
+   f.each(function(a){a.show()});
+   \$('bgcolor_picker').hide();
+} else {
+   f.each(function(a){a.hide()});
+   \$('bgcolor_picker').show();
+}
+if (this.value.match(/xyplot|density|whiskers|wiggle/)) {
+  \$('packing').hide()
+} else {
+  \$('packing').show();
+}
+END
+    push @rows,TR( th( { -align => 'right' }, $self->tr('GLYPH') ),
+		   td( $picker->popup_menu(
+			   -name    => 'conf_glyph',
+			   -values  => \@all_glyphs,
+			   -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
+			   -current => $override->{'glyph'},
+			   -scripts => {-onChange => $glyph_script}
+		       )
+		   )
+        );
+
+    push @rows,TR( {-id    => 'packing',
+		    -style => !$quantitative ? 'display:table-row' : 'display:none'
+		   },
+		   th( { -align => 'right' }, $self->tr('Packing') ),
 		   td( popup_menu(
 			   -name     => 'format_option',
 			   -values   => [ 0 .. 3 ],
@@ -2037,26 +2102,8 @@ END
 		   )
         );
 
-    my $glyph_script = <<END;
-var f=\$\$('tr.xyplot');
-if (this.value.match(/xyplot/)){
-   f.each(function(a){a.show()});
-} else {
-   f.each(function(a){a.hide()});
-}
-END
-    push @rows,TR( th( { -align => 'right' }, $self->tr('GLYPH') ),
-		   td( $picker->popup_menu(
-			   -name    => 'conf_glyph',
-			   -values  => \@all_glyphs,
-			   -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
-			   -current => $override->{'glyph'},
-			   -scripts => {-onChange => $glyph_script}
-		       )
-		   )
-        );
-
-    push @rows,TR({-class=>'xyplot',-style=>$glyph=~/xyplot/ ? 'display:table-row' : 'display:none'},
+    push @rows,TR({-class=>'xyplot',
+		   -style=>$g=~/xyplot/ ? 'display:table-row' : 'display:none'},
 		  th( { -align => 'right' }, 'xyplot subtype' ),
 		  td( $picker->popup_menu(
 			  -name    => 'conf_graph_type',
@@ -2067,7 +2114,10 @@ END
 		  )
         );
 
-    push @rows,TR( th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
+    push @rows,TR( { -id    => 'bgcolor_picker',
+		     -style => $g =~ /whisker/ ? 'display:none' : 'display:table-row'
+		   },
+		   th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_bgcolor',
 			   $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
@@ -2085,7 +2135,12 @@ END
 		   )
         ) if !$quantitative;
 
-    my $p = $override->{bicolor_pivot} || $bicolor_pivot;
+    #######################
+    # bicolor pivot stuff
+    #######################
+    my $p = $override->{bicolor_pivot} || $bicolor_pivot || 'none';
+    my $has_pivot = $g =~ /wiggle_xyplot|wiggle_density|xyplot/;
+
     my $pivot_script = <<END;
 var e=\$('switch_point_other');
 var f=\$\$('tr.switch_point_color');
@@ -2093,35 +2148,40 @@ if (this.value=='value'){
     e.show()
 } else{
     e.hide();
-    if (this.value=='none') {
-	f.each(function(a){a.hide()});
-    } else {
-	f.each(function(a){a.show()});
-    }
+}
+if (this.value=='none') {
+    f.each(function(a){a.hide()});
+} else {
+    f.each(function(a){a.show()});
 }
 END
     ;
 
-    push @rows,TR( th( { -align => 'right' }, 'Switch colors when values cross' ),
+     push @rows,TR( {-class=>'xyplot',
+	 	     -style =>  $has_pivot? 'display:table-row' : 'display:none'},
+                   th( { -align => 'right'}, 'Switch colors when values cross' ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_bicolor_pivot',
 			   -values  => [qw(none zero mean value)],
 			   -labels => {value => 'value entered below'},
 			   -default => $bicolor_pivot,
 			   -current => $p =~ /^[\d.-eE]+$/ ? 'value' : $p,
-			   -scripts => {-onChange => $pivot_script}
+			   -scripts => {-onChange => $pivot_script,-id=>'conf_bicolor_pivot'}
 		       )
 		   )
         ) if $quantitative;
 
     my $pv    = $p =~ /^[\d.-eE]+$/ ? $p : 0.0;
-    push @rows,TR({-id=>'switch_point_other',-style=>$p!~/mean|zero|none/ ? 'display:table-row' : 'display:none'},
+    push @rows,TR({-class =>'xyplot ',
+		   -id=>'switch_point_other',
+		   -style=>$has_pivot && $p!~/mean|zero|none/ ? 'display:table-row' : 'display:none'},
 		  th( {-align => 'right' },'Switch point value'),
-                  td( textfield(-name  => 'conf_bicolor_pivot_value',
+                  td( textfield(-name  => 'bicolor_pivot_value',
 				-value => $pv))) if $quantitative;
     
 
-    push @rows,TR({-class=>'switch_point_color', -style=>$p eq 'none' ? 'display:none': 'display:table-row'},
+    push @rows,TR({-class=>'switch_point_color xyplot', 
+		   -style=>$has_pivot && $p ne 'none' ? 'display:table-row' : 'display:none'},
 		  th( { -align => 'right' }, 'Color above switch point' ),
 		   td( $picker->color_pick(
 			   'conf_pos_color',
@@ -2131,7 +2191,8 @@ END
 		   )
         ) if $quantitative;
 
-    push @rows,TR( {-class=>'switch_point_color', -style=>$p eq 'none' ? 'display:none': 'display:table-row'},
+    push @rows,TR( {-class=>'switch_point_color xyplot', 
+		    -style=>$has_pivot && $p ne 'none' ? 'display:table-row' : 'display:none'},
 		   th( { -align => 'right' }, 'Color below switch point' ),
 		   td( $picker->color_pick(
 			   'conf_neg_color',
@@ -2142,6 +2203,42 @@ END
         ) if $quantitative;
 
 
+
+    #######################
+    # wiggle colors
+    #######################
+    push @rows,TR( {-class=>'wiggle_whiskers', 
+		    -style=>$g eq 'wiggle_whiskers' ? 'display:table-row' : 'display:none' },
+		   th( { -align => 'right' }, 'Color from 0 to mean value' ),
+		   td( $picker->color_pick(
+			   'conf_mean_color',
+			   $mean_color || 'black',
+			   $override->{'mean_color'}
+		       )
+		   )
+        ) if $quantitative;
+
+    push @rows,TR( {-class=>'wiggle_whiskers', 
+		    -style=>$g eq 'wiggle_whiskers' ? 'display:table-row' : 'display:none' },
+		   th( { -align => 'right' }, 'Color from mean to stdev value' ),
+		   td( $picker->color_pick(
+			   'conf_stdev_color',
+			   $stdev_color || 'grey',
+			   $override->{'stdev_color'}
+		       )
+		   )
+        ) if $quantitative;
+
+    push @rows,TR( {-class=>'wiggle_whiskers', 
+		    -style=>$g eq 'wiggle_whiskers' ? 'display:table-row' : 'display:none' },
+		   th( { -align => 'right' }, 'Color from stdev to max/min value' ),
+		   td( $picker->color_pick(
+			   'conf_max_color',
+			   $max_color || 'lightgrey',
+			   $override->{'max_color'}
+		       )
+		   )
+        ) if $quantitative;
 
     push @rows,TR( th( { -align => 'right' },'Minimum scale value'),
 		   td( textfield(-name  => 'conf_min_score',
@@ -2201,11 +2298,29 @@ END
 		   )
         ) if !$quantitative;
 
+    push @rows,TR( th( { -align => 'right' }, 'Apply this config when region >='),
+		   td(textfield(
+			  -name    => 'apply_semantic',
+			  -override=> 1,
+			  -value   => $semantic_override||$semantic_level),' bp',
+		      hidden(-name=>'delete_semantic',-value=>$semantic_override)
+		      ),
+	) unless $summary_mode;
+
+    push @rows,TR( th( { -align => 'right' }, 'Summary mode when region >='),
+		   td(textfield(
+			  -name    => 'summary_mode',
+			  -override=> 1,
+			  -value   => $state->{features}{$label}{'override_settings'}{'show summary'} 
+			  || $summary_length),' bp'
+		      )
+	) if $can_summarize && $summary_length;
+
     my $submit_script = <<END;
 Element.extend(this);
 var ancestors    = this.ancestors();
 var form_element = ancestors.find(function(el) {return el.nodeName=='FORM'; });
-Controller.reconfigure_track('$label',form_element,'$slabel')
+Controller.reconfigure_track('$label',form_element,'$slabel','$mode')
 END
 
     push @rows,TR(td({-colspan=>2},
@@ -2494,11 +2609,6 @@ sub toggle_section {
   my ($name,$section_title,@section_body) = @_;
 
   my $visible = $config{on};
-
-  # IE hack -- no longer needed?
-  # my $agent      = CGI->user_agent || '';
-  # my $ie         = $agent =~ /MSIE/;
-  # $config{tight} = undef if $ie;
 
   my $buttons = $self->globals->button_url;
   my $plus  = "$buttons/plus.png";

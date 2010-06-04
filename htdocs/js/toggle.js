@@ -13,10 +13,14 @@ function setVisState (element_name,is_visible) {
 
 function checkSummaries() {
   var sections = $('trackform').select("div.searchbody > div");
+  var text;
   for(i = 0; i < sections.length; i++) {
     var section_name = sections[i].select("div.el_visible > div > span")[0].getAttribute("id");
-    if(sections[i].select("div.el_visible")[0].visible() == false)
-      summarizeTracks(section_name); 
+    text = "";
+    if(sections[i].select("div.el_visible")[0].visible() == false) {
+      summarizeTracks(section_name);
+      text += section_name + " updated.";
+    alert("(" + i + " of " + sections.length + ") " + text);
   }
 }
 
@@ -46,7 +50,6 @@ function summarizeTracks(section_name) {
       tracks.push(track_name);
     }
   }
-  //alert("Here is some shit: " + $(section_name).select('span td'));
   
   // If the number of tracks isn't more than the maximum, change the max to the number of tracks.
   if (tracks.length < max_track_number)

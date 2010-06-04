@@ -16,11 +16,8 @@ function checkSummaries() {
   var text;
   for(i = 0; i < sections.length; i++) {
     var section_name = sections[i].select("div.el_visible > div > span")[0].getAttribute("id");
-    text = "";
     if(sections[i].select("div.el_visible")[0].visible() == false) {
       summarizeTracks(section_name);
-      text += section_name + " updated.";
-    alert("(" + i + " of " + sections.length + ") " + text);
   }
 }
 

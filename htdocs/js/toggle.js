@@ -13,10 +13,11 @@ function setVisState (element_name,is_visible) {
 
 function checkSummaries() {
   var sections = $('trackform').select("div.searchbody > div");
-  for(i = 0; i < sections.length; i++) {
-    var section_name = sections[i].select("div.el_visible > div > span")[0].getAttribute("id");
-    if(sections[i].select("div.el_visible")[0].visible() == false)
-      //summarizeTracks(section_name);
+  for(j = 0; j < sections.length; j++) {
+    var section_name = sections[j].select("div.el_visible > div > span")[0].getAttribute("id");
+    if(sections[j].select("div.el_visible")[0].visible() == false) {
+      summarizeTracks(section_name);
+    }
   }
 }
 

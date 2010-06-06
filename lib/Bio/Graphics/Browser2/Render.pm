@@ -2005,34 +2005,43 @@ sub reconfigure_track {
     my $self  = shift;
     my $label = shift;
 
-    my $state = $self->state();
+    my $state  = $self->state();
+    my $source = $self->data_source;
+
     $state->{features}{$label}{visible}          = param('show_track') ? 1 : 0;
     $state->{features}{$label}{options}          = param('format_option');
     my $dynamic = $self->tr('DYNAMIC_VALUE');
     my $mode    = param('mode');
 
+    my $length          = param('length')          || 0;
     my $semantic_len    = param('apply_semantic')  || 0;
     my $delete_semantic = param('delete_semantic');
 
     $state->{features}{$label}{summary_mode_len} = param('summary_mode') 
 	if param('summary_mode');
 
+    delete $state->{features}{$label}{semantic_override}{$delete_semantic} if $delete_semantic;
+
     my $o = $mode eq 'summary' ? $state->{features}{$label}{summary_override}                ={}
                                : $state->{features}{$label}{semantic_override}{$semantic_len}={};
-    delete $state->{features}{$label}{semantic_override}{$delete_semantic} if $delete_semantic;
 
     my $glyph = param('conf_glyph') || '';
   
     for my $s ( grep {/^conf_/} param()) {
-        my $value = param($s);
+        my @values = param($s);
+	my $value  = $values[-1]; # last one wins
 	$s =~ s/^conf_//;
 	next unless defined $value;
+	    
+	my $configured_value = $source->semantic_fallback_setting($label=>$s,$semantic_len);
+
 	if ($value eq $dynamic) {
 	    delete $o->{$s};
 	} elsif ($s eq 'bicolor_pivot' && $value eq 'value') {
-	    $o->{$s} = param('bicolor_pivot_value');
+	    my $bp = param('bicolor_pivot_value');
+	    $o->{$s} =    $bp if !defined $configured_value or $bp != $configured_value;
 	} else {
-	    $o->{$s} = $value;
+	    $o->{$s} = $value if !defined $configured_value or $value ne $configured_value;
 	    if ($glyph eq 'wiggle_whiskers') {# workarounds for whisker options
 		$o->{"${s}_neg"}  = $value if $s =~ /^(mean_color|stdev_color)/; 
 		$o->{min_color}   = $value if $s eq 'max_color';

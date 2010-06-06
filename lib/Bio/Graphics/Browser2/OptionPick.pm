@@ -29,14 +29,23 @@ please see DISCLAIMER.txt for disclaimers of warranty.
 
 
 use strict;
+use Bio::Graphics::Panel;
+use Bio::Graphics::Glyph::heat_map;
 
-my @GRADIENT =
-  ('white','#D3D3D3','#A9A9A9','gray','black','red','yellow','blue','green','orange','magenta','cyan',
-   '#FFCCCC','#FFAAAA','#FF9999','#EE7777','#EE5555','#EE3333','#EE2222','#DD0000','#DD2222','#EE3344','#EE5566',
-   '#EE6699','#EE88BB','#EEAADD','#EEBBFF','#EEBBFF','#EEBBFF','#DDBBFF','#DDBBFF','#CCBBFF','#CCCCFF','#CCCCFF',
-   '#AAAAEE','#8899EE','#7777DD','#5566CC','#3355BB','#2233BB','#0022AA','#2244AA','#3366BB','#5588CC','#7799CC',
-   '#88BBDD','#AADDDD','#CCFFEE','#BBFFCC','#AAFFAA','#99EE88','#77EE66','#66EE44','#55EE22','#44EE00','#66EE11',
-   '#77EE11','#99EE22','#AAEE22','#CCEE33','#DDEE33','#FFFF44');
+# my @GRADIENT =
+#   ('white','#D3D3D3','#A9A9A9','gray','black','red','yellow','blue','green','orange','magenta','cyan',
+#    '#FFCCCC','#FFAAAA','#FF9999','#EE7777','#EE5555','#EE3333','#EE2222','#DD0000','#DD2222','#EE3344','#EE5566',
+#    '#EE6699','#EE88BB','#EEAADD','#EEBBFF','#EEBBFF','#EEBBFF','#DDBBFF','#DDBBFF','#CCBBFF','#CCCCFF','#CCCCFF',
+#    '#AAAAEE','#8899EE','#7777DD','#5566CC','#3355BB','#2233BB','#0022AA','#2244AA','#3366BB','#5588CC','#7799CC',
+#    '#88BBDD','#AADDDD','#CCFFEE','#BBFFCC','#AAFFAA','#99EE88','#77EE66','#66EE44','#55EE22','#44EE00','#66EE11',
+#    '#77EE11','#99EE22','#AAEE22','#CCEE33','#DDEE33','#FFFF44');
+my $heatmap = 'Bio::Graphics::Glyph::heat_map';
+my $bgp     = 'Bio::Graphics::Panel';
+
+my @GRADIENT = sort {my ($h1,$s1,$v1) = $heatmap->RGBtoHSV($bgp->color_name_to_rgb($a));
+		     my ($h2,$s2,$v2) = $heatmap->RGBtoHSV($bgp->color_name_to_rgb($b));
+		     $h1<=>$h2 || $s1<=>$s2 || $v1<=>$v2;
+                    } grep {!/gradient/} Bio::Graphics::Panel->color_names;
 my %LABELS = (
 	      '#D3D3D3' => 'light gray',
 	      'gray'    => 'dark gray',
@@ -68,9 +77,13 @@ sub color_pick {
 
   $current_color ||= $default_color;
 
+  my ($r,$g,$b)   = Bio::Graphics::Panel->color_name_to_rgb($current_color);
+  my $avg         = ($r+$g+$b)/3;
+  my $fontcolor   = $avg > 128 ? 'black' : 'white';
+  
   my $menu = qq(<select name="$form_name"
-                style="background-color:$current_color"
-                onChange="this.style.background=this.options[this.selectedIndex].value">\n);
+                style="background-color:$current_color;color:$fontcolor"
+                onChange="this.style.background=this.options[this.selectedIndex].value;this.style.color=this.options[this.selectedIndex].style.color">\n);
 
   my $default = $self->translate('DEFAULT');
 
@@ -82,8 +95,10 @@ sub color_pick {
   for my $color (@GRADIENT) {
     next if $color eq $default_color;
     my $selected    = $color eq $current_color ? 'selected' : '';
-    my $description = $LABELS{$color} || ($color =~ /^\#/ ? 'gradient'.$index++ : $color);
-    my $fontcolor   = $color eq 'white' ? 'black' : 'white';
+    my $description  = $color;
+    ($r,$g,$b)   = Bio::Graphics::Panel->color_name_to_rgb($color);
+    $avg         = ($r+$g+$b)/3;
+    $fontcolor   = $avg > 128 ? 'black' : 'white';
     $menu .= qq(<option value="$color" bgcolor="$color" style="background-color:$color;color:$fontcolor"$selected>$description</option>\n);
   }
   $menu .= "</select\n>";

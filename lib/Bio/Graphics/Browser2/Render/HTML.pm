@@ -1950,7 +1950,10 @@ sub track_config {
     my $state       = $self->state();
     my $data_source = $self->data_source();
 
-    my $length      = $self->thin_segment->length;
+    my $seg      = $label =~ /:overview$/ ? $self->thin_whole_segment
+	          :$label =~ /:region$/   ? $self->thin_region_segment
+                  :$self->thin_segment;
+    my $length = eval{$seg->length}||0;
 
     eval 'require Bio::Graphics::Browser2::OptionPick; 1'
         unless Bio::Graphics::Browser2::OptionPick->can('new');
@@ -1995,6 +1998,7 @@ sub track_config {
     my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
     my $glyph    = $data_source->semantic_fallback_setting( $label => 'glyph',          $length )   || 'box';
     my $stranded = $data_source->semantic_fallback_setting( $label => 'stranded',       $length);
+    my $variance_band = $data_source->semantic_fallback_setting( $label => 'variance_band',$length);
     my $limit    = $data_source->semantic_fallback_setting( $label => 'feature_limit' , $length)    || 0;
     my $summary_length  = $data_source->semantic_fallback_setting( $label => 'show summary' , $length) || 0;
 
@@ -2135,7 +2139,7 @@ END
 		  th( { -align => 'right' }, 'xyplot subtype' ),
 		  td( $picker->popup_menu(
 			  -name    => 'conf_graph_type',
-			  -values  => [qw(histogram boxes line points linepoints)],
+			  -values  => [qw(histogram line points linepoints)],
 			  -default => ref $graph_type eq 'CODE' ? $dynamic : $graph_type,
 			  -current => $override->{'graph_type'},
 		      )
@@ -2151,20 +2155,6 @@ END
 			  -current => $override->{'graph_type'},
 		      )
 		  )
-        );
-
-    push @rows,TR( { -id    => 'bgcolor_picker',
-		     -class => 'xyplot density features',
-		   },
-		   th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
-		   td( $picker->color_pick(
-			   'conf_bgcolor',
-			   $summary_mode ? 'black'
-                                         :
-			      $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
-			   $override->{'bgcolor'}
-		       )
-		   )
         );
 
     push @rows,TR( {-class=>'xyplot features'},
@@ -2193,8 +2183,10 @@ if (this.value=='value'){
 }
 if (this.value=='none') {
     f.each(function(a){a.hide()});
+    \$('bgcolor_picker').show();
 } else {
     f.each(function(a){a.show()});
+    \$('bgcolor_picker').hide();
 }
 END
     ;
@@ -2237,6 +2229,20 @@ END
 			   'conf_neg_color',
 			   $data_source->semantic_fallback_setting( $label => 'neg_color', $length ),
 			   $override->{'neg_color'}
+		       )
+		   )
+        );
+
+    push @rows,TR( { -id    => 'bgcolor_picker',
+		     -class => 'xyplot density features',
+		   },
+		   th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
+		   td( $picker->color_pick(
+			   'conf_bgcolor',
+			   $summary_mode ? 'black'
+                                         :
+			      $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
+			   $override->{'bgcolor'}
 		       )
 		   )
         );
@@ -2288,6 +2294,22 @@ END
 				  -value => defined $override->{max_score} ? $override->{max_score}
 				  : $max_score)));
 
+    push @rows,TR({-class=>'xyplot'},
+		  th( { -align => 'right' }, 'Show variance band'),
+		  td(
+		      hidden(-name=>'conf_variance_band',-value=>0),
+		      checkbox(
+			  -name    => 'conf_variance_band',
+			  -override=> 1,
+			  -value   => 1,
+			  -checked => defined $override->{'variance_band'} 
+			  ? $override->{'variance_band'} 
+			  : $variance_band,
+			  -label   => '',
+		      )
+		  )
+        );
+
     push @rows,TR( {-class=>'features'},
 		   th( { -align => 'right' }, $self->tr('LINEWIDTH') ),
 		   td( $picker->popup_menu(
@@ -2329,15 +2351,16 @@ END
     
     push @rows,TR({-class=>'features'},
 		  th( { -align => 'right' }, $self->tr('STRANDED') ),
-		  td(checkbox(
-			 -name    => 'conf_stranded',
-			 -override=> 1,
+		  td( hidden(-name=>'conf_stranded',-value=>0),
+		      checkbox(
+			  -name    => 'conf_stranded',
+			  -override=> 1,
 			 -value   => 1,
-			 -checked => defined $override->{'stranded'} 
-			 ? $override->{'stranded'} 
-			 : $stranded,
-			 -label   => '',
-		     )
+			  -checked => defined $override->{'stranded'} 
+			  ? $override->{'stranded'} 
+			  : $stranded,
+			  -label   => '',
+		      )
 		  )
         );
 
@@ -2387,6 +2410,7 @@ END
     );
 
     $form .= table({-id=>'config_table',-border => 0 },@rows);
+    $form .= hidden(-name=>'length',-value=>$length);
     $form .= end_form();
 
     $return_html

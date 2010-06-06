@@ -13,6 +13,7 @@
 	  sortable tables of potential subtracks. The old "select" option is still
 	  supported, but deprecated.
 	* Added "kewl" blinds down effect when changing tabs.
+	* Greatly improved track configuration.
 	* From E.O. Stinson: added fixes for embedding GBrowse in other web pages.
 	* From E.O. Stinson: Added support for regex-style datasources that let you define
 	  one data source that will pass different options to a script-based config depending

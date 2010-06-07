@@ -160,7 +160,7 @@ sub print_top {
 	      -encoding=>$CONFIG->tr('CHARSET'),
 	     );
   push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;
-  push @args,(-gbrowse_images => $CONFIG->globals->buttons_url || '/gbrowse2/images/buttons');
+  push @args,(-gbrowse_images => $CONFIG->globals->button_url  || '/gbrowse2/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->globals->js_url      || '/gbrowse2/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;
 

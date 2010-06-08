@@ -335,6 +335,7 @@ htdocs/js/prototype.js
 htdocs/js/regionSelect.js
 htdocs/js/rubber.js
 htdocs/js/scriptaculous.js
+htdocs/js/scrollfix.js
 htdocs/js/slider.js
 htdocs/js/sound.js
 htdocs/js/subtracktable.css

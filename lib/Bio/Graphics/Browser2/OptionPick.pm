@@ -42,15 +42,14 @@ use Bio::Graphics::Glyph::heat_map;
 my $heatmap = 'Bio::Graphics::Glyph::heat_map';
 my $bgp     = 'Bio::Graphics::Panel';
 
-my @GRADIENT = sort {my ($h1,$s1,$v1) = $heatmap->RGBtoHSV($bgp->color_name_to_rgb($a));
-		     my ($h2,$s2,$v2) = $heatmap->RGBtoHSV($bgp->color_name_to_rgb($b));
-		     $h1<=>$h2 || $s1<=>$s2 || $v1<=>$v2;
-                    } grep {!/gradient/} Bio::Graphics::Panel->color_names;
-my %LABELS = (
-	      '#D3D3D3' => 'light gray',
-	      'gray'    => 'dark gray',
-	      '#A9A9A9' => 'gray',
-	     );
+my @GRADIENT = sort {
+    my ($r1,$g1,$b1) = $bgp->color_name_to_rgb($a);
+    my ($r2,$g2,$b2) = $bgp->color_name_to_rgb($b);
+    my ($h1,$s1,$v1) = $heatmap->RGBtoHSV($r1,$g1,$b1);
+    my ($h2,$s2,$v2) = $heatmap->RGBtoHSV($r2,$g2,$b2);
+    return $h1<=>$h2 || $s1<=>$s2 || $v1<=>$v2;
+} grep {!/gradient/} Bio::Graphics::Panel->color_names;
+my %LABELS = ();
 
 sub new {
   my $self   = shift;

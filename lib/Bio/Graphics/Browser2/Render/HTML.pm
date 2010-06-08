@@ -1381,7 +1381,7 @@ sub list_userdata {
 		-onClick         => "Controller.edit_upload_description('$name',this)",
 		-contentEditable => 'true',
 	    },
-	    $userdata->description($_) || 'Click to add a description'
+	    $userdata->description($_) || $self->tr('ADD_DESCRIPTION')
 	    );
 	my @track_labels        = $userdata->labels($name);
 	my $track_labels        = join '+',map {CGI::escape($_)} @track_labels;
@@ -1407,7 +1407,7 @@ sub list_userdata {
 			     )
 		      } @source_files]),
 		  TR(th({-align=>'left'},
-			(a({-href=>"?userdata_download=conf;track=$name"},'Configuration'))),
+			(a({-href=>"?userdata_download=conf;track=$name"},$self->tr('CONFIGURATION')))),
 		     td(scalar localtime $conf_modified),
 		     td("$conf_size bytes"),
 		     td(a({-href    => "javascript:void(0)",
@@ -2136,7 +2136,7 @@ END
 
     push @rows,TR({-class=>'xyplot',
 		   -style=>$g=~/xyplot/ ? 'display:table-row' : 'display:none'},
-		  th( { -align => 'right' }, 'xyplot subtype' ),
+		  th( { -align => 'right' }, $self->tr('XYPLOT_TYPE')),
 		  td( $picker->popup_menu(
 			  -name    => 'conf_graph_type',
 			  -values  => [qw(histogram line points linepoints)],
@@ -2147,7 +2147,7 @@ END
         );
 
     push @rows,TR({-class=>'whiskers'},
-		  th( { -align => 'right' }, 'whiskers subtype' ),
+		  th( { -align => 'right' }, $self->tr('WHISKERS_TYPE')),
 		  td( $picker->popup_menu(
 			  -name    => 'conf_graph_type_whiskers',
 			  -values  => [qw(whiskers boxes)],
@@ -2193,7 +2193,7 @@ END
 
      push @rows,TR( {-class=>'xyplot density',
 		     -id   =>'bicolor_pivot_id'},
-                   th( { -align => 'right'}, 'Switch colors when values cross' ),
+                   th( { -align => 'right'}, $self->tr('BICOLOR_PIVOT')),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_bicolor_pivot',
 			   -values  => [qw(none zero mean value)],
@@ -2208,13 +2208,13 @@ END
     my $pv    = $p =~ /^[\d.-eE]+$/ ? $p : 0.0;
     push @rows,TR({-class =>'xyplot density',
 		   -id=>'switch_point_other'},
-		  th( {-align => 'right' },'Switch point value'),
+		  th( {-align => 'right' },$self->tr('BICOLOR_PIVOT_VALUE')),
                   td( textfield(-name  => 'bicolor_pivot_value',
 				-value => $pv)));
     
 
     push @rows,TR({-class=>'switch_point_color xyplot density'}, 
-		  th( { -align => 'right' }, 'Color above switch point' ),
+		  th( { -align => 'right' }, $self->tr('BICOLOR_PIVOT_POS_COLOR')),
 		   td( $picker->color_pick(
 			   'conf_pos_color',
 			   $data_source->semantic_fallback_setting( $label => 'pos_color', $length ),
@@ -2224,7 +2224,7 @@ END
         );
 
     push @rows,TR( {-class=>'switch_point_color xyplot density'}, 
-		   th( { -align => 'right' }, 'Color below switch point' ),
+		   th( { -align => 'right' }, $self->tr('BICOLOR_PIVOT_NEG_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_neg_color',
 			   $data_source->semantic_fallback_setting( $label => 'neg_color', $length ),
@@ -2253,7 +2253,7 @@ END
     # wiggle colors
     #######################
     push @rows,TR( {-class=>'whiskers'}, 
-		   th( { -align => 'right' }, 'Color from 0 to mean value' ),
+		   th( { -align => 'right' }, $self->tr('WHISKER_MEAN_COLOR')),
 		   td( $picker->color_pick(
 			   'conf_mean_color',
 			   $mean_color || 'black',
@@ -2263,7 +2263,7 @@ END
         );
 
     push @rows,TR( {-class=>'whiskers'}, 
-		   th( { -align => 'right' }, 'Color from mean to stdev value' ),
+		   th( { -align => 'right' }, $self->tr('WHISKER_STDEV_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_stdev_color',
 			   $stdev_color || 'grey',
@@ -2273,7 +2273,7 @@ END
         );
 
     push @rows,TR( {-class=>'whiskers'}, 
-		   th( { -align => 'right' }, 'Color from stdev to max/min value' ),
+		   th( { -align => 'right' }, $self->tr('WHISKER_MAX_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_max_color',
 			   $max_color || 'lightgrey',
@@ -2283,19 +2283,19 @@ END
         );
 
     push @rows,TR( {-class=>'xyplot density whiskers'},
-		   th( { -align => 'right' },'Minimum scale value'),
+		   th( { -align => 'right' },$self->tr('SCALE_MIN')),
 		   td( textfield(-name  => 'conf_min_score',
 				 -value => defined $override->{min_score} ? $override->{min_score}
 				                                          : $summary_mode ? 0 : $min_score))) if $quantitative;
 
     push @rows,TR(  {-class=>'xyplot density whiskers'},
-		    th( { -align => 'right' },'Maximum scale value'),
+		    th( { -align => 'right' },$self->tr('SCALE_MAX')),
 		    td( textfield(-name  => 'conf_max_score',
 				  -value => defined $override->{max_score} ? $override->{max_score}
 				  : $max_score)));
 
     push @rows,TR({-class=>'xyplot'},
-		  th( { -align => 'right' }, 'Show variance band'),
+		  th( { -align => 'right' }, $self->tr('SHOW_VARIANCE')),
 		  td(
 		      hidden(-name=>'conf_variance_band',-value=>0),
 		      checkbox(
@@ -2365,7 +2365,7 @@ END
         );
 
     push @rows,TR({-class=>'general'},
-		  th( { -align => 'right' }, 'Apply this config when region >='),
+		  th( { -align => 'right' }, $self->tr('APPLY_CONFIG')),
 		  td(textfield(
 			 -name    => 'apply_semantic',
 			 -override=> 1,
@@ -2375,7 +2375,7 @@ END
 		   ) unless $summary_mode;
 
     push @rows,TR({-class=>'general'},
-		  th( { -align => 'right' }, 'Show summary when region >='),
+		  th( { -align => 'right' }, $self->tr('SHOW_SUMMARY')),
 		  td(textfield(
 			 -name    => 'summary_mode',
 			 -override=> 1,

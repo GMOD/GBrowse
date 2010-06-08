@@ -446,6 +446,10 @@ END
 
  ADD_YOUR_OWN_TRACKS => 'Add custom tracks',
 
+ ADD_DESCRIPTION    => 'Click to add a description',
+
+ CONFIGURATION     => 'Configuration',
+
  INVALID_SOURCE    => 'The source named %s is invalid.',
 
  NO_SEGMENT        => 'No genomic region selected.',
@@ -459,6 +463,34 @@ END
  PACKING          => 'Packing',
 
  GLYPH            => 'Shape',
+
+ XYPLOT_TYPE      => 'xyplot subtype',
+
+ WHISKERS_TYPE      => 'whiskers subtype',
+
+ BICOLOR_PIVOT    => 'Switch colors when value crosses',
+
+ BICOLOR_PIVOT_VAL    => 'Switch point value',
+
+ BICOLOR_PIVOT_POS_COLOR    => 'Color above switch point',
+
+ BICOLOR_PIVOT_NEG_COLOR    => 'Color below switch point',
+
+ WHISKER_MEAN_COLOR    => 'Color from 0 to mean value',
+
+ WHISKER_STDEV_COLOR    => 'Color from mean to stdev value',
+
+ WHISKER_MAX_COLOR    => 'Color from stdev to min/max value',
+
+ SCALE_MIN        => 'Minimum scale value',
+
+ SCALE_MAX        => 'Maximum scale value',
+
+ SHOW_VARIANCE    => 'Show variance band',
+
+ APPLY_CONFIG     => 'Apply this config when region >=',
+
+ SHOW_SUMMARY     => 'Show summary when region >=',
 
  LINEWIDTH        => 'Line width',
 

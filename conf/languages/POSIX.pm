@@ -470,7 +470,7 @@ END
 
  BICOLOR_PIVOT    => 'Switch colors when value crosses',
 
- BICOLOR_PIVOT_VAL    => 'Switch point value',
+ BICOLOR_PIVOT_VALUE    => 'Switch point value',
 
  BICOLOR_PIVOT_POS_COLOR    => 'Color above switch point',
 

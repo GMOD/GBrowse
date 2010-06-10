@@ -2013,7 +2013,7 @@ sub reconfigure_track {
     my $dynamic = $self->tr('DYNAMIC_VALUE');
     my $mode    = param('mode');
 
-    my $length          = param('length')          || 0;
+    my $length          = param('segment_length')  || 0;
     my $semantic_len    = param('apply_semantic')  || 0;
     my $delete_semantic = param('delete_semantic');
 
@@ -2032,7 +2032,7 @@ sub reconfigure_track {
 	my $value  = $values[-1]; # last one wins
 	$s =~ s/^conf_//;
 	next unless defined $value;
-	    
+
 	my $configured_value = $source->semantic_fallback_setting($label=>$s,$semantic_len);
 
 	if ($value eq $dynamic) {

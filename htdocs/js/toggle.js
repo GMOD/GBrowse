@@ -23,7 +23,8 @@ function checkSummaries() {
 
 // summarizeTracks mines the track options box for possible tracks and creates a shorter listing of them when the section is hidden.
 function summarizeTracks(section_name) {
-  // This is the maximum number of tracks we'll list. Anything more gets a "..."
+
+	   // This is the maximum number of tracks we'll list. Anything more gets a "..."
   var max_track_number = 5;
   
   // If the list is filled, clear it; if not, create it.

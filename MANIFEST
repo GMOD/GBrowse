@@ -343,6 +343,7 @@ htdocs/js/subtracktable.js
 htdocs/js/tabs.js
 htdocs/js/toggle.js
 htdocs/js/track.js
+htdocs/js/track_configure.js
 htdocs/js/unittest.js
 htdocs/js/x_cook.js
 htdocs/js/yahoo-dom-event.js

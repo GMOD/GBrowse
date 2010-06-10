@@ -335,6 +335,7 @@ sub render_html_head {
       GBox.js
       ajax_upload.js
       tabs.js
+      track_configure.js
       controller.js
     );
 
@@ -824,11 +825,10 @@ sub render_track_filter {
     my $name         = 'plugin:'.$plugin->name;
 
     return
- 	div({-id=>'track select'},
+ 	div({-id=>'track select',-style=>'padding-top:8px'},
 		start_form({-id      => 'track_filterform',
 			    -name    => 'configure_plugin',
 			    -onSubmit=> 'return false'}),
-	    br(),
 	    $form,
 	    button(
 		-name    => 'plugin_button',
@@ -850,7 +850,8 @@ sub render_toggle_track_table {
 
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
-							    style=>"text-indent:2em;padding-top:8px"},$self->render_track_filter($filter)));
+							    style=>"text-indent:2em;padding-top:8px"},
+							   $self->render_track_filter($filter)));
   }
   $html .= $self->toggle('Tracks',$self->render_track_table);
   $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));
@@ -925,11 +926,11 @@ sub render_track_table {
 
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
        my $escaped_label = CGI::escape($label);
-       $labels{$label} .= ' ['. a({-href=>'javascript:void(0)',
-				    -onMouseDown=>"GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
-				   },i($self->tr('SELECT_SUBTRACKS',$selected,$total))).']';
+       $labels{$label} .= ' ['. span({-class       =>'clickable',
+				      -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
+				      -onClick      => "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
+				     },i($self->tr('SELECT_SUBTRACKS',$selected,$total))).']';
    }
-
   }
    
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
@@ -1936,10 +1937,7 @@ sub source_menu {
 
 # This is the content of the popup balloon that describes the track and gives configuration settings
 
-# This is currently very hacky, hard to extend and needs to be generalized.
-# The concept that SHOULD be implemented is that each table row element has a series of classes
-# describing the contexts in which it should appear, and that popup menus that select various
-# glyphs should turn on and off the rows according to their classes.
+# This is currently somewhat hacky, hard to extend and needs to be generalized.
 # NOTE: to add new configuration rows, the name of the form element must begin with "conf_" and
 # the rest must correspond to a valid glyph option.
 sub track_config {
@@ -2084,26 +2082,6 @@ END
 		   ),
         );
 
-    my $glyph_script = <<END;
-var t   = \$('config_table');
-var all = t.select('tr').findAll(function(a){return !a.hasClassName('general')});
-all.each(function(a){a.hide()});
-
-if (this.value.match(/xyplot/)){
-   t.select('tr.xyplot').each(function(a){a.show()});
-   \$('conf_bicolor_pivot').onchange();
-}
-else if (this.value.match(/density/)){
-   t.select('tr.density').each(function(a){a.show()});
-   \$('conf_bicolor_pivot').onchange();
-}
-else if (this.value.match(/whiskers/)){
-   t.select('tr.whiskers').each(function(a){a.show()});
-}
-else {
-   t.select('tr.features').each(function(a){a.show()});
-}
-END
     push @rows,TR( {-class=>'general'},
 		   th( { -align => 'right' }, $self->tr('GLYPH') ),
 		   td( $picker->popup_menu(
@@ -2111,7 +2089,7 @@ END
 			   -values  => \@all_glyphs,
 			   -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
 			   -current => $override->{'glyph'},
-			   -scripts => {-id=>'glyph_picker_id',-onChange => $glyph_script}
+			   -scripts => {-id=>'glyph_picker_id',-onChange => 'track_configure.glyph_select($(\'config_table\'),this)'}
 		       )
 		   )
         );
@@ -2173,34 +2151,17 @@ END
     my $p = $override->{bicolor_pivot} || $bicolor_pivot || 'none';
     my $has_pivot = $g =~ /wiggle_xyplot|wiggle_density|xyplot/;
 
-    my $pivot_script = <<END;
-var e=\$('switch_point_other');
-var f=\$\$('tr.switch_point_color');
-if (this.value=='value'){
-    e.show()
-} else{
-    e.hide();
-}
-if (this.value=='none') {
-    f.each(function(a){a.hide()});
-    \$('bgcolor_picker').show();
-} else {
-    f.each(function(a){a.show()});
-    \$('bgcolor_picker').hide();
-}
-END
-    ;
-
-     push @rows,TR( {-class=>'xyplot density',
+    push @rows,TR( {-class=>'xyplot density',
 		     -id   =>'bicolor_pivot_id'},
                    th( { -align => 'right'}, $self->tr('BICOLOR_PIVOT')),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_bicolor_pivot',
 			   -values  => [qw(none zero mean value)],
-			   -labels => {value => 'value entered below'},
+			   -labels  => {value => 'value entered below'},
 			   -default => $bicolor_pivot,
 			   -current => $p =~ /^[\d.-eE]+$/ ? 'value' : $p,
-			   -scripts => {-onChange => $pivot_script,-id=>'conf_bicolor_pivot'}
+			   -scripts => {-onChange => 'track_configure.pivot_select(this)',
+					-id       => 'conf_bicolor_pivot'}
 		       )
 		   )
         );
@@ -2405,17 +2366,17 @@ END
 		     button(
 			 -name    => $self->tr('Change'),
 			 -onClick => $submit_script
-		     )
+		     ),
+		     hidden(-name=>'segment_length',-value=>$length),
 		  )
     );
 
     $form .= table({-id=>'config_table',-border => 0 },@rows);
-    $form .= hidden(-name=>'length',-value=>$length);
     $form .= end_form();
 
     $return_html
         .= table( TR( td( { -valign => 'top' }, [ $form ] ) ) );
-    $return_html .= script({-type=>'text/javascript'},"var g = \$('glyph_picker_id');g.onchange(g);");
+    $return_html .= script({-type=>'text/javascript'},"track_configure.glyph_select(\$('config_table'),\$('glyph_picker_id'))");
     $return_html .= end_html();
     return $return_html;
 }

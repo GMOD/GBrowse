@@ -1513,7 +1513,7 @@ sub add_features_to_track {
     $db2db{$db}  =  $db;  # cache database object
   }
 
-  my (%iterators,%iterator2dbid);
+  my (%iterators,%iterator2dbid,%is_summary);
   for my $db (keys %db2db) {
       my @labels           = keys %{$db2label{$db}};
 
@@ -1521,12 +1521,13 @@ sub add_features_to_track {
       for my $l (@labels) {
 	  my @types = $source->label2type($l,$length) or next;
 	  if ($source->show_summary($l,$length,$self->settings)) {
+	      $is_summary{$l}++;
 	      push @summary_types,@types;
 	  } else {
 	      push @full_types,@types;
 	  }
       }
-	  
+      
       warn "[$$] RenderPanels->get_iterator(@full_types)"  if DEBUG;
       warn "[$$] RenderPanels->get_summary_iterator(@summary_types)" if DEBUG;
       if (@summary_types && 
@@ -1568,7 +1569,8 @@ sub add_features_to_track {
 
 	  my $track = $tracks->{$l}  or next;
 	  
-	  my $stt = $self->subtrack_manager($l);
+	  my $stt        = $self->subtrack_manager($l);
+	  my $is_summary = $is_summary{$l};
 
 	  $filters->{$l}->($feature) or next if $filters->{$l};
 	  $feature_count{$l}++;
@@ -1611,15 +1613,13 @@ sub add_features_to_track {
 	      }
 	  }
 
-	  if ($stt && (my $id = $stt->feature_to_id_sub->($feature))) {
+	  if (!$is_summary && $stt && (my $id = $stt->feature_to_id_sub->($feature))) {
+	      my $label = $stt->id2label($id);
 	      $groups{$l}{$id} ||= Bio::Graphics::Feature->new(-type   => 'group',
-							       -name   => $id,
+							       -name   => $label,
 							       -start  => $segment->start,
 							       -end    => $segment->end,
 							       -seq_id => $segment->seq_id,
-#							       -strand => $feature->strand,
-#							       -source => $feature->source,
-#							       -method => $feature->method,
 		  );
 	      $groups{$l}{$id}->add_segment($feature);
 	      next;
@@ -1967,12 +1967,19 @@ sub create_track_args {
 			 -autoscale => 'local'
       );
   }
-
   my $hilite_callback = $args->{hilite_callback};
 
   my @default_args = (-glyph => 'generic');
   push @default_args,(-key   => $label)        unless $label =~ /^\w+:/;
   push @default_args,(-hilite => $hilite_callback) if $hilite_callback;
+
+  if ($self->subtrack_manager($label)) {
+      push @default_args,(-connector   => '');
+      my $is_quantitative = 
+	  $source->semantic_setting($label=>'glyph',$length) =~ /wiggle|xyplot|density|whisker/;
+      warn "$label => $is_quantitative";
+      push @default_args,(-label_group => !$is_quantitative || 0)
+  }
 
   if (my $stt = $self->subtrack_manager($label)) {
       push @default_args,(-sort_order => $stt->sort_feature_sub);
@@ -2013,6 +2020,8 @@ sub subtrack_manager {
     my $self = shift;
     my $label = shift;
     return $self->{_stt}{$label} if exists $self->{_stt}{$label};
+    return $self->{_stt}{$label} = undef
+	if $self->source->show_summary($label,$self->segment->length,$self->settings);
     return $self->{_stt}{$label} = Bio::Graphics::Browser2::Render->create_subtrack_manager($label,
 											    $self->source,
 											    $self->settings);

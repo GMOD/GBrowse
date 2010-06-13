@@ -65,12 +65,14 @@ sub elements {
     my $rows  = $self->rows;
     for my $r (@$rows) {
 	my @data   = @$r;
-	my @fields      = grep {!/^[=*]/}        @data;
+	my @fields      = grep {!/^[=*:]/}        @data;
 	my ($id)        = grep {length} map {/^=([\d\w]+)/ && $1 } @data;
+	my ($label)     = grep {length} map {/^:(.+)/      && $1 } @data;
 	my ($selected)  = grep {$_ eq '*'}       @data;
 	$id           ||= join ';',map {/^~(.+)/ ? $1 : $_} @fields;
 	$elements{$id} = { index    => $index++,
 			   selected => $selected,
+			   label    => $label || '',
 			   fields   => \@fields };
     }
     return $self->{_elements}=\%elements;
@@ -306,6 +308,13 @@ sub feature_to_id_sub {
     return $self->{_feature2id} = $as;
 }
 
+sub id2label {
+    my $self = shift;
+    my $element_id = shift;
+    my $e = $self->elements;
+    return $e->{$element_id}{label} || $element_id;
+}
+
 sub selected_ids {
     my $self = shift;
     my $elements = $self->elements;
@@ -321,7 +330,7 @@ sub filter_feature_sub {
     my $to_id    = $self->feature_to_id_sub or return;
     return sub {
 	my $feature = shift;
-	my $id      = $to_id->($feature);
+	my $id      = $to_id->($feature) or return;
 	return      defined $selected->{$id};
     }
 }

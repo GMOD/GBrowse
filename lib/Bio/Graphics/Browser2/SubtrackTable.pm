@@ -276,6 +276,7 @@ sub feature_to_id_sub {
     my $elements  = $self->elements;
 
     my $sub = "sub {no warnings; my \$f = shift;my \$found;\n";
+    $sub   .= "if (\$f->type eq 'group') { \$f = (\$f->get_SeqFeatures)[0]; }\n";
 
     for my $e (sort {$elements->{$a}{index} <=> $elements->{$b}{index}} keys %$elements) {
 	my $r = $elements->{$e}{fields};
@@ -303,7 +304,6 @@ sub feature_to_id_sub {
     my $as =  eval $sub;
     warn $@ unless $as;
     return $self->{_feature2id} = $as;
-
 }
 
 sub selected_ids {

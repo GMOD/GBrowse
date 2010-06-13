@@ -1567,6 +1567,8 @@ sub add_features_to_track {
           $l =~ s/:\d+//;  # get rid of semantic zooming tag
 
 	  my $track = $tracks->{$l}  or next;
+	  
+	  my $stt = $self->subtrack_manager($l);
 
 	  $filters->{$l}->($feature) or next if $filters->{$l};
 	  $feature_count{$l}++;
@@ -1608,6 +1610,21 @@ sub add_features_to_track {
 		  next;
 	      }
 	  }
+
+	  if ($stt && (my $id = $stt->feature_to_id_sub->($feature))) {
+	      $groups{$l}{$id} ||= Bio::Graphics::Feature->new(-type   => 'group',
+							       -name   => $id,
+							       -start  => $segment->start,
+							       -end    => $segment->end,
+							       -seq_id => $segment->seq_id,
+#							       -strand => $feature->strand,
+#							       -source => $feature->source,
+#							       -method => $feature->method,
+		  );
+	      $groups{$l}{$id}->add_segment($feature);
+	      next;
+	  }
+
 	  $track->add_feature($feature);
       }
     }
@@ -1995,9 +2012,10 @@ sub create_track_args {
 sub subtrack_manager {
     my $self = shift;
     my $label = shift;
-    return Bio::Graphics::Browser2::Render->create_subtrack_manager($label,
-								    $self->source,
-								    $self->settings);
+    return $self->{_stt}{$label} if exists $self->{_stt}{$label};
+    return $self->{_stt}{$label} = Bio::Graphics::Browser2::Render->create_subtrack_manager($label,
+											    $self->source,
+											    $self->settings);
 }
 
 # dead code - slate for removal

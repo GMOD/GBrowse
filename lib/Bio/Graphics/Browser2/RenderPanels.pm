@@ -1981,9 +1981,12 @@ sub create_track_args {
 
   if ($self->subtrack_manager($label)) {
       push @default_args,(-connector   => '');
-      my $is_quantitative = 
-	  $source->semantic_setting($label=>'glyph',$length) =~ /wiggle|xyplot|density|whisker/;
-      push @default_args,(-group_subtracks => !$is_quantitative || 0)
+      my $left_label = 
+	  $source->semantic_setting($label=>'label_position',$length)||'' eq 'left';
+      $left_label++ if $source->semantic_setting($label=>'label_transcripts',$length);
+      push @default_args,(
+	  -group_label          => 1,
+	  -group_label_position => $left_label ? 'top' : 'left');
   }
 
   if (my $stt = $self->subtrack_manager($label)) {

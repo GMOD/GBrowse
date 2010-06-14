@@ -18,6 +18,7 @@ use CGI qw(:standard param escape unescape);
 
 use constant TRUE  => 1;
 use constant DEBUG => 0;
+use constant DEBUGGING_RECTANGLES => 0;  # outline the imagemap
 use constant BENCHMARK => 0;
 
 use constant DEFAULT_EMPTYTRACKS => 0;
@@ -1392,6 +1393,8 @@ sub run_local_requests {
 
 		# == generate the images and maps in background==
 		$gd  = $panel->gd;
+		$self->debugging_rectangles($gd,scalar $panel->boxes)
+		    if DEBUGGING_RECTANGLES;
 		$map = $self->make_map( scalar $panel->boxes,
 					$panel, $label,
 					\%trackmap, 0 );
@@ -1614,13 +1617,16 @@ sub add_features_to_track {
 	  }
 
 	  if (!$is_summary && $stt && (my $id = $stt->feature_to_id_sub->($feature))) {
-	      my $label = $stt->id2label($id);
-	      $groups{$l}{$id} ||= Bio::Graphics::Feature->new(-type   => 'group',
-							       -name   => $label,
-							       -start  => $segment->start,
-							       -end    => $segment->end,
-							       -seq_id => $segment->seq_id,
-		  );
+	      unless ($groups{$l}) {
+		  my @ids   = $stt->selected_ids;
+		  $groups{$l}{$_} ||= Bio::Graphics::Feature->new(-type   => 'group',
+								  -primary_id     => $_,
+								  -name   => $stt->id2label($_),
+								  -start  => $segment->start,
+								  -end    => $segment->end,
+								  -seq_id => $segment->seq_id) 
+		      foreach @ids
+	      }
 	      $groups{$l}{$id}->add_segment($feature);
 	      next;
 	  }
@@ -1977,8 +1983,7 @@ sub create_track_args {
       push @default_args,(-connector   => '');
       my $is_quantitative = 
 	  $source->semantic_setting($label=>'glyph',$length) =~ /wiggle|xyplot|density|whisker/;
-      warn "$label => $is_quantitative";
-      push @default_args,(-label_group => !$is_quantitative || 0)
+      push @default_args,(-group_subtracks => !$is_quantitative || 0)
   }
 
   if (my $stt = $self->subtrack_manager($label)) {
@@ -2027,20 +2032,15 @@ sub subtrack_manager {
 											    $self->settings);
 }
 
-# dead code - slate for removal
-# =head2 create_cache_key()
-
-#   $cache_key = $self->create_cache_key(@args)
-
-# Create a unique cache key for the given args.
-
-# =cut
-
-# sub create_cache_key {
-#   my $self = shift;
-#   my @args = map {$_ || ''} grep {!ref($_)} @_;  # the map gets rid of uninit variable warnings
-#   return md5_hex(@args);
-# }
+sub debugging_rectangles {
+  my $self = shift;
+  my ($image,$boxes) = @_;
+  my $red = $image->colorClosest(255,0,0);
+  foreach (@$boxes) {
+    my @rect = @{$_}[1,2,3,4];
+    $image->rectangle(@{$_}[1,2,3,4],$red);
+  }
+}
 
 sub get_cache_base {
     my $self = shift;

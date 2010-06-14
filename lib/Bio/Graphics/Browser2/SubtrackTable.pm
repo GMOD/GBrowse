@@ -60,7 +60,7 @@ sub elements {
     my $self = shift;
     return $self->{_elements} if exists $self->{_elements};
     my $index = 1;  # not zero
-    my %elements;
+    my (%elements,$at_least_one_selected);
 
     my $rows  = $self->rows;
     for my $r (@$rows) {
@@ -74,7 +74,12 @@ sub elements {
 			   selected => $selected,
 			   label    => $label || '',
 			   fields   => \@fields };
+	$at_least_one_selected++ if $selected;
     }
+    unless ($at_least_one_selected) {
+	$elements{$_}{selected}++ foreach keys %elements;
+    }
+	
     return $self->{_elements}=\%elements;
 }
 
@@ -277,8 +282,9 @@ sub feature_to_id_sub {
     my @selectors = $self->selectors();
     my $elements  = $self->elements;
 
-    my $sub = "sub {no warnings; my \$f = shift;my \$found;\n";
-    $sub   .= "if (\$f->type eq 'group') { \$f = (\$f->get_SeqFeatures)[0]; }\n";
+    my $sub = "sub {no warnings; my \$f = shift;\nmy \$found;\n";
+    $sub   .= "if (\$f->type eq 'group') { \n";
+    $sub   .= "\$f = (\$f->get_SeqFeatures)[0] || return \$f->primary_id; }\n";
 
     for my $e (sort {$elements->{$a}{index} <=> $elements->{$b}{index}} keys %$elements) {
 	my $r = $elements->{$e}{fields};
@@ -291,7 +297,9 @@ sub feature_to_id_sub {
 		my $bang = $val ? '' : '!';
 		$sub .= "\$found &&= $bang\$f->has_tag('$operand');\n";
 	    } else {
-		my $operation = $val =~ /^~(.+)/ ? "=~ m[$1]i" : "eq '$val'";
+		my $operation =  $val =~ /^~(.+)/                         ? "=~ m[$1]i" 
+                               : $val =~ /^[+-]?\d*(\.\d+)?([eE]-?\d+)?$/ ? "== $val"
+                               : "eq '$val'";
 		if ($op eq 'tag_value') {
 		    $sub .= "\$found &&= \$f->has_tag('$operand');\n";
 		    $sub .= "\$found &&= (\$f->get_tag_values('$operand'))[0] $operation;\n";
@@ -304,7 +312,7 @@ sub feature_to_id_sub {
     }
     $sub .= "return;\n}";
     my $as =  eval $sub;
-    warn $@ unless $as;
+    warn "sutrack filter failed: ",$@ unless $as;
     return $self->{_feature2id} = $as;
 }
 
@@ -320,7 +328,7 @@ sub selected_ids {
     my $elements = $self->elements;
     my %selected = map {$_=>$elements->{$_}{index}} 
                    grep {$elements->{$_}{selected}} keys %$elements;
-    return \%selected;
+    return wantarray ? keys %selected : \%selected;
 }
 
 
@@ -414,10 +422,10 @@ sub infer_settings_from_source {
 
     return unless @dimensions && @rows;
 
-    my %aliases;
-    if (my $aliases = $source->setting($label=>'subtrack labels')) {
-	%aliases    = map {shellwords($_)} split ';',$aliases;
-    }
+    my $aliases     = $source->setting($label=>'subtrack select labels') 
+	            ||$source->setting($label=>'subtrack labels') ; # deprecated API
+
+    my %aliases    = map {shellwords($_)} split ';',$aliases if $aliases;
     return (\@dimensions,\@rows,\%aliases);
 }
 

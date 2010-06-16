@@ -123,15 +123,15 @@ img.figure {
     background-color: lightgray;
     border: double;
 }
-.list {
+span.list {
     font-size: 8pt;
     font-style: italic;
 }
 
-.list_show {
+span.list_show {
     font-weight: bold;
 }
 
-.list_hide {
+span.list_hide {
     font-weight: normal;
 }

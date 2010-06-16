@@ -24,6 +24,8 @@ function getNode(node_name) {
   // There are three pre-built groups: all, all track nodes, and all group nodes.
   if (!node_name) node_name = ""; // Prevent undefined errors.
   switch(node_name.toLowerCase()) {
+  
+    // Return all group nodes.
     case "all groups":
     case ":groups":
     case ":group":
@@ -36,6 +38,7 @@ function getNode(node_name) {
       return group_results;
       break;
     
+    // Return all track nodes.
     case "all tracks":
     case ":tracks":
     case ":track":
@@ -47,6 +50,7 @@ function getNode(node_name) {
       return track_results;
       break;
     
+    // Return all nodes by combining all groups and all tracks.
     case "all":
     case "*":
     case "":

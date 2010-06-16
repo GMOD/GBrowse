@@ -1,22 +1,26 @@
 var GlobalDrag;
 
-function gbTurnOff (a) {
-  if (document.getElementById(a+"_a")) { document.getElementById(a+"_a").checked='' };
-  if (document.getElementById(a+"_n")) { document.getElementById(a+"_n").checked='' };
+// gbTurnOff turns off any "All On" or "All Off" checkboxes which are checked.
+function gbTurnOff (section_name) {
+  if ($(section_name+"_a"))
+    $(section_name + "_a").checked = false;
+  if ($(section_name+"_n"))
+    $(section_name + "_n").checked = false;
 }
 
 // gbCheck turns all of the tracks on or off in a track group.
 function gbCheck (button,state) {
-  var a         = button.id;
-  a             = a.substring(0,a.lastIndexOf("_"));
-  var container = document.getElementById(a);
-  if (!container) { return false; }
-  var checkboxes = container.getElementsByTagName('input');
-  if (!checkboxes) { return false; }
+  var a = button.id.substring(0, button.id.lastIndexOf("_"));
+  if (!$(a))
+    return false;
+  
+  var checkboxes = $(a).select("input");
+  if (!checkboxes)
+    return false;
 
   var added_tracks = false;
 
-  if (state == 1){
+  if (state == 1) {
     var track_names = new Array();
     for (var i=0; i<checkboxes.length; i++) {
       checkboxes[i].checked=state;
@@ -32,7 +36,7 @@ function gbCheck (button,state) {
     }
   }
   gbTurnOff(a);
-  button.checked="on";
+  button.checked = true;
   list(a.substring(0, (a.length - "_section".length))); //The substring trims "_section" from the end of a list.
   return false;
 }
@@ -43,8 +47,9 @@ function gbToggleTrack (button) {
   ShowHideTrack(track_name,visible);
 }
 
+// ShowHideTrack toggles the visibility of "track", based on the "visible" flag.
 function ShowHideTrack(track_name,visible) {
-	 console.log('showhidetrack('+track_name+','+visible+')');
+	//console.log('showhidetrack('+track_name+','+visible+')');
   if (visible && !Controller.track_exists(track_name)) {
       Controller.add_track(track_name);
       return false;

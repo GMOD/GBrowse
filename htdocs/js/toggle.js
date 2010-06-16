@@ -20,11 +20,9 @@ function checkLists() {
 }
 
 // getNode returns the box (or boxes) that holds the section (or sections) with the specified title.
-function getNode(node_name) {
-  if (!node_name)
-    node_name = "";
-    
+function getNode(node_name) {    
   // There are three pre-built groups: all, all track nodes, and all group nodes.
+  if (!node_name) node_name = ""; // Prevent undefined errors.
   switch(node_name.toLowerCase()) {
     case "all groups":
     case ":groups":

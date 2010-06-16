@@ -4,6 +4,7 @@ package Bio::Graphics::Browser2::DataLoader;
 use strict;
 use IO::File;
 use Carp 'croak';
+use Digest::MD5 'md5_hex';
 
 # for mysql to work, you must do something like this:
 # grant create on `userdata\_%`.* to 'www-data'@localhost
@@ -237,9 +238,7 @@ sub create_database {
     my $backend   = $self->backend;
 
     if ($backend eq 'DBI::mysql') {
-	my @components = split '/',$data_path;
-	my $db_name    = 'userdata_'.join '_',@components[-3,-2,-1];
-	$db_name       =~ s/[^a-zA-Z0-9_-]/_/g;
+	my $db_name    = 'userdata_'.md5_hex($data_path);
 	$data_path     = $db_name;
 	$self->dsn($db_name);
 	my $mysql_admin = $self->mysql_admin;

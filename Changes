@@ -1,3 +1,10 @@
+2.11 
+        * Fixed generation of mysql database names for user upload sets so that names do
+	  not exceed mysql's limits.
+
+2.10 Tue Jun 15 10:58:32 EDT 2010
+        * Fully generalized subtrack creation.
+
 2.09 Mon May 24 18:45:48 PDT 2010
 	* To turn off caching of the config file (which is causing deparse errors for some
 	  callbacks) set the environment variable GBROWSE_NOCACHE to a true value

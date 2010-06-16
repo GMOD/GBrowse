@@ -106,60 +106,6 @@ examples = @entry_points
 das mapmaster = $mapmaster
 
 aggregators = $aggregators
-plugins     =
-
-# list of tracks to turn on by default
-default features =
-
-# The class of the objects used to establish the reference coordinates.
-reference class  = Sequence
-
-# "automatic" classes to try when an unqualified identifier is given
-automatic classes =
-
-# a footer
-footer = <hr>
-	<table width="100%">
-	<TR>
-	<TD align="LEFT" class="databody">
-	For the source code for this browser, see the <a href="http://www.gmod.org">
-	Generic Model Organism Database Project.</a>  For other questions, send
-	mail to <a href="mailto:lstein\@cshl.org">lstein\@cshl.org</a>.
-	</TD>
-	</TR>
-	</table>
-	<hr>
-
-# Various places where you can insert your own HTML -- see configuration docs
-html1 = 
-html2 = 
-html3 = 
-html4 = 
-html5 = 
-html6 = 
-
-# what image widths to offer
-image widths  = 450 640 800 1024
-
-# default width of detailed view (pixels)
-default width = 800
-
-# Web site configuration info
-stylesheet  = /gbrowse/gbrowse.css
-buttons     = /gbrowse/images/buttons
-tmpimages   = /gbrowse/tmp
-
-# max and default segment sizes for detailed view
-max segment     = 1000000
-default segment = 100000
-
-# zoom levels
-zoom levels    = 100 200 1000 2000 5000 10000 20000 50000 100000 2000000 500000 1000000
-
-# colors of the overview, detailed map and key
-overview bgcolor = lightgrey
-detailed bgcolor = lightgoldenrodyellow
-key bgcolor      = beige
 
 ########################
 # Default glyph settings

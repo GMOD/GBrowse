@@ -1582,13 +1582,13 @@ sub add_features_to_track {
 	  # GROUP CODE
 	  # Handle name-based groupings.
 	  unless (exists $group_pattern{$l}) {
-	      $group_pattern{$l} =  $source->code_setting($l => 'group_pattern');
+	      $group_pattern{$l} =  $source->semantic_setting($l => 'group_pattern',$length);
 	      $group_pattern{$l} =~ s!^/(.+)/$!$1! 
 		  if $group_pattern{$l}; # clean up regexp delimiters
 	  }
 	  
 	  # Handle generic grouping (needed for GFF3 database)
-	  $group_field{$l} = $source->code_setting($l => 'group_on') 
+	  $group_field{$l} = $source->semantic_setting($l => 'group_on',$length) 
 	      unless exists $group_field{$l};
 	  
 	  if (my $pattern = $group_pattern{$l}) {
@@ -1763,7 +1763,7 @@ sub get_iterator {
     return;
   }
 
-  return $db_segment->get_feature_stream(-type=>$feature_types);
+  return $db_segment->get_seq_stream(-type=>$feature_types);
 }
 
 sub get_summary_iterator {
@@ -2252,7 +2252,7 @@ sub make_title {
       $label     ||= $source->feature2label($feature) or last TRY;
       $key       ||= $source->setting($label,'key') || $label;
       $key         =~ s/s$//;
-      $key         = $feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
+      $key         = "source = ".$feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
 
       my $length   = $self->segment_length($label);
 

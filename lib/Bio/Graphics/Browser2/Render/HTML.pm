@@ -271,7 +271,7 @@ sub render_html_head {
   
   # Set any onTabLoad functions
   my $main_page_onLoads = "";
-  my $track_page_onLoads = "checkSummaries();";
+  my $track_page_onLoads = "checkLists();";
   my $custom_track_page_onLoads = "";
   my $settings_page_onLoads = "";
   
@@ -932,7 +932,7 @@ sub render_track_table {
 				     },i($self->tr('SELECT_SUBTRACKS',$selected,$total))).']';
    }
   }
-   
+
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 
   # Sort the tracks into categories:
@@ -1015,10 +1015,13 @@ sub render_track_table {
 						       span({-id=>$id},$table)));
       $control .= '&nbsp;'.i({-class=>'nojs'},
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
-				      -label=>$all_on,-onClick=>"gbCheck(this,1)"),
+				      -label=>$all_on,-onClick=>"gbCheck(this,1);"),
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
-				      -label=>$all_off,-onClick=>"gbCheck(this,0)")
-			    ).br()   if exists $track_groups{$category};
+				      -label=>$all_off,-onClick=>"gbCheck(this,0);")
+			    ).span({-class => "list",
+			            -id => "${id}_list",
+			            -style => "display: none;"},"")
+			    .br()   if exists $track_groups{$category};
       $section_contents{$category} = div($control.$section);
     }
 
@@ -1109,7 +1112,8 @@ sub nest_toggles {
 	    $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
  	    $result .= $self->toggle_section({on=>$settings->{section_visible}{$id}},
 					     $id,
-					     b($key),
+					     b($key).span({-class => "list",
+			            -id => "${id}_list"},""),
 					     div({-style=>'margin-left:1.5em;margin-right:1em'},
 						 $self->nest_toggles($hash->{$key},$sort)));
 	} else {

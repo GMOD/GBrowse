@@ -5,6 +5,7 @@ function gbTurnOff (a) {
   if (document.getElementById(a+"_n")) { document.getElementById(a+"_n").checked='' };
 }
 
+// gbCheck turns all of the tracks on or off in a track group.
 function gbCheck (button,state) {
   var a         = button.id;
   a             = a.substring(0,a.lastIndexOf("_"));
@@ -32,6 +33,7 @@ function gbCheck (button,state) {
   }
   gbTurnOff(a);
   button.checked="on";
+  list(a.substring(0, (a.length - "_section".length))); //The substring trims "_section" from the end of a list.
   return false;
 }
 
@@ -42,7 +44,7 @@ function gbToggleTrack (button) {
 }
 
 function ShowHideTrack(track_name,visible) {
-
+	 console.log('showhidetrack('+track_name+','+visible+')');
   if (visible && !Controller.track_exists(track_name)) {
       Controller.add_track(track_name);
       return false;

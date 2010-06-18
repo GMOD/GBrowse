@@ -1130,24 +1130,6 @@ sub subtrack_scan_list {
     my $stt   = Bio::Graphics::Browser2::Render->create_subtrack_manager($label,$self,{}) or return;
     my @ids   = keys %{$stt->elements};
     return \@ids;
-    
-#     my $select = $self->code_setting($label=>'select') or return;
-#     my @results;
-#     if ($select =~ /;/) { # new syntax
-# 	my @lines = split ';',$select;
-# 	my ($method) = shellwords (shift @lines);
-# 	for my $l (@lines) {
-# 	    my ($name,@args) = grep {!/^#/} shellwords($l);
-# 	    my @comments     = map {s/^=// && $_} grep {/^=/} @args;
-# 	    push @results,$name;
-# 	    push @results,'#'.$comments[0] if @comments;
-# 	}
-# 	return \@results;
-#     } else {
-# 	my ($method,@values) = shellwords($select);
-# 	return \@values;
-#     }
-
 }
 
 1;

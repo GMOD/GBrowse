@@ -880,6 +880,7 @@ sub render_track_table {
   if (my $filter = $self->track_filter_plugin) {
       $filter_active++;
       eval {@labels    = $filter->filter_tracks(\@labels,$source)};
+      warn $@ if $@;
       eval {@hilite    = $filter->hilite_terms};
       warn $@ if $@;
   }

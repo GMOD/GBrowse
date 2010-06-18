@@ -1983,9 +1983,14 @@ sub create_track_args {
       push @default_args,(-connector   => '');
       my $left_label = 
 	  $source->semantic_setting($label=>'label_position',$length)||'' eq 'left';
-      $left_label++ if $source->semantic_setting($label=>'label_transcripts',$length);
+
+      $left_label++ 
+	  if $source->semantic_setting($label=>'label_transcripts',$length);
+
+      my $group_label = $source->semantic_setting($label=>'glyph',$length) !~ /xyplot|wiggle|density|whisker/;
+
       push @default_args,(
-	  -group_label          => 1,
+	  -group_label          => $group_label||0,
 	  -group_label_position => $left_label ? 'top' : 'left');
   }
 

@@ -271,7 +271,8 @@ sub render_html_head {
   
   # Set any onTabLoad functions
   my $main_page_onLoads = "";
-  my $track_page_onLoads = "checkLists();";
+#  my $track_page_onLoads = "checkLists();";
+  my $track_page_onLoads = '';
   my $custom_track_page_onLoads = "";
   my $settings_page_onLoads = "";
   

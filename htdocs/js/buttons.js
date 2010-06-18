@@ -49,7 +49,6 @@ function gbToggleTrack (button) {
 
 // ShowHideTrack toggles the visibility of "track", based on the "visible" flag.
 function ShowHideTrack(track_name,visible) {
-	//console.log('showhidetrack('+track_name+','+visible+')');
   if (visible && !Controller.track_exists(track_name)) {
       Controller.add_track(track_name);
       return false;

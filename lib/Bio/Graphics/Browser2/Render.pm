@@ -2033,7 +2033,10 @@ sub reconfigure_track {
 	$s =~ s/^conf_//;
 	next unless defined $value;
 
-	$s = 'graph_type' if $s eq 'graph_type_whiskers';
+	if ($s eq 'graph_type_whiskers') {
+	    next unless $glyph eq 'whiskers';
+	    $s = 'graph_type';
+	}
 
 	my $configured_value = $source->semantic_fallback_setting($label=>$s,$semantic_len);
 

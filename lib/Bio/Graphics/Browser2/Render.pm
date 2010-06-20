@@ -1184,7 +1184,6 @@ sub init_plugins {
 		      $self->get_search_object);
   $self->plugins($plugins);
   $self->load_plugin_annotators();
-
   $plugins;
 }
 
@@ -1779,7 +1778,6 @@ sub _update_state {
     my $state  = $self->state;
 
     $self->update_state_from_cgi;
-
     warn "[$$] CGI updated" if DEBUG;
     if (my $seg = $self->segment) {
 	# A reset won't have a segment, so we need to test for that before we use
@@ -1796,7 +1794,6 @@ sub _update_state {
 	$self->auto_open();
     }
     $self->cleanup_dangling_uploads($state);
-
     warn "[$$] update_state() done" if DEBUG;
 }
 
@@ -1874,7 +1871,12 @@ sub auto_open {
     my $state    = $self->state;
 
     for my $feature (@$features) {
-        my @desired_labels = $self->data_source()->feature2label($feature)  or next;
+	# the next step optimizes away the case in which the feature type
+	# is a chromosome region
+	next if $feature->type eq 'region' || $feature->type eq 'segment';
+
+        my @desired_labels = $self->data_source()->feature2label($feature);
+	@desired_labels || next ;
 	warn "desired labels = @desired_labels" if DEBUG;
 	for my $desired_label (@desired_labels) {
 	    warn "auto_open(): add_track_to_state($desired_label)" if DEBUG;

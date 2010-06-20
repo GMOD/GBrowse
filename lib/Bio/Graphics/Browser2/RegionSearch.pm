@@ -92,7 +92,8 @@ sub init_databases {
     my %dbs;
 
     my $source = $self->source;
-    my $labels = $track_labels || [$source->labels];
+#    my $labels = $track_labels || [$source->labels];
+    my $labels = $track_labels || [$source->dbs];
 
     my $renderfarm = $self->source->global_setting('renderfarm');
 
@@ -100,8 +101,11 @@ sub init_databases {
 	$source->globals->slave_status_path
 	);
 
+    my %seenit;
     for my $l (@$labels) {
 	next if $l =~ /^(_scale|builtin)/;
+	my ($dbid)         = $source->db_settings($l);
+	next if $seenit{$dbid}++;
 
 	my $remote         = $local_only || !$renderfarm 
                                ? undef 
@@ -110,8 +114,6 @@ sub init_databases {
 	    my @remotes  = shellwords($remote);
 	    $remote = $slave_status->select(@remotes);
 	}
-
-	my ($dbid)         = $source->db_settings($l);
 
 	my $search_options = $source->search_options($dbid);
 

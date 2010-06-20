@@ -733,7 +733,7 @@ sub db_settings {
 
   # caching to avoid calling setting() too many times
   my $label = $self->semantic_label($track,$length);
-  return @{$DB_SETTINGS{$self,$label}} if $DB_SETTINGS{$self,$label};
+  return @{$DB_SETTINGS{$self,$label}} if defined $DB_SETTINGS{$self,$label};
 
   # if the track contains the "database" option, then it is a symbolic name
   # that indicates a [symbolic_name:database] section in this file or the globals
@@ -753,13 +753,14 @@ sub db_settings {
   } elsif ($self->semantic_setting($basename=>'db_adaptor',$length)) {
       $section = $basename;
   } else {
-      $symbolic_db_name  = $self->semantic_setting($basename => 'database', $length);
-      $symbolic_db_name ||= $self->fallback_setting('TRACK DEFAULTS' => 'database');
+      $symbolic_db_name  = $self->semantic_fallback_setting($basename => 'database', $length);
       $section          = $symbolic_db_name   
 	                    ? "$symbolic_db_name:database" 
                             : $basename;
   }
-  
+
+  return @{$DB_SETTINGS{$self,$section}} if defined $DB_SETTINGS{$self,$section};
+
   my $adaptor = $self->semantic_fallback_setting($section => 'db_adaptor', $length);
   unless ($adaptor) {
       warn "Unknown database defined for $section";
@@ -795,7 +796,8 @@ sub db_settings {
   my @result = ($self->{arg2dbid}{$key},$adaptor,@argv);
 
   # cache settings
-  $DB_SETTINGS{$self,$label} = \@result;
+  $DB_SETTINGS{$self,$label}   = \@result;
+  $DB_SETTINGS{$self,$section} = \@result;
 
   return @result;
 }
@@ -872,6 +874,20 @@ sub db2id {
     }
     @tracks = (@symbolic,@general,@rest); # triage
     return wantarray ? @tracks : $tracks[0];
+}
+
+=item @ids   = $dsn->dbs
+
+Return the names of all the sections that define dbs in the datasource.
+
+=cut
+
+sub dbs {
+    my $self = shift;
+    my @labels = $self->configured_types;
+    my @named      = grep {/:database/} @labels;
+    my @anonymous  = grep {$self->setting($_=>'db_adaptor')} @labels;
+    return (@named,@anonymous);
 }
 
 # this is an aggregator-aware way of retrieving all the named types

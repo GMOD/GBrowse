@@ -618,7 +618,6 @@ sub invert_types {
   my $self    = shift;
   my $config  = shift;
   return unless $config;
-
   my %inverted;
   for my $label (keys %{$config}) {
     my $feature = $self->setting($label => 'feature') or next;

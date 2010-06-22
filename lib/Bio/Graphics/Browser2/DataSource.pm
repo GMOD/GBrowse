@@ -76,6 +76,14 @@ sub new {
   return $self;
 }
 
+sub _new {
+    my $class = shift;
+    my $self  = $class->SUPER::_new(@_);
+    # this generates the invert_types data structure which will then get cached to disk
+    $self->_type2label($self,'foo','bar');
+    return $self;
+}
+
 sub name {
   my $self = shift;
   my $d    = $self->{name};
@@ -532,6 +540,22 @@ sub get_ranges {
   }
 }
 
+sub metadata {
+    my $self = shift;
+    my $metadata = $self->fallback_setting(general => 'metadata');
+    return unless $metadata;
+
+    my %a = $metadata =~ m/-(\w+)\s+([^-].+?(?= -[a-z]|$))/g;
+
+    my %metadata;
+    for (keys %a) { 
+	$a{$_} =~ s/\s+$// ;
+	$metadata{lc $_} = $a{$_};
+    }; # trim
+    
+    return \%metadata;
+}
+
 # override inherited in order to be case insensitive
 # and to account for semantic zooming
 sub type2label {
@@ -543,8 +567,8 @@ sub type2label {
 
   my @labels;
 
-  if (exists $self->{_type2labelmemo}{$type,$length,$dbid}) {
-      @labels =  @{$self->{_type2labelmemo}{$type,$length,$dbid}};
+  if (exists $self->{_type2labelmemo}{$type,$dbid}) {
+      @labels =  @{$self->{_type2labelmemo}{$type,$dbid}};
   }
 
   else {
@@ -562,26 +586,10 @@ sub type2label {
 	  $label_groups{$label_base}++;
       }
       @labels = keys %label_groups;
-      $self->{_type2labelmemo}{$type,$length,$dbid} = \@labels;
+      $self->{_type2labelmemo}{$type,$dbid} = \@labels;
   }
 
   return wantarray ? @labels : $labels[0];
-}
-
-sub metadata {
-    my $self = shift;
-    my $metadata = $self->fallback_setting(general => 'metadata');
-    return unless $metadata;
-
-    my %a = $metadata =~ m/-(\w+)\s+([^-].+?(?= -[a-z]|$))/g;
-
-    my %metadata;
-    for (keys %a) { 
-	$a{$_} =~ s/\s+$// ;
-	$metadata{lc $_} = $a{$_};
-    }; # trim
-    
-    return \%metadata;
 }
 
 sub _type2label {

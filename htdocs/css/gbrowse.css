@@ -77,6 +77,7 @@ span.clickable:hover {
 		    font-size: 16pt;
 		    font-weight:bold;
 		  }
+a#detailscaption   { font-size: 10 pt; }
 .errorpanel       { background-color: lightyellow;    
 		    margin:   -8px 8px  8px  -8px;
 		  }

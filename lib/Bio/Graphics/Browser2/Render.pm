@@ -715,9 +715,19 @@ sub render_body {
 					       regionview => $source->show_section('region'),
 					       detailview => $source->show_section('detail')});
       $main_page .= $self->render_galaxy_form($seg);
-  } else {
-      $main_page .= $self->render_select_track_link;
   }
+
+  elsif ($region->feature_count > 0) { # feature but no segment? Admin error
+      my $message = 'Configuration error: Chromosome/contig not found!';
+      my $details = 'Cannot display '.
+	  $features->[0]->display_name.
+	  ' because the chromosome/contig named '.
+	  $features->[0]->seq_id.
+	  ' is not defined in the database.';
+      $main_page .= script({-type=>'text/javascript'},"Controller.show_error('$message','$details')")
+  }
+
+  $main_page .= $self->render_select_track_link;
 
   my $tracks        = $self->render_tracks_section;
   my $upload_share  = $self->render_upload_share_section;
@@ -730,6 +740,7 @@ sub render_body {
 
   print $output;
 }
+
 
 sub render_actionmenu {
     my $self = shift;
@@ -1098,6 +1109,7 @@ sub thin_segment {
 
 sub thin_whole_segment {
     my $self  = shift;
+
     my $state = $self->state;
     if (defined $state->{ref} && defined $state->{seg_min}) {
 	return Bio::Graphics::Feature->new(-seq_id => $state->{ref},
@@ -2036,7 +2048,7 @@ sub reconfigure_track {
 	next unless defined $value;
 
 	if ($s eq 'graph_type_whiskers') {
-	    next unless $glyph eq 'whiskers';
+	    next unless $glyph =~ /whiskers/;
 	    $s = 'graph_type';
 	}
 

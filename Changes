@@ -1,6 +1,7 @@
 2.11 
         * Fixed generation of mysql database names for user upload sets so that names do
 	  not exceed mysql's limits.
+	* Speeded up execution speed when configuration files get large (>1000 tracks).
 
 2.10 Tue Jun 15 10:58:32 EDT 2010
         * Fully generalized subtrack creation.

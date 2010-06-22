@@ -823,9 +823,9 @@ var GBrowseController = Class.create({
       if (innerdiv != null) {
           var caption = detailsdiv.visible() ? 'Hide details' : 'Show details';
 	  innerdiv.innerHTML = message +
-                               ' <a id="detailscaption" href="javascript:void(0)" onClick="Controller.show_hide_errordetails()">'
+                               ' <span id="detailscaption" class="clickable" style="font-size:12pt" onClick="Controller.show_hide_errordetails()">'
 			       +caption
-			       +'</a>';
+			       +'</span>';
       }			     
       if (detailsdiv != null) {
           detailsdiv.innerHTML  = details;

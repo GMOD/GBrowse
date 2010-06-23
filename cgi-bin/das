@@ -81,7 +81,7 @@ use constant ERRCODES => {
     501 => 'Unimplemented feature',
 };
 
-use constant CACHE_STYLESHEET=> 0;
+use constant CACHE_STYLESHEET=> 1;
 
 my (%CACHED_TYPES,%SO_HASH);
 
@@ -585,7 +585,7 @@ sub fetch_sofile {
 
     my $so_file = shift;
     my $so_url  = SO;
-    require 'LWP::Simple' unless LWP::Simple->can('mirror');
+    eval "use LWP::Simple; 1" unless LWP::Simple->can('mirror');
 
     my $result = eval {
 	local $SIG{ALRM} = sub {die "timeout"};

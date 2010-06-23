@@ -1094,13 +1094,16 @@ END
 # unfortunately, the gbrowse library returns a relative address
 # for AUTO links
 sub hack_link {
-    my $self = shift;
-    my $url_ref = shift;
-    return unless $$url_ref =~ /^\.\./;
-    my $self_url = url(-full=>1);
-    $self_url =~ s!/das(/.+)?!!;
-    $$url_ref =~ s!^(\.\.\/)+!!;
-    $$url_ref = $self_url."/$$url_ref";
+    my $self     = shift;
+    my $url_ref  = shift;
+    return if $url_ref =~ m!^\w+:!;
+    unless ($self->{prefix}) {
+	my $self_url        = url(-full=>1,-path=>1);
+	($self->{prefix})   = $self_url =~ m!^(\w+://[^/]+)!;
+	($self->{suffix})   = $self_url =~ m!.+(/das/.+)!;
+    }
+    $$url_ref        =~ s!$self->{suffix}!!;
+    $$url_ref        = "$self->{prefix}$$url_ref";
 }
 
 sub no_parent_wanted {

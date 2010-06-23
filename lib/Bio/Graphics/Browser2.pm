@@ -60,7 +60,7 @@ sub new {
 ## methods for dealing with paths
 sub resolve_path {
   my $self = shift;
-  my $path = shift;
+  my $path      = shift;
   my $path_type = shift; # one of "config" "htdocs" or "url"
   return unless $path;
   return $path if $path =~ m!^/!;           # absolute path
@@ -262,14 +262,15 @@ sub data_source_path {
   my $dsn  = shift;
   my ($regex_key) = grep { $dsn =~ /^$_$/ } map { $_ =~ s/^=~//; $_ } grep { $_ =~ /^=~/ } keys(%{$self->{config}});
   if ($regex_key) {
-    my $path = $self->resolve_path($self->setting("=~".$regex_key=>'path'),'config');
-    my @matches = ($dsn =~ /$regex_key/);
-    for (my $i = 1; $i <= scalar(@matches); $i++) {
-      $path =~ s/\$$i/$matches[$i-1]/;
-    }
-    return $self->resolve_path($path, 'config');
+      my $path = $self->resolve_path($self->setting("=~".$regex_key=>'path'),'config');
+      my @matches = ($dsn =~ /$regex_key/);
+      for (my $i = 1; $i <= scalar(@matches); $i++) {
+	  $path =~ s/\$$i/$matches[$i-1]/;
+      }
+      return $self->resolve_path($path, 'config');
   }
-  $self->resolve_path($self->setting($dsn=>'path'),'config');
+  my $path = $self->setting($dsn=>'path') or return;
+  $self->resolve_path($path,'config');
 }
 
 sub create_data_source {

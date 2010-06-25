@@ -153,6 +153,26 @@ sub userdata {
     return $globals->user_dir($self->name,@path);
 }
 
+sub taxon_id {
+    my $self = shift;
+    my $meta = $self->metadata or return;
+    return $meta->{taxid};
+}
+
+sub build_id {
+    my $self = shift;
+    my $meta = $self->metadata or return;
+    my $authority = $meta->{authority}           or return;
+    my $version   = $meta->{coordinates_version} or return;
+    return "$authority$version";
+}
+
+sub species {
+    my $self = shift;
+    my $meta = $self->metadata or return;
+    return $meta->{species};
+}
+
 =head2 global_setting()
 
   $setting = $source->global_setting('option')
@@ -540,22 +560,6 @@ sub get_ranges {
   }
 }
 
-sub metadata {
-    my $self = shift;
-    my $metadata = $self->fallback_setting(general => 'metadata');
-    return unless $metadata;
-
-    my %a = $metadata =~ m/-(\w+)\s+([^-].+?(?= -[a-z]|$))/g;
-
-    my %metadata;
-    for (keys %a) { 
-	$a{$_} =~ s/\s+$// ;
-	$metadata{lc $_} = $a{$_};
-    }; # trim
-    
-    return \%metadata;
-}
-
 # override inherited in order to be case insensitive
 # and to account for semantic zooming
 sub type2label {
@@ -643,6 +647,24 @@ sub default_labels {
   my $defaults  = $self->setting('general'=>'default tracks');
   $defaults   ||= $self->setting('general'=>'default features'); # backward compatibility
   return $self->scale_tracks,shellwords($defaults||'');
+}
+
+sub metadata {
+    my $self = shift;
+    return $self->{metadata} if exists $self->{metadata};
+
+    my $metadata = $self->fallback_setting(general => 'metadata');
+    return unless $metadata;
+
+    my %a = $metadata =~ m/-(\w+)\s+([^-].*?(?= -[a-z]|$))/g;
+
+    my %metadata;
+    for (keys %a) { 
+	$a{$_} =~ s/\s+$// ;
+	$metadata{lc $_} = $a{$_};
+    }; # trim
+    
+    return $self->{metadata} = \%metadata;
 }
 
 =head2 add_scale_tracks()

@@ -13,6 +13,7 @@ use POSIX ();
 use Carp 'croak';
 
 use constant DEBUG => 0;
+my $HASBIGWIG;
 
 # The intent of this is to provide a single unified interface for managing
 # a user's uploaded and shared tracks.
@@ -173,9 +174,9 @@ sub source_files {
 sub trackname_from_url {
     my $self     = shift;
     my $url      = shift;
-
     my $uniquefy = shift;
-    (my $track_name=$url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
+
+    (my $track_name=$url) =~ tr!a-zA-Z0-9_%^@.-!_!cs;
 
     if (length $track_name > $self->max_filename) {
 	$track_name = substr($track_name,0,$self->max_filename);
@@ -230,7 +231,11 @@ sub import_url {
 
     if ($url =~ /\.bam$/) {
 	print $f $self->remote_bam_conf($track_name,$url,$key);
-    } else {
+    } 
+    elsif ($url =~ /\.bw$/) {
+	print $f $self->remote_bigwig_conf($track_name,$url,$key);
+    }
+    else {
 	print $f $self->remote_mirror_conf($track_name,$url,$key);
     }
     close $f;
@@ -415,6 +420,13 @@ sub get_loader {
 # during this operation so that the info isn't lost.
 sub guess_upload_type {
     my $self = shift;
+    my ($type,$lines,$eol) = $self->_guess_upload_type(@_);
+#    $type = 'bigwig' if $type eq 'wiggle' && $self->has_bigwig;
+    return ($type,$lines,$eol);
+}
+
+sub _guess_upload_type {
+    my $self = shift;
     my ($filename,$fh) = @_;
 
     my $buffer;
@@ -472,6 +484,14 @@ sub guess_upload_type {
 	return ('sam',\@lines,$eol)         if $line =~ /^[^ \t\n\r]+\t[0-9]+\t[^ \t\n\r@=]+\t[0-9]+\t[0-9]+\t(?:[0-9]+[MIDNSHP])+|\*/;
     }
     return;
+}
+
+sub has_bigwig {
+    my $self = shift;
+    return $HASBIGWIG if defined $HASBIGWIG;
+    return $HASBIGWIG = 1 if Bio::DB::BigWig->can('new');
+    my $result = eval "require Bio::DB::BigWig; 1";
+    return $HASBIGWIG = $result || 0;
 }
 
 sub install_filter {
@@ -560,6 +580,34 @@ bump         = fast
 key          = $key
 END
     ;
+}
+
+sub remote_bigwig_conf {
+    my $self = shift;
+    my ($track_name,$url,$key) = @_;
+    my $id = rand(1000);
+    my $dbname = "remotebw_$id";
+    my $track_id = $track_name;
+    warn "remote_bigwig_conf";
+    return <<END;
+[$dbname:database]
+db_adaptor = Bio::DB::BigWig
+db_args    = -bigwig $url
+search options = none
+
+>>>>>>>>>>>>>> cut here <<<<<<<<<<<<
+[$track_id]
+database        = $dbname
+feature         = summary
+glyph           = wiggle_whiskers
+max_color       = lightgrey
+min_color       = lightgrey
+mean_color      = black
+stdev_color     = grey
+stdev_color_neg = grey
+height          = 20
+
+END
 }
 
 package Bio::Graphics::Browser2::UserConf;

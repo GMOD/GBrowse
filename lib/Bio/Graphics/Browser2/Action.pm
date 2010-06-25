@@ -7,6 +7,7 @@ use strict;
 use Carp 'croak';
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
+use File::Basename 'basename';
 use constant DEBUG => 0;
 
 sub new {
@@ -385,17 +386,19 @@ sub ACTION_upload_file {
     my $session  = $render->session;
 
     my $usertracks = $render->user_tracks;
-    my $name = $fh ? File::Basename::basename($fh) : $q->param('name');
+    my $name = $fh ? basename($fh) : $q->param('name');
     $name ||= 'New track definition';
 
     my $content_type = $fh ? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain';
 
-    $state->{uploads}{$upload_id} = [$name,$$];
+    my $track_name = $usertracks->trackname_from_url($name,1);
+
+    $state->{uploads}{$upload_id} = [$track_name,$$];
     $session->flush();
     $session->unlock();
     
-    my ($result,$msg,$tracks,$pid) = $data ? $usertracks->upload_data($name, $data,$content_type)
-                                           : $usertracks->upload_file($name, $fh,  $content_type);
+    my ($result,$msg,$tracks,$pid) = $data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
+                                           : $usertracks->upload_file($track_name, $fh,  $content_type, 1);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
@@ -574,6 +577,32 @@ sub ACTION_set_subtracks {
     my $settings  = $self->state;
     $self->state->{subtracks}{$label} = $subtracks;
     return (204,'text/plain',undef);
+}
+
+sub ACTION_chrom_sizes {
+    my $self = shift;
+    my $q    = shift;
+    my $loader = Bio::Graphics::Browser2::DataLoader->new(undef,undef,undef,
+							  $self->data_source,
+							  undef);
+    my $sizes  = $loader->chrom_sizes;
+    unless ($sizes) {
+	return (200,
+		'text/plain',
+		"The chromosome sizes cannot be determined from this data source. Please contact the site administrator for help");
+    }
+    my $data;
+    open my $f,'<',$sizes or return (200,
+				     'text/plain',
+				     "An error occurred when opening chromosome sizes file: $!");
+    $data.= $_ while <$f>;
+    close $f;
+    my $build = $self->data_source->build_id || 'build_unknown';
+    my $name  = $self->data_source->species  || $self->data_source->name;
+    $name     =~ s/\s/_/g;
+    return (200,'text/plain',$data,
+	    -content_disposition => "attachment; filename=${name}_${build}_chrom.sizes",
+	);
 }
 
 sub ACTION_about_gbrowse {

@@ -48,13 +48,15 @@ END
 
    BOOKMARK => 'Bookmark this',
 
+   CHROM_SIZES => 'Get chrom sizes',
+
    EXPORT => 'Export as...',
 
-   IMAGE_LINK => '...low-res image',
+   IMAGE_LINK => '...low-res PNG image',
 
-   SVG_LINK   => '...high-res image',
+   SVG_LINK   => '...editable SVG image',
 
-   PDF_LINK   => '...PDF',
+   PDF_LINK   => '...high-res PDF',
    
    DUMP_GFF   => '...GFF annotation table',
 
@@ -169,7 +171,9 @@ END
 
    HELP_WITH_BROWSER     => 'Help with this browser',
 
-   HELP_FORMAT => 'Help with uploading',
+   HELP_FORMAT_UPLOAD => 'Help with uploading custom tracks',
+
+   HELP_FORMAT_IMPORT => 'Help with importing custom tracks',
 
    CANCEL   => 'Cancel',
 

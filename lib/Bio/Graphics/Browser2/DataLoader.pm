@@ -3,6 +3,8 @@ package Bio::Graphics::Browser2::DataLoader;
 
 use strict;
 use IO::File;
+use File::Basename 'basename','dirname';
+use Fcntl ':flock';
 use Carp 'croak';
 use Digest::MD5 'md5_hex';
 
@@ -13,6 +15,7 @@ use Digest::MD5 'md5_hex';
 sub new {
     my $class = shift;
     my ($track_name,$data_path,$conf_path,$settings,$userid) = @_;
+
     my $loadid = substr($userid,0,6).'_'.$track_name;
     my $self = bless
     { name     => $track_name,
@@ -69,18 +72,151 @@ sub set_status {
 
     my $status = $self->status_path;
     open my $fh,">",$status;
-    print $fh $msg;
+    flock($fh,LOCK_EX);
+    seek($fh,0,0);
+    print $fh $msg,"\n";
     close $fh;
 }
 
 sub get_status {
     my $self = shift;
+    undef $!;
     my $status = $self->status_path;
-    open my $fh,"<",$status;
+    open my $fh,"<",$status or return;
+    flock($fh,LOCK_SH);
+    seek($fh,0,0);
     my $msg = <$fh>;
     close $fh;
+    chomp($msg);
     return $msg;
 }
+
+sub get_fasta_files {
+    my $self = shift;
+    my $source = $self->settings;
+    my (@fastai,@fasta);
+
+    my @dbs    = $source->databases;
+    my %seenit;
+
+    for my $db (@dbs) {
+	my ($dbid,$adaptor,%args) = $source->db2args($db);
+	my $fasta = $args{-fasta} || $args{-dsn};
+	next if $seenit{$fasta}++;
+	next unless -e $fasta;
+	warn "looking at $dbid $fasta";
+	if (-d _) {
+	    push @fastai, glob("$fasta/*.fai");
+	    push @fasta, $fasta
+		if glob("$fasta/*.{fa,FA,fasta,FASTA}");
+	} else {
+	    push @fastai,$fasta if -e "$fasta.fai";     # points at an indexed fasta file
+	    push @fasta, $fasta if $fasta =~ /\.(fa|fasta)$/i;
+	}
+    }
+    return (@fastai,@fasta);
+}
+
+sub get_fasta_file {
+    my @fa = shift->get_fasta_files or return;
+    return $fa[0];
+}
+
+# try to generate a chrom sizes file
+sub chrom_sizes {
+    my $self    = shift;
+    my $source  = $self->settings;
+    my $globals = $source->globals;
+
+    my $mtime   = $source->mtime;
+    my $name    = $source->name;
+
+    my $sizes  = File::Spec->catfile($globals->tmpdir('chrom_sizes'),"$name.sizes");
+    if (-e $sizes && (stat(_))[9] >= $mtime) {
+	return $sizes;
+    }
+    $self->generate_chrom_sizes($sizes) or return;
+    return $sizes;
+}
+
+sub generate_chrom_sizes {
+    my $self  = shift;
+    my $sizes = shift;
+
+    my $source = $self->settings;
+    my $build   = $source->build_id;
+    my $species = $source->taxon_id;
+
+    open my $s,'>',$sizes or die "Can't open $sizes for writing: $!";
+
+    print $s "##species http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=$species\n"
+	if $species;
+    print $s "##genome-build $build\n" if $build;
+    
+    my $db      = $source->open_database;
+
+    # Bio::DB::SeqFeature has a seq_ids method.
+    # First, try to query the default database for the
+    # seq_ids it knows about.
+
+  TRY: {
+      my @seqids  = eval {$db->seq_ids}    or last TRY;
+      my $result = eval {
+	  for (@seqids) {
+	      my $segment = $db->segment($_) or die "Can't find chromosome $_ in default database";
+	      print $s "$_\t",$segment->length,"\n";
+	  }
+	  close $s;
+	  return 1;
+      };
+      return 1 if $result;
+      warn $@;
+      unlink $sizes;
+      last TRY;
+    }
+
+    # Bio::DasI objects have an entry_points method
+    if (my @segs = eval {$db->entry_points}) {
+	for (@segs) {
+	    print $s $_,"\t",$_->length,"\n";
+	}
+	close $s;
+	return 1;
+    }
+
+    # Otherwise we search for databases with associated fasta files
+    # or indexed fasta (fai) files.
+    my $fasta = $self->get_fasta_file or return;
+    my $fai   = "$fasta.fai";
+
+    if (!-e $fai && -f $fasta && eval "require Bio::DB::Sam;1") {
+	Bio::DB::Sam::Fai->load($fasta) or return;
+    }
+
+    if (-e $fai) { # fai file -- copy to sizes
+	open my $f,$fai or die "Can't open $fasta: $!";
+	while (<$f>) {
+	    my ($seqid,$length) = split /\s+/;
+	    print $s "$seqid\t$length\n";
+	}
+	close $f;
+	return 1;
+    } elsif (eval "require Bio::DB::Fasta; 1") {
+	my $fa = Bio::DB::Fasta->new($fasta);
+	my @ids = $fa->ids;
+	open my $s,'>',$sizes or die "Can't open $sizes for writing: $!";
+	for my $i (@ids) {
+	    print $s $i,"\t",$fa->length($i),"\n";
+	}
+	undef $fa;
+	return 1;
+    }
+
+    unlink $sizes;
+    return;
+}
+
+
 
 # the client depends on this status literally
 # BUG: this will interfere with i18n
@@ -132,7 +268,7 @@ sub load {
 	    while (<$fh>) {
 		$source_file->print($_) if $source_file;
 		$self->load_line($_);
-		$self->set_status("loaded $count lines") if $count++ % 1000;
+		$self->set_status("loaded $count lines") if $count++ % 1000 == 0;
 	    }
 	    $source_file->close;
 	}

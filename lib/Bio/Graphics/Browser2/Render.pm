@@ -260,30 +260,32 @@ sub init {
 # this prints out the HTTP data from an asynchronous event
 sub run_asynchronous_event {
     my $self = shift;
-    my ($status,$mime_type,$data) = $self->asynchronous_event
+    my ($status,$mime_type,$data,%headers) = $self->asynchronous_event
 	or return;
 
     warn "[$$] asynchronous event returning status=$status, mime-type=$mime_type" if DEBUG;
 
     if ($status == 204) { # no content
-	print CGI::header( -status => '204 No Content' );
+	print CGI::header( -status => '204 No Content',%headers );
     }
     elsif ($status == 302) { # redirect
-	print CGI::redirect($data);
+	print CGI::redirect($data,%headers);
     }
     elsif ($mime_type eq 'application/json') {
 	print CGI::header(-status=>$status,
 			  -cache_control => 'no-cache',
 			  -charset       => $self->tr('CHARSET'),
-			  -type  => $mime_type),
+			  -type  => $mime_type,
+			  ,%headers),
 	      JSON::to_json($data);
     }
     else {
 	print CGI::header(-status        => $status,
 			  -cache_control => 'no-cache',
 			  -charset       => $self->tr('CHARSET'),
-			  -type          => $mime_type),
-	       $data;
+			  -type          => $mime_type,
+			  %headers),
+	$data;
     }
     return 1;  # no further processing needed
 }
@@ -1295,9 +1297,6 @@ sub handle_gff_dump {
     @labels        = $self->split_labels((param('type'),param('t'))) unless @labels;
     @labels        = $self->visible_tracks                           unless @labels;
 
-    my $title      = join('+',@labels);
-    $title        .= ":$segment" if $segment;
-    $title         =~ s/\s/_/;
 
     my $dumper = Bio::Graphics::Browser2::TrackDumper->new(
         -data_source => $self->data_source(),
@@ -1311,6 +1310,13 @@ sub handle_gff_dump {
 
     # so that another user's tracks are added if requested
     $self->add_user_tracks($self->data_source,param('uuid')) if param('uuid');
+
+    my @l   = @labels;
+    foreach (@l) {s/[^a-zA-Z0-9_]/_/g};
+
+    my $title      = @l ? join('+',@l) : '';
+    $title        .= $title ? "_$segment" : $segment if $segment;
+    $title       ||= $self->data_source->name;
 
     if ($actions{scan}) {
 	print header('text/plain');
@@ -1327,6 +1333,8 @@ sub handle_gff_dump {
 	    $dumper->print_datafile() ;
 	}
 	elsif ($actions{fasta}) {
+	    my $build = $self->data_source->build;
+	    $title   .= "_$build" if $build;
 	    print header( -type                => $mime =~ /x-/ ? 'application/x-fasta' : $mime,
 			  -content_disposition => "attachment; filename=$title.fa");
 	    $dumper->print_fasta();
@@ -3610,6 +3618,7 @@ sub gff_dump_link {
 
   my $state     = $self->state;
   my $upload_id = $state->{uploadid} || $state->{userid};
+  my $segment   = $self->thin_segment;
 
   my $q = new CGI('');
   if ($fasta) {
@@ -3619,9 +3628,10 @@ sub gff_dump_link {
        $q->param(-name=>'gbgff',   -value=>'Save');
        $q->param(-name=>'m',       -value=>'application/x-gff3');
   }
+  $q->param('q'=>$segment->seq_id.':'.$segment->start.'..'.$segment->end);
 
-  # we probably need this
-  #  $q->param(-name=>'id',      -value=>$upload_id);
+  # we probably need this ?
+  $q->param(-name=>'id',      -value=>$upload_id);
 
   # handle external urls
   return "?".$q->query_string();
@@ -3771,6 +3781,96 @@ sub prepare_fcgi_for_fork {
 	$req->LastCall();
 	undef *FCGI::DESTROY;
     }
+}
+
+# try to generate a chrom sizes file
+sub chrom_sizes {
+    my $self   = shift;
+    my $source = $self->data_source;
+    my $mtime  = $source->mtime;
+    my $name   = $source->name;
+    my $sizes  = File::Spec->catfile($self->globals->tmpdir('chrom_sizes'),"$name.sizes");
+    if (-e $sizes && (stat(_))[9] >= $mtime) {
+	return $sizes;
+    }
+    $self->generate_chrom_sizes($sizes) or return;
+    return $sizes;
+}
+
+sub generate_chrom_sizes {
+    my $self  = shift;
+    my $sizes = shift;
+
+    warn "creating $sizes";
+
+    my $source = $self->data_source;
+
+    open my $s,'>',$sizes or die "Can't open $sizes for writing: $!";
+
+    # First, try to query the default database for the
+    # seq_ids it knows about.
+    my $db     = $source->open_database or return;
+
+    # Bio::DB::SeqFeature has a seq_ids method.
+    if (my @seqids = eval {$db->seq_ids}) {
+	for (@seqids) {
+	    my $segment = $db->segment($_) or die "Can't find chromosome $_ in default database";
+	    print $s "$_\t",$segment->length,"\n";
+	}
+	close $s;
+	return 1;
+    }
+
+    # Bio::DasI objects have an entry_points method
+    if (my @segs = eval {$db->entry_points}) {
+	for (@segs) {
+	    print $s $_,"\t",$_->length,"\n";
+	}
+	close $s;
+	return 1;
+    }
+
+    # Otherwise we search for databases with associated fasta files
+    # or indexed fasta (fai) files.
+    my ($fasta,$fastai);
+    my @dbs    = $source->databases;
+    for my $db (@dbs) {
+	my ($dbid,$adaptor,%args) = $source->db2args($db);
+	my $fasta = $args{-fasta} or next;
+	if (-e "$fasta.fai") {
+	    $fastai ||= "$fasta.fai";
+	} elsif (-e $fasta && -w dirname($fasta)) {
+	    $fasta  ||= $fasta;
+	}
+    }
+
+    return unless $fasta or $fastai;
+
+    if (!$fastai && eval "require Bio::DB::Sam;1") {
+	Bio::DB::Sam::Fai->load($fasta);
+	$fastai = "$fasta.fai";
+    }
+
+    if ($fastai) { # fai file -- copy to sizes
+	open my $f,$fastai or die "Can't open $fasta: $!";
+	while (<$f>) {
+	    my ($seqid,$length) = split /\s+/;
+	    print $s "$seqid\t$length\n";
+	}
+	close $f;
+    }
+
+    elsif (eval "require Bio::DB::Fasta; 1") {
+	my $fa = Bio::DB::Fasta->new($fasta);
+	my @ids = $fa->ids;
+	for my $i (@ids) {
+	    print $s $i,"\t",$fa->length($i),"\n";
+	}
+	undef $fa;
+    }
+
+    close $s;
+    return 1;
 }
 
 

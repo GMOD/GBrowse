@@ -699,7 +699,7 @@ sub render_actionmenu {
 	if HAVE_SVG && $self->can_generate_pdf;
 
     push @export_links,a({-href=>$self->gff_dump_link},                    $self->tr('DUMP_GFF'));
-    push @export_links,a({-href=>$self->dna_dump_link},                           $self->tr('DUMP_SEQ'));
+    push @export_links,a({-href=>$self->dna_dump_link},                    $self->tr('DUMP_SEQ'));
     push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->tr('SEND_TO_GALAXY'))
 	if $self->data_source->global_setting('galaxy outgoing');
 
@@ -725,8 +725,9 @@ sub render_actionmenu {
 			       -style       => 'cursor:pointer'
 			      },
 			      $self->tr('ABOUT_ME'));
-    my $plugin_link   = $self->plugin_links($self->plugins);
-    my $reset_link    = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
+    my $plugin_link      = $self->plugin_links($self->plugins);
+    my $chrom_sizes_link = a({-href=>'?action=chrom_sizes'},$self->tr('CHROM_SIZES'));
+    my $reset_link       = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
 
     my $login = $self->setting('user accounts') ? $self->render_login : '';
 
@@ -738,7 +739,8 @@ sub render_actionmenu {
 			     li({-class=>'dir'},a({-href=>'#'},$self->tr('EXPORT')),
 				ul(li(\@export_links))),
 			     $plugin_link ? li($plugin_link) : (),
-			     li($reset_link)
+			     li($chrom_sizes_link),
+			     li($reset_link),
 			  )
 		       ),
 		       li({-class=>'dir'},$self->tr('HELP'),
@@ -1327,6 +1329,8 @@ sub render_toggle_userdata_table {
     my $self = shift;
     return div(
 	h2({-style=>'margin: 0px 0px 0px 0px;padding:5px 0px 5px 0px'},'Uploaded Tracks'),
+	a({-href=>$self->annotation_help,-target=>'_blank'},
+	  i('['.$self->tr('HELP_FORMAT_UPLOAD').']')),
 	$self->render_userdata_table(),
 	$self->userdata_upload()
 	);
@@ -1335,6 +1339,8 @@ sub render_toggle_userdata_table {
 sub render_toggle_import_table {
     my $self = shift;
     return h2('Imported Tracks').
+	a({-href=>$self->annotation_help.'#remote',-target=>'_blank'},
+	  i('['.$self->tr('HELP_FORMAT_IMPORT').']')).
 	div($self->render_userimport_table(),
 	    $self->userdata_import()
 	);

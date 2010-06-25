@@ -315,7 +315,8 @@ sub asynchronous_event {
     #    to get this Bio::Graphics::Browser2::Render object.
 
     # legacy URLs
-    if (my @result = Bio::Graphics::Browser2::Action->handle_legacy_calls($CGI::Q,$self)) {
+    my $dispatch = Bio::Graphics::Browser2::Action->new($self);
+    if (my @result = $dispatch->handle_legacy_calls($CGI::Q,$self)) {
 	return @result;
     }
 
@@ -325,7 +326,6 @@ sub asynchronous_event {
     }
 
     elsif (my $action = param('action')) {
-	my $dispatch = Bio::Graphics::Browser2::Action->new($self);
 	my $method   = "ACTION_${action}";
 	unless ($dispatch->can($method)) {
 	    return (401,'text/plain',"invalid action: '$action'");
@@ -3585,13 +3585,18 @@ sub join_selected_tracks {
 
     my @selected = $self->visible_tracks;
     for (@selected) { # escape hyphens
-#	warn "MUST FIX join_selected_tracks";
 	if ((my $filter = $state->{features}{$_}{filter}{values})) {
 	    my @subtracks = grep {$filter->{$_}} keys %{$filter};
 	    $_ .= "/@subtracks";
 	}
     }
-    return join LABEL_SEPARATOR,@selected;
+    return $self->join_tracks(\@selected);
+}
+
+sub join_tracks {
+    my $self = shift;
+    my $tracks = shift;
+    return join LABEL_SEPARATOR,@$tracks;
 }
 
 sub bookmark_link {

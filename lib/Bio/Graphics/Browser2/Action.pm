@@ -29,8 +29,9 @@ sub session     {shift->render->session}
 sub segment     {shift->render->segment}
 
 sub handle_legacy_calls {
-    my $class  = shift;
-    my ($q,$render) = @_;
+    my $self  = shift;
+    my $q     = shift;
+    my $render = $self->render;
 
     # redirect to galaxy form submission
     if ($q->param('galaxy')) {
@@ -44,6 +45,15 @@ sub handle_legacy_calls {
 
     if ($q->param('clear_dsn') || $q->param('reset_dsn')) {
 	return (302,undef,"?action=reset_dsn");
+    }
+
+    if (my $url = $q->param('eurl')) {
+	$q->param(url => $url);
+	$q->param(upload_id => rand(10000));
+	my (undef,undef,$result) = $self->ACTION_import_track($q);
+	my $tracks = JSON::from_json($result)->{tracks};
+	my $t      = CGI::escape($render->join_tracks($tracks));
+	return (302,undef,"?enable=$t");
     }
 
     return;
@@ -419,7 +429,7 @@ sub ACTION_upload_file {
 }
 
 sub ACTION_import_track {
-    my $self   = shift;
+    my $self = shift;
     my $q    = shift;
 
     my $url = $q->param('url') or 

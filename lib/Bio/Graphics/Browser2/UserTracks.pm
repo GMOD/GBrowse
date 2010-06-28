@@ -421,7 +421,7 @@ sub get_loader {
 sub guess_upload_type {
     my $self = shift;
     my ($type,$lines,$eol) = $self->_guess_upload_type(@_);
-#    $type = 'bigwig' if $type eq 'wiggle' && $self->has_bigwig;
+    $type = 'bigwig' if $type eq 'wiggle' && $self->has_bigwig;
     return ($type,$lines,$eol);
 }
 

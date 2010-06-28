@@ -312,7 +312,7 @@ sub feature_to_id_sub {
     }
     $sub .= "return;\n}";
     my $as =  eval $sub;
-    warn "sutrack filter failed: ",$@ unless $as;
+    warn "subtrack filter failed: ",$@ unless $as;
     return $self->{_feature2id} = $as;
 }
 

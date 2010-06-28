@@ -47,15 +47,6 @@ sub handle_legacy_calls {
 	return (302,undef,"?action=reset_dsn");
     }
 
-    if (my $url = $q->param('eurl')) {
-	$q->param(url => $url);
-	$q->param(upload_id => rand(10000));
-	my (undef,undef,$result) = $self->ACTION_import_track($q);
-	my $tracks = JSON::from_json($result)->{tracks};
-	my $t      = CGI::escape($render->join_tracks($tracks));
-	return (302,undef,"?enable=$t");
-    }
-
     return;
 }
 
@@ -124,6 +115,10 @@ sub ACTION_configure_track {
 
     my $track_name = $q->param('track') or croak;
     my $revert     = $q->param('track_defaults');
+
+    # this is fixing an upstream bug of some sort
+    $track_name =~ s/:(overview|region|detail)$//
+	if $track_name =~/^(plugin|file|http|ftp)/; 
 
     my $html = $self->render->track_config($track_name,$revert);
     return ( 200, 'text/html', $html );
@@ -306,12 +301,11 @@ sub ACTION_change_track_order {
     my @labels   = $q->param('label[]') or return;
     foreach (@labels) {
 	s/%5F/_/g;
-	s/:(overview|region|detail)$// if m/^(plugin|file|http|ftp):/;
+	s/:(overview|region|detail)$// if m/^(plugin|file|http|ftp)/;
     }
     my %seen;
     @{ $settings->{tracks} } = grep { length() > 0 && !$seen{$_}++ }
     ( @labels, @{ $settings->{tracks} } );
-
     return (204,'text/plain',undef);    
 }
 

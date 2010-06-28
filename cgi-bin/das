@@ -146,6 +146,7 @@ sub dispatch {
     # all other arguments expect a valid data source
     $self->set_datasource($dsn);
     
+    do { $self->list_sources(); return } if $op eq $dsn;
     do { $self->stylesheet();   return } if $op eq 'stylesheet';
     do { $self->entry_points(); return } if $op eq 'entry_points';
     do { $self->types();        return } if $op eq 'types';
@@ -167,7 +168,7 @@ sub error_header {
 		 -X_DAS_Capabilities => CAPABILITIES,
 	) unless $self->{header}++;
     return if request_method() eq 'HEAD';
-    print $message;
+    print $message,"\n";
 }
 
 sub ok_header {
@@ -236,6 +237,10 @@ END
     my $self_url = url(-full=>1);
     $self_url    =~ s/sources.*$//;
 
+    my @sources  = $self->datasource ? $self->datasource 
+                                     : sort $globals->data_sources;
+    
+
     print "<SOURCES>\n";
 
   SOURCE:
@@ -262,24 +267,27 @@ END
 	    $created = strftime("%Y-%m-%dT%T%z",@time) || '';
 	}
 	my $version = $a{version} || $a{coordinates_version} || '';
-	my $track = $self->track;
-	next unless $source->setting($track=>'das category');
-	my $citation    = CGI::escapeHTML($source->setting($track=>'citation'));
-	my $key         = CGI::escapeHTML($source->setting($track=>'key'));
-	my $title       = CGI::escapeHTML($source->description($dsn));
-	my $description = $source->description($dsn)."; $track track";
-	$description   .= "; $key"      if $key;
-	$description   .= "; $citation" if $citation;
-	$description    = CGI::escapeHTML(CGI::unescapeHTML($description));
-	my $authority   = CGI::escapeHTML($a{authority});
-	$authority     .= "_$version" if $version;
-	my $base        = url();
-	$base           =~ s/\?$//;
-	my $maintainer  = CGI::escapeHTML($a{maintainer});
+	
+	my @tracks = $self->track ? $self->track : sort $source->labels;
+	for my $track (@tracks) {
+	    next unless $source->setting($track=>'das category');
+
+	    my $citation    = CGI::escapeHTML($source->setting($track=>'citation'));
+	    my $key         = CGI::escapeHTML($source->setting($track=>'key'));
+	    my $title       = CGI::escapeHTML($source->description($dsn));
+	    my $description = $source->description($dsn)."; $track track";
+	    $description   .= "; $key"      if $key;
+	    $description   .= "; $citation" if $citation;
+	    $description    = CGI::escapeHTML(CGI::unescapeHTML($description));
+	    my $authority   = CGI::escapeHTML($a{authority});
+	    $authority     .= "_$version" if $version;
+	    my $base        = url();
+	    $base           =~ s/\?$//;
+	    my $maintainer  = CGI::escapeHTML($a{maintainer});
 	    
-	my $uri = CGI::escape($dsn).'|'.CGI::escape($track);
+	    my $uri = CGI::escape($dsn).'|'.CGI::escape($track);
 	    
-	print <<END;
+	    print <<END;
      <SOURCE uri="$uri" title="$key" description="$description">
         <MAINTAINER email="$maintainer" />
         <VERSION uri="$dsn|$track" created="$created">
@@ -287,15 +295,16 @@ END
 END
 ;
 
-	for ('types','features','entry_points','stylesheet') {
-	    print <<END;
+	    for ('types','features','entry_points','stylesheet') {
+		print <<END;
           <CAPABILITY type="das1:$_" query_uri="$base/$dsn|$track/$_" />
 END
-	}
-	print  <<END;
-        </VERSION>
+	    }
+	    print  <<END;
+	</VERSION>
      </SOURCE>
 END
+	}
     }
     print "</SOURCES>\n";
 }
@@ -839,10 +848,10 @@ END
     foreach (@segments) {
 	my ($reference,$refclass,$start,$stop) = @$_;
 
-	my @segs = $self->get_segment_obj($reference,$start,$stop);
-	$self->error_segment($reference,$start,$stop) unless @segs;
+	my @features = $self->get_segment_obj($reference,$start,$stop,1);
+	$self->error_segment($reference,$start,$stop) unless @features;
 
-	for my $seq (@segs) {
+	for my $seq (@features) {
 	    $self->dump_segment($seq,\@filter,undef,$type2category);
 	}
     }
@@ -894,7 +903,7 @@ sub dump_segment {
     }
 
     if (@$filter) {
-	my $iterator = $seq->features(-types=>$filter,-merge=>1,-iterator=>1);
+	my $iterator = $db->features(-seq_id=>$r,-start=>$s,-end=>$e,-types=>$filter,-merge=>1,-iterator=>1);
 	while (my $f = $iterator->next_seq) {
 	    $self->print_feature($f,undef,transmute($f->type,$type2category),\%agg_map);
 	}
@@ -915,8 +924,9 @@ sub print_feature {
     my $level         = shift || 0;
     my $sequence      = shift || 0;
 
-    my @subparts     = $f->get_SeqFeatures;
-    my $no_parent    = @subparts && no_parent_wanted($f);
+    my @subparts     = $self->children($f);
+
+    my $no_parent    = @subparts && $self->no_parent_wanted($f);
 
     $self->_print_feature($f,
 			  $parent,
@@ -973,7 +983,9 @@ sub _print_feature {
   my $id          = $self->feature2id($f) || $pid;
   $id            .= ".$sequence" if $pid && $id eq $pid;
   my $counter     = 0;
-  my @child_ids   = map {$self->feature2id($_)||"$id.".$counter++} $f->get_SeqFeatures;
+  my @children    = $self->children($f);
+
+  my @child_ids   = map {$self->feature2id($_)||"$id.".$counter++} @children;
 
   my @notes       = $f->notes if $f->can('notes');
   my %attributes  = $f->attributes if $f->can('attributes');
@@ -1091,6 +1103,32 @@ END
     ;
 }
 
+sub children {
+    my $self = shift;
+    my $feat = shift;
+
+    my @children = $feat->get_SeqFeatures;
+
+    my @expanded_children;
+    for my $c (@children) {
+	if ($self->split_location($c)) {
+	    my @grand_children = $c->get_SeqFeatures;
+	    push @expanded_children,@grand_children;
+	} else {
+	    push @expanded_children,$c;
+	}
+    }
+    return @expanded_children;
+}
+
+sub split_location {
+    my $self = shift;
+    my $f    = shift;
+    my @subparts = $f->get_SeqFeatures;
+    my %subtypes     = map {$_->type=>1} @subparts;
+    return keys %subtypes == 1 && $subtypes{$f->type};
+}
+
 # unfortunately, the gbrowse library returns a relative address
 # for AUTO links
 sub hack_link {
@@ -1186,8 +1224,8 @@ sub get_segment_obj {
 
     my $source = $self->datasource;
     my $db     = $source->open_database($self->track);
-
     my $search = $self->get_search_object;
+
     my $term     = defined $start ? "$reference:$start..$stop" : $reference;
     my @features = $search->features(-search_term=>$term);
     return unless @features;
@@ -1202,6 +1240,7 @@ sub get_segment_obj {
 
 sub get_search_object {
     my $self = shift;
+    my $db   = shift;
 
     return $self->{searchobj} if defined $self->{searchobj};
 

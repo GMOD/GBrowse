@@ -282,7 +282,8 @@ sub make_requests {
 				     $format_option, 
 				     $label ],
 		    );
-		$cache_object->flag_error("Could not fetch data for $track");
+		my $msg = eval {$args->{remotes}->error($track)};
+		$cache_object->flag_error($msg || "Could not fetch data for $track");
 		$d{$track} = $cache_object;
 		next;
 	    }
@@ -463,6 +464,10 @@ sub wrap_rendered_track {
 	$config_click    = qq[Controller.edit_upload('$escaped_file')];
     }
 
+    elsif ( $label =~ /^(http|ftp)/ ) {
+	$config_click    = '';
+    }
+
     else {
         my $config_url = "url:?action=configure_track;track=$escaped_label";
         $config_click
@@ -472,7 +477,7 @@ sub wrap_rendered_track {
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
     my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
 
-    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label',true)";
+    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label',true)" unless $label =~ /^(http|ftp)/;
 
     my $title;
     if ($label =~ /^file:/) {
@@ -513,22 +518,19 @@ sub wrap_rendered_track {
             }
         ),
 
-        img({   -src         => $configure,
-                -style       => 'cursor:pointer',
-                -onmousedown => $config_click,
-                -onMouseOver =>
-	    "$balloon_style.showTooltip(event,'$configure_this_track')",
-            }
-        ),
-
-        img({   -src         => $download,
-                -style       => 'cursor:pointer',
-                -onmousedown => $download_click,
-                -onMouseOver =>
-	    "$balloon_style.showTooltip(event,'$download_this_track')",
-            }
-        ),
-
+        $config_click ? img({   -src         => $configure,
+				-style       => 'cursor:pointer',
+				-onmousedown => $config_click,
+				-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')",
+			    })
+	              : '',
+        $download_click ? img({   -src         => $download,
+				  -style       => 'cursor:pointer',
+				  -onmousedown => $download_click,
+				  -onMouseOver =>
+				      "$balloon_style.showTooltip(event,'$download_this_track')",
+			      })
+	                 : '',
 
         img({   -src         => $help,
                 -style       => 'cursor:pointer',
@@ -1358,12 +1360,14 @@ sub run_local_requests {
 
 	    else {
 
-		if ( my $file = ($feature_files->{$base}) ) {
+		if ( exists $feature_files->{$base} ) {
+		    
+		    my $file = $feature_files->{$base};
 		
 		    # Add feature files, including remote annotations
 		    my $featurefile_select = $args->{featurefile_select}
 		    || $self->feature_file_select($section);
-
+			
 		    if ( ref $file and $panel ) {
 			$self->add_feature_file(
 			    file     => $file,
@@ -1371,7 +1375,7 @@ sub run_local_requests {
 			    position => $feature_file_offsets{$label} || 0,
 			    options  => {},
 			    select   => $featurefile_select,
-			    );
+				);
 			%trackmap = map { $_ => $file } @{ $panel->{tracks} || [] };
 		    }
 		}
@@ -1408,9 +1412,10 @@ sub run_local_requests {
 
 	my $elapsed = time()-$time;
 	warn "render($label): $elapsed seconds ", ($@ ? "(error)" : "(ok)") if BENCHMARK;
-
+	
 	if ($@) {
-	    warn $@;
+	    warn "RenderPanels error";
+#	    warn $@;
 	    if ($@ =~ /timeout/) {
 		$requests->{$label}->flag_error('Timeout; Try turning off tracks or looking at a smaller region.');
 	    } else {
@@ -1698,38 +1703,6 @@ sub add_features_to_track {
 
 }
 
-sub load_external_sources {
-    croak "do not call load_external_sources";
-    my ( $self, %args ) = @_;
-
-    my $segment       = $args{'segment'}       or return;
-    my $whole_segment = $args{'whole_segment'} or return;
-    my $settings      = $args{'settings'};
-    my $plugin_set    = $args{'plugin_set'};
-    my $uploaded_sources = $args{'uploaded_sources'};
-    my $remote_sources   = $args{'remote_sources'};
-
-    # $f will hold a feature file hash in which keys are human-readable names
-    # of feature files and values are FeatureFile objects.
-
-    my $feature_file = {};
-    if ($segment) {
-        my $rel2abs = $self->coordinate_mapper( $segment, $whole_segment, 1 );
-        my $rel2abs_slow
-            = $self->coordinate_mapper( $segment, $whole_segment, 0 );
-        for my $featureset ( $plugin_set, $uploaded_sources, $remote_sources)
-        {
-	    next unless $featureset;
-            $featureset->annotate(
-                $segment,      $feature_file, $rel2abs,
-                $rel2abs_slow, $self->setting('max segment') || 1_000_000
-		);
-        }
-    }
-    return $feature_file;
-}
-
-
 sub get_iterator {
   my $self = shift;
   my ($db,$segment,$feature_types,$max) = @_;
@@ -1790,7 +1763,7 @@ Internal use: render a feature file into a panel
 sub add_feature_file {
   my $self = shift;
   my %args = @_;
-
+  
   my $file    = $args{file}    or return;
   my $options = $args{options} or return;
   my $select  = $args{select}  or return;
@@ -1798,8 +1771,6 @@ sub add_feature_file {
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
 
-  warn "render $file" if DEBUG;
-  
   eval {
     $file->render(
 		  $args{panel},

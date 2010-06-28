@@ -1489,8 +1489,8 @@ sub init_remote_sources {
   my $self = shift;
   warn "init_remote_sources()" if DEBUG;
   my $remote_sources   = Bio::Graphics::Browser2::RemoteSet->new($self->data_source,
-                                                                $self->state,
-                                                                $self->language);
+								 $self->state,
+								 $self->language);
   $remote_sources->add_files_from_state;
   $self->remote_sources($remote_sources);
   return $remote_sources;
@@ -3300,6 +3300,7 @@ sub render_deferred {
             hilite_callback  => $h_callback || undef,
             cache_extra      => $cache_extra,
 	    nocache          => $nocache || 0,
+	    remotes          => $self->remote_sources,
             flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
         }
     );
@@ -3533,13 +3534,13 @@ sub external_data {
 	my $search       = $self->get_search_object;
 	my $rel2abs      = $search->coordinate_mapper($segment,1);
 	my $rel2abs_slow = $search->coordinate_mapper($segment,0);
+	my $plugins      = $self->plugins;
 	eval {
 	    $_->annotate($meta_segment,$f,
 			 $rel2abs,$rel2abs_slow,$max_segment,
 			 $self->whole_segment,$self->region_segment);
 	} foreach ($self->plugins,$self->remote_sources);
     }
-
     warn "FEATURE files = ",join ' ',%$f if DEBUG;
     return $self->{feature_files} = $f;
 }

@@ -2480,6 +2480,7 @@ sub share_track {
 
     my $state = $self->state();
     my $source = $self->data_source;
+    my $name   = $source->name;
 
     (my $lbase = $label) =~ s/:\w+$//;
 
@@ -2529,10 +2530,11 @@ sub share_track {
             map  { shellwords( $self->setting( $_ => 'feature' ) ) }
             grep { $self->setting( $_ => 'das category' ) }
             $label eq 'all'
-        ? @visible
-        : $label );
+			  ? @visible
+			  : $label );
     my $das = url( -full => 1, -path_info => 1 );
     $das =~ s/gbrowse/das/;
+    $das =~ s/$name/$name|$label/ if $label ne 'all';
     $das .= "features";
     $das .= "?$das_types";
 
@@ -2585,9 +2587,6 @@ sub share_track {
                 : 'SHARE_DAS_INSTRUCTIONS_ONE_TRACK'
             )
             )
-            . br()
-            .b('DAS URL: ') 
-	    . br()
 	    . p( textfield(
                 -style    => 'background-color: wheat',
                 -readonly => 1,

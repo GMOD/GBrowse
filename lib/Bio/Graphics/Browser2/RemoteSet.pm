@@ -4,7 +4,7 @@ package Bio::Graphics::Browser2::RemoteSet;
 use strict;
 use base 'Bio::Graphics::Browser2::ExternalData';
 
-use Bio::Graphics::Browser2::Util 'error','shellwords';
+use Bio::Graphics::Browser2::Util 'shellwords';
 use IO::File;
 use CGI 'cookie','param','unescape';
 use Digest::MD5 'md5_hex';
@@ -212,8 +212,8 @@ sub get_das_segment {
   my $config   = $self->config;
 
   unless (eval "require Bio::Das; 1;") {
-    error($self->language->tr('NO_DAS'));
-    return;
+      Bio::Graphics::Browser2::Util::error($self->language->tr('NO_DAS'));
+      return;
   }
 
   my @aggregators = shellwords($config->setting('aggregators') ||'');
@@ -255,7 +255,7 @@ sub mirror {
   # Uploaded feature handling
   unless (LWP::UserAgent->can('new')) {
       unless (eval "require LWP") {
-	  error($self->language->tr('NO_LWP'));
+	  Bio::Graphics::Browser2::Util::error($self->language->tr('NO_LWP'));
 	  return;
       }
   }
@@ -325,11 +325,20 @@ sub annotate {
       my $mapper             = $url =~ m!\$(segment|ref|overview|region)!
                                      ? $fast_mapper
                                      : $slow_mapper;
-      my $feature_file       = $self->feature_file($url,$segment,
-						   $mapper,$slow_mapper,
-						   $whole_segment,$region_segment);
+      my $feature_file       = eval {$self->feature_file($url,$segment,
+							 $mapper,$slow_mapper,
+							 $whole_segment,$region_segment)
+      };
+      $self->error($url=>$@) if $@;
       $feature_files->{$url} = $feature_file;
   }
+}
+
+sub error {
+    my $self = shift;
+    my $url = shift;
+    $self->{error}{$url} = shift if @_;
+    return $self->{error}{$url};
 }
 
 1;

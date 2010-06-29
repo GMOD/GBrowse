@@ -235,6 +235,10 @@ END
 
    DATA_SOURCE => 'Data Source',
 
+   UPLOADED_TRACKS => 'Uploaded Tracks',
+
+   IMPORTED_TRACKS => 'Imported Tracks',
+
    UPLOAD_TRACKS=>'Add custom tracks',
 
    USERDATA_TABLE=>'Upload and share tracks',

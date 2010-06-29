@@ -232,8 +232,8 @@ ok(exists $tracks{Variation});
 ok(!eval{$source->make_link();1});
 
 # test that environment variable interpolation is working in dbargs
-$source = $globals->create_data_source('yeast_chr1');
 $ENV{GBROWSE_DOCS} = '/foo/bar';
+$source = $globals->create_data_source('yeast_chr1');
 (undef,$adapter,@args) = $source->db_settings;
 ok($args[3]=~m!^/foo/bar!);
 

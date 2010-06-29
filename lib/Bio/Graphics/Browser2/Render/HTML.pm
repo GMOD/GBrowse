@@ -1328,17 +1328,17 @@ sub render_upload_share_section {
 sub render_toggle_userdata_table {
     my $self = shift;
     return div(
-	h2({-style=>'margin: 0px 0px 0px 0px;padding:5px 0px 5px 0px'},'Uploaded Tracks'),
+	h2({-style=>'margin: 0px 0px 0px 0px;padding:5px 0px 5px 0px'},$self->tr('UPLOADED_TRACKS')),
 	a({-href=>$self->annotation_help,-target=>'_blank'},
 	  i('['.$self->tr('HELP_FORMAT_UPLOAD').']')),
 	$self->render_userdata_table(),
-	$self->userdata_upload()
+	$self->userdata_upload(),
 	);
 }
 
 sub render_toggle_import_table {
     my $self = shift;
-    return h2('Imported Tracks').
+    return h2($self->tr('IMPORTED_TRACKS')).
 	a({-href=>$self->annotation_help.'#remote',-target=>'_blank'},
 	  i('['.$self->tr('HELP_FORMAT_IMPORT').']')).
 	div($self->render_userimport_table(),

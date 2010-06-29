@@ -761,43 +761,34 @@ sub db_settings {
   $track ||= 'general';
 
   # caching to avoid calling setting() too many times
-  my $label = $self->semantic_label($track,$length);
-  return @{$DB_SETTINGS{$self,$label}} if defined $DB_SETTINGS{$self,$label};
+  my $semantic_label = $self->semantic_label($track,$length);
 
-  # if the track contains the "database" option, then it is a symbolic name
-  # that indicates a [symbolic_name:database] section in this file or the globals
-  # file.
-  my ($symbolic_db_name,$section,$basename);
+  return @{$DB_SETTINGS{$self,$semantic_label}} if defined $DB_SETTINGS{$self,$semantic_label};
 
-  if ($track =~ /(.+):(\d+)$/) {
-      $basename = $1;
-      $length   = $2;
-  } else {
-      $basename = $track;
-      $length   ||= 1;
+  my $symbolic_db_name;
+
+  if ($track =~ /:database$/) {
+      $symbolic_db_name = $track
+  } elsif (my $d  = $self->semantic_fallback_setting($track => 'database', $length)) {
+      $symbolic_db_name = "$d:database";
+  } elsif ($self->semantic_setting($track=>'db_adaptor',$length)) {
+      $symbolic_db_name = $track;
+  } elsif ($self->semantic_fallback_setting($track => 'db_adaptor', $length)) {
+      $symbolic_db_name = 'general';
   }
 
-  if ($basename =~ /:database$/) {
-      $section = $symbolic_db_name = $basename;
-  } elsif ($self->semantic_setting($basename=>'db_adaptor',$length)) {
-      $section = $basename;
-  } else {
-      $symbolic_db_name  = $self->semantic_fallback_setting($basename => 'database', $length);
-      $section          = $symbolic_db_name   
-	                    ? "$symbolic_db_name:database" 
-                            : $basename;
+  if (defined $DB_SETTINGS{$self,$symbolic_db_name}) {
+      return @{$DB_SETTINGS{$self,$semantic_label} ||= $DB_SETTINGS{$self,$symbolic_db_name}};
   }
 
-  return @{$DB_SETTINGS{$self,$section}} if defined $DB_SETTINGS{$self,$section};
-
-  my $adaptor = $self->semantic_fallback_setting($section => 'db_adaptor', $length);
+  my $adaptor = $self->semantic_fallback_setting($symbolic_db_name => 'db_adaptor', $length);
   unless ($adaptor) {
-      warn "Unknown database defined for $section";
+      warn "Unknown database defined for $track";
       return;
   }
   eval "require $adaptor; 1" or die $@;
 
-  my $args    = $self->semantic_fallback_setting($section => 'db_args', $length);
+  my $args    = $self->semantic_fallback_setting($symbolic_db_name => 'db_args', $length);
   my @argv    = ref $args eq 'CODE'
         ? $args->()
 	: shellwords($args||'');
@@ -812,21 +803,20 @@ sub db_settings {
   }
 
   if (defined (my $a = 
-	       $self->semantic_fallback_setting($section => 'aggregators',$length))) {
+	       $self->semantic_fallback_setting($symbolic_db_name => 'aggregators',$length))) {
     my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
   
   # uniquify dbids
   my $key    = Dumper($adaptor,@argv);
-  $self->{arg2dbid}{$key} ||= $section;
-  $self->{arg2dbid}{$key}   = $section if $section =~ /:database$/;
+  $self->{arg2dbid}{$key} ||= $symbolic_db_name;
 
   my @result = ($self->{arg2dbid}{$key},$adaptor,@argv);
 
   # cache settings
-  $DB_SETTINGS{$self,$label}   = \@result;
-  $DB_SETTINGS{$self,$section} = \@result;
+  $DB_SETTINGS{$self,$symbolic_db_name}   ||= \@result;
+  $DB_SETTINGS{$self,$semantic_label  }   ||= \@result;
 
   return @result;
 }

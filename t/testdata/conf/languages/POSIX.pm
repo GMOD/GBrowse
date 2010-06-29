@@ -165,6 +165,10 @@ END
 
    HELP_FORMAT => 'Help with File Format',
 
+   HELP_FORMAT_UPLOAD => 'Help with uploading custom tracks',
+
+   HELP_FORMAT_IMPORT => 'Help with importing custom tracks',
+
    CANCEL   => 'Cancel',
 
    ABOUT    => 'About...',
@@ -216,6 +220,10 @@ END
    DUMPS       => 'Reports &amp; Analysis',
 
    DATA_SOURCE => 'Data Source',
+
+   UPLOADED_TRACKS => 'Uploaded Tracks',
+
+   IMPORTED_TRACKS => 'Imported Tracks',
 
    UPLOAD_TRACKS=>'Add custom tracks',
 

@@ -729,6 +729,7 @@ sub get_scan {
 	next unless    $config->fallback_setting($l => 'discoverable');
 	next if        $config->code_setting($l=>'global feature');
 	my $key      = $config->code_setting($l => 'key');
+	my $category = $config->code_setting($l => 'category');
 	my $citation = $config->code_setting($l => 'citation');
 	my $subtracks = $config->subtrack_scan_list($l);
 	$result .=  <<END;
@@ -738,6 +739,7 @@ END
     ;
     $result .=  "select   = @$subtracks\n" if $subtracks;
     $result .=  "citation = $citation\n"   if $citation;
+    $result .=  "category = $category\n"   if $category;
     $result .=  "\n";
     }
 return $result;

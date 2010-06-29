@@ -487,6 +487,9 @@ sub wrap_rendered_track {
 	$title = url_label($label);
 
     }
+    elsif ($label =~ /^plugin/) {
+	($title = $label) =~ s/^plugin://;
+    }
     else {
 	(my $l = $label) =~ s/:\w+$//;
 	$title = $source->setting($l=>'key') || $label;

@@ -2843,6 +2843,9 @@ sub label2key {
   if ($label =~ /^ftp|^http/) {
     $key = $source->setting($label => 'key') || url_label($label);
   }
+  elsif ($label =~ /^plugin/) {
+      ($key = $label) =~ s/^plugin://;
+  }
 
   my $presets = $self->get_external_presets || {};
   for my $l ($self->language->language) {

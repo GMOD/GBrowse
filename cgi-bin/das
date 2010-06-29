@@ -81,7 +81,7 @@ use constant ERRCODES => {
     501 => 'Unimplemented feature',
 };
 
-use constant CACHE_STYLESHEET=> 1;
+use constant CACHE_STYLESHEET=> 0;
 
 my (%CACHED_TYPES,%SO_HASH);
 
@@ -406,7 +406,7 @@ END
 		    ($glyph,%style_hint) = $self->guess_glyph($style{-glyph},1);
 		    if ($style{-glyph} eq 'gene' && $type eq $toplevel) {
 			$glyph = 'HIDDEN' ;
-			%style = ();
+			%style = %style_hint = ();
 		    }
 		    %style = (%style,%style_hint);
 		}
@@ -459,8 +459,8 @@ sub guess_glyph {
 
     eval "require $class" unless $class->can('new');
     if ($group) {
-	return $class->isa('Bio::Graphics::Glyph::transcript') ? ('LINE',-style=>'hat')
-	      : $class->isa('Bio::Graphics::Glyph::cds')       ? ('LINE',-style=>'hat')
+	return  $class->isa('Bio::Graphics::Glyph::transcript') ? ('LINE',-style=>'hat')
+	      : $class->isa('Bio::Graphics::Glyph::cds')        ? ('LINE',-style=>'hat')
 	      : 'LINE';
     } else {
 	return $class->isa('Bio::Graphics::Glyph::arrow')        ? 'ARROW'
@@ -518,13 +518,18 @@ sub categories {
     push @{$category2type{'group'}},      (@composite_types,@all_types);
     $type2category{$_} = $category foreach @composite_types;
 
+    my $so_hash = $self->so_hash;
+
     for my $type (@all_types) {
-	$type2category{$type} = $category;
 	my $typeobj      = Bio::DB::GFF::Typename->new($type);
-	$type2category{__label__}{$type}      = $track;
 	$type2category{__fuzzy__}{$typeobj}   = $typeobj;
-	$type2category{__subparts__}{$type}++   if $has_subparts;
-	$type2category{__superparts__}{$type}++ if $has_superparts;
+	my $so = $so_hash->{lc $type} if $so_hash;
+	for my $t ($type,$so) {
+	    $type2category{$t}                 = $category;
+	    $type2category{__label__}{$t}      = $track;
+	    $type2category{__subparts__}{$t}++   if $has_subparts;
+	    $type2category{__superparts__}{$t}++ if $has_superparts;
+	}
     }
     $CACHED_TYPES{$dsn} = [(\%category2type,\%type2category,\@types)];
     return @{$CACHED_TYPES{$dsn}};
@@ -905,7 +910,7 @@ sub dump_segment {
     if (@$filter) {
 	my $iterator = $db->features(-seq_id=>$r,-start=>$s,-end=>$e,-types=>$filter,-merge=>1,-iterator=>1);
 	while (my $f = $iterator->next_seq) {
-	    $self->print_feature($f,undef,transmute($f->type,$type2category),\%agg_map);
+	    $self->print_feature($f,undef,$self->transmute($f->type,$type2category),\%agg_map);
 	}
     }
 
@@ -1270,7 +1275,6 @@ sub seq2version {
 # calculate type and category from type and method
 sub transmute {
     my $self = shift;
-    
     my $type = shift;
     my $map  = shift;
 

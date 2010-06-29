@@ -7,6 +7,7 @@
 	* Added "Get chromosome sizes" entry to the File menu.
 	* Fasta and GFF3 dumps working ok now.
 	* Uploaded WIG files will generate bigwig indexes if library is available.
+	* action=scan now returns the category for each track.
 
 2.10 Tue Jun 15 10:58:32 EDT 2010
         * Fully generalized subtrack creation.

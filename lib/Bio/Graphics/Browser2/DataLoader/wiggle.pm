@@ -6,6 +6,8 @@ use base 'Bio::Graphics::Browser2::DataLoader';
 use File::Basename 'basename','dirname';
 use IO::String;
 
+my $HASBIGWIG;
+
 sub start_load {
     my $self   = shift;
 
@@ -121,7 +123,7 @@ sub minmax {
       next if /^\#/;
       my @tokens = split(/\s+/,$_) or next;
       my $seqid  = @tokens > 3 ? $tokens[0] : $chrom;
-      $self->set_status("chromosome $seqid: line $count") if $count++ % 10000 == 0;
+      $self->set_status("chromosome $seqid: line $count") if $count++ % 1000 == 0;
       my $value  = $tokens[-1];
       $value = $transform->($self,$value) if $transform;
       $stats{$seqid} ||= Statistics::Descriptive::Sparse->new();

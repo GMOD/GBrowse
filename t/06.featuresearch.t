@@ -128,7 +128,6 @@ ok(scalar @$features,0);
 $features    = $region->search_features({-search_term => 'Heterodox14'});
 ok(scalar @$features,1);
 
-
 # now try the local multidatabase functionality
 my $search = Bio::Graphics::Browser2::RegionSearch->new(
     { source => $source,
@@ -148,7 +147,7 @@ ok(scalar @$features,1);
 $features    = $search->search_features_locally({-search_term => 'My_feature:f12',-shortcircuit=>0});
 ok(scalar @$features,2);
 my @dbids = sort map {$_->gbrowse_dbid} @$features;
-ok("@dbids","Linkage general");
+ok("@dbids","general volvox2:database");
 
 my @seqid = sort map {$_->seq_id} @$features;
 ok("@seqid","ctgA ctgB");

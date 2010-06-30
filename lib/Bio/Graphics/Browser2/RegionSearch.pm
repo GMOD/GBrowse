@@ -92,8 +92,8 @@ sub init_databases {
     my %dbs;
 
     my $source = $self->source;
-#    my $labels = $track_labels || [$source->labels];
-    my $labels = $track_labels || [$source->dbs];
+    my $labels = $track_labels || [$source->labels];
+#    my $labels = $track_labels || [$source->dbs];
 
     my $renderfarm = $self->source->global_setting('renderfarm');
 
@@ -104,7 +104,7 @@ sub init_databases {
     my %seenit;
     for my $l (@$labels) {
 	next if $l =~ /^(_scale|builtin)/;
-	my ($dbid)         = $source->db_settings($l);
+	my ($dbid)         = $source->db_settings($l) or next;
 	next if $seenit{$dbid}++;
 
 	my $remote         = $local_only || !$renderfarm 
@@ -116,9 +116,6 @@ sub init_databases {
 	}
 
 	my $search_options = $source->search_options($dbid);
-
-	# this can't be right - we need to do id searches
-	# next if $search_options eq 'none';  
 
 	$dbs{$dbid}{options} ||= $search_options;
 	$dbs{$dbid}{remotes}{$remote}++ if $remote;
@@ -202,8 +199,8 @@ sub features {
 =head2 $meta_segment = $db->segment($segment)
 
 Given an existing segment, return a
-Bio::Graphics::Browser2::MetaSegment object, which behaves more or less
-like a regular Bio::Das::SegmentI object, but searches multiple
+Bio::Graphics::Browser2::MetaSegment object, which behaves more or
+less like a regular Bio::Das::SegmentI object, but searches multiple
 databases. Both iterative and non-iterative feature fetching is
 supported.
 
@@ -217,6 +214,59 @@ sub segment {
     my $segment = shift;
     return Bio::Graphics::Browser2::MetaSegment->new($self,$segment);
 }
+
+=head2 $segment = $db->feature2segment($feature)
+
+Converts a feature into a segment in the database that the feature
+corresponds to.
+
+=cut
+
+sub feature2segment {
+    my $self             = shift;
+    my ($feature,$dbid)  = @_;
+
+    my $source   = $self->source;
+    $dbid      ||= $feature->gbrowse_dbid;
+    my $db       = $source->open_database($dbid);
+
+    my $region   = Bio::Graphics::Browser2::Region->new(
+ 	{ source     => $source,
+ 	  state      => {},
+ 	  db         => $db,
+	  searchopts => $source->search_options($dbid),
+	}
+ 	);
+    $region->features([$feature]);
+    return $region->seg;
+}
+
+=head2 @segments = $db->features2segments($feature)
+
+As above, but takes an arrayref of features and returns an array of
+segments.
+
+=cut
+
+sub features2segments {
+    my $self             = shift;
+    my ($features,$dbid)  = @_;
+
+    my $source   = $self->source;
+    my $db       = $source->open_database($dbid);
+
+    my $region   = Bio::Graphics::Browser2::Region->new(
+ 	{ source     => $source,
+ 	  state      => {},
+ 	  db         => $db,
+	  searchopts => $source->search_options($dbid),
+	}
+ 	);
+    my $s = $region->features2segments($features);
+    return unless $s;
+    return @$s;
+}
+
 
 =head2 $found = $db->search_features($args)
 

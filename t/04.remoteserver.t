@@ -18,6 +18,8 @@ use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 my $PID;
 
 BEGIN {
+    print STDERR "Rarely test 04.remoteserver.t gets 'stuck'. If this happens, kill the test and Build test again.\n";
+
   # to handle systems with no installed Test module
   # we include the t dir (where a copy of Test.pm is located)
   # as a fallback

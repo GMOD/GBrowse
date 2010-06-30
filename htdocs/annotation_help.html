@@ -11,17 +11,17 @@
     <th><a href="#featurefile format">Feature File Formats</a></th>
     <th><a href="#customize">Customizing Appearance</a></th>
     <th><a href="#numeric">Displaying Intensity Plots &amp; Other Numeric Data</a></th>
-    <th><a href="#remote">Importing Annotations via the Internet</a></th>
+    <th><a href="#remote">Importing Custom Tracks via the Internet</a></th>
   </tr>
 </table>
 
 <A NAME="intro"></A>
+<h1>Uploading Custom Tracks</h1>
 
 <p>
 
-As described in <a href="general_help.html">GBrowse help</a> this
-genome browser allows you to upload track data in a variety of
-quantitative and non-quantitative formats. You can also <a
+This genome browser allows you to upload custom track data in a
+variety of quantitative and non-quantitative formats. You can also <a
 href="#remote">import data sets</a> that reside on network-connected
 servers by referring to their URLs.
 
@@ -1052,7 +1052,7 @@ for the xyplot glyph options.
 
 <hr>
 
-<H2><a name="remote">Importing Annotations via the Internet</a></H2>
+<H2><a name="remote">Importing Custom Tracks via the Internet</a></H2>
 
 <p>
 
@@ -1070,14 +1070,32 @@ the URL of an annotation file. The following URL types are allowed:
       displayed. When you update the file, the updated version will be
       mirrored automatically.
 
-  <dt><b>The URL of a sorted, indexed BAM file.</b>
+  <dt><b>The URL of a BigWig (.bw) file</b> <dd>This is a format that
+  allows you to import UCSC Wiggle tracks into the browser in a fast
+  and efficient manner.  If you haven't already done so, obtain the
+  BigWig tools from the <a
+  href="http://genome.ucsc.edu/goldenPath/help/bigWig.html">UCSC
+  Genome Browser</a> and run the wigToBigWig utility as described
+  there.  Name the file with a ".bw" extension (important!) and place
+  it on an FTP or Web server that can be accessed via this
+  browser. Finally paste the full URL of the BigWig file into the
+  "Import a track URL" field and press "upload". Note: To create the
+  BigWig file you will need a "chrom.sizes" file corresponding to the
+  chromosome lengths of the genome. To obtain a suitable file from the
+  browser, select <i>Download Chrom Sizes</i> from the "File" menu in
+  the upper left corner of the genome browser page.
+
+  <dt><b>The URL of a sorted, indexed BAM file</b>
   <dd>Sort a BAM sequence alignment file and index it with
       SamTools. Place the BAM file and its associated .bai index file on
-      a web or FTP-accessible server and paste its URL into the field. The information in the file
+      a web or FTP-accessible server and paste its URL into the "Import a
+      track URL" field.
+      The information in the file
       will be retrieved as needed in a network-efficient manner. It is up to
       you to ensure that the chromosome coordinates of the BAM file match the
       build of the genome used by this instance of the browser, or nothing will
-      show up (you'll get blank tracks).
+      show up (you'll get blank tracks). Please be aware that the URL must end
+      with ".bam" for GBrowse to recognize that it is a BAM file.
 
   <dt><b>A GBrowse or DAS URL</b>
   <dd>You can share tracks from one GBrowse

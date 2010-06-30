@@ -3,7 +3,6 @@ package Bio::Graphics::Browser2::DataLoader::bam;
 # $Id$
 use strict;
 use base 'Bio::Graphics::Browser2::DataLoader';
-use File::Basename 'basename','dirname';
 
 my $HASBIGWIG;
 
@@ -94,20 +93,6 @@ $semantic_track
 $sam_track
 END
 
-}
-
-sub get_fasta_file {
-    my $self = shift;
-
-    my $source = $self->settings;
-    my @dbs    = $source->databases;
-    for my $db (@dbs) {
-	my ($dbid,$adaptor,%args) = $source->db2args($db);
-	my $fasta = $args{-fasta} or next;
-	return $fasta if -e "$fasta.fai";                  # points at an indexed fasta file
-	return $fasta if -e $fasta && -w dirname($fasta);  # fasta file exists and can create index
-    }
-    return;
 }
 
 sub load {

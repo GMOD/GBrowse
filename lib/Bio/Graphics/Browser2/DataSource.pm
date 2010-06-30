@@ -76,6 +76,14 @@ sub new {
   return $self;
 }
 
+sub _new {
+    my $class = shift;
+    my $self  = $class->SUPER::_new(@_);
+    # this generates the invert_types data structure which will then get cached to disk
+    $self->_type2label($self,'foo','bar');
+    return $self;
+}
+
 sub name {
   my $self = shift;
   my $d    = $self->{name};
@@ -143,6 +151,26 @@ sub userdata {
     my @path = @_;
     my $globals = $self->globals;
     return $globals->user_dir($self->name,@path);
+}
+
+sub taxon_id {
+    my $self = shift;
+    my $meta = $self->metadata or return;
+    return $meta->{taxid};
+}
+
+sub build_id {
+    my $self = shift;
+    my $meta = $self->metadata or return;
+    my $authority = $meta->{authority}           or return;
+    my $version   = $meta->{coordinates_version} or return;
+    return "$authority$version";
+}
+
+sub species {
+    my $self = shift;
+    my $meta = $self->metadata or return;
+    return $meta->{species};
 }
 
 =head2 global_setting()
@@ -543,8 +571,8 @@ sub type2label {
 
   my @labels;
 
-  if (exists $self->{_type2labelmemo}{$type,$length,$dbid}) {
-      @labels =  @{$self->{_type2labelmemo}{$type,$length,$dbid}};
+  if (exists $self->{_type2labelmemo}{$type,$dbid}) {
+      @labels =  @{$self->{_type2labelmemo}{$type,$dbid}};
   }
 
   else {
@@ -562,26 +590,10 @@ sub type2label {
 	  $label_groups{$label_base}++;
       }
       @labels = keys %label_groups;
-      $self->{_type2labelmemo}{$type,$length,$dbid} = \@labels;
+      $self->{_type2labelmemo}{$type,$dbid} = \@labels;
   }
 
   return wantarray ? @labels : $labels[0];
-}
-
-sub metadata {
-    my $self = shift;
-    my $metadata = $self->fallback_setting(general => 'metadata');
-    return unless $metadata;
-
-    my %a = $metadata =~ m/-(\w+)\s+([^-].+?(?= -[a-z]|$))/g;
-
-    my %metadata;
-    for (keys %a) { 
-	$a{$_} =~ s/\s+$// ;
-	$metadata{lc $_} = $a{$_};
-    }; # trim
-    
-    return \%metadata;
 }
 
 sub _type2label {
@@ -618,11 +630,10 @@ sub invert_types {
   my $self    = shift;
   my $config  = shift;
   return unless $config;
-
   my %inverted;
   for my $label (keys %{$config}) {
     my $feature = $self->setting($label => 'feature') or next;
-    my ($dbid)  = $self->db_settings($label);
+    my ($dbid)  = $self->db_settings($label) or next;
     $dbid =~ s/:database$//;
     foreach (shellwords($feature||'')) {
       $inverted{lc $_}{$dbid}{$label}++;
@@ -636,6 +647,24 @@ sub default_labels {
   my $defaults  = $self->setting('general'=>'default tracks');
   $defaults   ||= $self->setting('general'=>'default features'); # backward compatibility
   return $self->scale_tracks,shellwords($defaults||'');
+}
+
+sub metadata {
+    my $self = shift;
+    return $self->{metadata} if exists $self->{metadata};
+
+    my $metadata = $self->fallback_setting(general => 'metadata');
+    return unless $metadata;
+
+    my %a = $metadata =~ m/-(\w+)\s+([^-].*?(?= -[a-z]|$))/g;
+
+    my %metadata;
+    for (keys %a) { 
+	$a{$_} =~ s/\s+$// ;
+	$metadata{lc $_} = $a{$_};
+    }; # trim
+    
+    return $self->{metadata} = \%metadata;
 }
 
 =head2 add_scale_tracks()
@@ -732,43 +761,34 @@ sub db_settings {
   $track ||= 'general';
 
   # caching to avoid calling setting() too many times
-  my $label = $self->semantic_label($track,$length);
-  return @{$DB_SETTINGS{$self,$label}} if defined $DB_SETTINGS{$self,$label};
+  my $semantic_label = $self->semantic_label($track,$length);
 
-  # if the track contains the "database" option, then it is a symbolic name
-  # that indicates a [symbolic_name:database] section in this file or the globals
-  # file.
-  my ($symbolic_db_name,$section,$basename);
+  return @{$DB_SETTINGS{$self,$semantic_label}} if defined $DB_SETTINGS{$self,$semantic_label};
 
-  if ($track =~ /(.+):(\d+)$/) {
-      $basename = $1;
-      $length   = $2;
-  } else {
-      $basename = $track;
-      $length   ||= 1;
+  my $symbolic_db_name;
+
+  if ($track =~ /:database$/) {
+      $symbolic_db_name = $track
+  } elsif (my $d  = $self->semantic_fallback_setting($track => 'database', $length)) {
+      $symbolic_db_name = "$d:database";
+  } elsif ($self->semantic_setting($track=>'db_adaptor',$length)) {
+      $symbolic_db_name = $track;
+  } elsif ($self->semantic_fallback_setting($track => 'db_adaptor', $length)) {
+      $symbolic_db_name = 'general';
   }
 
-  if ($basename =~ /:database$/) {
-      $section = $symbolic_db_name = $basename;
-  } elsif ($self->semantic_setting($basename=>'db_adaptor',$length)) {
-      $section = $basename;
-  } else {
-      $symbolic_db_name  = $self->semantic_fallback_setting($basename => 'database', $length);
-      $section          = $symbolic_db_name   
-	                    ? "$symbolic_db_name:database" 
-                            : $basename;
+  if (defined $DB_SETTINGS{$self,$symbolic_db_name}) {
+      return @{$DB_SETTINGS{$self,$semantic_label} ||= $DB_SETTINGS{$self,$symbolic_db_name}};
   }
 
-  return @{$DB_SETTINGS{$self,$section}} if defined $DB_SETTINGS{$self,$section};
-
-  my $adaptor = $self->semantic_fallback_setting($section => 'db_adaptor', $length);
+  my $adaptor = $self->semantic_setting($symbolic_db_name => 'db_adaptor', $length);
   unless ($adaptor) {
-      warn "Unknown database defined for $section";
+      warn "Unknown database defined for $track";
       return;
   }
   eval "require $adaptor; 1" or die $@;
 
-  my $args    = $self->semantic_fallback_setting($section => 'db_args', $length);
+  my $args    = $self->semantic_fallback_setting($symbolic_db_name => 'db_args', $length);
   my @argv    = ref $args eq 'CODE'
         ? $args->()
 	: shellwords($args||'');
@@ -783,21 +803,20 @@ sub db_settings {
   }
 
   if (defined (my $a = 
-	       $self->semantic_fallback_setting($section => 'aggregators',$length))) {
+	       $self->semantic_setting($symbolic_db_name => 'aggregators',$length))) {
     my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
   
   # uniquify dbids
   my $key    = Dumper($adaptor,@argv);
-  $self->{arg2dbid}{$key} ||= $section;
-  $self->{arg2dbid}{$key}   = $section if $section =~ /:database$/;
+  $self->{arg2dbid}{$key} ||= $symbolic_db_name;
 
   my @result = ($self->{arg2dbid}{$key},$adaptor,@argv);
 
   # cache settings
-  $DB_SETTINGS{$self,$label}   = \@result;
-  $DB_SETTINGS{$self,$section} = \@result;
+  $DB_SETTINGS{$self,$symbolic_db_name}   ||= \@result;
+  $DB_SETTINGS{$self,$semantic_label  }   ||= \@result;
 
   return @result;
 }
@@ -878,16 +897,19 @@ sub db2id {
 
 =item @ids   = $dsn->dbs
 
-Return the names of all the sections that define dbs in the datasource.
+Return the names of all the sections that define dbs in the datasource: both track sections
+that define dbargs and named database sections. Note that we do not
+uniquify the case in which the same adaptor and dbargs are defined twice in two different
+sections.
 
 =cut
 
 sub dbs {
     my $self = shift;
-    my @labels = $self->configured_types;
-    my @named      = grep {/:database/} @labels;
-    my @anonymous  = grep {$self->setting($_=>'db_adaptor')} @labels;
-    return (@named,@anonymous);
+    my @labels     = ('general',$self->configured_types);
+    my %named      = map {$_=>1} grep {/:database/} @labels;
+    my @anonymous  = grep {!$named{$_} && $self->setting($_=>'db_adaptor')} @labels;
+    return (keys %named,@anonymous);
 }
 
 # this is an aggregator-aware way of retrieving all the named types

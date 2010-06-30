@@ -66,7 +66,7 @@ function startAjaxUpload(upload_id) {
   upload_form.hide();
   var cancel_script = 'Controller.cancel_upload("'+upload_id+'_status","'+upload_id+'");'
   
-    status.update( '<image src="' + Controller.button_url('spinner.gif') + '" />');
+  status.update( '<image src="' + Controller.button_url('spinner.gif') + '" />');
   status.insert(new Element('span').update('<b>Uploading...</b>'));
   status.insert(new Element('a',{   href: 'javascript:void(0)',
                                  onClick: cancel_script
@@ -213,7 +213,6 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field
                 +        '  enctype="multipart/form-data"'
                 +        '  method="POST">'
                 +    '<p>'
-                +    '<a href="HELP_LINK" target="_blank"><i>[Help with the file format]</i></a>'
                 + '<br /><b>UPLOAD_PROMPT</b><br />';
 
    if (field_type=='upload') {

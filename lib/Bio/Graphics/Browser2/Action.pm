@@ -7,6 +7,7 @@ use strict;
 use Carp 'croak';
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
+use File::Basename 'basename';
 use constant DEBUG => 0;
 
 sub new {
@@ -28,8 +29,9 @@ sub session     {shift->render->session}
 sub segment     {shift->render->segment}
 
 sub handle_legacy_calls {
-    my $class  = shift;
-    my ($q,$render) = @_;
+    my $self  = shift;
+    my $q     = shift;
+    my $render = $self->render;
 
     # redirect to galaxy form submission
     if ($q->param('galaxy')) {
@@ -113,6 +115,10 @@ sub ACTION_configure_track {
 
     my $track_name = $q->param('track') or croak;
     my $revert     = $q->param('track_defaults');
+
+    # this is fixing an upstream bug of some sort
+    $track_name =~ s/:(overview|region|detail)$//
+	if $track_name =~/^(plugin|file|http|ftp)/; 
 
     my $html = $self->render->track_config($track_name,$revert);
     return ( 200, 'text/html', $html );
@@ -295,12 +301,11 @@ sub ACTION_change_track_order {
     my @labels   = $q->param('label[]') or return;
     foreach (@labels) {
 	s/%5F/_/g;
-	s/:(overview|region|detail)$// if m/^(plugin|file|http|ftp):/;
+	s/:(overview|region|detail)$// if m/^(plugin|file|http|ftp)/;
     }
     my %seen;
     @{ $settings->{tracks} } = grep { length() > 0 && !$seen{$_}++ }
     ( @labels, @{ $settings->{tracks} } );
-
     return (204,'text/plain',undef);    
 }
 
@@ -385,17 +390,19 @@ sub ACTION_upload_file {
     my $session  = $render->session;
 
     my $usertracks = $render->user_tracks;
-    my $name = $fh ? File::Basename::basename($fh) : $q->param('name');
+    my $name = $fh ? basename($fh) : $q->param('name');
     $name ||= 'New track definition';
 
     my $content_type = $fh ? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain';
 
-    $state->{uploads}{$upload_id} = [$name,$$];
+    my $track_name = $usertracks->trackname_from_url($name,1);
+
+    $state->{uploads}{$upload_id} = [$track_name,$$];
     $session->flush();
     $session->unlock();
     
-    my ($result,$msg,$tracks,$pid) = $data ? $usertracks->upload_data($name, $data,$content_type)
-                                           : $usertracks->upload_file($name, $fh,  $content_type);
+    my ($result,$msg,$tracks,$pid) = $data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
+                                           : $usertracks->upload_file($track_name, $fh,  $content_type, 1);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
@@ -416,7 +423,7 @@ sub ACTION_upload_file {
 }
 
 sub ACTION_import_track {
-    my $self   = shift;
+    my $self = shift;
     my $q    = shift;
 
     my $url = $q->param('url') or 
@@ -574,6 +581,32 @@ sub ACTION_set_subtracks {
     my $settings  = $self->state;
     $self->state->{subtracks}{$label} = $subtracks;
     return (204,'text/plain',undef);
+}
+
+sub ACTION_chrom_sizes {
+    my $self = shift;
+    my $q    = shift;
+    my $loader = Bio::Graphics::Browser2::DataLoader->new(undef,undef,undef,
+							  $self->data_source,
+							  undef);
+    my $sizes  = $loader->chrom_sizes;
+    unless ($sizes) {
+	return (200,
+		'text/plain',
+		"The chromosome sizes cannot be determined from this data source. Please contact the site administrator for help");
+    }
+    my $data;
+    open my $f,'<',$sizes or return (200,
+				     'text/plain',
+				     "An error occurred when opening chromosome sizes file: $!");
+    $data.= $_ while <$f>;
+    close $f;
+    my $build = $self->data_source->build_id || 'build_unknown';
+    my $name  = $self->data_source->species  || $self->data_source->name;
+    $name     =~ s/\s/_/g;
+    return (200,'text/plain',$data,
+	    -content_disposition => "attachment; filename=${name}_${build}_chrom.sizes",
+	);
 }
 
 sub ACTION_about_gbrowse {

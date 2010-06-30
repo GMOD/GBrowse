@@ -22,6 +22,7 @@ bin/ucsc_genes2gff.pl
 bin/wiggle2gff3.pl
 bin/windows_install.pl
 Build.PL
+cgi-bin/das
 cgi-bin/gbgff
 cgi-bin/gbrowse
 cgi-bin/gbrowse_details
@@ -526,6 +527,7 @@ lib/Bio/Graphics/Browser2/DataBase.pm
 lib/Bio/Graphics/Browser2/DataLoader.pm
 lib/Bio/Graphics/Browser2/DataLoader/bam.pm
 lib/Bio/Graphics/Browser2/DataLoader/bed.pm
+lib/Bio/Graphics/Browser2/DataLoader/bigwig.pm
 lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
 lib/Bio/Graphics/Browser2/DataLoader/generic.pm
 lib/Bio/Graphics/Browser2/DataLoader/gff.pm

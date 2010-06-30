@@ -475,12 +475,15 @@ ok($tracks[0],'http_www.foo.bar_this_is_a_remotetrack');
 my $path = $usertracks->track_conf($tracks[0]);
 ok(-e $path);
 
-$f = Bio::Graphics::FeatureFile->new(-file=>$path);
-ok (($f->configured_types)[0] eq 'http_www.foo.bar_this_is_a_remotetrack');
-ok ($f->setting('http_www.foo.bar_this_is_a_remotetrack'=>'remote feature'),
-    'http://www.foo.bar/this/is/a/remotetrack');
-ok ($f->setting('http_www.foo.bar_this_is_a_remotetrack'=>'category'),
-    'My Tracks:Remote Tracks');
+{
+    local $^W = 0; # kill annoying warning from bioperl
+    $f = Bio::Graphics::FeatureFile->new(-file=>$path);
+    ok (($f->configured_types)[0] eq 'http_www.foo.bar_this_is_a_remotetrack');
+    ok ($f->setting('http_www.foo.bar_this_is_a_remotetrack'=>'remote feature'),
+	'http://www.foo.bar/this/is/a/remotetrack');
+    ok ($f->setting('http_www.foo.bar_this_is_a_remotetrack'=>'category'),
+	'My Tracks:Remote Tracks');
+}
 
 $usertracks->delete_file($tracks[0]);
 ok(!-e $path);

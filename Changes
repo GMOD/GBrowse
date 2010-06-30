@@ -4,7 +4,8 @@
 	* Speeded up execution speed when configuration files get large (>1000 tracks).
 	* DAS server and client now functional.
 	* Reenabled the "eurl" parameter to link to a data set from the URL.
-	* Added "Get chromosome sizes" entry to the File menu.
+	* Added "Get chromosome sizes" entry to the File menu (requires a developer's snapshot of
+	  bioperl to work with all data sources).
 	* Fasta and GFF3 dumps working ok now.
 	* Uploaded WIG files will generate bigwig indexes if library is available.
 	* action=scan now returns the category for each track.

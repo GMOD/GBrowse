@@ -4,18 +4,24 @@ The Generic Genome Browser (GBrowse) is a simple but highly
 configurable web-based genome browser.  It is a component of the
 Generic Model Organism Systems Database project (GMOD).
 
-******* WARNING ******
+******* DOWNLOADING ******
 
-The HEAD of SVN (including this file) is currently in alpha test. You
-are encouraged to give this a try, and to report your experiences to
-the mailing lists at www.gmod.org.
+The 2.X versions are now considered stable. You may download it from
+CPAN at http://search.cpan.org/~lds/GBrowse/ or get the developer's
+version via SVN:
 
-For production, we suggest you use one of the released tarballs, or
-check out the "stable" svn branch:
+svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/trunk Generic-Genome-Browser
+
+The older 1.X version is still available for download here:
+
+http://sourceforge.net/projects/gmod/files/Generic%20Genome%20Browser/GBrowse-1.70/Generic-Genome-Browser-1.70.tar.gz/download
+
+or via SVN here:
 
 svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/branches/stable Generic-Genome-Browser
 
-**********************
+
+**************************
 
 SYNOPSIS:
 
@@ -37,29 +43,28 @@ that. What follows here is a brief synopsis.
 
     Module                  Version
     ---------------------+----------
-    Bio::Perl               1.005002
-    CGI::Session            4.02    
-    Digest::MD5             0       
-    File::Temp              0       
-    GD                      2.07    
-    IO::String              0       
-    JSON                    0       
-    LWP                     0       
     perl                    5.008   
-    Storable                0       
+    Bio::Perl               1.0069
+    CGI::Session            4.02    
+    Bio::Graphics           2.09
+    GD                      2.07    
+    Digest::MD5             any
+    File::Temp              any       
+    IO::String              any       
+    JSON                    any       
+    LWP                     any       
+    Storable                any
+    Statistics::Descriptive any
 
     The Build script will tell you if you are missing any
-    prerequisites. With the exception of BioPerl, all of these are
-    available on CPAN (www.cpan.org), or by using the CPAN shell
-    ("perl -MCPAN -e shell").
+    prerequisites. All of these are available on CPAN (www.cpan.org),
+    or by using the CPAN shell ("perl -MCPAN -e shell").
 
-- You will need the Bioperl DEVELOPER release (version 1.5.9). It is
-  quite stable, so you should not need to worry about installing it,
-  but if you wish, you can set up GBrowse to use a non-installed
-  version of Bioperl simply by unpacking it in your home directory
-  or some other convenient location. Download Bioperl here:
+- You should install BioPerl from CPAN (currently version 1.6.9) or, to
+  take advantage of additional features and performance boosts, get a
+  snapshot of the current developer version:
 
-    http://bioperl.org/DIST/current_core_unstable.tar.gz
+  http://github.com/bioperl/bioperl-live/tarball/master
 
 2) Run the command:
 
@@ -131,7 +136,7 @@ www.gmod.org.
 
 Lincoln Stein & the GMOD team
 lincoln.stein@gmail.com
-April 2010
+July 2010
 
 
 --- COPYRIGHT AND LICENSING ---
@@ -158,6 +163,7 @@ Nathan O. Siemers <Nathan.Siemers@bms.com>
 Ian Davies <i.davies2@rogers.com>
 Lincoln Stein <lincoln.stein@gmail.com>
 Peter Ruzanov <peter.ruzanov@oicr.on.ca>
+Chris Vandevelde <Christopher.Vandevelde@oicr.on.ca>
 
 Special thanks go to the authors of the translations, who include:
 

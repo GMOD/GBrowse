@@ -215,6 +215,9 @@ sub user_account_db        { shift->setting(general=>'user_account_db')
 				   || 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse'  }
 sub admin_account          { shift->setting(general=>'admin_account') }
 sub admin_dbs              { shift->setting(general=>'admin_dbs')     }
+sub openid_secret {
+    return GBrowse::ConfigData->config('OpenIDConsumerSecret')
+}
 
 sub session_driver {
     my $self = shift;

@@ -94,6 +94,7 @@ for my $arg (keys %{$build->private_props}) {
     $build->config_data($arg=>$value);
     $argc++;
 }
+$build->config_data(OpenIDConsumerSecret=>int(1e15*rand()));
 $build->config_done(1) if $argc > 0;
 
 $build->add_build_element('conf');

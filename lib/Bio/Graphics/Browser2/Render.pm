@@ -1333,7 +1333,7 @@ sub handle_gff_dump {
 	    $dumper->print_datafile() ;
 	}
 	elsif ($actions{fasta}) {
-	    my $build = $self->data_source->build;
+	    my $build = $self->data_source->build_id;
 	    $title   .= "_$build" if $build;
 	    print header( -type                => $mime =~ /x-/ ? 'application/x-fasta' : $mime,
 			  -content_disposition => "attachment; filename=$title.fa");

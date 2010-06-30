@@ -1,3 +1,6 @@
+2.12 Wed Jun 30 15:28:16 EDT 2010
+     * Fixed FASTA dumping due to typo introduced just prior to 2.11 release.
+
 2.11 Mon Jun 28 11:42:02 EDT 2010
         * Fixed generation of mysql database names for user upload sets so that names do
 	  not exceed mysql's limits.
@@ -7,6 +10,7 @@
 	* Added "Get chromosome sizes" entry to the File menu (requires a developer's snapshot of
 	  bioperl to work with all data sources).
 	* Fasta and GFF3 dumps working ok now.
+	* You can now import a BigWig file by reference.
 	* Uploaded WIG files will generate bigwig indexes if library is available.
 	* action=scan now returns the category for each track.
 

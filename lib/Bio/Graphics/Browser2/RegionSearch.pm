@@ -92,8 +92,8 @@ sub init_databases {
     my %dbs;
 
     my $source = $self->source;
-#    my $labels = $track_labels || [$source->labels];
-    my $labels = $track_labels || [$source->dbs];
+    my $labels = $track_labels || [$source->labels];
+#    my $labels = $track_labels || [$source->dbs];
 
     my $renderfarm = $self->source->global_setting('renderfarm');
 
@@ -104,7 +104,7 @@ sub init_databases {
     my %seenit;
     for my $l (@$labels) {
 	next if $l =~ /^(_scale|builtin)/;
-	my ($dbid)         = $source->db_settings($l);
+	my ($dbid)         = $source->db_settings($l) or next;
 	next if $seenit{$dbid}++;
 
 	my $remote         = $local_only || !$renderfarm 
@@ -116,9 +116,6 @@ sub init_databases {
 	}
 
 	my $search_options = $source->search_options($dbid);
-
-	# this can't be right - we need to do id searches
-	# next if $search_options eq 'none';  
 
 	$dbs{$dbid}{options} ||= $search_options;
 	$dbs{$dbid}{remotes}{$remote}++ if $remote;

@@ -633,7 +633,7 @@ sub invert_types {
   my %inverted;
   for my $label (keys %{$config}) {
     my $feature = $self->setting($label => 'feature') or next;
-    my ($dbid)  = $self->db_settings($label);
+    my ($dbid)  = $self->db_settings($label) or next;
     $dbid =~ s/:database$//;
     foreach (shellwords($feature||'')) {
       $inverted{lc $_}{$dbid}{$label}++;
@@ -781,7 +781,7 @@ sub db_settings {
       return @{$DB_SETTINGS{$self,$semantic_label} ||= $DB_SETTINGS{$self,$symbolic_db_name}};
   }
 
-  my $adaptor = $self->semantic_fallback_setting($symbolic_db_name => 'db_adaptor', $length);
+  my $adaptor = $self->semantic_setting($symbolic_db_name => 'db_adaptor', $length);
   unless ($adaptor) {
       warn "Unknown database defined for $track";
       return;
@@ -803,7 +803,7 @@ sub db_settings {
   }
 
   if (defined (my $a = 
-	       $self->semantic_fallback_setting($symbolic_db_name => 'aggregators',$length))) {
+	       $self->semantic_setting($symbolic_db_name => 'aggregators',$length))) {
     my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
@@ -897,16 +897,19 @@ sub db2id {
 
 =item @ids   = $dsn->dbs
 
-Return the names of all the sections that define dbs in the datasource.
+Return the names of all the sections that define dbs in the datasource: both track sections
+that define dbargs and named database sections. Note that we do not
+uniquify the case in which the same adaptor and dbargs are defined twice in two different
+sections.
 
 =cut
 
 sub dbs {
     my $self = shift;
-    my @labels = $self->configured_types;
-    my @named      = grep {/:database/} @labels;
-    my @anonymous  = grep {$self->setting($_=>'db_adaptor')} @labels;
-    return (@named,@anonymous);
+    my @labels     = ('general',$self->configured_types);
+    my %named      = map {$_=>1} grep {/:database/} @labels;
+    my @anonymous  = grep {!$named{$_} && $self->setting($_=>'db_adaptor')} @labels;
+    return (keys %named,@anonymous);
 }
 
 # this is an aggregator-aware way of retrieving all the named types

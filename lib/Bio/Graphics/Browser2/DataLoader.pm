@@ -104,7 +104,6 @@ sub get_fasta_files {
 	my $fasta = $args{-fasta} || $args{-dsn};
 	next if $seenit{$fasta}++;
 	next unless -e $fasta;
-	warn "looking at $dbid $fasta";
 	if (-d _) {
 	    push @fastai, glob("$fasta/*.fai");
 	    push @fasta, $fasta
@@ -280,7 +279,8 @@ sub load {
 
     die $@ if $@;
     $self->set_processing_complete;
-    return $self->tracks;
+    my @tracks = $self->tracks;
+    return @tracks;
 }
 
 sub start_load  { }

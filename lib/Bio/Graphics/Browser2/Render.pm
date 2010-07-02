@@ -129,7 +129,8 @@ sub user_tracks {
     my $class = $self->is_admin ? 'Bio::Graphics::Browser2::AdminTracks'
                                 : 'Bio::Graphics::Browser2::UserTracks';
     
-    $uuid  ||= $self->state->{upload_id} || '';
+    $uuid  ||= $self->state->{uploadid} || '';
+    warn "[$$] uuid  = $uuid" if DEBUG;
     return $self->{usertracks}{$uuid} 
        ||= $class->new($self->data_source,
 		       $self->state,
@@ -184,17 +185,10 @@ sub run {
        query_string() if $debug;
 
   $self->set_source() && return;
+  my $state = $self->state;
 
   warn "[$$] add_user_tracks()" if $debug;
-  # This guarantees that all user-specific tracks
-  # disappear after the current session completes.
-  # But it is no longer needed as usertracks are cleared
-  # every time session is retrieved from cache
-  # local $self->data_source->{_user_tracks} = {};
-
   $self->add_user_tracks($self->data_source);
-
-  my $state = $self->state;
 
   warn "[$$] testing for asynchronous event()" if $debug;
   if ($self->run_asynchronous_event) {
@@ -616,7 +610,7 @@ sub background_individual_track_render {
 sub render {
   my $self           = shift;
 
-  warn "render()" if DEBUG;
+  warn "[$$] render()" if DEBUG;
 
   # NOTE: these handle_* methods will return true
   # if they want us to exit before printing the header
@@ -1542,16 +1536,19 @@ sub zoomBar {
 sub add_remote_tracks {
     my $self        = shift;
     my $urls        = shift;
+
     my $user_tracks = $self->user_tracks;
-    my %tracks;
+
+    warn "ADD_REMOTE_TRACKS(@$urls)" if DEBUG;
+
     for my $url (@$urls) {
 	my ($result,$msg,$tracks) 
 	    = $user_tracks->import_url($url,1);
-	next unless $result;
-	$tracks{$_}++ foreach @$tracks;
+	warn "[$$] $url: result=$result, msg=$msg, tracks=@$tracks" if DEBUG;
     }
-    $self->add_user_tracks($self->data_source);
-    $self->add_track_to_state($_) foreach keys %tracks;
+    my @tracks = $self->add_user_tracks($self->data_source);
+    warn "[$$] adding tracks @tracks" if DEBUG;
+    $self->add_track_to_state($_) foreach @tracks;
     $self->init_remote_sources();
 }
 
@@ -1984,6 +1981,9 @@ sub update_state_from_cgi {
   my $state = $self->state;
 
   $self->update_options($state);
+  $self->update_coordinates($state);
+  $self->update_region($state);
+
   if (param('revert')) {
       $self->default_tracks($state);
   }
@@ -1992,8 +1992,6 @@ sub update_state_from_cgi {
       $self->update_tracks($state);
   }
 
-  $self->update_coordinates($state);
-  $self->update_region($state);
   $self->update_section_visibility($state);
   $self->update_galaxy_url($state);
 }
@@ -2227,6 +2225,8 @@ sub update_coordinates {
   my $self  = shift;
   my $state = shift || $self->state;
 
+  warn "update_coordinates, session id = ",$self->session->id if DEBUG;
+
   delete $self->{region}; # clear cached region
   my $position_updated;
 
@@ -2289,6 +2289,8 @@ sub update_coordinates {
       # update our "name" state and the CGI parameter
       $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
       param(name => $state->{name});
+
+      warn "name = $state->{name}" if DEBUG;
   }
 
   elsif (param('name')) {
@@ -2549,6 +2551,9 @@ sub asynchronous_update_coordinates {
     my $action = shift;
 
     my $state  = $self->state;
+
+#    warn "asynchronous_update_coordinates, session id = ",$self->session->id;
+#    warn "asynchronous_update_coordinates: \$state->{ref} = $state->{ref}";
 
     my $whole_segment_start = $state->{seg_min};
     my $whole_segment_stop  = $state->{seg_max};
@@ -3555,6 +3560,9 @@ sub add_user_tracks {
 
     return if $self->is_admin;  # admin user's tracks are already in main config file.
 
+    $self->state->{uploadid} ||= Bio::Graphics::Browser2::Util->generate_id;
+    $uuid ||= $self->state->{uploadid};
+
     my $userdata = $self->user_tracks($uuid);
     my @user_tracks = $userdata->tracks;
 
@@ -3563,6 +3571,8 @@ sub add_user_tracks {
 	my $config_path = $userdata->track_conf($track);
 	eval {$data_source->parse_user_file($config_path)};
     }
+
+    return @user_tracks;
 }
 
 # Delete the segments so that they can be recreated with new parameters

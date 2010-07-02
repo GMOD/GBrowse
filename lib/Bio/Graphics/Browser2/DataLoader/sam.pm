@@ -4,6 +4,7 @@ package Bio::Graphics::Browser2::DataLoader::sam;
 
 use strict;
 use base 'Bio::Graphics::Browser2::DataLoader::bam';
+use Bio::DB::Sam;
 
 # go back to line-at-a-time loading
 sub load {
@@ -50,21 +51,23 @@ sub sam2bam {
     my $self = shift;
     my ($sampath,$bampath) = @_;
 
-    my $fasta      = $self->get_fasta_file;
-    $fasta 
-	or die "Could not find a suitable reference FASTA file for indexing this SAM file";
-    
-    # This is to create the .fai file. Do this in a block so that handle
-    # goes out of scope when not needed.
-    {
-	my $fai = Bio::DB::Sam::Fai->load($fasta)
-	    or die "Could not load reference FASTA file for indexing this SAM file: $!";
-    }
-
     my $tam = Bio::DB::Tam->open($sampath)
 	or die "Could not open SAM file for reading: $!";
 
-    my $header = $tam->header_read2($fasta.".fai");
+    my $header = eval {$tam->header_read};
+    unless ($header) {
+	warn "Bio::DB::Sam version 1.20 or greater required for SAM conversion to work properly";
+    }
+
+    unless ($header && $header->n_targets > 0) {
+	my $fasta      = $self->get_fasta_file;
+	$fasta 
+	    or die "Could not find a suitable reference FASTA file for indexing this SAM file";
+    
+	my $fai = Bio::DB::Sam::Fai->load($fasta)
+	    or die "Could not load reference FASTA file for indexing this SAM file: $!";
+	$header = $tam->header_read2($fasta.".fai");
+    }
 
     my $bam = Bio::DB::Bam->open($bampath,'w')
 	or die "Could not open BAM file for writing: $!";

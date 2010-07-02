@@ -46,7 +46,7 @@ my $build = GBrowseInstall->new(
 	'Net::OpenID::Consumer'    => 0,
 	'Crypt::SSLeay'            => 0,
 	'Net::SMTP::SSL'           => 0,
-	'Bio::DB::Sam'             => 1.19,
+	'Bio::DB::Sam'             => 1.20,
 	'Bio::DB::BigFile'         => 1.00,
     },
     script_files => [

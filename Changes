@@ -4,6 +4,7 @@
      * Fixed upload listing table so as not to duplicate track labels.
      * Fixed track importation via the eurl parameter so that it works when the 
        user's uploadid is empty (due to clearing cache of cookies).
+     * Fixed DAS server handling of the link option.
 
 2.12 Wed Jun 30 15:28:16 EDT 2010
      * Fixed FASTA dumping due to typo introduced just prior to 2.11 release.

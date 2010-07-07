@@ -786,13 +786,8 @@ sub galaxy_form {
     return '' unless $galaxy_url;
 
     my $URL  = $source->global_setting('galaxy incoming');
-    if (!$URL) {
-	$URL = url(-full=>1,-path_info=>1);
-    } else {
-      $URL .= "/".$source->name;
-    }
+    $URL   ||= $self->globals->gbrowse_url;
 
-    
     # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
     # when Galaxy posts the URL.
     my $dbkey  = $source->global_setting('galaxy build name') || $source->name;

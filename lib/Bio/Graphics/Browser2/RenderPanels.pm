@@ -1558,7 +1558,7 @@ sub add_features_to_track {
   # The effect of this loop is to fetch a feature from each iterator in turn
   # using a queueing scheme. This allows streaming iterators to parallelize a
   # bit. This may not be worth the effort.
-  my (%feature2dbid,%classes,%max_features,%limit_hit);
+  my (%feature2dbid,%classes,%max_features,%limit_hit,%has_subtracks);
 
   while (keys %iterators) {
     for my $iterator (values %iterators) {
@@ -1602,10 +1602,9 @@ sub add_features_to_track {
 	  if (my $pattern = $group_pattern{$l}) {
 	      my $name = $feature->name or next;
 	      (my $base = $name) =~ s/$pattern//i;
-	      $groups{$l}{$base} 
-	      ||= Bio::Graphics::Feature->new(-type   => 'group',
-					      -name   => $feature->display_name,
-					      -strand => $feature->strand,
+	      $groups{$l}{$base}  ||= Bio::Graphics::Feature->new(-type   => 'group',
+								  -name   => $feature->display_name,
+								  -strand => $feature->strand,
 		  );
 	      $groups{$l}{$base}->add_segment($feature);
 	      next;
@@ -1625,16 +1624,13 @@ sub add_features_to_track {
 	  }
 
 	  if (!$is_summary && $stt && (my $id = $stt->feature_to_id_sub->($feature))) {
-	      unless ($groups{$l}) {
-		  my @ids   = $stt->selected_ids;
-		  $groups{$l}{$_} ||= Bio::Graphics::Feature->new(-type   => 'group',
-								  -primary_id     => $_,
-								  -name   => $stt->id2label($_),
-								  -start  => $segment->start,
-								  -end    => $segment->end,
-								  -seq_id => $segment->seq_id) 
-		      foreach @ids
-	      }
+	      $groups{$l}{$id} ||= Bio::Graphics::Feature->new(-type       => 'group',
+							       -primary_id => $id,
+							       -name       => $stt->id2label($id),
+							       -start      => $segment->start,
+							       -end        => $segment->end,
+							       -seq_id    => $segment->seq_id);
+	      $has_subtracks{$l}++;
 	      $groups{$l}{$id}->add_segment($feature);
 	      next;
 	  }
@@ -1655,8 +1651,23 @@ sub add_features_to_track {
   for my $l (keys %groups) {
     my $track  = $tracks->{$l};
     my $g      = $groups{$l} or next;
+
+    # add empty subtracks if needed
+    if ($has_subtracks{$l} && !$source->semantic_setting($l => 'hide empty subtracks',$length)) {
+	my $stt   = $self->subtrack_manager($l);
+	my @ids   = $stt->selected_ids;
+	$g->{$_} ||= Bio::Graphics::Feature->new(-type   => 'group',
+						 -primary_id     => $_,
+						 -name   => $stt->id2label($_),
+						 -start  => $segment->start,
+						 -end    => $segment->end,
+						 -seq_id => $segment->seq_id) 
+	    foreach @ids
+    }
+    
     $track->add_feature($_) foreach values %$g;
     $feature_count{$l} += keys %$g;
+
   }
 
   # now reconfigure the tracks based on their counts

@@ -3637,7 +3637,7 @@ sub gff_dump_link {
 
   my $state     = $self->state;
   my $upload_id = $state->{uploadid} || $state->{userid};
-  my $segment   = $self->thin_segment;
+  my $segment   = $self->thin_segment or return '';
 
   my $q = new CGI('');
   if ($fasta) {
@@ -3693,8 +3693,8 @@ sub image_link {
     my $flip     = $settings->{flip} || param('flip') || 0;
     my $keystyle = $settings->{ks};
     my $grid     = $settings->{grid} || 0;
-    my $url      = url();
-    $url         = dirname($url) . "/gbrowse_img/".CGI::escape($source);
+    my ($base,$s) = $self->globals->gbrowse_base;
+    my $url      = "$base/gbrowse_img/$s";
     my $tracks   = $settings->{tracks};
     my $width    = $settings->{width};
     my $name     = "$settings->{ref}:$settings->{start}..$settings->{stop}";

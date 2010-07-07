@@ -1,3 +1,10 @@
+2.14
+     * Prevent a blank-screen crash when searching for chromosomes not in the database.
+     * Added a "hide empty subtracks" option to suppress subtrack display when there are
+       no features in the region of interest. Note that if there are no features in any
+       subtracks, the entire track will be empty regardless of the subtracks (this may or
+       may not be a bug).
+
 2.13
      * Fixed SAM file processing so as not to die on first line of SAM @SQ header.
        This requires Bio::DB::Sam 1.20 to work properly.

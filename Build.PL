@@ -48,6 +48,7 @@ my $build = GBrowseInstall->new(
 	'Net::SMTP::SSL'           => 0,
 	'Bio::DB::Sam'             => 1.20,
 	'Bio::DB::BigFile'         => 1.00,
+	'Template'                 => 2.20,
     },
     script_files => [
 	'bin/gbrowse_slave',

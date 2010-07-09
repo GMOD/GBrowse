@@ -525,6 +525,7 @@ sub categories {
 	$type2category{__fuzzy__}{$typeobj}   = $typeobj;
 	my $so = $so_hash->{lc $type} if $so_hash;
 	for my $t ($type,$so) {
+	    unless unless $t;
 	    $type2category{$t}                 = $category;
 	    $type2category{__label__}{$t}      = $track;
 	    $type2category{__subparts__}{$t}++   if $has_subparts;
@@ -928,7 +929,7 @@ sub print_feature {
     my $group         = shift || $parent || $f;
     my $level         = shift || 0;
     my $sequence      = shift || 0;
-
+    
     my @subparts     = $self->children($f);
 
     my $no_parent    = @subparts && $self->no_parent_wanted($f);
@@ -1007,8 +1008,7 @@ sub _print_feature {
     $gclass      = '';
   }
 
-  my $group_type  = $self->forced_group($parent||$f) || $type;
-
+  my $group_type  = $self->forced_group($parent||$f) || eval{$parent->type} || $type;
   $group_type     =~ s/\:\w+$//;
 
   # This is way nasty.  The aggregator may have changed the method of the
@@ -1039,6 +1039,8 @@ sub _print_feature {
   if (@child_ids) {
       my $glyph = $datasource->fallback_setting($track=>'glyph');
       $gtype    = " type='$type'";
+  } else {
+      $gtype    = " type='$group_type'";
   }
 
   if (%attributes) {
@@ -1051,10 +1053,10 @@ sub _print_feature {
       $group_info = join("\n",map {qq(\t<NOTE>$_</NOTE>)} @notes);
   }
 
-    if ($group_info) { # post-fix formatting
-	$group_info =~ s/^\t//;
-	$group_info =~s/\n$//;
-    }
+  if ($group_info) { # post-fix formatting
+      $group_info =~ s/^\t//;
+      $group_info =~s/\n$//;
+  }
 
   my ($target,$target_info);
   if (($target = $f->target) && $target->can('start')) {
@@ -1071,6 +1073,8 @@ sub _print_feature {
 
   # suppress printing parent features for earlier versions of DAS
   return if $das_version < 1.6 and @child_ids;
+
+  $flabel ||= $grouplabel;
 
   print <<END;
    <FEATURE id="$id" label="$flabel">
@@ -1099,7 +1103,7 @@ END
       print qq(        $group_info\n)  if $group_info;
       print qq(      </GROUP>\n);
     } else {
-      print qq(      <GROUP id="$groupid"$gtype/>\n);
+      print qq(      <GROUP id="$groupid"$gtype label="$grouplabel"/>\n);
     }
   }
   print <<END;

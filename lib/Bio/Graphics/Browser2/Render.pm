@@ -2190,8 +2190,8 @@ sub update_tracks {
 
       my @matched;
        foreach my $s (@subs) {
-        map {push(@matched,$`) if ($s=~/\D(\d+)$/i && $1 == $_)} @ds;
-        map {s/\s.*//} @matched;
+        map {push(@matched,$`) if ($s=~/\D(\d+)\;*$/i && $1 == $_)} @ds;
+        map {s/\s*//} @matched;
        }
        $label.="/".join("+",@matched) if @matched;
       }

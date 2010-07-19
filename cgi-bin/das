@@ -1139,7 +1139,7 @@ sub split_location {
 sub hack_link {
     my $self     = shift;
     my $url_ref  = shift;
-    return if $url_ref =~ m!^\w+:!;
+    return if $$url_ref =~ m!^\w+:!;
     unless ($self->{prefix}) {
 	my $self_url        = url(-full=>1,-path=>1);
 	($self->{prefix})   = $self_url =~ m!^(\w+://[^/]+)!;

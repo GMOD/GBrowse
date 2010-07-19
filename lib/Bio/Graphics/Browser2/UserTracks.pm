@@ -4,6 +4,7 @@ package Bio::Graphics::Browser2::UserTracks;
 use strict;
 use Bio::Graphics::Browser2::DataSource;
 use Bio::Graphics::Browser2::DataLoader;
+use Bio::Graphics::Browser2::UserDB;
 use File::Spec;
 use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
@@ -38,12 +39,18 @@ sub new {
     my $self = shift;
     my ($config,$state,$lang,$uuid) = @_;
     $uuid ||= $state->{uploadid};
+    my $userdb = Bio::Graphics::Browser2::UserDB->new();
+    my $globals = Bio::Graphics::Browser2->open_globals;
+    my $session = $globals->session;
 
     return bless {
 	config   => $config,
+	userdb	 => $userdb,
 	state    => $state,
 	language => $lang,
 	uuid     => $uuid,
+	session	 => $session,
+	globals	 => $globals
     },ref $self || $self;
 }
 
@@ -57,25 +64,19 @@ sub path {
     $self->config->userdata($uploadid);
 }
 
+# Tracks - Returns an array of filenames representing a user's uploaded tracks (or imported tracks, if "imported" is defined.
 sub tracks {
     my $self     = shift;
     my $path     = $self->path;
     my $imported = shift;
-    return unless $self->{uuid};
+    my $userdb = $self->{userdb};
+    my $session = $self->{session};
 
-    my @result;
-    opendir D,$path;
-    while (my $dir = readdir(D)) {
-	next if $dir =~ /^\.+$/;
-
-	my $is_imported   = (-e File::Spec->catfile($path,
-						    $dir,
-						    $self->imported_file_name))||0;
-	next if defined $imported && $imported != $is_imported;
-
-	push @result,$dir;
+	if ($imported) {
+		return $userdb->get_imported_files($userdb->get_user_id($session->username));
+    } else {
+    	return $userdb->get_owned_files($userdb->get_user_id($session->username));
     }
-    return @result;
 }
 
 sub conf_files {
@@ -137,23 +138,24 @@ sub conf_metadata {
     return ($name,(stat($conf))[9,7]);
 }
 
+# Description (Track[, Description]) - Returns a file's description, or changes the current description if defined.
 sub description {
     my $self  = shift;
     my $track = shift;
-    my $desc  = File::Spec->catfile($self->path,$track,"$track.desc");
+    my $userdb = $self->{userdb};
+    my $session = $self->{session};
+    my $userid = $userdb->get_user_id($session->username);
+	my $fileid = $userdb->get_file_id($track, $userid);
+    
     if (@_) {
-	warn "setting desc to @_" if DEBUG;
-	open my $f,">",$desc or return;
-	print $f join("\n",@_);
-	close $f;
-	return 1;
+		$userdb->field($fileid, "description", shift);
+		return 1;
     } else {
-	open my $f,"<",$desc or return;
-	my @lines = <$f>;
-	return join '',@lines;
+		return $userdb->field($fileid, "description");
     }
 }
 
+# Source Files - Returns an array of source files (with details) associated with a specified track.
 sub source_files {
     my $self = shift;
     my $track = shift;
@@ -264,24 +266,32 @@ sub reload_file {
     }
 }
 
+# Upload Data - Uploads a string of data entered as text (on the Upload & Share Tracks tab).
 sub upload_data {
     my $self = shift;
     my ($file_name,$data,$content_type,$overwrite) = @_;
+    my $userdb = $self->{userdb};
+    my $session = $self->{session};
+    
     my $io = IO::String->new($data);
     $self->upload_file($file_name,$io,$content_type,$overwrite);
 }
 
+# Upload File - Self-explanatory, uploads a user's file, as called by the AJAX upload system (on the Upload & Share Tracks tab).
 sub upload_file {
     my $self = shift;
     my ($file_name,$fh,$content_type,$overwrite) = @_;
+    my $userdb = $self->{userdb};
+    my $session = $self->{session};
+    my $privacy_policy = shift || "private";
     
     my $track_name = $self->trackname_from_url($file_name,!$overwrite);
     $content_type ||= '';
 
     if ($content_type eq 'application/gzip' or $file_name =~ /\.gz$/) {
-	$fh = $self->install_filter($fh,'gunzip -c');
+		$fh = $self->install_filter($fh,'gunzip -c');
     } elsif ($content_type eq 'application/bzip2' or $file_name =~ /\.bz2$/) {
-	$fh = $self->install_filter($fh,'bunzip2 -c');
+		$fh = $self->install_filter($fh,'bunzip2 -c');
     }
     
     # guess the file type from the first non-blank line
@@ -290,20 +300,22 @@ sub upload_file {
     my (@tracks,$fcgi);
 
     my $result= eval {
-	local $SIG{TERM} = sub { die "cancelled" };
-	croak "Could not guess the type of the file $file_name"
-	    unless $type;
+		local $SIG{TERM} = sub { die "cancelled" };
+		croak "Could not guess the type of the file $file_name"
+			unless $type;
 
-	my $load = $self->get_loader($type,$track_name);
-	$load->eol_char($eol);
-	@tracks = $load->load($lines,$fh);
-	1;
+		my $load = $self->get_loader($type,$track_name);
+		$load->eol_char($eol);
+		@tracks = $load->load($lines,$fh);
+		1;
     };
 
     if ($@ =~ /cancelled/) {
-	$self->delete_file($track_name);
-	return (0,'Cancelled by user',[]);
+		$self->delete_file($track_name);
+		return (0,'Cancelled by user',[]);
     }
+    
+    $userdb->add_file($userdb->get_user_id($session->username), $file_name, "", $privacy_policy);
 
     my $msg = $@;
     warn "UPLOAD ERROR: ",$msg if $msg;
@@ -311,9 +323,12 @@ sub upload_file {
     return ($result,$msg,\@tracks);
 }
 
+# Delete File - Also pretty self-explanatory, deletes a user's file as called by the AJAX upload system (on the Upload & Share Tracks tab).
 sub delete_file {
     my $self = shift;
     my $track_name  = shift;
+    my $userdb = $self->{userdb};
+    my $session = $self->{session};
     my $loader = Bio::Graphics::Browser2::DataLoader->new($track_name,
 							  $self->track_path($track_name),
 							  $self->track_conf($track_name),
@@ -321,6 +336,9 @@ sub delete_file {
 							  $self->state->{uploadid});
     $loader->drop_databases($self->track_conf($track_name));
     rmtree($self->track_path($track_name));
+    my $userid = $userdb->get_user_id($session->username);
+	my $fileid = $userdb->get_file_id($track_name, $userid);
+    $userdb->delete_file($fileid);
 }
 
 sub merge_conf {
@@ -383,7 +401,7 @@ sub labels {
     my $self       = shift;
     my $track_name = shift;
     my $conf       = $self->track_conf($track_name) or return;
-    return grep {!/:database/} eval{Bio::Graphics::FeatureFile->new(-file=>$conf)->labels};
+    return grep {!/:(database|\d+)/} eval{Bio::Graphics::FeatureFile->new(-file=>$conf)->labels};
 }
 
 sub status {
@@ -491,7 +509,7 @@ sub has_bigwig {
     return $HASBIGWIG if defined $HASBIGWIG;
     return $HASBIGWIG = 1 if Bio::DB::BigWig->can('new');
     my $result = eval "require Bio::DB::BigWig; 1";
-    return $HASBIGWIG = $result || 0;
+    return $HASBIGWIG = $result || 0;use Bio::Graphics::Browser2::DataLoader;
 }
 
 sub install_filter {

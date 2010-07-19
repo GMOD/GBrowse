@@ -76,6 +76,6 @@ BODY              { background-color: #F7FBFF;
 }
 .tabbody {
     background-color: beige;
-    padding-top: 5px;
+    padding: 5px;
     border:   1px solid;
 }

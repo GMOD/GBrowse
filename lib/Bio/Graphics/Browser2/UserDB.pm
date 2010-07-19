@@ -12,36 +12,36 @@ use LWP::UserAgent;
 use Net::SMTP;
 use Net::OpenID::Consumer;
 use Text::ParseWords 'quotewords';
+use Digest::MD5 qw(md5_hex);
 
-our $VERSION = '0.01';
-
-my $Globals = Bio::Graphics::Browser2->open_globals;
-my $session = $Globals->session;
-
-our $AppName       = $Globals->application_name;
-our $AppNameLong   = $Globals->application_name_long;
-our $ReturnAddress = $Globals->email_address;
-
-if (!$ENV{'HTTP_REFERER'}) {
-  $ENV{'HTTP_REFERER'} = "";
-}
-  my $index = index($ENV{'HTTP_REFERER'},'?');
-  my $url   = substr($ENV{'HTTP_REFERER'},0,$index);
-     $url  .= '/'  if $index == -1;
-
-my $smtp  = $Globals->smtp;
-my $dbi   = $Globals->user_account_db;
-my $login = DBI->connect($dbi);
-unless ($login) {
-    print header();
-    print "Error: Could not open login database.";
-    die "Could not open login database $dbi";
+sub new {
+  my $class = shift;
+  my $self = {};
+  my $VERSION = '0.5';
+  my $globals = Bio::Graphics::Browser2->open_globals;
+  my $dbi  = shift || $globals->user_account_db;
+  my $session = $globals->session;
+  
+  my $login = DBI->connect($dbi);
+  unless ($login) {
+      print header();
+      print "Error: Could not open login database.";
+      die "Could not open login database $dbi";
+  }
+  
+  $self->{dbi} = $login;
+  $self->{globals} = $globals;
+  $self->{session} = $session;
+  
+  bless ($self, ref $class || $class);
+  return $self;
 }
 
 # Get Header - Returns the message found at the top of all confirmation e-mails.
 sub get_header {
   my $self = shift;
-  my $message  = "\nThank you for creating an account with " . $AppName . ": " . $AppNameLong . "\n\n";
+  my $globals = $self->{globals};
+  my $message  = "\nThank you for creating an account with " . $globals->application_name . ": " . $globals->application_name_long . "\n\n";
      $message .= "The account information found below is for your reference only. ";
      $message .= "Please keep all account names and passwords in a safe location ";
      $message .= "and do not share your password with others.";
@@ -51,7 +51,8 @@ sub get_header {
 # Get Footer - Returns the message found at the bottom of all e-mails.
 sub get_footer {
   my $self = shift;
-  my $message  = "Courtesy of " . $AppName . "Administration\n\n";
+  my $globals = $self->{globals};
+  my $message  = "Courtesy of " . $globals->application_name . " Administration\n\n";
      $message .= "This message and any attachments may contain confidential and/or ";
      $message .= "privileged information for the sole use of the intended recipient. ";
      $message .= "Any review or distribution by anyone other than the person for whom ";
@@ -96,7 +97,8 @@ sub check_user {
 sub check_admin {
   my $self = shift;
   my $username = shift;
-  my $admin_name = $Globals->admin_account;
+  my $globals = $self->{globals};
+  my $admin_name = $globals->admin_account;
   return unless $admin_name;
   return $username eq $admin_name;
 }
@@ -105,7 +107,9 @@ sub check_admin {
 sub check_old_confirmations {
   my $self = shift;
   my $nowfun = $self->nowfun();
-  my $delete = $login->prepare(
+  my $userdb = $self->{dbi};
+  
+  my $delete = $userdb->prepare(
     "DELETE FROM users WHERE confirmed=0 AND ($nowfun - last_login) >= 7000000");
   $delete->execute()
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
@@ -114,7 +118,9 @@ sub check_old_confirmations {
 
 # Now Function - return the database-dependent function for determining current date & time
 sub nowfun {
-  return $dbi =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
+  my $self = shift;
+  my $globals = $self->{globals};
+  return $globals->user_account_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
 }
 
 # Do Sendmail - Handles outgoing email using either Net::SMTP or Net::SMTP::SSL as required.
@@ -129,11 +135,12 @@ sub nowfun {
 sub do_sendmail {
   my $self = shift;
   my $args = shift;
+  my $globals = $self->{globals};
 
   eval {
-	  $smtp or die "need SMTP argument";
+	  $globals->smtp or die "No SMTP server found in globals";
 
-	  my ($server, $port, $protocol, $username, $password) = split ':', $smtp;
+	  my ($server, $port, $protocol, $username, $password) = split ':', $globals->smtp;
 	  $protocol ||= 'plain';
 	  $port     ||= $protocol eq 'plain' ? 25 : 465;
 	  $protocol =~ /plain|ssl/ or die 'encryption must be either "plain" or "ssl"';
@@ -187,6 +194,7 @@ sub do_validate {
   my $self = shift;
   my ($user,$pass,$remember) = @_;
   
+  my $userdb = $self->{dbi};
   my $update;
 
   if($self->check_user($user)==0) {
@@ -196,10 +204,10 @@ sub do_validate {
 
   my $nowfun = $self->nowfun();
   if($remember != 2) {
-    $update = $login->prepare(
+    $update = $userdb->prepare(
       "UPDATE users SET last_login=$nowfun,remember=$remember WHERE username=? AND pass=? AND confirmed=1");
   } else {
-    $update = $login->prepare(
+    $update = $userdb->prepare(
       "UPDATE users SET last_login=$nowfun WHERE username=? AND pass=? AND confirmed=1");
   }
 
@@ -212,7 +220,7 @@ sub do_validate {
   if($rows == 1) {
     $self->check_old_confirmations();
     if($remember != 2) {
-      my $select = $login->prepare(
+      my $select = $userdb->prepare(
         "SELECT userid FROM users WHERE username=? AND pass=? AND confirmed=1");
       $select->execute($user,$pass)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
@@ -232,12 +240,15 @@ sub do_validate {
 sub do_add_user_check {
   my $self = shift;
   my ($user,$email,$pass,$userid) = @_;
+  
+  my $userdb = $self->{dbi};
+  
   if($self->check_email($email)==0) {print "Invalid e-mail address (" . $email . ") provided.";return;}
   if($self->check_user($user)==0) {
     print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
   }
 
-  my $select = $login->prepare(
+  my $select = $userdb->prepare(
     "SELECT confirmed FROM users WHERE email=?");
   $select->execute($email)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
@@ -257,6 +268,9 @@ sub do_add_user_check {
 sub do_add_user {
   my $self = shift;
   my ($user,$email,$pass,$userid) = @_;
+  
+  my $userdb = $self->{dbi};
+  
   if($self->check_email($email)==0) {print "Invalid e-mail address provided.";return;}
   if($self->check_user($user)==0) {
     print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";
@@ -268,7 +282,7 @@ sub do_add_user {
   }
 
   my $confirm = $self->create_key('32');
-  my ($rows) = $login->selectrow_array(
+  my ($rows) = $userdb->selectrow_array(
     "SELECT count(*) FROM users WHERE userid=? OR username=? OR email=?",
     undef,
     $userid,$user,$email);
@@ -279,7 +293,7 @@ sub do_add_user {
   }
 
   my $nowfun = $self->nowfun();
-  my $insert = $login->prepare ("INSERT INTO users VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)");
+  my $insert = $userdb->prepare ("INSERT INTO users VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)");
 
   # BUG: we should salt the password
   $pass = sha1($pass);
@@ -303,7 +317,8 @@ sub do_add_user {
 sub do_send_confirmation {
   my $self = shift;
   my ($email,$confirm,$user,$pass) = @_;
-  my $link = $url."?confirm=1;code=$confirm;id=logout";
+  my $globals = $self->{globals};
+  my $link = $globals->gbrowse_url()."?confirm=1;code=$confirm;id=logout";
 
   my $message  = $self->get_header();
      $message .= "\n\n    Username: $user\n    Password: $pass\n    E-mail:   $email\n\n";
@@ -312,10 +327,10 @@ sub do_send_confirmation {
      $message .= $self->get_footer();
 
   my ($status,$err) = $self->do_sendmail({
-     from       => $ReturnAddress,
-     from_title => $AppName,
+     from       => $globals->email_address,
+     from_title => $globals->application_name,
      to         => $email,
-     subject    => "$AppName Account Activation",
+     subject    => $globals->application_name . " Account Activation",
      msg        => $message
   });
   unless ($status) {
@@ -329,18 +344,20 @@ sub do_send_confirmation {
 sub do_edit_confirmation {
   my $self = shift;
   my ($email,$option) = @_;
+  
+  my $userdb = $self->{dbi};
 
-  my $select = $login->prepare(
+  my $select = $userdb->prepare(
     "SELECT username, userid FROM users WHERE email=?");
   $select->execute($email)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
   my ($user,$userid) = $select->fetchrow_array();
 
-  my $delete = $login->prepare(
+  my $delete = $userdb->prepare(
     "DELETE FROM users WHERE username=? AND userid=?");
   $delete->execute($user,$userid)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-  my $delete2 = $login->prepare(
+  my $delete2 = $userdb->prepare(
     "DELETE FROM openid_users WHERE username=? AND userid=?");
   $delete2->execute($user,$userid)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
@@ -358,23 +375,24 @@ sub do_edit_confirmation {
 sub do_confirm_account {
   my $self = shift;
   my ($user,$confirm) = @_;
+  my $userdb = $self->{dbi};
 
   # BUG: we should salt the password
   my $new_confirm = sha1($confirm);
 
-  my ($rows) = $login->selectrow_array(
+  my ($rows) = $userdb->selectrow_array(
     "SELECT count(*) FROM users WHERE cnfrm_code=? AND confirmed=0",
     undef,
     $confirm);
   if($rows != 1) {print "Already Active"; return;}
 
-  my $update = $login->prepare(
+  my $update = $userdb->prepare(
     "UPDATE users SET confirmed=1,cnfrm_code=? WHERE username=? AND cnfrm_code=? AND confirmed=0");
   $update->execute($new_confirm,$user,$confirm)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
   $rows = $update->rows;
   if($rows == 1) {
-    my $query = $login->prepare(
+    my $query = $userdb->prepare(
       "SELECT userid FROM users WHERE username=? AND cnfrm_code=? AND confirmed=1");
     $query->execute($user,$new_confirm)
       or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
@@ -392,6 +410,7 @@ sub do_confirm_account {
 sub do_edit_details {
   my $self = shift;
   my ($user,$column,$old,$new) = @_;
+  my $userdb = $self->{dbi};
 
   if($column eq 'email') {
     if($self->check_email($new) == 0) {
@@ -407,7 +426,7 @@ sub do_edit_details {
      $querystring .= " WHERE username = ?";
      $querystring .= "   AND $column  = ?";
 
-  my $update = $login->prepare($querystring);
+  my $update = $userdb->prepare($querystring);
   unless($update->execute($new,$user,$old)) {
     if($column eq 'email') {
       print "New e-mail already in use, please try another.";
@@ -441,6 +460,9 @@ sub do_edit_details {
 sub do_email_info {
   my $self = shift;
   my $email = shift;
+  my $globals = $self->{globals};
+  my $userdb = $self->{dbi};
+  
   if($self->check_email($email)==0) {print "Invalid e-mail address provided.";return;}
 
   my ($user,$rows,$openid_ref) = $self->do_retrieve_user($email);
@@ -460,10 +482,10 @@ sub do_email_info {
      $message .= $self->get_footer();
 
   my ($status,$err) = $self->do_sendmail({
-			     from       => $ReturnAddress,
-			     from_title => $AppName,
+			     from       => $globals->email_address,
+			     from_title => $globals->application_name,
 			     to         => $email,
-			     subject    => "$AppName Account Information",
+			     subject    => $globals->application_name . " Account Information",
 			     msg        => $message
 			    });
 
@@ -474,7 +496,7 @@ sub do_email_info {
 
   # BUG: we should salt the password
   my $secret = sha1($pass);
-  my $update = $login->prepare(
+  my $update = $userdb->prepare(
     "UPDATE users SET pass=? WHERE username=? AND email=? AND confirmed=1");
   $update->execute($secret,$user,$email)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
@@ -487,9 +509,12 @@ sub do_email_info {
 sub do_retrieve_user {
   my $self = shift;
   my $email = shift;
+  
+  my $userdb = $self->{dbi};
+  
   my @openids;
 
-  my $users = $login->selectcol_arrayref(
+  my $users = $userdb->selectcol_arrayref(
     "SELECT username FROM users WHERE email=? AND confirmed=1",
   	undef,
   	$email)
@@ -498,7 +523,7 @@ sub do_retrieve_user {
   my $rows = @$users;
   if ($rows == 1) {
     my $user  = $users->[0];
-    my $query = $login->prepare(
+    my $query = $userdb->prepare(
       "SELECT openid_url FROM openid_users WHERE username=?");
     $query->execute($user)
       or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
@@ -519,6 +544,8 @@ sub do_retrieve_user {
 sub do_delete_user {
   my $self = shift;
   my ($user, $pass) = @_;
+  
+  my $userdb = $self->{dbi};
   my $unseqpass = $pass;
 
   # BUG we should salt the password
@@ -533,7 +560,7 @@ sub do_delete_user {
     @bind = ($user,$pass);
   }
 
-  my $delete = $login->prepare($sql);
+  my $delete = $userdb->prepare($sql);
   $delete->execute(@bind)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
@@ -547,7 +574,7 @@ sub do_delete_user {
     return;
   }
 
-  my $query = $login->prepare(
+  my $query = $userdb->prepare(
     "DELETE FROM openid_users WHERE username=?");
   if($query->execute($user)) {
     print "Success";
@@ -561,9 +588,10 @@ sub do_delete_user {
 # Check OpenID - Sends a user to their openid host for confirmation.
 sub do_check_openid {
     my $self = shift;
+    my $globals = $self->{globals};
     my ($openid, $userid, $option) = @_;
     warn "do_check_openid($openid, $userid)";
-    my $return_to  = "$url?openid_confirm=1;page=$option;s=$userid;";
+    my $return_to  = $globals->gbrowse_url()."?openid_confirm=1;page=$option;s=$userid;";
        $return_to .= "id=logout;" if $option ne "openid-add";
        #id=logout needed in case another user is already signed in
     
@@ -592,6 +620,9 @@ sub do_check_openid {
 sub do_confirm_openid {
     my $self = shift;
     my ($callback, $userid, $option) = @_;
+    
+    my $userdb = $self->{dbi};
+    
     my ($error, @results, $select, $user, $only);
 
     my $csr = Net::OpenID::Consumer->new(
@@ -602,7 +633,7 @@ sub do_confirm_openid {
     );
 
     if($option eq "openid-add") {
-        ($user, $only) = $login->selectrow_array(
+        ($user, $only) = $userdb->selectrow_array(
 	    "SELECT username,openid_only FROM users WHERE userid=?",
 	    undef,
 	    $userid)
@@ -649,6 +680,9 @@ sub do_confirm_openid {
 sub do_get_openid {
     my $self = shift;
     my $openid = shift;
+
+    my $userdb = $self->{dbi};
+    
     my ($error,@results);
 
     my $from = <<END;
@@ -659,7 +693,7 @@ FROM users A, openid_users B
    AND B.openid_url = ?
 END
 ;
-    my ($rows) = $login->selectrow_array(
+    my ($rows) = $userdb->selectrow_array(
 	"select count(*) $from",
 	undef,
 	$openid)
@@ -677,7 +711,7 @@ END
         return \@results;
     }
 
-    my $select = $login->prepare("SELECT A.username, A.userid,A.remember, A.openid_only $from");
+    my $select = $userdb->prepare("SELECT A.username, A.userid,A.remember, A.openid_only $from");
     $select->execute($openid)
         or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
         and return \@results);
@@ -685,7 +719,7 @@ END
     my @info = $select->fetchrow_array;
 
     my $nowfun = $self->nowfun();
-    my $update = $login->prepare(
+    my $update = $userdb->prepare(
         "UPDATE users SET last_login=$nowfun WHERE username=? AND userid=? AND confirmed=1");
     $update->execute($info[0], $info[1])
         or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
@@ -699,6 +733,8 @@ END
 sub do_change_openid {
     my $self = shift;
     my ($user, $pass, $openid, $option) = @_;
+    
+    my $userdb = $self->{dbi};
     my $unseqpass = $pass;
 
     # BUG: we should salt the password
@@ -713,7 +749,7 @@ sub do_change_openid {
         @bind = ($user, $pass);
     }
 
-    my $users = $login->selectrow_arrayref($sql,undef,@bind)
+    my $users = $userdb->selectrow_arrayref($sql,undef,@bind)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
     my $rows = @$users;
 
@@ -731,7 +767,7 @@ sub do_change_openid {
         return;
     }
 
-    my $delete = $login->prepare(
+    my $delete = $userdb->prepare(
         "DELETE FROM openid_users WHERE userid=? AND username=? AND openid_url=?");
     if($delete->execute($users->[0], $user, $openid)) {
         print "Success";
@@ -745,13 +781,16 @@ sub do_change_openid {
     return;
 }
 
-# Add OpenID to Account - Adds a confirmed openid to an account.
+# Add OpenID to Account (UserID, Username, OpenID, Only(?)) - Adds a confirmed openid to an account.
 sub do_add_openid_to_account {
     my $self = shift;
     my ($userid, $user, $openid, $only) = @_;
+    
+    my $userdb = $self->{dbi};
+    
     my ($error,@results);
 
-    my $insert = $login->prepare("INSERT INTO openid_users VALUES (?,?,?)");
+    my $insert = $userdb->prepare("INSERT INTO openid_users VALUES (?,?,?)");
     if($insert->execute($userid, $user, $openid)) {
         $error = "Success";
     } else {
@@ -765,10 +804,12 @@ sub do_add_openid_to_account {
     return \@results;
 }
 
-# Add OpenID User - Adds a new openid user to the user database.
+# Add OpenID User (Username, OpenID, UserID, Remember?) - Adds a new openid user to the user database.
 sub do_add_openid_user {
     my $self = shift;
     my ($user, $openid, $userid, $remember) = @_;
+    
+    my $userdb = $self->{dbi};
 
     if($self->check_user($user)==0) {
         print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
@@ -779,14 +820,14 @@ sub do_add_openid_user {
     my $email   = $self->create_key('64');
 
     my $nowfun = $self->nowfun();
-    my $query = $login->prepare(
+    my $query = $userdb->prepare(
         "INSERT INTO users (userid,username,email,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created) VALUES (?,?,?,?,?,1,1,?, $nowfun, $nowfun)"
     );
 
     # BUG: we should salt the password
     $pass = sha1($pass);
     if($query->execute($userid, $user, $email, $pass, $remember, $confirm)) {
-        my $insert = $login->prepare("INSERT INTO openid_users (userid,username,openid_url) VALUES (?,?,?)");
+        my $insert = $userdb->prepare("INSERT INTO openid_users (userid,username,openid_url) VALUES (?,?,?)");
         if($insert->execute($userid, $user, $openid)) {
             print "Success";
         } else {
@@ -809,13 +850,14 @@ sub do_add_openid_user {
     return;
 }
 
-# List OpenID - Generates a list of openids associated with a user's account.
+# List OpenID (User) - Generates a list of openids associated with a user's account.
 sub do_list_openid {
     my $self = shift;
     my $user = shift;
     my ($error,@openids);
+    my $userdb = $self->{dbi};
 
-    my $select = $login->prepare(
+    my $select = $userdb->prepare(
         "SELECT openid_url FROM openid_users WHERE username=?");
     $select->execute($user)
         or ($error = DBI->errstr and push @openids,{error=>"Error: $error."}
@@ -833,5 +875,149 @@ sub do_list_openid {
     print JSON::to_json(\@results);
 }
 
+
+######################## F I L E   F U N C T I O N S #########################
+# Please note all functions (except these first two) use owner IDs & file IDs when appropriate.
+
+# Get User ID (User) - Returns a user's ID.
+sub get_user_id {
+    my $self = shift;
+    my $userdb = $self->{dbi};
+    my $user = $userdb->quote(shift);
+    return $userdb->selectrow_array("SELECT userid FROM users WHERE username = $user");
+}
+
+# Get File ID (Full Path) - Returns a file's ID.
+sub get_file_id{
+    my $self = shift;
+    my $userdb = $self->{dbi};
+    my $subdir_path = $userdb->quote(shift);
+    my $userid = shift;
+    
+    my $if_user = $userid ? "ownerid = " . $userdb->quote($userid) . " AND " : "";
+    return $userdb->selectrow_array("SELECT uploadid FROM uploads WHERE " . $if_user . "subdir_path = $subdir_path");
+}
+
+# Get Owned Files (User) - Returns an array of the paths of files owned by a user.
+sub get_owned_files {
+    my $self = shift;
+    my $userdb = $self->{dbi};
+    my $ownerid = $userdb->quote(shift);
+    my @files;
+    
+    if ($ownerid eq "") {
+		warn "No userid specified to get_owned_files";
+    } else {
+		my $rows = $userdb->selectcol_arrayref("SELECT subdir_path FROM uploads WHERE ownerid = $ownerid ORDER BY uploadid");
+		return @{$rows};
+    }
+}
+
+# Get Public Files () - Returns an array of public or admin file paths.
+sub get_public_files {
+    my $self = shift;
+    my @files;
+    my $userdb = $self->{dbi};
+    
+    my $rows = $userdb->selectcol_arrayref("SELECT * FROM uploads WHERE sharing_policy = 'public' ORDER BY uploadid");
+    return @{$rows};
+}
+
+# Get Imported Files (User) - Returns an array of files imported by a user.
+sub get_imported_files {
+	my $self = shift;
+	return 0;
+}
+
+# File In DB (Full Path[, Owner]) - Returns the number of results for a file (and optional owner) in the database, 0 if not found.
+sub file_in_db {
+    my $self = shift;
+    my $userdb = $self->{dbi};
+    my ($subdir_path, $ownerid) = @_;
+	
+	foreach ($subdir_path, $ownerid) {
+		$_ = $userdb->quote($_);
+	}
+    my $usersql = $ownerid? " AND ownerid = $ownerid" : "";
+    my $sql = "SELECT * FROM uploads WHERE subdir_path LIKE $subdir_path" . $usersql;
+    return $userdb->do($sql);
+}
+
+# Add File (Owner, Full Path, Description, Sharing Policy) - Adds $file to the database under $owner.
+sub add_file {
+    my $self = shift;
+    my $userdb = $self->{dbi};
+    my ($ownerid, $subdir_path, $description, $shared) = @_;
+    
+    if ($self->file_in_db($subdir_path, $ownerid) == 0) {
+		my $fileid = md5_hex($ownerid.$subdir_path);
+		my $now = $self->nowfun();
+		foreach ($fileid, $ownerid, $subdir_path, $description, $shared) {
+			$_ = $userdb->quote($_);
+		}
+		return $userdb->do("INSERT INTO uploads (uploadid, ownerid, subdir_path, description, creation_date, modification_date, sharing_policy) VALUES ($fileid, $ownerid, $subdir_path, $description, $now, $now, $shared)");
+    } else {
+		warn "$ownerid has already uploaded $subdir_path.";
+    }
+}
+
+# Delete File (File ID) - Deletes $file_id from the database.
+sub delete_file {
+	my $self = shift;
+    my $userdb = $self->{dbi};
+    my $fileid = $userdb->quote(shift);
+    if ($fileid) {
+      return $userdb->do("DELETE FROM uploads WHERE uploadid = $fileid");
+    }
+}
+
+# Get All Files () - Pretty self-explanatory. Only works if you're signed in as the admin.
+sub get_all_files {
+    my $self = shift;
+    my @files;
+    my $userdb = $self->{dbi};
+    my $session = $self->{session};
+    
+    if ($self->check_admin($session->username)) {
+    	my $rows = $userdb->selectcol_arrayref("SELECT subdir_path FROM uploads ORDER BY uploadid");
+    	return @{$rows};
+    } else {
+    	warn "Cannot get all files without being admin.";
+    }
+}
+
+# Field (Upload ID, Field[, Value]) - Returns (or, if defined, sets to the new value) the specified field of a file.
+sub field {
+    my $self = shift;
+    my $uploadid = shift;
+    my $field = shift;
+    my $userdb = $self->{dbi};
+    
+    unless ($field =~ m/description|subdir_path|ownerid|sharing_policy|groupid/i) {
+    	return "Invalid field specified";
+    }
+    
+    if (@_) {
+    	my $value = shift;
+	    #Clean up the string
+    	$value =~ s/^\s+//;
+		$value =~ s/\s+$//; 
+    	$value = $userdb->quote($value);
+    	my $now = $self->nowfun();
+    	$self->update_modified($uploadid);
+	    return $userdb->do("UPDATE uploads SET $field = $value WHERE uploadid = '$uploadid'");
+    } else {
+    	return $userdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = '$uploadid'");
+    }
+}
+
+# Update Modified (File ID) - Updates the modification date/time of the specified file to right now.
+sub update_modified {
+    my $self = shift;
+    my $fileid = shift;
+    my $userdb = $self->{dbi};
+    my $now = $self->nowfun();
+    return $userdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = '$fileid'");
+}
+
 1;
-__END__

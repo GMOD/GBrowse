@@ -5,12 +5,14 @@ use warnings;
 use base 'Bio::Graphics::Browser2::Render';
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Browser2::SubtrackTable;
+use Bio::Graphics::Browser2::UserDB;
 use Bio::Graphics::Karyotype;
 use Bio::Graphics::Browser2::Util qw[citation url_label segment_str];
 use JSON;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
+use CGI::Pretty;
 use Text::Tabs;
 
 use constant JS    => '/gbrowse2/js';
@@ -22,6 +24,7 @@ use constant DEBUG => 0;
 use constant HAVE_SVG => eval "require GD::SVG; 1";
 our $CAN_PDF;
 
+# Render HTML Start - Returns the HTML for the browser's <head> section.
 sub render_html_start {
   my $self  = shift;
   my $title = shift;
@@ -33,6 +36,7 @@ sub render_html_start {
   return $html;
 }
 
+# Render Top - Returns the HTML for the top banner of the page.
 sub render_top {
     my $self = shift;
     my ($title,$features) = @_;
@@ -46,6 +50,7 @@ sub render_top {
 	  . $self->toggle({nodiv=>1},'banner','',$html);
 }
 
+# Render Error DIV - Returns the HTML for the error display at the top of the page.
 sub render_error_div {
     my $self   = shift;
 
@@ -71,6 +76,7 @@ sub render_error_div {
 	).br();
 }
 
+# Render Tabbed Pages - Returns the HTML containing the tabs & the page DIVs to hold the content.
 sub render_tabbed_pages {
     my $self = shift;
     my ($main_html,$tracks_html,$custom_tracks_html,$settings_html,) = @_;
@@ -95,6 +101,7 @@ sub render_tabbed_pages {
     return $html;
 }
 
+# Render User Head - Returns any HTML for the <head> section specified by the user in GBrowse.conf.
 sub render_user_head {
     my $self = shift;
     my $settings = $self->state;
@@ -104,6 +111,7 @@ sub render_user_head {
     return $a || '';
 }
 
+# Render User Header - Returns any HTML for the top of the browser (the header) as specified by the user in GBrowse.conf.
 sub render_user_header {
     my $self = shift;
     my $settings = $self->state;
@@ -113,6 +121,7 @@ sub render_user_header {
     return $a || '';
 }
 
+# Render Bottom - Returns any HTML included in the footer specified by the user in GBrowse.conf.
 sub render_bottom {
   my $self = shift;
   my $features = shift; # not used
@@ -122,6 +131,7 @@ sub render_bottom {
   return $value.end_html();
 }
 
+# Render Navbar - Returns the HTML for the navigation bar along the top of the main browser page (in the "Search" node).
 sub render_navbar {
   my $self    = shift;
   my $segment = shift;
@@ -172,6 +182,7 @@ sub render_navbar {
       . div( { -id => "plugin_configure_div"},'');
 }
 
+# Plugin Form - Returns the HTML for the plugin form in the main navigation bar.
 sub plugin_form {
     my $self     = shift;
     my $settings = $self->state;
@@ -190,7 +201,7 @@ sub plugin_form {
 	   end_form);
 }
 
-
+# Source Form - Returns the HTML for the source chooser in the main navigation bar.
 sub source_form {
     my $self = shift;
     join '',(
@@ -256,6 +267,7 @@ END
     return $html;
 }
 
+# Render HTML Head - Returns the HTML for the beginning of the page (for CGI's start HTML function).
 sub render_html_head {
   my $self = shift;
   my ($dsn,$title) = @_;
@@ -290,8 +302,6 @@ sub render_html_head {
   if (defined($plugin_onLoads{'settings_page'})) {
     $settings_page_onLoads .= $plugin_onLoads{'settings_page'};
   }
-  
-  
   
   my $onTabScript .= "function onTabLoad(tab_id) {\n";
   $onTabScript .= "if (tab_id == 'main_page_select') {$main_page_onLoads}\n";
@@ -417,8 +427,7 @@ sub render_html_head {
   return start_html(@args);
 }
 
-# renders a block of javascript that loads some of our global config
-# settings into the main controller object for use in client-side code
+# Render JS Controller Settings - Renders a block of javascript that loads some of our global config settings into the main controller object for use in client-side code.
 sub render_js_controller_settings {
     my ( $self ) = @_;
 
@@ -786,13 +795,8 @@ sub galaxy_form {
     return '' unless $galaxy_url;
 
     my $URL  = $source->global_setting('galaxy incoming');
-    if (!$URL) {
-	$URL = url(-full=>1,-path_info=>1);
-    } else {
-      $URL .= "/".$source->name;
-    }
+    $URL   ||= $self->globals->gbrowse_url;
 
-    
     # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
     # when Galaxy posts the URL.
     my $dbkey  = $source->global_setting('galaxy build name') || $source->name;
@@ -1046,19 +1050,20 @@ sub render_track_table {
 	       );
 }
 
+# Category Table - This returns the hash of the category table.
 sub category_table {
     my $self   = shift;
     my $tabledata  = $self->data_source->setting('category tables');
     my @tabledata  = shellwords($tabledata||'');
     my %categorytable=();
     while (@tabledata) {
-	my $category=shift(@tabledata);
-	my $rows=shift(@tabledata);
-	my @rows=split(/\s+/,$rows);
-	my $cols=shift(@tabledata);
-	my @cols=split(/\s+/,$cols);
-	$categorytable{$category}{row_labels}=\@rows;
-	$categorytable{$category}{col_labels}=\@cols;
+	    my $category=shift(@tabledata);
+	    my $rows=shift(@tabledata);
+	    my @rows=split(/\s+/,$rows);
+	    my $cols=shift(@tabledata);
+	    my @cols=split(/\s+/,$cols);
+	    $categorytable{$category}{row_labels}=\@rows;
+	    $categorytable{$category}{col_labels}=\@cols;
     }
     
     return \%categorytable; 
@@ -1073,29 +1078,28 @@ sub indent_categories {
     my $sort_index = 0;
 
     for my $category (@$categories) {
-	my $cont   = $contents->{$category} || '';
+	    my $cont   = $contents->{$category} || '';
 
-	my @parts  = map {s/\\//g; $_} split m/(?<!\\):/,$category;
-	$sort_order{$_} = $sort_index++ foreach @parts;
+	    my @parts  = map {s/\\//g; $_} split m/(?<!\\):/,$category;
+	    $sort_order{$_} = $sort_index++ foreach @parts;
 
-	my $i      = $category_hash;
+	    my $i      = $category_hash;
 
-	# we need to add phony __next__ and __contents__ keys to avoid
-	# the case in which the track sections are placed at different
-	# levels of the tree, for instance 
-	# "category=level1:level2" and "category=level1"
-	for my $index (0..$#parts) {
-	    $i = $i->{__next__}{$parts[$index]} ||= {};
-	    $i->{__contents__}                    = $cont 
-		                                    if $index == $#parts;
-	}
+	    # we need to add phony __next__ and __contents__ keys to avoid
+	    # the case in which the track sections are placed at different
+	    # levels of the tree, for instance 
+	    # "category=level1:level2" and "category=level1"
+	    for my $index (0..$#parts) {
+	        $i = $i->{__next__}{$parts[$index]} ||= {};
+	        $i->{__contents__}                    = $cont 
+		                                        if $index == $#parts;
+	    }
     }
     my $i               = 1;
     my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order);
 }
 
-# this turns the nested category/subcategory hashes into a prettily indented
-# tracks table
+# Nest Toggles - This turns the nested category/subcategory hashes into a prettily-indented tracks table.
 sub nest_toggles {
     my $self         = shift;
     my ($hash,$sort) = @_;
@@ -1104,29 +1108,28 @@ sub nest_toggles {
     my $result = '';
     my $default = $self->data_source->category_default;
 
-    for my $key (sort { 
-	           ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b
-		      }  keys %$hash) {
-	if ($key eq '__contents__') {
-	    $result .= $hash->{$key}."\n";
-	} elsif ($key eq '__next__') {
-	    $result .= $self->nest_toggles($hash->{$key},$sort);
-	} elsif ($hash->{$key}{__next__}) {
-	    my $id =  "${key}_section";
-	    $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
- 	    $result .= $self->toggle_section({on=>$settings->{section_visible}{$id}},
-					     $id,
-					     b($key).span({-class => "list",
-			            -id => "${id}_list"},""),
-					     div({-style=>'margin-left:1.5em;margin-right:1em'},
-						 $self->nest_toggles($hash->{$key},$sort)));
-	} else {
-	    $result .= $self->nest_toggles($hash->{$key},$sort);
-	}
+    for my $key (sort { ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b }  keys %$hash) {
+	    if ($key eq '__contents__') {
+	        $result .= $hash->{$key}."\n";
+	    } elsif ($key eq '__next__') {
+	        $result .= $self->nest_toggles($hash->{$key},$sort);
+	    } elsif ($hash->{$key}{__next__}) {
+	        my $id =  "${key}_section";
+	        $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
+     	    $result .= $self->toggle_section({on=>$settings->{section_visible}{$id}},
+					         $id,
+					         b($key).span({-class => "list",
+			                -id => "${id}_list"},""),
+					         div({-style=>'margin-left:1.5em;margin-right:1em'},
+						     $self->nest_toggles($hash->{$key},$sort)));
+	    } else {
+	        $result .= $self->nest_toggles($hash->{$key},$sort);
+	    }
     }
     return $result;
 }
 
+# Render Multiple Choices - Returns the 
 sub render_multiple_choices {
     my $self     = shift;
     my $features = shift;
@@ -1137,6 +1140,7 @@ sub render_multiple_choices {
     return $karyotype->to_html($terms2hilite);
 }
 
+# Render Global Config - Returns the HTML for the Preferences page.
 sub render_global_config {
     my $self     = shift;
     my $settings = $self->state;
@@ -1279,6 +1283,7 @@ sub render_global_config {
     return div($content);
 }
 
+#Clear Hilights - Returns the HTML for the "Clear Highligting" link.
 sub clear_highlights {
     my $self = shift;
     my $link = a({-style   => 'font-size:9pt',
@@ -1288,43 +1293,48 @@ sub clear_highlights {
 		 $self->tr('CLEAR_HIGHLIGHTING'));
 }
 
+#Render Select Track Link - Returns the HTML for the "Select Tracks" button on the main browser page.
 sub render_select_track_link {
     my $self  = shift;
     my $title = $self->tr('SELECT_TRACKS');
     return button({-name=>$title,
-		   -onClick => "Controller.select_tab('track_page')"
+		    -onClick => "Controller.select_tab('track_page')"
 		  }
-	);
-		  
+	  );
 }
+
+#Render Select Browser Link - Returns the HTML for the "Back to Browser" button/link.
 sub render_select_browser_link {
     my $self  = shift;
     my $style  = shift || 'button';
 
     my $title = $self->tr('BACK_TO_BROWSER');
     if ($style eq 'button') {
-	return button({-name=>$title,
-		       -onClick => "Controller.select_tab('main_page')"
-		      }
-	    );
+	    return button({-name=>$title,
+		           -onClick => "Controller.select_tab('main_page')"
+		          }
+	        );
     } elsif ($style eq 'link') {
-	return a({-href=>'javascript:void(0)',
-		  -onClick => "Controller.select_tab('main_page')"},
-		 $title);
+	    return a({-href=>'javascript:void(0)',
+		      -onClick => "Controller.select_tab('main_page')"},
+		     $title);
     }
 }
 
+# Render Upload & Share Section - Returns the content of the "Uploads and Shared Tracks" tab.
 sub render_upload_share_section {
     my $self = shift;
-    return $self->is_admin
-	? div(h2({-style=>'font-style:italic;background-color:yellow'}, # BUG: this is HTML - should not be here!!!
-		 'Admin mode: Uploaded tracks are public'),
+    my $html = $self->is_admin?
+      div(h2({-style=>'font-style:italic;background-color:yellow'}, # BUG: this is HTML - should not be here!!!
+		    'Admin mode: Uploaded tracks are public'),
 	      $self->render_toggle_userdata_table,
 	      $self->render_toggle_import_table)
-	: div($self->render_toggle_userdata_table,
+	  : div($self->render_toggle_userdata_table,
 	      $self->render_toggle_import_table);
+	return $html;
 }
 
+# Renders the "Uploaded Tracks" table, with the title & help link
 sub render_toggle_userdata_table {
     my $self = shift;
     return div(
@@ -1336,6 +1346,7 @@ sub render_toggle_userdata_table {
 	);
 }
 
+# Renders the "Imported Tracks" table, with the title & help link
 sub render_toggle_import_table {
     my $self = shift;
     return h2($self->tr('IMPORTED_TRACKS')).
@@ -1346,6 +1357,7 @@ sub render_toggle_import_table {
 	);
 }
 
+# Renders the container holding the "Uploaded Tracks" table
 sub render_userdata_table {
     my $self = shift;
     my $html = div( {-id=>'userdata_table_div',-class=>'uploadbody'},
@@ -1353,6 +1365,7 @@ sub render_userdata_table {
     return $html;
 }
 
+# Renders the container holding the "Imported Tracks" table
 sub render_userimport_table {
     my $self = shift;
     my $html = div( { -id => 'userimport_table_div',-class=>'uploadbody' },
@@ -1361,6 +1374,7 @@ sub render_userimport_table {
     return $html;
 }
 
+# List Userdata - Creates the HTML listing of a user's uploaded files (uploads or imported, depending on $type).
 sub list_userdata {
     my $self = shift;
     my $type = shift;
@@ -1403,6 +1417,8 @@ sub list_userdata {
 	my $random_id = 'upload_'.int rand(9999);
 
 	my ($conf_name,$conf_modified,$conf_size) = $userdata->conf_metadata($name);
+	
+	warn join(", ", $userdata->conf_metadata($name));
 
 	my @source_files  = $userdata->source_files($name);
 	my $download_data = 
@@ -1482,6 +1498,7 @@ sub list_userdata {
     return join '',@rows;
 }
 
+#Userdata Import - Renders the "[Import a track URL]" link in the Imported Tracks section.
 sub userdata_import {
     my $self     = shift;
     my $html     = '';
@@ -1500,6 +1517,7 @@ sub userdata_import {
     return $html;
 }
 
+#Userdata Upload - Renders the "Add custom tracks" text and links in the Uploaded Tracks section.
 sub userdata_upload {
     my $self     = shift;
     my $url      = url(-absolute=>1,-path_info=>1);

@@ -2,7 +2,7 @@ package Bio::Graphics::Browser2;
 # $Id$
 # Globals and utilities for GBrowse and friends
 
-our $VERSION = '2.12';
+our $VERSION = '2.13';
 
 use strict;
 use warnings;
@@ -116,6 +116,26 @@ sub openid_url  { shift->url_path('openid')             }
 sub js_url      { shift->url_path('js')                 }
 sub help_url    { shift->url_path('gbrowse_help')       }
 sub stylesheet_url   { shift->url_path('stylesheet')    }
+
+
+# this returns the base URL and path info for use in constructing
+# links. For example, if gbrowse is running at http://foo.bar/cgi-bin/gb2/gbrowse/yeast,
+# it will return the list ('http://foo.bar/cgi-bin/gb2','yeast')
+sub gbrowse_base {
+    my $self   = shift;
+    my $url    = CGI::url();
+    my $source = $self->get_source_from_cgi;
+    $source    = CGI::escape($source);
+    $url =~   s!/[^/]*$!!;
+    return ($url,$source);
+}
+
+# this returns the URL of the "master" gbrowse instance
+sub gbrowse_url {
+    my $self   = shift;
+    my ($base,$source) = $self->gbrowse_base;
+    return "$base/gbrowse/$source";
+}
 
 sub make_path {
     my $self = shift;

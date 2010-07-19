@@ -3,43 +3,16 @@
 eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 use strict;
-use Bio::Graphics::Browser2;
-use Bio::Graphics::Browser2::Render;
 use Bio::Graphics::Browser2::UserDB;
 use CGI qw(:standard);
-use DBI;
-use Digest::SHA qw(sha1);
-use JSON;
-use LWP::UserAgent;
-#use LWPx::ParanoidAgent; (Better, but currently broken)
-use Net::SMTP;
-use Net::OpenID::Consumer;
-use Text::ParseWords 'quotewords';
-
-# Required modules:
-#    1. Net::SMTP
-#    1. Crypt::SSLeay & libssl-dev
-#    2. Net::OpenID::Consumer
-#    3. Math::BigInt
-#
-# If you need to sendmail via an SMTP server that requires
-# SASL and SSL authentication, you will need
-#
-#    1. Net::SMTP::SSL
-#    2. Authen::SASL
-
 
 our $VERSION = '$Id: gbrowse_login,v 1.1 2009-08-27 20:33:23 idavies Exp $';
 
 umask 022;
    
+my $userdb = Bio::Graphics::Browser2::UserDB->new();
+
 my %actions  = map {$_=>1} param('action');
 my %callback;
 
@@ -59,7 +32,7 @@ my $option   = param('option');
 
 if($actions{list_openid}) {
     print header('application/json');
-    do_list_openid($user)  if $actions{list_openid};
+    $userdb->do_list_openid($user)  if $actions{list_openid};
     exit 0;
 }
 
@@ -74,170 +47,26 @@ if($actions{confirm_openid}) {
     }
 
     print header('application/json');
-    do_confirm_openid(\%callback, $userid, $option);
+    $userdb->do_confirm_openid(\%callback, $userid, $option);
     exit 0;
 }
 
 print header();
 
-do_add_user_check    ($user, $email, $pass, $userid)      if $actions{add_user_check};
-do_add_user          ($user, $email, $pass, $userid)      if $actions{add_user};
-do_validate          ($user, $pass, $remember)            if $actions{validate};
-do_edit_details      ($user, $column, $old, $new)         if $actions{edit_details};
-do_email_info        ($email)                             if $actions{email_info};
-do_edit_confirmation ($email, $option)                    if $actions{edit_confirmation};
-do_confirm_account   ($user, $confirm)                    if $actions{confirm_account};
-do_delete_user       ($user, $pass)                       if $actions{delete_user};
+$userdb->do_validate			($user, $pass, $remember)				if $actions{validate};
+$userdb->do_add_user_check		($user, $email, $pass, $userid)			if $actions{add_user_check};
+$userdb->do_add_user			($user, $email, $pass, $userid)			if $actions{add_user};
+$userdb->do_edit_confirmation	($email, $option)						if $actions{edit_confirmation};
+$userdb->do_confirm_account		($user, $confirm)						if $actions{confirm_account};
+$userdb->do_edit_details		($user, $column, $old, $new)			if $actions{edit_details};
+$userdb->do_email_info			($email)								if $actions{email_info};
+$userdb->do_delete_user			($user, $pass)							if $actions{delete_user};
 
-do_add_openid_user   ($user, $openid, $userid, $remember) if $actions{add_openid_user};
-do_check_openid      ($openid, $userid, $option)          if $actions{check_openid};
-do_change_openid     ($user, $pass, $openid, $option)     if $actions{change_openid};
+$userdb->do_add_openid_user		($user, $openid, $userid, $remember)	if $actions{add_openid_user};
+$userdb->do_check_openid		($openid, $userid, $option)				if $actions{check_openid};
+$userdb->do_change_openid		($user, $pass, $openid, $option)		if $actions{change_openid};
 
 exit 0;
-
-# Get Header - Returns the message found at the top of all confirmation e-mails.
-sub get_header {
-    return Bio::Graphics::Browser2::UserDB->get_header();
-}
-
-# Get Footer - Returns the message found at the bottom of all e-mails.
-sub get_footer {
-    return Bio::Graphics::Browser2::UserDB->get_footer();
-}
-
-# Create Key - Generates a random string of a given length.
-sub create_key {
-    my $val = shift;
-    return Bio::Graphics::Browser2::UserDB->create_key($val);
-}
-
-# Check E-mail - Returns true if an e-mail is in a valid format.
-sub check_email {
-    my $email = shift;
-    return Bio::Graphics::Browser2::UserDB->check_email($email);
-}
-
-# Check User - Returns true if a username is in a valid format.
-sub check_user {
-    my $user = shift;
-    return Bio::Graphics::Browser2::UserDB->check_user($user);
-}
-
-#Check Admin - Returns true if a user is an admin.
-sub check_admin {
-    my $admin = shift;
-    return Bio::Graphics::Browser2::UserDB->check_admin($admin);
-}
-
-# Check Old Confirmations - Deletes any unconfirmed accounts more than 7 days old.
-sub check_old_confirmations {
-    return Bio::Graphics::Browser2::UserDB->check_old_confirmations();
-}
-
-#################### N O N - O P E N I D   F U N C T I O N S #####################
-# Validate - Ensures that a non-openid user's credentials are correct.
-sub do_validate {
-    my ($user, $pass, $remember) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_validate($user, $pass, $remember);
-}
-
-# Add User Check - Checks to see if the user has already been added.
-sub do_add_user_check {
-    my ($user, $email, $pass, $userid) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_add_user_check($user, $email, $pass, $userid);
-}
-
-# Add User - Adds a new non-openid user to the user database.
-sub do_add_user {
-    my ($user, $email, $pass, $userid) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_add_user($user, $email, $pass, $userid);
-}
-
-# Send Confirmation - Sends an e-mail when a user creates a new non-openid account
-#                       to ensure that the user is valid and the e-mail exists.
-sub do_send_confirmation {
-    my ($email, $confirm, $user, $pass) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_send_confirmation($email, $confirm, $user, $pass);
-}
-
-# Edit Confirmation - Deletes or resends unconfirmed information based on "option"
-sub do_edit_confirmation {
-    my ($email, $option) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_edit_confirmation($email, $option);
-}
-
-# Confirm Account - Activates a new account when the user follows the mailed link.
-sub do_confirm_account {
-    my ($user, $confirm) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_confirm_account($user, $confirm);
-}
-
-# Edit Details - Updates the user's e-mail or password depending on the "column"
-sub do_edit_details {
-    my ($user, $column, $old, $new) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_edit_details($user, $column, $old, $new);
-}
-
-# E-mail Info - Sends an e-mail when a user has forgotten their password.
-sub do_email_info {
-    my $email = shift;
-    return Bio::Graphics::Browser2::UserDB->do_email_info($email);
-}
-
-# Retrieve User - Gets the username associated with a given e-mail.
-sub do_retrieve_user {
-    my $email = shift;
-    return Bio::Graphics::Browser2::UserDB->do_retrieve_user($email);
-}
-
-# Delete User - Removes a user from the database.
-sub do_delete_user {
-    my ($user, $pass) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_delete_user($user, $pass);
-}
-
-######################## O P E N I D   F U N C T I O N S #########################
-# Check OpenID - Sends a user to their openid host for confirmation.
-sub do_check_openid {
-    my ($openid, $userid, $option) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_check_openid($openid, $userid, $option);
-}
-
-# Confirm OpenID - Checks that the returned credentials are valid.
-sub do_confirm_openid {
-    my ($callback, $userid, $option) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_confirm_openid($callback, $userid, $option);
-}
-
-# Get OpenID - Check to see if the provided openid has been used before.
-sub do_get_openid {
-    my $openid = shift;
-    return Bio::Graphics::Browser2::UserDB->do_get_openid($openid);
-}
-
-# Change OpenID - Add or removes an openid from an account based on "option"
-sub do_change_openid {
-    my ($user, $pass, $openid, $option) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_change_openid($user, $pass, $openid, $option);
-}
-
-# Add OpenID to Account - Adds a confirmed openid to an account.
-sub do_add_openid_to_account {
-    my ($userid, $user, $openid, $only) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_add_openid_to_account($userid, $user, $openid, $only);
-}
-
-# Add OpenID User - Adds a new openid user to the user database.
-sub do_add_openid_user {
-    my ($user, $openid, $userid, $remember) = @_;
-    return Bio::Graphics::Browser2::UserDB->do_add_openid_user($user, $openid, $userid, $remember);
-}
-
-# List OpenID - Generates a list of openids associated with a user's account.
-sub do_list_openid {
-    my $user = shift;
-    return Bio::Graphics::Browser2::UserDB->do_list_openid($user);
-}
 
 __END__
 
@@ -261,8 +90,8 @@ use gbrowse_login;
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
-    userid        varchar(32) not null UNIQUE key,
-    username      varchar(32) not null PRIMARY key,
+    userid        varchar(32) not null PRIMARY key,
+    username      varchar(32),
     email         varchar(64) not null UNIQUE key,
     pass          varchar(32) not null,
     remember          boolean not null,
@@ -280,11 +109,13 @@ CREATE TABLE openid_users (
     openid_url   varchar(128) not null PRIMARY key
 ) ENGINE=InnoDB;
 
-DROP TABLE IF EXISTS user_files;
-CREATE TABLE user_files (
-    path            text not null PRIMARY key,
-    ownerid         varchar(32) not null,
-    allowed_users   text
+DROP TABLE IF EXISTS uploads;
+CREATE TABLE uploads (
+    uploadid	       	varchar(32) not null PRIMARY key,
+    ownerid				varchar(32) not null,
+    subdir_path				   text,
+    description				   text,
+    creation_date			   datetime not null,
+    modification_date		   datetime,
+    sharing_policy			   ENUM('private', 'public', 'group', 'casual') not null
 ) ENGINE=InnoDB;
-
-

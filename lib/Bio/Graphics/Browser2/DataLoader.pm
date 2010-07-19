@@ -104,7 +104,6 @@ sub get_fasta_files {
 	my $fasta = $args{-fasta} || $args{-dsn};
 	next if $seenit{$fasta}++;
 	next unless -e $fasta;
-	warn "looking at $dbid $fasta";
 	if (-d _) {
 	    push @fastai, glob("$fasta/*.fai");
 	    push @fasta, $fasta
@@ -280,7 +279,8 @@ sub load {
 
     die $@ if $@;
     $self->set_processing_complete;
-    return $self->tracks;
+    my @tracks = $self->tracks;
+    return @tracks;
 }
 
 sub start_load  { }
@@ -386,7 +386,7 @@ named "userdata_*". The usual way to do this is with the mysql shell:
 
  mysql> grant create on `userdata\_%`.* to www-data\@localhost
 END
-
+	
 	my $dbh = DBI->connect($mysql_admin)
 	    or die DBI->errstr,".\n",$mysql_usage;
 	$dbh->do("drop database if exists `$data_path`");
@@ -431,14 +431,14 @@ sub drop_databases {
 sub mysql_admin {
     my $self = shift;
     my $db_host    = $self->setting('userdb_host') || 'localhost';
-    my $db_user    = $self->setting('userdb_user') || '';
-    my $db_pass    = $self->setting('userdb_pass') || '';
+    my $db_user    = "gbrowse"; #$self->setting('userdb_user') || '';
+    my $db_pass    = "gbrowse"; #$self->setting('userdb_pass') || '';
     eval "require DBI" unless DBI->can('connect');
     my $dsn        = 'DBI:mysql:';
     my @options;
-    push @options,"host=$db_host"     if $db_host;
-    push @options,"user=$db_user"     if $db_user;
-    push @options,"password=$db_pass" if $db_pass;
+    push @options,"host=localhost"     if $db_host;
+    push @options,"user=gbrowse"     if $db_user;
+    push @options,"password=gbrowse" if $db_pass;
     return $dsn . join ';',@options;
 }
 

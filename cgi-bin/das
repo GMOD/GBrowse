@@ -210,6 +210,8 @@ sub list_dsns {
 		my $description = $source->description($dsn)."; $track track";
 		$description   .= "; $key"      if $key;
 		$description   .= "; $citation" if $citation;
+                $description    = _xml_escapeASCII(   $description );
+                $description    = _xml_escapeLiteral( $description );
 		print "$j<DSN>\n";
 		print qq($j$j<SOURCE id="$dsn|$track">$dsn|$track</SOURCE>\n);
 		print qq($j$j<MAPMASTER>),$mapmaster,qq(</MAPMASTER>\n);
@@ -220,6 +222,26 @@ sub list_dsns {
     }
     print "</DASDSN>\n";
 }
+
+# escape functions cribbed from XML::Writer (which is public domain)
+sub _xml_escapeLiteral {
+  my $data = $_[0];
+  if ($data =~ /[\&\<\>\"]/) {
+    $data =~ s/\&/\&amp\;/g;
+    $data =~ s/\</\&lt\;/g;
+    $data =~ s/\>/\&gt\;/g;
+    $data =~ s/\"/\&quot\;/g;
+  }
+  return $data;
+}
+
+sub _xml_escapeASCII($) {
+    my $data = shift;
+    $data =~ s/([^\x00-\x7F])/sprintf('&#x%X;', ord($1))/ge;
+    return $data;
+}
+
+
 
 sub list_sources {
     my $self = shift;

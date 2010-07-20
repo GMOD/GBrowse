@@ -525,7 +525,7 @@ sub categories {
 	$type2category{__fuzzy__}{$typeobj}   = $typeobj;
 	my $so = $so_hash->{lc $type} if $so_hash;
 	for my $t ($type,$so) {
-	    unless unless $t;
+	    next unless $t;
 	    $type2category{$t}                 = $category;
 	    $type2category{__label__}{$t}      = $track;
 	    $type2category{__subparts__}{$t}++   if $has_subparts;

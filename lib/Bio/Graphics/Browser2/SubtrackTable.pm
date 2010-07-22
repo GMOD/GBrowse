@@ -166,20 +166,35 @@ sub selection_table {
     my $comment      = $self->track_comment;
     my $instructions = $render->tr('SUBTRACK_INSTRUCTIONS');
 
+       # it is possible for there to be more fields in the data table than among
+    # the selectors, so we create additional dummy columns in the header
+    my $cols = 0;
+    for (keys %$elements) {
+        my $c = @{$elements->{$_}{fields}};
+        $cols = $c if $cols < $c;
+    }
+    my $extra = $cols - @selectors;
+    $extra    = 0 if $extra < 0;
+    my @extra = ('&nbsp;') x $extra;
+
     my @table_rows;
-    push @table_rows,TR(td({-class=>'datatitle',-colspan=>$#selectors+2},b($comment)))      
-	if $comment;
-    push @table_rows,TR(td({-class=>'datatitle',-colspan=>$#selectors+2},i($instructions))) 
-	if $instructions;
-    push @table_rows,TR(th({-colspan=>$#selectors+2},"<i>$key</i> Subtracks"));
+    push @table_rows,TR(td({-class=>'datatitle',-colspan=>$#selectors+$extra+2},b($comment)))
+        if $comment;
+    push @table_rows,TR(td({-class=>'datatitle',-colspan=>$#selectors+$extra+2},i($instructions)))
+        if $instructions;
+    push @table_rows,TR(th({-colspan=>$#selectors+$extra+2},"<i>$key</i> Subtracks"));
     push @table_rows,TR(     th({-class=>'table-sortable:numericdesc'},'Select'),
-			map {th({-class=>"filterable $sort_type[$_]"},$selectors[$_][0])} (0..$#selectors));
-			
+                             (map {th({-class=>"filterable $sort_type[$_]"},$selectors[$_][0])} (0..$#selectors)),
+                                  th(\@extra)
+                             );
+
     push @table_rows,TR(th(span({-class => 'clickable',
-				 -onClick => 'Table.checkAll(this,false)'},'All off'),
-			   span({-class   => 'clickable',
-				 -onClick => 'Table.checkAll(this,true)'}, 'All on')),
-			th(\@popups));
+                                 -onClick => 'Table.checkAll(this,false)'},'All off'),
+                           span({-class   => 'clickable',
+                                 -onClick => 'Table.checkAll(this,true)'}, 'All on')),
+                        th(\@popups),
+                        th(\@extra)
+                        );
 
     my $thead = thead(@table_rows);
 

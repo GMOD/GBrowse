@@ -4,6 +4,9 @@
        no features in the region of interest. Note that if there are no features in any
        subtracks, the entire track will be empty regardless of the subtracks (this may or
        may not be a bug).
+     * Fixed display problem in subtrack selection table when there are additional data row 
+       elements that are not listed among the selection criteria.
+     * Fixed TrackDumper routines to dump out both the tracks and signal from vista tracks.
 
 2.13
      * Fixed SAM file processing so as not to die on first line of SAM @SQ header.

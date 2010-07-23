@@ -12,7 +12,6 @@ use JSON;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
-use CGI::Pretty;
 use Text::Tabs;
 
 use constant JS    => '/gbrowse2/js';
@@ -24,10 +23,13 @@ use constant DEBUG => 0;
 use constant HAVE_SVG => eval "require GD::SVG; 1";
 our $CAN_PDF;
 
+# NOTE: Strange comments around col 80 are to fix syntax hilighting in gedit, and will be taken out
+
 # Render HTML Start - Returns the HTML for the browser's <head> section.
 sub render_html_start {
   my $self  = shift;
   my $title = shift;
+  my $session  = $self->session;
   my $dsn   = $self->data_source;
   my $html  = $self->render_html_head($dsn,$title);
   $html    .= $self->render_js_controller_settings();
@@ -80,10 +82,10 @@ sub render_error_div {
 sub render_tabbed_pages {
     my $self = shift;
     my ($main_html,$tracks_html,$custom_tracks_html,$settings_html,) = @_;
-    my $main_title          = $self->tr('MAIN_PAGE');
-    my $tracks_title        = $self->tr('SELECT_TRACKS');
-    my $custom_tracks_title = $self->tr('CUSTOM_TRACKS_PAGE');
-    my $settings_title      = $self->tr('SETTINGS_PAGE');
+    my $main_title          = $self->tr('MAIN_PAGE');											#;
+    my $tracks_title        = $self->tr('SELECT_TRACKS');										#;
+    my $custom_tracks_title = $self->tr('CUSTOM_TRACKS_PAGE');									#;
+    my $settings_title      = $self->tr('SETTINGS_PAGE');										#;
 
     my $html = '';
     $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
@@ -188,9 +190,9 @@ sub plugin_form {
     my $settings = $self->state;
 
     return $settings->{GALAXY_URL}
-    ? button(-name    => $self->tr('SEND_TO_GALAXY'),
+    ? button(-name    => $self->tr('SEND_TO_GALAXY'),											#,
 	      -onClick  => $self->galaxy_link).
-       button(-name    => $self->tr('CANCEL'),
+       button(-name    => $self->tr('CANCEL'),													#,
 	      -onClick => $self->galaxy_clear.";Controller.update_sections(['plugin_form'])",
        )
      : join '',(
@@ -221,7 +223,7 @@ sub sliderform {
 	return
 	    join '',(
 		start_form(-name=>'sliderform',-id=>'sliderform',-onSubmit=>'return false'),
-		b($self->tr('Scroll'). ': '),
+		b($self->tr('Scroll'). ': '),															#.
 		$self->slidertable($segment),
 		b(
 		    checkbox(-name=>'flip',
@@ -257,13 +259,14 @@ sub render_search_form_objects {
     if ($self->setting('autocomplete')) {
         my $spinner_url = $self->globals->button_url.'/spinner.gif';
 	$html .= <<END
+#<
 <span id="indicator1" style="display: none">
   <img src="$spinner_url" alt="Working..." />
 </span>
 <div id="autocomplete_choices" class="autocomplete"></div>
 END
     }
-    $html .= submit( -name => $self->tr('Search') );
+    $html .= submit( -name => $self->tr('Search') );											#;
     return $html;
 }
 
@@ -405,7 +408,7 @@ sub render_html_head {
   # put all the html head arguments together
   my @args = (-title    => $title,
               -style    => \@stylesheets,
-              -encoding => $self->tr('CHARSET'),
+              -encoding => $self->tr('CHARSET'),												#,
 	      -script   => \@scripts,
 	      -head     => \@extra_headers,
 	     );
@@ -675,9 +678,9 @@ sub render_instructions {
       $self->toggle('Instructions',
 		    div({-style=>'margin-left:2em'},
 			$self->setting('search_instructions') ||
-			$self->tr('SEARCH_INSTRUCTIONS',$oligo),
+			$self->tr('SEARCH_INSTRUCTIONS',$oligo),											#,
 			$self->setting('navigation_instructions') ||
-			$self->tr('NAVIGATION_INSTRUCTIONS'),
+			$self->tr('NAVIGATION_INSTRUCTIONS'),												#,
 			br(),
 			$self->examples(),
 			br(),$self->html_frag('html2',$self->state)
@@ -701,42 +704,42 @@ sub render_actionmenu {
     my $self  = shift;
     my $settings = $self->state;
 
-    my   @export_links=a({-href=>'?make_image=GD', -target=>'_blank'},     $self->tr('IMAGE_LINK'));
+    my   @export_links=a({-href=>'?make_image=GD', -target=>'_blank'},     $self->tr('IMAGE_LINK'));	#;
     push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->tr('SVG_LINK'))
 	if HAVE_SVG;
     push @export_links,a({-href=>'?make_image=PDF',-target=>'_blank'}, $self->tr('PDF_LINK'))
 	if HAVE_SVG && $self->can_generate_pdf;
 
-    push @export_links,a({-href=>$self->gff_dump_link},                    $self->tr('DUMP_GFF'));
-    push @export_links,a({-href=>$self->dna_dump_link},                    $self->tr('DUMP_SEQ'));
+    push @export_links,a({-href=>$self->gff_dump_link},                    $self->tr('DUMP_GFF'));		#;
+    push @export_links,a({-href=>$self->dna_dump_link},                    $self->tr('DUMP_SEQ'));		#;
     push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->tr('SEND_TO_GALAXY'))
 	if $self->data_source->global_setting('galaxy outgoing');
 
-    my $bookmark_link = a({-href=>'?action=bookmark'},$self->tr('BOOKMARK')),;
+    my $bookmark_link = a({-href=>'?action=bookmark'},$self->tr('BOOKMARK')),;							#,
     my $share_link    = a({-href        => '#',
 			   -onMouseDown => "GBox.showTooltip(event,'url:?action=share_track;track=all')"},
 			  ($self->tr('SHARE_ALL') || "Share These Tracks" )),
 
     my $help_link     = a({-href=>$self->general_help(),
-			   -target=>'_new'},$self->tr('HELP_WITH_BROWSER'));
+			   -target=>'_new'},$self->tr('HELP_WITH_BROWSER'));										#;
     my $about_gb_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_gbrowse')",
 			   -href        => 'javascript:void(0)',
 			   -style       => 'cursor:pointer'
 			  },
-			  $self->tr('ABOUT'));
+			  $self->tr('ABOUT'));																		#;
     my $about_dsn_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_dsn')",
 			       -href        => 'javascript:void(0)',
 			       -style       => 'cursor:pointer'
 			      },
-			      $self->tr('ABOUT_DSN'));
+			      $self->tr('ABOUT_DSN'));																#;
     my $about_me_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_me')",
 			       -href        => 'javascript:void(0)',
 			       -style       => 'cursor:pointer'
 			      },
-			      $self->tr('ABOUT_ME'));
+			      $self->tr('ABOUT_ME'));																#;
     my $plugin_link      = $self->plugin_links($self->plugins);
-    my $chrom_sizes_link = a({-href=>'?action=chrom_sizes'},$self->tr('CHROM_SIZES'));
-    my $reset_link       = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
+    my $chrom_sizes_link = a({-href=>'?action=chrom_sizes'},$self->tr('CHROM_SIZES'));					#;
+    my $reset_link       = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));		#;
 
     my $login = $self->setting('user accounts') ? $self->render_login : '';
 
@@ -745,14 +748,14 @@ sub render_actionmenu {
 		       li({-class=>'dir'},'File',
 			  ul(li($bookmark_link),
 			     li($share_link),
-			     li({-class=>'dir'},a({-href=>'#'},$self->tr('EXPORT')),
+			     li({-class=>'dir'},a({-href=>'#'},$self->tr('EXPORT')),						#,
 				ul(li(\@export_links))),
 			     $plugin_link ? li($plugin_link) : (),
 			     li($chrom_sizes_link),
 			     li($reset_link),
 			  )
 		       ),
-		       li({-class=>'dir'},$self->tr('HELP'),
+		       li({-class=>'dir'},$self->tr('HELP'),											#,
 			  ul({-class=>'dropdown'},
 			     li($help_link),
 			     li({-class=>'divider'},''),
@@ -777,7 +780,7 @@ sub plugin_links {
   my @result;
   for my $p (@plugins) {
     my $plugin = $plugins->plugin($p) or next;
-    my $action = "?plugin=$p;plugin_do=".$self->tr('Go');
+    my $action = "?plugin=$p;plugin_do=".$self->tr('Go');										#;
     push @result,a({-href=>$action,-target=>'_new'},"[$labels->{$p}]");
   }
   return \@result;
@@ -828,7 +831,7 @@ sub render_track_filter {
 
     my $form         = $plugin->configure_form();
     my $plugin_type  = $plugin->type;
-    my $action       = $self->tr('Configure_plugin');
+    my $action       = $self->tr('Configure_plugin');											#;
     my $name         = 'plugin:'.$plugin->name;
 
     return
@@ -839,7 +842,7 @@ sub render_track_filter {
 	    $form,
 	    button(
 		-name    => 'plugin_button',
-		-value   => $self->tr('search'),
+		-value   => $self->tr('search'),														#,
 		-onClick => 'doPluginUpdate()',
 	    ),
 	    end_form(),
@@ -866,9 +869,7 @@ sub render_toggle_track_table {
   return $html;
 }
 
-# this draws the various config options
-  # This subroutine is invoked to draw the checkbox group underneath the main display.
-# It creates a hyperlinked set of feature names.
+# Render Track Table - Invoked to draw the checkbox group in the "Select Tracks" tab. It creates a hyperlinked set of feature names.
 sub render_track_table {
   my $self     = shift;
   my $settings = $self->state;
@@ -937,7 +938,7 @@ sub render_track_table {
        $labels{$label} .= ' ['. span({-class       =>'clickable',
 				      -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
 				      -onClick      => "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
-				     },i($self->tr('SELECT_SUBTRACKS',$selected,$total))).']';
+				     },i($self->tr('SELECT_SUBTRACKS',$selected,$total))).']';					#.
    }
   }
 
@@ -963,15 +964,15 @@ sub render_track_table {
   $exclude{$user_tracks}++ if $user_tracks;
   my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
 
-  my $all_on  = $self->tr('ALL_ON');
-  my $all_off = $self->tr('ALL_OFF');
+  my $all_on  = $self->tr('ALL_ON');															#;
+  my $all_off = $self->tr('ALL_OFF');															#;
 
   my (%seenit,%section_contents);
 
-  my @categories = ($self->tr('OVERVIEW'),
-		    $self->tr('REGION'),
+  my @categories = ($self->tr('OVERVIEW'),														#,
+		    $self->tr('REGION'),																#,
 		    @user_keys,
-		    $self->tr('ANALYSIS'),
+		    $self->tr('ANALYSIS'),																#,
       );
   push @categories,$user_tracks if $user_tracks;
 
@@ -1282,7 +1283,7 @@ sub render_global_config {
 	) . end_form();
     return div($content);
 }
-
+																								#.
 #Clear Hilights - Returns the HTML for the "Clear Highligting" link.
 sub clear_highlights {
     my $self = shift;
@@ -1292,7 +1293,7 @@ sub clear_highlights {
 		 },
 		 $self->tr('CLEAR_HIGHLIGHTING'));
 }
-
+																								#;
 #Render Select Track Link - Returns the HTML for the "Select Tracks" button on the main browser page.
 sub render_select_track_link {
     my $self  = shift;
@@ -1384,6 +1385,7 @@ sub list_userdata {
     my $imported = $type eq 'imported' ? 1 : 0;
     my @tracks   = $userdata->tracks($imported);
     my %modified = map {$_ => $userdata->modified($_) } @tracks;
+    
     @tracks      = sort @tracks;
 
     my $buttons = $self->data_source->globals->button_url;
@@ -1417,8 +1419,6 @@ sub list_userdata {
 	my $random_id = 'upload_'.int rand(9999);
 
 	my ($conf_name,$conf_modified,$conf_size) = $userdata->conf_metadata($name);
-	
-	warn join(", ", $userdata->conf_metadata($name));
 
 	my @source_files  = $userdata->source_files($name);
 	my $download_data = 
@@ -1517,7 +1517,7 @@ sub userdata_import {
     return $html;
 }
 
-#Userdata Upload - Renders the "Add custom tracks" text and links in the Uploaded Tracks section.
+#Userdata Upload - Renders an "Add custom tracks" link in the Uploaded Tracks section.
 sub userdata_upload {
     my $self     = shift;
     my $url      = url(-absolute=>1,-path_info=>1);
@@ -1667,13 +1667,13 @@ sub plugin_menu {
     '&nbsp;',
     button(
       -name     => 'plugin_action',
-      -value    => $self->tr('Configure'),
+      -value    => $self->tr('Configure'),														#,
       -onClick => 'Controller.configure_plugin("plugin_configure_div");'
     ),
     '&nbsp;',
     button(
         -name    => 'plugin_action',
-        -value   => $self->tr('Go'),
+        -value   => $self->tr('Go'),															#,
         -onClick => 'var select_box = document.pluginform.plugin;'
             . q{var plugin_type = select_box.options[select_box.selectedIndex].attributes.getNamedItem('plugin_type').value;}
             . 'Controller.plugin_go('
@@ -1743,7 +1743,7 @@ sub wrap_plugin_configuration {
         push @buttons,
             button(
             -name    => 'plugin_button',
-            -value   => $self->tr('CANCEL'),
+            -value   => $self->tr('CANCEL'),													#,
             -onClick => 'Controller.wipe_div("plugin_configure_div");'
             );
 
@@ -1754,7 +1754,7 @@ sub wrap_plugin_configuration {
         push @buttons,
             button(
             -name    => 'plugin_button',
-            -value   => $self->tr('Configure_plugin'),
+            -value   => $self->tr('Configure_plugin'),											#,
             -onClick => 'Controller.reconfigure_plugin("'
                 . $self->tr('Configure_plugin') . '", "'
                 . "plugin:$plugin_name"
@@ -1765,7 +1765,7 @@ sub wrap_plugin_configuration {
             push @buttons,
                 button(
                 -name    => 'plugin_button',
-                -value   => $self->tr('Find'),
+                -value   => $self->tr('Find'),													#,
                 -onClick => 'alert("Find not yet implemented")',
                 );
         }
@@ -1773,7 +1773,7 @@ sub wrap_plugin_configuration {
             push @buttons,
                 button(
                 -name    => 'plugin_button',
-                -value   => $self->tr('Go'),
+                -value   => $self->tr('Go'),													#,
                 -onClick => 'Controller.plugin_go("'
                     . $plugin_base . '","'
                     . $plugin_type . '","'
@@ -1785,8 +1785,8 @@ sub wrap_plugin_configuration {
         # Start adding to the html
         $return_html .= h1(
               $plugin_type eq 'finder'
-            ? $self->tr('Find')
-            : $self->tr('Configure'),
+            ? $self->tr('Find')																	#:
+            : $self->tr('Configure'),															#,
             $plugin_name,
         );
 	$return_html .= div({-style=>'font-size:small'},@plugin_description);
@@ -1800,11 +1800,11 @@ sub wrap_plugin_configuration {
             $button_html,;
     }
     else {
-        $return_html .= join '', p( $self->tr('Boring_plugin') ),
+        $return_html .= join '', p( $self->tr('Boring_plugin') ),								#,
             b(
             button(
                 -name    => 'plugin_button',
-                -value   => $self->tr('CANCEL'),
+                -value   => $self->tr('CANCEL'),												#,
                 -onClick => 'Controller.wipe_div("plugin_configure_div");'
             )
             );
@@ -2020,7 +2020,7 @@ sub track_config {
     my $return_html = start_html();
 
     my $title   = div({-class=>'config-title'},$key);
-    my $dynamic = $self->tr('DYNAMIC_VALUE');
+    my $dynamic = $self->tr('DYNAMIC_VALUE');													#;
 
     my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 10;
     my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
@@ -2101,7 +2101,7 @@ END
 		   td( {-colspan => 2}, $title));
 
     push @rows, TR({-class=>'general'},
-		   th( { -align => 'right' }, $self->tr('Show') ),
+		   th( { -align => 'right' }, $self->tr('Show') ),										#,
 		   td( checkbox(
 			   -name     => 'show_track',
 			   -value    => $label,
@@ -2113,7 +2113,7 @@ END
         );
 
     push @rows,TR( {-class=>'general'},
-		   th( { -align => 'right' }, $self->tr('GLYPH') ),
+		   th( { -align => 'right' }, $self->tr('GLYPH') ),										#,
 		   td( $picker->popup_menu(
 			   -name    => 'conf_glyph',
 			   -values  => \@all_glyphs,
@@ -2126,17 +2126,17 @@ END
 
     push @rows,TR( {-class => 'features',
 		    -id    => 'packing'},
-		   th( { -align => 'right' }, $self->tr('Packing') ),
+		   th( { -align => 'right' }, $self->tr('Packing') ),									#,
 		   td( popup_menu(
 			   -name     => 'format_option',
 			   -values   => [ 0 .. 3 ],
 			   -override => 1,
 			   -default  => $state->{features}{$label}{options},
 			   -labels   => {
-			       0 => $self->tr('Auto'),
-			       1 => $self->tr('Compact'),
-			       2 => $self->tr('Expand'),
-			       3 => $self->tr('Expand_Label'),
+			       0 => $self->tr('Auto'),														#,
+			       1 => $self->tr('Compact'),													#,
+			       2 => $self->tr('Expand'),													#,
+			       3 => $self->tr('Expand_Label'),												#,
 			   }
 		       )
 		   )
@@ -2144,7 +2144,7 @@ END
 
     push @rows,TR({-class=>'xyplot',
 		   -style=>$g=~/xyplot/ ? 'display:table-row' : 'display:none'},
-		  th( { -align => 'right' }, $self->tr('XYPLOT_TYPE')),
+		  th( { -align => 'right' }, $self->tr('XYPLOT_TYPE')),									#,
 		  td( $picker->popup_menu(
 			  -name    => 'conf_graph_type',
 			  -values  => [qw(histogram line points linepoints)],
@@ -2155,7 +2155,7 @@ END
         );
 
     push @rows,TR({-class=>'whiskers'},
-		  th( { -align => 'right' }, $self->tr('WHISKERS_TYPE')),
+		  th( { -align => 'right' }, $self->tr('WHISKERS_TYPE')),								#,
 		  td( $picker->popup_menu(
 			  -name    => 'conf_graph_type_whiskers',
 			  -values  => [qw(whiskers boxes)],
@@ -2166,7 +2166,7 @@ END
         );
 
     push @rows,TR( {-class=>'xyplot features'},
-		   th( { -align => 'right' }, $self->tr('FG_COLOR') ),
+		   th( { -align => 'right' }, $self->tr('FG_COLOR') ),									#,
 		   td( $picker->color_pick(
 			   'conf_fgcolor',
 			   $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
@@ -2183,7 +2183,7 @@ END
 
     push @rows,TR( {-class=>'xyplot density',
 		     -id   =>'bicolor_pivot_id'},
-                   th( { -align => 'right'}, $self->tr('BICOLOR_PIVOT')),
+                   th( { -align => 'right'}, $self->tr('BICOLOR_PIVOT')),						#,
 		   td( $picker->popup_menu(
 			   -name    => 'conf_bicolor_pivot',
 			   -values  => [qw(none zero mean value)],
@@ -2199,13 +2199,13 @@ END
     my $pv    = $p =~ /^[\d.-eE]+$/ ? $p : 0.0;
     push @rows,TR({-class =>'xyplot density',
 		   -id=>'switch_point_other'},
-		  th( {-align => 'right' },$self->tr('BICOLOR_PIVOT_VALUE')),
+		  th( {-align => 'right' },$self->tr('BICOLOR_PIVOT_VALUE')),							#,
                   td( textfield(-name  => 'bicolor_pivot_value',
 				-value => $pv)));
     
 
     push @rows,TR({-class=>'switch_point_color xyplot density'}, 
-		  th( { -align => 'right' }, $self->tr('BICOLOR_PIVOT_POS_COLOR')),
+		  th( { -align => 'right' }, $self->tr('BICOLOR_PIVOT_POS_COLOR')),						#,
 		   td( $picker->color_pick(
 			   'conf_pos_color',
 			   $data_source->semantic_fallback_setting( $label => 'pos_color', $length ),
@@ -2215,7 +2215,7 @@ END
         );
 
     push @rows,TR( {-class=>'switch_point_color xyplot density'}, 
-		   th( { -align => 'right' }, $self->tr('BICOLOR_PIVOT_NEG_COLOR') ),
+		   th( { -align => 'right' }, $self->tr('BICOLOR_PIVOT_NEG_COLOR') ),					#,
 		   td( $picker->color_pick(
 			   'conf_neg_color',
 			   $data_source->semantic_fallback_setting( $label => 'neg_color', $length ),
@@ -2227,7 +2227,7 @@ END
     push @rows,TR( { -id    => 'bgcolor_picker',
 		     -class => 'xyplot density features',
 		   },
-		   th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
+		   th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),							#,
 		   td( $picker->color_pick(
 			   'conf_bgcolor',
 			   $summary_mode ? 'black'
@@ -2244,7 +2244,7 @@ END
     # wiggle colors
     #######################
     push @rows,TR( {-class=>'whiskers'}, 
-		   th( { -align => 'right' }, $self->tr('WHISKER_MEAN_COLOR')),
+		   th( { -align => 'right' }, $self->tr('WHISKER_MEAN_COLOR')),							#,
 		   td( $picker->color_pick(
 			   'conf_mean_color',
 			   $mean_color || 'black',
@@ -2254,7 +2254,7 @@ END
         );
 
     push @rows,TR( {-class=>'whiskers'}, 
-		   th( { -align => 'right' }, $self->tr('WHISKER_STDEV_COLOR') ),
+		   th( { -align => 'right' }, $self->tr('WHISKER_STDEV_COLOR') ),						#,
 		   td( $picker->color_pick(
 			   'conf_stdev_color',
 			   $stdev_color || 'grey',
@@ -2264,7 +2264,7 @@ END
         );
 
     push @rows,TR( {-class=>'whiskers'}, 
-		   th( { -align => 'right' }, $self->tr('WHISKER_MAX_COLOR') ),
+		   th( { -align => 'right' }, $self->tr('WHISKER_MAX_COLOR') ),							#,
 		   td( $picker->color_pick(
 			   'conf_max_color',
 			   $max_color || 'lightgrey',
@@ -2274,19 +2274,19 @@ END
         );
 
     push @rows,TR( {-class=>'xyplot density whiskers'},
-		   th( { -align => 'right' },$self->tr('SCALE_MIN')),
+		   th( { -align => 'right' },$self->tr('SCALE_MIN')),									#,
 		   td( textfield(-name  => 'conf_min_score',
 				 -value => defined $override->{min_score} ? $override->{min_score}
 				                                          : $summary_mode ? 0 : $min_score))) if $quantitative;
 
     push @rows,TR(  {-class=>'xyplot density whiskers'},
-		    th( { -align => 'right' },$self->tr('SCALE_MAX')),
+		    th( { -align => 'right' },$self->tr('SCALE_MAX')),									#,
 		    td( textfield(-name  => 'conf_max_score',
 				  -value => defined $override->{max_score} ? $override->{max_score}
 				  : $max_score)));
 
     push @rows,TR({-class=>'xyplot'},
-		  th( { -align => 'right' }, $self->tr('SHOW_VARIANCE')),
+		  th( { -align => 'right' }, $self->tr('SHOW_VARIANCE')),								#,
 		  td(
 		      hidden(-name=>'conf_variance_band',-value=>0),
 		      checkbox(
@@ -2302,7 +2302,7 @@ END
         );
 
     push @rows,TR( {-class=>'features'},
-		   th( { -align => 'right' }, $self->tr('LINEWIDTH') ),
+		   th( { -align => 'right' }, $self->tr('LINEWIDTH') ),									#,
 		   td( $picker->popup_menu(
 			   -name    => 'conf_linewidth',
 			   -current => $override->{'linewidth'},
@@ -2314,7 +2314,7 @@ END
 
     push @rows,TR( {-class=>'general'},
 		   th(
-		       { -align => 'right' }, $self->tr('HEIGHT') ),
+		       { -align => 'right' }, $self->tr('HEIGHT') ),									#,
 		   td( $picker->popup_menu(
 			   -name    => 'conf_height',
 			   -current => $override->{'height'},
@@ -2328,11 +2328,11 @@ END
         );
     
     push @rows,TR({-class=>'features'},
-		  th( { -align => 'right' }, $self->tr('Limit') ),
+		  th( { -align => 'right' }, $self->tr('Limit') ),										#,
 		  td( $picker->popup_menu(
 			  -name     => 'conf_feature_limit',
 			  -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
-			  -labels   => { 0 => $self->tr('NO_LIMIT') },
+			  -labels   => { 0 => $self->tr('NO_LIMIT') },										#,
 			   -current  => $override->{feature_limit},
 			  -override => 1,
 			  -default  => $limit,
@@ -2341,7 +2341,7 @@ END
         );
     
     push @rows,TR({-class=>'features'},
-		  th( { -align => 'right' }, $self->tr('STRANDED') ),
+		  th( { -align => 'right' }, $self->tr('STRANDED') ),									#,
 		  td( hidden(-name=>'conf_stranded',-value=>0),
 		      checkbox(
 			  -name    => 'conf_stranded',
@@ -2356,7 +2356,7 @@ END
         );
 
     push @rows,TR({-class=>'general'},
-		  th( { -align => 'right' }, $self->tr('APPLY_CONFIG')),
+		  th( { -align => 'right' }, $self->tr('APPLY_CONFIG')),								#,
 		  td(textfield(
 			 -name    => 'apply_semantic',
 			 -override=> 1,
@@ -2366,7 +2366,7 @@ END
 		   ) unless $summary_mode;
 
     push @rows,TR({-class=>'general'},
-		  th( { -align => 'right' }, $self->tr('SHOW_SUMMARY')),
+		  th( { -align => 'right' }, $self->tr('SHOW_SUMMARY')),								#,
 		  td(textfield(
 			 -name    => 'summary_mode',
 			 -override=> 1,
@@ -2386,15 +2386,15 @@ END
 		  td({-colspan=>2},
 		     button(
 			 -style   => 'background:pink',
-			 -name    => $self->tr('Revert'),
+			 -name    => $self->tr('Revert'),													#,
 			 -onClick => $reset_js
 		     ), br, 
 		     button(
-			 -name    => $self->tr('Cancel'),
+			 -name    => $self->tr('Cancel'),													#,
 			 -onClick => 'Balloon.prototype.hideTooltip(1)'
 		     ),
 		     button(
-			 -name    => $self->tr('Change'),
+			 -name    => $self->tr('Change'),													#,
 			 -onClick => $submit_script
 		     ),
 		     hidden(-name=>'segment_length',-value=>$length),
@@ -2475,11 +2475,11 @@ sub download_track_menu {
     $html   .= div({-align=>'center'},
 		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key),br(),
 
-		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_REGION',$segment_str),
+		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_REGION',$segment_str),				#,
 			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid:$start..$end;l=$track;s=0;f=save+gff3';$byebye",
 		   ),br(),
 
-		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_CHROM',$seqid),
+		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_CHROM',$seqid),					#,
 			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid;l=$track;s=0;f=save+gff3';$byebye",
 		   ),br(),
 
@@ -2487,7 +2487,7 @@ sub download_track_menu {
 			  -onClick => "$unload;location.href='?gbgff=1;l=$track;s=0;f=save+gff3';$byebye",
 		   )).
 
-		   button(-style=>"background:pink",-onClick=>"$byebye",-name=>$self->tr('CANCEL'));
+		   button(-style=>"background:pink",-onClick=>"$byebye",-name=>$self->tr('CANCEL'));	#;
     return $html;
 }
 
@@ -2557,7 +2557,7 @@ sub share_track {
     $das .= "?$das_types";
 
     my $return_html = start_html();
-    $return_html .= h1( $self->tr( 'SHARE', $description ) );
+    $return_html .= h1( $self->tr( 'SHARE', $description ) );									#;
 
     my $tsize = 72;
 
@@ -2623,7 +2623,7 @@ sub share_track {
     $return_html .= end_html();
     return div({-style=>'width:600px'},$return_html);
 }
-
+																								#'
 
 
 ################### various utilities ###################
@@ -2744,7 +2744,7 @@ sub format_autocomplete {
     }
     my $html = "<ul>\n";
     for my $n (sort keys %names) {
-	$n =~ s/($partial)/<b>$1<\/b>/i;
+	$n =~ s/($partial)/<b>$1<\/b>/i;															#/
 	$html .= "<li>$n</li>\n";
     }
     $html .= "</ul>\n";
@@ -2775,7 +2775,7 @@ sub display_citation {
      }
  				
    my $return_html = start_html(-title => $key, -head => \@stylesheets);
-   my $cit_txt = citation( $data_source, $label, $self->language ) || $self->tr('NO_CITATION');
+   my $cit_txt = citation( $data_source, $label, $self->language ) || $self->tr('NO_CITATION');	#;
      
    if (my ($lim) = $slabel =~ /\:(\d+)$/) {
         $key .= " (at >$lim bp)";

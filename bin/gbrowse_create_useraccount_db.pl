@@ -158,6 +158,17 @@ CREATE TABLE openid_users (
     openid_url   varchar(128) not null PRIMARY key
 );
 
+DROP TABLE IF EXISTS uploads;
+CREATE TABLE uploads (
+    uploadid	       	varchar(32) not null PRIMARY key,
+    ownerid				varchar(32) not null,
+    subdir_path				   text,
+    description				   text,
+    creation_date			   datetime not null,
+    modification_date		   datetime,
+    sharing_policy			   ENUM('private', 'public', 'group', 'casual') not null
+) ENGINE=InnoDB;
+
 ** SQLite **
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
@@ -180,3 +191,13 @@ CREATE TABLE openid_users (
     openid_url   varchar(128) not null PRIMARY key
 );
 
+DROP TABLE IF EXISTS uploads;
+CREATE TABLE uploads (
+    uploadid	       	varchar(32) not null PRIMARY key,
+    ownerid				varchar(32) not null,
+    subdir_path				   text,
+    description				   text,
+    creation_date			   datetime not null,
+    modification_date		   datetime,
+    sharing_policy			   ENUM('private', 'public', 'group', 'casual') not null
+);

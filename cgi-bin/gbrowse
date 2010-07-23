@@ -24,6 +24,7 @@ if ($fcgi) {
 	my $status = $fcgi->Accept;
 	next unless $status >= 0;
         %ENV = (%sys_env, %ENV);
+    
 	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
 	Bio::Graphics::Browser2::Render::HTML->new($globals)->run();

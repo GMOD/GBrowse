@@ -123,7 +123,7 @@ sub is_admin {
     return $login eq $admin;
 }
 
-
+# User Tracks - Returns a list of a user's tracks.
 sub user_tracks {
     my $self  = shift;
     my $uuid  = shift;
@@ -140,7 +140,7 @@ sub user_tracks {
 		       $self->state,
 		       $self->language,
 		       $uuid,
-	   );
+	   )
 }
 
 sub remote_sources {
@@ -315,7 +315,7 @@ sub asynchronous_event {
     # legacy URLs
     my $dispatch = Bio::Graphics::Browser2::Action->new($self);
     if (my @result = $dispatch->handle_legacy_calls($CGI::Q,$self)) {
-	return @result;
+		return @result;
     }
 
     if ( my $track_name = param('display_citation') ) {
@@ -324,15 +324,15 @@ sub asynchronous_event {
     }
 
     elsif (my $action = param('action')) {
-	my $method   = "ACTION_${action}";
-	unless ($dispatch->can($method)) {
-	    return (401,'text/plain',"invalid action: '$action'");
-	}
-	return $dispatch->$method($CGI::Q);
+		my $method   = "ACTION_${action}";
+		unless ($dispatch->can($method)) {
+			return (401,'text/plain',"invalid action: '$action'");
+		}
+		return $dispatch->$method($CGI::Q);
     }
 
     else {
-	return;
+		return;
     }
 }
 
@@ -403,12 +403,12 @@ sub background_track_render {
         $details_msg = h1(
 	    br(),
             $self->tr(
+																				            	#}}}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label($self->get_max_segment),
             )
         );
     }
-
     $requests{'region'} =
         $self->render_deferred( labels          => [ $self->expand_track_names($self->regionview_tracks) ],
 				segment         => $self->region_segment,
@@ -577,6 +577,7 @@ sub background_individual_track_render {
         $display_details = 0;
         $details_msg     = h1(
             $self->tr(
+																					            #)
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label(MAX_SEGMENT),
             )
@@ -584,7 +585,7 @@ sub background_individual_track_render {
         my %track_keys = ( $label => 0 );
         return ( \%track_keys, $display_details, $details_msg );
     }
-
+    
     my $cache_extra = $self->create_cache_extra();
 
     # Start rendering the detail and overview tracks
@@ -607,7 +608,6 @@ sub background_individual_track_render {
                 = $cache_track_hash->{$track_label}->key();
         }
     }
-
     return (\%track_keys, $display_details, $details_msg);
 }
 
@@ -638,6 +638,8 @@ sub render_header {
       );
   print $header;
 }
+
+																								#,
 
 sub state_cookie {
   my $self    = shift;
@@ -789,9 +791,9 @@ sub generate_title {
 
     return $description unless $features;
     return !$features || !$state->{name}     ? $description
-         : @$features == 0                   ? $self->tr('NOT_FOUND',$state->{name})
+         : @$features == 0                   ? $self->tr('NOT_FOUND',$state->{name}) 			#
 	 : @$features == 1 ? "$description: ".
-				   $self->tr('SHOWING_FROM_TO',
+				   $self->tr('SHOWING_FROM_TO',													#)
 					     scalar $dsn->unit_label($features->[0]->length),
 					     $features->[0]->seq_id,
 					     $dsn->commas($features->[0]->start),
@@ -1207,7 +1209,7 @@ sub plugin_action {
   # the logic of this is obscure to me, but seems to have to do with activating plugins
   # via the URL versus via fill-out forms, which may go through a translation.
   if (param('plugin_do')) {
-    $action = $self->tr(param('plugin_do')) || $self->tr('Go');
+    $action = $self->tr(param('plugin_do')) || $self->tr('Go');									#}}){}
   }
 
   $action   ||=  param('plugin_action');
@@ -1250,14 +1252,15 @@ sub plugin_find {
 
   # nothing returned, so plug the keyword into the search box to save user's search
   unless ($results && @$results) {
-      $settings->{name} = $keyword ? $keyword : $self->tr('Plugin_search_2',$plugin_name);
+      $settings->{name} = $keyword ? $keyword : $self->tr('Plugin_search_2',$plugin_name);		#;
       return;
   }
 
   # Write informative information into the search box - not sure if this is the right thing to do.
   $settings->{name} = defined($search_string) ? $self->tr('Plugin_search_1',$search_string,$plugin_name)
-                                              : $self->tr('Plugin_search_2',$plugin_name);
+                                              : $self->tr('Plugin_search_2',$plugin_name);		#:
   # do we really want to do this?!!
+  
   $self->write_auto($results);
   return $results;
 }
@@ -1418,14 +1421,14 @@ sub handle_plugins {
 
     # for activating the plugin by URL
     if ( param('plugin_do') ) {
-        $plugin_action = $self->tr( param('plugin_do') ) || $self->tr('Go');
+        $plugin_action = $self->tr( param('plugin_do') ) || $self->tr('Go');					#{}{}{}{})()
     }
-
+	
     my $state  = $self->state();
     my $cookie = $self->create_cookie();
 
     ### CONFIGURE  ###############################################
-    if ($plugin_action eq $self->tr('Configure')) {
+    if ($plugin_action eq $self->tr('Configure')) { 											#}
 	$self->plugin_configuration_form($plugin);
 	return 1;
     }
@@ -1447,7 +1450,7 @@ sub handle_plugins {
 
     my $segment = $self->segment();
     if (    $plugin_type   eq 'dumper'
-        and $plugin_action eq $self->tr('Go')
+        and $plugin_action eq $self->tr('Go')													#{}{}{}{})()#
         and (  $segment
             or param('plugin_config')
             or $plugin->verb eq ( $self->tr('Import') || 'Import' ) )
@@ -1614,7 +1617,7 @@ sub handle_download_userdata {
     my $is_text = -T $file;
 
     print CGI::header(-attachment   => $fname,
-		      -charset      => $self->tr('CHARSET'), # 'US-ASCII' ?
+		      -charset      => $self->tr('CHARSET'), # 'US-ASCII' ?								#,
 		      -type         => $is_text ? 'text/plain' : 'application/octet-stream');
 
     my $f = $ftype eq 'conf' ? $userdata->conf_fh($track)
@@ -1914,24 +1917,22 @@ sub cleanup_dangling_uploads {
     my $self  = shift;
     my $state = shift;
 
-
     my %name_to_id;
     for my $id (keys %{$state->{uploads}}) {
-	unless ($state->{uploads}{$id}[0]) {
-	    delete $state->{uploads}{$id};
-	    next;
-	}
-	$name_to_id{$state->{uploads}{$id}[0]}{$id}++;
+		unless ($state->{uploads}{$id}[0]) {
+			delete $state->{uploads}{$id};
+			next;
+		}
+		$name_to_id{$state->{uploads}{$id}[0]}{$id}++;
     }
-
 
     my $usertracks = $self->user_tracks;
     my %tracks = map {$_=>1} $usertracks->tracks();
 
     for my $k (keys %name_to_id) {
-	unless (exists $tracks{$k}) {
-	    delete $state->{uploads}{$_} foreach keys %{$name_to_id{$k}};
-	}
+		unless (exists $tracks{$k}) {
+			delete $state->{uploads}{$_} foreach keys %{$name_to_id{$k}};
+		}
     }
 
 }
@@ -2498,6 +2499,8 @@ sub asynchronous_update_element {
             $source->commas( $segment->start ),
             $source->commas( $segment->end )
             );
+																								#}{}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
+	
     }
     elsif ( $element eq 'span' ) {  # this is the popup menu that shows ranges
         my $container
@@ -3556,7 +3559,7 @@ sub external_data {
     warn "FEATURE files = ",join ' ',%$f if DEBUG;
     return $self->{feature_files} = $f;
 }
-
+#
 # Supplement data source with user uploads
 sub add_user_tracks {
     my $self        = shift;
@@ -3572,13 +3575,10 @@ sub add_user_tracks {
     my $userdata = $self->user_tracks($uuid);
     my @user_tracks = $userdb->get_owned_files($userdb->get_user_id($session->username));
     
-#    warn "adding usertracks for $uuid, getting @user_tracks";
     for my $track (@user_tracks) {
 		my $config_path = $userdata->track_conf($track);
 		eval {$data_source->parse_user_file($config_path)};
     }
-
-	warn join(", ", @user_tracks);
 }
 
 # Delete the segments so that they can be recreated with new parameters
@@ -3679,6 +3679,9 @@ sub galaxy_link {
     return '' unless $galaxy_url;
     my $clear_it  = $self->galaxy_clear;
     my $submit_it = q(document.galaxyform.submit());
+    
+   																								 #}) - Syntax highlight fixing.
+    
     return "$clear_it;$submit_it";
 }
 
@@ -3729,17 +3732,16 @@ sub add_hilites {
 
   # add feature hilighting
     if ($settings->{h_feat} && ref $settings->{h_feat} eq 'HASH') {
-	for my $h (keys %{$settings->{h_feat}}) {
-	    $$img_url .= ";h_feat=$h\@$settings->{h_feat}{$h}";
-	}
+		for my $h (keys %{$settings->{h_feat}}) {
+			$$img_url .= ";h_feat=$h\@$settings->{h_feat}{$h}";
+		}
     }
   # add region hilighting
     if ($settings->{h_region} && ref $settings->{h_region} eq 'ARRAY') {
-	for my $h (@{$settings->{h_region}}) {
-	    $$img_url .= ";h_region=$h";
-	}
+		for my $h (@{$settings->{h_region}}) {
+			$$img_url .= ";h_region=$h";
+		}
     }
-
 }
 
 sub svg_link {

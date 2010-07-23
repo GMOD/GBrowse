@@ -367,6 +367,7 @@ sub dsn {
     $d;
 }
 
+# Create a new database to hold a user's uploaded file.
 sub create_database {
     my $self      = shift;
     my $data_path = shift;
@@ -428,17 +429,18 @@ sub drop_databases {
     }
 }
 
+# MySQL Admin - Returns the string which defines the custom uploads DB MySQL connection details.
 sub mysql_admin {
     my $self = shift;
     my $db_host    = $self->setting('userdb_host') || 'localhost';
-    my $db_user    = "gbrowse"; #$self->setting('userdb_user') || '';
-    my $db_pass    = "gbrowse"; #$self->setting('userdb_pass') || '';
+    my $db_user    = $self->setting('userdb_user') || 'gbrowse';
+    my $db_pass    = $self->setting('userdb_pass') || 'gbrowse';
     eval "require DBI" unless DBI->can('connect');
-    my $dsn        = 'DBI:mysql:';
+    my $dsn        = 'DBI:mysql:gbrowse_login;';
     my @options;
-    push @options,"host=localhost"     if $db_host;
-    push @options,"user=gbrowse"     if $db_user;
-    push @options,"password=gbrowse" if $db_pass;
+    push @options,"host=$db_host"     if $db_host;
+    push @options,"user=$db_user"     if $db_user;
+    push @options,"password=$db_pass" if $db_pass;
     return $dsn . join ';',@options;
 }
 

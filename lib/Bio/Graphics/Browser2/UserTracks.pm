@@ -11,7 +11,8 @@ use File::Path 'mkpath','rmtree';
 use IO::File;
 use IO::String;
 use POSIX ();
-use Carp 'croak';
+use Carp qw(croak);
+use CGI 'param';
 
 use constant DEBUG => 0;
 my $HASBIGWIG;
@@ -37,11 +38,13 @@ sub sources_dir_name   { 'SOURCES'   }
 
 sub new {
     my $self = shift;
-    my ($config,$state,$lang,$uuid) = @_;
+    my ($config, $state, $lang, $uuid, $username) = @_;
     $uuid ||= $state->{uploadid};
     my $userdb = Bio::Graphics::Browser2::UserDB->new();
     my $globals = Bio::Graphics::Browser2->open_globals;
-    my $session = $globals->session;
+    my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
+    my $authority    = param('authority') || CGI::cookie('authority');
+    my $session = $globals->authorized_session($requested_id,$authority);
 
     return bless {
 	config   => $config,
@@ -49,13 +52,13 @@ sub new {
 	state    => $state,
 	language => $lang,
 	uuid     => $uuid,
-	session	 => $session,
+	username => $session->username || $username,
 	globals	 => $globals
     },ref $self || $self;
 }
 
 sub config   { shift->{config}    }
-sub state    { shift->{state}     }    
+sub state    { shift->{state}     }
 sub language { shift->{language}  }
 
 sub path {
@@ -64,18 +67,18 @@ sub path {
     $self->config->userdata($uploadid);
 }
 
-# Tracks - Returns an array of filenames representing a user's uploaded tracks (or imported tracks, if "imported" is defined.
+# Tracks - Returns an array of filenames representing a user's uploaded tracks (or imported tracks, if "imported" is defined).
 sub tracks {
     my $self     = shift;
     my $path     = $self->path;
     my $imported = shift;
     my $userdb = $self->{userdb};
-    my $session = $self->{session};
-
+    my $username = $self->{username};
+	
 	if ($imported) {
-		return $userdb->get_imported_files($userdb->get_user_id($session->username));
+		return $userdb->get_imported_files($userdb->get_user_id($username));
     } else {
-    	return $userdb->get_owned_files($userdb->get_user_id($session->username));
+    	return $userdb->get_owned_files($userdb->get_user_id($username));
     }
 }
 
@@ -117,17 +120,30 @@ sub import_flag {
 			       $self->imported_file_name);
 }
 
+# Created (Track) - Returns creation date of $track.
 sub created {
     my $self  = shift;
     my $track = shift;
-    my $conf  = File::Spec->catfile($self->path,$track,"$track.conf");
-    return (stat($conf))[10];
+    my $userdb = $self->{userdb};
+    my $username = $self->{username};
+    
+    my $fileid = $userdb->get_file_id($track, $username);
+    return $userdb->field($fileid, "creation_date");
 }
 
+# Modified (Track) - Returns date modified of $track.
 sub modified {
     my $self  = shift;
     my $track = shift;
-    return ($self->conf_metadata($track))[1];
+    my $userdb = $self->{userdb};
+    my $username = $self->{username};
+    
+    my $fileid = $userdb->get_file_id($track, $username);
+    if ($fileid) {
+    	return $userdb->field($fileid, "modification_date");
+    } else {
+    	return 0;
+    }
 }
 
 sub conf_metadata {
@@ -143,8 +159,8 @@ sub description {
     my $self  = shift;
     my $track = shift;
     my $userdb = $self->{userdb};
-    my $session = $self->{session};
-    my $userid = $userdb->get_user_id($session->username);
+    my $username = $self->{username};
+    my $userid = $userdb->get_user_id($username);
 	my $fileid = $userdb->get_file_id($track, $userid);
     
     if (@_) {
@@ -173,6 +189,7 @@ sub source_files {
     return @files;
 }
 
+# Trackname from URL - Gets a track name from a given URL
 sub trackname_from_url {
     my $self     = shift;
     my $url      = shift;
@@ -201,17 +218,22 @@ sub trackname_from_url {
     return $track_name;
 }
 
+# Max filename - Returns the maximum possible length for a file name.
 sub max_filename {
     my $self = shift;
     my $length = POSIX::pathconf($self->path,&POSIX::_PC_NAME_MAX) || 255;
     return $length - 4; # give enough room for the suffix
 }
 
+# Import URL - Imports a URL for use in the database.
 sub import_url {
     my $self = shift;
 
     my $url       = shift;
     my $overwrite = shift;
+    my $privacy_policy = shift || "private";
+    my $userdb = $self->{userdb};
+    my $username = $self->{username};
 
     my $key;
     if ($url =~ m!http://([^/]+).+/(\w+)/\?.*t=([^+;]+)!) {
@@ -245,6 +267,7 @@ sub import_url {
     close $i;
 
     $loader->set_processing_complete;
+    $userdb->add_file($userdb->get_user_id($username), $url, "", $privacy_policy);
 
     return (1,'',[$track_name]);
 }
@@ -271,7 +294,6 @@ sub upload_data {
     my $self = shift;
     my ($file_name,$data,$content_type,$overwrite) = @_;
     my $userdb = $self->{userdb};
-    my $session = $self->{session};
     
     my $io = IO::String->new($data);
     $self->upload_file($file_name,$io,$content_type,$overwrite);
@@ -282,7 +304,7 @@ sub upload_file {
     my $self = shift;
     my ($file_name,$fh,$content_type,$overwrite) = @_;
     my $userdb = $self->{userdb};
-    my $session = $self->{session};
+    my $username = $self->{username};
     my $privacy_policy = shift || "private";
     
     my $track_name = $self->trackname_from_url($file_name,!$overwrite);
@@ -315,7 +337,7 @@ sub upload_file {
 		return (0,'Cancelled by user',[]);
     }
     
-    $userdb->add_file($userdb->get_user_id($session->username), $file_name, "", $privacy_policy);
+    $userdb->add_file($userdb->get_user_id($username), $file_name, "", $privacy_policy);
 
     my $msg = $@;
     warn "UPLOAD ERROR: ",$msg if $msg;
@@ -328,7 +350,7 @@ sub delete_file {
     my $self = shift;
     my $track_name  = shift;
     my $userdb = $self->{userdb};
-    my $session = $self->{session};
+    my $username = $self->{username};
     my $loader = Bio::Graphics::Browser2::DataLoader->new($track_name,
 							  $self->track_path($track_name),
 							  $self->track_conf($track_name),
@@ -336,7 +358,7 @@ sub delete_file {
 							  $self->state->{uploadid});
     $loader->drop_databases($self->track_conf($track_name));
     rmtree($self->track_path($track_name));
-    my $userid = $userdb->get_user_id($session->username);
+    my $userid = $userdb->get_user_id($username);
 	my $fileid = $userdb->get_file_id($track_name, $userid);
     $userdb->delete_file($fileid);
 }

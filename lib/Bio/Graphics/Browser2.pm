@@ -22,6 +22,7 @@ use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 my (%CONFIG_CACHE,$HAS_DBFILE,$HAS_STORABLE);
 
+# Open a globals object with a config file in the standard location.
 sub open_globals {
     my $self = shift;
     my $conf_dir  = $self->config_base;
@@ -34,8 +35,7 @@ sub new {
   my $class            = shift;
   my $config_file_path = shift;
 
-  # this code caches the config info so that we don't need to 
-  # reparse in persistent (e.g. modperl) environment
+  # Cache the config info so we don't need to reparse in a persistent (e.g. modperl) environment
   my $mtime            = (stat($config_file_path))[9] || 0;
   if (exists $CONFIG_CACHE{$config_file_path}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {

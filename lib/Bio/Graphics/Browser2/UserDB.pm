@@ -590,7 +590,6 @@ sub do_check_openid {
     my $self = shift;
     my $globals = $self->{globals};
     my ($openid, $userid, $option) = @_;
-    warn "do_check_openid($openid, $userid)";
     my $return_to  = $globals->gbrowse_url()."?openid_confirm=1;page=$option;s=$userid;";
        $return_to .= "id=logout;" if $option ne "openid-add";
        #id=logout needed in case another user is already signed in
@@ -875,7 +874,6 @@ sub do_list_openid {
     print JSON::to_json(\@results);
 }
 
-
 ######################## F I L E   F U N C T I O N S #########################
 # Please note all functions (except these first two) use owner IDs & file IDs when appropriate.
 
@@ -891,11 +889,11 @@ sub get_user_id {
 sub get_file_id{
     my $self = shift;
     my $userdb = $self->{dbi};
-    my $subdir_path = $userdb->quote(shift);
+    my $path = $userdb->quote(shift);
     my $userid = shift;
     
     my $if_user = $userid ? "ownerid = " . $userdb->quote($userid) . " AND " : "";
-    return $userdb->selectrow_array("SELECT uploadid FROM uploads WHERE " . $if_user . "subdir_path = $subdir_path");
+    return $userdb->selectrow_array("SELECT uploadid FROM uploads WHERE " . $if_user . "path = $path");
 }
 
 # Get Owned Files (User) - Returns an array of the paths of files owned by a user.
@@ -903,12 +901,10 @@ sub get_owned_files {
     my $self = shift;
     my $userdb = $self->{dbi};
     my $ownerid = $userdb->quote(shift);
-    my @files;
-    
     if ($ownerid eq "") {
 		warn "No userid specified to get_owned_files";
     } else {
-		my $rows = $userdb->selectcol_arrayref("SELECT subdir_path FROM uploads WHERE ownerid = $ownerid ORDER BY uploadid");
+    	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads WHERE ownerid = $ownerid AND path NOT LIKE '%\$%' ORDER BY uploadid");
 		return @{$rows};
     }
 }
@@ -916,9 +912,7 @@ sub get_owned_files {
 # Get Public Files () - Returns an array of public or admin file paths.
 sub get_public_files {
     my $self = shift;
-    my @files;
     my $userdb = $self->{dbi};
-    
     my $rows = $userdb->selectcol_arrayref("SELECT * FROM uploads WHERE sharing_policy = 'public' ORDER BY uploadid");
     return @{$rows};
 }
@@ -926,20 +920,27 @@ sub get_public_files {
 # Get Imported Files (User) - Returns an array of files imported by a user.
 sub get_imported_files {
 	my $self = shift;
-	return 0;
+    my $userdb = $self->{dbi};
+    my $ownerid = $userdb->quote(shift);
+    if ($ownerid eq "") {
+		warn "No userid specified to get_imported_files";
+    } else {
+    	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads WHERE ownerid = $ownerid AND path LIKE '%\$%' ORDER BY uploadid");
+		return @{$rows};
+    }
 }
 
 # File In DB (Full Path[, Owner]) - Returns the number of results for a file (and optional owner) in the database, 0 if not found.
 sub file_in_db {
     my $self = shift;
     my $userdb = $self->{dbi};
-    my ($subdir_path, $ownerid) = @_;
+    my ($path, $ownerid) = @_;
 	
-	foreach ($subdir_path, $ownerid) {
+	foreach ($path, $ownerid) {
 		$_ = $userdb->quote($_);
 	}
     my $usersql = $ownerid? " AND ownerid = $ownerid" : "";
-    my $sql = "SELECT * FROM uploads WHERE subdir_path LIKE $subdir_path" . $usersql;
+    my $sql = "SELECT * FROM uploads WHERE path LIKE $path" . $usersql;
     return $userdb->do($sql);
 }
 
@@ -947,17 +948,17 @@ sub file_in_db {
 sub add_file {
     my $self = shift;
     my $userdb = $self->{dbi};
-    my ($ownerid, $subdir_path, $description, $shared) = @_;
+    my ($ownerid, $path, $description, $shared) = @_;
     
-    if ($self->file_in_db($subdir_path, $ownerid) == 0) {
-		my $fileid = md5_hex($ownerid.$subdir_path);
+    if ($self->file_in_db($path, $ownerid) == 0) {
+		my $fileid = md5_hex($ownerid.$path);
 		my $now = $self->nowfun();
-		foreach ($fileid, $ownerid, $subdir_path, $description, $shared) {
+		foreach ($fileid, $ownerid, $path, $description, $shared) {
 			$_ = $userdb->quote($_);
 		}
-		return $userdb->do("INSERT INTO uploads (uploadid, ownerid, subdir_path, description, creation_date, modification_date, sharing_policy) VALUES ($fileid, $ownerid, $subdir_path, $description, $now, $now, $shared)");
+		return $userdb->do("INSERT INTO uploads (uploadid, ownerid, path, description, creation_date, modification_date, sharing_policy) VALUES ($fileid, $ownerid, $path, $description, $now, $now, $shared)");
     } else {
-		warn "$ownerid has already uploaded $subdir_path.";
+		warn "$ownerid has already uploaded $path.";
     }
 }
 
@@ -979,7 +980,7 @@ sub get_all_files {
     my $session = $self->{session};
     
     if ($self->check_admin($session->username)) {
-    	my $rows = $userdb->selectcol_arrayref("SELECT subdir_path FROM uploads ORDER BY uploadid");
+    	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads ORDER BY uploadid");
     	return @{$rows};
     } else {
     	warn "Cannot get all files without being admin.";
@@ -992,10 +993,6 @@ sub field {
     my $uploadid = shift;
     my $field = shift;
     my $userdb = $self->{dbi};
-    
-    unless ($field =~ m/description|subdir_path|ownerid|sharing_policy|groupid/i) {
-    	return "Invalid field specified";
-    }
     
     if (@_) {
     	my $value = shift;

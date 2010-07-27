@@ -32,6 +32,8 @@ my $build = GBrowseInstall->new(
 	'Storable'            => 0,
     },
     recommends  => {
+        'Ace'                      => 0,
+	'Bio::Das'                 => 0,
 	'Bio::DB::Sam'             => 1.20,
 	'Bio::DB::BigFile'         => 1.00,
 	'Crypt::SSLeay'            => 0,
@@ -45,6 +47,7 @@ my $build = GBrowseInstall->new(
 	'File::NFSLock'            => 0,
 	'GD::SVG'                  => 0,
 	'Math::BigInt'             => 0,
+	'MOBY::Client::Central'    => 0,
 	'Net::OpenID::Consumer'    => 0,
 	'Net::SMTP::SSL'           => 0,
 	$] <= 5.008 ? ('Safe::World'  => 0)

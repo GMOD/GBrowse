@@ -230,42 +230,41 @@ sub prepare_database {
   
     $dbh->do(<<"    END;") or die DBI->errstr;
     create table alignments (
-			 hit_id    int not null auto_increment,
+			 hit_id    serial not null,
 			 hit_name  varchar(100) not null,
 			 src1      varchar(100) not null,
 			 ref1      varchar(100) not null,
 			 start1    int not null,
 			 end1      int not null,
-			 strand1   enum('+','-') not null,
-			 seq1      mediumtext,
-			 bin       double(20,6) not null,
+			 strand1   varchar(1) not null,
+			 seq1      text,
+			 bin       numeric(20,6) not null,
 			 src2      varchar(100) not null,
 			 ref2      varchar(100) not null,
 			 start2    int not null,
 			 end2      int not null,
-			 strand2   enum('+','-') not null,
-			 seq2      mediumtext,
-			 primary key(hit_id),
-			 index(src1,ref1,bin,start1,end1)
-			 )
+			 strand2   varchar(1) not null,
+			 seq2      text,
+			 primary key(hit_id)
+			 );
+
+    alter table alignments add constraint strand1_val CHECK( strand1='+' OR strand1 ='-' );
+    alter table alignments add constraint strand2_val CHECK( strand2='+' OR strand2 ='-' );
     END;
 
     $dbh->do(<<"    END;") or die DBI->errstr;
     create table map (
-	  	  map_id int not null auto_increment,
+	  	  map_id serial not null,
 		  hit_name  varchar(100) not null,
                   src1 varchar(100),
 		  pos1 int not null,
 		  pos2 int not null,
-		  primary key(map_id),
-		  index(hit_name)
-		  )
+		  primary key(map_id)
+		  );
+    create index map_hit_name on map (hit_name);
     END;
-
-    $dbh->do('alter table alignments disable keys');
-    $dbh->do('alter table map');
   }
-  
+
   my $hit_insert = $dbh->prepare(<<END) or die $dbh->errstr;
 insert into alignments (hit_name,src1,ref1,start1,end1,strand1,seq1,bin,src2,ref2,start2,end2,strand2,seq2) 
 values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -328,7 +327,7 @@ sub load_alignment {
 }
 
 sub done {
-  $dbh->do('alter table alignments enable keys');
+  $dbh->do('create index alignments_index1 on alignments (src1,ref1,bin,start1,end1);alter table alignments enable keys');
   print "\nDone!\n\n";
 }
 

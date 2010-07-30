@@ -25,7 +25,7 @@ sub new {
 		die "Could not open login database $credentials";
 	}
 
-	return bless {
+	my $self = bless {
 		dbi => $login,
 		globals => $globals,
 		session => $session,
@@ -33,6 +33,7 @@ sub new {
 		userdb => $userdb,
 		filesystem => $filesystem
 	}, ref $class || $class;
+	return $self;
 }
 
 # Get File ID (Full Path) - Returns a file's ID from the database.
@@ -77,21 +78,6 @@ sub get_imported_files {
     } else {
     	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads WHERE ownerid = $ownerid AND path LIKE '%\$%' ORDER BY uploadid");
 		return @{$rows};
-    }
-}
-
-# Get All Files () - Pretty self-explanatory. Only works if you're signed in as the admin.
-sub get_all_files {
-    my $self = shift;
-    my @files;
-    my $userdb = $self->{dbi};
-    my $session = $self->{session};
-    
-    if ($self->check_admin($session->username)) {
-    	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads ORDER BY uploadid");
-    	return @{$rows};
-    } else {
-    	warn "Cannot get all files without being admin.";
     }
 }
 
@@ -183,6 +169,9 @@ sub add_file {
     my $self = shift;
     my $userdb = $self->{dbi};
     my ($ownerid, $path, $description, $shared) = @_;
+    warn "Shared: $shared";
+    $shared ||= "private";
+    warn "Shared 2: $shared";
     
     if ($self->file_exists($path, $ownerid) == 0) {
 		my $fileid = md5_hex($ownerid.$path);

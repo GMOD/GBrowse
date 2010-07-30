@@ -194,7 +194,7 @@ sub get_user_id {
     my $self = shift;
     my $userdb = $self->{dbi};
     my $user = $userdb->quote(shift);
-    return $userdb->selectrow_array("SELECT userid FROM users WHERE username = $user");
+    return $userdb->selectrow_array("SELECT userid FROM users WHERE username = $user") || "";
 }
 
 # Validate - Ensures that a non-openid user's credentials are correct.

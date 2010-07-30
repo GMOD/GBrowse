@@ -17,7 +17,7 @@ sub new {
 	my $usertracks = shift;
 	my $globals = Bio::Graphics::Browser2->open_globals;
 
-	return bless{
+	my $self =  bless{
 		globals => $globals,
 		session => $globals->session,
 		uuid => shift || $state->{uploadid},
@@ -25,6 +25,7 @@ sub new {
 		state => $state,
 		usertracks => $usertracks
 	}, ref $class || $class;
+	return $self;
 }
 
 # Get Owned Files (User) - Returns an array of the paths of files owned by a user.
@@ -37,7 +38,7 @@ sub get_owned_files {
 	opendir D, $path;
 	while (my $dir = readdir(D)) {
 		next if $dir =~ /^\.+$/;
-		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->imported_file_name)) || 0;
+		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->{usertracks}->imported_file_name)) || 0;
 		next if $is_imported == 1;
 		push @result,$dir;
 	}
@@ -54,7 +55,7 @@ sub get_imported_files {
 	opendir D,$path;
 	while (my $dir = readdir(D)) {
 		next if $dir =~ /^\.+$/;
-		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->imported_file_name)) || 0;
+		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->{usertracks}->imported_file_name)) || 0;
 		next if $is_imported == 0;
 		push @result,$dir;
 	}

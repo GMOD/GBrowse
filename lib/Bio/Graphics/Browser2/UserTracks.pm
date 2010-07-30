@@ -45,25 +45,25 @@ sub new {
     my $globals = Bio::Graphics::Browser2->open_globals;
     my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     my $authority    = param('authority') || CGI::cookie('authority');
-    my $session = $globals->authorized_session($requested_id,$authority);
-    
-    my $userdb = Bio::Graphics::Browser2::UserDB->new();
-    my $filesystem = Bio::Graphics::Browser2::UserTracks::Filesystem->new($config, $state, $class);
-    my $database = Bio::Graphics::Browser2::UserTracks::Database->new($filesystem, $userdb);
-    my $files = ($globals->user_accounts == 1) ? $database : $filesystem;
-
-    return bless {
+    my $session = $globals->authorized_session($requested_id,$authority);    
+	
+    my $self = bless {
 		config     => $config,
-		files	   => $files,
-		userdb	   => $userdb,
-		filesystem => $filesystem,
-		database   => $database,
 		state      => $state,
 		language   => $lang,
 		uuid       => $uuid,
 		username   => $session->username || $username,
 		globals	   => $globals
     }, ref $class || $class;
+    my $userdb = Bio::Graphics::Browser2::UserDB->new();
+    my $filesystem = Bio::Graphics::Browser2::UserTracks::Filesystem->new($config, $state, $self);
+    my $database = Bio::Graphics::Browser2::UserTracks::Database->new($filesystem, $userdb);
+    my $files = ($globals->user_accounts == 1) ? $database : $filesystem;
+    $self->{userdb} = $userdb;
+    $self->{files} = $files;
+    $self->{filesystem} = $filesystem;
+    $self->{database} = $database;
+    return $self;
 }
 
 # These methods pass through directly to whatever files backend we're using (Filesystem or Database).
@@ -96,10 +96,9 @@ sub source_files {
 
 # Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {
-    my $self   = shift;
-    my $thing = $self->config;
+    my $self = shift;
     my $uploadid = $self->{uuid};
-	return $thing->userdata($uploadid);
+	return $self->{config}->userdata($uploadid);
 }
 
 # Returns the path to the conf files associated with all tracks.
@@ -217,11 +216,11 @@ sub upload_data {
 # Upload File - Uploads a user's file, as called by the AJAX upload system (on the Upload & Share Tracks tab).
 sub upload_file {
     my $self = shift;
-    my ($file_name,$fh,$content_type,$overwrite) = @_;
+    my ($file_name, $fh, $content_type, $overwrite, $privacy_policy) = @_;
     my $files = $self->{files};
     my $username = $self->{username};
     my $userdb = $self->{userdb};
-    my $privacy_policy = shift || "private";
+    $privacy_policy ||= "private";
     
     my $track_name = $self->trackname_from_url($file_name,!$overwrite);
     $content_type ||= '';
@@ -237,7 +236,7 @@ sub upload_file {
     $lines                 ||= [];
     my (@tracks,$fcgi);
 
-    my $result= eval {
+    my $result = eval {
 		local $SIG{TERM} = sub { die "cancelled" };
 		croak "Could not guess the type of the file $file_name"
 			unless $type;

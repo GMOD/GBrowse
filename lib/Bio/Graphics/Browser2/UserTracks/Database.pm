@@ -1,5 +1,6 @@
 package Bio::Graphics::Browser2::UserTracks::Database;
 
+# $Id: Database.pm 23607 2010-07-30 17:34:25Z cnvandev $
 use strict;
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::UserDB;
@@ -169,9 +170,7 @@ sub add_file {
     my $self = shift;
     my $userdb = $self->{dbi};
     my ($ownerid, $path, $description, $shared) = @_;
-    warn "Shared: $shared";
     $shared ||= "private";
-    warn "Shared 2: $shared";
     
     if ($self->file_exists($path, $ownerid) == 0) {
 		my $fileid = md5_hex($ownerid.$path);

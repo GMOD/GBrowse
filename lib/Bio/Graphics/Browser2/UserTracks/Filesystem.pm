@@ -1,5 +1,6 @@
 package Bio::Graphics::Browser2::UserTracks::Filesystem;
 
+# $Id: Filesystem.pm 23607 2010-07-30 17:34:25Z cnvandev $
 use strict;
 use Bio::Graphics::Browser2::UserTracks;
 use Bio::Graphics::Browser2;

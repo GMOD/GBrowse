@@ -19,14 +19,14 @@ sub new {
   my $self = {};
   my $VERSION = '0.5';
   my $globals = Bio::Graphics::Browser2->open_globals;
-  my $dbi  = shift || $globals->user_account_db;
+  my $credentials  = shift || $globals->user_account_db;
   my $session = $globals->session;
   
-  my $login = DBI->connect($dbi);
+  my $login = DBI->connect($credentials);
   unless ($login) {
       print header();
       print "Error: Could not open login database.";
-      die "Could not open login database $dbi";
+      die "Could not open login database $credentials";
   }
   
   $self->{dbi} = $login;
@@ -189,6 +189,14 @@ sub do_sendmail {
 }
 
 #################### N O N - O P E N I D   F U N C T I O N S #####################
+# Get User ID (User) - Returns a user's ID.
+sub get_user_id {
+    my $self = shift;
+    my $userdb = $self->{dbi};
+    my $user = $userdb->quote(shift);
+    return $userdb->selectrow_array("SELECT userid FROM users WHERE username = $user");
+}
+
 # Validate - Ensures that a non-openid user's credentials are correct.
 sub do_validate {
   my $self = shift;
@@ -872,149 +880,6 @@ sub do_list_openid {
 
     my @results = sort {$a->{name} cmp $b->{name}} @openids;
     print JSON::to_json(\@results);
-}
-
-######################## F I L E   F U N C T I O N S #########################
-# Please note all functions (except these first two) use owner IDs & file IDs when appropriate.
-
-# Get User ID (User) - Returns a user's ID.
-sub get_user_id {
-    my $self = shift;
-    my $userdb = $self->{dbi};
-    my $user = $userdb->quote(shift);
-    return $userdb->selectrow_array("SELECT userid FROM users WHERE username = $user");
-}
-
-# Get File ID (Full Path) - Returns a file's ID.
-sub get_file_id{
-    my $self = shift;
-    my $userdb = $self->{dbi};
-    my $path = $userdb->quote(shift);
-    my $userid = shift;
-    
-    my $if_user = $userid ? "ownerid = " . $userdb->quote($userid) . " AND " : "";
-    return $userdb->selectrow_array("SELECT uploadid FROM uploads WHERE " . $if_user . "path = $path");
-}
-
-# Get Owned Files (User) - Returns an array of the paths of files owned by a user.
-sub get_owned_files {
-    my $self = shift;
-    my $userdb = $self->{dbi};
-    my $ownerid = $userdb->quote(shift);
-    if ($ownerid eq "") {
-		warn "No userid specified to get_owned_files";
-    } else {
-    	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads WHERE ownerid = $ownerid AND path NOT LIKE '%\$%' ORDER BY uploadid");
-		return @{$rows};
-    }
-}
-
-# Get Public Files () - Returns an array of public or admin file paths.
-sub get_public_files {
-    my $self = shift;
-    my $userdb = $self->{dbi};
-    my $rows = $userdb->selectcol_arrayref("SELECT * FROM uploads WHERE sharing_policy = 'public' ORDER BY uploadid");
-    return @{$rows};
-}
-
-# Get Imported Files (User) - Returns an array of files imported by a user.
-sub get_imported_files {
-	my $self = shift;
-    my $userdb = $self->{dbi};
-    my $ownerid = $userdb->quote(shift);
-    if ($ownerid eq "") {
-		warn "No userid specified to get_imported_files";
-    } else {
-    	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads WHERE ownerid = $ownerid AND path LIKE '%\$%' ORDER BY uploadid");
-		return @{$rows};
-    }
-}
-
-# File In DB (Full Path[, Owner]) - Returns the number of results for a file (and optional owner) in the database, 0 if not found.
-sub file_in_db {
-    my $self = shift;
-    my $userdb = $self->{dbi};
-    my ($path, $ownerid) = @_;
-	
-	foreach ($path, $ownerid) {
-		$_ = $userdb->quote($_);
-	}
-    my $usersql = $ownerid? " AND ownerid = $ownerid" : "";
-    my $sql = "SELECT * FROM uploads WHERE path LIKE $path" . $usersql;
-    return $userdb->do($sql);
-}
-
-# Add File (Owner, Full Path, Description, Sharing Policy) - Adds $file to the database under $owner.
-sub add_file {
-    my $self = shift;
-    my $userdb = $self->{dbi};
-    my ($ownerid, $path, $description, $shared) = @_;
-    
-    if ($self->file_in_db($path, $ownerid) == 0) {
-		my $fileid = md5_hex($ownerid.$path);
-		my $now = $self->nowfun();
-		foreach ($fileid, $ownerid, $path, $description, $shared) {
-			$_ = $userdb->quote($_);
-		}
-		return $userdb->do("INSERT INTO uploads (uploadid, ownerid, path, description, creation_date, modification_date, sharing_policy) VALUES ($fileid, $ownerid, $path, $description, $now, $now, $shared)");
-    } else {
-		warn "$ownerid has already uploaded $path.";
-    }
-}
-
-# Delete File (File ID) - Deletes $file_id from the database.
-sub delete_file {
-	my $self = shift;
-    my $userdb = $self->{dbi};
-    my $fileid = $userdb->quote(shift);
-    if ($fileid) {
-      return $userdb->do("DELETE FROM uploads WHERE uploadid = $fileid");
-    }
-}
-
-# Get All Files () - Pretty self-explanatory. Only works if you're signed in as the admin.
-sub get_all_files {
-    my $self = shift;
-    my @files;
-    my $userdb = $self->{dbi};
-    my $session = $self->{session};
-    
-    if ($self->check_admin($session->username)) {
-    	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads ORDER BY uploadid");
-    	return @{$rows};
-    } else {
-    	warn "Cannot get all files without being admin.";
-    }
-}
-
-# Field (Upload ID, Field[, Value]) - Returns (or, if defined, sets to the new value) the specified field of a file.
-sub field {
-    my $self = shift;
-    my $uploadid = shift;
-    my $field = shift;
-    my $userdb = $self->{dbi};
-    
-    if (@_) {
-    	my $value = shift;
-	    #Clean up the string
-    	$value =~ s/^\s+//;
-		$value =~ s/\s+$//; 
-    	$value = $userdb->quote($value);
-    	my $now = $self->nowfun();
-    	$self->update_modified($uploadid);
-	    return $userdb->do("UPDATE uploads SET $field = $value WHERE uploadid = '$uploadid'");
-    } else {
-    	return $userdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = '$uploadid'");
-    }
-}
-
-# Update Modified (File ID) - Updates the modification date/time of the specified file to right now.
-sub update_modified {
-    my $self = shift;
-    my $fileid = shift;
-    my $userdb = $self->{dbi};
-    my $now = $self->nowfun();
-    return $userdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = '$fileid'");
 }
 
 1;

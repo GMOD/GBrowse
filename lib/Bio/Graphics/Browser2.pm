@@ -231,8 +231,8 @@ sub application_name       { shift->setting(general=>'application_name')      ||
 sub application_name_long  { shift->setting(general=>'application_name_long') || 'The Generic Genome Browser' }
 sub email_address          { shift->setting(general=>'email_address')         || 'noreply@gbrowse.com'        }
 sub smtp                   { shift->setting(general=>'smtp_gateway')          || 'smtp.res.oicr.on.ca'        }
-sub user_account_db        { shift->setting(general=>'user_account_db')       
-				   || 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse'  }
+sub user_account_db        { shift->setting(general=>'user_account_db')       || 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse'  }
+sub user_accounts		   { shift->setting(general=>'user accounts')		  || 0 }
 sub admin_account          { shift->setting(general=>'admin_account') }
 sub admin_dbs              { shift->setting(general=>'admin_dbs')     }
 sub openid_secret {

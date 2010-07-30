@@ -6,7 +6,7 @@ use warnings;
 use JSON;
 use Digest::MD5 'md5_hex';
 use CGI qw(:standard param request_method header url iframe img span div br center url_param);
-use Carp 'croak','cluck';
+use Carp qw(croak cluck);
 use File::Basename 'dirname','basename';
 use Text::Tabs;
 
@@ -50,63 +50,65 @@ my $FCGI_REQUEST;  # stash fastCGI request handle
 #   $source = $globals->create_data_source($session->source)
 
 sub new {
-  my $class = shift;
-  my ($data_source,$session);
+	my $class = shift;
+	my ($data_source,$session);
 
-  if (@_ == 2) {
-    ($data_source,$session) = @_;
-  } elsif (@_ == 1) {
-    my $globals = shift;
-    my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
-    my $authority    = param('authority') || CGI::cookie('authority');
-    $session = $globals->authorized_session($requested_id,$authority);
-    $globals->update_data_source($session);
-    $data_source = $globals->create_data_source($session->source);
-    $globals->{url} ||= CGI::url();
-  } else {
-    croak "usage: ".__PACKAGE__."->new(\$globals) or ->new(\$data_source,\$session)";
-  }
-  
-  my $self = bless {},ref $class || $class;
-  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new();
-  $self->{session} = $session;
-  $self->data_source($data_source);
-  $self->session($session);
-  $self->state($session->page_settings);
-  $self->set_language();
-  $self->set_signal_handlers();
-  $self;
+	if (@_ == 2) {
+		($data_source,$session) = @_;
+	} elsif (@_ == 1) {
+		my $globals = shift;
+		my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
+		my $authority    = param('authority') || CGI::cookie('authority');
+		$session = $globals->authorized_session($requested_id,$authority);
+		$globals->update_data_source($session);
+		$data_source = $globals->create_data_source($session->source);
+		$globals->{url} ||= CGI::url();
+	} else {
+		croak "usage: ".__PACKAGE__."->new(\$globals) or ->new(\$data_source,\$session)";
+	}
+
+	my $self = bless {},ref $class || $class;
+	$self->{session} = $session;
+	$self->data_source($data_source);
+	$self->session($session);
+	$self->state($session->page_settings);
+	$self->set_language();
+	$self->set_signal_handlers();
+	$self->{userdb} = Bio::Graphics::Browser2::UserDB->new();
+	$self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self->data_source, $self->state, $self->language, $self->state->{uploadid});
+	$self;
 }
 
 sub set_signal_handlers {
     my $self = shift;
-    $SIG{CHLD} = sub{    my $kid; 
-			 do { 
-			     $kid = waitpid(-1, WNOHANG); 
-			 } 
-			 while $kid > 0;
+    $SIG{CHLD} = sub{
+    	my $kid; 
+		do { 
+		     $kid = waitpid(-1, WNOHANG); 
+		}
+		while $kid > 0;
     };
 }
 
 sub data_source {
-  my $self = shift;
-  my $d = $self->{data_source};
-  $self->{data_source} = shift if @_;
-  $d;
+	my $self = shift;
+	my $d = $self->{data_source};
+	$self->{data_source} = shift if @_;
+	$d;
 }
 
 sub session {
-  my $self = shift;
-  my $d = $self->{session};
-  $self->{session} = shift if @_;
-  $d;
+	my $self = shift;
+	my $d = $self->{session};
+	$self->{session} = shift if @_;
+	$d;
 }
 
 sub state {
-  my $self = shift;
-  my $d = $self->{state};
-  $self->{state} = shift if @_;
-  $d;
+	my $self = shift;
+	my $d = $self->{state};
+	$self->{state} = shift if @_;
+	$d;
 }
 
 sub error_message {
@@ -133,14 +135,10 @@ sub user_tracks {
     my $class = $self->is_admin ? 'Bio::Graphics::Browser2::AdminTracks'
                                 : 'Bio::Graphics::Browser2::UserTracks';
     
-    $uuid  ||= $self->state->{uploadid} || '';
+    $uuid ||= $self->state->{uploadid} || '';
     warn "[$$] uuid  = $uuid" if DEBUG;
-    return $self->{usertracks}{$uuid} 
-       ||= $class->new($self->data_source,
-		       $self->state,
-		       $self->language,
-		       $uuid,
-	   )
+    return $self->{usertracks}{$uuid}
+    ||= $self->{usertracks};
 }
 
 sub remote_sources {
@@ -3564,6 +3562,7 @@ sub external_data {
 sub add_user_tracks {
     my $self        = shift;
     my ($data_source,$uuid) = @_;
+    my $files = $self->{usertracks};
     my $userdb = $self->{userdb};
     my $session = $self->{session};
 
@@ -3572,11 +3571,9 @@ sub add_user_tracks {
     $self->state->{uploadid} ||= Bio::Graphics::Browser2::Util->generate_id;
     $uuid ||= $self->state->{uploadid};
 
-    my $userdata = $self->user_tracks($uuid);
-    my @user_tracks = $userdb->get_owned_files($userdb->get_user_id($session->username));
-    
+    my @user_tracks = $files->tracks($userdb->get_user_id($session->username));
     for my $track (@user_tracks) {
-		my $config_path = $userdata->track_conf($track);
+		my $config_path = $files->track_conf($track);
 		eval {$data_source->parse_user_file($config_path)};
     }
 }

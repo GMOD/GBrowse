@@ -278,8 +278,8 @@ sub match_nonce {
     $self->private || return;
     my $nonce = $self->{session}->param('.nonce');
     warn "id=",$self->id," matching $nonce against ",$new_nonce,"|",$salt if DEBUG;
-    warn "$nonce eq ",md5_hex($new_nonce,$salt)                           if DEBUG;
-    return $nonce eq md5_hex($new_nonce,$salt);
+    warn "$nonce eq ",md5_hex($new_nonce, $salt)                          if DEBUG;
+    return $nonce eq md5_hex($new_nonce, $salt);
 }
 
 sub config_hash {

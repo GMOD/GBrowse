@@ -146,7 +146,7 @@ sub dump {
 	                  ? [$self->selected_tracks] 
 	                  : []
 	  ) or return;
-      $dumper->print_gff3();
+      $dumper->print_datafile();
   }
 
   elsif ($config->{print_config}) {

@@ -4,9 +4,14 @@
        no features in the region of interest. Note that if there are no features in any
        subtracks, the entire track will be empty regardless of the subtracks (this may or
        may not be a bug).
+       * Fixed bug in TrackDumper plugin to prevent "Can't locate object method print_gff3" 
+       error. Thanks to Prem Anand for the fix.
      * Fixed display problem in subtrack selection table when there are additional data row 
        elements that are not listed among the selection criteria.
      * Fixed TrackDumper routines to dump out both the tracks and signal from vista tracks.
+     * Added CORS capabilities to DAS server so that javascript clients don't have to use a proxy.
+     * Precompile glyphs used in each datasource in parent process so that each child doesn't have to
+       recompile them.
 
 2.13
      * Fixed SAM file processing so as not to die on first line of SAM @SQ header.

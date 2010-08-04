@@ -35,7 +35,6 @@ else {
     GBrowse2::Das->new($globals)->run();    
 }
 
-
 exit 0;
 
 package GBrowse2::Das;
@@ -163,6 +162,8 @@ sub error_header {
     my ($message,$code) = @_;
     $code ||= 500;
     print header(-type          =>'text/plain',
+		 -Access_Control_Allow_Origin => '*',
+		 -Access_Control_Expose_Headers => 'X-DAS-Version, X-DAS-Status, X-DAS-Capabilities, X-DAS-Server',
 		 -X_DAS_Version => DAS_VERSION,
 		 -X_DAS_Status  => "$code ".ERRCODES->{$code},
 		 -X_DAS_Capabilities => CAPABILITIES,
@@ -174,8 +175,11 @@ sub error_header {
 sub ok_header {
     my $self = shift;
     print header(-type          =>'text/xml',
+		 -Access_Control_Allow_Origin => '*',
+		 -Access_Control_Expose_Headers => 'X-DAS-Version, X-DAS-Status, X-DAS-Capabilities, X-DAS-Server',
 		 -X_DAS_Version => DAS_VERSION,
 		 -X_DAS_Status  => '200 '.ERRCODES->{200},
+		 -X_DAS_Server       => "GBrowse/$Bio::Graphics::Browser2::VERSION",
 		 -X_DAS_Capabilities => CAPABILITIES,
 	) unless $self->{header}++;
 }

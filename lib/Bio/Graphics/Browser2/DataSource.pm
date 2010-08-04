@@ -17,6 +17,7 @@ use CGI 'pre';
 
 my %CONFIG_CACHE; # cache parsed config files
 my %DB_SETTINGS;  # cache database settings
+my %LOADED_GLYPHS;
 
 BEGIN {
     if( $ENV{MOD_PERL} &&
@@ -70,6 +71,7 @@ sub new {
   $self->dir(dirname($config_file_path));
   $self->config_file($config_file_path);
   $self->add_scale_tracks();
+  $self->precompile_glyphs;
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
   $CONFIG_CACHE{$config_file_path}{ctime}  = time();
@@ -130,6 +132,18 @@ sub globals {
 sub clear_cached_dbids {
     my $self = shift;
     delete $self->{feature2dbid};
+}
+
+sub precompile_glyphs {
+    my $self = shift;
+    for my $l ($self->labels) {
+	my $glyph = $self->setting($l=>'glyph');
+	next unless $glyph;
+	next if ref($glyph) eq 'CODE';
+	next if $LOADED_GLYPHS{$glyph}++;
+	eval "use Bio::Graphics::Glyph::$glyph" unless
+	    "Bio::Graphics::Glyph\:\:$glyph"->can('new');
+    }
 }
 
 sub clear_cached_config {

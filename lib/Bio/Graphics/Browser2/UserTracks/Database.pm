@@ -2,208 +2,211 @@ package Bio::Graphics::Browser2::UserTracks::Database;
 
 # $Id: Database.pm 23607 2010-07-30 17:34:25Z cnvandev $
 use strict;
+use base 'Bio::Graphics::Browser2::UserTracks';
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::UserDB;
-use Bio::Graphics::Browser2::UserTracks;
-use Bio::Graphics::Browser2::UserTracks::Filesystem;
 use DBI;
 use Digest::MD5 qw(md5_hex);
+use CGI "param";
+use Carp "cluck";
 
-sub new {
+sub _new {
 	my $class = shift;
-	my $self = {};
-	my $VERSION = '0.1';
-	my $filesystem = shift;
-	my $globals = Bio::Graphics::Browser2->open_globals;
-	my $userdb = shift || Bio::Graphics::Browser2::UserDB->new();
-	my $credentials  = shift || $globals->user_account_db;
+	my $VERSION = '0.2';
+	my ($config, $state, $lang) = @_;
+	my $globals = $config->globals;
 	my $session = $globals->session;
 
-	my $login = DBI->connect($credentials);
+    my $credentials = $globals->user_account_db;
+    my $login = DBI->connect($credentials);
 	unless ($login) {
 		print header();
 		print "Error: Could not open login database.";
 		die "Could not open login database $credentials";
 	}
-
-	my $self = bless {
-		dbi => $login,
-		globals => $globals,
-		session => $session,
-		username => $session->username,
-		userdb => $userdb,
-		filesystem => $filesystem
-	}, ref $class || $class;
-	return $self;
+	
+    return bless {
+    	uploadsdb => $login,
+		config	  => $config,
+		state     => $state,
+		language  => $lang,
+		session	  => $session,
+		userid	  => $state->{userid},
+		uploadsid  => $state->{uploadid},
+		globals	  => $globals,
+		userdb	  => Bio::Graphics::Browser2::UserDB->new()
+    }, ref $class || $class;
 }
 
-# Get File ID (Full Path) - Returns a file's ID from the database.
+# Get File ID (Full Path[, userid]) - Returns a file's ID from the database.
 sub get_file_id{
     my $self = shift;
-    my $userdb = $self->{dbi};
-    my $path = $userdb->quote(shift);
-    my $userid = shift;
+    my $uploadsdb = $self->{uploadsdb};
+    my $path = $uploadsdb->quote(shift);
+    my $uploadsid = shift // $self->{uploadsid};												#/
     
-    my $if_user = $userid ? "ownerid = " . $userdb->quote($userid) . " AND " : "";
-    return $userdb->selectrow_array("SELECT uploadid FROM uploads WHERE " . $if_user . "path = $path");
+    my $if_user = $uploadsid ? "userid = " . $uploadsdb->quote($uploadsid) . " AND " : "";
+    return $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE " . $if_user . "path = $path");
 }
 
-# Get Owned Files (User) - Returns an array of the paths of files owned by a user.
+# Get Owned Files () - Returns an array of the paths of files owned by the currently logged-in user.
 sub get_owned_files {
     my $self = shift;
-    my $userdb = $self->{dbi};
-    my $ownerid = $userdb->quote(shift);
-    if ($ownerid eq "") {
-		warn "No userid specified to get_owned_files";
-    } else {
-    	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads WHERE ownerid = $ownerid AND path NOT LIKE '%\$%' ORDER BY uploadid");
-		return @{$rows};
-    }
+    my $uploadsdb = $self->{uploadsdb};
+    my $uploadsid = $self->{uploadsid};
+    $uploadsid = $uploadsdb->quote($uploadsid);
+	my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = $uploadsid AND path NOT LIKE '%\$%' ORDER BY uploadid");
+	return @{$rows};
 }
 
 # Get Public Files () - Returns an array of public or admin file paths.
 sub get_public_files {
     my $self = shift;
-    my $userdb = $self->{dbi};
-    my $rows = $userdb->selectcol_arrayref("SELECT * FROM uploads WHERE sharing_policy = 'public' ORDER BY uploadid");
+    my $uploadsdb = $self->{uploadsdb};
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT * FROM uploads WHERE sharing_policy = 'public' ORDER BY uploadid");
     return @{$rows};
 }
 
-# Get Imported Files (User) - Returns an array of files imported by a user.
+# Get Imported Files () - Returns an array of files imported by a user.
 sub get_imported_files {
 	my $self = shift;
-    my $userdb = $self->{dbi};
-    my $ownerid = $userdb->quote(shift);
-    if ($ownerid eq "") {
-		warn "No userid specified to get_imported_files";
-    } else {
-    	my $rows = $userdb->selectcol_arrayref("SELECT path FROM uploads WHERE ownerid = $ownerid AND path LIKE '%\$%' ORDER BY uploadid");
-		return @{$rows};
-    }
+    my $uploadsdb = $self->{uploadsdb};
+    my $uploadsid = $self->{uploadsid};
+    $uploadsid = $uploadsdb->quote($uploadsid);
+	my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = $uploadsid AND path LIKE '%\$%' ORDER BY uploadid");
+	return @{$rows};
 }
 
-# Field (Path, User ID, Field[, Value]) - Returns (or, if defined, sets to the new value) the specified field of a file.
+# Field (Field, Path[, Value, User ID]) - Returns (or, if defined, sets to the new value) the specified field of a file.
 sub field {
     my $self = shift;
-    my $path = shift;
-    my $userid = shift;
+    my $uploadsdb = $self->{uploadsdb};
     my $field = shift;
-    my $userdb = $self->{dbi};
+    my $path = shift;
+    my $value = shift;
+    my $uploadsid = shift // $self->{uploadsid}; 												#/
+    my $fileid = $self->get_file_id($path, $uploadsid);
     
-    my $fileid = $self->get_file_id($path, $userid);
-    
-    if (@_) {
-    	my $value = shift;
+    if ($value) {
 	    #Clean up the string
     	$value =~ s/^\s+//;
 		$value =~ s/\s+$//; 
-    	$value = $userdb->quote($value);
+    	$value = $uploadsdb->quote($value);
     	my $now = $self->nowfun();
-	    return $userdb->do("UPDATE uploads SET $field = $value WHERE uploadid = '$fileid'");
+    	my $sql = "UPDATE uploads SET $field = $value WHERE uploadid = '$fileid'";
+    	warn $sql;
+	    my $result = $uploadsdb->do($sql);
 	    $self->update_modified($fileid);
+	    return $result;
     } else {
-    	return $userdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = '$fileid'");
+    	return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = '$fileid'");
     }
 }
 
-# Update Modified (Path, UserID) - Updates the modification date/time of the specified file to right now.
+# Update Modified (Path[, UploadsID]) - Updates the modification date/time of the specified file to right now.
 sub update_modified {
     my $self = shift;
+    my $uploadsdb = $self->{uploadsdb};
     my $path = shift;
-    my $userid = shift;
-    my $userdb = $self->{dbi};
+    my $uploadsid = shift // $self->{uploadsid};												#/
     
-    my $fileid = $self->get_file_id($path, $userid);
-    
+    my $fileid = $self->get_file_id($path);
     my $now = $self->nowfun();
-    return $userdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = '$fileid'");
+    return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = '$fileid'");
 }
 
-# Created (Track) - Returns creation date of $track.
+# Created (Track) - Returns creation date of $track, cannot be set.
 sub created {
     my $self  = shift;
     my $track = shift;
-    my $username = $self->{username};
-    return $self->field($track, $username, "creation_date");
+    my $uploadsid = shift // $self->{uploadsid};												#/
+    return $self->field("creation_date", $track);
 }
 
-# Modified (Track) - Returns date modified of $track.
+# Modified (Track) - Returns date modified of $track, cannot be set (except by update_modified()).
 sub modified {
     my $self  = shift;
     my $track = shift;
-    my $username = $self->{username};
-   	return $self->field($track, $username, "modification_date");
+    my $uploadsid = shift // $self->{uploadsid};												#/
+   	return $self->field("modification_date", $track);
 }
 
-# Description (Track[, Description]) - Returns a file's description, or changes the current description if defined.
+# Description (Track[, Description, Value, UserID]) - Returns a file's description, or changes the current description if defined.
 sub description {
     my $self  = shift;
     my $track = shift;
-    my $username = $self->{username};
-    my $userdb = $self->{userdb};
-    my $userid = $userdb->get_user_id($username);
+    my $value = shift;
+    my $uploadsid = shift // $self->{uploadsid};												#/
     
-    if (@_) {
-		$self->field($track, $userid, "description", shift);
-		return 1;
-    } else {
-		return $self->field($track, $userid, "description");
-    }
+    cluck "Args: $track, $uploadsid, $value";
+	
+	# If we're given a value, add it to the arguments.    
+    my @args = ("description", $track);
+    push(@args, $value) if ($value);
+	return $self->field(@args);
 }
 
-# File Exists (Full Path[, Owner]) - Returns the number of results for a file (and optional owner) in the database, 0 if not found.
+# File Exists (Full Path[, UploadsID]) - Returns the number of results for a file (and optional owner) in the database, 0 if not found.
 sub file_exists {
     my $self = shift;
-    my $userdb = $self->{dbi};
-    my ($path, $ownerid) = @_;
+    my $uploadsdb = $self->{uploadsdb};
+    my $path = $uploadsdb->quote(shift);
+    my $uploadsid = $uploadsdb->quote(shift);
 	
-	foreach ($path, $ownerid) {
-		$_ = $userdb->quote($_);
-	}
-    my $usersql = $ownerid? " AND ownerid = $ownerid" : "";
-    my $sql = "SELECT * FROM uploads WHERE path LIKE $path" . $usersql;
-    return $userdb->do($sql);
+    my $usersql = $uploadsid? " AND userid = $uploadsid" : "";
+    return $uploadsdb->do("SELECT * FROM uploads WHERE path LIKE $path" . $usersql);
 }
 
-# Add File (Owner, Full Path, Description, Sharing Policy) - Adds $file to the database under $owner.
+# Add File (Full Path[, Description, Sharing Policy, UploadsID]) - Adds $file to the database under $owner.
 sub add_file {
     my $self = shift;
-    my $userdb = $self->{dbi};
-    my ($ownerid, $path, $description, $shared) = @_;
-    $shared ||= "private";
+    my $uploadsdb = $self->{uploadsdb};
+    my $path = shift;
+    my $description = $uploadsdb->quote(shift);
+    my $uploadsid = shift // $self->{uploadsid};												#/
+    my $shared = $uploadsdb->quote(shift // "private");											#/
     
-    if ($self->file_exists($path, $ownerid) == 0) {
-		my $fileid = md5_hex($ownerid.$path);
+    if ($self->file_exists($path) == 0) {
+		my $fileid = md5_hex($uploadsid.$path);
 		my $now = $self->nowfun();
-		foreach ($fileid, $ownerid, $path, $description, $shared) {
-			$_ = $userdb->quote($_);
-		}
-		return $userdb->do("INSERT INTO uploads (uploadid, ownerid, path, description, creation_date, modification_date, sharing_policy) VALUES ($fileid, $ownerid, $path, $description, $now, $now, $shared)");
+		$path = $uploadsdb->quote($path);
+		$uploadsid = $uploadsdb->quote($uploadsid);
+		$fileid = $uploadsdb->quote($fileid);
+		return $uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, creation_date, modification_date, sharing_policy) VALUES ($fileid, $uploadsid, $path, $description, $now, $now, $shared)");
     } else {
-		warn "$ownerid has already uploaded $path.";
+		warn $self->{session}->{username} . " has already uploaded $path.";
     }
 }
 
-# Delete File (Path, UserID) - Deletes $file_id from the database.
+# Delete File (Path) - Deletes $file_id from the database.
 sub delete_file {
 	my $self = shift;
-    my $userdb = $self->{dbi};
+	my $uploadsdb = $self->{uploadsdb};
     my $path = shift;
-    my $userid = shift;
-    my $filesystem = $self->{filesystem};
+    my $userid = $self->{userid};
+    my $uploadsid = $self->{uploadsid};													#/
     
-    $filesystem->delete_file($path);
-    my $fileid = $userdb->quote($self->get_file_id($path, $userid));
+    # First delete from the database.
+    my $fileid = $uploadsdb->quote($self->get_file_id($path, $uploadsid));
     if ($fileid) {
-    	return $userdb->do("DELETE FROM uploads WHERE uploadid = $fileid");
+    	return $uploadsdb->do("DELETE FROM uploads WHERE uploadid = $fileid");
     }
+    
+    # Then remove the file - better to have a dangling file then a dangling reference to nothing.
+    my $loader = Bio::Graphics::Browser2::DataLoader->new($path,
+							  $self->track_path($path),
+							  $self->track_conf($path),
+							  $self->{config},
+							  $userid);
+    $loader->drop_databases($self->track_conf($path));
+    rmtree($self->track_path($path));
 }
 
 # Now Function - return the database-dependent function for determining current date & time
 sub nowfun {
-  my $self = shift;
-  my $globals = $self->{globals};
-  return $globals->user_account_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
+	my $self = shift;
+	my $globals = $self->{globals};
+	return $globals->user_account_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
 }
 
 1;

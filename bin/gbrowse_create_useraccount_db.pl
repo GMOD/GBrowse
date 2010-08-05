@@ -161,7 +161,7 @@ CREATE TABLE openid_users (
 DROP TABLE IF EXISTS uploads;
 CREATE TABLE uploads (
     uploadid	       	varchar(32) not null PRIMARY key,
-    ownerid				varchar(32) not null,
+    userid				varchar(32) not null,
     subdir_path				   text,
     description				   text,
     creation_date			   datetime not null,
@@ -194,7 +194,7 @@ CREATE TABLE openid_users (
 DROP TABLE IF EXISTS uploads;
 CREATE TABLE uploads (
     uploadid	       	varchar(32) not null PRIMARY key,
-    ownerid				varchar(32) not null,
+    userid				varchar(32) not null,
     subdir_path				   text,
     description				   text,
     creation_date			   datetime not null,

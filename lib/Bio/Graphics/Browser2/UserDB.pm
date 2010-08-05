@@ -30,12 +30,12 @@ sub new {
       die "Could not open login database $credentials";
   }
   
-  $self->{dbi} = $login;
-  $self->{globals} = $globals;
-  $self->{session} = $session;
-  
-  bless ($self, ref $class || $class);
-  return $self;
+  return bless {
+	dbi => $login,
+	globals => $globals,
+  	session => $session,
+  	username => $session->username
+  }, ref $class || $class;
 }
 
 # Get Header - Returns the message found at the top of all confirmation e-mails.
@@ -97,7 +97,7 @@ sub check_user {
 #Check Admin - Returns true if a user is an admin.
 sub check_admin {
   my $self = shift;
-  my $username = shift;
+  my $username = shift || $self->{username};
   my $globals = $self->{globals};
   my $admin_name = $globals->admin_account;
   return unless $admin_name;
@@ -194,7 +194,7 @@ sub do_sendmail {
 sub get_user_id {
     my $self = shift;
     my $userdb = $self->{dbi};
-    my $user = $userdb->quote(shift);
+    my $user = $userdb->quote(shift || $self->{username});
     return $userdb->selectrow_array("SELECT userid FROM users WHERE username = $user") || "";
 }
 

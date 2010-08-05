@@ -23,7 +23,7 @@ use constant DEBUG => 0;
 use constant HAVE_SVG => eval "require GD::SVG; 1";
 our $CAN_PDF;
 
-# NOTE: Strange comments around col 80 are to fix syntax hilighting in gedit, and will be taken out
+# NOTE: Strange comments around col 97 are to fix syntax hilighting in gedit, and will be taken out
 
 # Render HTML Start - Returns the HTML for the browser's <head> section.
 sub render_html_start {
@@ -258,8 +258,7 @@ sub render_search_form_objects {
     );
     if ($self->setting('autocomplete')) {
         my $spinner_url = $self->globals->button_url.'/spinner.gif';
-	$html .= <<END
-#<
+	$html .= <<END;
 <span id="indicator1" style="display: none">
   <img src="$spinner_url" alt="Working..." />
 </span>
@@ -1193,8 +1192,8 @@ sub render_global_config {
 			      ),
 			  ),
 			  td( span(
-				  { -title => $self->tr('FEATURES_TO_HIGHLIGHT_HINT') },
-				  b( $self->tr('FEATURES_TO_HIGHLIGHT') ),
+				  { -title => $self->tr('FEATURES_TO_HIGHLIGHT_HINT') },						#,
+				  b( $self->tr('FEATURES_TO_HIGHLIGHT') ),										#,
 				  br,
 				  textfield(
 				      -id       => 'h_feat',
@@ -1206,7 +1205,7 @@ sub render_global_config {
 				  ),
 				  a({-href=>'javascript:void(0)',
 				     -onClick=>'Controller.set_display_option("h_feat","_clear_");$("h_feat").value=""'},
-				    $self->tr('CLEAR_HIGHLIGHTING'))
+				    $self->tr('CLEAR_HIGHLIGHTING'))											##
 			      ),
 			  ),
 		      ),
@@ -1214,7 +1213,7 @@ sub render_global_config {
 			  td( $self->data_source->cache_time
 			      ? ( b(  checkbox(
 					  -name     => 'cache',
-					  -label    => $self->tr('CACHE_TRACKS'),
+					  -label    => $self->tr('CACHE_TRACKS'),									#,
 					  -override => 1,
 					  -checked  => $settings->{cache},
 					  -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
@@ -1227,8 +1226,8 @@ sub render_global_config {
 			  td('&nbsp;'),
 			  
 			  td( span(
-				  { -title => $self->tr('REGIONS_TO_HIGHLIGHT_HINT') },
-				  b( $self->tr('REGIONS_TO_HIGHLIGHT') ),
+				  { -title => $self->tr('REGIONS_TO_HIGHLIGHT_HINT') },							#,
+				  b( $self->tr('REGIONS_TO_HIGHLIGHT') ),										#,
 				  br,
 				  textfield(
 				      -id       => 'h_region',
@@ -1241,7 +1240,7 @@ sub render_global_config {
 				  a({-href=>'javascript:void(0)',
 				     -onClick=>'Controller.set_display_option("h_region","_clear_");$("h_region").value=""'
 				    },
-				    $self->tr('CLEAR_HIGHLIGHTING'))
+				    $self->tr('CLEAR_HIGHLIGHTING'))											##
 			      ),
 			  ),
 		      ),
@@ -1249,7 +1248,7 @@ sub render_global_config {
 			  td( { -align => 'left' },
 			      b(  checkbox(
 				      -name     => 'show_tooltips',
-				      -label    => $self->tr('SHOW_TOOLTIPS'),
+				      -label    => $self->tr('SHOW_TOOLTIPS'),									#,
 				      -override => 1,
 				      -checked  => $settings->{show_tooltips},
 				      -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
@@ -1258,7 +1257,7 @@ sub render_global_config {
 			  ),
 			  td('&nbsp;'),
 			  td( $self->setting('region segment')
-			      ? ( b( $self->tr('Region_size') ),
+			      ? ( b( $self->tr('Region_size') ),											#,
 				  br,
 				  popup_menu(
 				      -name     => 'region_size',
@@ -1276,7 +1275,7 @@ sub render_global_config {
 			  td( {   -colspan => 3,
 				  -align   => 'right'
 			      },
-			      b( submit( -name => $self->tr('Update_settings') ) )
+			      b( submit( -name => $self->tr('Update_settings') ) )							##
 			  )
 		      )
 	       )
@@ -1297,7 +1296,7 @@ sub clear_highlights {
 #Render Select Track Link - Returns the HTML for the "Select Tracks" button on the main browser page.
 sub render_select_track_link {
     my $self  = shift;
-    my $title = $self->tr('SELECT_TRACKS');
+    my $title = $self->tr('SELECT_TRACKS');														#;
     return button({-name=>$title,
 		    -onClick => "Controller.select_tab('track_page')"
 		  }
@@ -1309,7 +1308,7 @@ sub render_select_browser_link {
     my $self  = shift;
     my $style  = shift || 'button';
 
-    my $title = $self->tr('BACK_TO_BROWSER');
+    my $title = $self->tr('BACK_TO_BROWSER');													#;
     if ($style eq 'button') {
 	    return button({-name=>$title,
 		           -onClick => "Controller.select_tab('main_page')"
@@ -1339,9 +1338,9 @@ sub render_upload_share_section {
 sub render_toggle_userdata_table {
     my $self = shift;
     return div(
-	h2({-style=>'margin: 0px 0px 0px 0px;padding:5px 0px 5px 0px'},$self->tr('UPLOADED_TRACKS')),
+	h2({-style=>'margin: 0px 0px 0px 0px;padding:5px 0px 5px 0px'},$self->tr('UPLOADED_TRACKS')),#,
 	a({-href=>$self->annotation_help,-target=>'_blank'},
-	  i('['.$self->tr('HELP_FORMAT_UPLOAD').']')),
+	  i('['.$self->tr('HELP_FORMAT_UPLOAD').']')),												#.
 	$self->render_userdata_table(),
 	$self->userdata_upload(),
 	);
@@ -1350,7 +1349,7 @@ sub render_toggle_userdata_table {
 # Renders the "Imported Tracks" table, with the title & help link
 sub render_toggle_import_table {
     my $self = shift;
-    return h2($self->tr('IMPORTED_TRACKS')).
+    return h2($self->tr('IMPORTED_TRACKS')).													#.
 	a({-href=>$self->annotation_help.'#remote',-target=>'_blank'},
 	  i('['.$self->tr('HELP_FORMAT_IMPORT').']')).
 	div($self->render_userimport_table(),
@@ -1410,7 +1409,7 @@ sub list_userdata {
 		-onClick         => "Controller.edit_upload_description('$name',this)",
 		-contentEditable => 'true',
 	    },
-	    $userdata->description($_) || $self->tr('ADD_DESCRIPTION')
+	    $userdata->description($_) || $self->tr('ADD_DESCRIPTION')								##
 	    );
 	my @track_labels        = $userdata->labels($name);
 	my $track_labels        = join '+',map {CGI::escape($_)} @track_labels;
@@ -1418,7 +1417,7 @@ sub list_userdata {
 	my $status    = $userdata->status($name) || 'complete';
 	my $random_id = 'upload_'.int rand(9999);
 
-	my ($conf_name,$conf_modified,$conf_size) = $userdata->conf_metadata($name);
+	my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($name);
 
 	my @source_files  = $userdata->source_files($name);
 	my $download_data = 
@@ -1436,7 +1435,7 @@ sub list_userdata {
 			     )
 		      } @source_files]),
 		  TR(th({-align=>'left'},
-			(a({-href=>"?userdata_download=conf;track=$name"},$self->tr('CONFIGURATION')))),
+			(a({-href=>"?userdata_download=conf;track=$name"},$self->tr('CONFIGURATION')))),	#,
 		     td(scalar localtime $conf_modified),
 		     td("$conf_size bytes"),
 		     td(a({-href    => "javascript:void(0)",

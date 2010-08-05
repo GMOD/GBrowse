@@ -4,8 +4,8 @@ package Bio::Graphics::Browser2::UserTracks;
 use strict;
 use Bio::Graphics::Browser2::DataSource;
 use Bio::Graphics::Browser2::DataLoader;
-use Bio::Graphics::Browser2::UserTracks::Database;
 use Bio::Graphics::Browser2::UserTracks::Filesystem;
+use Bio::Graphics::Browser2::UserTracks::Database;
 use File::Spec;
 use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
@@ -18,64 +18,27 @@ use CGI 'param';
 use constant DEBUG => 0;
 my $HASBIGWIG;
 
-# The intent of this is to provide a single unified interface for managing
-# a user's uploaded and shared tracks.
+# The intent of this is to provide a single unified interface for managing a user's uploaded and shared tracks.
 
-# It works on the basis of a file-based database with the following structure:
-#    base      -- e.g. /var/tmp/gbrowse2/userdata
-#    uploadid  -- e.g. dc39b67fb5278c0da0e44e9e174d0b40
-#    source    -- e.g. volvox
-#    concatenated path /var/tmp/gbrowse2/userdata/volvox/dc39b67fb5278c0da0e44e9e174d0b40
-
-# The concatenated path contains a series of directories named after the track.
-# Each directory has a .conf file that describes its contents and configuration.
-# There will also be data files associated with the configuration.
+sub new {
+    my $class = shift;
+	my $globals = Bio::Graphics::Browser2->open_globals;
+	my $which = ($globals->user_accounts == 1)? "database" : "filesystem";
+	
+	if ($which =~ /filesystem/i) {
+		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
+	} elsif  ($which =~ /database/i) {
+		return Bio::Graphics::Browser2::UserTracks::Database->_new(@_);
+	} else {
+		croak "Could not determine whether to user Filesystem or Database.";
+	}
+}
 
 # class methods
 sub busy_file_name     { 'BUSY'      }
 sub status_file_name   { 'STATUS'    }
 sub imported_file_name { 'IMPORTED'  }
 sub sources_dir_name   { 'SOURCES'   }
-
-sub new {
-    my $class = shift;
-    my ($config, $state, $lang, $uuid, $username) = @_;
-    $uuid ||= $state->{uploadid};
-    
-    my $globals = Bio::Graphics::Browser2->open_globals;
-    my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
-    my $authority    = param('authority') || CGI::cookie('authority');
-    my $session = $globals->authorized_session($requested_id,$authority);    
-	
-    my $self = bless {
-		config     => $config,
-		state      => $state,
-		language   => $lang,
-		uuid       => $uuid,
-		username   => $session->username || $username,
-		globals	   => $globals
-    }, ref $class || $class;
-    my $userdb = Bio::Graphics::Browser2::UserDB->new();
-    my $filesystem = Bio::Graphics::Browser2::UserTracks::Filesystem->new($config, $state, $self);
-    my $database = Bio::Graphics::Browser2::UserTracks::Database->new($filesystem, $userdb);
-    my $files = ($globals->user_accounts == 1) ? $database : $filesystem;
-    $self->{userdb} = $userdb;
-    $self->{files} = $files;
-    $self->{filesystem} = $filesystem;
-    $self->{database} = $database;
-    return $self;
-}
-
-# These methods pass through directly to whatever files backend we're using (Filesystem or Database).
-sub modified { return shift->{files}->modified(@_);	}
-sub created { return shift->{files}->created(@_); }
-sub description { return shift->{files}->description(@_); }
-sub add_file { return shift->{files}->add_file(@_); }
-sub delete_file { return shift->{files}->delete_file(@_); }
-sub get_owned_files { return shift->{files}->get_owned_files(@_); }
-sub get_imported_files { return shift->{files}->get_imported_files(@_); }
-
-sub config { shift->{config}; }
 
 # Source Files - Returns an array of source files (with details) associated with a specified track.
 sub source_files {
@@ -97,7 +60,7 @@ sub source_files {
 # Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {
     my $self = shift;
-    my $uploadid = $self->{uuid};
+    my $uploadid = $self->{uploadsid};
 	return $self->{config}->userdata($uploadid);
 }
 
@@ -132,7 +95,7 @@ sub track_conf {
     return File::Spec->catfile($path, $track, "$track.conf");
 }
 
-# Returns the full path of an imported track
+# Returns whether a track is imported or not.
 sub import_flag {
     my $self  = shift;
     my $track = shift;
@@ -154,16 +117,13 @@ sub tracks {
     my $self     = shift;
     my $path     = $self->path;
     my $imported = shift;
-    my $files = $self->{files};
     my $userdb = $self->{userdb};
     my $username = $self->{username};
-    
-    my $param = ($self->{globals}->user_accounts == 1)? $userdb->get_user_id($username) : $self->path;
 	
 	if ($imported) {
-		return $files->get_imported_files($param);
+		return $self->get_imported_files();
     } else {
-    	return $files->get_owned_files($param);
+    	return $self->get_owned_files();
     }
 }
 
@@ -216,11 +176,9 @@ sub upload_data {
 # Upload File - Uploads a user's file, as called by the AJAX upload system (on the Upload & Share Tracks tab).
 sub upload_file {
     my $self = shift;
-    my ($file_name, $fh, $content_type, $overwrite, $privacy_policy) = @_;
-    my $files = $self->{files};
-    my $username = $self->{username};
+    my ($file_name, $fh, $content_type, $overwrite) = @_;
+    my $userid = $self->{userid};
     my $userdb = $self->{userdb};
-    $privacy_policy ||= "private";
     
     my $track_name = $self->trackname_from_url($file_name,!$overwrite);
     $content_type ||= '';
@@ -247,7 +205,7 @@ sub upload_file {
 		1;
     };
     
-    $files->add_file($userdb->get_user_id($username), $file_name, "", $privacy_policy);
+    $self->add_file($file_name);
 
     if ($@ =~ /cancelled/) {
 		$self->delete_file($track_name);
@@ -265,10 +223,10 @@ sub import_url {
     my $self = shift;
     my $url       = shift;
     my $overwrite = shift;
-    my $privacy_policy = shift || "private";
-    my $files = $self->{files};
+    my $privacy_policy = shift // "private";													#/
     my $username = $self->{username};
     my $userdb = $self->{userdb};
+    my $userid = $self->{uploadid};
 
     my $key;
     if ($url =~ m!http://([^/]+).+/(\w+)/\?.*t=([^+;]+)!) {
@@ -283,7 +241,7 @@ sub import_url {
 							  $self->track_path($track_name),
 							  $self->track_conf($track_name),
 							  $self->{config},
-							  $self->{state}->{uploadid});
+							  $userid);
     $loader->set_status('starting import');
 
     my $conf = $self->track_conf($track_name);
@@ -303,7 +261,7 @@ sub import_url {
     close $i;
 
     $loader->set_processing_complete;
-    $files->add_file($userdb->get_user_id($username), $url, "", $privacy_policy);
+    $self->add_file($url);
 
     return (1,'',[$track_name]);
 }
@@ -619,6 +577,15 @@ height          = 20
 
 END
 }
+
+# These methods are replaced by methods in Filesystem.pm and Database.pm
+sub modified { warn "modified() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
+sub created { warn "created() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
+sub description { warn "description() File::Spechas been called without properly inheriting Filesystem.pm or Datbase.pm"; }
+sub add_file { warn "add_file() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
+sub delete_file { warn "delete_file() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
+sub get_owned_files { warn "get_owned_files() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
+sub get_imported_files { warn "get_imported_files() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
 
 package Bio::Graphics::Browser2::UserConf;
 

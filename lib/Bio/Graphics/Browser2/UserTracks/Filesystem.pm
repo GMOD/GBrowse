@@ -2,44 +2,52 @@ package Bio::Graphics::Browser2::UserTracks::Filesystem;
 
 # $Id: Filesystem.pm 23607 2010-07-30 17:34:25Z cnvandev $
 use strict;
+use base 'Bio::Graphics::Browser2::UserTracks';
 use Bio::Graphics::Browser2::UserTracks;
 use Bio::Graphics::Browser2;
 use File::Spec;
 use File::Path;
 
-use constant DEBUG => 0;
+# Filesystem works on the basis of a file-based database with the following structure:
+#    base      -- e.g. /var/tmp/gbrowse2/userdata
+#    uploadid  -- e.g. dc39b67fb5278c0da0e44e9e174d0b40
+#    source    -- e.g. volvox
+#    concatenated path /var/tmp/gbrowse2/userdata/volvox/dc39b67fb5278c0da0e44e9e174d0b40
 
-sub new {
+# The concatenated path contains a series of directories named after the track.
+# Each directory has a .conf file that describes its contents and configuration.
+# There will also be data files associated with the configuration.
+
+sub _new {
 	my $class = shift;
-	my $self = {};
-	my $VERSION = '0.1';
-	my $config = shift;
-	my $state = shift;
-	my $usertracks = shift;
-	my $globals = Bio::Graphics::Browser2->open_globals;
-
-	my $self =  bless{
-		globals => $globals,
-		session => $globals->session,
-		uuid => shift || $state->{uploadid},
-		config => $config,
-		state => $state,
-		usertracks => $usertracks
-	}, ref $class || $class;
-	return $self;
+	my $VERSION = '0.2';
+	my ($config, $state, $lang) = @_;
+	my $globals = $config->globals;
+	my $session = $globals->session;
+	my $userid = shift || $state->{userid};
+	my $uploadid = shift || $state->{uploadid};
+	
+    return bless {
+		config   => $config,
+		state    => $state,
+		language => $lang,
+		upload     => $uploadid,
+		globals	 => $globals,
+		session	 => $session
+    }, ref $class || $class;
 }
 
 # Get Owned Files (User) - Returns an array of the paths of files owned by a user.
 sub get_owned_files {
     my $self = shift;
     my $path = shift;
-	return unless $self->{uuid};
+	return unless $self->{uploadid};
 	
 	my @result;
 	opendir D, $path;
 	while (my $dir = readdir(D)) {
 		next if $dir =~ /^\.+$/;
-		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->{usertracks}->imported_file_name)) || 0;
+		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->imported_file_name)) || 0;
 		next if $is_imported == 1;
 		push @result,$dir;
 	}
@@ -49,14 +57,14 @@ sub get_owned_files {
 # Get Imported Files (User) - Returns an array of files imported by a user.
 sub get_imported_files {
 	my $self = shift;
-	my $path = $self->{usertracks}->path;
-	return unless $self->{uuid};
+	my $path = $self->path;
+	return unless $self->{uploadid};
 
 	my @result;
 	opendir D,$path;
 	while (my $dir = readdir(D)) {
 		next if $dir =~ /^\.+$/;
-		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->{usertracks}->imported_file_name)) || 0;
+		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->imported_file_name)) || 0;
 		next if $is_imported == 0;
 		push @result,$dir;
 	}
@@ -80,25 +88,21 @@ sub add_file {
 sub delete_file {
     my $self = shift;
     my $track_name  = shift;
-    my $files = $self->{files};
-    my $username = $self->{username};
-    my $userdb = $self->{userdb};
-    my $usertracks = $self->{usertracks};
     my $loader = Bio::Graphics::Browser2::DataLoader->new($track_name,
-							  $usertracks->track_path($track_name),
-							  $usertracks->track_conf($track_name),
+							  $self->track_path($track_name),
+							  $self->track_conf($track_name),
 							  $self->{config},
-							  $self->{state}->{uploadid});
-    $loader->drop_databases($usertracks->track_conf($track_name));
-    rmtree($usertracks->track_path($track_name));
+							  $self->{uploadid});
+    $loader->drop_databases($self->track_conf($track_name));
+    rmtree($self->track_path($track_name));
 }
 
 # Created (Track) - Returns creation date of $track.
 sub created {
     my $self  = shift;
     my $track = shift;
-    my $path = $self->{usertracks}->path;
-    my $conf  = File::Spec->catfile($path,$track,"$track.conf");
+    my $path = $self->path;
+    my $conf  = File::Spec->catfile($path, $track, "$track.conf");
     return (stat($conf))[10];
 }
 
@@ -106,17 +110,16 @@ sub created {
 sub modified {
     my $self  = shift;
     my $track = shift;
-    return ($self->{usertracks}->conf_metadata($track))[1];
+    return ($self->conf_metadata($track))[1];
 }
 
 # Description (Track[, Description]) - Returns a file's description, or changes the current description if defined.
 sub description {
     my $self  = shift;
     my $track = shift;
-    my $path = $self->{usertracks}->path;
-    my $desc  = File::Spec->catfile($path,$track,"$track.desc");
+    my $path = $self->path;
+    my $desc  = File::Spec->catfile($path, $track, "$track.desc");
     if (@_) {
-        warn "setting desc to @_" if DEBUG;
         open my $f,">",$desc or return;
         print $f join("\n",@_);
         close $f;

@@ -45,6 +45,7 @@ sub source_files {
     my $self = shift;
     my $track = shift;
     my $path = File::Spec->catfile($self->track_path($track), $self->sources_dir_name);
+    $path = $self->trackname_from_url($path, 0) if ($self->is_imported($path) == 1);
     my @files;
     if (opendir my $dir, $path) {
 		while (my $f = readdir($dir)) {
@@ -76,6 +77,7 @@ sub track_path {
     my $self  = shift;
     my $track = shift;
     my $path = $self->path;
+    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
     return File::Spec->catfile($path, $track);
 }
 
@@ -84,6 +86,7 @@ sub data_path {
     my $self = shift;
     my ($track,$datafile) = @_;
     my $path = $self->path;
+    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
     return File::Spec->catfile($path, $track, $self->sources_dir_name, $datafile);
 }
 
@@ -92,14 +95,16 @@ sub track_conf {
     my $self  = shift;
     my $track = shift;
     my $path = $self->path;
-    return File::Spec->catfile($path, $track, "$track.conf");
+    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
+	return File::Spec->catfile($path, $track, "$track.conf");
 }
 
-# Returns whether a track is imported or not.
+# Returns the location of the import flag file..
 sub import_flag {
     my $self  = shift;
     my $track = shift;
     my $path = $self->path;
+    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
     return File::Spec->catfile($path, $track, $self->imported_file_name);
 }
 
@@ -107,6 +112,7 @@ sub import_flag {
 sub conf_metadata {
     my $self  = shift;
     my $track = shift;
+    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
     my $conf  = File::Spec->catfile($self->path, $track, "$track.conf");
     my $name  = basename($conf);
     return ($name,(stat($conf))[9,7]);
@@ -131,11 +137,11 @@ sub tracks {
 sub max_filename {
     my $self = shift;
     my $path = $self->path;
-    my $length = POSIX::pathconf($path,&POSIX::_PC_NAME_MAX) || 255;
+    my $length = POSIX::pathconf($path, &POSIX::_PC_NAME_MAX) || 255;
     return $length - 4; # give enough room for the suffix
 }
 
-# Trackname from URL - G$track_name, $useridets a track name from a given URL
+# Trackname from URL - Gets a track name from a given URL
 sub trackname_from_url {
     my $self     = shift;
     my $url      = shift;
@@ -144,18 +150,18 @@ sub trackname_from_url {
     (my $track_name=$url) =~ tr!a-zA-Z0-9_%^@.-!_!cs;
 
     if (length $track_name > $self->max_filename) {
-	$track_name = substr($track_name, 0, $self->max_filename);
+		$track_name = substr($track_name, 0, $self->max_filename);
     }
 
     my $unique = 0;
     while ($uniquefy && !$unique) {
-	my $path = $self->track_path($track_name);
-	if (-e $path) {
-	    $track_name .= "-0" unless $track_name =~ /-\d+$/;
-	    $track_name  =~ s/-(\d+)$/'-'.($1+1)/e; # add +1 to the trackname
-	} else {
-	    $unique++;
-	}
+		my $path = $self->track_path($track_name);
+		if (-e $path) {
+			$track_name .= "-0" unless $track_name =~ /-\d+$/;
+			$track_name  =~ s/-(\d+)$/'-'.($1+1)/e; # add +1 to the trackname
+		} else {
+			$unique++;
+		}
     }
 
     my $path = $self->track_path($track_name);
@@ -180,7 +186,6 @@ sub upload_file {
     my $userid = $self->{userid};
     my $userdb = $self->{userdb};
     
-    my $track_name = $self->trackname_from_url($file_name,!$overwrite);
     $content_type ||= '';
 
     if ($content_type eq 'application/gzip' or $file_name =~ /\.gz$/) {
@@ -190,7 +195,7 @@ sub upload_file {
     }
     
     # guess the file type from the first non-blank line
-    my ($type,$lines,$eol)   = $self->guess_upload_type($file_name,$fh);
+    my ($type,$lines,$eol)   = $self->guess_upload_type($file_name, $fh);
     $lines                 ||= [];
     my (@tracks,$fcgi);
 
@@ -199,22 +204,22 @@ sub upload_file {
 		croak "Could not guess the type of the file $file_name"
 			unless $type;
 
-		my $load = $self->get_loader($type,$track_name);
+		my $load = $self->get_loader($type, $file_name);
 		$load->eol_char($eol);
-		@tracks = $load->load($lines,$fh);
+		@tracks = $load->load($lines, $fh);
 		1;
     };
     
-    $self->add_file($file_name);
+    $self->add_file($file_name, 0);
 
     if ($@ =~ /cancelled/) {
-		$self->delete_file($track_name);
+		$self->delete_file($file_name);
 		return (0,'Cancelled by user',[]);
     }
 
     my $msg = $@;
     warn "UPLOAD ERROR: ",$msg if $msg;
-    $self->delete_file($track_name) unless $result;
+    $self->delete_file($file_name) unless $result;
     return ($result,$msg,\@tracks);
 }
 
@@ -245,23 +250,27 @@ sub import_url {
     $loader->set_status('starting import');
 
     my $conf = $self->track_conf($track_name);
-    open my $f,">",$conf or croak "Couldn't open $conf: $!";
+    warn "Conf = $conf";
+    open (my $f, "+>", $conf) or croak "Couldn't open $conf: $!";
+    print $f "This is some bullshit, man.";
+    my @data = $f;
+    warn join("\n", @data);
 
     if ($url =~ /\.bam$/) {
-		print $f $self->remote_bam_conf($track_name,$url,$key);
+		print $f $self->remote_bam_conf($track_name, $url, $key);
     } 
     elsif ($url =~ /\.bw$/) {
-		print $f $self->remote_bigwig_conf($track_name,$url,$key);
+		print $f $self->remote_bigwig_conf($track_name, $url, $key);
     }
     else {
-		print $f $self->remote_mirror_conf($track_name,$url,$key);
+		print $f $self->remote_mirror_conf($track_name, $url, $key);
     }
     close $f;
-    open my $i,">",$self->import_flag($track_name);
+    open my $i, ">", $self->import_flag($track_name);
     close $i;
 
     $loader->set_processing_complete;
-    $self->add_file($url);
+    $self->add_file($url, 1);
 
     return (1,'',[$track_name]);
 }
@@ -272,22 +281,24 @@ sub reload_file {
     my $track = shift;
     my @sources = $self->source_files($track);
     for my $s (@sources) {
-	my ($name,$size,$mtime,$path) = @$s;
-	rename $path,"$path.bak"            or next;
-	my $io = IO::File->new("$path.bak") or next;
-	my ($result) = $self->upload_file($name,$io,'',1);
-	if ($result) {
-	    unlink "$path.bak";
-	} else {
-	    rename "$path.bak",$path;
-	}
+		my ($name,$size,$mtime,$path) = @$s;
+		rename $path,"$path.bak"            or next;
+		my $io = IO::File->new("$path.bak") or next;
+		my ($result) = $self->upload_file($name,$io,'',1);
+		if ($result) {
+			unlink "$path.bak";
+		} else {
+			rename "$path.bak",$path;
+		}
     }
 }
 
+# Returns a file handle to a conf file.
 sub conf_fh {
     my $self = shift;
     my $track = shift;
     my $path = $self->path;
+    $track = $self->trackname_from_url($track) if ($self->is_imported($track) == 1);
     return Bio::Graphics::Browser2::UserConf->fh($self->track_conf($track));
 }
 
@@ -354,6 +365,7 @@ sub labels {
     return grep {!/:(database|\d+)/} eval{Bio::Graphics::FeatureFile->new(-file=>$conf)->labels};
 }
 
+# Status - Returns the status of a DataLoader object for a specific file.
 sub status {
     my $self     = shift;
     my $filename = shift;
@@ -363,15 +375,16 @@ sub status {
 			      $self->track_path($filename),
 			      $self->track_conf($filename),
 			      $self->{config},
-			      $self->{state}->{uploadid},
+			      $self->{uploadid},
 	);
     return $load->get_status();
 }
 
+# Get Loader - Returns the loader of the appropriate DataLoader package type for a specific file.
 sub get_loader {
     my $self   = shift;
     my ($type,$track_name) = @_;
-
+    
     my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";
     die $@ if $@;
@@ -379,7 +392,7 @@ sub get_loader {
 			$self->track_path($track_name),
 			$self->track_conf($track_name),
 			$self->{config},
-			$self->{state}->{uploadid},
+			$self->{uploadid},
 	);
 }
 
@@ -462,6 +475,7 @@ sub has_bigwig {
     return $HASBIGWIG = $result || 0;
 }
 
+# Install Filter - Attaches a filter (such as GUNZIP or BUNZIP2) to a file handle.
 sub install_filter {
     my $self = shift;
     my ($in_fh,$command) = @_;
@@ -509,7 +523,7 @@ sub remote_bam_conf {
 	$self->track_path($track_name),
 	$self->track_conf($track_name),
 	$self->{config},
-	$self->{state}->{uploadid});
+	$self->{uploadid});
     my $fasta  = $loader->get_fasta_file;
 
     return <<END;

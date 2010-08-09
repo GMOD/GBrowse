@@ -47,8 +47,7 @@ sub get_owned_files {
 	opendir D, $path;
 	while (my $dir = readdir(D)) {
 		next if $dir =~ /^\.+$/;
-		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->imported_file_name)) || 0;
-		next if $is_imported == 1;
+		next if (is_imported($dir) == 1);
 		push @result,$dir;
 	}
 	return @result;
@@ -61,12 +60,11 @@ sub get_imported_files {
 	return unless $self->{uploadid};
 
 	my @result;
-	opendir D,$path;
+	opendir D, $path;
 	while (my $dir = readdir(D)) {
 		next if $dir =~ /^\.+$/;
-		my $is_imported   = (-e File::Spec->catfile($path, $dir, $self->imported_file_name)) || 0;
-		next if $is_imported == 0;
-		push @result,$dir;
+		next if (is_imported($dir) == 0);
+		push @result, $dir;
 	}
 	return @result;
 }
@@ -129,6 +127,14 @@ sub description {
         my @lines = <$f>;
         return join '',@lines;
     }
+}
+
+# Is Imported (Track) - Returns 1 if an already-added track is imported, 0 if not.
+sub is_imported {
+	my $self = shift;
+	my $track = shift;
+	my $path = $self->path;
+	return (-e File::Spec->catfile($path, $track, $self->imported_file_name)) || 0;
 }
 
 1;

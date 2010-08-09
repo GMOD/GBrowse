@@ -215,6 +215,7 @@ sub source_form {
     );
 }
 
+# Slider Form - Returns the HTML for the zooming controls with the "Flip" checkbox.
 sub sliderform {
     my $self    = shift;
     my $segment = shift;
@@ -241,6 +242,7 @@ sub sliderform {
     }
 }
 
+# Render Search For Objects - Returns the "Landmark or Region" search box on the browser tab.
 sub render_search_form_objects {
     my $self     = shift;
     my $settings = $self->state;
@@ -580,6 +582,7 @@ sub _render_select_menu {
 		$menu_html );
 }
 
+# Render Login - Returns the HTML for the login links on the top-right corner of the screen.
 sub render_login {
     my $self     = shift;
     my $images   = $self->globals->openid_url;
@@ -1283,7 +1286,7 @@ sub render_global_config {
     return div($content);
 }
 																								#.
-#Clear Hilights - Returns the HTML for the "Clear Highligting" link.
+# Clear Hilights - Returns the HTML for the "Clear Highligting" link.
 sub clear_highlights {
     my $self = shift;
     my $link = a({-style   => 'font-size:9pt',
@@ -1293,7 +1296,7 @@ sub clear_highlights {
 		 $self->tr('CLEAR_HIGHLIGHTING'));
 }
 																								#;
-#Render Select Track Link - Returns the HTML for the "Select Tracks" button on the main browser page.
+# Render Select Track Link - Returns the HTML for the "Select Tracks" button on the main browser page.
 sub render_select_track_link {
     my $self  = shift;
     my $title = $self->tr('SELECT_TRACKS');														#;
@@ -1303,7 +1306,7 @@ sub render_select_track_link {
 	  );
 }
 
-#Render Select Browser Link - Returns the HTML for the "Back to Browser" button/link.
+# Render Select Browser Link - Returns the HTML for the "Back to Browser" button/link.
 sub render_select_browser_link {
     my $self  = shift;
     my $style  = shift || 'button';
@@ -1324,13 +1327,9 @@ sub render_select_browser_link {
 # Render Upload & Share Section - Returns the content of the "Uploads and Shared Tracks" tab.
 sub render_upload_share_section {
     my $self = shift;
-    my $html = $self->is_admin?
-      div(h2({-style=>'font-style:italic;background-color:yellow'}, # BUG: this is HTML - should not be here!!!
-		    'Admin mode: Uploaded tracks are public'),
-	      $self->render_toggle_userdata_table,
-	      $self->render_toggle_import_table)
-	  : div($self->render_toggle_userdata_table,
-	      $self->render_toggle_import_table);
+    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, 'Admin mode: Uploaded tracks are public') : ""; # BUG: this is HTML - should not be here!!!
+	$html .= $self->render_toggle_userdata_table . $self->render_toggle_import_table;
+	$html = div($html);
 	return $html;
 }
 
@@ -1357,11 +1356,14 @@ sub render_toggle_import_table {
 	);
 }
 
-# Renders the container holding the "Uploaded Tracks" table
+# Renders the container holding the "Uploaded Tracks" listing
 sub render_userdata_table {
     my $self = shift;
-    my $html = div( {-id=>'userdata_table_div',-class=>'uploadbody'},
-		    scalar $self->list_userdata('uploaded'));
+    my $html = div( {
+    	-id		=> 'userdata_table_div',
+    	-class	=> 'uploadbody',
+    	}, scalar $self->list_userdata('uploaded')
+    );
     return $html;
 }
 
@@ -1369,7 +1371,7 @@ sub render_userdata_table {
 sub render_userimport_table {
     my $self = shift;
     my $html = div( { -id => 'userimport_table_div',-class=>'uploadbody' },
-		    $self->list_userdata('imported'),
+		$self->list_userdata('imported'),
 	);
     return $html;
 }
@@ -1387,114 +1389,183 @@ sub list_userdata {
     
     @tracks      = sort @tracks;
 
-    my $buttons = $self->data_source->globals->button_url;
-    my $share   = "$buttons/share.png";
-    my $delete  = "$buttons/trash.png";
-
     my $count = 0;
     my @rows = map {
-	my $name          = $_;
-	my $short_name    = $name;
+		my $name          = $_;
+		my $short_name    = $name;
 
-	if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
-	    my @tracks = split /\+/,$2;
-	    $short_name = "Shared track from $1 (@tracks)";
-	} elsif (length $short_name > 40) {
-	    $short_name       =~ s/^(.{40}).+/$1.../;
-	}
+		if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
+			my @tracks = split /\+/,$2;
+			$short_name = "Shared track from $1 (@tracks)";
+		} elsif (length $short_name > 40) {
+			$short_name       =~ s/^(.{40}).+/$1.../;
+		}
 
-	my $description   = div(
-	    {
-		-id              => "${name}_description",
-		-onClick         => "Controller.edit_upload_description('$name',this)",
-		-contentEditable => 'true',
-	    },
-	    $userdata->description($_) || $self->tr('ADD_DESCRIPTION')								##
-	    );
-	my @track_labels        = $userdata->labels($name);
-	my $track_labels        = join '+',map {CGI::escape($_)} @track_labels;
+		my @track_labels        = $userdata->labels($name);
+		my $track_labels        = join '+', map {CGI::escape($_)} @track_labels;
 
-	my $status    = $userdata->status($name) || 'complete';
-	my $random_id = 'upload_'.int rand(9999);
+		my $status    = $userdata->status($name) || 'complete';
+		my $random_id = 'upload_'.int rand(9999);
 
-	my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($name);
-
-	my @source_files  = $userdata->source_files($name);
-	my $download_data = 
-	    table({-class=>'padded-table'},
-		  TR([map {
-		      th({-align=>'left'},
-			 a({-href=>"?userdata_download=$_->[0];track=$name"},$_->[0])).
-			     td(scalar localtime($_->[2])).
-			     td($_->[1],'bytes').
-			     td(
-				 ($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3])
-				 ? a({-href    => "javascript:void(0)",
-				      -onClick => "editUploadData('$name','$_->[0]')"},'[edit]')
-				 : '&nbsp;'
-			     )
-		      } @source_files]),
-		  TR(th({-align=>'left'},
-			(a({-href=>"?userdata_download=conf;track=$name"},$self->tr('CONFIGURATION')))),	#,
-		     td(scalar localtime $conf_modified),
-		     td("$conf_size bytes"),
-		     td(a({-href    => "javascript:void(0)",
-			   -onClick => "editUploadConf('$name')"},'[edit]'))
-		  ),
-	    );
-
-	my $go_there = join(' ',
-			    map {
+		# Controls
+		my $buttons = $self->data_source->globals->button_url;
+	    my $share   = "$buttons/share.png";
+	    my $delete  = "$buttons/trash.png";
+		my $toggle_details = a({
+				-href	  => "#",
+				-onClick => "this.up().next('div.details').toggle();"
+			 },
+			 "Toggle Details"
+		);
+		my $trash_icon = img({
+				-src     	  => $delete,
+				-style  	  => 'cursor:pointer',
+				-onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
+				-onClick     => "deleteUploadTrack('$name')"
+			}
+		);
+		my $share_icon = img({
+				-src		  => $share,
+				-style   	  => 'cursor:pointer',
+				-onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
+				-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
+			}
+		);
+		
+		my $controls = div({
+				-class => "controls",
+				-style => "display: none; padding: 0.15em;"
+			},
+			$toggle_details.'&nbsp;',
+			$trash_icon.'&nbsp;',
+			($type eq 'uploaded')? $share_icon : ''
+		);
+				 
+		# Short listing (Title, subtracks, etc.)
+		my $go_there = join(' ',
+			map {
 				my $label = $_;
 				my $key   = $self->data_source->setting($label=>'key');
-				$key ? (
-				    '['
-				    .a({-href    => 'javascript:void(0)',
-					-onClick => 
-					    qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))},
-				       b($key))
-				    .']'
-				    )
-				    : ''
-			    } @track_labels);
-	
-	my $color         = $count++%2 ? 'paleturquoise': 'lightblue';
-
-	div({-style=>"background-color:$color"},
-	    div({-id=>"${name}_stat"},''),
-	    img({-src     => $delete,
-		 -style   => 'cursor:pointer',
-		 -onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
-		 -onClick     => "deleteUploadTrack('$name')"
-		},'&nbsp;',
-	    ($type eq 'uploaded') 
-		? img({-src=>$share,
-		 -style   => 'cursor:pointer',
-		 -onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
-		 -onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
-		})
-	        : '',
-	    ),'&nbsp;',
-	    b($short_name),$go_there,br(), 
-	    i($description),
-	    div({-style=>'padding-left:10em'},
-		b('Source files:'),
-		$download_data),
-	    div({-id=>"${name}_editfield"},''),
-	    ($status !~ /complete/) 
-	      ? div(
-		div({-id=>"${random_id}_form"},'&nbsp;'),
-		div({-id=>"${random_id}_status"},i($status),
-		           a({-href    =>'javascript:void(0)',
-			      -onClick => 
-				  "Controller.monitor_upload('$random_id','$name')",
-			     },'Interrupted [Resume]')
-		)
-	      )
-	      : '',
-	    )
+				$key? (
+					'['.
+					a({
+							-href    => 'javascript:void(0)',
+							-onClick => qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))
+						},
+						b($key)
+					).
+					']'
+				) : ''
+			} @track_labels);
+		my $stat = div({
+				-id => "${name}_stat"
+			}, ''
+		);
+		my $title = h1({
+				-style	=> "display: inline; font-size: 14pt;"
+			}, $short_name
+		);
+		
+		my $short_listing = span({
+				-style => "display: inline-block; width: 45em;"
+			},
+			$stat, $title, $go_there
+		);
+				 
+		# Source file listing
+		my @source_files = $userdata->source_files($name);
+		my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($name);
+		my $download_data = ul({
+				-style => "margin: 0; margin-left: 4em; padding: 0; list-style: none;"
+			},
+			li(
+				[map {
+					a( {
+							-href => "?userdata_download=$_->[0];track=$name",
+							-style	=> "display: inline-block; width: 15em;"
+						},
+							$_->[0]
+					).
+					span({-style => "display: inline-block; width: 15em;"}, scalar localtime($_->[2])).
+					span({-style => "display: inline-block; width: 10em;"}, $_->[1],'bytes').
+					span(
+						($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3])?
+						a( {
+								-href    => "javascript:void(0)",
+								-onClick => "editUploadData('$name','$_->[0]')"
+							},
+							'[edit]'
+						)
+					: '&nbsp;'
+					)
+				} @source_files]
+			),
+			li(
+				a({
+						-href	=> "?userdata_download=conf;track=$name",
+						-style	=> "display: inline-block; width: 15em;"
+					},
+					$self->tr('CONFIGURATION')													##
+				).
+				span({-style => "display: inline-block; width: 15em;"}, scalar localtime $conf_modified).
+				span({-style => "display: inline-block; width: 10em;"}, "$conf_size bytes").
+				a({
+						-href    => "javascript:void(0)",
+						-onClick => "editUploadConf('$name')"
+					}, '[edit]'
+				)
+			)
+		);
+		
+		# Details Section
+		my $description = div(
+			{
+				-id              => "${name}_description",
+				-onClick         => "Controller.edit_upload_description('$name',this)",
+				-contentEditable => 'true',
+			}, $userdata->description($_) || $self->tr('ADD_DESCRIPTION')						##
+		);
+		my $status_box = ($status !~ /complete/)?
+			div(
+				div({-id=>"${random_id}_form"},'&nbsp;'),
+				div({-id=>"${random_id}_status"},
+					i($status),
+					a({
+							-href    =>'javascript:void(0)',
+				  			-onClick => "Controller.monitor_upload('$random_id','$name')",
+				 		},
+				 		'Interrupted [Resume]'
+				 	)
+				)
+			 ) : '';
+				 
+		my $details = div({
+				-style => "",
+				-class => "details"
+			},
+			i($description),
+			b({ -style => "margin-left: 4em;"},
+				'Source files:'
+			),
+			$download_data,
+			$status_box,
+		);
+			
+		my $edit_field = div({
+				-id => "${name}_editfield"
+			}, ''
+		);	
+		 
+		# And now the final track listing.
+		my $color = ($count++%2) ? 'paleturquoise': 'lightblue';
+		div({
+				-style		 => "background-color: $color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;",
+				-onmouseover => "this.down('div.controls').setStyle('display: inline-block;');",
+				-onmouseout	 => "this.down('div.controls').hide();"
+			}, $short_listing, $controls, $details, $edit_field
+		);
     } @tracks;
-    return join '',@rows;
+    return join '', @rows;
 }
 
 #Userdata Import - Renders the "[Import a track URL]" link in the Imported Tracks section.
@@ -1854,6 +1925,7 @@ sub do_plugin_header {
     );
 }
 
+# Slider Table - Returns the HTML for the zooming and panning controls.
 sub slidertable {
   my $self    = shift;
   my $state   = $self->state;

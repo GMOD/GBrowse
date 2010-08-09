@@ -55,8 +55,12 @@ sub get_owned_files {
     my $uploadsdb = $self->{uploadsdb};
     my $uploadsid = $self->{uploadsid};
     $uploadsid = $uploadsdb->quote($uploadsid);
-	my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = $uploadsid AND path NOT LIKE '%\$%' ORDER BY uploadid");
-	return @{$rows};
+	my $files = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = $uploadsid ORDER BY uploadid");
+	my @owned_files;
+	foreach (@{$files}) {
+		push(@owned_files, $_) if ($self->is_imported($_) == 0);
+	};
+	return @owned_files;
 }
 
 # Get Public Files () - Returns an array of public or admin file paths.
@@ -73,8 +77,12 @@ sub get_imported_files {
     my $uploadsdb = $self->{uploadsdb};
     my $uploadsid = $self->{uploadsid};
     $uploadsid = $uploadsdb->quote($uploadsid);
-	my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = $uploadsid AND path LIKE '%\$%' ORDER BY uploadid");
-	return @{$rows};
+	my $files = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = $uploadsid ORDER BY uploadid");
+	my @imported_files;
+	foreach (@{$files}) {
+		push(@imported_files, $_) if ($self->is_imported($_) == 1);
+	};
+	return @imported_files;
 }
 
 # Field (Field, Path[, Value, User ID]) - Returns (or, if defined, sets to the new value) the specified field of a file.
@@ -93,9 +101,7 @@ sub field {
 		$value =~ s/\s+$//; 
     	$value = $uploadsdb->quote($value);
     	my $now = $self->nowfun();
-    	my $sql = "UPDATE uploads SET $field = $value WHERE uploadid = '$fileid'";
-    	warn $sql;
-	    my $result = $uploadsdb->do($sql);
+	    my $result = $uploadsdb->do("UPDATE uploads SET $field = $value WHERE uploadid = '$fileid'");
 	    $self->update_modified($fileid);
 	    return $result;
     } else {
@@ -138,8 +144,6 @@ sub description {
     my $value = shift;
     my $uploadsid = shift // $self->{uploadsid};												#/
     
-    cluck "Args: $track, $uploadsid, $value";
-	
 	# If we're given a value, add it to the arguments.    
     my @args = ("description", $track);
     push(@args, $value) if ($value);
@@ -162,6 +166,7 @@ sub add_file {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
     my $path = shift;
+    my $imported = shift // 0;																	#/
     my $description = $uploadsdb->quote(shift);
     my $uploadsid = shift // $self->{uploadsid};												#/
     my $shared = $uploadsdb->quote(shift // "private");											#/
@@ -172,34 +177,34 @@ sub add_file {
 		$path = $uploadsdb->quote($path);
 		$uploadsid = $uploadsdb->quote($uploadsid);
 		$fileid = $uploadsdb->quote($fileid);
-		return $uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, creation_date, modification_date, sharing_policy) VALUES ($fileid, $uploadsid, $path, $description, $now, $now, $shared)");
+		return $uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy) VALUES ($fileid, $uploadsid, $path, $description, $imported, $now, $now, $shared)");
     } else {
 		warn $self->{session}->{username} . " has already uploaded $path.";
     }
 }
 
-# Delete File (Path) - Deletes $file_id from the database.
+# Delete File (Track) - Deletes $file_id from the database.
 sub delete_file {
 	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
-    my $path = shift;
+    my $track = shift;
     my $userid = $self->{userid};
     my $uploadsid = $self->{uploadsid};													#/
     
     # First delete from the database.
-    my $fileid = $uploadsdb->quote($self->get_file_id($path, $uploadsid));
+    my $fileid = $uploadsdb->quote($self->get_file_id($track, $uploadsid));
     if ($fileid) {
     	return $uploadsdb->do("DELETE FROM uploads WHERE uploadid = $fileid");
     }
     
     # Then remove the file - better to have a dangling file then a dangling reference to nothing.
-    my $loader = Bio::Graphics::Browser2::DataLoader->new($path,
-							  $self->track_path($path),
-							  $self->track_conf($path),
+    my $loader = Bio::Graphics::Browser2::DataLoader->new($track,
+							  $self->track_path($track),
+							  $self->track_conf($track),
 							  $self->{config},
 							  $userid);
-    $loader->drop_databases($self->track_conf($path));
-    rmtree($self->track_path($path));
+    $loader->drop_databases($self->track_conf($track));
+    rmtree($self->track_path($track));
 }
 
 # Now Function - return the database-dependent function for determining current date & time
@@ -207,6 +212,15 @@ sub nowfun {
 	my $self = shift;
 	my $globals = $self->{globals};
 	return $globals->user_account_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
+}
+
+# Is Imported (Track) - Returns 1 if an already-added track is imported, 0 if not.
+sub is_imported {
+	my $self = shift;
+	my $track = shift;
+	my $uploadsdb = $self->{uploadsdb};
+	my $fileid = $self->get_file_id($track);
+	return $uploadsdb->selectrow_array("SELECT imported FROM uploads WHERE uploadid = '$fileid'");
 }
 
 1;

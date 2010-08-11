@@ -1328,7 +1328,28 @@ sub render_select_browser_link {
 sub render_upload_share_section {
     my $self = shift;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, 'Admin mode: Uploaded tracks are public') : ""; # BUG: this is HTML - should not be here!!!
-	$html .= $self->render_toggle_userdata_table . $self->render_toggle_import_table;
+	$html .= $self->render_custom_track_listing;
+	$html = div($html);
+	return $html;
+}
+
+# Render Custom Track Listing - Returns the HTML listing of public, uploaded & imported tracks.
+sub render_custom_track_listing {
+	my $self = shift;
+	my $html = h1("Custom Tracks");
+	my $globals = $self->globals;
+	
+	$html .= a( {
+					-href => $self->annotation_help.'#remote',
+					-target => '_blank'
+				},
+				i('['.$self->tr('HELP_FORMAT_IMPORT').']')										#.
+			);
+	$html .= $self->list_custom_tracks("all", 1);
+	$html .= $self->add_userdata;
+	if ($globals->user_accounts == 1) {
+		$html .= $self->list_public_tracks;
+	}
 	$html = div($html);
 	return $html;
 }
@@ -1362,7 +1383,7 @@ sub render_userdata_table {
     my $html = div( {
     	-id		=> 'userdata_table_div',
     	-class	=> 'uploadbody',
-    	}, scalar $self->list_userdata('uploaded')
+    	}, scalar $self->list_custom_tracks('uploaded')
     );
     return $html;
 }
@@ -1371,36 +1392,100 @@ sub render_userdata_table {
 sub render_userimport_table {
     my $self = shift;
     my $html = div( { -id => 'userimport_table_div',-class=>'uploadbody' },
-		$self->list_userdata('imported'),
+		$self->list_custom_tracks('imported'),
 	);
     return $html;
 }
 
-# List Userdata - Creates the HTML listing of a user's uploaded files (uploads or imported, depending on $type).
-sub list_userdata {
+# Renders the listing of public files
+sub list_public_tracks {
+	my $self = shift;
+	my $usertracks = $self->user_tracks;
+	my @public_tracks = $usertracks->get_public_files;
+	my $html = h1("Public Tracks");
+	$html .= $self->list_tracks("public", @public_tracks);
+	$html = div({-class => "public_tracks"}, $html);
+	return $html;
+}
+
+# List Custom Tracks (type) - Creates the HTML listing of a user's uploaded files ([uploads, imported, all]).
+sub list_custom_tracks {
     my $self = shift;
+    my $userdata = $self->user_tracks;
     my $type = shift;
-
-    my $userdata = $self->user_tracks();
-
-    my $imported = $type eq 'imported' ? 1 : 0;
-    my @tracks   = $userdata->tracks($imported);
-    my %modified = map {$_ => $userdata->modified($_) } @tracks;
     
+	# If we've requested just imported or just uploaded tracks, output those. If not, output all.
+	my @tracks;
+	if ($type eq "all") {
+		@tracks = $userdata->tracks(1);
+		push(@tracks, $userdata->tracks(0));
+	} else {
+		my $imported = ($type =~ /import/)? 1 : 0;
+	    @tracks = $userdata->tracks($imported);
+	}
+	return $self->list_tracks($type, @tracks);
+}
+
+# List Tracks - Renders a visual listing of an array of tracks.
+sub list_tracks {
+	my $self		 = shift;
+	my $listing_type = shift;
+	my @tracks		 = @_;
+	
+	my $userdata = $self->user_tracks;	
+    my %modified = map {$_ => $userdata->modified($_) } @tracks;
     @tracks      = sort @tracks;
-
-    my $count = 0;
-    my @rows = map {
-		my $name          = $_;
-		my $short_name    = $name;
-
+    my $short	 = ($listing_type =~ /public/)? 1 : 0;
+	
+	#Common elements from track roll
+	my $buttons = $self->data_source->globals->button_url;
+    my $share   = "$buttons/share.png";
+    my $delete  = "$buttons/trash.png";
+	my $toggle_details = a(	
+		{
+			-href	  => "javascript: void(0);",
+			-onClick => "this.up().next('div.details').toggle();"
+		 },
+		 "Toggle Details"
+	);
+	
+	# Main track roll code.
+	my $count = 0;
+    my @rows  = map {
+		my $name		= $_;
+		
+		#Set the background color
+		my ($background_color1, $background_color2, $accent_color1, $accent_color2);
+		my $track_type = ($userdata->is_imported($name) == 1)? "imported" : "uploaded";
+		$track_type = "public" if $listing_type =~ /public/;
+		if ($track_type =~ /upload/) {
+			$background_color1 = 'paleturquoise';
+			$background_color2 = 'lightblue';
+			$accent_color1 = '#8CBEBE';
+			$accent_color2 = '#8AADB8';
+		} elsif ($track_type =~ /import/) {
+			$background_color1 = 'palegreen';
+			$background_color2 = 'lightgreen';
+			$accent_color1 = '#7AC97A';
+			$accent_color2 = '#73BE73';
+		} elsif ($track_type =~ /public/) {
+			$background_color1 = '#AAAAAA';
+			$background_color2 = '#CCCCCC';
+			$accent_color1 = '#999999';
+			$accent_color2 = '#AAAAAA';
+		}
+		my $background_color = ($count % 2)? $background_color1 : $background_color2;
+		my $accent_color = ($count % 2)? $accent_color1 : $accent_color2;
+		$count++;
+		
+		#Set the visible name
+		my $short_name	= $name;
 		if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
 			my @tracks = split /\+/,$2;
 			$short_name = "Shared track from $1 (@tracks)";
 		} elsif (length $short_name > 40) {
 			$short_name       =~ s/^(.{40}).+/$1.../;
 		}
-
 		my @track_labels        = $userdata->labels($name);
 		my $track_labels        = join '+', map {CGI::escape($_)} @track_labels;
 
@@ -1408,47 +1493,46 @@ sub list_userdata {
 		my $random_id = 'upload_'.int rand(9999);
 
 		# Controls
-		my $buttons = $self->data_source->globals->button_url;
-	    my $share   = "$buttons/share.png";
-	    my $delete  = "$buttons/trash.png";
-		my $toggle_details = a({
-				-href	  => "#",
-				-onClick => "this.up().next('div.details').toggle();"
-			 },
-			 "Toggle Details"
-		);
-		my $trash_icon = img({
-				-src     	  => $delete,
-				-style  	  => 'cursor:pointer',
-				-onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
-				-onClick     => "deleteUploadTrack('$name')"
-			}
-		);
-		my $share_icon = img({
+		my $share_icon = img(
+			{
 				-src		  => $share,
 				-style   	  => 'cursor:pointer',
 				-onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
 				-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
 			}
 		);
-		
-		my $controls = div({
-				-class => "controls",
-				-style => "display: none; padding: 0.15em;"
-			},
-			$toggle_details.'&nbsp;',
-			$trash_icon.'&nbsp;',
-			($type eq 'uploaded')? $share_icon : ''
+		my $trash_icon = img(
+			{
+				-src     	  => $delete,
+				-style  	  => 'cursor:pointer',
+				-onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
+				-onClick     => "deleteUploadTrack('$name')"
+			}
 		);
-				 
+		
+		my $controls = $toggle_details.'&nbsp;';
+		if ($track_type !~ /public/) {
+			$controls .= $trash_icon.'&nbsp;';
+			$controls .= ($track_type =~ /upload/)? $share_icon : '';
+		}
+		$controls = div(
+			{
+				-class => "controls",
+				-style => "display: inline-block; padding: 0.15em;"
+			}, $controls
+		);
+		
 		# Short listing (Title, subtracks, etc.)
+		my $source_note = ($track_type !~ /public/)? span({-style => "float: right; font-size: 16pt; font-family: Helvetica, Arial, Verdana, sans-serif; color: " . $accent_color . ";"}, ($track_type =~ /import/)? "Imported" : "Uploaded") : "";
+		
 		my $go_there = join(' ',
 			map {
 				my $label = $_;
 				my $key   = $self->data_source->setting($label=>'key');
 				$key? (
 					'['.
-					a({
+					a(
+						{
 							-href    => 'javascript:void(0)',
 							-onClick => qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))
 						},
@@ -1457,20 +1541,10 @@ sub list_userdata {
 					']'
 				) : ''
 			} @track_labels);
-		my $stat = div({
-				-id => "${name}_stat"
-			}, ''
-		);
-		my $title = h1({
-				-style	=> "display: inline; font-size: 14pt;"
-			}, $short_name
-		);
+		my $stat = div({-id => "${name}_stat"}, '');
+		my $title = h1({-style	=> "display: inline; font-size: 14pt;"}, $short_name);
 		
-		my $short_listing = span({
-				-style => "display: inline-block; width: 45em;"
-			},
-			$stat, $title, $go_there
-		);
+		my $short_listing = span({-style => "display: inline-block; width: 45em;"}, $stat, $title, $go_there) . $source_note;
 				 
 		# Source file listing
 		my @source_files = $userdata->source_files($name);
@@ -1530,7 +1604,8 @@ sub list_userdata {
 				div({-id=>"${random_id}_form"},'&nbsp;'),
 				div({-id=>"${random_id}_status"},
 					i($status),
-					a({
+					a(
+						{
 							-href    =>'javascript:void(0)',
 				  			-onClick => "Controller.monitor_upload('$random_id','$name')",
 				 		},
@@ -1539,36 +1614,35 @@ sub list_userdata {
 				)
 			 ) : '';
 				 
-		my $details = div({
-				-style => "",
+		my $details = div(
+			{
+				-style => ($short == 1)? "display: none;" : "display: block;",
 				-class => "details"
 			},
 			i($description),
-			b({ -style => "margin-left: 4em;"},
-				'Source files:'
-			),
+			b({ -style => "margin-left: 4em;"},	'Source files:'),
 			$download_data,
 			$status_box,
 		);
 			
-		my $edit_field = div({
-				-id => "${name}_editfield"
-			}, ''
-		);	
+		my $edit_field = div({-id => "${name}_editfield"}, '');	
 		 
 		# And now the final track listing.
-		my $color = ($count++%2) ? 'paleturquoise': 'lightblue';
-		div({
-				-style		 => "background-color: $color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;",
-				-onmouseover => "this.down('div.controls').setStyle('display: inline-block;');",
-				-onmouseout	 => "this.down('div.controls').hide();"
-			}, $short_listing, $controls, $details, $edit_field
+		div(
+			{
+				-class	=> "custom_track",
+				-style	=> "background-color: $background_color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;"
+			},
+			$short_listing,
+			$controls,
+			$details,
+			$edit_field
 		);
     } @tracks;
     return join '', @rows;
 }
 
-#Userdata Import - Renders the "[Import a track URL]" link in the Imported Tracks section.
+# Userdata Import - Renders the "[Import a track URL]" link in the Imported Tracks section.
 sub userdata_import {
     my $self     = shift;
     my $html     = '';
@@ -1587,7 +1661,7 @@ sub userdata_import {
     return $html;
 }
 
-#Userdata Upload - Renders an "Add custom tracks" link in the Uploaded Tracks section.
+# Userdata Upload - Renders an "Add custom tracks" link in the Uploaded Tracks section.
 sub userdata_upload {
     my $self     = shift;
     my $url      = url(-absolute=>1,-path_info=>1);
@@ -1608,8 +1682,44 @@ sub userdata_upload {
 		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url','$upload_label','$remove_label' , 'upload','$help_link')",
 			  -id=>'file_adder',
 			 },"[$from_file]"));
-		       
+    return $html;
+}
 
+# Add User Data - Renders a link to add a custom track.
+sub add_userdata {
+	my $self = shift;
+	my $url      = url(-absolute=>1,-path_info=>1);
+
+    my $upload_label  = $self->tr('UPLOAD_FILE'); 												#;
+    my $remove_label  = $self->tr('REMOVE');													#;
+    my $new_label     = $self->tr('NEW_TRACK');													#;
+    my $from_text     = $self->tr('FROM_TEXT');													#;
+    my $from_file     = $self->tr('FROM_FILE');													#;
+    my $help_link     = $self->annotation_help;
+    my $import_prompt = $self->tr('REMOTE_URL');												#;
+    my $import_label  = $self->tr('IMPORT_TRACK');												#;
+	
+	my $html     = '';    
+    $html .= p({-style=>'margin-left:10pt;font-weight:bold'},
+		'Add custom track(s):',
+		a(
+			{-href=>"javascript:addAnUploadField('custom_list_start', '$url', '$new_label',   '$remove_label', 'edit','$help_link')"},
+			"[$from_text]"
+		),
+		a( {
+				-href=>"javascript:addAnUploadField('custom_list_start', '$url','$upload_label','$remove_label' , 'upload','$help_link')",
+				-id=>'file_adder',
+			},
+			"[$from_file]"
+		),
+		a( {
+				-href => "javascript:addAnUploadField('custom_list_start','$url','$import_prompt','$remove_label','import','$help_link')",
+				-id   => 'import_adder',
+			},
+			b("[$import_label]")
+		)
+	);
+	$html .= div({-id=>'custom_list_start'},'');
     return $html;
 }
 

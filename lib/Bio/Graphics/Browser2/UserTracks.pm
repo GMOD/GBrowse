@@ -45,7 +45,7 @@ sub source_files {
     my $self = shift;
     my $track = shift;
     my $path = File::Spec->catfile($self->track_path($track), $self->sources_dir_name);
-    $path = $self->trackname_from_url($path, 0) if ($self->is_imported($path) == 1);
+    $path = $self->trackname_from_url($path, 0) if ($self->is_imported($track) == 1);
     my @files;
     if (opendir my $dir, $path) {
 		while (my $f = readdir($dir)) {

@@ -632,12 +632,10 @@ sub render_header {
   my $header = CGI::header(
       -cache_control =>'no-cache',
       -cookie  => [$cookie1,$cookie2],
-      -charset => $self->tr('CHARSET'),
-      );
+      -charset => $self->tr('CHARSET'),															#,
+  );
   print $header;
 }
-
-																								#,
 
 sub state_cookie {
   my $self    = shift;

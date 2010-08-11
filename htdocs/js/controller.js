@@ -895,18 +895,18 @@ var GBrowseController = Class.create({
 		      Controller.update_sections(new Array(userdata_table_id,userimport_table_id))
 		      }
 	       });
-	  el.stopObserving('keypress');
-	  el.stopObserving('blur');
-	  el.blur();
-	  return true;
+		  el.stopObserving('keypress');
+		  el.stopObserving('blur');
+		  el.blur();
+		  return true;
       }
       if (event.keyCode==Event.KEY_ESC) {
           el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
-	  Controller.update_sections(new Array(userdata_table_id,userimport_table_id));
-	  el.stopObserving('keypress');
-	  el.stopObserving('blur');
-	  el.blur();
-	  return true;
+		  Controller.update_sections(new Array(userdata_table_id,userimport_table_id));
+		  el.stopObserving('keypress');
+		  el.stopObserving('blur');
+		  el.blur();
+		  return true;
       }
       return false;
   },

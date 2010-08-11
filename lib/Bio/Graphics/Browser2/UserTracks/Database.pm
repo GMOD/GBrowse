@@ -43,9 +43,9 @@ sub get_file_id{
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
     my $path = $uploadsdb->quote(shift);
-    my $uploadsid = shift // $self->{uploadsid};												#/
+    my $uploadsid = shift;
     
-    my $if_user = $uploadsid ? "userid = " . $uploadsdb->quote($uploadsid) . " AND " : "";
+    my $if_user = $uploadsid? "userid = " . $uploadsdb->quote($uploadsid) . " AND " : "";
     return $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE " . $if_user . "path = $path");
 }
 
@@ -67,7 +67,9 @@ sub get_owned_files {
 sub get_public_files {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT * FROM uploads WHERE sharing_policy = 'public' ORDER BY uploadid");
+    my $uploadsid = $self->{uploadsid};
+    $uploadsid = $uploadsdb->quote($uploadsid);
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'public' AND userid = $uploadsid ORDER BY uploadid");
     return @{$rows};
 }
 
@@ -220,7 +222,7 @@ sub is_imported {
 	my $track = shift;
 	my $uploadsdb = $self->{uploadsdb};
 	my $fileid = $self->get_file_id($track);
-	return $uploadsdb->selectrow_array("SELECT imported FROM uploads WHERE uploadid = '$fileid'");
+	return $uploadsdb->selectrow_array("SELECT imported FROM uploads WHERE uploadid = '$fileid'") || 0;
 }
 
 1;

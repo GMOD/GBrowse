@@ -1523,7 +1523,7 @@ sub list_tracks {
 		);
 		
 		# Short listing (Title, subtracks, etc.)
-		my $source_note = ($track_type !~ /public/)? span({-style => "float: right; font-size: 16pt; font-family: Helvetica, Arial, Verdana, sans-serif; color: " . $accent_color . ";"}, ($track_type =~ /import/)? "Imported" : "Uploaded") : "";
+		my $source_note = span({-style => "float: right; font-size: 16pt; font-family: Helvetica, Arial, Verdana, sans-serif; color: " . $accent_color . ";"}, (($track_type !~ /public/)? ($track_type =~ /import/)? "Imported" : "Uploaded") : "Public");
 		
 		my $go_there = join(' ',
 			map {

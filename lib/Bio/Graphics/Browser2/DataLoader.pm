@@ -50,6 +50,7 @@ sub setting {
     my $option = shift;
     $self->settings->global_setting($option);
 }
+sub globals { shift->settings->globals }
 sub busy_path {
     my $self = shift;
     return File::Spec->catfile($self->data_path,
@@ -342,7 +343,7 @@ sub category {
 
 sub backend {
     my $self = shift;
-    my $backend   = $self->setting('userdb_adaptor');
+    my $backend   = $self->globals->upload_db_adaptor;
     $backend = $self->guess_backend if $backend && $backend eq 'auto';
     unless ($backend) {
 	$backend = $self->guess_backend;
@@ -374,8 +375,12 @@ sub create_database {
     my $backend   = $self->backend;
 
     if ($backend eq 'DBI::mysql') {
+	my $globals    = $self->settings->globals;
 	my $db_name    = 'userdata_'.md5_hex($data_path);
 	$data_path     = $db_name;
+	$db_name      .= ";host=".$globals->upload_db_host;
+	$db_name      .= ";user=".$globals->upload_db_user;
+	$db_name      .= ";password=".$globals->upload_db_pass;
 	$self->dsn($db_name);
 	my $mysql_admin = $self->mysql_admin;
 
@@ -391,8 +396,8 @@ END
 	    or die DBI->errstr,".\n",$mysql_usage;
 	$dbh->do("drop database if exists `$data_path`");
 	$dbh->do("create database `$data_path`")
-	    or die "Could not create $data_path:",DBI->errstr,".\n",$mysql_usage,;
-		 
+	    or die "Could not create $data_path:",DBI->errstr,".\n",$mysql_usage;
+	
     } elsif ($backend eq 'DBI::SQLite') {
 	$self->dsn(File::Spec->catfile($data_path,'index.SQLite'));
     } else {
@@ -423,6 +428,7 @@ sub drop_databases {
 	my $mysql_admin  = $self->mysql_admin;
 	my $dbh = DBI->connect($mysql_admin)
 	    or die DBI->errstr;
+	$dsn =~ s/;.+$//;
 	$dbh->do("drop database `$dsn`")
 	    or die "Could not drop $dsn:",DBI->errstr;
     }
@@ -430,9 +436,10 @@ sub drop_databases {
 
 sub mysql_admin {
     my $self = shift;
-    my $db_host    = $self->setting('userdb_host') || 'localhost';
-    my $db_user    = $self->setting('userdb_user') || '';
-    my $db_pass    = $self->setting('userdb_pass') || '';
+    my $globals    = $self->globals;
+    my $db_host    = $globals->upload_db_host;
+    my $db_user    = $globals->upload_db_user;
+    my $db_pass    = $globals->upload_db_pass;
     eval "require DBI" unless DBI->can('connect');
     my $dsn        = 'DBI:mysql:';
     my @options;

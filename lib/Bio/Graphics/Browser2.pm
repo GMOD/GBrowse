@@ -239,6 +239,24 @@ sub openid_secret {
     return GBrowse::ConfigData->config('OpenIDConsumerSecret')
 }
 
+# uploads
+sub upload_db_adaptor {
+    my $self = shift;
+    return $self->setting(general=>'upload_db_adaptor') || $self->setting(general=>'userdb_adaptor');
+}
+sub upload_db_host {
+    my $self = shift;
+    return $self->setting(general=>'upload_db_host') || $self->setting(general=>'userdb_host') || 'localhost'
+}
+sub upload_db_user {
+    my $self = shift;
+    return $self->setting(general=>'upload_db_user') || $self->setting(general=>'userdb_user') || '';
+}
+sub upload_db_pass {
+    my $self = shift;
+    return $self->setting(general=>'upload_db_pass') || $self->setting(general=>'userdb_pass') || '';
+}
+
 sub session_driver {
     my $self = shift;
     my $driver = $self->setting(general=>'session driver');

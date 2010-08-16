@@ -12,6 +12,8 @@
      * Added CORS capabilities to DAS server so that javascript clients don't have to use a proxy.
      * Precompile glyphs used in each datasource in parent process so that each child doesn't have to
        recompile them.
+     * Renamed all the "userdb*" options to "upload_db_*" to avoid confusion with user_account_db.
+     * Fixed uploaded tracks mysql backend so that server logs in with correct username and password.
 
 2.13
      * Fixed SAM file processing so as not to die on first line of SAM @SQ header.

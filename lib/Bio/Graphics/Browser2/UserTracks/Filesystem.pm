@@ -31,14 +31,14 @@ sub _new {
 		config   => $config,
 		state    => $state,
 		language => $lang,
-		upload     => $uploadid,
+		uploadid => $uploadid,
 		globals	 => $globals,
 		session	 => $session
     }, ref $class || $class;
 }
 
-# Get Owned Files (User) - Returns an array of the paths of files owned by a user.
-sub get_owned_files {
+# Get Uploaded Files (User) - Returns an array of the paths of files owned by a user.
+sub get_uploaded_files {
     my $self = shift;
     my $path = shift;
 	return unless $self->{uploadid};
@@ -95,7 +95,7 @@ sub delete_file {
     rmtree($self->track_path($track_name));
 }
 
-# Created (Track) - Returns creation date of $track.
+# Created (File) - Returns creation date of $track.
 sub created {
     my $self  = shift;
     my $track = shift;
@@ -104,14 +104,14 @@ sub created {
     return (stat($conf))[10];
 }
 
-# Modified (Track) - Returns date modified of $track.
+# Modified (File) - Returns date modified of $track.
 sub modified {
     my $self  = shift;
     my $track = shift;
     return ($self->conf_metadata($track))[1];
 }
 
-# Description (Track[, Description]) - Returns a file's description, or changes the current description if defined.
+# Description (File[, Description]) - Returns a file's description, or changes the current description if defined.
 sub description {
     my $self  = shift;
     my $track = shift;
@@ -129,12 +129,20 @@ sub description {
     }
 }
 
-# Is Imported (Track) - Returns 1 if an already-added track is imported, 0 if not.
+# Is Imported (File) - Returns 1 if an already-added track is imported, 0 if not.
 sub is_imported {
 	my $self = shift;
 	my $track = shift;
 	my $path = $self->path;
 	return (-e File::Spec->catfile($path, $track, $self->imported_file_name)) || 0;
 }
+
+# File Type (File[, User]) - Returns the type of a specified track, in relation to the (optionally specified) user.
+sub file_type {
+	my $self = shift;
+	my $track = shift;
+	return $self->is_imported($track)? "imported" : "uploaded";
+}
+
 
 1;

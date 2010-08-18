@@ -10,9 +10,10 @@ use Bio::Graphics::Karyotype;
 use Bio::Graphics::Browser2::Util qw[citation url_label segment_str];
 use JSON;
 use Digest::MD5 'md5_hex';
-use Carp 'croak';
+use Carp 'croak', 'cluck';
 use CGI qw(:standard escape start_table end_table);
 use Text::Tabs;
+use Data::Dumper;
 
 use constant JS    => '/gbrowse2/js';
 use constant ANNOTATION_EDIT_ROWS => 25;
@@ -1327,17 +1328,20 @@ sub render_select_browser_link {
 # Render Upload & Share Section - Returns the content of the "Uploads and Shared Tracks" tab.
 sub render_upload_share_section {
     my $self = shift;
+    my $globals = $self->globals;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, 'Admin mode: Uploaded tracks are public') : ""; # BUG: this is HTML - should not be here!!!
-	$html .= $self->render_custom_track_listing;
+	$html .= $self->render_added_track_listing;
+	if ($globals->user_accounts == 1) {
+		$html .= $self->render_available_track_listing;
+	}
 	$html = div($html);
 	return $html;
 }
 
-# Render Custom Track Listing - Returns the HTML listing of public, uploaded & imported tracks.
-sub render_custom_track_listing {
+# Render Added Track Listing - Returns the HTML listing of public, uploaded, imported and shared tracks added to a session, and a section to add more.
+sub render_added_track_listing {
 	my $self = shift;
-	my $html = h1("Custom Tracks");
-	my $globals = $self->globals;
+	my $html = h1("Added Tracks");
 	
 	$html .= a( {
 					-href => $self->annotation_help.'#remote',
@@ -1345,291 +1349,43 @@ sub render_custom_track_listing {
 				},
 				i('['.$self->tr('HELP_FORMAT_IMPORT').']')										#.
 			);
-	$html .= $self->list_custom_tracks("all", 1);
+	$html .= $self->list_tracks;
 	$html .= $self->add_userdata;
-	if ($globals->user_accounts == 1) {
-		$html .= $self->list_public_tracks;
-	}
-	$html = div($html);
+	$html = div({-id => "added_tracks"}, $html);
 	return $html;
 }
 
-# Renders the "Uploaded Tracks" table, with the title & help link
-sub render_toggle_userdata_table {
-    my $self = shift;
-    return div(
-	h2({-style=>'margin: 0px 0px 0px 0px;padding:5px 0px 5px 0px'},$self->tr('UPLOADED_TRACKS')),#,
-	a({-href=>$self->annotation_help,-target=>'_blank'},
-	  i('['.$self->tr('HELP_FORMAT_UPLOAD').']')),												#.
-	$self->render_userdata_table(),
-	$self->userdata_upload(),
-	);
-}
-
-# Renders the "Imported Tracks" table, with the title & help link
-sub render_toggle_import_table {
-    my $self = shift;
-    return h2($self->tr('IMPORTED_TRACKS')).													#.
-	a({-href=>$self->annotation_help.'#remote',-target=>'_blank'},
-	  i('['.$self->tr('HELP_FORMAT_IMPORT').']')).
-	div($self->render_userimport_table(),
-	    $self->userdata_import()
-	);
-}
-
-# Renders the container holding the "Uploaded Tracks" listing
-sub render_userdata_table {
-    my $self = shift;
-    my $html = div( {
-    	-id		=> 'userdata_table_div',
-    	-class	=> 'uploadbody',
-    	}, scalar $self->list_custom_tracks('uploaded')
-    );
-    return $html;
-}
-
-# Renders the container holding the "Imported Tracks" table
-sub render_userimport_table {
-    my $self = shift;
-    my $html = div( { -id => 'userimport_table_div',-class=>'uploadbody' },
-		$self->list_custom_tracks('imported'),
-	);
-    return $html;
-}
-
-# Renders the listing of public files
-sub list_public_tracks {
+# Render Public Track Listing - Returns the HTML listing of public & shared tracks available to a user.
+sub render_available_track_listing {
 	my $self = shift;
-	my $usertracks = $self->user_tracks;
-	my @public_tracks = $usertracks->get_public_files;
-	my $html = h1("Public Tracks");
-	$html .= $self->list_tracks("public", @public_tracks);
-	$html = div({-class => "public_tracks"}, $html);
+	my $html = h1("Available Tracks");
+	$html .= $self->list_tracks("public");
+	$html = div({-id => "available_tracks"}, $html);
 	return $html;
 }
 
-# List Custom Tracks (type) - Creates the HTML listing of a user's uploaded files ([uploads, imported, all]).
-sub list_custom_tracks {
-    my $self = shift;
-    my $userdata = $self->user_tracks;
-    my $type = shift;
-    
-	# If we've requested just imported or just uploaded tracks, output those. If not, output all.
-	my @tracks;
-	if ($type eq "all") {
-		@tracks = $userdata->tracks(1);
-		push(@tracks, $userdata->tracks(0));
-	} else {
-		my $imported = ($type =~ /import/)? 1 : 0;
-	    @tracks = $userdata->tracks($imported);
-	}
-	return $self->list_tracks($type, @tracks);
-}
-
-# List Tracks - Renders a visual listing of an array of tracks.
+# List Tracks - Renders a visual listing of an array of tracks. No arguments creates the standard "my tracks" listing.
 sub list_tracks {
-	my $self		 = shift;
-	my $listing_type = shift;
-	my @tracks		 = @_;
-	
-	my $userdata = $self->user_tracks;	
-    my %modified = map {$_ => $userdata->modified($_) } @tracks;
-    @tracks      = sort @tracks;
-    my $short	 = ($listing_type =~ /public/)? 1 : 0;
-	
-	#Common elements from track roll
-	my $buttons = $self->data_source->globals->button_url;
-    my $share   = "$buttons/share.png";
-    my $delete  = "$buttons/trash.png";
-	my $toggle_details = a(	
-		{
-			-href	  => "javascript: void(0);",
-			-onClick => "this.up().next('div.details').toggle();"
-		 },
-		 "Toggle Details"
-	);
+	my $self = shift;
+	my $globals	= $self->globals;
+	my $userdata = $self->user_tracks;
+	my $listing_type = shift // "";																#/
+	my @tracks = sort(($listing_type =~ /public/)? $userdata->get_public_files : shift // $userdata->tracks);		#/
 	
 	# Main track roll code.
 	my $count = 0;
-    my @rows  = map {
-		my $name		= $_;
+    my @rows = map {
+		my $name = $_;
+		my $type = $listing_type || $userdata->file_type($name);
 		
-		#Set the background color
-		my ($background_color1, $background_color2, $accent_color1, $accent_color2);
-		my $track_type = ($userdata->is_imported($name) == 1)? "imported" : "uploaded";
-		$track_type = "public" if $listing_type =~ /public/;
-		if ($track_type =~ /upload/) {
-			$background_color1 = 'paleturquoise';
-			$background_color2 = 'lightblue';
-			$accent_color1 = '#8CBEBE';
-			$accent_color2 = '#8AADB8';
-		} elsif ($track_type =~ /import/) {
-			$background_color1 = 'palegreen';
-			$background_color2 = 'lightgreen';
-			$accent_color1 = '#7AC97A';
-			$accent_color2 = '#73BE73';
-		} elsif ($track_type =~ /public/) {
-			$background_color1 = '#AAAAAA';
-			$background_color2 = '#CCCCCC';
-			$accent_color1 = '#999999';
-			$accent_color2 = '#AAAAAA';
-		}
-		my $background_color = ($count % 2)? $background_color1 : $background_color2;
-		my $accent_color = ($count % 2)? $accent_color1 : $accent_color2;
+		my ($background_color, $accent_color) = $self->track_listing_colors($count, $type);
+		my $controls = $self->render_track_controls($name, $type);
+		my $short_listing = $self->render_track_list_title($name, $type, $accent_color);
+		my $details = $self->render_track_details($name, $listing_type);
+		my $edit_field = div({-id => $name . "_editfield"}, '');
 		$count++;
-		
-		#Set the visible name
-		my $short_name	= $name;
-		if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
-			my @tracks = split /\+/,$2;
-			$short_name = "Shared track from $1 (@tracks)";
-		} elsif (length $short_name > 40) {
-			$short_name       =~ s/^(.{40}).+/$1.../;
-		}
-		my @track_labels        = $userdata->labels($name);
-		my $track_labels        = join '+', map {CGI::escape($_)} @track_labels;
-
-		my $status    = $userdata->status($name) || 'complete';
-		my $random_id = 'upload_'.int rand(9999);
-
-		# Controls
-		my $share_icon = img(
-			{
-				-src		  => $share,
-				-style   	  => 'cursor:pointer',
-				-onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
-				-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
-			}
-		);
-		my $trash_icon = img(
-			{
-				-src     	  => $delete,
-				-style  	  => 'cursor:pointer',
-				-onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
-				-onClick     => "deleteUploadTrack('$name')"
-			}
-		);
-		
-		my $controls = $toggle_details.'&nbsp;';
-		if ($track_type !~ /public/) {
-			$controls .= $trash_icon.'&nbsp;';
-			$controls .= ($track_type =~ /upload/)? $share_icon : '';
-		}
-		$controls = div(
-			{
-				-class => "controls",
-				-style => "display: inline-block; padding: 0.15em;"
-			}, $controls
-		);
-		
-		# Short listing (Title, subtracks, etc.)
-		my $source_note = span({-style => "float: right; font-size: 16pt; font-family: Helvetica, Arial, Verdana, sans-serif; color: " . $accent_color . ";"}, (($track_type !~ /public/)? ($track_type =~ /import/)? "Imported" : "Uploaded") : "Public");
-		
-		my $go_there = join(' ',
-			map {
-				my $label = $_;
-				my $key   = $self->data_source->setting($label=>'key');
-				$key? (
-					'['.
-					a(
-						{
-							-href    => 'javascript:void(0)',
-							-onClick => qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))
-						},
-						b($key)
-					).
-					']'
-				) : ''
-			} @track_labels);
-		my $stat = div({-id => "${name}_stat"}, '');
-		my $title = h1({-style	=> "display: inline; font-size: 14pt;"}, $short_name);
-		
-		my $short_listing = span({-style => "display: inline-block; width: 45em;"}, $stat, $title, $go_there) . $source_note;
-				 
-		# Source file listing
-		my @source_files = $userdata->source_files($name);
-		my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($name);
-		my $download_data = ul({
-				-style => "margin: 0; margin-left: 4em; padding: 0; list-style: none;"
-			},
-			li(
-				[map {
-					a( {
-							-href => "?userdata_download=$_->[0];track=$name",
-							-style	=> "display: inline-block; width: 15em;"
-						},
-							$_->[0]
-					).
-					span({-style => "display: inline-block; width: 15em;"}, scalar localtime($_->[2])).
-					span({-style => "display: inline-block; width: 10em;"}, $_->[1],'bytes').
-					span(
-						($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3])?
-						a( {
-								-href    => "javascript:void(0)",
-								-onClick => "editUploadData('$name','$_->[0]')"
-							},
-							'[edit]'
-						)
-					: '&nbsp;'
-					)
-				} @source_files]
-			),
-			li(
-				a({
-						-href	=> "?userdata_download=conf;track=$name",
-						-style	=> "display: inline-block; width: 15em;"
-					},
-					$self->tr('CONFIGURATION')													##
-				).
-				span({-style => "display: inline-block; width: 15em;"}, scalar localtime $conf_modified).
-				span({-style => "display: inline-block; width: 10em;"}, "$conf_size bytes").
-				a({
-						-href    => "javascript:void(0)",
-						-onClick => "editUploadConf('$name')"
-					}, '[edit]'
-				)
-			)
-		);
-		
-		# Details Section
-		my $description = div(
-			{
-				-id              => "${name}_description",
-				-onClick         => "Controller.edit_upload_description('$name',this)",
-				-contentEditable => 'true',
-			}, $userdata->description($_) || $self->tr('ADD_DESCRIPTION')						##
-		);
-		my $status_box = ($status !~ /complete/)?
-			div(
-				div({-id=>"${random_id}_form"},'&nbsp;'),
-				div({-id=>"${random_id}_status"},
-					i($status),
-					a(
-						{
-							-href    =>'javascript:void(0)',
-				  			-onClick => "Controller.monitor_upload('$random_id','$name')",
-				 		},
-				 		'Interrupted [Resume]'
-				 	)
-				)
-			 ) : '';
-				 
-		my $details = div(
-			{
-				-style => ($short == 1)? "display: none;" : "display: block;",
-				-class => "details"
-			},
-			i($description),
-			b({ -style => "margin-left: 4em;"},	'Source files:'),
-			$download_data,
-			$status_box,
-		);
-			
-		my $edit_field = div({-id => "${name}_editfield"}, '');	
-		 
 		# And now the final track listing.
-		div(
-			{
+		div( {
 				-class	=> "custom_track",
 				-style	=> "background-color: $background_color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;"
 			},
@@ -1640,6 +1396,281 @@ sub list_tracks {
 		);
     } @tracks;
     return join '', @rows;
+}
+
+# Track Listing Colors (Count, Type) - Returns the accent & background color for the track listing of the specified type & count.
+sub track_listing_colors {
+	my $self = shift;
+	my $count = shift;
+	my $type = shift;
+	my ($background_color1, $background_color2, $accent_color1, $accent_color2);
+	if ($type =~ /upload/) {
+		$background_color1 = 'paleturquoise';
+		$background_color2 = 'lightblue';
+		$accent_color1 = '#8CBEBE';
+		$accent_color2 = '#8AADB8';
+	} elsif ($type =~ /import/) {
+		$background_color1 = 'palegreen';
+		$background_color2 = 'lightgreen';
+		$accent_color1 = '#7AC97A';
+		$accent_color2 = '#73BE73';
+	} elsif ($type =~ /public/) {
+		$background_color1 = '#AAAAAA';
+		$background_color2 = '#CCCCCC';
+		$accent_color1 = '#999999';
+		$accent_color2 = '#AAAAAA';
+	} elsif ($type =~ /shared/) {
+		$background_color1 = '#FFFF55';
+		$background_color2 = '#FFFF77';
+		$accent_color1 = '#CCCC44';
+		$accent_color2 = '#CCCC5F';
+	}
+	my $background_color = ($count % 2)? $background_color1 : $background_color2;
+	my $accent_color = ($count % 2)? $accent_color1 : $accent_color2;
+	return ($background_color, $accent_color);
+}
+
+# Render Track List Title (Track, Type, Accent Color) - Renders the visible HTML which is seen when the details are hidden.
+sub render_track_list_title {
+	my $self = shift;
+	my $track = shift;
+	my $type = shift;
+	my $accent_color = shift;
+	my $userdata = $self->user_tracks();
+	
+	my $short_name = $track;
+	if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
+		my @tracks = split /\+/, $2;
+		$short_name = "Shared track from $1 (@tracks)";
+	} elsif (length $short_name > 40) {
+		$short_name =~ s/^(.{40}).+/$1.../;
+	}
+	my @track_labels = $userdata->labels($track);
+	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
+	my $source_note = span({-style => "float: right; font-size: 16pt; font-family: Helvetica, Arial, Verdana, sans-serif; color: " . $accent_color . ";"}, $type);
+	my $go_there = join(' ',
+		map {
+			my $label = $_;
+			my $key   = $self->data_source->setting($label=>'key');
+			$key? (
+				'['.
+				a( {
+						-href    => 'javascript:void(0)',
+						-onClick => qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))
+					},
+					b($key)
+				).
+				']'
+			) : ''
+		} @track_labels);
+	my $stat = div(
+		{
+			-id => $track . "_stat",
+			-style=> "display: inline;"
+		},
+		''
+	);
+	my $title = h1({-style	=> "display: inline; font-size: 14pt;"}, $short_name);
+	
+	return span(
+		{-style => "display: inline-block; width: 45em;"},
+		$stat,
+		$title,
+		$go_there
+	) . $source_note;
+}
+
+# Render Track Controls (Track Name[, Type]) - Renders the HTML for the main track controls in the added track listing.
+sub render_track_controls {
+	my $self = shift;
+	my $track = shift;
+	my $type = shift;
+	my $userdata = $self->user_tracks();
+	my @track_labels = $userdata->labels($track);
+	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
+	
+	my $buttons = $self->data_source->globals->button_url;
+    my $share = "$buttons/share.png";
+    my $delete = "$buttons/trash.png";
+	my $toggle_details = a(	
+		{
+			-href	  => "javascript: void(0);",
+			-onClick => "this.up().next('div.details').toggle();"
+		 },
+		 "Toggle Details"
+	);
+	
+	my $share_icon = img(
+		{
+			-src		  => $share,
+			-style   	  => 'cursor:pointer',
+			-onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
+			-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
+		}
+	);
+	my $delete_action = ($type =~ /(public|shared)/)? "removeSharedTrack('$track')" : "deleteUploadTrack('$track', )";
+	my $trash_icon = img(
+		{
+			-src     	 => $delete,
+			-style  	 => 'cursor:pointer',
+			-onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
+			-onClick     => $delete_action
+		}
+	);
+	
+	my $controls = $toggle_details.'&nbsp;';
+	if ($type !~ /public/) {
+		$controls .= $trash_icon.'&nbsp;';
+		$controls .= (($type =~ /upload/)? $share_icon . '&nbsp;' : '' );
+	} else {
+		$controls .= a(
+			{
+				-href	 => "javascript:void(0);",
+				-onClick => "addSharedTrack('$track')"
+			},
+			"Add"
+		) unless ($userdata->is_mine($track) == 1);
+	}
+	return div(
+		{
+			-class => "controls",
+			-style => "display: inline-block; padding: 0.15em;"
+		}, $controls
+	);
+}
+
+# Render Track Details (Track Name[, Listing Type]) - Renders the track listing details section.
+sub render_track_details {
+	my $self = shift;
+	my $track = shift;
+	my $listing_type = shift // "";																#/
+	my $userdata = $self->user_tracks;
+	my $globals	= $self->globals;
+	my $random_id = 'upload_'.int rand(9999);
+	
+	my $description = div(
+		{
+			-id              => $track . "_description",
+			-onClick         => ($userdata->is_mine($track))? "Controller.edit_upload_description('$track',this)" : "",
+			-contentEditable => ($userdata->is_mine($track))? 'true' : 'false',
+		},
+		$userdata->description($track) || $self->tr('ADD_DESCRIPTION')							##
+	);
+	my $source_listing = div(
+		{-style => "margin-left: 2em; display: inline-block;"},
+		$self->render_track_source_files($track)
+	);
+	my $sharing = ($globals->user_accounts == 1)? div(
+		{-style => "margin-left: 2em; display: inline-block;"},
+		$self->render_track_sharing($track)
+	) : "";
+	
+	my $status    = $userdata->status($track) || 'complete';
+	my $status_box = div(
+			div({-id=>"${random_id}_form"},'&nbsp;'),
+			div({-id=>"${random_id}_status"},
+				i($status),
+				a(
+					{
+						-href    =>'javascript:void(0)',
+			  			-onClick => "Controller.monitor_upload('$random_id','$track')",
+			 		},
+			 		'Interrupted [Resume]'
+			 	)
+			)
+		 ) unless ($status =~ /complete/);
+			 
+	return div(
+		{
+			-style => ($listing_type =~ /public/)? "display: none;" : "display: block;",
+			-class => "details"
+		},
+		i($description),
+		$source_listing,
+		$sharing,
+		$status_box
+	);
+}
+
+# Render Track Source Files (Track) - Renders the HTML listing of a track's source files.
+sub render_track_source_files {
+	my $self = shift;
+	my $track = shift;
+	my $userdata = $self->user_tracks();
+	my @source_files = $userdata->source_files($track);
+	my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($track);
+	my $source_listing =
+		b('Source files:') .
+		ul(
+			{-style => "margin: 0; padding: 0; list-style: none;"},
+			li(
+				[map {
+					a( {
+							-href => "?userdata_download=$_->[0];track=$track",
+							-style	=> "display: inline-block; width: 15em;"
+						},
+							$_->[0]
+					).
+					span({-style => "display: inline-block; width: 15em;"}, scalar localtime($_->[2])).
+					span({-style => "display: inline-block; width: 10em;"}, $_->[1],'bytes').
+					span(
+						($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3])?
+						a( {
+								-href    => "javascript:void(0)",
+								-onClick => "editUploadData('$track','$_->[0]')"
+							},
+							'[edit]'
+						)
+					: '&nbsp;'
+					)
+				} @source_files]
+			),
+			li(
+				a( {
+						-href	=> "?userdata_download=conf;track=$track",
+						-style	=> "display: inline-block; width: 15em;"
+					},
+					$self->tr('CONFIGURATION')													##
+				).
+				span({-style => "display: inline-block; width: 15em;"}, scalar localtime $conf_modified).
+				span({-style => "display: inline-block; width: 10em;"}, "$conf_size bytes").
+				a({
+						-href    => "javascript:void(0)",
+						-onClick => "editUploadConf('$track')"
+					}, '[edit]'
+				)
+			)
+		);
+	return $source_listing;
+}
+
+# Render Track Sharing (Track) - Renders the HTML listing of a track's sharing properties.
+sub render_track_sharing {
+	my $self = shift;
+	my $track = shift;
+	my $userdata = $self->user_tracks();
+	
+	my $sharing_policy = $userdata->permissions($track);
+	my $users = join (",", $userdata->shared_with($track));
+	my $sharing_content = 
+		b("Sharing:").
+		br().
+		"Track is ";
+	if ($userdata->is_mine($track) == 0) {
+		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? b("shared") . " with you." : b("public") . ".";
+	} else {
+		$sharing_content .= Select(
+			{-onChange => "changePermissions('$track', this.options[this.selectedIndex].value.toLowerCase())"},
+			map {
+				option(
+					($sharing_policy =~ /$_/i)? {-selected => "selected"} : "",
+					"$_"
+				)
+			} qw(Private Casual Group Public)
+		);
+		$sharing_content .= " shared with " .  ($users? "$users" : "no one.") if ($sharing_policy =~ /(casual|group)/);
+	}
+	return $sharing_content;
 }
 
 # Userdata Import - Renders the "[Import a track URL]" link in the Imported Tracks section.
@@ -2002,8 +2033,8 @@ sub wrap_track_in_track_div {
     my $track_name    = $args{'track_name'};
     my $track_html    = $args{'track_html'};
 
-    # track_type used in register_track() javascript method
-    my $track_type = $args{'track_type'} || 'standard';
+    # type used in register_track() javascript method
+    my $type = $args{'type'} || 'standard';
 
     my $section = $self->get_section_from_label($track_id);
     my $class   = $track_id =~ /scale/i ? 'scale' : 'track';
@@ -2017,7 +2048,7 @@ sub wrap_track_in_track_div {
         . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("]
 	. $track_id   . q[", "]
         . $track_name . q[", "]
-        . $track_type . q[", "]
+        . $type . q[", "]
         . $section
         . q[");</script>];
 }

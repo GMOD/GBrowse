@@ -118,19 +118,18 @@ sub conf_metadata {
     return ($name,(stat($conf))[9,7]);
 }
 
-# Tracks - Returns an array of filenames representing a user's uploaded tracks (or imported tracks, if "imported" is defined).
+# Tracks - Returns an array of paths to a user's tracks.
 sub tracks {
-    my $self     = shift;
-    my $path     = $self->path;
-    my $imported = shift;
+    my $self = shift;
     my $userdb = $self->{userdb};
-    my $username = $self->{username};
+    my $globals = $self->{globals};
 	
-	if ($imported) {
-		return $self->get_imported_files();
-    } else {
-    	return $self->get_owned_files();
-    }
+	my @tracks;
+	push (@tracks, $self->get_uploaded_files, $self->get_imported_files);
+	if ($globals->user_accounts == 1) {
+		push (@tracks, $self->get_added_public_files, $self->get_shared_files);
+	}
+	return @tracks;
 }
 
 # Max filename - Returns the maximum possible length for a file name.
@@ -593,12 +592,13 @@ END
 }
 
 # These methods are replaced by methods in Filesystem.pm and Database.pm
+# Many of these functions are called asynchronously, if you want to connect an AJAX call to one of these functions add a hook in Action.pm
 sub modified { warn "modified() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
 sub created { warn "created() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
 sub description { warn "description() File::Spechas been called without properly inheriting Filesystem.pm or Datbase.pm"; }
 sub add_file { warn "add_file() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
 sub delete_file { warn "delete_file() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
-sub get_owned_files { warn "get_owned_files() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
+sub get_uploaded_files { warn "get_uploaded_files() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
 sub get_imported_files { warn "get_imported_files() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
 
 package Bio::Graphics::Browser2::UserConf;

@@ -395,13 +395,11 @@ sub background_track_render {
             cache_extra     => $cache_extra,
             external_tracks => $external
             );
-    }
-    else{
+    } else {
         $display_details = 0;
         $details_msg = h1(
 	    br(),
-            $self->tr(
-																				            	#}}}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
+            $self->tr(															            	#}}}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label($self->get_max_segment),
             )
@@ -574,8 +572,7 @@ sub background_individual_track_render {
     {
         $display_details = 0;
         $details_msg     = h1(
-            $self->tr(
-																					            #)
+            $self->tr(																            #)
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label(MAX_SEGMENT),
             )
@@ -2457,14 +2454,8 @@ sub asynchronous_update_sections {
     }
 
     # New Uploaded Data Section
-    if ( $handle_section_name{'userdata_table_div'}) {
-	$return_object->{'userdata_table_div'}
-	    = $self->render_userdata_table();
-    }
-
-    if ( $handle_section_name{'userimport_table_div'}) {
-	$return_object->{'userimport_table_div'}
-	    = $self->render_userimport_table();
+    if ( $handle_section_name{'added_tracks'}) {
+	$return_object->{'added_tracks'} = $self->render_added_track_listing();
     }
 
     # Handle Remaining and Undefined Sections

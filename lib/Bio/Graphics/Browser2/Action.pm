@@ -102,8 +102,7 @@ sub ACTION_update_sections {
     my $render  = $self->render;
     my @section_names = $q->param('section_names');
 
-    my $section_html
-	= $render->asynchronous_update_sections( \@section_names );
+    my $section_html = $render->asynchronous_update_sections( \@section_names );
 
     my $return_object = { section_html => $section_html, };
     return ( 200, 'application/json', $return_object );
@@ -419,7 +418,7 @@ sub ACTION_upload_file {
 				 tracks    => $tracks ,
 				 uploadName=> $name,
                                };
-    return (200,'text/html',JSON::to_json($return_object));  # workaround
+    return (200, 'text/html', JSON::to_json($return_object));  # workaround
 }
 
 sub ACTION_import_track {
@@ -515,7 +514,6 @@ sub ACTION_cancel_upload {
     } else {
 	return (200,'text/html','<div class="error"><i>Not found</i></div>');
     }
-    
 }
 
 sub ACTION_set_upload_description {
@@ -530,6 +528,64 @@ sub ACTION_set_upload_description {
     my $usertracks = $render->user_tracks;
     $usertracks->description($upload_name, $upload_desc);
     return (204,'text/plain',undef);
+}
+
+sub ACTION_add_shared_track {
+	my $self = shift;
+	my $q = shift;
+	my $render = $self->render;
+    my $track = $q->param('track') or croak;
+
+    my $usertracks = $render->user_tracks;
+    $usertracks->add_shared_track($track);
+    return (204, 'text/plain', undef);
+}
+
+sub ACTION_remove_shared_track {
+	my $self = shift;
+	my $q = shift;
+	my $render = $self->render;
+    my $track = $q->param('track') or croak;
+
+    my $usertracks = $render->user_tracks;
+    $usertracks->remove_shared_track($track);
+    return (204, 'text/plain', undef);
+}
+
+sub ACTION_share_track {
+	my $self = shift;
+	my $q = shift;
+	my $render = $self->render;
+    my $track = $q->param('track') or croak;
+    my $uploadsid = $q->param('uploadsid') or croak;
+
+    my $usertracks = $render->user_tracks;
+    $usertracks->add_shared_track($track, $uploadsid);
+    return (204, 'text/plain', undef);	
+}
+
+sub ACTION_unshare_track {
+	my $self = shift;
+	my $q = shift;
+	my $render = $self->render;
+    my $track = $q->param('track') or croak;
+    my $uploadsid = $q->param('uploadsid') or croak;
+
+    my $usertracks = $render->user_tracks;
+    $usertracks->add_shared_track($track, $uploadsid);
+    return (204, 'text/plain', undef);	
+}
+
+sub ACTION_change_permissions {
+	my $self = shift;
+	my $q = shift;
+	my $render = $self->render;
+    my $track = $q->param('file') or croak;
+    my $new_permissions = $q->param('sharing_policy') or croak;
+
+    my $usertracks = $render->user_tracks;
+    $usertracks->permissions($track, $new_permissions);
+    return (204, 'text/plain', undef);	
 }
 
 sub ACTION_modifyUserData {

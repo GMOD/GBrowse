@@ -33,6 +33,8 @@ var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
 var userdata_table_id       = 'userdata_table_div';
 var userimport_table_id     = 'userimport_table_div';
+var added_tracks_id			= 'added_tracks';
+var public_tracks_id		= 'public_tracks';
 
 //  Sorta Constants
 var expired_limit  = 1;
@@ -879,36 +881,36 @@ var GBrowseController = Class.create({
 
   set_upload_description:
   function(event) {
-      var el = event.findElement();
-      if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
-	  var upload_name = el.id.sub('_description$','');
-	  var desc        = el.innerHTML;
-	  el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
-	  new Ajax.Request(Controller.url, {
-		      method:      'post',
-		      parameters:{  
-		          action: 'set_upload_description',
-			  upload_name: upload_name,
-			  description: desc
-		      },
-		      onSuccess: function(transport) {
-		      Controller.update_sections(new Array(userdata_table_id,userimport_table_id))
-		      }
-	       });
-		  el.stopObserving('keypress');
-		  el.stopObserving('blur');
-		  el.blur();
-		  return true;
-      }
-      if (event.keyCode==Event.KEY_ESC) {
-          el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
-		  Controller.update_sections(new Array(userdata_table_id,userimport_table_id));
-		  el.stopObserving('keypress');
-		  el.stopObserving('blur');
-		  el.blur();
-		  return true;
-      }
-      return false;
+		var el = event.findElement();
+		if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
+			var upload_name = el.id.sub('_description$','');
+			var desc        = el.innerHTML;
+			el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+			new Ajax.Request(Controller.url, {
+				method:      'post',
+				parameters:{  
+					action: 'set_upload_description',
+					upload_name: upload_name,
+					description: desc
+				},
+				onSuccess: function(transport) {
+					Controller.update_sections(new Array(added_tracks_id, public_tracks_id))
+				}
+			});
+			el.stopObserving('keypress');
+			el.stopObserving('blur');
+			el.blur();
+			return true;
+		}
+		if (event.keyCode==Event.KEY_ESC) {
+		el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+		Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
+		el.stopObserving('keypress');
+		el.stopObserving('blur');
+		el.blur();
+		return true;
+		}
+		return false;
   },
 
   // downloadUserTrackSource() is called to populate the user track edit field

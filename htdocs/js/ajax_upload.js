@@ -1,11 +1,8 @@
 /** This nice bit of software is used courtesy of the webtoolkit group; the file 
-    was renamed to be more informative. **/
-
-/**
-*
-*  AJAX IFRAME METHOD (AIM)
-*  http://www.webtoolkit.info/
-*
+    was renamed to be more informative.
+    
+	AJAX IFRAME METHOD (AIM)
+	http://www.webtoolkit.info/
 **/
 
 var Ajax_Status_Updater;
@@ -86,21 +83,21 @@ function startAjaxUpload(upload_id) {
 }
 
 // Complete AJAX Upload - Runs the controller to add the track or, if there's an error, displays it.
-function completeAjaxUpload(response,upload_id,field_type) {
+function completeAjaxUpload(response, upload_id, field_type) {
 	var r;
 	try {
 		r = response.evalJSON(true);
 	} catch(e) { 
        r = {success:     false, 
             uploadName: 'Uploaded file',
-            error_msg:   'The server returned an error during upload'
+            error_msg:  'The server returned an error during upload'
     	}
     }
+    
+    console.log("AJAX Upload completed.");
 
 	if (r.success) {
-		var fields = (field_type == 'upload') ? new Array(track_listing_id, userdata_table_id)
-		            : (field_type == 'edit') ? new Array(track_listing_id, userdata_table_id, userimport_table_id)
-		                                    : new Array(track_listing_id, userimport_table_id);
+		var fields = new Array(track_listing_id, added_tracks_id, public_tracks_id);
 		if (r.tracks != null && r.tracks.length > 0) {
 			Controller.add_tracks(
 				r.tracks,
@@ -155,7 +152,7 @@ function deleteUploadTrack (fileName) {
 				var tracks = transport.responseJSON.tracks;
 				if (tracks != null)
 					tracks.each(function(tid) { Controller.delete_track(tid) });
-				Controller.update_sections(new Array(userdata_table_id,userimport_table_id,track_listing_id));
+				Controller.update_sections(new Array(added_tracks_id, track_listing_id));
 			}
 		}
 	);
@@ -235,4 +232,25 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	for (i = 0; i < fields.length; i++) {
 		fields[i].setStyle("background-color: " + ((i % 2)? "#AAAAAA" : "#CCCCCC") + ";");
 	}
+}
+
+function changePermissions(track, sharing_policy) {
+	var indicator = track + "_stat";
+	$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+	console.log("Calling change_permissions on " + track + " to " + sharing_policy);
+	new Ajax.Request(
+		document.URL, {
+			method: 'post',
+			parameters: {
+				action: 'change_permissions',
+				file: track,
+				sharing_policy: sharing_policy
+			},
+			onSuccess: function (transport) {
+				console.log("Callback received!");
+				//Add error checking here.
+				Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
+			}
+		}
+	);
 }

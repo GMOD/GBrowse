@@ -537,6 +537,8 @@ sub ACTION_share_file {
     my $file = $q->param('file') or croak;
     my $uploadsid = $q->param('uploadsid') or croak;
 
+	warn "A request to share got all the way to Action.pm";
+
     my $usertracks = $render->user_tracks;
     $usertracks->share($file, $uploadsid);
     return (204, 'text/plain', undef);	
@@ -563,7 +565,7 @@ sub ACTION_change_permissions {
 
     my $usertracks = $render->user_tracks;
     $usertracks->permissions($track, $new_permissions);
-    return (404, 'text/plain', undef);	
+    return (204, 'text/plain', undef);	
 }
 
 sub ACTION_modifyUserData {

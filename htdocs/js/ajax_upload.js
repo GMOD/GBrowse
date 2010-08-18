@@ -72,7 +72,9 @@ function startAjaxUpload(upload_id) {
 		onSuccess: function(transport) {
 	   if (transport.responseText.match(/complete/)) {
 	   	    Ajax_Status_Updater.get(upload_id).stop();
-		        Controller.update_sections(new Array(track_listing_id, added_tracks_id, public_tracks_id));
+		        Controller.update_sections(new Array(userdata_table_id,
+							 userimport_table_id,
+							 track_listing_id));
 		}
 		}
 	   });
@@ -243,8 +245,8 @@ function changePermissions(fileName, sharing_policy) {
 				file: fileName,
 				sharing_policy: sharing_policy
 			},
-			onSuccess: function (response) {
-				Controller.update_sections(new Array(added_tracks_id, public_tracks_id)););
+			onSuccess: function (transport) {
+				Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
 			}
 		}
 	);
@@ -262,7 +264,7 @@ function shareFile(fileName, uploadsid) {
 				uploadsid: uploadsid
 			},
 			onSuccess: function (transport) {
-				Controller.update_sections(new Array(added_tracks_id));
+				Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
 			}
 		}
 	);
@@ -280,7 +282,7 @@ function unshareFile(fileName, uploadsid) {
 				uploadsid: uploadsid
 			},
 			onSuccess: function (transport) {
-				Controller.update_sections(new Array(added_tracks_id));
+				Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
 			}
 		}
 	);

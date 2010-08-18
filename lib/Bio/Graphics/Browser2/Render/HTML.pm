@@ -703,6 +703,7 @@ sub render_busy_signal {
        });
 }
 
+# Renders the file menu.
 sub render_actionmenu {
     my $self  = shift;
     my $settings = $self->state;
@@ -1479,13 +1480,13 @@ sub render_track_list_title {
 	) . $source_note;
 }
 
-# Render Track Controls (Track Name[, Type]) - Renders the HTML for the main track controls in the added track listing.
+# Render Track Controls (Track Name, Type) - Renders the HTML for the main track controls in the added track listing.
 sub render_track_controls {
 	my $self = shift;
 	my $track = shift;
 	my $type = shift;
-	my $uploadsid = $self->{uploadsid};
 	my $userdata = $self->user_tracks();
+	my $uploadsid = $userdata->{uploadsid};
 	my @track_labels = $userdata->labels($track);
 	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
 	
@@ -1519,9 +1520,9 @@ sub render_track_controls {
 	);
 	
 	my $controls = $toggle_details.'&nbsp;';
+	$controls .= $trash_icon.'&nbsp;';
 	if ($type !~ /public/) {
-		$controls .= $trash_icon.'&nbsp;';
-		$controls .= (($type =~ /upload/)? $share_icon . '&nbsp;' : '' );
+		$controls .= ($type =~ /upload/)? $share_icon . '&nbsp;' : '' ;
 	} else {
 		$controls .= a(
 			{

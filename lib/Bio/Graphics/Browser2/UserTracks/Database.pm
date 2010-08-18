@@ -113,6 +113,8 @@ sub share {
 	my $uploadsid = shift // $self->{uploadsid};												#/
 	my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = '$fileid'");
 	
+	warn "A request to share $fileid to $uploadsid got all the way to Database.pm";
+	
 	#If we find the user's ID, it's already been added, just return that it worked.
 	return 1 if ($users =~ $uploadsid);
 	$users .= ", " if $users;
@@ -203,7 +205,7 @@ sub file_exists {
     return $uploadsdb->do("SELECT * FROM uploads WHERE path LIKE $path" . $usersql);
 }
 
-# Add File (Full Path[, Description, Sharing Policy, Uploads ID]) - Adds $file to the database under $owner.
+# Add File (Full Path[, Description, Sharing Policy, Uploads ID]) - Adds $file to the database under the current (or specified) owner.
 sub add_file {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};

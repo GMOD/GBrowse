@@ -530,49 +530,27 @@ sub ACTION_set_upload_description {
     return (204,'text/plain',undef);
 }
 
-sub ACTION_add_shared_track {
+sub ACTION_share_file {
 	my $self = shift;
 	my $q = shift;
 	my $render = $self->render;
-    my $track = $q->param('track') or croak;
-
-    my $usertracks = $render->user_tracks;
-    $usertracks->add_shared_track($track);
-    return (204, 'text/plain', undef);
-}
-
-sub ACTION_remove_shared_track {
-	my $self = shift;
-	my $q = shift;
-	my $render = $self->render;
-    my $track = $q->param('track') or croak;
-
-    my $usertracks = $render->user_tracks;
-    $usertracks->remove_shared_track($track);
-    return (204, 'text/plain', undef);
-}
-
-sub ACTION_share_track {
-	my $self = shift;
-	my $q = shift;
-	my $render = $self->render;
-    my $track = $q->param('track') or croak;
+    my $file = $q->param('file') or croak;
     my $uploadsid = $q->param('uploadsid') or croak;
 
     my $usertracks = $render->user_tracks;
-    $usertracks->add_shared_track($track, $uploadsid);
+    $usertracks->share($file, $uploadsid);
     return (204, 'text/plain', undef);	
 }
 
-sub ACTION_unshare_track {
+sub ACTION_unshare_file {
 	my $self = shift;
 	my $q = shift;
 	my $render = $self->render;
-    my $track = $q->param('track') or croak;
+    my $file = $q->param('file') or croak;
     my $uploadsid = $q->param('uploadsid') or croak;
 
     my $usertracks = $render->user_tracks;
-    $usertracks->add_shared_track($track, $uploadsid);
+    $usertracks->unshare($file, $uploadsid);
     return (204, 'text/plain', undef);	
 }
 
@@ -585,7 +563,7 @@ sub ACTION_change_permissions {
 
     my $usertracks = $render->user_tracks;
     $usertracks->permissions($track, $new_permissions);
-    return (204, 'text/plain', undef);	
+    return (404, 'text/plain', undef);	
 }
 
 sub ACTION_modifyUserData {

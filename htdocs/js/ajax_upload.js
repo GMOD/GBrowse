@@ -72,9 +72,7 @@ function startAjaxUpload(upload_id) {
 		onSuccess: function(transport) {
 	   if (transport.responseText.match(/complete/)) {
 	   	    Ajax_Status_Updater.get(upload_id).stop();
-		        Controller.update_sections(new Array(userdata_table_id,
-							 userimport_table_id,
-							 track_listing_id));
+		        Controller.update_sections(new Array(track_listing_id, added_tracks_id, public_tracks_id));
 		}
 		}
 	   });
@@ -138,7 +136,7 @@ return true;
 
 // NOTE: these functions should be migrated to Controller
 
-function deleteUploadTrack (fileName) {
+function deleteUpload (fileName) {
    var indicator = fileName + "_stat";
    $(indicator).innerHTML = '<image src="' + Controller.button_url('spinner.gif') + '" />';
    new Ajax.Request(
@@ -234,22 +232,55 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	}
 }
 
-function changePermissions(track, sharing_policy) {
-	var indicator = track + "_stat";
+function changePermissions(fileName, sharing_policy) {
+	var indicator = fileName + "_stat";
 	$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
-	console.log("Calling change_permissions on " + track + " to " + sharing_policy);
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',
 			parameters: {
 				action: 'change_permissions',
-				file: track,
+				file: fileName,
 				sharing_policy: sharing_policy
 			},
+			onSuccess: function (response) {
+				Controller.update_sections(new Array(added_tracks_id, public_tracks_id)););
+			}
+		}
+	);
+}
+
+function shareFile(fileName, uploadsid) {
+	var indicator = fileName + "_stat";
+	$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+	new Ajax.Request(
+		document.URL, {
+			method: 'post',
+			parameters: {
+				action: 'share_file',
+				file: fileName,
+				uploadsid: uploadsid
+			},
 			onSuccess: function (transport) {
-				console.log("Callback received!");
-				//Add error checking here.
-				Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
+				Controller.update_sections(new Array(added_tracks_id));
+			}
+		}
+	);
+}
+
+function unshareFile(fileName, uploadsid) {
+	var indicator = fileName + "_stat";
+	$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+	new Ajax.Request(
+		document.URL, {
+			method: 'post',
+			parameters: {
+				action: 'unshare_file',
+				file: fileName,
+				uploadsid: uploadsid
+			},
+			onSuccess: function (transport) {
+				Controller.update_sections(new Array(added_tracks_id));
 			}
 		}
 	);

@@ -2457,6 +2457,11 @@ sub asynchronous_update_sections {
     if ( $handle_section_name{'added_tracks'}) {
 	$return_object->{'added_tracks'} = $self->render_added_track_listing();
     }
+    
+    # Public Files Section
+    if ( $handle_section_name{'public_tracks'}) {
+	$return_object->{'public_tracks'} = $self->render_public_track_listing();
+    }
 
     # Handle Remaining and Undefined Sections
     foreach my $section_name ( keys %handle_section_name ) {

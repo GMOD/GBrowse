@@ -66,20 +66,12 @@ sub get_uploaded_files {
 	return @$rows;
 }
 
-# Get Public Files ([User ID, all]) - Returns an array of public or admin file paths, excluding the ones the user requested (unless the "all" flag is set).
+# Get Public Files ([User ID]) - Returns an array of available public files that the user hasn't added.
 sub get_public_files {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
-    my $all = shift;
-    
-    my $sql = "SELECT path FROM uploads WHERE sharing_policy = 'public'";
-    if (!$all) {
-    	my $uploadsid = shift // $self->{uploadsid};											#/
-	    $sql .= " AND (users IS NULL OR users NOT LIKE " . $uploadsdb->quote("%" . $uploadsid . "%") . ")";
-	}
-    $sql .= " ORDER BY uploadid";
-    
-    my $rows = $uploadsdb->selectcol_arrayref($sql);
+    my $uploadsid = shift // $self->{uploadsid};												#/
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'public' AND (users IS NULL OR users NOT LIKE " . $uploadsdb->quote("%" . $uploadsid . "%") . ") AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
     return @$rows;
 }
 
@@ -98,7 +90,7 @@ sub get_added_public_files {
 	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
     my $uploadsid = $self->{uploadsid};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'public' AND users LIKE " . $uploadsdb->quote('%' . $uploadsid . '%') . " AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'public' AND (users LIKE " . $uploadsdb->quote('%' . $uploadsid . '%') . " OR userid = " . $uploadsdb->quote($uploadsid) . ") ORDER BY uploadid");
     return @$rows;
 }
 
@@ -108,32 +100,32 @@ sub get_shared_files {
 	my $uploadsdb = $self->{uploadsdb};
     my $uploadsid = $self->{uploadsid};
     #Since upload IDs are all the same size, we don't have to worry about one ID repeated in another so this next line is OK. Still, might be a good idea to secure this somehow?
-    $uploadsid = $uploadsdb->quote('%' . $uploadsid . '%');
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'group' OR sharing_policy = 'casual' AND users LIKE $uploadsid ORDER BY uploadid");
+    my $likeuploadsid = $uploadsdb->quote('%' . $uploadsid . '%');
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE (sharing_policy = 'group' OR sharing_policy = 'casual') AND users LIKE $likeuploadsid AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
     return @$rows;
 }
 
-# Add Shared File (File[, User ID) - Adds a public or shared track to a user's session
-sub add_shared_file {
+# Share (File[, User ID) - Adds a public or shared track to a user's session
+sub share {
 	my $self = shift;
-	my $uploadsid = shift // $self->{uploadsid};												#/
 	my $uploadsdb = $self->{uploadsdb};
-	my $file = $uploadsdb->quote(shift);
-	my $fileid = $self->get_file_id($file);
+	my $fileid = $self->get_file_id(shift);
+	my $uploadsid = shift // $self->{uploadsid};												#/
 	my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = '$fileid'");
+	
 	#If we find the user's ID, it's already been added, just return that it worked.
 	return 1 if ($users =~ $uploadsid);
-	$users .= ", " if (($users) && ($users != ""));
-	return $uploadsdb->do("UPDATE uploads SET users = '$users" . $uploadsid . "'  WHERE uploadid = '$fileid'");
+	$users .= ", " if $users;
+	return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users . $uploadsid) . "  WHERE uploadid = '$fileid'");
 }
 
-# Remove Shared File (File[, User ID]) - Removes an added public or shared track from a user's session
-sub remove_shared_file {
+# Unshare (File[, User ID]) - Removes an added public or shared track from a user's session
+sub unshare {
 	my $self = shift;
-	my $uploadsid = shift // $self->{uploadsid};												#/
 	my $uploadsdb = $self->{uploadsdb};
-	my $file = $uploadsdb->quote(shift);
-	my $fileid = $self->get_file_id($file);
+	my $fileid = $self->get_file_id(shift);
+	my $uploadsid = shift // $self->{uploadsid};												#/
+	
 	my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = '$fileid'");
 	#If we find the user's ID, it's already been added, just return that it worked.
 	return 1 if ($users !~ $uploadsid);
@@ -304,11 +296,10 @@ sub file_type {
 	my $file = shift;
 	my $uploadsid = shift // $self->{uploadsid};												#/
 	
+	return "public" if ($self->permissions($file) =~ /public/);
 	if ($self->is_mine($file)) {
 		return $self->is_imported($file)? "imported" : "uploaded";
-	} else {
-		return ($self->permissions($file) =~ /public/)? "public" : "shared";
-	}
+	} else { return "shared" };
 }
 
 1;

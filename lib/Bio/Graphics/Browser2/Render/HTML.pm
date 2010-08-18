@@ -1332,7 +1332,7 @@ sub render_upload_share_section {
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, 'Admin mode: Uploaded tracks are public') : ""; # BUG: this is HTML - should not be here!!!
 	$html .= $self->render_added_track_listing;
 	if ($globals->user_accounts == 1) {
-		$html .= $self->render_available_track_listing;
+		$html .= $self->render_public_track_listing;
 	}
 	$html = div($html);
 	return $html;
@@ -1355,12 +1355,12 @@ sub render_added_track_listing {
 	return $html;
 }
 
-# Render Public Track Listing - Returns the HTML listing of public & shared tracks available to a user.
-sub render_available_track_listing {
+# Render Public Track Listing - Returns the HTML listing of public tracks available to a user.
+sub render_public_track_listing {
 	my $self = shift;
-	my $html = h1("Available Tracks");
+	my $html = h1("Public Tracks");
 	$html .= $self->list_tracks("public");
-	$html = div({-id => "available_tracks"}, $html);
+	$html = div({-id => "public_tracks"}, $html);
 	return $html;
 }
 
@@ -1384,7 +1384,6 @@ sub list_tracks {
 		my $details = $self->render_track_details($name, $listing_type);
 		my $edit_field = div({-id => $name . "_editfield"}, '');
 		$count++;
-		# And now the final track listing.
 		div( {
 				-class	=> "custom_track",
 				-style	=> "background-color: $background_color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;"
@@ -1473,7 +1472,7 @@ sub render_track_list_title {
 	my $title = h1({-style	=> "display: inline; font-size: 14pt;"}, $short_name);
 	
 	return span(
-		{-style => "display: inline-block; width: 45em;"},
+		{-style => "display: inline-block; width: 60em;"},
 		$stat,
 		$title,
 		$go_there
@@ -1485,6 +1484,7 @@ sub render_track_controls {
 	my $self = shift;
 	my $track = shift;
 	my $type = shift;
+	my $uploadsid = $self->{uploadsid};
 	my $userdata = $self->user_tracks();
 	my @track_labels = $userdata->labels($track);
 	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
@@ -1508,7 +1508,7 @@ sub render_track_controls {
 			-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
 		}
 	);
-	my $delete_action = ($type =~ /(public|shared)/)? "removeSharedTrack('$track')" : "deleteUploadTrack('$track', )";
+	my $delete_action = ($type =~ /(public|shared)/)? "unshareFile('$track', '$uploadsid')" : "deleteUpload('$track')";
 	my $trash_icon = img(
 		{
 			-src     	 => $delete,
@@ -1526,7 +1526,7 @@ sub render_track_controls {
 		$controls .= a(
 			{
 				-href	 => "javascript:void(0);",
-				-onClick => "addSharedTrack('$track')"
+				-onClick => "shareFile('$track', '$uploadsid')"
 			},
 			"Add"
 		) unless ($userdata->is_mine($track) == 1);
@@ -1651,7 +1651,9 @@ sub render_track_sharing {
 	my $userdata = $self->user_tracks();
 	
 	my $sharing_policy = $userdata->permissions($track);
-	my $users = join (",", $userdata->shared_with($track));
+	my @users = $userdata->shared_with($track);
+	$_ = b($_) . "&nbsp;[" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$track', '$_')"}, "X") . "]" foreach @users;
+	my $userlist = join (",", @users);
 	my $sharing_content = 
 		b("Sharing:").
 		br().
@@ -1668,7 +1670,29 @@ sub render_track_sharing {
 				)
 			} qw(Private Casual Group Public)
 		);
-		$sharing_content .= " shared with " .  ($users? "$users" : "no one.") if ($sharing_policy =~ /(casual|group)/);
+		my $sharing_help = b("Private") . " - Visible only to me.<br>";
+		$sharing_help .= b("Casual") . " - Visible to me and anyone I send a link to, but not visible in the public tracks.<br>";
+		$sharing_help .= b("Group") . " - Visible to and anyone I add to the sharing group.<br>";
+		$sharing_help .= b("Public") . " - Visible to anyone.<br>";
+		$sharing_content .= "&nbsp;[" . a({-href => "javascript:void(0)", -onMouseOver => "GBubble.showTooltip(event,'$sharing_help',0,300);"}, "?") . "]";
+		$sharing_content .= "&nbsp;shared with " .  ($userlist? "$userlist" : "no one.") if ($sharing_policy =~ /(casual|group)/);
+		
+		if ($sharing_policy =~ /group/) {
+			my $add_box = "&nbsp;" . input(
+				{
+					-length => 20,
+					-value => "Enter an upload ID here.",
+					-onFocus => "this.clear()"
+				}
+			);		
+			my $share_link = "&nbsp;[" . a(
+				{
+					-href => "javascript: void(0)",
+					-onClick => "shareFile('$track', this.previous('input').getValue())",
+				},
+				"Add" ) . "]";
+			$sharing_content .= $add_box . $share_link;
+		};
 	}
 	return $sharing_content;
 }
@@ -1681,9 +1705,9 @@ sub userdata_import {
     my $url      = url(-absolute=>1,-path_info=>1);
     $html   .= div({-id=>'import_list_start'},'');
 
-    my $import_label  = $self->tr('IMPORT_TRACK');
-    my $import_prompt = $self->tr('REMOTE_URL');
-    my $remove_label  = $self->tr('REMOVE');
+    my $import_label  = $self->tr('IMPORT_TRACK'); 												#;
+    my $import_prompt = $self->tr('REMOTE_URL'); 												#;
+    my $remove_label  = $self->tr('REMOVE'); 													#;
     my $help_link     = $self->annotation_help;
     $html            .= div({-style=>'margin-left:10pt'},
 			   a({-href => "javascript:addAnUploadField('import_list_start','$url','$import_prompt','$remove_label','import','$help_link')",
@@ -1700,11 +1724,11 @@ sub userdata_upload {
     my $html     = '';
     $html       .= div({-id=>'upload_list_start'},'');
 
-    my $upload_label = $self->tr('UPLOAD_FILE');
-    my $remove_label = $self->tr('REMOVE');
-    my $new_label    = $self->tr('NEW_TRACK');
-    my $from_text    = $self->tr('FROM_TEXT');
-    my $from_file    = $self->tr('FROM_FILE');
+    my $upload_label = $self->tr('UPLOAD_FILE'); 												#;
+    my $remove_label = $self->tr('REMOVE'); 													#;
+    my $new_label    = $self->tr('NEW_TRACK'); 													#;
+    my $from_text    = $self->tr('FROM_TEXT'); 													#;
+    my $from_file    = $self->tr('FROM_FILE'); 													#;
     my $help_link     = $self->annotation_help;
     $html         .= p({-style=>'margin-left:10pt;font-weight:bold'},
 		       'Add custom track(s):',

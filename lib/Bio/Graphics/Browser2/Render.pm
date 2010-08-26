@@ -693,7 +693,8 @@ sub render_body {
   my $title    = $self->generate_title($features);
 
   my $output;
-  $output .= $self->render_html_start($title);
+  my @post_load = $self->get_post_load_functions;
+  $output .= $self->render_html_start($title,@post_load);
   $output .= $self->render_user_header;
   $output .= $self->render_busy_signal;
   $output .= $self->render_actionmenu;
@@ -730,9 +731,8 @@ sub render_body {
   my $global_config = $self->render_global_config;
 
   $output .= $self->render_tabbed_pages($main_page,$tracks,$upload_share,$global_config);
-  $output .= $self->render_bottom($features);
-
   $output .= $self->render_login_section;
+  $output .= $self->render_bottom($features);
 
   print $output;
 }
@@ -928,6 +928,17 @@ sub render_panels {
 }
 
 sub clear_highlights { croak 'implement in subclass' }
+
+sub get_post_load_functions {
+    my $self = shift;
+    my @fun;
+    if (my $url = param('eurl')) {
+	my $trackname = $self->user_tracks->trackname_from_url($url);
+	push @fun,'Controller.select_tab("custom_tracks_page")';
+	push @fun,"reloadURL('$trackname','$url',true)";
+    }
+    return @fun;
+}
 
 sub scale_bar {
     my $self         = shift;
@@ -1541,12 +1552,17 @@ sub add_remote_tracks {
 
     warn "ADD_REMOTE_TRACKS(@$urls)" if DEBUG;
 
+    my @tracks;
+
     for my $url (@$urls) {
+	my $name = $user_tracks->trackname_from_url($url);
 	my ($result,$msg,$tracks) 
-	    = $user_tracks->import_url($url,1);
+	    = $user_tracks->mirror_url($name,$url,1);
 	warn "[$$] $url: result=$result, msg=$msg, tracks=@$tracks" if DEBUG;
+	push @tracks,@$tracks;
     }
-    my @tracks = $self->add_user_tracks($self->data_source);
+
+    push @tracks,$self->add_user_tracks($self->data_source);
     warn "[$$] adding tracks @tracks" if DEBUG;
     $self->add_track_to_state($_) foreach @tracks;
     $self->init_remote_sources();
@@ -1932,7 +1948,6 @@ sub cleanup_dangling_uploads {
 
 }
 
-
 sub add_track_to_state {
   my $self  = shift;
   my $label = shift;
@@ -1944,11 +1959,12 @@ sub add_track_to_state {
 
   # don't add invalid track
   my %potential_tracks = map {$_=>1} $self->potential_tracks;
-#  warn "invalid track $label" unless $potential_tracks{$label};
+  warn "invalid track $label" if DEBUG && !$potential_tracks{$label};
   return unless $potential_tracks{$label};
 
   my %current = map {$_=> 1} @{$state->{tracks}};
-  push @{$state->{tracks}},$label unless $current{$label};
+#  push @{$state->{tracks}},$label unless $current{$label};   # on bottom
+  unshift @{$state->{tracks}},$label unless $current{$label}; # on top (better)
 
   warn "[$$]ADD TRACK TO STATE WAS: ",
     join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n" if DEBUG;
@@ -2149,12 +2165,6 @@ sub update_tracks {
   if (my @add = param('add')) {
       my @style = param('style');
       $self->handle_quickie(\@add,\@style);
-  }
-
-  if (my @url = param('eurl')) {
-      my $group_separator = GROUP_SEPARATOR;
-      my @unescaped = map {s/$group_separator/;/g;$_} @url;
-      $self->add_remote_tracks(\@unescaped);
   }
 
   # selected tracks can be set by the 'l', 'label' or 't' parameter
@@ -2773,11 +2783,6 @@ sub update_section_visibility {
     $state->{section_visible}{$section} = $visibility;
   }
 }
-
-#sub update_external_sources {
-#  my $self = shift;
-#  $self->remote_sources->set_sources([param('eurl')]) if param('eurl');
-#}
 
 sub update_galaxy_url {
     my $self  = shift;
@@ -3558,7 +3563,7 @@ sub add_user_tracks {
     $self->state->{uploadid} ||= Bio::Graphics::Browser2::Util->generate_id;
     $uuid ||= $self->state->{uploadid};
 
-    my $userdata = $self->user_tracks($uuid);
+    my $userdata    = $self->user_tracks($uuid);
     my @user_tracks = $userdata->tracks;
 
 #    warn "adding usertracks for $uuid, getting @user_tracks";

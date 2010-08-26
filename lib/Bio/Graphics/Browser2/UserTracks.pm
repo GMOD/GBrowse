@@ -248,6 +248,7 @@ sub import_url {
 							  $self->track_conf($track_name),
 							  $self->config,
 							  $self->state->{uploadid});
+    $loader->strip_prefix($self->config->seqid_prefix);
     $loader->set_status('starting import');
 
     my $conf = $self->track_conf($track_name);
@@ -467,12 +468,14 @@ sub get_loader {
     my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";
     die $@ if $@;
-    return $module->new($track_name,
-			$self->track_path($track_name),
-			$self->track_conf($track_name),
-			$self->config,
-			$self->state->{uploadid},
+    my $loader = $module->new($track_name,
+			      $self->track_path($track_name),
+			      $self->track_conf($track_name),
+			      $self->config,
+			      $self->state->{uploadid},
 	);
+    $loader->strip_prefix($self->config->seqid_prefix);
+    return $loader;
 }
 
 # guess the file type and eol based on its name and the first 1024 bytes

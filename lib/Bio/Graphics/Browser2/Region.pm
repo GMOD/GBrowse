@@ -266,25 +266,35 @@ sub lookup_features {
 	  # heuristic fetch. Try various abbreviations and wildcards
 	  my @sloppy_names = ();
 
-	  if ($searchopts->{heuristics} &&
-	      $name_to_try =~ /^([\dIVXA-F]+)$/) {
-	      my $id = $1;
-	      foreach (qw(CHROMOSOME_ Chr chr)) {
-		  my $n = "${_}${id}";
-		  push @sloppy_names,$n;
+	  if ($searchopts->{heuristic}) {
+	      my $seqid_prefix = $source->globals->seqid_prefix;
+	      warn "seqid_prefix=$seqid_prefix";
+	      if ($name_to_try =~ /^([\dIVXA-F]+)$/) {
+		  my %seenit;
+		  my $id = $1;
+		  foreach (qw(CHROMOSOME_ Chr chr),$seqid_prefix) {
+		      next if $seenit{$_}++;
+		      my $n = "${_}${id}";
+		      push @sloppy_names,$n;
+		  }
 	      }
-	  }
 
-	  # try to remove the chr CHROMOSOME_I
-	  if ($searchopts->{heuristics} &&
-	      (my $chr = $name_to_try) =~ s/^(chromosome_?|chr)//i) {
-	      push @sloppy_names,$chr;
+	      # try to remove the chr CHROMOSOME_I
+	      if ((my $chr = $name_to_try) =~ s/^(chromosome_?|chr)//i) {
+		  push @sloppy_names,$chr;
+	      }
+
+	      if ((my $chr = $name_to_try) =~ s/^$seqid_prefix//) {
+		  push @sloppy_names,$chr;
+	      }
 	  }
 
 	  if ($searchopts->{stem}) {
 	      push @sloppy_names,"$name_to_try*" 
 		  if length $name_to_try >= 3 and $name_to_try !~ /\*$/;
 	  }
+
+	  warn "sloppy names = @sloppy_names";
 
 	  for my $n (@sloppy_names) {
 	      for my $c ('',@classes) {

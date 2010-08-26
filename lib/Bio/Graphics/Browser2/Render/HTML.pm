@@ -24,11 +24,12 @@ our $CAN_PDF;
 
 sub render_html_start {
   my $self  = shift;
-  my $title = shift;
+  my ($title,@actions) = @_;
   my $dsn   = $self->data_source;
-  my $html  = $self->render_html_head($dsn,$title);
+  my $html  = $self->render_html_head($dsn,$title,@actions);
   $html    .= $self->render_js_controller_settings();
   $html    .= $self->render_balloon_settings();
+  $html    .= "<div id='main'>";
   $html    .= $self->render_select_menus();
   return $html;
 }
@@ -119,7 +120,7 @@ sub render_bottom {
   my $a   = $self->data_source->global_setting('footer');
   my $value = ref $a eq 'CODE' ? $a->(@_) : $a;
   $value ||= '';
-  return $value.end_html();
+  return $value."</div>".end_html();
 }
 
 sub render_navbar {
@@ -258,7 +259,7 @@ END
 
 sub render_html_head {
   my $self = shift;
-  my ($dsn,$title) = @_;
+  my ($dsn,$title,@other_initialization) = @_;
   my @plugin_list = $self->plugins->plugins;
 
   return if $self->{started_html}++;
@@ -412,7 +413,8 @@ sub render_html_head {
   push @args,(-onLoad => "$body_onLoads");
 
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $plugin_onloads");
+  my $other_actions   = join ';',@other_initialization;
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $plugin_onloads; $other_actions");
 
   return start_html(@args);
 }

@@ -232,24 +232,37 @@ var GBrowseController = Class.create({
   },
 
   append_child_from_html:
-  function (child_html,parent_obj) {
+  function (child_html,parent_obj,onTop) {
     //Append new html to the appropriate section This is a bit cludgy but we
     //create a temp element, read the html into it and then move the div
     //element back out.  This keeps the other tracks intact.
+    if (onTop == null) onTop = false;
+
     var tmp_element       = document.createElement("tmp_element");
     tmp_element.innerHTML = child_html;
-    parent_obj.appendChild(tmp_element);
 
+    var tracks      = parent_obj.getElementsByClassName('track');
+    var first_track = tracks[0];
+
+    if (onTop && first_track != null) {
+	parent_obj.insertBefore(tmp_element,first_track[0]);
+    } else {
+	parent_obj.appendChild(tmp_element);
+    }
     // Move each child node but skip if it is a comment (class is undef)
     if (tmp_element.hasChildNodes()) {
-      var children = tmp_element.childNodes;
-      for (var i = 0; i < children.length; i++) {
-        if (children[i].className == undefined){
-          continue;
-        }
-        parent_obj.appendChild(children[i]);
-      };
-    };
+	var children = tmp_element.childNodes;
+	for (var i = 0; i < children.length; i++) {
+	    if (children[i].className == undefined){
+		continue;
+	    }
+	    if (onTop && first_track != null) {
+		parent_obj.insertBefore(children[i],first_track);
+	    } else {
+		parent_obj.appendChild(children[i]);
+	    }
+	}
+    }
     parent_obj.removeChild(tmp_element);
   },
 
@@ -410,13 +423,13 @@ var GBrowseController = Class.create({
   }, // end scroll
 
   add_track:
-  function(track_name, onSuccessFunc, force) {
+  function(track_name, onSuccessFunc, force, onTop) {
     var track_names = new Array(track_name);
-    this.add_tracks(track_names,onSuccessFunc,force);
+    this.add_tracks(track_names,onSuccessFunc,force, onTop);
   },
 
   add_tracks:
-  function(track_names, onSuccessFunc, force) {
+  function(track_names, onSuccessFunc, force, onTop) {
 
     if (force == null) force=false;
 
@@ -463,7 +476,7 @@ var GBrowseController = Class.create({
           var html           = this_track_data.track_html;
           var panel_id       = this_track_data.panel_id;
 
-          Controller.append_child_from_html(html,$(panel_id));
+          Controller.append_child_from_html(html,$(panel_id),onTop);
 
           if (this_track_data.display_details == 0){
             $(ret_gbtrack.track_image_id).setOpacity(0);
@@ -927,7 +940,7 @@ var GBrowseController = Class.create({
   },
 
   _modifyUserTrackSource:
-  function (param,statusElement) {
+  function (param,statusElement,displayWhenDone) {
      var upload_id  = 'upload_' + Math.floor(Math.random() * 99999);
      param.upload_id = upload_id;
      new Ajax.Request(Controller.url, {
@@ -943,12 +956,15 @@ var GBrowseController = Class.create({
          onSuccess:   function (transport) {
 	 	          if ($(statusElement) != null) $(statusElement).remove();
 			  var r = transport.responseJSON;
+			  Controller.add_tracks(r.tracks,null,false,true);
 			  r.tracks.each(function(t) {
 			  	      Controller.rerender_track(t,true,true);
 				      });
 		          var updater = Ajax_Status_Updater.get(upload_id);
 			  if (updater != null) updater.stop();
 		          Controller.update_sections(new Array(userdata_table_id,track_listing_id));
+			  if (displayWhenDone != null && displayWhenDone)
+			      Controller.select_tab('main_page');
 	               }
          });
      
@@ -968,11 +984,11 @@ var GBrowseController = Class.create({
 
   // mirrorTrackSource() is called to mirror a URL to a track
   mirrorTrackSource:
-  function (sourceURL,trackName,statusElement) {
+  function (sourceURL,trackName,statusElement,displayWhenDone) {
       this._modifyUserTrackSource( { action:     'upload_file',
                                      name:       trackName,
 				     mirror_url: sourceURL },
-	                           statusElement);
+	                            statusElement,displayWhenDone);
   },
 
 // monitor_upload is redundant and needs to be refactored
@@ -995,6 +1011,18 @@ var GBrowseController = Class.create({
      if (this.tabs != null) {
        this.tabs.select_tab(tab_id);
      }
+  },
+
+  wait_for_initialization:
+  function (html,callback) {
+      $('main').setOpacity(0.2);
+      var html = '<div id="dialog_123" style="position:absolute; left:50px; top:50px; border:5px double black; background: wheat; z-index:100">'
+                 + html
+                 +'</div>';
+      $('main').insert({before:html});
+      if (callback) callback();
+      $('main').setOpacity(1.0);
+      $('dialog_123').remove();
   }
 
 

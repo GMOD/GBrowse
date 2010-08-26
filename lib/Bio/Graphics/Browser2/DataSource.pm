@@ -358,6 +358,8 @@ sub label2type {
   return shellwords($self->setting($l,'feature')||$self->setting($label,'feature')||'');
 }
 
+sub seqid_prefix { shift->fallback_setting(general=>'seqid_prefix') }
+
 sub default_style {
   my $self = shift;
   return $self->SUPER::style('TRACK DEFAULTS');

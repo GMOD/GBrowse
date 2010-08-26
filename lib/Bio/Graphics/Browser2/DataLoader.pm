@@ -67,6 +67,13 @@ sub sources_path {
 			       Bio::Graphics::Browser2::UserTracks->sources_dir_name);
 }
 
+sub strip_prefix {
+    my $self = shift;
+    my $d = $self->{strip_prefix};
+    $self->{strip_prefix} = shift if @_;
+    return $d;
+}
+
 sub set_status {
     my $self   = shift;
     my $msg    = shift;

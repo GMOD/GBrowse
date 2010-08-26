@@ -11,6 +11,10 @@ use File::Basename 'basename','dirname';
 sub load_line { 
     my $self = shift;
     my $line = shift;
+
+    my $prefix = $self->strip_prefix;
+    $line =~ s/^$prefix// if $prefix;
+
     if ($line =~ /^track/) {  # starting or ending a section
 	$self->finish_track_declaration;
 	$self->start_track_declaration($line);

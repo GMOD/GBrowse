@@ -122,8 +122,9 @@ function completeAjaxUpload(response,upload_id,field_type) {
 				          if (updater != null)
 					  	updater.stop();
                                           $(upload_id).remove();
-                                        }
-				     )}
+				      })
+				   },
+				false,true
 				);
 	} else {
             var updater = Ajax_Status_Updater.get(upload_id);
@@ -192,9 +193,10 @@ function editUpload (fileName,sourceFile) {
     Controller.downloadUserTrackSource(editID,fileName,sourceFile);
 }
 
-function reloadURL (trackname,mirrorURL) {
-    var statusDiv = trackname + "_editfield";    
-    Controller.mirrorTrackSource(mirrorURL,trackname,statusDiv);
+function reloadURL (trackname,mirrorURL,displayWhenDone) {
+    var statusDiv = trackname + "_editfield";
+    if (displayWhenDone == null) displayWhenDone = false;
+    Controller.mirrorTrackSource(mirrorURL,trackname,statusDiv,displayWhenDone);
 }
 
 function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field_type,help_link) {

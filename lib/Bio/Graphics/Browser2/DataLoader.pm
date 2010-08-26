@@ -347,7 +347,7 @@ sub backend {
     $backend = $self->guess_backend if $backend && $backend eq 'auto';
     unless ($backend) {
 	$backend = $self->guess_backend;
-	warn "No userdb_adaptor option set in GBrowse.conf. Will try to use $backend.";
+	warn "No upload_db_adaptor option set in GBrowse.conf. Will try to use $backend.";
     }
     return $backend;
 }

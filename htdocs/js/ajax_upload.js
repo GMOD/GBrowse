@@ -85,7 +85,6 @@ function startAjaxUpload(upload_id) {
 	   if (transport.responseText.match(/complete/)) {
 	   	    Ajax_Status_Updater.get(upload_id).stop();
 	            Controller.update_sections(new Array(userdata_table_id,
-							 userimport_table_id,
 							 track_listing_id));
 	    }
         }
@@ -108,8 +107,9 @@ function completeAjaxUpload(response,upload_id,field_type) {
     if (r.success) {
 
         var fields = field_type == 'upload' ? new Array(track_listing_id,userdata_table_id)
-                    :field_type == 'edit'   ? new Array(track_listing_id,userdata_table_id,userimport_table_id)
-                                            : new Array(track_listing_id,userimport_table_id);
+	            :field_type == 'url'    ? new Array(track_listing_id,userdata_table_id)
+                    :field_type == 'edit'   ? new Array(track_listing_id,userdata_table_id)
+                                            : new Array(track_listing_id);
 
 	if (r.tracks != null && r.tracks.length > 0) {
   	  Controller.add_tracks(r.tracks,
@@ -159,7 +159,7 @@ function deleteUploadTrack (fileName) {
 	       var tracks = transport.responseJSON.tracks;
 	       if (tracks != null)
 		   tracks.each(function(tid) { Controller.delete_track(tid) });
-	       Controller.update_sections(new Array(userdata_table_id,userimport_table_id,track_listing_id));
+	       Controller.update_sections(new Array(userdata_table_id,track_listing_id));
 	    }
         }
    );
@@ -192,6 +192,11 @@ function editUpload (fileName,sourceFile) {
     Controller.downloadUserTrackSource(editID,fileName,sourceFile);
 }
 
+function reloadURL (trackname,mirrorURL) {
+    var statusDiv = trackname + "_editfield";    
+    Controller.mirrorTrackSource(mirrorURL,trackname,statusDiv);
+}
+
 function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field_type,help_link) {
 
     if (field_type == null) field_type='upload';
@@ -216,21 +221,30 @@ function addAnUploadField(after_element,action,upload_prompt,remove_prompt,field
                 + '<br /><b>UPLOAD_PROMPT</b><br />';
 
    if (field_type=='upload') {
-       html += '<input type="hidden" name="action" value="upload_file"  />'
+       html += '<input type="hidden" name="action"     value="upload_file"  />'
+	      +'<input type="hidden" name="workaround" value="1"  />'
               +'<input type="file"   name="file"      id="upload_field" />';
    }
    else if (field_type=='edit') {
        html += '<input type="hidden" name="action" value="upload_file"  />'
              + '<input type="hidden" name="name"   value="UPLOAD_TAG"   />'
+	     + '<input type="hidden" name="workaround" value="1"  />'
              + '<textarea name="data" id="edit_field" rows="20" cols="100" wrap="off"></textarea>'
+             + '<br />';
+   }
+   else if (field_type=='url') {
+       html += '<input type="hidden" name="action"        value="upload_file"  />'
+	     + '<input type="hidden" name="workaround" value="1"  />'
+             + '<input type="text"   name="mirror_url"    size="100" />'
              + '<br />';
    }
    else {
        html += '<input type="hidden" name="action" value="import_track" />'
+	     + '<input type="hidden" name="workaround" value="1"  />'
              + '<input type="text"   name="url" id="import_field" size="50" />';
    }
 
-   html += '<input type="submit" name="submit"    value="Upload" />'
+   html += '<input type="submit"  name="submit"    value="Upload" />'
          + '<input type="hidden"  name="upload_id" value="UPLOAD_TAG" />'
          + '&nbsp;<a href="javascript:void(0)" onClick="Element.extend(this);this.up(\'div\').remove()">'
          + 'REMOVE_PROMPT</a>';

@@ -2461,11 +2461,6 @@ sub asynchronous_update_sections {
 	    = $self->render_userdata_table();
     }
 
-    if ( $handle_section_name{'userimport_table_div'}) {
-	$return_object->{'userimport_table_div'}
-	    = $self->render_userimport_table();
-    }
-
     # Handle Remaining and Undefined Sections
     foreach my $section_name ( keys %handle_section_name ) {
         next if ( defined $return_object->{$section_name} );

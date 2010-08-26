@@ -67,6 +67,9 @@ sub skip_file {
         qw(
            gbrowse_netinstall.pl
            gbrowse_netinstall2.pl
+	   process_wormbase.pl
+	   gbrowse_gmap
+	   make_das_conf.pl
           );
 
     return $skip{ basename($file) };

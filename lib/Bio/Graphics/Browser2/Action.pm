@@ -377,8 +377,10 @@ sub ACTION_upload_file {
 
     my $fh   = $q->param('file');
     my $data = $q->param('data');
+    my $url  = $q->param('mirror_url');
+    my $workaround = $q->param('workaround');
 
-    ($fh || $data) or 
+    ($fh || $data || $url) or 
 	return(200,'text/html',JSON::to_json({success=>0,
 					      error_msg=>'empty file'}
 	       ));
@@ -390,19 +392,25 @@ sub ACTION_upload_file {
     my $session  = $render->session;
 
     my $usertracks = $render->user_tracks;
-    my $name = $fh ? basename($fh) : $q->param('name');
-    $name ||= 'New track definition';
+    my $name       = $fh  ? basename($fh) 
+	            :$url ? $url
+                          : $q->param('name');
+    $name  ||= 'Uploaded file';
 
     my $content_type = $fh ? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain';
 
-    my $track_name = $usertracks->trackname_from_url($name,1);
+    my $track_name = $usertracks->trackname_from_url($name);
 
     $state->{uploads}{$upload_id} = [$track_name,$$];
     $session->flush();
     $session->unlock();
     
-    my ($result,$msg,$tracks,$pid) = $data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
+    warn "url = $url";
+    my ($result,$msg,$tracks,$pid) = $url  ? $usertracks->mirror_url($track_name,  $url, 1)
+                                    :$data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
                                            : $usertracks->upload_file($track_name, $fh,  $content_type, 1);
+
+    warn "result = $result, msg=$msg,tracks = @$tracks" if $tracks;
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
@@ -416,10 +424,11 @@ sub ACTION_upload_file {
 
     my $return_object        = { success   => $result||0,
 				 error_msg => CGI::escapeHTML($msg),
-				 tracks    => $tracks ,
+				 tracks    => $tracks,
 				 uploadName=> $name,
                                };
-    return (200,'text/html',JSON::to_json($return_object));  # workaround
+    return (200,'text/html',JSON::to_json($return_object)) if $workaround;
+    return (200,'application/json',$return_object);
 }
 
 sub ACTION_import_track {
@@ -431,7 +440,8 @@ sub ACTION_import_track {
 					      error_msg=>'no URL provided'}
 	       ));
 
-    my $upload_id = $q->param('upload_id');
+    my $upload_id  = $q->param('upload_id');
+    my $workaround = $q->param('workaround');
 
     my $render   = $self->render;
     my $state    = $self->state;
@@ -454,7 +464,8 @@ sub ACTION_import_track {
 				 tracks    => $tracks ,
 				 uploadName=> $url,
                                };
-    return (200,'text/html',JSON::to_json($return_object));  # workaround
+    return (200,'text/html',JSON::to_json($return_object)) if $workaround;
+    return (200,'application/json',$return_object);
 }
 
 sub ACTION_delete_upload {

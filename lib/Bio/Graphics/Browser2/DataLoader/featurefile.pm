@@ -21,14 +21,11 @@ sub handle_feature {
     my $self     = shift;
     local $_     = shift;
 
-    my $prefix   = $self->strip_prefix;
     my $ld       = $self->{load_data};
 
     # handle reference line
     if (/^reference\s*=\s*(.+)/) {
-	my $seqid = $1;
-	$seqid    = s/^$prefix// if $prefix;
-	$ld->{reference} = $seqid;
+	$ld->{reference} = $1;
 	return;
     }
 
@@ -84,7 +81,6 @@ sub handle_feature {
 	    ($_->[1],$_->[2])   = ($_->[2],$_->[1]) if $_->[1] > $_->[2];
 	}
 	$reference = $_->[0] if defined $_->[0];
-	$reference =~ s/^$prefix// if $prefix;
 	$_ = [@{$_}[1,2]]; # strip off the reference.
     }
     

@@ -267,12 +267,12 @@ sub lookup_features {
 	  my @sloppy_names = ();
 
 	  if ($searchopts->{heuristic}) {
-	      my $seqid_prefix = $source->globals->seqid_prefix;
-	      warn "seqid_prefix=$seqid_prefix";
+	      my $seqid_prefix = $source->seqid_prefix;
 	      if ($name_to_try =~ /^([\dIVXA-F]+)$/) {
 		  my %seenit;
 		  my $id = $1;
 		  foreach (qw(CHROMOSOME_ Chr chr),$seqid_prefix) {
+		      next unless $_;
 		      next if $seenit{$_}++;
 		      my $n = "${_}${id}";
 		      push @sloppy_names,$n;
@@ -284,7 +284,7 @@ sub lookup_features {
 		  push @sloppy_names,$chr;
 	      }
 
-	      if ((my $chr = $name_to_try) =~ s/^$seqid_prefix//) {
+	      if ($seqid_prefix && (my $chr = $name_to_try) =~ s/^$seqid_prefix//) {
 		  push @sloppy_names,$chr;
 	      }
 	  }
@@ -293,8 +293,6 @@ sub lookup_features {
 	      push @sloppy_names,"$name_to_try*" 
 		  if length $name_to_try >= 3 and $name_to_try !~ /\*$/;
 	  }
-
-	  warn "sloppy names = @sloppy_names";
 
 	  for my $n (@sloppy_names) {
 	      for my $c ('',@classes) {

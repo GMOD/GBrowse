@@ -311,13 +311,18 @@ sub mirror_url {
     }
 
     # fetch in one process, process in another
-    my $child = open(my $fh,"-|");
-    defined $child or die "Couldn't fork: $!";
+    eval "use IO::Pipe" unless IO::Pipe->can('new');
+    my $fh  = IO::Pipe->new;
+    my $child = Bio::Graphics::Browser2::Render->fork();
+    die "Couldn't fork" unless defined $child;
+
     unless ($child) {
 	warn "printing from child..." if DEBUG;
-	$self->_print_url($agent,$url);
+	$fh->writer();
+	$self->_print_url($agent,$url,$fh);
 	CORE::exit 0;
     }
+    $fh->reader;
     my @result = $self->upload_file($name,$fh,$result->header('Content-Type')||'text/plain',$overwrite);
     $self->set_mirrored($name,$url);
     return @result;
@@ -675,8 +680,8 @@ END
 
 sub _print_url {
     my $self = shift;
-    my ($agent,$url) = @_;
-    $agent->get($url,':content_cb' => sub { print shift; });
+    my ($agent,$url,$fh) = @_;
+    $agent->get($url,':content_cb' => sub { print $fh shift; });
 }
 
 package Bio::Graphics::Browser2::UserConf;

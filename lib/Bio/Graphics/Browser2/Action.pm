@@ -405,12 +405,9 @@ sub ACTION_upload_file {
     $session->flush();
     $session->unlock();
     
-    warn "url = $url";
     my ($result,$msg,$tracks,$pid) = $url  ? $usertracks->mirror_url($track_name,  $url, 1)
                                     :$data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
                                            : $usertracks->upload_file($track_name, $fh,  $content_type, 1);
-
-    warn "result = $result, msg=$msg,tracks = @$tracks" if $tracks;
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};

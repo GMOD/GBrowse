@@ -13,7 +13,10 @@ sub load_line {
     my $line = shift;
 
     my $prefix = $self->strip_prefix;
-    $line =~ s/^$prefix// if $prefix;
+    if ($prefix) {
+	$line =~ s/^$prefix//;
+	$line =~ s/chrom=$prefix/chrom=/;
+    }
 
     if ($line =~ /^track/) {  # starting or ending a section
 	$self->finish_track_declaration;

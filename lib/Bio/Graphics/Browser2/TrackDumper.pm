@@ -194,7 +194,7 @@ sub dump_sam {
 	if ($child) {
 	    $pipe->reader();
 	    while (<$pipe>) {
-		s/^([^\t]+)\t([^\t}+)\t([^\t+])/$1\t$2\t$prefix$3/ if $prefix;
+		s/^([^\t]+)\t([^\t]+)\t([^\t]+)/$1\t$2\t$prefix$3/ if $prefix;
 		print $_;
 	    }
 	} else {
@@ -211,7 +211,7 @@ sub dump_sam {
     # CGI scripts simply do it directly.
     my $fh = $db->features(@args,-fh  => 1);
 	while (<$fh>) {
-	    s/^([^\t]+)\t([^\t}+)\t([^\t+])/$1\t$2\t$prefix$3/ if $prefix;
+		s/^([^\t]+)\t([^\t]+)\t([^\t]+)/$1\t$2\t$prefix$3/ if $prefix;
 	    print $_;
 	}
 }

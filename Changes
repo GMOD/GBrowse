@@ -4,7 +4,7 @@
        no features in the region of interest. Note that if there are no features in any
        subtracks, the entire track will be empty regardless of the subtracks (this may or
        may not be a bug).
-       * Fixed bug in TrackDumper plugin to prevent "Can't locate object method print_gff3" 
+     * Fixed bug in TrackDumper plugin to prevent "Can't locate object method print_gff3" 
        error. Thanks to Prem Anand for the fix.
      * Fixed display problem in subtrack selection table when there are additional data row 
        elements that are not listed among the selection criteria.
@@ -19,8 +19,10 @@
      * 'eurl' parameter is now loaded asynchronously so that user can watch the process of the upload
        (useful from galaxy).
      * Fixed URL-based file uploads so that they work correctly even when the user has no session yet.
-     * Added a seqid_prefix option that allows you to add and strip "chr" style prefixes from all seqids;
+     * Added a datasource "seqid_prefix" option that allows you to add and strip "chr" style prefixes from all seqids;
        this allows for interoperability with UCSC, which always wants a "chr" to begin each chromosome.
+     * Fixed loading of SAM files to avoid loading of incorrect fasta file when both .fa and .fa.fai files
+       are present in the scaffolds directory.
 
 2.13
      * Fixed SAM file processing so as not to die on first line of SAM @SQ header.

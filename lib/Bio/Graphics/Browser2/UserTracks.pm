@@ -87,7 +87,6 @@ sub set_mirrored {
     my $self = shift;
     my ($track_name,$url) = @_;
     my $flagfile = $self->mirror_flag($track_name);
-    warn "set_mirrored($track_name => $flagfile)";
     open my $i,">",$flagfile or warn "can't open mirror file: $!";
     print $i $url;
     close $i;

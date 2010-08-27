@@ -57,7 +57,7 @@ sub do_strip_prefix {
     open my $o,">",$dest         or die "Can't open $dest: $!";
     while (<$i>) {
 	next if /^\@/;
-	s/^([^\t]+)\t([^\t}+)\t$prefix([^\t+])/$1\t$2\t$3/;
+	s/^([^\t]+)\t([^\t]+)\t$prefix([^\t]+)/$1\t$2\t$3/;
     } continue {
 	print $o $_;
     }
@@ -82,9 +82,10 @@ sub sam2bam {
 	my $fasta      = $self->get_fasta_file;
 	$fasta 
 	    or die "Could not find a suitable reference FASTA file for indexing this SAM file";
-    
+
 	my $fai = Bio::DB::Sam::Fai->load($fasta)
 	    or die "Could not load reference FASTA file for indexing this SAM file: $!";
+
 	$header = $tam->header_read2($fasta.".fai");
     }
 

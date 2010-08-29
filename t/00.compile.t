@@ -37,7 +37,7 @@ sub compiles_ok {
         if ( $? == 0 ) {
             ok( 1, "$cat_path compiled ok" )
                 or diag $stderr;
-            like( $stderr, qr/syntax OK\n$/, 'stderr said "syntax OK"' )
+            like( $stderr, qr/syntax OK\n$/, qq|$cat_path stderr said "syntax OK"| )
                 or diag $stderr;
         } elsif ( $stderr =~ /^Can't locate (\S+) in \@INC/ && missing_recommend($1) ) {
             ok( 1, "$cat_path does not compile due to missing recommend" );
@@ -46,7 +46,7 @@ sub compiles_ok {
             diag "stdout: $stdout";
             diag "stderr: $stderr";
         }
-        is( $stdout, '', 'nothing on stdout' );
+        is( $stdout, '', "$cat_path nothing on stdout" );
     }
 }
 

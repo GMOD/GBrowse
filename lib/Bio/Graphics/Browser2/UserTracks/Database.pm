@@ -70,8 +70,9 @@ sub get_uploaded_files {
 sub get_public_files {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
-    my $uploadsid = shift // $self->{uploadsid};												#/
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'public' AND (users IS NULL OR users NOT LIKE " . $uploadsdb->quote("%" . $uploadsid . "%") . ") AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
+    my $uploadsid = $self->{uploadsid};
+    my $userid = shift // $self->{userid};												#/
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'public' AND (users IS NULL OR users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ") AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
     return @$rows;
 }
 
@@ -89,8 +90,9 @@ sub get_imported_files {
 sub get_added_public_files {
 	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
+    my $userid = $self->{userid};
     my $uploadsid = $self->{uploadsid};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'public' AND (users LIKE " . $uploadsdb->quote('%' . $uploadsid . '%') . " OR userid = " . $uploadsdb->quote($uploadsid) . ") ORDER BY uploadid");
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'public' AND (users LIKE " . $uploadsdb->quote('%' . $userid . '%') . " OR userid = " . $uploadsdb->quote($uploadsid) . ") ORDER BY uploadid");
     return @$rows;
 }
 
@@ -98,10 +100,11 @@ sub get_added_public_files {
 sub get_shared_files {
 	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
+    my $userid = $self->{userid};
     my $uploadsid = $self->{uploadsid};
     #Since upload IDs are all the same size, we don't have to worry about one ID repeated in another so this next line is OK. Still, might be a good idea to secure this somehow?
-    my $likeuploadsid = $uploadsdb->quote('%' . $uploadsid . '%');
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE (sharing_policy = 'group' OR sharing_policy = 'casual') AND users LIKE $likeuploadsid AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
+    my $likeuserid = $uploadsdb->quote('%' . $userid . '%');
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE (sharing_policy = 'group' OR sharing_policy = 'casual') AND users LIKE $likeuserid AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
     return @$rows;
 }
 
@@ -110,15 +113,13 @@ sub share {
 	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
 	my $fileid = $self->get_file_id(shift);
-	my $uploadsid = shift // $self->{uploadsid};												#/
+	my $userid = shift // $self->{userid};														#/
 	my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = '$fileid'");
 	
-	warn "A request to share $fileid to $uploadsid got all the way to Database.pm";
-	
 	#If we find the user's ID, it's already been added, just return that it worked.
-	return 1 if ($users =~ $uploadsid);
+	return 1 if ($users =~ $userid);
 	$users .= ", " if $users;
-	return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users . $uploadsid) . "  WHERE uploadid = '$fileid'");
+	return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users . $userid) . "  WHERE uploadid = '$fileid'");
 }
 
 # Unshare (File[, User ID]) - Removes an added public or shared track from a user's session
@@ -126,13 +127,13 @@ sub unshare {
 	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
 	my $fileid = $self->get_file_id(shift);
-	my $uploadsid = shift // $self->{uploadsid};												#/
+	my $userid = shift // $self->{userid};													#/
 	
 	my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = '$fileid'");
 	#If we find the user's ID, it's already been added, just return that it worked.
-	return 1 if ($users !~ $uploadsid);
-	$users =~ s/$uploadsid(, )?//i;
-	$users =~ s/(, $)//i; #Not sure if this is the best way...probably not.
+	return 1 if ($users !~ $userid);
+	$users =~ s/$userid(, )?//i;
+	$users =~ s/(, $)//i; #Not sure if this is the best way to remove a trailing ", "...probably not.
 	return $uploadsdb->do("UPDATE uploads SET users = '$users'  WHERE uploadid = '$fileid'");
 }
 
@@ -272,14 +273,24 @@ sub permissions {
 	}
 }
 
-# Is Mine (File[, Uploads ID]) - Returns 1 if a track is owned by the logged-in (or specified) user), 0 if not.
+# Is Mine (File[, Uploads ID]) - Returns 1 if a track is owned by the logged-in (or specified) user, 0 if not.
 sub is_mine {
 	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
 	my $file = $uploadsdb->quote(shift);
 	my $uploadsid = $uploadsdb->quote(shift // $self->{uploadsid});								#/
 	my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE path = $file AND userid = $uploadsid");
-	return (@$results > 0);
+	return (@$results > 0)? 1 : 0;
+}
+
+# Is Shared With Me (File[, Uploads ID]) - Returns 1 if a track is shared with the logged-in (or specified) user, 0 if not.
+sub is_shared_with_me {
+	my $self = shift;
+	my $uploadsdb = $self->{uploadsdb};
+	my $file = $uploadsdb->quote(shift);
+	my $uploadsid = $uploadsdb->quote("%" . (shift // $self->{userid}) . "%");					#/
+	my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE path = $file AND users LIKE $uploadsid");
+	return (@$results > 0)? 1 : 0;
 }
 
 # Shared With (File) - Returns an array of users a track is shared with.

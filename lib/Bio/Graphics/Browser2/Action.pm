@@ -535,12 +535,10 @@ sub ACTION_share_file {
 	my $q = shift;
 	my $render = $self->render;
     my $file = $q->param('file') or croak;
-    my $uploadsid = $q->param('uploadsid') or croak;
-
-	warn "A request to share got all the way to Action.pm";
+    my $userid = $q->param('userid') or croak;
 
     my $usertracks = $render->user_tracks;
-    $usertracks->share($file, $uploadsid);
+    $usertracks->share($file, $userid);
     return (204, 'text/plain', undef);	
 }
 
@@ -549,10 +547,10 @@ sub ACTION_unshare_file {
 	my $q = shift;
 	my $render = $self->render;
     my $file = $q->param('file') or croak;
-    my $uploadsid = $q->param('uploadsid') or croak;
+    my $userid = $q->param('userid') or croak;
 
     my $usertracks = $render->user_tracks;
-    $usertracks->unshare($file, $uploadsid);
+    $usertracks->unshare($file, $userid);
     return (204, 'text/plain', undef);	
 }
 

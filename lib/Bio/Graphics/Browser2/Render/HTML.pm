@@ -455,6 +455,7 @@ EOS
 
 }
 
+# Renders the settings which control the balloon styles on the page.
 sub render_balloon_settings {
     my $self   = shift;
     my $source = $self->data_source;
@@ -596,7 +597,7 @@ sub render_login {
     $click = 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');';
     $html  = '';
 
-    if ($session->private) {
+    if ($session->private) {a
         $html .= span({-style=>'float:right;font-weight:bold;color:black;'},
                       'Welcome, '.$session->username) . br() .
                  span({-style       => $style,
@@ -627,6 +628,7 @@ sub render_login {
     return $settings->{head} ? $container : '';
 }
 
+# Renders the account confirmation screen.
 sub render_login_account_confirm {
     my $self     = shift;
     my $confirm  = shift;
@@ -642,6 +644,7 @@ sub render_login_account_confirm {
         : "";
 }
 
+# Renders the "Confirm OpenID" popup.
 sub render_login_openid_confirm {
     my $self            = shift;
     my $images          = $self->globals->openid_url;
@@ -661,6 +664,7 @@ sub render_login_openid_confirm {
         : "";
 }
 
+# Returns the HTML for the page's title, as displayed at the top.
 sub render_title {
     my $self  = shift;
     my $title = shift;
@@ -671,6 +675,7 @@ sub render_title {
 	: '';
 }
 
+# Renders the search & navigation instructions & examples.
 sub render_instructions {
   my $self     = shift;
   my $settings = $self->state;
@@ -693,6 +698,7 @@ sub render_instructions {
   : '';
 }
 
+# Renders the HTML for the spinning "busy" signal on the top-left corner of the page.
 sub render_busy_signal {
     my $self = shift;
     return img({
@@ -703,20 +709,20 @@ sub render_busy_signal {
        });
 }
 
-# Renders the file menu.
+# Renders the menu bar across the top of the browser.
 sub render_actionmenu {
     my $self  = shift;
     my $settings = $self->state;
 
     my   @export_links=a({-href=>'?make_image=GD', -target=>'_blank'},     $self->tr('IMAGE_LINK'));	#;
-    push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->tr('SVG_LINK'))
+    push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->tr('SVG_LINK'))		##
 	if HAVE_SVG;
-    push @export_links,a({-href=>'?make_image=PDF',-target=>'_blank'}, $self->tr('PDF_LINK'))
+    push @export_links,a({-href=>'?make_image=PDF',-target=>'_blank'}, $self->tr('PDF_LINK'))			##
 	if HAVE_SVG && $self->can_generate_pdf;
 
     push @export_links,a({-href=>$self->gff_dump_link},                    $self->tr('DUMP_GFF'));		#;
     push @export_links,a({-href=>$self->dna_dump_link},                    $self->tr('DUMP_SEQ'));		#;
-    push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->tr('SEND_TO_GALAXY'))
+    push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->tr('SEND_TO_GALAXY'))	##
 	if $self->data_source->global_setting('galaxy outgoing');
 
     my $bookmark_link = a({-href=>'?action=bookmark'},$self->tr('BOOKMARK')),;							#,
@@ -771,8 +777,7 @@ sub render_actionmenu {
     return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));
 }
 
-# for the subset of plugins that are named in the 'quicklink plugins' option, create
-# quick links for them.
+# For the subset of plugins that are named in the 'quicklink plugins' option, create quick links for them.
 sub plugin_links {
   my $self    = shift;
   my $plugins = shift;
@@ -1330,8 +1335,8 @@ sub render_select_browser_link {
 sub render_upload_share_section {
     my $self = shift;
     my $globals = $self->globals;
-    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, 'Admin mode: Uploaded tracks are public') : ""; # BUG: this is HTML - should not be here!!!
-	$html .= $self->render_added_track_listing;
+    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, 'Admin mode: Uploaded tracks are public') : "";
+	$html .= $self->render_custom_track_listing;
 	if ($globals->user_accounts == 1) {
 		$html .= $self->render_public_track_listing;
 	}
@@ -1339,10 +1344,10 @@ sub render_upload_share_section {
 	return $html;
 }
 
-# Render Added Track Listing - Returns the HTML listing of public, uploaded, imported and shared tracks added to a session, and a section to add more.
-sub render_added_track_listing {
+# Render Custom Track Listing - Returns the HTML listing of public, uploaded, imported and shared tracks added to a session, and a section to add more.
+sub render_custom_track_listing {
 	my $self = shift;
-	my $html = h1("Added Tracks");
+	my $html = h1("Custom Tracks");
 	
 	$html .= a( {
 					-href => $self->annotation_help.'#remote',
@@ -1352,7 +1357,7 @@ sub render_added_track_listing {
 			);
 	$html .= $self->list_tracks;
 	$html .= $self->add_userdata;
-	$html = div({-id => "added_tracks"}, $html);
+	$html = div({-id => "custom_tracks"}, $html);
 	return $html;
 }
 
@@ -1372,6 +1377,7 @@ sub list_tracks {
 	my $userdata = $self->user_tracks;
 	my $listing_type = shift // "";																#/
 	my @tracks = sort(($listing_type =~ /public/)? $userdata->get_public_files : shift // $userdata->tracks);		#/
+	$listing_type .= " available" if $listing_type =~ /public/;
 	
 	# Main track roll code.
 	my $count = 0;
@@ -1445,6 +1451,7 @@ sub render_track_list_title {
 	} elsif (length $short_name > 40) {
 		$short_name =~ s/^(.{40}).+/$1.../;
 	}
+	
 	my @track_labels = $userdata->labels($track);
 	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
 	my $source_note = span({-style => "float: right; font-size: 16pt; font-family: Helvetica, Arial, Verdana, sans-serif; color: " . $accent_color . ";"}, $type);
@@ -1480,19 +1487,18 @@ sub render_track_list_title {
 	) . $source_note;
 }
 
-# Render Track Controls (Track Name, Type) - Renders the HTML for the main track controls in the added track listing.
+# Render Track Controls (Track Name, Type) - Renders the HTML for the main track controls in the custom track listing.
 sub render_track_controls {
 	my $self = shift;
 	my $track = shift;
 	my $type = shift;
 	my $userdata = $self->user_tracks();
-	my $uploadsid = $userdata->{uploadsid};
+	my $userid = $userdata->{userid};
 	my @track_labels = $userdata->labels($track);
 	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
 	
 	my $buttons = $self->data_source->globals->button_url;
-    my $share = "$buttons/share.png";
-    my $delete = "$buttons/trash.png";
+    
 	my $toggle_details = a(	
 		{
 			-href	  => "javascript: void(0);",
@@ -1500,38 +1506,53 @@ sub render_track_controls {
 		 },
 		 "Toggle Details"
 	);
+	my $controls = $toggle_details;
 	
-	my $share_icon = img(
-		{
-			-src		  => $share,
-			-style   	  => 'cursor:pointer',
-			-onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
-			-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
+	# Conditional controls, based on the type of track.
+	if ($userdata->is_mine($track)) {
+		# The delete icon,
+		$controls .= '&nbsp;' . img(
+			{
+				-src     	 => "$buttons/trash.png",
+				-style  	 => 'cursor:pointer',
+				-onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
+				-onClick     => "deleteUpload('$track')"
+			}
+		);
+	}
+	if ($type !~ /available/) {
+		if ($userdata->is_mine($track)) {
+			# The sharing icon, if it's an upload.
+			$controls .= '&nbsp;' . img(
+				{
+					-src		  => "$buttons/share.png",
+					-style   	  => 'cursor:pointer',
+					-onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
+					-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
+				}
+			) if ($type =~ /upload/);
 		}
-	);
-	my $delete_action = ($type =~ /(public|shared)/)? "unshareFile('$track', '$uploadsid')" : "deleteUpload('$track')";
-	my $trash_icon = img(
-		{
-			-src     	 => $delete,
-			-style  	 => 'cursor:pointer',
-			-onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
-			-onClick     => $delete_action
+		if ($type =~ /(public|shared)/) {
+			# The "remove" [x] link.
+			$controls .= '&nbsp;' . a(
+				{
+					-href     	 => "javascript: void(0)",
+					-onMouseOver => 'GBubble.showTooltip(event,"Remove from my session",0,200)',
+					-onClick     => "unshareFile('$track', '$userid')"
+				},
+				"[X]"
+			);
 		}
-	);
-	
-	my $controls = $toggle_details.'&nbsp;';
-	$controls .= $trash_icon.'&nbsp;';
-	if ($type !~ /public/) {
-		$controls .= ($type =~ /upload/)? $share_icon . '&nbsp;' : '' ;
 	} else {
-		$controls .= a(
+		$controls .= '&nbsp;' . a(
 			{
 				-href	 => "javascript:void(0);",
-				-onClick => "shareFile('$track', '$uploadsid')"
+				-onClick => "shareFile('$track', '$userid')"
 			},
-			"Add"
-		) unless ($userdata->is_mine($track) == 1);
+			"[Add]"
+		);
 	}
+	
 	return div(
 		{
 			-class => "controls",
@@ -1650,11 +1671,14 @@ sub render_track_sharing {
 	my $self = shift;
 	my $track = shift;
 	my $userdata = $self->user_tracks();
+	my $userdb = $self->{userdb};
 	
+	#Building the users list.
 	my $sharing_policy = $userdata->permissions($track);
 	my @users = $userdata->shared_with($track);
-	$_ = b($_) . "&nbsp;[" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$track', '$_')"}, "X") . "]" foreach @users;
+	$_ = b($userdb->get_username($_)) . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$track', '$_')"}, "[X]") . "" foreach @users;
 	my $userlist = join (",", @users);
+	
 	my $sharing_content = 
 		b("Sharing:").
 		br().
@@ -1686,12 +1710,12 @@ sub render_track_sharing {
 					-onFocus => "this.clear()"
 				}
 			);		
-			my $share_link = "&nbsp;[" . a(
+			my $share_link = "&nbsp;" . a(
 				{
 					-href => "javascript: void(0)",
 					-onClick => "shareFile('$track', this.previous('input').getValue())",
 				},
-				"Add" ) . "]";
+				"[Add]" );
 			$sharing_content .= $add_box . $share_link;
 		};
 	}

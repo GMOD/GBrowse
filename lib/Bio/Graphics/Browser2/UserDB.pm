@@ -198,6 +198,14 @@ sub get_user_id {
     return $userdb->selectrow_array("SELECT userid FROM users WHERE username = $user") || "";
 }
 
+# Get Username (User ID) - Returns a user's username, given their ID.
+sub get_username {
+	my $self = shift;
+	my $userdb = $self->{dbi};
+    my $userid = $userdb->quote(shift);
+    return $userdb->selectrow_array("SELECT username FROM users WHERE userid = $userid") || "";
+}
+
 # Validate - Ensures that a non-openid user's credentials are correct.
 sub do_validate {
   my $self = shift;

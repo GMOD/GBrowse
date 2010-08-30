@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Bio::Graphics::Browser2::Shellwords;
 use constant DEBUG=>0;
+use Data::Dumper;
 
 sub new {
     my $self  = shift;

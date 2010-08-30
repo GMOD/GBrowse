@@ -33,7 +33,7 @@ var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
 var userdata_table_id       = 'userdata_table_div';
 var userimport_table_id     = 'userimport_table_div';
-var added_tracks_id			= 'added_tracks';
+var custom_tracks_id		= 'custom_tracks';
 var public_tracks_id		= 'public_tracks';
 
 //  Sorta Constants

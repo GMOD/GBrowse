@@ -97,7 +97,7 @@ function completeAjaxUpload(response, upload_id, field_type) {
     console.log("AJAX Upload completed.");
 
 	if (r.success) {
-		var fields = new Array(track_listing_id, added_tracks_id, public_tracks_id);
+		var fields = new Array(track_listing_id, custom_tracks_id, public_tracks_id);
 		if (r.tracks != null && r.tracks.length > 0) {
 			Controller.add_tracks(
 				r.tracks,
@@ -152,7 +152,7 @@ function deleteUpload (fileName) {
 				var tracks = transport.responseJSON.tracks;
 				if (tracks != null)
 					tracks.each(function(tid) { Controller.delete_track(tid) });
-				Controller.update_sections(new Array(added_tracks_id, track_listing_id));
+				Controller.update_sections(new Array(custom_tracks_id, track_listing_id));
 			}
 		}
 	);
@@ -246,13 +246,13 @@ function changePermissions(fileName, sharing_policy) {
 				sharing_policy: sharing_policy
 			},
 			onSuccess: function (transport) {
-				Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
+				Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
 			}
 		}
 	);
 }
 
-function shareFile(fileName, uploadsid) {
+function shareFile(fileName, userid) {
 	var indicator = fileName + "_stat";
 	$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
 	new Ajax.Request(
@@ -261,16 +261,16 @@ function shareFile(fileName, uploadsid) {
 			parameters: {
 				action: 'share_file',
 				file: fileName,
-				uploadsid: uploadsid
+				userid: userid
 			},
 			onSuccess: function (transport) {
-				Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
+				Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
 			}
 		}
 	);
 }
 
-function unshareFile(fileName, uploadsid) {
+function unshareFile(fileName, userid) {
 	var indicator = fileName + "_stat";
 	$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
 	new Ajax.Request(
@@ -279,10 +279,10 @@ function unshareFile(fileName, uploadsid) {
 			parameters: {
 				action: 'unshare_file',
 				file: fileName,
-				uploadsid: uploadsid
+				userid: userid
 			},
 			onSuccess: function (transport) {
-				Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
+				Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
 			}
 		}
 	);

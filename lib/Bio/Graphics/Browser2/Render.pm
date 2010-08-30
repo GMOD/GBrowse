@@ -366,10 +366,6 @@ sub authorize_user {
     return ($id,$nonce);
 }
 
-sub format_autocomplete {
-    croak "implement in subclass";
-}
-
 sub background_track_render {
     my $self = shift;
 
@@ -736,18 +732,6 @@ sub render_body {
   print $output;
 }
 
-
-sub render_actionmenu {
-    my $self = shift;
-    croak "implement in subclass";
-}
-
-sub render_tabbed_pages {
-    my $self = shift;
-    my ($main,$upload_share,$config) = @_;
-    croak "implement in subclass";
-}
-
 sub render_login_section {
     my $self = shift;
     my $output = '';
@@ -760,19 +744,10 @@ sub render_login_section {
     return $output;
 }
 
-sub render_select_track_link {
-    croak "implement in subclass";
-}
-
 sub render_tracks_section {
     my $self = shift;
     return $self->render_toggle_track_table;
 }
-
-sub render_upload_share_section {
-    croak "implement in subclass";
-}
-
 
 sub generate_title {
     my $self     = shift;
@@ -792,27 +767,6 @@ sub generate_title {
 					     $dsn->commas($features->[0]->start),
 					     $dsn->commas($features->[0]->end))
 	 : $description;
-}
-
-# never called, method in HTML.pm with same name is run instead
-sub render_top    {
-  my $self     = shift;
-  my $title    = shift;
-  croak "render_top() should not be called in parent class";
-}
-
-# never called, method in HTML.pm with same name is run instead
-sub render_title   {
-  my $self     = shift;
-  my $title    = shift;
-  croak "render_title() should not be called in parent class";
-}
-
-#never called, method in HTML.pm with same name is run instead
-sub render_navbar {
-  my $self = shift;
-  my $seg  = shift;
-  croak "render_navbar() should not be called in parent class";
 }
 
 # Provide segment info for rubberbanding
@@ -857,6 +811,7 @@ sub segment_info_object {
     return \%segment_info_object;
 }
 
+# Returns the HTML for the blank panel for a section (which will later be filled)
 sub render_panels {
     my $self    = shift;
     my $seg     = shift;
@@ -873,14 +828,14 @@ sub render_panels {
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
         my $panels_html    = $self->get_blank_panels( [$self->overview_tracks],
 						      'overview' );
-	my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
-	$html .= div(
-	    $self->toggle({tight=>1},
- 			  'Overview',
- 			  div({ -id => 'overview_panels', -class => 'track', -style=>'padding-bottom:3px' },
- 			      $scale_bar_html, $panels_html,
- 			  ))
- 	    ) . $drag_script;
+		my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
+		$html .= div(
+			$self->toggle({tight=>1},
+	 			  'Overview',
+	 			  div({ -id => 'overview_panels', -class => 'track', -style=>'padding-bottom:3px' },
+	 			      $scale_bar_html, $panels_html,
+	 			  ))
+	 	    ) . $drag_script;
     }
 
     if ( $section->{'regionview'} and $self->state->{region_size} ) {
@@ -906,7 +861,7 @@ sub render_panels {
 						      'detail');
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
         my $details_msg    = span({ -id => 'details_msg', },'');
-	my $clear_hilites  = $self->clear_highlights;
+		my $clear_hilites  = $self->clear_highlights;
         $html .= div(
             $self->toggle({tight=>1},
 			  'Details',
@@ -925,8 +880,6 @@ sub render_panels {
     }
     return $html;
 }
-
-sub clear_highlights { croak 'implement in subclass' }
 
 sub scale_bar {
     my $self         = shift;
@@ -978,54 +931,6 @@ sub scale_bar {
         track_type => 'scale_bar',
     );
     return $html
-}
-
-
-#never called, method in HTML.pm with same name is run instead
-sub render_toggle_track_table {
-  my $self = shift;
-  croak "render_toggle_track_table() should not be called in parent class";
-}
-
-sub render_track_table {
-  my $self = shift;
-  croak "render_track_table() should not be called in parent class";
-}
-
-sub render_instructions {
-  my $self  = shift;
-  my $title = shift;
-  croak "render_instructions() should not be called in parent class";
-}
-sub render_multiple_choices {
-  my $self = shift;
-  croak "render_multiple_choices() should not be called in parent class";
-}
-
-sub render_global_config {
-  my $self = shift;
-  croak "render_global_config() should not be called in parent class";
-}
-
-sub render_toggle_external_table {
-  my $self = shift;
-  croak "render_toggle_external_table() should not be called in parent class";
-}
-
-sub render_toggle_userdata_table {
-  my $self = shift;
-  croak "render_toggle_userdata_table() should not be called in parent class";
-}
-
-sub render_bottom {
-  my $self = shift;
-  my $features = shift;
-  croak "render_bottom() should not be called in parent class";
-}
-
-sub html_frag {
-  my $self = shift;
-  croak "html_frag() should not be called in parent class";
 }
 
 sub init_database {
@@ -1520,17 +1425,6 @@ sub cleanup {
   my $state = $self->state;
   $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}"
       if $state->{ref};  # to remember us by :-)
-}
-
-sub fatal_error {
-  my $self = shift;
-  my @msg  = @_;
-  croak 'Please call fatal_error() for a subclass of Bio::Graphics::Browser2::Render';
-}
-
-sub zoomBar {
-    my $self = shift;
-    croak 'Please define zoomBar() in a subclass of Bio::Graphics::Browser2::Render';
 }
 
 sub add_remote_tracks {
@@ -2073,24 +1967,6 @@ sub reconfigure_track {
     }
 }
 
-sub track_config {
-  my $self     = shift;
-  my $track_name    = shift;
-  croak "track_config() should not be called in parent class";
-}
-
-sub select_subtracks {
-  my $self       = shift;
-  my $track_name = shift;
-  croak "select_subtracks() should not be called in parent class";
-}
-
-sub share_track {
-  my $self     = shift;
-  my $track_name    = shift;
-  croak "share_track() should not be called in parent class";
-}
-
 sub update_options {
   my $self  = shift;
   my $state = shift || $self->state;
@@ -2454,8 +2330,8 @@ sub asynchronous_update_sections {
     }
 
     # New Uploaded Data Section
-    if ( $handle_section_name{'added_tracks'}) {
-	$return_object->{'added_tracks'} = $self->render_added_track_listing();
+    if ( $handle_section_name{'custom_tracks'}) {
+	$return_object->{'custom_tracks'} = $self->render_custom_track_listing();
     }
     
     # Public Files Section
@@ -3085,12 +2961,13 @@ sub featurefiles_in_section {
     my %found;
 
     for my $label (keys %$external) {
-	$state->{features}{$label}{visible}   or next;
-	my $file     = $external->{$label}    or next;
-	my %sections = map {$_=>1} $self->featurefile_sections($label);
-	$label .= ":".lc $desired_section if $expand;
-	$found{$label}++ if $sections{lc $desired_section};
+		$state->{features}{$label}{visible}   or next;
+		my $file     = $external->{$label}    or next;
+		my %sections = map {$_=>1} $self->featurefile_sections($label);
+		$label .= ":".lc $desired_section if $expand;
+		$found{$label}++ if $sections{lc $desired_section};
     }
+    my $keys = keys %found;
     return keys %found;
 }
 
@@ -3502,10 +3379,10 @@ sub make_hilite_callback {
 sub categorize_track {
   my $self  = shift;
   my $label = shift;
-  return $self->tr('OVERVIEW') if $label =~ /:overview$/;
-  return $self->tr('REGION')   if $label =~ /:region$/;
-  return $self->tr('EXTERNAL') if $label =~ /^(http|ftp|file):/;
-  return $self->tr('ANALYSIS') if $label =~ /^plugin:/;
+  return $self->tr('OVERVIEW') if $label =~ /:overview$/;						#=
+  return $self->tr('REGION')   if $label =~ /:region$/;							#=
+  return $self->tr('EXTERNAL') if $label =~ /^(http|ftp|file):/;				#=
+  return $self->tr('ANALYSIS') if $label =~ /^plugin:/;							#=
 
   my $category;
   for my $l ($self->language->language) {
@@ -3516,7 +3393,7 @@ sub categorize_track {
   $category        ||= '';  # prevent uninit variable warnings
   $category         =~ s/^["']//;  # get rid of leading quotes
   $category         =~ s/["']$//;  # get rid of trailing quotes
-  return $category ||= $self->tr('GENERAL');
+  return $category ||= $self->tr('GENERAL');									#;
 }
 
 sub is_safari {
@@ -3596,10 +3473,10 @@ sub join_selected_tracks {
 
     my @selected = $self->visible_tracks;
     for (@selected) { # escape hyphens
-	if ((my $filter = $state->{features}{$_}{filter}{values})) {
-	    my @subtracks = grep {$filter->{$_}} keys %{$filter};
-	    $_ .= "/@subtracks";
-	}
+		if ((my $filter = $state->{features}{$_}{filter}{values})) {
+			my @subtracks = grep {$filter->{$_}} keys %{$filter};
+			$_ .= "/@subtracks";
+		}
     }
     return $self->join_tracks(\@selected);
 }
@@ -3669,9 +3546,7 @@ sub galaxy_link {
     warn "[$$] galaxy_link = $galaxy_url" if DEBUG;
     return '' unless $galaxy_url;
     my $clear_it  = $self->galaxy_clear;
-    my $submit_it = q(document.galaxyform.submit());
-    
-   																								 #}) - Syntax highlight fixing.
+    my $submit_it = q(document.galaxyform.submit());							#}) - Syntax highlight fixing.
     
     return "$clear_it;$submit_it";
 }
@@ -3702,7 +3577,7 @@ sub image_link {
     my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}
                              } map {/\s/?"$_":$_}
     grep {
-	$settings->{features}{$_}{options}
+		$settings->{features}{$_}{options}
     } @$tracks;
     $id        ||= ''; # to prevent uninit variable warnings
     my $img_url  = "$url/?name=$name;l=$selected;width=$width;id=$id";
@@ -3891,7 +3766,124 @@ sub generate_chrom_sizes {
     return 1;
 }
 
+# The following functions are implemented in HTML.pm (or any other Render subclass), are never called, and are here for debugging.
+sub format_autocomplete {
+    croak "implement in subclass";
+}
 
+sub render_actionmenu {
+    my $self = shift;
+    croak "implement in subclass";
+}
+
+sub render_tabbed_pages {
+    my $self = shift;
+    my ($main,$upload_share,$config) = @_;
+    croak "implement in subclass";
+}
+
+sub render_select_track_link {
+    croak "implement in subclass";
+}
+
+sub render_upload_share_section {
+    croak "implement in subclass";
+}
+
+sub render_top    {
+  my $self     = shift;
+  my $title    = shift;
+  croak "render_top() should not be called in parent class";
+}
+
+sub render_title   {
+  my $self     = shift;
+  my $title    = shift;
+  croak "render_title() should not be called in parent class";
+}
+
+sub render_navbar {
+  my $self = shift;
+  my $seg  = shift;
+  croak "render_navbar() should not be called in parent class";
+}
+
+sub clear_highlights { croak 'implement in subclass' }
+
+sub render_toggle_track_table {
+  my $self = shift;
+  croak "render_toggle_track_table() should not be called in parent class";
+}
+
+sub render_track_table {
+  my $self = shift;
+  croak "render_track_table() should not be called in parent class";
+}
+
+sub render_instructions {
+  my $self  = shift;
+  my $title = shift;
+  croak "render_instructions() should not be called in parent class";
+}
+sub render_multiple_choices {
+  my $self = shift;
+  croak "render_multiple_choices() should not be called in parent class";
+}
+
+sub render_global_config {
+  my $self = shift;
+  croak "render_global_config() should not be called in parent class";
+}
+
+sub render_toggle_external_table {
+  my $self = shift;
+  croak "render_toggle_external_table() should not be called in parent class";
+}
+
+sub render_toggle_userdata_table {
+  my $self = shift;
+  croak "render_toggle_userdata_table() should not be called in parent class";
+}
+
+sub render_bottom {
+  my $self = shift;
+  my $features = shift;
+  croak "render_bottom() should not be called in parent class";
+}
+
+sub html_frag {
+  my $self = shift;
+  croak "html_frag() should not be called in parent class";
+}
+
+sub fatal_error {
+  my $self = shift;
+  my @msg  = @_;
+  croak 'Please call fatal_error() for a subclass of Bio::Graphics::Browser2::Render';
+}
+
+sub zoomBar {
+    my $self = shift;
+    croak 'Please define zoomBar() in a subclass of Bio::Graphics::Browser2::Render';
+}
+
+sub track_config {
+  my $self     = shift;
+  my $track_name    = shift;
+  croak "track_config() should not be called in parent class";
+}
+
+sub select_subtracks {
+  my $self       = shift;
+  my $track_name = shift;
+  croak "select_subtracks() should not be called in parent class";
+}
+
+sub share_track {
+  my $self     = shift;
+  my $track_name    = shift;
+  croak "share_track() should not be called in parent class";
+}
 
 ########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end
 sub tr {

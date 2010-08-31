@@ -4,6 +4,7 @@
        this will enable glyphs and plugins to access the DNA for all features, even if the feature is contained
        in a database that does not have access to the DNA.
      * Fixed various problems in the ProteinDumper plugin.
+     * Fixed problems with all regular expression tracks being cached to same directory.
 
 2.14 Fri Aug 27 11:05:08 EDT 2010
      * Prevent a blank-screen crash when searching for chromosomes not in the database.

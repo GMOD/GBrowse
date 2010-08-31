@@ -1900,12 +1900,19 @@ sub source_menu {
   my %descriptions = map {$_=>$globals->data_source_description($_)} @sources;
   @sources         = sort {$descriptions{$a} cmp $descriptions{$b}} @sources;
 
+  my %sources      = map {$_=>1} @sources;
+  unless ($sources{$self->data_source->name}) { # for regexp-based sources
+      my $n = $self->data_source->name;
+      $descriptions{$n} = $self->data_source->description;
+      @sources         = sort {$descriptions{$a} cmp $descriptions{$b}} (@sources,$n);
+  }
+
   return b($self->tr('DATA_SOURCE')).br.
     ( $sources ?
-      popup_menu(-name   => 'source',
-		 -values => \@sources,
-		 -labels => \%descriptions,
-		 -default => $self->session->source,
+      popup_menu(-name     => 'source',
+		 -values   => \@sources,
+		 -labels   => \%descriptions,
+		 -default  => $self->data_source->name,
 		 -onChange => 'this.form.submit()',
 		)
 	: $globals->data_source_description($self->session->source)

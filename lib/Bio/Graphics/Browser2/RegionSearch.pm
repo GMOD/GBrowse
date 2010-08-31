@@ -507,7 +507,9 @@ sub search_features_remotely {
 	}
     }
 
-    eval {Bio::Graphics::Browser2::Render->fcgi_request()->Flush};
+    if (my $fcgi = Bio::Graphics::Browser2::Render->fcgi_request()) {
+	$fcgi->Flush;
+    }
 
     return \@found;
 }

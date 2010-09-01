@@ -1706,7 +1706,7 @@ sub render_track_sharing {
 			my $add_box = "&nbsp;" . input(
 				{
 					-length => 20,
-					-value => "Enter an upload ID here.",
+					-value => "Enter a username here.",
 					-onFocus => "this.clear()"
 				}
 			);		

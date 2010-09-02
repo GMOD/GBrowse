@@ -816,9 +816,10 @@ sub sort_local_remote {
 			      !/plugin:/ &&
 			      !/file:/   &&
 			      !/^(ftp|http|das):/ &&
-			      (($url = $source->fallback_setting($_=>'remote renderer') ||0)
-			       && ($url ne 'none')
-			       && ($url ne 'local')))
+			      !$source->is_usertrack($_) &&
+			      (($url = $source->fallback_setting($_=>'remote renderer') ||0) &&
+			      ($url ne 'none') &&
+			      ($url ne 'local')))
                         } @uncached;
 
     my @remote    = grep {$is_remote{$_} } @uncached;

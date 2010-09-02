@@ -8,6 +8,7 @@ use Carp 'croak';
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
 use File::Basename 'basename';
+use JSON;
 use constant DEBUG => 0;
 
 sub new {

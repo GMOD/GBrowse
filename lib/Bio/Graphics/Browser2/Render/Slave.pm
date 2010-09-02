@@ -110,7 +110,6 @@ sub do_preload {
     my @labels      = $conf->configured_types;
 
     for my $l (@labels) {
-	uc $l eq 'GENERAL'                             or next;
 	my $adaptor = $conf->setting($l=>'db_adaptor') or next;
 	my $args    = $conf->setting($l=>'db_args')    or next;
 	(my $label = $l) =~ s/:database//;  # aesthetic

@@ -866,6 +866,7 @@ sub open_database {
 	  my $default = $self->open_database();  # I hope we don't get into a loop here
 	  eval {$db->dna_accessor($default)} unless $default eq $db;
       }
+
   }
 
   # remember mapping of this database to this track
@@ -1020,7 +1021,7 @@ sub add_dbid_to_feature {
     if ($feature->isa('HASH')) {
 	$feature->{__gbrowse_dbid} = $dbid;
 	my $class = ref $feature;
-	return if $self->{hacked_classes}{$class}++;
+	return if $class->can('gbrowse_dbid');
 	my $method = sub {
 	    my $f = shift;
 	    return $f->{__gbrowse_dbid};
@@ -1031,7 +1032,7 @@ sub add_dbid_to_feature {
     else {
 	$self->{feature2dbid}{overload::StrVal($feature)} = $dbid;
 	my $class = ref $feature;
-	return if $self->{hacked_classes}{$class}++;
+	return if $class->can('gbrowse_dbid');
 	my $method = sub { my $f = shift;
 			   return $self->{feature2dbid}{overload::StrVal($f)}
 	  };

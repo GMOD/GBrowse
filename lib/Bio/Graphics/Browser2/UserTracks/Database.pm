@@ -107,32 +107,34 @@ sub get_shared_files {
 # Share (File[, Username OR User ID]) - Adds a public or shared track to a user's session
 sub share {
 	my $self = shift;
-	
-	# Get the current users.
 	my $fileid = $self->get_file_id(shift);
-	my $uploadsdb = $self->{uploadsdb};
-	my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
-	
+	my $sharing_policy = $self->field("sharing_policy", $fileid);
+
 	# If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
 	my $userdb = $self->{userdb};
 	my $potential_userid = shift;
 	my $attempted_userid = $userdb->get_user_id($potential_userid);
-	my $userid = ($attempted_userid? $attempted_userid : $potential_userid) || $self->{userid};	#/
+	my $userid = ($attempted_userid? $attempted_userid : $potential_userid) // $self->{userid};	#/
 	
-	#If we find the user's ID, it's already been added, just return that it worked.
-	return 1 if ($users =~ $userid);
-	$users .= ", " if $users;
-	return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users . $userid) . "  WHERE uploadid = " . $uploadsdb->quote($fileid));
+	if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($fileid) && ($sharing_policy =~ /group/))) {
+		# Get the current users.
+		my $uploadsdb = $self->{uploadsdb};
+		my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
+	
+		#If we find the user's ID, it's already been added, just return that it worked.
+		return 1 if ($users =~ $userid);
+		$users .= ", " if $users;
+		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users . $userid) . "  WHERE uploadid = " . $uploadsdb->quote($fileid));
+	} else {
+		warn "Share() attempted in an illegal situation on $fileid by " . $userid;
+	}
 }
 
 # Unshare (File[, Username OR User ID]) - Removes an added public or shared track from a user's session
 sub unshare {
 	my $self = shift;
-	
-	# Get the current users.
 	my $fileid = $self->get_file_id(shift);
-	my $uploadsdb = $self->{uploadsdb};
-	my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
+	my $sharing_policy = $self->field("sharing_policy", $fileid);
 	
 	# If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
 	my $userdb = $self->{userdb};
@@ -140,12 +142,20 @@ sub unshare {
 	my $attempted_userid = $userdb->get_user_id($potential_userid);
 	my $userid = ($attempted_userid? $attempted_userid : $potential_userid) // $self->{userid};	#/
 	
-	#If we find the user's ID, it's already been removed, just return that it worked.
-	return 1 if ($users !~ $userid);
-	$users =~ s/$userid(, )?//i;
-	$users =~ s/(, $)//i; #Not sure if this is the best way to remove a trailing ", "...probably not.
+	if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($fileid) && ($sharing_policy =~ /group/))) {
+		# Get the current users.
+		my $uploadsdb = $self->{uploadsdb};
+		my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
 	
-	return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users) . " WHERE uploadid = " . $uploadsdb->quote($fileid));
+		#If we find the user's ID, it's already been removed, just return that it worked.
+		return 1 if ($users !~ $userid);
+		$users =~ s/$userid(, )?//i;
+		$users =~ s/(, $)//i; #Not sure if this is the best way to remove a trailing ", "...probably not.
+	
+		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users) . " WHERE uploadid = " . $uploadsdb->quote($fileid));
+	} else {
+		warn "Unshare() attempted in an illegal situation on $fileid by " . $userid;
+	}
 }
 
 # Field (Field, Path[, Value, User ID]) - Returns (or, if defined, sets to the new value) the specified field of a file.
@@ -158,13 +168,17 @@ sub field {
     my $uploadsid = shift // $self->{uploadsid}; 												#/
     
     if ($value) {
-	    #Clean up the string
-    	$value =~ s/^\s+//;
-		$value =~ s/\s+$//; 
-    	my $now = $self->nowfun();
-	    my $result = $uploadsdb->do("UPDATE uploads SET $field = " . $uploadsdb->quote($value) . " WHERE uploadid = " . $uploadsdb->quote($fileid));
-	    $self->update_modified($fileid);
-	    return $result;
+    	if ($self->is_mine($fileid)) {
+			#Clean up the string
+			$value =~ s/^\s+//;
+			$value =~ s/\s+$//; 
+			my $now = $self->nowfun();
+			my $result = $uploadsdb->do("UPDATE uploads SET $field = " . $uploadsdb->quote($value) . " WHERE uploadid = " . $uploadsdb->quote($fileid));
+			$self->update_modified($fileid);
+			return $result;
+		} else {
+	    	warn "Field() was called to modify $field on " . $fileid . " by " . $self->{username} . ", a non-owner.";
+	    }
     } else {
     	return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = '$fileid'");
     }
@@ -175,10 +189,8 @@ sub update_modified {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
     my $fileid = $self->get_file_id(shift);
-    my $uploadsid = shift // $self->{uploadsid};												#/
-
     my $now = $self->nowfun();
-    return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = '$fileid'");
+    return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = " . $self->quote($fileid));
 }
 
 # Created (File) - Returns creation date of $file, cannot be set.
@@ -200,7 +212,15 @@ sub description {
     my $self  = shift;
     my $file = $self->get_file_id(shift);
     my $value = shift;
-	return $value? $self->field("description", $file, $value) : $self->field("description", $file);
+    if ($value) {
+    	if ($self->is_mine($file)) {
+	    	return $self->field("description", $file, $value)
+	    } else {
+	    	warn "Change Description requested on $file by " . $self->{username} . ", a non-owner.";
+	    }
+    } else {
+    	return $self->field("description", $file)
+    }
 }
 
 # File Exists (Full Path[, UploadsID]) - Returns the number of results for a file (and optional owner) in the database, 0 if not found.

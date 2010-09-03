@@ -193,9 +193,12 @@ sub do_sendmail {
 # Get User ID (User) - Returns a user's ID.
 sub get_user_id {
     my $self = shift;
-    my $userdb = $self->{dbi};
-    my $user = $userdb->quote(shift || $self->{username});
-    return $userdb->selectrow_array("SELECT userid FROM users WHERE username = $user") || "";
+	my $userdb = $self->{dbi};
+    my $potential_userid = shift;
+    my $db_lookup = $userdb->selectrow_array("SELECT userid FROM users WHERE username = " . $userdb->quote($potential_userid));
+    my $user_id = ($db_lookup? $db_lookup : $potential_userid);
+    my $confirmed_user = $userdb->selectcol_arrayref("SELECT userid FROM users");
+    return $user_id if join(" ", @$confirmed_user) =~ $user_id;
 }
 
 # Get Username (User ID) - Returns a user's username, given their ID.

@@ -1699,11 +1699,11 @@ sub render_track_sharing {
 		$sharing_help .= b("Casual") . " - Visible to me and anyone I send a link to, but not visible in the public tracks.<br>";
 		$sharing_help .= b("Group") . " - Visible to and anyone I add to the sharing group.<br>";
 		$sharing_help .= b("Public") . " - Visible to anyone.<br>";
-		$sharing_content .= "&nbsp;[" . a({-href => "javascript:void(0)", -onMouseOver => "GBubble.showTooltip(event,'$sharing_help',0,300);"}, "?") . "]";
+		$sharing_content .= "&nbsp;" . a({-href => "javascript:void(0)", -onMouseOver => "GBubble.showTooltip(event,'$sharing_help',0,300);"}, "[?]");
 		$sharing_content .= "&nbsp;shared with " .  ($userlist? "$userlist" : "no one.") if ($sharing_policy =~ /(casual|group)/);
 		
 		if ($sharing_policy =~ /casual/) {
-			my $sharing_url = url(-full => 1, -path_info => 1) . "?share_link=" . $userdata->get_file_id($track);
+			my $sharing_url = url(-full => 1, -path_info => 1) . "?share_link=" . $userdata->get_file($track);
 			my $sharing_link = a({-href => $sharing_url}, $sharing_url);
 			$sharing_content .= br() . "Share with this link: ";
 			$sharing_content .= $sharing_link;

@@ -7,6 +7,8 @@
      * Fixed problems with all regular expression tracks being cached to same directory.
      * Fixed issues with uploaded tracks not being displayed when renderfarm activated.
      * Fixed issues involving failure of render slaves to preload databases (slowing everything down).
+     * You can now have an annotator plugin turned on by default by specifying it in the "default
+       features" option using the syntax "plugin:RestrictionAnnotator".
 
 2.14 Fri Aug 27 11:05:08 EDT 2010
      * Prevent a blank-screen crash when searching for chromosomes not in the database.

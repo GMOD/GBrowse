@@ -160,6 +160,13 @@ sub plugins {
   $d;
 }
 
+sub plugin_name {
+    my $self = shift;
+    my $label = shift;
+    my ($id) = $label =~ /^plugin:(\w+)/;
+    return $self->plugins->plugin($id)->name;
+}
+
 sub debug {
     my $self = shift;
     return $self->{debug} if exists $self->{debug};
@@ -240,14 +247,14 @@ sub set_source {
 sub init {
     my $self = shift;
     warn "init()" if DEBUG;
-    warn "set_default_state()" if DEBUG;
-    $self->set_default_state();
     warn "init_database()" if DEBUG;
     $self->init_database();
     warn "init_plugins()" if DEBUG;
     $self->init_plugins();
     warn "init_remote_sources()" if DEBUG;
     $self->init_remote_sources();
+    warn "set_default_state()" if DEBUG;
+    $self->set_default_state();
     warn "init done" if DEBUG;
 }
 
@@ -1407,15 +1414,10 @@ sub handle_plugins {
     return unless ($plugin_base);
 
     $self->init_plugins();
-
-    my $plugin;
-    if ($plugin_base   =~ /^plugin:([^:]+)/) {
-	my $name       = $1;
-	($plugin) = grep {$_->name eq $name } $self->plugins->plugins;
-    } else {
-	$plugin      = $self->plugins->plugin($plugin_base);
-    }
-    warn "an operation was requested on plugin $plugin_base, but this plugin has not been configured"
+    my ($id) = $plugin_base =~ /^plugin:(\w+)/;
+    $id    ||= $plugin_base;
+    my $plugin      = $self->plugins->plugin($id);
+    warn "an operation was requested on plugin $id, but this plugin has not been configured"
 	unless $plugin;
     return unless $plugin;
 
@@ -1874,10 +1876,10 @@ sub default_category_open {
 sub default_tracks {
   my $self  = shift;
   my $state  = $self->state;
-  my @labels = $self->data_source->labels;
+#  my @labels = $self->data_source->labels;
+  my @labels = $self->potential_tracks;
 
   $state->{tracks}   = \@labels;
-  warn "order = @labels" if DEBUG;
 
   $state->{features}{$_} = {visible=>0,options=>0,limit=>0}
       foreach @labels;
@@ -3009,8 +3011,8 @@ sub load_plugin_annotators {
 
   for my $plugin ($self->plugins->plugins) {
     next unless $plugin->type eq 'annotator';
-    my $name = $plugin->name;
-#    my $name = $plugin->id;  # use the ID "RestrictionAnnotator" rather than the name "Restriction Annotator"
+#    my $name = $plugin->name;
+    my $name = $plugin->id;  # use the ID "RestrictionAnnotator" rather than the name "Restriction Annotator"
     $name = "plugin:$name";
     $source->add_type($name,{}) unless $listed_in_source{$name}++;
     $state->{features}{$name} ||= {visible=>$label_visible{$name}||0,options=>0,limit=>0};
@@ -3191,6 +3193,7 @@ sub get_panel_renderer {
 						   -source         => $self->data_source,
 						   -settings       => $self->state,
 						   -language       => $self->language,
+						   -render         => $self,
 						  );}
 
 ################## image rendering code #############

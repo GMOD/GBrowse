@@ -152,7 +152,7 @@ sub annotate {
 
   for my $p (@plugins) {
     next unless $p->type eq 'annotator';
-    my $name = "plugin:".$p->name;
+    my $name = "plugin:".$p->id;
     next unless $p->page_settings && $p->page_settings->{features}{$name}{visible};
     warn "Plugin $name is visible, so running it on segment $segment" if DEBUG;
     if ($segment->length > $max_segment) {

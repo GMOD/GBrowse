@@ -891,7 +891,8 @@ sub render_track_table {
    my $key = $self->label2key($label);
    my ($link,$mouseover);
    if ($label =~ /^plugin:/) {
-       $labels{$label} = $key;
+#       $labels{$label} = $key;
+       $labels{$label} = $self->plugin_name($label);
        next;
    }
    elsif ($label =~ /^file:/){
@@ -1640,6 +1641,7 @@ sub plugin_configuration_form {
 
     my $plugin_type = $plugin->type;
     my $plugin_name = $plugin->name;
+    my $plugin_id   = $plugin->id;
 
     print CGI::header(-type=>'text/html',     
 		      -cache_control =>'no-cache');
@@ -1652,7 +1654,7 @@ sub plugin_configuration_form {
 	  button(-value => $self->tr('Configure_plugin'),
  		 -onClick=>'Controller.reconfigure_plugin('
                  . '"'.$self->tr('Configure_plugin').'"'
-                 . qq(, "plugin:$plugin_name")
+                 . qq(, "plugin:$plugin_id")
                  . qq(, "plugin_configure_div")
                  . qq(, "$plugin_type")
                  . qq(, this.parentNode)
@@ -1683,6 +1685,7 @@ sub wrap_plugin_configuration {
     if ($config_html) {
         my $plugin_type        = $plugin->type;
         my $plugin_name        = $plugin->name;
+        my $plugin_id          = $plugin->id;
 	my @plugin_description = $plugin->description;
         my @buttons;
 
@@ -1704,7 +1707,7 @@ sub wrap_plugin_configuration {
             -value   => $self->tr('Configure_plugin'),
             -onClick => 'Controller.reconfigure_plugin("'
                 . $self->tr('Configure_plugin') . '", "'
-                . "plugin:$plugin_name"
+                . "plugin:$plugin_id"
                 . '","plugin_configure_div","'
                 . $plugin_type . '");'
             );
@@ -1713,7 +1716,11 @@ sub wrap_plugin_configuration {
                 button(
                 -name    => 'plugin_button',
                 -value   => $self->tr('Find'),
-                -onClick => 'alert("Find not yet implemented")',
+                -onClick => 'Controller.plugin_go("'
+                    . $plugin_base . '","'
+                    . $plugin_type . '","'
+                    . $self->tr('Find') . '","'
+                    . 'config' . '")',
                 );
         }
         elsif ( $plugin_type eq 'dumper' ) {

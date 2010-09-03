@@ -742,13 +742,13 @@ var GBrowseController = Class.create({
   configure_plugin:
   function(div_id) {
     var plugin_base  = document.pluginform.plugin.value;
-    this.update_sections(new Array(div_id), '&plugin_base='+plugin_base,null,null,true);
-    new Effect.ScrollTo(div_id);
-    new Effect.BlindDown(div_id);
+    this.update_sections(new Array(div_id), '&plugin_base='+plugin_base,true,false,null);
+    Effect.BlindDown(div_id);
   },
 
   reconfigure_plugin:
   function(plugin_action,plugin_track_id,pc_div_id,plugin_type,form_element) {
+
     if (form_element==null)
        form_element = $("configure_plugin");
     else
@@ -765,6 +765,7 @@ var GBrowseController = Class.create({
         if (pc_div_id != null) Controller.wipe_div(pc_div_id); 
 
         if (plugin_type == 'annotator'){
+          ShowHideTrack(plugin_track_id,true);
 	  Controller.each_track(plugin_track_id,function(gbtrack) {
               Controller.rerender_track(gbtrack.track_id,true);
             });
@@ -807,7 +808,6 @@ var GBrowseController = Class.create({
       return false; 
     }
     else if (plugin_type == 'finder'){
-        alert('Searching for ' + $F('landmark_search_field') + ' via ' + $F('plugin'));
 	document.searchform.plugin_find.value  = $F('plugin');
 	document.searchform.force_submit.value = 1;
 	document.searchform.submit();

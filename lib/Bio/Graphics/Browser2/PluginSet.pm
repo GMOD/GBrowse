@@ -155,7 +155,7 @@ sub annotate {
     my $name = "plugin:".$p->name;
     next unless $p->page_settings && $p->page_settings->{features}{$name}{visible};
     warn "Plugin $name is visible, so running it on segment $segment" if DEBUG;
-    if ($max_segment < $segment->length+1) {
+    if ($segment->length > $max_segment) {
 	$feature_files->{$name} = Bio::Graphics::FeatureFile->new();  # empty
     } else {
 	my $features = $p->annotate($segment,$fast_mapper) or next;

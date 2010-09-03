@@ -1677,7 +1677,7 @@ sub render_track_sharing {
 	my $sharing_policy = $userdata->permissions($track);
 	my @users = $userdata->shared_with($track);
 	$_ = b($userdb->get_username($_)) . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$track', '$_')"}, "[X]") . "" foreach @users;
-	my $userlist = join (",", @users);
+	my $userlist = join (", ", @users);
 	
 	my $sharing_content = 
 		b("Sharing:").
@@ -1702,6 +1702,13 @@ sub render_track_sharing {
 		$sharing_content .= "&nbsp;[" . a({-href => "javascript:void(0)", -onMouseOver => "GBubble.showTooltip(event,'$sharing_help',0,300);"}, "?") . "]";
 		$sharing_content .= "&nbsp;shared with " .  ($userlist? "$userlist" : "no one.") if ($sharing_policy =~ /(casual|group)/);
 		
+		if ($sharing_policy =~ /casual/) {
+			my $sharing_url = url(-full => 1, -path_info => 1) . "?share_link=" . $userdata->get_file_id($track);
+			my $sharing_link = a({-href => $sharing_url}, $sharing_url);
+			$sharing_content .= br() . "Share with this link: ";
+			$sharing_content .= $sharing_link;
+		}
+		
 		if ($sharing_policy =~ /group/) {
 			my $add_box = "&nbsp;" . input(
 				{
@@ -1710,13 +1717,13 @@ sub render_track_sharing {
 					-onFocus => "this.clear()"
 				}
 			);		
-			my $share_link = "&nbsp;" . a(
+			my $add_link = "&nbsp;" . a(
 				{
 					-href => "javascript: void(0)",
 					-onClick => "shareFile('$track', this.previous('input').getValue())",
 				},
 				"[Add]" );
-			$sharing_content .= $add_box . $share_link;
+			$sharing_content .= $add_box . $add_link;
 		};
 	}
 	return $sharing_content;

@@ -893,7 +893,7 @@ var GBrowseController = Class.create({
 					description: desc
 				},
 				onSuccess: function(transport) {
-					Controller.update_sections(new Array(added_tracks_id, public_tracks_id))
+					Controller.update_sections(new Array(custom_tracks_id, public_tracks_id))
 				}
 			});
 			el.stopObserving('keypress');
@@ -903,7 +903,7 @@ var GBrowseController = Class.create({
 		}
 		if (event.keyCode==Event.KEY_ESC) {
 		el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
-		Controller.update_sections(new Array(added_tracks_id, public_tracks_id));
+		Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
 		el.stopObserving('keypress');
 		el.stopObserving('blur');
 		el.blur();
@@ -1014,6 +1014,9 @@ function initialize_page() {
   if ($('autocomplete_choices') != null) 
        initAutocomplete();
 
+	var share_link = window.location.href.parseQuery().share_link;
+  	if (share_link)
+  		shareFile(share_link, "");
 }
 
 // set the colors for the rubberband regions

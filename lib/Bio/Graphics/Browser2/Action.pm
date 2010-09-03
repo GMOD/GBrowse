@@ -539,7 +539,7 @@ sub ACTION_share_file {
 
     my $usertracks = $render->user_tracks;
     $usertracks->share($file, $userid);
-    return (204, 'text/plain', undef);	
+    return (204, 'text/plain', undef);
 }
 
 sub ACTION_unshare_file {

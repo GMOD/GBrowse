@@ -72,9 +72,7 @@ function startAjaxUpload(upload_id) {
 		onSuccess: function(transport) {
 	   if (transport.responseText.match(/complete/)) {
 	   	    Ajax_Status_Updater.get(upload_id).stop();
-		        Controller.update_sections(new Array(userdata_table_id,
-							 userimport_table_id,
-							 track_listing_id));
+		        Controller.update_sections(new Array(custom_tracks_id, track_listing_id));
 		}
 		}
 	   });
@@ -254,7 +252,8 @@ function changePermissions(fileName, sharing_policy) {
 
 function shareFile(fileName, userid) {
 	var indicator = fileName + "_stat";
-	$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+	if ($(indicator))
+		$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',
@@ -272,7 +271,8 @@ function shareFile(fileName, userid) {
 
 function unshareFile(fileName, userid) {
 	var indicator = fileName + "_stat";
-	$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+	if ($(indicator))
+		$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',

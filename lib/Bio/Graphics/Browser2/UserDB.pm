@@ -203,7 +203,7 @@ sub get_username {
 	my $self = shift;
 	my $userdb = $self->{dbi};
     my $userid = $userdb->quote(shift);
-    return $userdb->selectrow_array("SELECT username FROM users WHERE userid = $userid") || "";
+    return $userdb->selectrow_array("SELECT username FROM users WHERE userid = $userid") || "an anonymous user";
 }
 
 # Validate - Ensures that a non-openid user's credentials are correct.

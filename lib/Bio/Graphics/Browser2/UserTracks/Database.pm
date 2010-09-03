@@ -41,12 +41,12 @@ sub _new {
 # Get File ID (Full Path[, userid]) - Returns a file's ID from the database.
 sub get_file_id{
     my $self = shift;
+    my $potential_fileid = shift;
+  	my $uploadsid = shift;
     my $uploadsdb = $self->{uploadsdb};
-    my $path = $uploadsdb->quote(shift);
-    my $uploadsid = shift;
-    
-    my $if_user = $uploadsid? "userid = " . $uploadsdb->quote($uploadsid) . " AND " : "";
-    return $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE " . $if_user . "path = $path");
+	my $if_user = $uploadsid? "userid = " . $uploadsdb->quote($uploadsid) . " AND " : "";
+	my $attempted_fileid = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE " . $if_user . "path = " . $uploadsdb->quote($potential_fileid));
+	my $userid = ($attempted_fileid? $attempted_fileid : $potential_fileid);
 }
 
 # Now Function - return the database-dependent function for determining current date & time
@@ -61,8 +61,7 @@ sub get_uploaded_files {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
     my $uploadsid = $self->{uploadsid};
-    $uploadsid = $uploadsdb->quote($uploadsid);
-	my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = $uploadsid AND sharing_policy <> 'public' AND imported <> 1 ORDER BY uploadid");
+	my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = " . $uploadsdb->quote($uploadsid) . " AND sharing_policy <> 'public' AND imported <> 1 ORDER BY uploadid");
 	return @$rows;
 }
 
@@ -81,8 +80,7 @@ sub get_imported_files {
 	my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
     my $uploadsid = $self->{uploadsid};
-    $uploadsid = $uploadsdb->quote($uploadsid);
-	my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = $uploadsid AND sharing_policy <> 'public' AND imported = 1 ORDER BY uploadid");
+	my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = " . $uploadsdb->quote($uploadsid) . " AND sharing_policy <> 'public' AND imported = 1 ORDER BY uploadid");
 	return @$rows;
 }
 
@@ -91,7 +89,6 @@ sub get_added_public_files {
 	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
     my $userid = $self->{userid};
-    my $uploadsid = $self->{uploadsid};
     my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE sharing_policy = 'public' AND users LIKE " . $uploadsdb->quote('%' . $userid . '%') . " ORDER BY uploadid");
     return @$rows;
 }
@@ -102,9 +99,8 @@ sub get_shared_files {
 	my $uploadsdb = $self->{uploadsdb};
     my $userid = $self->{userid};
     my $uploadsid = $self->{uploadsid};
-    #Since upload IDs are all the same size, we don't have to worry about one ID repeated in another so this next line is OK. Still, might be a good idea to secure this somehow?
-    my $likeuserid = $uploadsdb->quote('%' . $userid . '%');
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE (sharing_policy = 'group' OR sharing_policy = 'casual') AND users LIKE $likeuserid AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
+    #Since upload IDs are all the same size, we don't have to worry about one ID repeated inside another so this next line is OK. Still, might be a good idea to secure this somehow?
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE (sharing_policy = 'group' OR sharing_policy = 'casual') AND users LIKE " . $uploadsdb->quote('%' . $userid . '%') . " AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
     return @$rows;
 }
 
@@ -121,7 +117,7 @@ sub share {
 	my $userdb = $self->{userdb};
 	my $potential_userid = shift;
 	my $attempted_userid = $userdb->get_user_id($potential_userid);
-	my $userid = ($attempted_userid? $attempted_userid : $potential_userid) // $self->{userid};	#/
+	my $userid = ($attempted_userid? $attempted_userid : $potential_userid) || $self->{userid};	#/
 	
 	#If we find the user's ID, it's already been added, just return that it worked.
 	return 1 if ($users =~ $userid);
@@ -157,18 +153,16 @@ sub field {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
     my $field = shift;
-    my $path = shift;
+    my $fileid = $self->get_file_id(shift);
     my $value = shift;
     my $uploadsid = shift // $self->{uploadsid}; 												#/
-    my $fileid = $self->get_file_id($path);
     
     if ($value) {
 	    #Clean up the string
     	$value =~ s/^\s+//;
 		$value =~ s/\s+$//; 
-    	$value = $uploadsdb->quote($value);
     	my $now = $self->nowfun();
-	    my $result = $uploadsdb->do("UPDATE uploads SET $field = $value WHERE uploadid = '$fileid'");
+	    my $result = $uploadsdb->do("UPDATE uploads SET $field = " . $uploadsdb->quote($value) . " WHERE uploadid = " . $uploadsdb->quote($fileid));
 	    $self->update_modified($fileid);
 	    return $result;
     } else {
@@ -180,10 +174,9 @@ sub field {
 sub update_modified {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
-    my $path = shift;
+    my $fileid = $self->get_file_id(shift);
     my $uploadsid = shift // $self->{uploadsid};												#/
-    
-    my $fileid = $self->get_file_id($path);
+
     my $now = $self->nowfun();
     return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = '$fileid'");
 }
@@ -191,21 +184,21 @@ sub update_modified {
 # Created (File) - Returns creation date of $file, cannot be set.
 sub created {
     my $self  = shift;
-    my $file = shift;
+    my $file = $self->get_file_id(shift);
     return $self->field("creation_date", $file);
 }
 
 # Modified (File) - Returns date modified of $file, cannot be set (except by update_modified()).
 sub modified {
     my $self  = shift;
-    my $file = shift;
+    my $file = $self->get_file_id(shift);
    	return $self->field("modification_date", $file);
 }
 
 # Description (File[, Value]) - Returns a file's description, or changes the current description if defined.
 sub description {
     my $self  = shift;
-    my $file = shift;
+    my $file = $self->get_file_id(shift);
     my $value = shift;
 	return $value? $self->field("description", $file, $value) : $self->field("description", $file);
 }
@@ -214,11 +207,11 @@ sub description {
 sub file_exists {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
-    my $path = $uploadsdb->quote(shift);
-    my $uploadsid = $uploadsdb->quote(shift);
+    my $path = shift;
+    my $uploadsid = shift;
 	
-    my $usersql = $uploadsid? " AND userid = $uploadsid" : "";
-    return $uploadsdb->do("SELECT * FROM uploads WHERE path LIKE $path" . $usersql);
+    my $usersql = $uploadsid? " AND userid = " . $uploadsdb->quote($uploadsid) : "";
+    return $uploadsdb->do("SELECT * FROM uploads WHERE path LIKE " . $uploadsdb->quote("%" . $path . "%") . $usersql);
 }
 
 # Add File (Full Path[, Description, Sharing Policy, Uploads ID]) - Adds $file to the database under the current (or specified) owner.
@@ -246,85 +239,93 @@ sub add_file {
 # Delete File (File) - Deletes $file_id from the database.
 sub delete_file {
 	my $self = shift;
-	my $uploadsdb = $self->{uploadsdb};
     my $file = shift;
+    my $fileid = $self->get_file_id($file);
     my $userid = $self->{userid};
     my $uploadsid = $self->{uploadsid};
     
-    # First delete from the database.
-    my $fileid = $uploadsdb->quote($self->get_file_id($file, $uploadsid));
-    if ($fileid) {
-    	return $uploadsdb->do("DELETE FROM uploads WHERE uploadid = $fileid");
-    }
-    
-    # Then remove the file - better to have a dangling file then a dangling reference to nothing.
-    my $loader = Bio::Graphics::Browser2::DataLoader->new($file,
-							  $self->track_path($file),
-							  $self->track_conf($file),
-							  $self->{config},
-							  $userid);
-    $loader->drop_databases($self->track_conf($file));
-    rmtree($self->track_path($file));
+    if ($self->is_mine($file)) {
+		# First delete from the database.
+		my $uploadsdb = $self->{uploadsdb};
+		return $uploadsdb->do("DELETE FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
+		
+		# Then remove the file - better to have a dangling file then a dangling reference to nothing.
+		my $loader = Bio::Graphics::Browser2::DataLoader->new($file,
+								  $self->track_path($file),
+								  $self->track_conf($file),
+								  $self->{config},
+								  $userid);
+		$loader->drop_databases($self->track_conf($file));
+		rmtree($self->track_path($file));
+    } else {
+		warn "Delete change on " . $fileid . "requested by " . $self->{username} . " a non-owner.";
+	}
 }
 
 # Is Imported (File) - Returns 1 if an already-added track is imported, 0 if not.
 sub is_imported {
 	my $self = shift;
-	my $file = shift;
+	my $file = $self->get_file_id(shift);
 	my $uploadsdb = $self->{uploadsdb};
-	my $fileid = $self->get_file_id($file);
-	return $uploadsdb->selectrow_array("SELECT imported FROM uploads WHERE uploadid = '$fileid'") || 0;
+	return $uploadsdb->selectrow_array("SELECT imported FROM uploads WHERE uploadid = " . $uploadsdb->quote($file)) || 0;
 }
 
 # Permissions (File[, New Permissions]) - Return or change the permissions.
 sub permissions {
 	my $self = shift;
-	my $file = shift;
+	my $file = $self->get_file_id(shift);
 	my $new_permissions = shift;
 	if ($new_permissions) {
-		$self->field("users", $file, $self->{userid}) if $new_permissions =~ /public/;
-		return $self->field("sharing_policy", $file, $new_permissions);
+		if ($self->is_mine($file)) {
+			$self->field("users", $file, $self->{userid}) if $new_permissions =~ /public/;
+			return $self->field("sharing_policy", $file, $new_permissions);
+		} else {
+			warn "Permissions change on " . $file . "requested by " . $self->{username} . " a non-owner.";
+		}
 	} else {
 		return $self->field("sharing_policy", $file);
 	}
 }
 
-# Is Mine (File[, Uploads ID]) - Returns 1 if a track is owned by the logged-in (or specified) user, 0 if not.
+# Is Mine (File) - Returns 1 if a track is owned by the logged-in (or specified) user, 0 if not.
 sub is_mine {
 	my $self = shift;
+	my $file = $self->get_file_id(shift);
+	my $owner = $self->owner($file);
+	return ($owner eq $self->{uploadsid})? 1 : 0;
+}
+
+# Owner (File) - Returns the owner of the specified file.
+sub owner {
+	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
-	my $file = $uploadsdb->quote(shift);
-	my $uploadsid = $uploadsdb->quote(shift // $self->{uploadsid});								#/
-	my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE path = $file AND userid = $uploadsid");
-	return (@$results > 0)? 1 : 0;
+	my $file = $self->get_file_id(shift);
+	return $uploadsdb->selectrow_array("SELECT userid FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
 }
 
 # Is Shared With Me (File[, Uploads ID]) - Returns 1 if a track is shared with the logged-in (or specified) user, 0 if not.
 sub is_shared_with_me {
 	my $self = shift;
 	my $uploadsdb = $self->{uploadsdb};
-	my $file = $uploadsdb->quote(shift);
+	my $file = $self->get_file_id(shift);
 	my $uploadsid = $uploadsdb->quote("%" . (shift // $self->{userid}) . "%");					#/
-	my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE path = $file AND users LIKE $uploadsid");
+	my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE path = " . $uploadsdb->quote($file) . " AND users LIKE $uploadsid");
 	return (@$results > 0)? 1 : 0;
 }
 
 # Shared With (File) - Returns an array of users a track is shared with.
 sub shared_with {
 	my $self = shift;
-	my $file = shift;
+	my $fileid = $self->get_file_id(shift);
 	my $uploadsdb = $self->{uploadsdb};
-	my $fileid = $self->get_file_id($file);
-	my $users_string = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = '$fileid'");
+	my $users_string = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
 	return split(", ", $users_string);
 }
 
-# Track Type (File[, User]) - Returns the type of a specified track, in relation to the (optionally specified) user.
+# Track Type (File) - Returns the type of a specified track, in relation to the user.
 sub file_type {
 	my $self = shift;
-	my $file = shift;
-	my $uploadsid = shift // $self->{uploadsid};												#/
-	
+	my $file = $self->get_file_id(shift);
 	return "public" if ($self->permissions($file) =~ /public/);
 	if ($self->is_mine($file)) {
 		return $self->is_imported($file)? "imported" : "uploaded";

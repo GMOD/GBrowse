@@ -9,6 +9,8 @@
      * Fixed issues involving failure of render slaves to preload databases (slowing everything down).
      * You can now have an annotator plugin turned on by default by specifying it in the "default
        features" option using the syntax "plugin:RestrictionAnnotator".
+     * Renderfarm slaves now honor the init_code directive. You will need Bio::Graphics version 2.13
+       in order to take advantage of this feature.
 
 2.14 Fri Aug 27 11:05:08 EDT 2010
      * Prevent a blank-screen crash when searching for chromosomes not in the database.

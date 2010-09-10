@@ -103,6 +103,10 @@ sub set_selected {
 
     my $idx = 0;
     my %seenit;
+    
+    foreach my $el (keys %$elements) {
+     map{if($el =~ /\;\d+$/ && $selected->[$_] eq $`){$selected->[$_] = $el}} (0..@$selected-1);
+    }
 
     # reorder the elements that are named on the list
     for my $e (@$selected) {

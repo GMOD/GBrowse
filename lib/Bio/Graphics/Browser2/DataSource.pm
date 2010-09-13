@@ -536,6 +536,13 @@ sub semantic_fallback_setting {
     return $self->fallback_setting($label,$option);
 }
 
+sub button_url {
+    my $self = shift;
+    my $globals = $self->globals;
+    my $path    = $self->global_setting('buttons');
+    return $globals->resolve_path($path,'url');
+}
+
 =head2 $section_setting = $data_source->section_setting($section_name)
 
 Returns "open" "closed" or "off" for the named section. Named sections are:

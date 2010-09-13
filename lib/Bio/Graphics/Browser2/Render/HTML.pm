@@ -245,7 +245,7 @@ sub render_search_form_objects {
 	-override=>1,
     );
     if ($self->setting('autocomplete')) {
-        my $spinner_url = $self->globals->button_url.'/spinner.gif';
+        my $spinner_url = $self->data_source->button_url.'/spinner.gif';
 	$html .= <<END
 <span id="indicator1" style="display: none">
   <img src="$spinner_url" alt="Working..." />
@@ -684,7 +684,7 @@ sub render_busy_signal {
     my $self = shift;
     return img({
         -id    => 'busy_indicator',
-        -src   => $self->globals->button_url.'/spinner.gif',
+        -src   => $self->data_source->button_url.'/spinner.gif',
         -style => 'position: fixed; top: 5px; left: 5px; display: none',
         -alt   => "Working..."
        });
@@ -1818,7 +1818,7 @@ sub slidertable {
   my $span  = $self->thin_segment->length;
   my $max   = $self->thin_whole_segment->length;
 
-  my $buttonsDir    = $self->globals->button_url;
+  my $buttonsDir    = $self->data_source->button_url;
 
   my $half_title = $self->data_source->unit_label(int $span/2);
   my $full_title = $self->data_source->unit_label($span);
@@ -2632,7 +2632,7 @@ sub toggle_section {
 
   my $visible = $config{on};
 
-  my $buttons = $self->globals->button_url;
+  my $buttons = $self->data_source->button_url;
   my $plus  = "$buttons/plus.png";
   my $minus = "$buttons/minus.png";
   my $break = div({-id=>"${name}_break",

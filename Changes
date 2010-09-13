@@ -12,6 +12,8 @@
      * Renderfarm slaves now honor the init_code directive. You will need Bio::Graphics version 2.13
        in order to take advantage of this feature.
      * You can now override the "buttons" images path in individual datasource files.
+     * Fixed incorrect sequence dumping in the sequence dumper when using the 
+       Bio::DB::GFF database backend.
 
 2.14 Fri Aug 27 11:05:08 EDT 2010
      * Prevent a blank-screen crash when searching for chromosomes not in the database.

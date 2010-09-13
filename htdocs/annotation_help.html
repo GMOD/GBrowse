@@ -8,7 +8,8 @@
 <table width="100%"  style="border:ridge">
   <tr class="searchtitle">
     <th><a href="#format">File Formats</a></th>
-    <th><a href="#featurefile format">Feature File Formats</a></th>
+    <th><a href="#bedfile format">BED File Format</a></th>
+    <th><a href="#featurefile format">Feature File Format</a></th>
     <th><a href="#customize">Customizing Appearance</a></th>
     <th><a href="#numeric">Displaying Intensity Plots &amp; Other Numeric Data</a></th>
     <th><a href="#remote">Importing Custom Tracks via the Internet</a></th>
@@ -30,7 +31,11 @@ servers by referring to their URLs.
 Accepted formats include:
 
 <ul>
-  <li><a href="http://genome.ucsc.edu/FAQ/FAQformat#format1"  target="_blank">BED</a>
+  <li><a href="http://genome.ucsc.edu/FAQ/FAQformat#format1"
+  target="_blank">BED</a>
+
+  <li><a href="#featurefile format"  target="_blank">GBrowse Feature
+  File Format</a>
 
   <li> <a href="http://genome.ucsc.edu/FAQ/FAQformat#format3" target="_blank">GFF</a>
 
@@ -62,16 +67,62 @@ this document. When uploading WIG or BED files, GBrowse will convert
 the UCSC track definition line into an equivalent GBrowse
 configuration section.
 
+<a name="bedfile format"></a>
+
+<h2>BED Format</h2>
+
+<p>
+The simplest format to use is BED. Each line of the file is a feature; each feature
+has three required fields, and 9 optional fields, separated by white space:
+
+<ol>
+  <li><b>chrom</b> - The name of the chromosome (e.g. chr1), contig or scaffold.
+  <li><b>chromStart</b> - The starting position of the feature on the chromosome. The first base of the chromosome is <b>numbered 0</b>.
+  <li><b>chromEnd</b> - The ending position of the feature on the chromosome. The chromEnd base is not part of the feature.
+</ol>
+
+<p>
+
+For example, this file will define a single 100 bp feature on chromosome chr1 spanning the bases 0 to 99:
+<blockquote>
+<pre>
+chr1 0 100
+</pre>
+</blockquote>
+
+<p>
+
+Additional fields let you add a name, a score, a color and other types of decoration to the feature. The most commonly
+used optional field is the name field, which allows you to add a name
+to your feature:
+
+<blockquote>
+<pre>
+chr1 0 100 myFavoriteGene
+</pre>
+</blockquote>
+
+
+<p>
+
+Please 
+see the <a href="http://genome.ucsc.edu/FAQ/FAQformat#format1">UCSC genome browser documentation</a> for 
+the full description of everything you can do with BED. 
+
 <a name="featurefile format"></a>
 
 <h2>Feature File Format</h2>
 
 <p>
 
-For qualitative data, use the simple "Feature File format" described
-here, or the <a href="http://www.sequenceontology.org/gff3.shtml">GFF3
-format</a> Annotation files must be saved as <b>text only</b>.  Here
-is an example of Feature File format:
+In addition to the BED file format for qualitative tracks, GBrowse
+supports "Feature File format", which is slightly more 
+configurable than BED. In addition, it uses 1-based chromosome
+coordinates, which are somewhat more intuitive.
+
+<p>
+
+Here is an example:
 
 <blockquote>
 <pre>

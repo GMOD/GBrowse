@@ -3,17 +3,20 @@
        the dna_accessor() method and that the default database has access to the underlying sequence, then
        this will enable glyphs and plugins to access the DNA for all features, even if the feature is contained
        in a database that does not have access to the DNA.
-     * Fixed various problems in the ProteinDumper plugin.
-     * Fixed problems with all regular expression tracks being cached to same directory.
-     * Fixed issues with uploaded tracks not being displayed when renderfarm activated.
-     * Fixed issues involving failure of render slaves to preload databases (slowing everything down).
+     * You can now override the "buttons" images path in individual datasource files.
      * You can now have an annotator plugin turned on by default by specifying it in the "default
        features" option using the syntax "plugin:RestrictionAnnotator".
      * Renderfarm slaves now honor the init_code directive. You will need Bio::Graphics version 2.13
        in order to take advantage of this feature.
-     * You can now override the "buttons" images path in individual datasource files.
+     * Added a description of the BED file format to the upload help page.
+     * Fixed various problems in the ProteinDumper plugin.
+     * Fixed problems with all regular expression tracks being cached to same directory.
+     * Fixed issues with uploaded tracks not being displayed when renderfarm activated.
+     * Fixed issues involving failure of render slaves to preload databases (slowing everything down).
      * Fixed incorrect sequence dumping in the sequence dumper when using the 
        Bio::DB::GFF database backend.
+     * Fixed problems with losing all default tracks when first loading the browser (this was a bug
+       introduced in SVN and never released.)
 
 2.14 Fri Aug 27 11:05:08 EDT 2010
      * Prevent a blank-screen crash when searching for chromosomes not in the database.

@@ -9,6 +9,7 @@ use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
 use IO::File;
 use IO::String;
+use File::Temp 'tempdir';
 use POSIX ();
 use Carp 'croak';
 
@@ -332,6 +333,23 @@ sub upload_data {
     my ($file_name,$data,$content_type,$overwrite) = @_;
     my $io = IO::String->new($data);
     $self->upload_file($file_name,$io,$content_type,$overwrite);
+}
+
+sub upload_url {
+    my $self  = shift;
+    my $url   = shift;
+    my $dir   = tempdir(CLEANUP=>1);
+    my $path  = File::Spec->catfile($dir,basename($url));
+    eval "require LWP::UserAgent" unless LWP::UserAgent->can('new');
+    my $agent = LWP::UserAgent->new();
+    my $response = $agent->mirror($url,$path);
+    $response->is_success or die $response->status_line;
+    my $mime = $response->header('Content-type');
+    open my $fh,"<",$path;
+    my @args = $self->upload_file(basename($url),$fh,$mime,1);
+    unlink $path;
+    File::Temp::cleanup();
+    return @args;
 }
 
 sub upload_file {

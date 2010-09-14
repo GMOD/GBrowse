@@ -1,4 +1,8 @@
-2.15 
+2.16
+     * Added code to recognize and strip whitespace from search coordinates. This 
+       allows "chr1:2,000 .. 1,180,000" to work as a search term.
+
+2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports
        the dna_accessor() method and that the default database has access to the underlying sequence, then
        this will enable glyphs and plugins to access the DNA for all features, even if the feature is contained

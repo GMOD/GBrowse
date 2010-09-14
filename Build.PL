@@ -19,7 +19,6 @@ my $build = GBrowseInstall->new(
 	'perl'                => '5.008',
 	'Bio::Root::Version'  => '1.005009001',
 	'Bio::Graphics'       => '2.09',
-        'Capture::Tiny'       => 0,
 	'CGI::Session'        => '4.02',
 	'Digest::MD5'         => 0,	
         'ExtUtils::CBuilder'  => 0,
@@ -31,6 +30,7 @@ my $build = GBrowseInstall->new(
 	'Statistics::Descriptive'  => 0,
 	'Storable'            => 0,
     },
+    build_requires => {'Capture::Tiny'       => 0,},
     recommends  => {
         'Ace'                      => 0,
 	'Bio::Das'                 => 0,

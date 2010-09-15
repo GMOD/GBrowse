@@ -125,6 +125,8 @@ sub share {
 	my $attempted_userid = $userdb->get_user_id($potential_userid) or return;
 	my $userid = $attempted_userid || $potential_userid || $self->{userid};
 	
+	warn "Attempting to share $fileid with $userid.";
+	
 	my $sharing_policy = $self->permissions($fileid);
 	if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($fileid) && ($sharing_policy =~ /group/))) {
 		# Get the current users.

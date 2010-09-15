@@ -77,7 +77,6 @@ sub track_path {
     my $self  = shift;
     my $track = shift;
     my $path = $self->path;
-    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
     return File::Spec->catfile($path, $track);
 }
 
@@ -86,7 +85,6 @@ sub data_path {
     my $self = shift;
     my ($track,$datafile) = @_;
     my $path = $self->path;
-    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
     return File::Spec->catfile($path, $track, $self->sources_dir_name, $datafile);
 }
 
@@ -95,7 +93,6 @@ sub track_conf {
     my $self  = shift;
     my $track = shift;
     my $path = $self->path;
-    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
 	return File::Spec->catfile($path, $track, "$track.conf");
 }
 
@@ -104,7 +101,6 @@ sub import_flag {
     my $self  = shift;
     my $track = shift;
     my $path = $self->path;
-    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
     return File::Spec->catfile($path, $track, $self->imported_file_name);
 }
 
@@ -112,7 +108,6 @@ sub import_flag {
 sub conf_metadata {
     my $self  = shift;
     my $track = shift;
-    $track = $self->trackname_from_url($track, 0) if ($self->is_imported($track) == 1);
     my $conf  = File::Spec->catfile($self->path, $track, "$track.conf");
     my $name  = basename($conf);
     return ($name,(stat($conf))[9,7]);

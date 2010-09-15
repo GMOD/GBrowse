@@ -4,7 +4,7 @@ package Bio::Graphics::Browser2::Action;
 # dispatch
 
 use strict;
-use Carp 'croak';
+use Carp qw(croak confess);
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
 use File::Basename 'basename';
@@ -522,13 +522,11 @@ sub ACTION_set_upload_description {
 
     my $state       = $self->state;
     my $render      = $self->render;
-    my $publicid = $q->param('publicid') or croak;
-    my $new_description = $q->param('description') or croak;
-    
-    warn "I've made it into Public Description with '$new_description' as my new description!";
+    my $fileid = $q->param('fileid') or confess "No file ID given to set_upload_description.";
+    my $new_description = $q->param('description') or confess "No new description given to set_upload_description.";
 
     my $usertracks = $render->user_tracks;
-    $usertracks->public_description($publicid, $new_description);
+    $usertracks->description($fileid, $new_description);
     return (204,'text/plain',undef);
 }
 
@@ -536,11 +534,11 @@ sub ACTION_share_file {
 	my $self = shift;
 	my $q = shift;
 	my $render = $self->render;
-    my $publicid = $q->param('publicid') or croak;
-    my $userid = $q->param('userid') or croak;
+    my $fileid = $q->param('fileid') or confess "No file ID given to share_file.";
+    my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
 
     my $usertracks = $render->user_tracks;
-    $usertracks->public_share($publicid, $userid);
+    $usertracks->share($fileid, $userid);
     return (204, 'text/plain', undef);
 }
 
@@ -548,11 +546,11 @@ sub ACTION_unshare_file {
 	my $self = shift;
 	my $q = shift;
 	my $render = $self->render;
-    my $publicid = $q->param('publicid') or croak;
-    my $userid = $q->param('userid') or croak;
+    my $fileid = $q->param('fileid') or confess "No file ID given to unshare_file.";
+    my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
 
     my $usertracks = $render->user_tracks;
-    $usertracks->public_unshare($publicid, $userid);
+    $usertracks->unshare($fileid, $userid);
     return (204, 'text/plain', undef);	
 }
 
@@ -560,11 +558,11 @@ sub ACTION_change_permissions {
 	my $self = shift;
 	my $q = shift;
 	my $render = $self->render;
-    my $publicid = $q->param('publicid') or croak;
-    my $new_policy = $q->param('sharing_policy') or croak;
+    my $fileid = $q->param('fileid') or confess "No file ID given to change_permissions.";
+    my $new_policy = $q->param('sharing_policy') or confess "No new sharing policy given to change_permissions.";
 
     my $usertracks = $render->user_tracks;
-    $usertracks->public_sharing_policy($publicid, $new_policy);
+    $usertracks->permissions($fileid, $new_policy);
     return (204, 'text/plain', undef);	
 }
 

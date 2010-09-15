@@ -352,19 +352,21 @@ sub public_file_lookup {
 }
 
 #################### PUBLIC FUNCTIONS ####################
-# These functions are meant to be publicly accessible. No others are, and will screw up if you call them externally to this module. Maybe some of them should be added as conditionals to the existing getter/setter functions?
+# These functions are meant to be publicly accessible. No others are, and will probably screw up if you call them externally to this module. Maybe some of them should be added as conditionals to the existing getter/setter functions?
 
-# Public Sharing Link (Public File ID) - Generates the sharing link for a specific file. Can be publicly accessed.
+# Public Sharing Link (Public File ID) - Generates the sharing link for a specific file.
 sub public_sharing_link {
 	my $self = shift;
-	my $file = $self->public_file_lookup(shift) or confess "Invalid file to public_sharing_link()";
-	return url(-full => 1, -path_info => 1) . "?share_link=" . $file;
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_sharing_link()";
+	return url(-full => 1, -path_info => 1) . "?share_link=" . $fileid;
 }
 
-# Public File Type (Public File ID) - Returns the type of a specified track, in relation to the user. Can be publicly accessed.
+# Public File Type (Public File ID) - Returns the type of a specified track, in relation to the user.
 sub public_file_type {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_file_type()";
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_file_type()";
 	return "public" if ($self->permissions($fileid) =~ /public/);
 	if ($self->is_mine($fileid)) {
 		return $self->is_imported($fileid)? "imported" : "uploaded";
@@ -374,14 +376,16 @@ sub public_file_type {
 # Public Is Mine (Public File ID) - Returns true if an upload belongs to the logged-in user, false if not.
 sub public_is_mine {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_is_mine()";
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_is_mine()";
 	return $self->is_mine($fileid);
 }
 
-# Public Shared With (Public File ID) - Returns an array of users a track is shared with. Can be publicly accessed.
+# Public Shared With (Public File ID) - Returns an array of users a track is shared with.
 sub public_shared_with {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_shared_with()";
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_shared_with()";
 	my $users_string = $self->field("users", $fileid);
 	return split(", ", $users_string);
 }
@@ -389,36 +393,71 @@ sub public_shared_with {
 # Public Description (Public File ID) - Returns the plaintext description of an upload.
 sub public_description {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_description()";
-	return $self->description($fileid);
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_description()";
+	my $new_description = shift;
+	
+	if ($new_description) {
+		return $self->description($fileid, $new_description);
+	} else {
+		return $self->description($fileid);
+	}
 }
 
 # Public Sharing Policy (Public File ID) - Returns the sharing policy of an upload as a string of (private|casual|group|public).
 sub public_sharing_policy {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_sharing_policy()";
-	return $self->permissions($fileid);
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_sharing_policy()";
+	my $new_permissions = shift;
+	
+	if ($new_permissions) {
+		return $self->permissions($fileid, $new_permissions);
+	} else {
+		return $self->permissions($fileid);
+	}
 }
 
 # Public Modification Date (Public File ID) - Returns the date and time of the last modification of an object.
 sub public_modification_date {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_modification_date()";
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_modification_date()";
 	return $self->modified($fileid);
 }
 
 # Public Creation Date (Public File ID) - Returns the date and time of the original upload.
 sub public_creation_date {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_filename()";
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' public_creation_date()";
 	return $self->created($fileid);
 }
 
 # Public File Name (Public File ID) - Returns the filename or URL as stored in the database.
 sub public_filename {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_shared_with()";
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_filename()";
 	return $self->field("path", $fileid);
+}
+
+# Public Share (Public File ID) - Shares the file with the specified user, or adds a public track to a user's session.
+sub public_share {
+	my $self = shift;
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_share()";
+	my $userid = shift;
+	return $self->share($fileid, $userid);
+}
+
+# Public Unshare (Public File ID) - Removes a user from a track's shared list, or removes a public track from a user's session.
+sub public_unshare {
+	my $self = shift;
+	my $publicid = shift;
+	my $fileid = $self->public_file_lookup($publicid) or confess "Invalid file '$publicid' to public_unshare()";
+	my $userid = shift;
+	return $self->unshare($fileid, $userid);
 }
 
 1;

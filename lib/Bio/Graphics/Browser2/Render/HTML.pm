@@ -1393,7 +1393,7 @@ sub list_tracks {
 		my $edit_field = div({-id => $name . "_editfield"}, '');
 		$count++;
 		div( {
-				-id		=> $fileid,
+				-id		=> "upload_$fileid",
 				-class	=> "custom_track",
 				-style	=> "background-color: $background_color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;"
 			},
@@ -1541,7 +1541,7 @@ sub render_track_controls {
 				{
 					-href     	 => "javascript: void(0)",
 					-onMouseOver => 'GBubble.showTooltip(event,"Remove from my session",0,200)',
-					-onClick     => "unshareFile('$track', '$userid')"
+					-onClick     => "unshareFile('$fileid', '$userid')"
 				},
 				"[X]"
 			);
@@ -1550,7 +1550,7 @@ sub render_track_controls {
 		$controls .= '&nbsp;' . a(
 			{
 				-href	 => "javascript:void(0);",
-				-onClick => "shareFile('$track', '$userid')"
+				-onClick => "shareFile('$fileid', '$userid')"
 			},
 			"[Add]"
 		);
@@ -1587,7 +1587,10 @@ sub render_track_details {
 		$self->render_track_source_files($track)
 	);
 	my $sharing = ($globals->user_accounts == 1)? div(
-		{-style => "margin-left: 2em; display: inline-block;"},
+		{
+			-style => "margin-left: 2em; display: inline-block;",
+			-class => "sharing"
+		},
 		$self->render_track_sharing($track)
 	) : "";
 	
@@ -1681,7 +1684,7 @@ sub render_track_sharing {
 	#Building the users list.
 	my $sharing_policy = $userdata->public_sharing_policy($fileid);
 	my @users = $userdata->public_shared_with($fileid);
-	$_ = b($userdb->get_username($_)) . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$track', '$_')"}, "[X]") . "" foreach @users;
+	$_ = b($userdb->get_username($_)) . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
 	my $userlist = join (", ", @users);
 	
 	my $sharing_content = b("Sharing:") . br() . "Track is ";
@@ -1689,7 +1692,7 @@ sub render_track_sharing {
 		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? b("shared") . " with you." : b("public") . ".";
 	} else {
 		$sharing_content .= Select(
-			{-onChange => "changePermissions('$track', this.options[this.selectedIndex].value.toLowerCase())"},
+			{-onChange => "changePermissions('$fileid', this.options[this.selectedIndex].value.toLowerCase())"},
 			map {
 				option(
 					($sharing_policy =~ /$_/i)? {-selected => "selected"} : "",
@@ -1724,7 +1727,7 @@ sub render_track_sharing {
 			my $add_link = "&nbsp;" . a(
 				{
 					-href => "javascript: void(0)",
-					-onClick => "shareFile('$track', this.previous('input').getValue())",
+					-onClick => "shareFile('$fileid', this.previous('input').getValue())",
 				},
 				"[Add]" );
 			$sharing_content .= $add_box . $add_link;

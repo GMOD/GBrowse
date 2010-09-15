@@ -232,15 +232,17 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	}
 }
 
-function changePermissions(fileName, sharing_policy) {
-	var indicator = fileName + "_stat";
-	$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+function changePermissions(publicid, sharing_policy) {
+	var title = $("upload_" + publicid).down("div[id$='_stat']");
+	if (title)
+		title.innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+	console.log("Public ID: " + publicid + ", and Sharing Policy: " + sharing_policy);
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',
 			parameters: {
 				action: 'change_permissions',
-				file: fileName,
+				publicid: publicid,
 				sharing_policy: sharing_policy
 			},
 			onSuccess: function (transport) {
@@ -250,16 +252,16 @@ function changePermissions(fileName, sharing_policy) {
 	);
 }
 
-function shareFile(fileName, userid) {
-	var indicator = fileName + "_stat";
-	if ($(indicator))
-		$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+function shareFile(publicid, userid) {
+	var title = $("upload_" + publicid).down("div[id$='_stat']");
+	if (title)
+		title.innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',
 			parameters: {
 				action: 'share_file',
-				file: fileName,
+				publicid: publicid,
 				userid: userid
 			},
 			onSuccess: function (transport) {
@@ -269,16 +271,16 @@ function shareFile(fileName, userid) {
 	);
 }
 
-function unshareFile(fileName, userid) {
-	var indicator = fileName + "_stat";
-	if ($(indicator))
-		$(indicator).innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+function unshareFile(publicid, userid) {
+	var title = $("upload_" + publicid).down("div[id$='_stat']");
+	if (title)
+		title.innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',
 			parameters: {
 				action: 'unshare_file',
-				file: fileName,
+				publicid: publicid,
 				userid: userid
 			},
 			onSuccess: function (transport) {

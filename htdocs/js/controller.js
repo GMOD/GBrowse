@@ -880,34 +880,34 @@ var GBrowseController = Class.create({
 
   set_upload_description:
   function(event) {
-		var el = event.findElement();
+		var description_box = event.findElement();
 		if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
-			var upload_name = el.id.sub('_description$','');
-			var desc        = el.innerHTML;
-			el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+			var publicid = description_box.up("div[id^='upload_']").id.sub("upload_","");
+			var description = description_box.innerHTML;
+			description_box.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
 			new Ajax.Request(Controller.url, {
 				method:      'post',
 				parameters:{  
 					action: 'set_upload_description',
-					upload_name: upload_name,
-					description: desc
+					publicid: publicid,
+					description: description
 				},
 				onSuccess: function(transport) {
 					Controller.update_sections(new Array(custom_tracks_id, public_tracks_id))
 				}
 			});
-			el.stopObserving('keypress');
-			el.stopObserving('blur');
-			el.blur();
+			description_box.stopObserving('keypress');
+			description_box.stopObserving('blur');
+			description_box.blur();
 			return true;
 		}
 		if (event.keyCode==Event.KEY_ESC) {
-		el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
-		Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
-		el.stopObserving('keypress');
-		el.stopObserving('blur');
-		el.blur();
-		return true;
+			description_box.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+			Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
+			description_box.stopObserving('keypress');
+			description_box.stopObserving('blur');
+			description_box.blur();
+			return true;
 		}
 		return false;
   },

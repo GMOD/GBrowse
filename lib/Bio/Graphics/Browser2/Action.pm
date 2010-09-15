@@ -522,11 +522,13 @@ sub ACTION_set_upload_description {
 
     my $state       = $self->state;
     my $render      = $self->render;
-    my $upload_name = $q->param('upload_name') or croak;
-    my $upload_desc = $q->param('description') or croak;
+    my $publicid = $q->param('publicid') or croak;
+    my $new_description = $q->param('description') or croak;
+    
+    warn "I've made it into Public Description with '$new_description' as my new description!";
 
     my $usertracks = $render->user_tracks;
-    $usertracks->description($upload_name, $upload_desc);
+    $usertracks->public_description($publicid, $new_description);
     return (204,'text/plain',undef);
 }
 
@@ -534,11 +536,11 @@ sub ACTION_share_file {
 	my $self = shift;
 	my $q = shift;
 	my $render = $self->render;
-    my $file = $q->param('file') or croak;
+    my $publicid = $q->param('publicid') or croak;
     my $userid = $q->param('userid') or croak;
 
     my $usertracks = $render->user_tracks;
-    $usertracks->share($file, $userid);
+    $usertracks->public_share($publicid, $userid);
     return (204, 'text/plain', undef);
 }
 
@@ -546,11 +548,11 @@ sub ACTION_unshare_file {
 	my $self = shift;
 	my $q = shift;
 	my $render = $self->render;
-    my $file = $q->param('file') or croak;
+    my $publicid = $q->param('publicid') or croak;
     my $userid = $q->param('userid') or croak;
 
     my $usertracks = $render->user_tracks;
-    $usertracks->unshare($file, $userid);
+    $usertracks->public_unshare($publicid, $userid);
     return (204, 'text/plain', undef);	
 }
 
@@ -558,11 +560,11 @@ sub ACTION_change_permissions {
 	my $self = shift;
 	my $q = shift;
 	my $render = $self->render;
-    my $track = $q->param('file') or croak;
-    my $new_permissions = $q->param('sharing_policy') or croak;
+    my $publicid = $q->param('publicid') or croak;
+    my $new_policy = $q->param('sharing_policy') or croak;
 
     my $usertracks = $render->user_tracks;
-    $usertracks->permissions($track, $new_permissions);
+    $usertracks->public_sharing_policy($publicid, $new_policy);
     return (204, 'text/plain', undef);	
 }
 

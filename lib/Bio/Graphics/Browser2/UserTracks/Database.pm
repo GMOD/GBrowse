@@ -354,70 +354,70 @@ sub public_file_lookup {
 #################### PUBLIC FUNCTIONS ####################
 # These functions are meant to be publicly accessible. No others are, and will screw up if you call them externally to this module. Maybe some of them should be added as conditionals to the existing getter/setter functions?
 
-# Display Sharing Link (Public File ID) - Generates the sharing link for a specific file. Can be publicly accessed.
-sub display_sharing_link {
+# Public Sharing Link (Public File ID) - Generates the sharing link for a specific file. Can be publicly accessed.
+sub public_sharing_link {
 	my $self = shift;
-	my $file = $self->public_file_lookup(shift) or confess "Invalid file to display_owner()";
+	my $file = $self->public_file_lookup(shift) or confess "Invalid file to public_sharing_link()";
 	return url(-full => 1, -path_info => 1) . "?share_link=" . $file;
 }
 
-# Display File Type (Public File ID) - Returns the type of a specified track, in relation to the user. Can be publicly accessed.
-sub display_file_type {
+# Public File Type (Public File ID) - Returns the type of a specified track, in relation to the user. Can be publicly accessed.
+sub public_file_type {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to display_file_type()";
+	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_file_type()";
 	return "public" if ($self->permissions($fileid) =~ /public/);
 	if ($self->is_mine($fileid)) {
 		return $self->is_imported($fileid)? "imported" : "uploaded";
 	} else { return "shared" };
 }
 
-# Display Is Mine (Public File ID) - Returns true if an upload belongs to the logged-in user, false if not.
-sub display_is_mine {
+# Public Is Mine (Public File ID) - Returns true if an upload belongs to the logged-in user, false if not.
+sub public_is_mine {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to display_is_mine()";
+	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_is_mine()";
 	return $self->is_mine($fileid);
 }
 
-# Display Shared With (Public File ID) - Returns an array of users a track is shared with. Can be publicly accessed.
-sub display_shared_with {
+# Public Shared With (Public File ID) - Returns an array of users a track is shared with. Can be publicly accessed.
+sub public_shared_with {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to display_shared_with()";
+	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_shared_with()";
 	my $users_string = $self->field("users", $fileid);
 	return split(", ", $users_string);
 }
 
-# Display Description (Public File ID) - Returns the plaintext description of an upload.
-sub display_description {
+# Public Description (Public File ID) - Returns the plaintext description of an upload.
+sub public_description {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to display_description()";
+	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_description()";
 	return $self->description($fileid);
 }
 
-# Display Sharing Policy (Public File ID) - Returns the sharing policy of an upload as a string of (private|casual|group|public).
-sub display_sharing_policy {
+# Public Sharing Policy (Public File ID) - Returns the sharing policy of an upload as a string of (private|casual|group|public).
+sub public_sharing_policy {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to display_sharing_policy()";
+	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_sharing_policy()";
 	return $self->permissions($fileid);
 }
 
-# Display Modification Date (Public File ID) - Returns the date and time of the last modification of an object.
-sub display_modification_date {
+# Public Modification Date (Public File ID) - Returns the date and time of the last modification of an object.
+sub public_modification_date {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to display_modification_date()";
+	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_modification_date()";
 	return $self->modified($fileid);
 }
 
-# Display Creation Date (Public File ID) - Returns the date and time of the original upload.
-sub display_creation_date {
+# Public Creation Date (Public File ID) - Returns the date and time of the original upload.
+sub public_creation_date {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to display_filename()";
+	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_filename()";
 	return $self->created($fileid);
 }
 
-# Display File Name (Public File ID) - Returns the filename or URL as stored in the database.
-sub display_filename {
+# Public File Name (Public File ID) - Returns the filename or URL as stored in the database.
+sub public_filename {
 	my $self = shift;
-	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to display_shared_with()";
+	my $fileid = $self->public_file_lookup(shift) or confess "Invalid file to public_shared_with()";
 	return $self->field("path", $fileid);
 }
 

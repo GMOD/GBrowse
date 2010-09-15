@@ -882,14 +882,14 @@ var GBrowseController = Class.create({
   function(event) {
 		var description_box = event.findElement();
 		if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
-			var publicid = description_box.up("div[id^='upload_']").id.sub("upload_","");
+			var fileid = description_box.up("div[id^='upload_']").id.sub("upload_","");
 			var description = description_box.innerHTML;
 			description_box.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
 			new Ajax.Request(Controller.url, {
 				method:      'post',
 				parameters:{  
 					action: 'set_upload_description',
-					publicid: publicid,
+					fileid: fileid,
 					description: description
 				},
 				onSuccess: function(transport) {
@@ -991,32 +991,32 @@ var Controller = new GBrowseController; // singleton
 
 function initialize_page() {
 
-  // These statements initialize the tabbing
-  Controller.tabs = new TabbedSection(['main_page','track_page','custom_tracks_page','settings_page']);
+	// These statements initialize the tabbing
+	Controller.tabs = new TabbedSection(['main_page','track_page','custom_tracks_page','settings_page']);
 
-  //event handlers
-    [page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
-    if ($(el) != null) {
-      Controller.segment_observers.set(el,1);
-    }
-  });
-  
-  // The next statement is to avoid the scalebars from being "out of sync"
-  // when manually advancing the browser with its forward/backward buttons.
-  // Unfortunately it causes an infinite loop when there are multiple regions!
-  if ($(detail_container_id) != null)
-      Controller.update_coordinates('left 0');
+	//event handlers
+	[page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
+		if ($(el) != null) {
+		  Controller.segment_observers.set(el,1);
+		}
+	});
 
-  // These statements get the rubberbanding running.
-  Overview.prototype.initialize();
-  Region.prototype.initialize();
-  Details.prototype.initialize();
-  if ($('autocomplete_choices') != null) 
-       initAutocomplete();
+	// The next statement is to avoid the scalebars from being "out of sync"
+	// when manually advancing the browser with its forward/backward buttons.
+	// Unfortunately it causes an infinite loop when there are multiple regions!
+	if ($(detail_container_id) != null)
+	  Controller.update_coordinates('left 0');
+
+	// These statements get the rubberbanding running.
+	Overview.prototype.initialize();
+	Region.prototype.initialize();
+	Details.prototype.initialize();
+	if ($('autocomplete_choices') != null) 
+	   initAutocomplete();
 
 	var share_link = window.location.href.parseQuery().share_link;
-  	if (share_link)
-  		shareFile(share_link, "");
+	if (share_link)
+		shareFile(share_link, "");
 }
 
 // set the colors for the rubberband regions

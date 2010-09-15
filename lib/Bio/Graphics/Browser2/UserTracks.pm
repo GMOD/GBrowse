@@ -244,11 +244,8 @@ sub import_url {
     $loader->set_status('starting import');
 
     my $conf = $self->track_conf($track_name);
-    warn "Conf = $conf";
     open (my $f, "+>", $conf) or croak "Couldn't open $conf: $!";
-    print $f "This is some bullshit, man.";
     my @data = $f;
-    warn join("\n", @data);
 
     if ($url =~ /\.bam$/) {
 		print $f $self->remote_bam_conf($track_name, $url, $key);

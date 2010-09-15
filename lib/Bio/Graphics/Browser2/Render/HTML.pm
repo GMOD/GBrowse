@@ -1383,8 +1383,8 @@ sub list_tracks {
 	my $count = 0;
     my @rows = map {
 		my $name = $_;
-		my $fileid = $userdata->get_public_id($name);
-		my $type = $listing_type || $userdata->public_file_type($fileid);
+		my $fileid = $userdata->get_file_id($name);
+		my $type = $listing_type || $userdata->file_type($fileid);
 		
 		my ($background_color, $accent_color) = $self->track_listing_colors($count, $type);
 		my $controls = $self->render_track_controls($name, $type);
@@ -1495,7 +1495,7 @@ sub render_track_controls {
 	my $track = shift;
 	my $type = shift;
 	my $userdata = $self->user_tracks;
-	my $fileid = $userdata->get_public_id($track);
+	my $fileid = $userdata->get_file_id($track);
 	my $userid = $userdata->{userid};
 	my @track_labels = $userdata->labels($track);
 	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
@@ -1512,7 +1512,7 @@ sub render_track_controls {
 	my $controls = $toggle_details;
 	
 	# Conditional controls, based on the type of track.
-	if ($userdata->public_is_mine($fileid)) {
+	if ($userdata->is_mine($fileid)) {
 		# The delete icon,
 		$controls .= '&nbsp;' . img(
 			{
@@ -1524,7 +1524,7 @@ sub render_track_controls {
 		);
 	}
 	if ($type !~ /available/) {
-		if ($userdata->public_is_mine($fileid)) {
+		if ($userdata->is_mine($fileid)) {
 			# The sharing icon, if it's an upload.
 			$controls .= '&nbsp;' . img(
 				{
@@ -1570,17 +1570,17 @@ sub render_track_details {
 	my $track = shift;
 	my $listing_type = shift // "";																#/
 	my $userdata = $self->user_tracks;
-	my $fileid = $userdata->get_public_id($track);
+	my $fileid = $userdata->get_file_id($track);
 	my $globals	= $self->globals;
 	my $random_id = 'upload_'.int rand(9999);
 	
 	my $description = div(
 		{
 			-id              => $track . "_description",
-			-onClick         => ($userdata->public_is_mine($fileid))? "Controller.edit_upload_description('$track',this)" : "",
-			-contentEditable => ($userdata->public_is_mine($fileid))? 'true' : 'false',
+			-onClick         => ($userdata->is_mine($fileid))? "Controller.edit_upload_description('$track',this)" : "",
+			-contentEditable => ($userdata->is_mine($fileid))? 'true' : 'false',
 		},
-		$userdata->public_description($fileid) || $self->tr('ADD_DESCRIPTION')							##
+		$userdata->description($fileid) || $self->tr('ADD_DESCRIPTION')							##
 	);
 	my $source_listing = div(
 		{-style => "margin-left: 2em; display: inline-block;"},
@@ -1678,17 +1678,17 @@ sub render_track_sharing {
 	my $self = shift;
 	my $track = shift;
 	my $userdata = $self->user_tracks;
-	my $fileid = $userdata->get_public_id($track);
+	my $fileid = $userdata->get_file_id($track);
 	my $userdb = $self->{userdb};
 	
 	#Building the users list.
-	my $sharing_policy = $userdata->public_sharing_policy($fileid);
-	my @users = $userdata->public_shared_with($fileid);
+	my $sharing_policy = $userdata->permissions($fileid);
+	my @users = $userdata->shared_with($fileid);
 	$_ = b($userdb->get_username($_)) . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
 	my $userlist = join (", ", @users);
 	
 	my $sharing_content = b("Sharing:") . br() . "Track is ";
-	if ($userdata->public_is_mine($fileid) == 0) {
+	if ($userdata->is_mine($fileid) == 0) {
 		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? b("shared") . " with you." : b("public") . ".";
 	} else {
 		$sharing_content .= Select(
@@ -1710,7 +1710,7 @@ sub render_track_sharing {
 		$sharing_content .= "&nbsp;shared with " .  ($userlist? "$userlist" : "no one.") if ($sharing_policy =~ /(casual|group)/);
 		
 		if ($sharing_policy =~ /casual/) {
-			my $sharing_url = $userdata->public_sharing_link($fileid);
+			my $sharing_url = $userdata->sharing_link($fileid);
 			my $sharing_link = a({-href => $sharing_url}, $sharing_url);
 			$sharing_content .= br() . "Share with this link: ";
 			$sharing_content .= $sharing_link;

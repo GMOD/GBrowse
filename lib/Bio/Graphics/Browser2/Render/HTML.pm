@@ -13,7 +13,6 @@ use Digest::MD5 'md5_hex';
 use Carp 'croak', 'cluck';
 use CGI qw(:standard escape start_table end_table);
 use Text::Tabs;
-use Data::Dumper;
 
 use constant JS    => '/gbrowse2/js';
 use constant ANNOTATION_EDIT_ROWS => 25;
@@ -29,12 +28,12 @@ our $CAN_PDF;
 # Render HTML Start - Returns the HTML for the browser's <head> section.
 sub render_html_start {
   my $self  = shift;
-  my $title = shift;
-  my $session  = $self->session;
+  my ($title,@actions) = @_;
   my $dsn   = $self->data_source;
-  my $html  = $self->render_html_head($dsn,$title);
+  my $html  = $self->render_html_head($dsn,$title,@actions);
   $html    .= $self->render_js_controller_settings();
   $html    .= $self->render_balloon_settings();
+  $html    .= "<div id='main'>";
   $html    .= $self->render_select_menus();
   return $html;
 }
@@ -131,7 +130,7 @@ sub render_bottom {
   my $a   = $self->data_source->global_setting('footer');
   my $value = ref $a eq 'CODE' ? $a->(@_) : $a;
   $value ||= '';
-  return $value.end_html();
+  return $value."</div>".end_html();
 }
 
 # Render Navbar - Returns the HTML for the navigation bar along the top of the main browser page (in the "Search" node).
@@ -260,8 +259,8 @@ sub render_search_form_objects {
 	-override=>1,
     );
     if ($self->setting('autocomplete')) {
-        my $spinner_url = $self->globals->button_url.'/spinner.gif';
-	$html .= <<END;
+        my $spinner_url = $self->data_source->button_url.'/spinner.gif';
+	$html .= <<END
 <span id="indicator1" style="display: none">
   <img src="$spinner_url" alt="Working..." />
 </span>
@@ -275,7 +274,7 @@ END
 # Render HTML Head - Returns the HTML for the beginning of the page (for CGI's start HTML function).
 sub render_html_head {
   my $self = shift;
-  my ($dsn,$title) = @_;
+  my ($dsn,$title,@other_initialization) = @_;
   my @plugin_list = $self->plugins->plugins;
 
   return if $self->{started_html}++;
@@ -427,7 +426,8 @@ sub render_html_head {
   push @args,(-onLoad => "$body_onLoads");
 
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $plugin_onloads");
+  my $other_actions   = join ';',@other_initialization;
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $plugin_onloads; $other_actions");
 
   return start_html(@args);
 }
@@ -597,7 +597,7 @@ sub render_login {
     $click = 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');';
     $html  = '';
 
-    if ($session->private) {a
+    if ($session->private) {
         $html .= span({-style=>'float:right;font-weight:bold;color:black;'},
                       'Welcome, '.$session->username) . br() .
                  span({-style       => $style,
@@ -703,7 +703,7 @@ sub render_busy_signal {
     my $self = shift;
     return img({
         -id    => 'busy_indicator',
-        -src   => $self->globals->button_url.'/spinner.gif',
+        -src   => $self->data_source->button_url.'/spinner.gif',
         -style => 'position: fixed; top: 5px; left: 5px; display: none',
         -alt   => "Working..."
        });
@@ -908,7 +908,8 @@ sub render_track_table {
    my $key = $self->label2key($label);
    my ($link,$mouseover);
    if ($label =~ /^plugin:/) {
-       $labels{$label} = $key;
+#       $labels{$label} = $key;
+       $labels{$label} = $self->plugin_name($label);
        next;
    }
    elsif ($label =~ /^file:/){
@@ -1118,7 +1119,9 @@ sub nest_toggles {
     my $result = '';
     my $default = $self->data_source->category_default;
 
-    for my $key (sort { ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b }  keys %$hash) {
+    for my $key (sort { 
+	           ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b
+		      }  keys %$hash) {
 	    if ($key eq '__contents__') {
 	        $result .= $hash->{$key}."\n";
 	    } elsif ($key eq '__next__') {
@@ -1139,7 +1142,7 @@ sub nest_toggles {
     return $result;
 }
 
-# Render Multiple Choices - Returns the 
+# Render Multiple Choices - 
 sub render_multiple_choices {
     my $self     = shift;
     my $features = shift;
@@ -1300,9 +1303,9 @@ sub clear_highlights {
 		  -href    => 'javascript:void(0)',
 		  -onClick => 'Controller.set_display_option("h_feat","_clear_");Controller.set_display_option("h_region","_clear_")'
 		 },
-		 $self->tr('CLEAR_HIGHLIGHTING'));
+		 $self->tr('CLEAR_HIGHLIGHTING'));														#;
 }
-																								#;
+											
 # Render Select Track Link - Returns the HTML for the "Select Tracks" button on the main browser page.
 sub render_select_track_link {
     my $self  = shift;
@@ -1764,16 +1767,20 @@ sub userdata_upload {
     $html       .= div({-id=>'upload_list_start'},'');
 
     my $upload_label = $self->tr('UPLOAD_FILE'); 												#;
+	my $mirror_label = $self->tr('MIRROR_FILE'); 												#;
     my $remove_label = $self->tr('REMOVE'); 													#;
     my $new_label    = $self->tr('NEW_TRACK'); 													#;
     my $from_text    = $self->tr('FROM_TEXT'); 													#;
     my $from_file    = $self->tr('FROM_FILE'); 													#;
+	my $from_url     = $self->tr('FROM_URL'); 													#;
     my $help_link     = $self->annotation_help;
     $html         .= p({-style=>'margin-left:10pt;font-weight:bold'},
 		       'Add custom track(s):',
 		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',   '$remove_label', 'edit','$help_link')"},
 			 "[$from_text]"),
-		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url','$upload_label','$remove_label' , 'upload','$help_link')",
+		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$mirror_label', '$remove_label', 'url','$help_link')"},
+			 "[$from_url]"),
+		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url','$upload_label',  '$remove_label' , 'upload','$help_link')",
 			  -id=>'file_adder',
 			 },"[$from_file]"));
     return $html;
@@ -1967,6 +1974,7 @@ sub plugin_configuration_form {
 
     my $plugin_type = $plugin->type;
     my $plugin_name = $plugin->name;
+    my $plugin_id   = $plugin->id;
 
     print CGI::header(-type=>'text/html',     
 		      -cache_control =>'no-cache');
@@ -1979,7 +1987,7 @@ sub plugin_configuration_form {
 	  button(-value => $self->tr('Configure_plugin'),
  		 -onClick=>'Controller.reconfigure_plugin('
                  . '"'.$self->tr('Configure_plugin').'"'
-                 . qq(, "plugin:$plugin_name")
+                 . qq(, "plugin:$plugin_id")
                  . qq(, "plugin_configure_div")
                  . qq(, "$plugin_type")
                  . qq(, this.parentNode)
@@ -2010,6 +2018,7 @@ sub wrap_plugin_configuration {
     if ($config_html) {
         my $plugin_type        = $plugin->type;
         my $plugin_name        = $plugin->name;
+        my $plugin_id          = $plugin->id;
 	my @plugin_description = $plugin->description;
         my @buttons;
 
@@ -2031,7 +2040,7 @@ sub wrap_plugin_configuration {
             -value   => $self->tr('Configure_plugin'),											#,
             -onClick => 'Controller.reconfigure_plugin("'
                 . $self->tr('Configure_plugin') . '", "'
-                . "plugin:$plugin_name"
+                . "plugin:$plugin_id"
                 . '","plugin_configure_div","'
                 . $plugin_type . '");'
             );
@@ -2040,7 +2049,11 @@ sub wrap_plugin_configuration {
                 button(
                 -name    => 'plugin_button',
                 -value   => $self->tr('Find'),													#,
-                -onClick => 'alert("Find not yet implemented")',
+                -onClick => 'Controller.plugin_go("'
+                    . $plugin_base . '","'
+                    . $plugin_type . '","'
+                    . $self->tr('Find') . '","'
+                    . 'config' . '")',
                 );
         }
         elsif ( $plugin_type eq 'dumper' ) {
@@ -2096,8 +2109,8 @@ sub wrap_track_in_track_div {
     my $track_name    = $args{'track_name'};
     my $track_html    = $args{'track_html'};
 
-    # type used in register_track() javascript method
-    my $type = $args{'type'} || 'standard';
+    # track_type used in register_track() javascript method
+    my $track_type = $args{'track_type'} || 'standard';
 
     my $section = $self->get_section_from_label($track_id);
     my $class   = $track_id =~ /scale/i ? 'scale' : 'track';
@@ -2111,7 +2124,7 @@ sub wrap_track_in_track_div {
         . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("]
 	. $track_id   . q[", "]
         . $track_name . q[", "]
-        . $type . q[", "]
+        . $track_type . q[", "]
         . $section
         . q[");</script>];
 }
@@ -2139,7 +2152,7 @@ sub slidertable {
   my $span  = $self->thin_segment->length;
   my $max   = $self->thin_whole_segment->length;
 
-  my $buttonsDir    = $self->globals->button_url;
+  my $buttonsDir    = $self->data_source->button_url;
 
   my $half_title = $self->data_source->unit_label(int $span/2);
   my $full_title = $self->data_source->unit_label($span);
@@ -2228,12 +2241,19 @@ sub source_menu {
   my %descriptions = map {$_=>$globals->data_source_description($_)} @sources;
   @sources         = sort {$descriptions{$a} cmp $descriptions{$b}} @sources;
 
+  my %sources      = map {$_=>1} @sources;
+  unless ($sources{$self->data_source->name}) { # for regexp-based sources
+      my $n = $self->data_source->name;
+      $descriptions{$n} = $self->data_source->description;
+      @sources         = sort {$descriptions{$a} cmp $descriptions{$b}} (@sources,$n);
+  }
+
   return b($self->tr('DATA_SOURCE')).br.
     ( $sources ?
-      popup_menu(-name   => 'source',
-		 -values => \@sources,
-		 -labels => \%descriptions,
-		 -default => $self->session->source,
+      popup_menu(-name     => 'source',
+		 -values   => \@sources,
+		 -labels   => \%descriptions,
+		 -default  => $self->data_source->name,
 		 -onChange => 'this.form.submit()',
 		)
 	: $globals->data_source_description($self->session->source)
@@ -2946,7 +2966,7 @@ sub toggle_section {
 
   my $visible = $config{on};
 
-  my $buttons = $self->globals->button_url;
+  my $buttons = $self->data_source->button_url;
   my $plus  = "$buttons/plus.png";
   my $minus = "$buttons/minus.png";
   my $break = div({-id=>"${name}_break",

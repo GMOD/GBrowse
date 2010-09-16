@@ -110,7 +110,6 @@ sub do_preload {
     my @labels      = $conf->configured_types;
 
     for my $l (@labels) {
-	uc $l eq 'GENERAL'                             or next;
 	my $adaptor = $conf->setting($l=>'db_adaptor') or next;
 	my $args    = $conf->setting($l=>'db_args')    or next;
 	(my $label = $l) =~ s/:database//;  # aesthetic
@@ -314,7 +313,9 @@ sub render_tracks {
 	return "REQUEST DATASOURCE: $d_name";
     }
 
+    $self->do_init($datasource);
     $self->adjust_conf($datasource);
+
     $self->Debug("render_tracks(): Opening database...");
 
     # Find the segment - it may be hiding in any of the databases.
@@ -528,6 +529,13 @@ sub adjust_conf {
 	my $value = $preload->setting(general=>$s);
 	$globals->setting(general=>$s,$value);
     }
+}
+
+sub do_init {
+    my $self = shift;
+    my $datasource = shift;
+    $self->Debug('do_init()');
+    $datasource->initialize_code();
 }
 
 sub Debug {

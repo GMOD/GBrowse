@@ -21,6 +21,13 @@ my $HASBIGWIG;
 
 # The intent of this is to provide a single unified interface for managing a user's uploaded and shared tracks.
 
+# class methods
+sub busy_file_name     { 'BUSY'      }
+sub status_file_name   { 'STATUS'    }
+sub imported_file_name { 'IMPORTED'  }
+sub mirrored_file_name { 'MIRRORED'  }
+sub sources_dir_name   { 'SOURCES'   }
+
 sub new {
     my $class = shift;
 	my $globals = Bio::Graphics::Browser2->open_globals;
@@ -35,31 +42,6 @@ sub new {
 	}
 }
 
-# class methods
-sub busy_file_name     { 'BUSY'      }
-sub status_file_name   { 'STATUS'    }
-sub imported_file_name { 'IMPORTED'  }
-sub mirrored_file_name { 'MIRRORED'  }
-sub sources_dir_name   { 'SOURCES'   }
-
-# Source Files - Returns an array of source files (with details) associated with a specified track.
-sub source_files {
-    my $self = shift;
-    my $track = shift;
-    my $path = File::Spec->catfile($self->track_path($track), $self->sources_dir_name);
-    $path = $self->trackname_from_url($path, 0) if ($self->is_imported($track) == 1);
-    my @files;
-    if (opendir my $dir, $path) {
-		while (my $f = readdir($dir)) {
-			my $path = File::Spec->catfile($path, $f);
-			next unless -f $path;
-			my ($size, $mtime) = (stat(_))[7,9];
-			push @files, [$f, $size, $mtime, $path];
-		}
-    }
-    return @files;
-}
-
 sub config   { shift->{config}    }
 sub state    { shift->{state}     }    
 sub language { shift->{language}  }
@@ -68,7 +50,7 @@ sub language { shift->{language}  }
 sub path {
     my $self = shift;
     my $uploadid = $self->{uploadsid};
-	return $self->{config}->userdata($uploadid);
+	return $self->config->userdata($uploadid);
 }
 
 # Tracks - Returns an array of paths to a user's tracks.
@@ -116,24 +98,21 @@ sub conf_files {
 sub track_path {
     my $self  = shift;
     my $track = shift;
-    my $path = $self->path;
-    return File::Spec->catfile($path, $track);
+    return File::Spec->catfile($self->path,$track);
 }
 
 # Returns the full path to the track's data file.
 sub data_path {
     my $self = shift;
     my ($track,$datafile) = @_;
-    my $path = $self->path;
-    return File::Spec->catfile($path, $track, $self->sources_dir_name, $datafile);
+    return File::Spec->catfile($self->path, $track, $self->sources_dir_name, $datafile);
 }
 
 # Returns the full path to the track's configuration file.
 sub track_conf {
     my $self  = shift;
     my $track = shift;
-    my $path = $self->path;
-	return File::Spec->catfile($path, $track, "$track.conf");
+    return File::Spec->catfile($self->path, $track, "$track.conf");
 }
 
 # Returns a file handle to a conf file.
@@ -147,8 +126,7 @@ sub conf_fh {
 sub import_flag {
     my $self  = shift;
     my $track = shift;
-    my $path = $self->path;
-    return File::Spec->catfile($path, $track, $self->imported_file_name);
+    return File::Spec->catfile($self->path, $track, $self->imported_file_name);
 }
 
 sub mirror_flag {
@@ -181,31 +159,22 @@ sub conf_metadata {
     return ($name,(stat($conf))[9,7]);
 }
 
+# Source Files - Returns an array of source files (with details) associated with a specified track.
 sub source_files {
     my $self = shift;
     my $track = shift;
-    my $path = File::Spec->catfile($self->track_path($track),
-				   $self->sources_dir_name);
+    my $path = File::Spec->catfile($self->track_path($track), $self->sources_dir_name);
     my @files;
-    if (opendir my $dir,$path) {
-	while (my $f = readdir($dir)) {
-	    my $path = File::Spec->catfile($path,$f);
-	    next unless -f $path;
-	    my ($size,$mtime) = (stat(_))[7,9];
-	    push @files,[$f,$size,$mtime,$path];
-	}
+    if (opendir my $dir, $path) {
+		while (my $f = readdir($dir)) {
+			my $path = File::Spec->catfile($path, $f);
+			next unless -f $path;
+			my ($size, $mtime) = (stat(_))[7,9];
+			push @files, [$f, $size, $mtime, $path];
+		}
     }
     return @files;
 }
-
-# Max filename - Returns the maximum possible length for a file name.
-sub max_filename {
-    my $self = shift;
-    my $path = $self->path;
-    my $length = POSIX::pathconf($path, &POSIX::_PC_NAME_MAX) || 255;
-    return $length - 4; # give enough room for the suffix
-}
-
 
 # Trackname from URL - Gets a track name from a given URL
 sub trackname_from_url {
@@ -236,6 +205,13 @@ sub trackname_from_url {
     rmtree($path) if -e $path;  # only happens if uniquefy = 0
     mkpath $path;
     return $track_name;
+}
+
+# Max filename - Returns the maximum possible length for a file name.
+sub max_filename {
+    my $self = shift;
+    my $length = POSIX::pathconf($self->path, &POSIX::_PC_NAME_MAX) || 255;
+    return $length - 4; # give enough room for the suffix
 }
 
 # Import URL - Imports a URL for use in the database.
@@ -349,9 +325,25 @@ sub mirror_url {
 sub upload_data {
     my $self = shift;
     my ($file_name,$data,$content_type,$overwrite) = @_;
-    
     my $io = IO::String->new($data);
     $self->upload_file($file_name,$io,$content_type,$overwrite);
+}
+
+sub upload_url {
+    my $self  = shift;
+    my $url   = shift;
+    my $dir   = tempdir(CLEANUP=>1);
+    my $path  = File::Spec->catfile($dir,basename($url));
+    eval "require LWP::UserAgent" unless LWP::UserAgent->can('new');
+    my $agent = LWP::UserAgent->new();
+    my $response = $agent->mirror($url,$path);
+    $response->is_success or die $response->status_line;
+    my $mime = $response->header('Content-type');
+    open my $fh,"<",$path;
+    my @args = $self->upload_file(basename($url),$fh,$mime,1);
+    unlink $path;
+    File::Temp::cleanup();
+    return @args;
 }
 
 # Upload File - Uploads a user's file, as called by the AJAX upload system (on the Upload & Share Tracks tab).
@@ -400,23 +392,6 @@ sub upload_file {
     warn "UPLOAD ERROR: ",$msg if $msg;
     $self->delete_file($file_name) unless $result;
     return ($result,$msg,\@tracks);
-}
-
-sub upload_url {
-    my $self  = shift;
-    my $url   = shift;
-    my $dir   = tempdir(CLEANUP=>1);
-    my $path  = File::Spec->catfile($dir,basename($url));
-    eval "require LWP::UserAgent" unless LWP::UserAgent->can('new');
-    my $agent = LWP::UserAgent->new();
-    my $response = $agent->mirror($url,$path);
-    $response->is_success or die $response->status_line;
-    my $mime = $response->header('Content-type');
-    open my $fh,"<",$path;
-    my @args = $self->upload_file(basename($url),$fh,$mime,1);
-    unlink $path;
-    File::Temp::cleanup();
-    return @args;
 }
 
 sub merge_conf {

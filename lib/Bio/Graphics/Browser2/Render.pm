@@ -41,6 +41,7 @@ use constant LABEL_SEPARATOR      => "\x1e";
 
 my %PLUGINS;       # cache initialized plugins
 my $FCGI_REQUEST;  # stash fastCGI request handle
+my $STATE;         # stash state for use by callbacks
 
 # new() can be called with two arguments: ($data_source,$session)
 # or with one argument: ($globals)
@@ -50,43 +51,41 @@ my $FCGI_REQUEST;  # stash fastCGI request handle
 #   $source = $globals->create_data_source($session->source)
 
 sub new {
-	my $class = shift;
-	my ($data_source,$session);
+  my $class = shift;
 
-	if (@_ == 2) {
-		($data_source,$session) = @_;
-	} elsif (@_ == 1) {
-		my $globals = shift;
-		my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
-		my $authority    = param('authority') || CGI::cookie('authority');
-		$session = $globals->authorized_session($requested_id,$authority);
-		$globals->update_data_source($session);
-		$data_source = $globals->create_data_source($session->source);
-		$globals->{url} ||= CGI::url();
-	} else {
-		croak "usage: ".__PACKAGE__."->new(\$globals) or ->new(\$data_source,\$session)";
-	}
+  my ($data_source,$session);
 
-	my $self = bless {},ref $class || $class;
-	$self->{session} = $session;
-	$self->data_source($data_source);
-	$self->session($session);
-	$self->state($session->page_settings);
-	$self->set_language();
-	$self->set_signal_handlers();
-	$self->{userdb} = Bio::Graphics::Browser2::UserDB->new();
-	$self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self->data_source, $self->state, $self->language, $self->state->{uploadid});
-	$self;
+  if (@_ == 2) {
+    ($data_source,$session) = @_;
+  } elsif (@_ == 1) {
+    my $globals = shift;
+    my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
+    my $authority    = param('authority') || CGI::cookie('authority');
+    $session = $globals->authorized_session($requested_id,$authority);
+    $globals->update_data_source($session);
+    $data_source = $globals->create_data_source($session->source);
+  } else {
+    croak "usage: ".__PACKAGE__."->new(\$globals) or ->new(\$data_source,\$session)";
+  }
+
+  my $self = bless {},ref $class || $class;
+  $self->data_source($data_source);
+  $self->session($session);
+  $self->state($session->page_settings);
+  $self->set_language();
+  $self->set_signal_handlers();
+  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new();
+  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self->data_source, $self->state, $self->language, $self->state->{uploadid});
+  $self;
 }
 
 sub set_signal_handlers {
     my $self = shift;
-    $SIG{CHLD} = sub{
-    	my $kid; 
-		do { 
-		     $kid = waitpid(-1, WNOHANG); 
-		}
-		while $kid > 0;
+    $SIG{CHLD} = sub{    my $kid; 
+			 do { 
+			     $kid = waitpid(-1, WNOHANG); 
+			 } 
+			 while $kid > 0;
     };
 }
 
@@ -105,10 +104,16 @@ sub session {
 }
 
 sub state {
-	my $self = shift;
-	my $d = $self->{state};
-	$self->{state} = shift if @_;
-	$d;
+  my $self = shift;
+  my $d = $self->{state};
+  $STATE = $self->{state} = shift if @_;
+  $d;
+}
+
+# this is a STATIC method that can be used by callbacks as
+# Bio::Graphics::Browser2::Render->request->{name}
+sub request {
+    return $STATE;
 }
 
 sub error_message {
@@ -2134,8 +2139,9 @@ sub update_coordinates {
 
   elsif (param('q')) {
       warn "param(q) = ",param('q') if DEBUG;
+      $state->{search_str} = param('q');
       @{$state}{'ref','start','stop'} 
-          = Bio::Graphics::Browser2::Region->parse_feature_name(param('q'));
+          = Bio::Graphics::Browser2::Region->parse_feature_name($state->{search_str});
       $position_updated++;
   }
 
@@ -2189,8 +2195,8 @@ sub update_coordinates {
       undef $state->{ref};  # no longer valid
       undef $state->{start};
       undef $state->{stop};
-      $state->{name} = param('name');
-      $state->{dbid} = param('dbid'); # get rid of this
+      $state->{name}       = $state->{search_str} = param('name');
+      $state->{dbid}       = param('dbid'); # get rid of this
   }
 }
 
@@ -3562,7 +3568,6 @@ sub galaxy_link {
     return '' unless $galaxy_url;
     my $clear_it  = $self->galaxy_clear;
     my $submit_it = q(document.galaxyform.submit());							#}) - Syntax highlight fixing.
-    
     return "$clear_it;$submit_it";
 }
 

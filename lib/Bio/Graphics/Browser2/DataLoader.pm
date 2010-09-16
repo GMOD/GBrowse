@@ -399,7 +399,7 @@ named "userdata_*". The usual way to do this is with the mysql shell:
 
  mysql> grant create on `userdata\_%`.* to www-data\@localhost
 END
-	
+
 	my $dbh = DBI->connect($mysql_admin)
 	    or die DBI->errstr,".\n",$mysql_usage;
 	$dbh->do("drop database if exists `$data_path`");

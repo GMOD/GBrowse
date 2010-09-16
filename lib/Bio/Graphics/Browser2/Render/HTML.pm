@@ -10,7 +10,7 @@ use Bio::Graphics::Karyotype;
 use Bio::Graphics::Browser2::Util qw[citation url_label segment_str];
 use JSON;
 use Digest::MD5 'md5_hex';
-use Carp 'croak', 'cluck';
+use Carp qw(croak cluck);
 use CGI qw(:standard escape start_table end_table);
 use Text::Tabs;
 
@@ -1346,7 +1346,6 @@ sub render_upload_share_section {
 	$html = div($html);
 	return $html;
 }
-
 # Render Custom Track Listing - Returns the HTML listing of public, uploaded, imported and shared tracks added to a session, and a section to add more.
 sub render_custom_track_listing {
 	my $self = shift;
@@ -1738,6 +1737,7 @@ sub render_track_sharing {
 	}
 	return $sharing_content;
 }
+
 
 # Userdata Import - Renders the "[Import a track URL]" link in the Imported Tracks section.
 sub userdata_import {

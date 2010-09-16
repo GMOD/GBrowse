@@ -95,6 +95,14 @@ END
 
 }
 
+# slightly different behavior -- never return the .fai file - only the first .fa file
+sub get_fasta_file {
+    my $self = shift;
+    my @fasta      = $self->get_fasta_files;
+    my $fasta      = (grep {!/\.fai$/} @fasta)[0];
+    return $fasta;
+}
+
 sub load {
     my $self                = shift;
     my ($initial_lines,$fh) = @_;

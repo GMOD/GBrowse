@@ -18,8 +18,11 @@ sub Loader {
 sub load_line {
     my $self = shift;
     my $line = shift;
+    my $prefix = $self->strip_prefix;
+
     chomp $line;
     push @{$self->{conflines}},$line if $line =~ /^track/;
+    $line =~ s/^$prefix// if $prefix;
     $self->loader->load_line($line);
 }
 
@@ -56,7 +59,7 @@ END
    unless (@lines) {
        my $track_label = $self->new_track_label;
        my $track_name  = $self->track_name;
-       my $key         = 'Uploaded Data';
+       my $key         = $track_name;
        my $bgcolor     = $COLORS[rand @COLORS];
        my $glyph       = 'gene';
        my @types       = $self->loader->loaded_types;

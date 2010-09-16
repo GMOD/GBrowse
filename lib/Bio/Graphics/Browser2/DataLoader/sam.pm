@@ -30,6 +30,7 @@ sub finish_load {
 
     # turn SAM file into a BAM file
     $self->set_status('converting SAM to BAM');
+    $self->do_strip_prefix($source_file);
     $self->sam2bam($source_file,$bam);
 
     # sort it
@@ -45,6 +46,24 @@ sub finish_load {
 
     $self->set_status('creating conf file');
     $self->create_conf_file($bam);
+}
+
+sub do_strip_prefix {
+    my $self = shift;
+    my $source_file = shift;
+    my $prefix = $self->strip_prefix or return;
+    my $dest   = "$source_file.new";
+    open my $i,'<',$source_file  or die "Can't open $source_file: $!";
+    open my $o,">",$dest         or die "Can't open $dest: $!";
+    while (<$i>) {
+	next if /^\@/;
+	s/^([^\t]+)\t([^\t]+)\t$prefix([^\t]+)/$1\t$2\t$3/;
+    } continue {
+	print $o $_;
+    }
+    close $o;
+    close $i;
+    rename $dest,$source_file;
 }
 
 sub sam2bam {
@@ -66,6 +85,7 @@ sub sam2bam {
     
 	my $fai = Bio::DB::Sam::Fai->load($fasta)
 	    or die "Could not load reference FASTA file for indexing this SAM file: $!";
+
 	$header = $tam->header_read2($fasta.".fai");
     }
 

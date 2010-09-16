@@ -32,9 +32,6 @@ var galaxy_form_id          = 'galaxy_form';
 var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
 var userdata_table_id       = 'userdata_table_div';
-var userimport_table_id     = 'userimport_table_div';
-var custom_tracks_id		= 'custom_tracks';
-var public_tracks_id		= 'public_tracks';
 
 //  Sorta Constants
 var expired_limit  = 1;
@@ -235,30 +232,44 @@ var GBrowseController = Class.create({
   },
 
   append_child_from_html:
-  function (child_html,parent_obj) {
+  function (child_html,parent_obj,onTop) {
     //Append new html to the appropriate section This is a bit cludgy but we
     //create a temp element, read the html into it and then move the div
     //element back out.  This keeps the other tracks intact.
+    if (onTop == null) onTop = false;
+
     var tmp_element       = document.createElement("tmp_element");
     tmp_element.innerHTML = child_html;
-    parent_obj.appendChild(tmp_element);
 
+    var tracks      = parent_obj.getElementsByClassName('track');
+    var first_track = tracks[0];
+
+    if (onTop && first_track != null) {
+	parent_obj.insertBefore(tmp_element,first_track[0]);
+    } else {
+	parent_obj.appendChild(tmp_element);
+    }
     // Move each child node but skip if it is a comment (class is undef)
     if (tmp_element.hasChildNodes()) {
-      var children = tmp_element.childNodes;
-      for (var i = 0; i < children.length; i++) {
-        if (children[i].className == undefined){
-          continue;
-        }
-        parent_obj.appendChild(children[i]);
-      };
-    };
+	var children = tmp_element.childNodes;
+	for (var i = 0; i < children.length; i++) {
+	    if (children[i].className == undefined){
+		continue;
+	    }
+	    if (onTop && first_track != null) {
+		parent_obj.insertBefore(children[i],first_track);
+	    } else {
+		parent_obj.appendChild(children[i]);
+	    }
+	}
+    }
     parent_obj.removeChild(tmp_element);
   },
 
   // Update Section Methods *****************************************
   update_sections:
   function(section_names, param_str, scroll_there, spin, onSuccessFunc) {
+
     if (param_str==null){
         param_str = '';
     }
@@ -412,13 +423,13 @@ var GBrowseController = Class.create({
   }, // end scroll
 
   add_track:
-  function(track_name, onSuccessFunc, force) {
+  function(track_name, onSuccessFunc, force, onTop) {
     var track_names = new Array(track_name);
-    this.add_tracks(track_names,onSuccessFunc,force);
+    this.add_tracks(track_names,onSuccessFunc,force, onTop);
   },
 
   add_tracks:
-  function(track_names, onSuccessFunc, force) {
+  function(track_names, onSuccessFunc, force, onTop) {
 
     if (force == null) force=false;
 
@@ -465,7 +476,7 @@ var GBrowseController = Class.create({
           var html           = this_track_data.track_html;
           var panel_id       = this_track_data.panel_id;
 
-          Controller.append_child_from_html(html,$(panel_id));
+          Controller.append_child_from_html(html,$(panel_id),onTop);
 
           if (this_track_data.display_details == 0){
             $(ret_gbtrack.track_image_id).setOpacity(0);
@@ -731,13 +742,13 @@ var GBrowseController = Class.create({
   configure_plugin:
   function(div_id) {
     var plugin_base  = document.pluginform.plugin.value;
-    this.update_sections(new Array(div_id), '&plugin_base='+plugin_base,null,null,true);
-    new Effect.ScrollTo(div_id);
-    new Effect.BlindDown(div_id);
+    this.update_sections(new Array(div_id), '&plugin_base='+plugin_base,true,false,null);
+    Effect.BlindDown(div_id);
   },
 
   reconfigure_plugin:
   function(plugin_action,plugin_track_id,pc_div_id,plugin_type,form_element) {
+
     if (form_element==null)
        form_element = $("configure_plugin");
     else
@@ -754,6 +765,7 @@ var GBrowseController = Class.create({
         if (pc_div_id != null) Controller.wipe_div(pc_div_id); 
 
         if (plugin_type == 'annotator'){
+          ShowHideTrack(plugin_track_id,true);
 	  Controller.each_track(plugin_track_id,function(gbtrack) {
               Controller.rerender_track(gbtrack.track_id,true);
             });
@@ -796,7 +808,6 @@ var GBrowseController = Class.create({
       return false; 
     }
     else if (plugin_type == 'finder'){
-        alert('Searching for ' + $F('landmark_search_field') + ' via ' + $F('plugin'));
 	document.searchform.plugin_find.value  = $F('plugin');
 	document.searchform.force_submit.value = 1;
 	document.searchform.submit();
@@ -880,36 +891,36 @@ var GBrowseController = Class.create({
 
   set_upload_description:
   function(event) {
-		var description_box = event.findElement();
-		if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
-			var fileid = description_box.up("div[id^='upload_']").id.sub("upload_","");
-			var description = description_box.innerHTML;
-			description_box.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
-			new Ajax.Request(Controller.url, {
-				method:      'post',
-				parameters:{  
-					action: 'set_upload_description',
-					fileid: fileid,
-					description: description
-				},
-				onSuccess: function(transport) {
-					Controller.update_sections(new Array(custom_tracks_id, public_tracks_id))
-				}
-			});
-			description_box.stopObserving('keypress');
-			description_box.stopObserving('blur');
-			description_box.blur();
-			return true;
-		}
-		if (event.keyCode==Event.KEY_ESC) {
-			description_box.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
-			Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
-			description_box.stopObserving('keypress');
-			description_box.stopObserving('blur');
-			description_box.blur();
-			return true;
-		}
-		return false;
+      var el = event.findElement();
+      if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
+	  var upload_name = el.id.sub('_description$','');
+	  var desc        = el.innerHTML;
+	  el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+	  new Ajax.Request(Controller.url, {
+		      method:      'post',
+		      parameters:{  
+		          action: 'set_upload_description',
+			  upload_name: upload_name,
+			  description: desc
+		      },
+		      onSuccess: function(transport) {
+		      Controller.update_sections(new Array(userdata_table_id));
+		      }
+	       });
+	  el.stopObserving('keypress');
+	  el.stopObserving('blur');
+	  el.blur();
+	  return true;
+      }
+      if (event.keyCode==Event.KEY_ESC) {
+          el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+	  Controller.update_sections(new Array(userdata_table_id));
+	  el.stopObserving('keypress');
+	  el.stopObserving('blur');
+	  el.blur();
+	  return true;
+      }
+      return false;
   },
 
   // downloadUserTrackSource() is called to populate the user track edit field
@@ -928,38 +939,56 @@ var GBrowseController = Class.create({
 
   },
 
-  // uploadUserTrackSource() is called to submit a user track edit field
-  // to the server
-  uploadUserTrackSource:
-  function (sourceField,fileName,sourceFile,editElement) {
-
+  _modifyUserTrackSource:
+  function (param,statusElement,displayWhenDone) {
      var upload_id  = 'upload_' + Math.floor(Math.random() * 99999);
-
+     param.upload_id = upload_id;
      new Ajax.Request(Controller.url, {
      	 method:       'post',
-	 parameters:   { action:     'modifyUserData',
-                         track:      fileName,
-                         sourceFile: sourceFile,
-			 upload_id:  upload_id,
-			 data:       $F(sourceField)},
+	 parameters:   param,
          onCreate:    function() {
-	      if ($(editElement) != null) {
-	      	 $(editElement).innerHTML = '<div id="'+upload_id+'_form'+'"></div>'
+	      if ($(statusElement) != null) {
+	      	 $(statusElement).innerHTML = '<div id="'+upload_id+'_form'+'"></div>'
                                		   +'<div id="'+upload_id+'_status'+'"></div>';
 	      }
 	      startAjaxUpload(upload_id);
 	     },
          onSuccess:   function (transport) {
-	 	          if ($(editElement) != null) $(editElement).remove();
+	 	          if ($(statusElement) != null) $(statusElement).remove();
 			  var r = transport.responseJSON;
+			  Controller.add_tracks(r.tracks,null,false,true);
 			  r.tracks.each(function(t) {
 			  	      Controller.rerender_track(t,true,true);
 				      });
 		          var updater = Ajax_Status_Updater.get(upload_id);
 			  if (updater != null) updater.stop();
-		          Controller.update_sections(new Array(userdata_table_id,userimport_table_id,track_listing_id));
+		          Controller.update_sections(new Array(userdata_table_id,track_listing_id));
+			  if (displayWhenDone != null && displayWhenDone)
+			      Controller.select_tab('main_page');
 	               }
          });
+     
+  },
+
+  // uploadUserTrackSource() is called to submit a user track edit field
+  // to the server
+  uploadUserTrackSource:
+  function (sourceField,fileName,sourceFile,editElement) {
+      this._modifyUserTrackSource({ action:     'modifyUserData',
+				    track:      fileName,
+				    sourceFile: sourceFile,
+				    data:       $F(sourceField)
+                                   },
+	                          editElement);
+  },
+
+  // mirrorTrackSource() is called to mirror a URL to a track
+  mirrorTrackSource:
+  function (sourceURL,trackName,statusElement,displayWhenDone) {
+      this._modifyUserTrackSource( { action:     'upload_file',
+                                     name:       trackName,
+				     mirror_url: sourceURL },
+	                            statusElement,displayWhenDone);
   },
 
 // monitor_upload is redundant and needs to be refactored
@@ -982,6 +1011,18 @@ var GBrowseController = Class.create({
      if (this.tabs != null) {
        this.tabs.select_tab(tab_id);
      }
+  },
+
+  wait_for_initialization:
+  function (html,callback) {
+      $('main').setOpacity(0.2);
+      var html = '<div id="dialog_123" style="position:absolute; left:50px; top:50px; border:5px double black; background: wheat; z-index:100">'
+                 + html
+                 +'</div>';
+      $('main').insert({before:html});
+      if (callback) callback();
+      $('main').setOpacity(1.0);
+      $('dialog_123').remove();
   }
 
 
@@ -991,32 +1032,29 @@ var Controller = new GBrowseController; // singleton
 
 function initialize_page() {
 
-	// These statements initialize the tabbing
-	Controller.tabs = new TabbedSection(['main_page','track_page','custom_tracks_page','settings_page']);
+  // These statements initialize the tabbing
+  Controller.tabs = new TabbedSection(['main_page','track_page','custom_tracks_page','settings_page']);
 
-	//event handlers
-	[page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
-		if ($(el) != null) {
-		  Controller.segment_observers.set(el,1);
-		}
-	});
+  //event handlers
+    [page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
+    if ($(el) != null) {
+      Controller.segment_observers.set(el,1);
+    }
+  });
+  
+  // The next statement is to avoid the scalebars from being "out of sync"
+  // when manually advancing the browser with its forward/backward buttons.
+  // Unfortunately it causes an infinite loop when there are multiple regions!
+  if ($(detail_container_id) != null)
+      Controller.update_coordinates('left 0');
 
-	// The next statement is to avoid the scalebars from being "out of sync"
-	// when manually advancing the browser with its forward/backward buttons.
-	// Unfortunately it causes an infinite loop when there are multiple regions!
-	if ($(detail_container_id) != null)
-	  Controller.update_coordinates('left 0');
+  // These statements get the rubberbanding running.
+  Overview.prototype.initialize();
+  Region.prototype.initialize();
+  Details.prototype.initialize();
+  if ($('autocomplete_choices') != null) 
+       initAutocomplete();
 
-	// These statements get the rubberbanding running.
-	Overview.prototype.initialize();
-	Region.prototype.initialize();
-	Details.prototype.initialize();
-	if ($('autocomplete_choices') != null) 
-	   initAutocomplete();
-
-	var share_link = window.location.href.parseQuery().share_link;
-	if (share_link)
-		shareFile(share_link, "");
 }
 
 // set the colors for the rubberband regions

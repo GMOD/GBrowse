@@ -1,6 +1,10 @@
 2.16
      * Added code to recognize and strip whitespace from search coordinates. This 
        allows "chr1:2,000 .. 1,180,000" to work as a search term.
+     * Added code that allows callbacks to invoke Bio::Graphics::Browser2::Render->request()
+       in order to get a hash that contains various information about the current state.
+       Interesting keys include: search_str, ref, start, end, flip, tracks, features, userid, uploadid,
+       h_feat, width, grid.
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports

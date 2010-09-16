@@ -39,6 +39,7 @@ use constant LABEL_SEPARATOR      => "\x1e";
 
 my %PLUGINS;       # cache initialized plugins
 my $FCGI_REQUEST;  # stash fastCGI request handle
+my $STATE;         # stash state for use by callbacks
 
 # new() can be called with two arguments: ($data_source,$session)
 # or with one argument: ($globals)
@@ -101,8 +102,14 @@ sub session {
 sub state {
   my $self = shift;
   my $d = $self->{state};
-  $self->{state} = shift if @_;
+  $STATE = $self->{state} = shift if @_;
   $d;
+}
+
+# this is a STATIC method that can be used by callbacks as
+# Bio::Graphics::Browser2::Render->request->{name}
+sub request {
+    return $STATE;
 }
 
 sub error_message {
@@ -2255,8 +2262,9 @@ sub update_coordinates {
 
   elsif (param('q')) {
       warn "param(q) = ",param('q') if DEBUG;
+      $state->{search_str} = param('q');
       @{$state}{'ref','start','stop'} 
-          = Bio::Graphics::Browser2::Region->parse_feature_name(param('q'));
+          = Bio::Graphics::Browser2::Region->parse_feature_name($state->{search_str});
       $position_updated++;
   }
 
@@ -2310,8 +2318,8 @@ sub update_coordinates {
       undef $state->{ref};  # no longer valid
       undef $state->{start};
       undef $state->{stop};
-      $state->{name} = param('name');
-      $state->{dbid} = param('dbid'); # get rid of this
+      $state->{name}       = $state->{search_str} = param('name');
+      $state->{dbid}       = param('dbid'); # get rid of this
   }
 }
 

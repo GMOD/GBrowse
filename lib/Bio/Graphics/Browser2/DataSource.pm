@@ -17,6 +17,7 @@ use CGI 'pre';
 
 my %CONFIG_CACHE; # cache parsed config files
 my %DB_SETTINGS;  # cache database settings
+my %LOADED_GLYPHS;
 
 BEGIN {
     if( $ENV{MOD_PERL} &&
@@ -70,6 +71,7 @@ sub new {
   $self->dir(dirname($config_file_path));
   $self->config_file($config_file_path);
   $self->add_scale_tracks();
+  $self->precompile_glyphs;
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
   $CONFIG_CACHE{$config_file_path}{ctime}  = time();
@@ -130,6 +132,18 @@ sub globals {
 sub clear_cached_dbids {
     my $self = shift;
     delete $self->{feature2dbid};
+}
+
+sub precompile_glyphs {
+    my $self = shift;
+    for my $l ($self->labels) {
+	my $glyph = $self->setting($l=>'glyph');
+	next unless $glyph;
+	next if ref($glyph) eq 'CODE';
+	next if $LOADED_GLYPHS{$glyph}++;
+	eval "use Bio::Graphics::Glyph::$glyph" unless
+	    "Bio::Graphics::Glyph\:\:$glyph"->can('new');
+    }
 }
 
 sub clear_cached_config {
@@ -344,6 +358,8 @@ sub label2type {
   return shellwords($self->setting($l,'feature')||$self->setting($label,'feature')||'');
 }
 
+sub seqid_prefix { shift->fallback_setting(general=>'seqid_prefix') }
+
 sub default_style {
   my $self = shift;
   return $self->SUPER::style('TRACK DEFAULTS');
@@ -518,6 +534,13 @@ sub semantic_fallback_setting {
     my $setting = $self->semantic_setting($label,$option,$length);
     return $setting if defined $setting;
     return $self->fallback_setting($label,$option);
+}
+
+sub button_url {
+    my $self = shift;
+    my $globals = $self->globals;
+    my $path    = $self->global_setting('buttons');
+    return $globals->resolve_path($path,'url');
 }
 
 =head2 $section_setting = $data_source->section_setting($section_name)
@@ -838,13 +861,19 @@ sub open_database {
 
   my ($dbid,$adaptor,@argv) = $self->db_settings($track,$length);
   my $db                    = Bio::Graphics::Browser2::DataBase->open_database($adaptor,@argv);
-
+  
   # do a little extra stuff the first time we see a new database
   unless ($self->{databases_seen}{$db}++) {
       my $refclass = $self->setting('reference class');
       eval {$db->default_class($refclass)} if $refclass;
       $db->strict_bounds_checking(1) if $db->can('strict_bounds_checking');
       $db->absolute(1)               if $db->can('absolute');
+
+      unless ($track eq 'general') {
+	  my $default = $self->open_database();  # I hope we don't get into a loop here
+	  eval {$db->dna_accessor($default)} unless $default eq $db;
+      }
+
   }
 
   # remember mapping of this database to this track
@@ -999,7 +1028,7 @@ sub add_dbid_to_feature {
     if ($feature->isa('HASH')) {
 	$feature->{__gbrowse_dbid} = $dbid;
 	my $class = ref $feature;
-	return if $self->{hacked_classes}{$class}++;
+	return if $class->can('gbrowse_dbid');
 	my $method = sub {
 	    my $f = shift;
 	    return $f->{__gbrowse_dbid};
@@ -1010,7 +1039,7 @@ sub add_dbid_to_feature {
     else {
 	$self->{feature2dbid}{overload::StrVal($feature)} = $dbid;
 	my $class = ref $feature;
-	return if $self->{hacked_classes}{$class}++;
+	return if $class->can('gbrowse_dbid');
 	my $method = sub { my $f = shift;
 			   return $self->{feature2dbid}{overload::StrVal($f)}
 	  };

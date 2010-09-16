@@ -53,6 +53,10 @@ sub tr {
   return @_ ? sprintf($translated,map {CGI::escapeHTML($_)} @_) : $translated;
 }
 
+sub translate {
+    shift->tr(@_);
+}
+
 sub tr_table {
   my $self = shift;
   my @languages = @_;

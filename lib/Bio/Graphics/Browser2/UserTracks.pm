@@ -11,6 +11,7 @@ use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
 use IO::File;
 use IO::String;
+use File::Temp 'tempdir';
 use POSIX ();
 use Carp qw(croak cluck);
 use CGI 'param';
@@ -38,6 +39,7 @@ sub new {
 sub busy_file_name     { 'BUSY'      }
 sub status_file_name   { 'STATUS'    }
 sub imported_file_name { 'IMPORTED'  }
+sub mirrored_file_name { 'MIRRORED'  }
 sub sources_dir_name   { 'SOURCES'   }
 
 # Source Files - Returns an array of source files (with details) associated with a specified track.
@@ -58,6 +60,10 @@ sub source_files {
     return @files;
 }
 
+sub config   { shift->{config}    }
+sub state    { shift->{state}     }    
+sub language { shift->{language}  }
+
 # Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {
     my $self = shift;
@@ -65,7 +71,41 @@ sub path {
 	return $self->{config}->userdata($uploadid);
 }
 
+# Tracks - Returns an array of paths to a user's tracks.
+sub tracks {
+    my $self = shift;
+    my $userdb = $self->{userdb};
+    my $globals = $self->{globals};
+	
+	my @tracks;
+	push (@tracks, $self->get_uploaded_files, $self->get_imported_files);
+	if ($globals->user_accounts == 1) {
+		push (@tracks, $self->get_added_public_files, $self->get_shared_files);
+	}
+	return @tracks;
+}
+
 # Returns the path to the conf files associated with all tracks.
+sub is_mirrored {
+    my $self  = shift;
+    my $track = shift;
+    my $mirror_flag = $self->mirror_flag($track);
+    return unless -e $mirror_flag;
+    open(my $i,$mirror_flag);
+    my $url = <$i>;
+    close $i;
+    return $url;
+}
+
+sub set_mirrored {
+    my $self = shift;
+    my ($track_name,$url) = @_;
+    my $flagfile = $self->mirror_flag($track_name);
+    open my $i,">",$flagfile or warn "can't open mirror file: $!";
+    print $i $url;
+    close $i;
+}
+
 sub conf_files {
     my $self = shift;
     my $path = $self->path;
@@ -96,12 +136,40 @@ sub track_conf {
 	return File::Spec->catfile($path, $track, "$track.conf");
 }
 
+# Returns a file handle to a conf file.
+sub conf_fh {
+    my $self = shift;
+    my $track = shift;
+    return Bio::Graphics::Browser2::UserConf->fh($self->track_conf($track));
+}
+
 # Returns the location of the import flag file..
 sub import_flag {
     my $self  = shift;
     my $track = shift;
     my $path = $self->path;
     return File::Spec->catfile($path, $track, $self->imported_file_name);
+}
+
+sub mirror_flag {
+    my $self  = shift;
+    my $track = shift;
+    return File::Spec->catfile($self->path,
+			       $track,
+			       $self->mirrored_file_name);
+}
+
+sub created {
+    my $self  = shift;
+    my $track = shift;
+    my $conf  = File::Spec->catfile($self->path,$track,"$track.conf");
+    return (stat($conf))[10];
+}
+
+sub modified {
+    my $self  = shift;
+    my $track = shift;
+    return ($self->conf_metadata($track))[1];
 }
 
 # Returns the modified time and size of a conf file.
@@ -113,18 +181,21 @@ sub conf_metadata {
     return ($name,(stat($conf))[9,7]);
 }
 
-# Tracks - Returns an array of paths to a user's tracks.
-sub tracks {
+sub source_files {
     my $self = shift;
-    my $userdb = $self->{userdb};
-    my $globals = $self->{globals};
-	
-	my @tracks;
-	push (@tracks, $self->get_uploaded_files, $self->get_imported_files);
-	if ($globals->user_accounts == 1) {
-		push (@tracks, $self->get_added_public_files, $self->get_shared_files);
+    my $track = shift;
+    my $path = File::Spec->catfile($self->track_path($track),
+				   $self->sources_dir_name);
+    my @files;
+    if (opendir my $dir,$path) {
+	while (my $f = readdir($dir)) {
+	    my $path = File::Spec->catfile($path,$f);
+	    next unless -f $path;
+	    my ($size,$mtime) = (stat(_))[7,9];
+	    push @files,[$f,$size,$mtime,$path];
 	}
-	return @tracks;
+    }
+    return @files;
 }
 
 # Max filename - Returns the maximum possible length for a file name.
@@ -135,11 +206,14 @@ sub max_filename {
     return $length - 4; # give enough room for the suffix
 }
 
+
 # Trackname from URL - Gets a track name from a given URL
 sub trackname_from_url {
     my $self     = shift;
     my $url      = shift;
     my $uniquefy = shift;
+
+    warn "trackname_from_url($url)" if DEBUG;
 
     (my $track_name=$url) =~ tr!a-zA-Z0-9_%^@.-!_!cs;
 
@@ -164,6 +238,113 @@ sub trackname_from_url {
     return $track_name;
 }
 
+# Import URL - Imports a URL for use in the database.
+sub import_url {
+    my $self = shift;
+    my $url       = shift;
+    my $overwrite = shift;
+    my $privacy_policy = shift // "private";													#/
+    my $username = $self->{username};
+    my $userdb = $self->{userdb};
+    my $userid = $self->{uploadid};
+
+    my $key;
+    if ($url =~ m!http://([^/]+).+/(\w+)/\?.*t=([^+;]+)!) {
+		my @tracks = split /\+/,$3;
+		$key = "Shared track from $1 (@tracks)";
+    } else {
+    	$key  = "Shared track from $url";
+    }
+
+    my $track_name = $self->trackname_from_url($url,!$overwrite);
+    my $loader = Bio::Graphics::Browser2::DataLoader->new($track_name,
+							  $self->track_path($track_name),
+							  $self->track_conf($track_name),
+							  $self->config,
+							  $self->state->{uploadid});
+    $loader->strip_prefix($self->config->seqid_prefix);
+    $loader->set_status('starting import');
+
+    my $conf = $self->track_conf($track_name);
+    open (my $f, "+>", $conf) or croak "Couldn't open $conf: $!";
+    my @data = $f;
+
+    if ($url =~ /\.bam$/) {
+		print $f $self->remote_bam_conf($track_name, $url, $key);
+    } 
+    elsif ($url =~ /\.bw$/) {
+		print $f $self->remote_bigwig_conf($track_name, $url, $key);
+    }
+    else {
+		print $f $self->remote_mirror_conf($track_name, $url, $key);
+    }
+
+    close $f;
+    open my $i, ">", $self->import_flag($track_name);
+    close $i;
+
+    $loader->set_processing_complete;
+    $self->add_file($url, 1);
+
+    return (1,'',[$track_name]);
+}
+
+# Attempts to reload a file into the database.
+sub reload_file {
+    my $self = shift;
+    my $track = shift;
+    my @sources = $self->source_files($track);
+    for my $s (@sources) {
+		my ($name,$size,$mtime,$path) = @$s;
+		rename $path,"$path.bak"            or next;
+		my $io = IO::File->new("$path.bak") or next;
+		my ($result) = $self->upload_file($name,$io,'',1);
+		if ($result) {
+			unlink "$path.bak";
+		} else {
+			rename "$path.bak",$path;
+		}
+    }
+}
+
+sub mirror_url {
+    my $self  = shift;
+    my ($name,$url,$overwrite) = @_;
+
+    warn "mirroring..." if DEBUG;
+
+    if ($url =~ /\.(bam|bw)$/ or $url =~ /\b(gbgff|das)\b/) {
+	return $self->import_url($url,$overwrite);
+    }
+
+    # first we do a HEAD to validate that the thing exists
+    eval "require LWP::UserAgent" unless LWP::UserAgent->can('new');
+    my $agent  = LWP::UserAgent->new();
+    my $result = $agent->head($url);
+    unless ($result->is_success) {
+	my $msg = $url.': '.$result->status_line;
+	warn $msg if DEBUG;
+	return (0,$msg,[]);
+    }
+
+    # fetch in one process, process in another
+    eval "use IO::Pipe" unless IO::Pipe->can('new');
+    my $fh  = IO::Pipe->new;
+    my $child = Bio::Graphics::Browser2::Render->fork();
+    die "Couldn't fork" unless defined $child;
+
+    unless ($child) {
+	warn "printing from child..." if DEBUG;
+	$fh->writer();
+	$self->_print_url($agent,$url,$fh);
+	CORE::exit 0;
+    }
+    $fh->reader;
+    my @result = $self->upload_file($name,$fh,$result->header('Content-Type')||'text/plain',$overwrite);
+    $self->set_mirrored($name,$url);
+    return @result;
+}
+
 # Upload Data - Uploads a string of data entered as text (on the Upload & Share Tracks tab).
 sub upload_data {
     my $self = shift;
@@ -177,6 +358,10 @@ sub upload_data {
 sub upload_file {
     my $self = shift;
     my ($file_name, $fh, $content_type, $overwrite) = @_;
+
+    warn "$file_name: OVERWRITE = $overwrite" if DEBUG;
+
+    my $track_name = $self->trackname_from_url($file_name,!$overwrite);
     my $userid = $self->{userid};
     my $userdb = $self->{userdb};
     
@@ -217,80 +402,21 @@ sub upload_file {
     return ($result,$msg,\@tracks);
 }
 
-# Import URL - Imports a URL for use in the database.
-sub import_url {
-    my $self = shift;
-    my $url       = shift;
-    my $overwrite = shift;
-    my $privacy_policy = shift // "private";													#/
-    my $username = $self->{username};
-    my $userdb = $self->{userdb};
-    my $userid = $self->{uploadid};
-
-    my $key;
-    if ($url =~ m!http://([^/]+).+/(\w+)/\?.*t=([^+;]+)!) {
-		my @tracks = split /\+/,$3;
-		$key = "Shared track from $1 (@tracks)";
-    } else {
-    	$key  = "Shared track from $url";
-    }
-
-    my $track_name = $self->trackname_from_url($url,!$overwrite);
-    my $loader = Bio::Graphics::Browser2::DataLoader->new($track_name,
-							  $self->track_path($track_name),
-							  $self->track_conf($track_name),
-							  $self->{config},
-							  $userid);
-    $loader->set_status('starting import');
-
-    my $conf = $self->track_conf($track_name);
-    open (my $f, "+>", $conf) or croak "Couldn't open $conf: $!";
-    my @data = $f;
-
-    if ($url =~ /\.bam$/) {
-		print $f $self->remote_bam_conf($track_name, $url, $key);
-    } 
-    elsif ($url =~ /\.bw$/) {
-		print $f $self->remote_bigwig_conf($track_name, $url, $key);
-    }
-    else {
-		print $f $self->remote_mirror_conf($track_name, $url, $key);
-    }
-    close $f;
-    open my $i, ">", $self->import_flag($track_name);
-    close $i;
-
-    $loader->set_processing_complete;
-    $self->add_file($url, 1);
-
-    return (1,'',[$track_name]);
-}
-
-# Attempts to reload a file into the database.
-sub reload_file {
-    my $self = shift;
-    my $track = shift;
-    my @sources = $self->source_files($track);
-    for my $s (@sources) {
-		my ($name,$size,$mtime,$path) = @$s;
-		rename $path,"$path.bak"            or next;
-		my $io = IO::File->new("$path.bak") or next;
-		my ($result) = $self->upload_file($name,$io,'',1);
-		if ($result) {
-			unlink "$path.bak";
-		} else {
-			rename "$path.bak",$path;
-		}
-    }
-}
-
-# Returns a file handle to a conf file.
-sub conf_fh {
-    my $self = shift;
-    my $track = shift;
-    my $path = $self->path;
-    $track = $self->trackname_from_url($track) if ($self->is_imported($track) == 1);
-    return Bio::Graphics::Browser2::UserConf->fh($self->track_conf($track));
+sub upload_url {
+    my $self  = shift;
+    my $url   = shift;
+    my $dir   = tempdir(CLEANUP=>1);
+    my $path  = File::Spec->catfile($dir,basename($url));
+    eval "require LWP::UserAgent" unless LWP::UserAgent->can('new');
+    my $agent = LWP::UserAgent->new();
+    my $response = $agent->mirror($url,$path);
+    $response->is_success or die $response->status_line;
+    my $mime = $response->header('Content-type');
+    open my $fh,"<",$path;
+    my @args = $self->upload_file(basename($url),$fh,$mime,1);
+    unlink $path;
+    File::Temp::cleanup();
+    return @args;
 }
 
 sub merge_conf {
@@ -365,8 +491,8 @@ sub status {
     my $load   = $loader->new($filename,
 			      $self->track_path($filename),
 			      $self->track_conf($filename),
-			      $self->{config},
-			      $self->{uploadid},
+			      $self->config,
+			      $self->state->{uploadid},
 	);
     return $load->get_status();
 }
@@ -379,12 +505,14 @@ sub get_loader {
     my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";
     die $@ if $@;
-    return $module->new($track_name,
-			$self->track_path($track_name),
-			$self->track_conf($track_name),
-			$self->{config},
-			$self->{uploadid},
+    my $loader = $module->new($track_name,
+			      $self->track_path($track_name),
+			      $self->track_conf($track_name),
+			      $self->config,
+			      $self->state->{uploadid},
 	);
+    $loader->strip_prefix($self->config->seqid_prefix);
+    return $loader;
 }
 
 # guess the file type and eol based on its name and the first 1024 bytes
@@ -513,8 +641,8 @@ sub remote_bam_conf {
 	$track_name,
 	$self->track_path($track_name),
 	$self->track_conf($track_name),
-	$self->{config},
-	$self->{uploadid});
+	$self->config,
+	$self->state->{uploadid});
     my $fasta  = $loader->get_fasta_file;
 
     return <<END;
@@ -583,6 +711,12 @@ height          = 20
 END
 }
 
+sub _print_url {
+    my $self = shift;
+    my ($agent,$url,$fh) = @_;
+    $agent->get($url,':content_cb' => sub { print $fh shift; });
+}
+
 # These methods are replaced by methods in Filesystem.pm and Database.pm
 # Many of these functions are called asynchronously, if you want to connect an AJAX call to one of these functions add a hook in Action.pm
 sub modified { warn "modified() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
@@ -645,10 +779,10 @@ use base 'Bio::Graphics::Browser2::UserTracks';
 
 sub path {
     my $self    = shift;
-    my $globals   = $self->{config}->globals;
+    my $globals   = $self->config->globals;
     my $admin_dbs = $globals->admin_dbs 
 	or return $self->SUPER::path;
-    my $source    = $self->{config}->name;
+    my $source    = $self->config->name;
     my $path      = File::Spec->catfile($admin_dbs,$source);
     return $path;
 }

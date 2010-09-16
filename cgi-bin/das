@@ -35,7 +35,6 @@ else {
     GBrowse2::Das->new($globals)->run();    
 }
 
-
 exit 0;
 
 package GBrowse2::Das;
@@ -163,6 +162,8 @@ sub error_header {
     my ($message,$code) = @_;
     $code ||= 500;
     print header(-type          =>'text/plain',
+		 -Access_Control_Allow_Origin => '*',
+		 -Access_Control_Expose_Headers => 'X-DAS-Version, X-DAS-Status, X-DAS-Capabilities, X-DAS-Server',
 		 -X_DAS_Version => DAS_VERSION,
 		 -X_DAS_Status  => "$code ".ERRCODES->{$code},
 		 -X_DAS_Capabilities => CAPABILITIES,
@@ -174,8 +175,11 @@ sub error_header {
 sub ok_header {
     my $self = shift;
     print header(-type          =>'text/xml',
+		 -Access_Control_Allow_Origin => '*',
+		 -Access_Control_Expose_Headers => 'X-DAS-Version, X-DAS-Status, X-DAS-Capabilities, X-DAS-Server',
 		 -X_DAS_Version => DAS_VERSION,
 		 -X_DAS_Status  => '200 '.ERRCODES->{200},
+		 -X_DAS_Server       => "GBrowse/$Bio::Graphics::Browser2::VERSION",
 		 -X_DAS_Capabilities => CAPABILITIES,
 	) unless $self->{header}++;
 }
@@ -210,6 +214,8 @@ sub list_dsns {
 		my $description = $source->description($dsn)."; $track track";
 		$description   .= "; $key"      if $key;
 		$description   .= "; $citation" if $citation;
+                $description    = _xml_escapeASCII(   $description );
+                $description    = _xml_escapeLiteral( $description );
 		print "$j<DSN>\n";
 		print qq($j$j<SOURCE id="$dsn|$track">$dsn|$track</SOURCE>\n);
 		print qq($j$j<MAPMASTER>),$mapmaster,qq(</MAPMASTER>\n);
@@ -220,6 +226,26 @@ sub list_dsns {
     }
     print "</DASDSN>\n";
 }
+
+# escape functions cribbed from XML::Writer (which is public domain)
+sub _xml_escapeLiteral {
+  my $data = $_[0];
+  if ($data =~ /[\&\<\>\"]/) {
+    $data =~ s/\&/\&amp\;/g;
+    $data =~ s/\</\&lt\;/g;
+    $data =~ s/\>/\&gt\;/g;
+    $data =~ s/\"/\&quot\;/g;
+  }
+  return $data;
+}
+
+sub _xml_escapeASCII($) {
+    my $data = shift;
+    $data =~ s/([^\x00-\x7F])/sprintf('&#x%X;', ord($1))/ge;
+    return $data;
+}
+
+
 
 sub list_sources {
     my $self = shift;
@@ -525,6 +551,7 @@ sub categories {
 	$type2category{__fuzzy__}{$typeobj}   = $typeobj;
 	my $so = $so_hash->{lc $type} if $so_hash;
 	for my $t ($type,$so) {
+	    next unless $t;
 	    $type2category{$t}                 = $category;
 	    $type2category{__label__}{$t}      = $track;
 	    $type2category{__subparts__}{$t}++   if $has_subparts;
@@ -928,7 +955,7 @@ sub print_feature {
     my $group         = shift || $parent || $f;
     my $level         = shift || 0;
     my $sequence      = shift || 0;
-
+    
     my @subparts     = $self->children($f);
 
     my $no_parent    = @subparts && $self->no_parent_wanted($f);
@@ -1007,8 +1034,7 @@ sub _print_feature {
     $gclass      = '';
   }
 
-  my $group_type  = $self->forced_group($parent||$f) || $type;
-
+  my $group_type  = $self->forced_group($parent||$f) || eval{$parent->type} || $type;
   $group_type     =~ s/\:\w+$//;
 
   # This is way nasty.  The aggregator may have changed the method of the
@@ -1039,6 +1065,8 @@ sub _print_feature {
   if (@child_ids) {
       my $glyph = $datasource->fallback_setting($track=>'glyph');
       $gtype    = " type='$type'";
+  } else {
+      $gtype    = " type='$group_type'";
   }
 
   if (%attributes) {
@@ -1051,10 +1079,10 @@ sub _print_feature {
       $group_info = join("\n",map {qq(\t<NOTE>$_</NOTE>)} @notes);
   }
 
-    if ($group_info) { # post-fix formatting
-	$group_info =~ s/^\t//;
-	$group_info =~s/\n$//;
-    }
+  if ($group_info) { # post-fix formatting
+      $group_info =~ s/^\t//;
+      $group_info =~s/\n$//;
+  }
 
   my ($target,$target_info);
   if (($target = $f->target) && $target->can('start')) {
@@ -1071,6 +1099,8 @@ sub _print_feature {
 
   # suppress printing parent features for earlier versions of DAS
   return if $das_version < 1.6 and @child_ids;
+
+  $flabel ||= $grouplabel;
 
   print <<END;
    <FEATURE id="$id" label="$flabel">
@@ -1099,7 +1129,7 @@ END
       print qq(        $group_info\n)  if $group_info;
       print qq(      </GROUP>\n);
     } else {
-      print qq(      <GROUP id="$groupid"$gtype/>\n);
+      print qq(      <GROUP id="$groupid"$gtype label="$grouplabel"/>\n);
     }
   }
   print <<END;

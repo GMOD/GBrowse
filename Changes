@@ -1,9 +1,52 @@
-2.14
+2.16
+     * Added code to recognize and strip whitespace from search coordinates. This 
+       allows "chr1:2,000 .. 1,180,000" to work as a search term.
+
+2.15 Mon Sep 13 11:22:40 EDT 2010
+     * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports
+       the dna_accessor() method and that the default database has access to the underlying sequence, then
+       this will enable glyphs and plugins to access the DNA for all features, even if the feature is contained
+       in a database that does not have access to the DNA.
+     * You can now override the "buttons" images path in individual datasource files.
+     * You can now have an annotator plugin turned on by default by specifying it in the "default
+       features" option using the syntax "plugin:RestrictionAnnotator".
+     * Renderfarm slaves now honor the init_code directive. You will need Bio::Graphics version 2.13
+       in order to take advantage of this feature.
+     * Added a description of the BED file format to the upload help page.
+     * Fixed various problems in the ProteinDumper plugin.
+     * Fixed problems with all regular expression tracks being cached to same directory.
+     * Fixed issues with uploaded tracks not being displayed when renderfarm activated.
+     * Fixed issues involving failure of render slaves to preload databases (slowing everything down).
+     * Fixed incorrect sequence dumping in the sequence dumper when using the 
+       Bio::DB::GFF database backend.
+     * Fixed problems with losing all default tracks when first loading the browser (this was a bug
+       introduced in SVN and never released.)
+
+2.14 Fri Aug 27 11:05:08 EDT 2010
      * Prevent a blank-screen crash when searching for chromosomes not in the database.
      * Added a "hide empty subtracks" option to suppress subtrack display when there are
        no features in the region of interest. Note that if there are no features in any
        subtracks, the entire track will be empty regardless of the subtracks (this may or
        may not be a bug).
+     * Fixed bug in TrackDumper plugin to prevent "Can't locate object method print_gff3" 
+       error. Thanks to Prem Anand for the fix.
+     * Fixed display problem in subtrack selection table when there are additional data row 
+       elements that are not listed among the selection criteria.
+     * Fixed TrackDumper routines to dump out both the tracks and signal from vista tracks.
+     * Added CORS capabilities to DAS server so that javascript clients don't have to use a proxy.
+     * Precompile glyphs used in each datasource in parent process so that each child doesn't have to
+       recompile them.
+     * Renamed all the "userdb*" options to "upload_db_*" to avoid confusion with user_account_db.
+     * Fixed uploaded tracks mysql backend so that server logs in with correct username and password.
+     * simplified custom tracks interface by removing separate section for "import tracks" and adding a 
+       "From URL" link to the Upload Tracks section
+     * 'eurl' parameter is now loaded asynchronously so that user can watch the process of the upload
+       (useful from galaxy).
+     * Fixed URL-based file uploads so that they work correctly even when the user has no session yet.
+     * Added a datasource "seqid_prefix" option that allows you to add and strip "chr" style prefixes from all seqids;
+       this allows for interoperability with UCSC, which always wants a "chr" to begin each chromosome.
+     * Fixed loading of SAM files to avoid loading of incorrect fasta file when both .fa and .fa.fai files
+       are present in the scaffolds directory.
 
 2.13
      * Fixed SAM file processing so as not to die on first line of SAM @SQ header.

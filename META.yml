@@ -1,42 +1,17 @@
 ---
-name: GBrowse
-version: 2.13
+abstract: 'The GMOD Generic Genome Browser'
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
-abstract: The GMOD Generic Genome Browser
-license: perl
-resources:
-  license: http://dev.perl.org/licenses/
-requires:
-  Bio::Graphics: 2.09
-  Bio::Root::Version: 1.005009001
-  CGI::Session: 4.02
-  Digest::MD5: 0
+build_requires:
   ExtUtils::CBuilder: 0
-  File::Temp: 0
-  GD: 2.07
-  IO::String: 0
-  JSON: 0
-  LWP: 0
-  Statistics::Descriptive: 0
-  Storable: 0
-  perl: 5.008
-recommends:
-  Bio::DB::BigFile: 1
-  Bio::DB::Sam: 1.2
-  Crypt::SSLeay: 0
-  DBD::Pg: 0
-  DBD::SQLite: 0
-  DBD::mysql: 0
-  DBI: 0
-  DB_File::Lock: 0
-  Digest::SHA: 0
-  FCGI: 0
-  File::NFSLock: 0
-  GD::SVG: 0
-  Math::BigInt: 0
-  Net::OpenID::Consumer: 0
-  Net::SMTP::SSL: 0
+configure_requires:
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3603'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: GBrowse
 provides:
   Bio::DB::GFF::Aggregator::match_gap:
     file: lib/Bio/DB/GFF/Aggregator/match_gap.pm
@@ -62,7 +37,7 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser2:
     file: lib/Bio/Graphics/Browser2.pm
-    version: 2.13
+    version: 2.14
   Bio::Graphics::Browser2::Action:
     file: lib/Bio/Graphics/Browser2/Action.pm
   Bio::Graphics::Browser2::AdminTracks:
@@ -185,7 +160,40 @@ provides:
     file: lib/Legacy/Graphics/Browser.pm
   MyFeatureFileLoader:
     file: lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
-generated_by: Module::Build version 0.3
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
+recommends:
+  Ace: 0
+  Bio::DB::BigFile: 1
+  Bio::DB::Sam: 1.2
+  Bio::Das: 0
+  Crypt::SSLeay: 0
+  DBD::Pg: 0
+  DBD::SQLite: 0
+  DBD::mysql: 0
+  DBI: 0
+  DB_File::Lock: 0
+  Digest::SHA: 0
+  FCGI: 0
+  File::NFSLock: 0
+  GD::SVG: 0
+  Math::BigInt: 0
+  Net::OpenID::Consumer: 0
+  Net::SMTP::SSL: 0
+  Template: 2.2
+requires:
+  Bio::Graphics: 2.09
+  Bio::Root::Version: 1.005009001
+  CGI::Session: 4.02
+  Capture::Tiny: 0
+  Digest::MD5: 0
+  ExtUtils::CBuilder: 0
+  File::Temp: 0
+  GD: 2.07
+  IO::String: 0
+  JSON: 0
+  LWP: 0
+  Statistics::Descriptive: 0
+  Storable: 0
+  perl: 5.008
+resources:
+  license: http://dev.perl.org/licenses/
+version: 2.14

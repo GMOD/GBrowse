@@ -594,7 +594,8 @@ sample_data/yeast_chr1+2/yeast_chr1+2.gff3
 sample_data/yeast_scaffolds/chr1.fa
 sample_data/yeast_scaffolds/chr2.fa
 sample_data/yeast_scaffolds/chromosomes.gff3
-t/01yeast.t
+t/00.compile.t
+t/01.yeast.t
 t/02.rearchitecture.t
 t/03.render.t
 t/04.remoteserver.t

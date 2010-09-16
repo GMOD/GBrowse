@@ -137,8 +137,12 @@ sub user_tracks {
     
     $uuid ||= $self->state->{uploadid} || '';
     warn "[$$] uuid  = $uuid" if DEBUG;
-    return $self->{usertracks}{$uuid}
-    ||= $self->{usertracks};
+    return $self->{usertracks}{$uuid} 
+       ||= $class->new($self->data_source,
+		       $self->state,
+		       $self->language,
+		       $uuid,
+	   );
 }
 
 sub remote_sources {
@@ -160,6 +164,13 @@ sub plugins {
   my $d = $self->{plugins};
   $self->{plugins} = shift if @_;
   $d;
+}
+
+sub plugin_name {
+    my $self = shift;
+    my $label = shift;
+    my ($id) = $label =~ /^plugin:(\w+)/;
+    return $self->plugins->plugin($id)->name;
 }
 
 sub debug {
@@ -242,14 +253,14 @@ sub set_source {
 sub init {
     my $self = shift;
     warn "init()" if DEBUG;
-    warn "set_default_state()" if DEBUG;
-    $self->set_default_state();
     warn "init_database()" if DEBUG;
     $self->init_database();
     warn "init_plugins()" if DEBUG;
     $self->init_plugins();
     warn "init_remote_sources()" if DEBUG;
     $self->init_remote_sources();
+    warn "set_default_state()" if DEBUG;
+    $self->set_default_state();
     warn "init done" if DEBUG;
 }
 
@@ -382,7 +393,7 @@ sub background_track_render {
     my $details_msg       = '';
     my %requests;
 
-    if ( $self->segment->length <= $self->get_max_segment+1 ) {
+    if ( $self->segment->length <= $self->get_max_segment ) {
         $requests{'detail'} =
             $self->render_deferred(
             labels          => [ $self->expand_track_names($self->detail_tracks) ],
@@ -401,6 +412,7 @@ sub background_track_render {
             )
         );
     }
+
     $requests{'region'} =
         $self->render_deferred( labels          => [ $self->expand_track_names($self->regionview_tracks) ],
 				segment         => $self->region_segment,
@@ -563,8 +575,8 @@ sub background_individual_track_render {
     }
 
     if ($section eq 'detail'
-	and $self->segment
-        and $self->segment->length > $self->get_max_segment() )
+        && $self->segment
+        && $self->segment->length > $self->get_max_segment() )
     {
         $display_details = 0;
         $details_msg     = h1(
@@ -599,6 +611,7 @@ sub background_individual_track_render {
                 = $cache_track_hash->{$track_label}->key();
         }
     }
+
     return (\%track_keys, $display_details, $details_msg);
 }
 
@@ -688,7 +701,8 @@ sub render_body {
   my $title    = $self->generate_title($features);
 
   my $output;
-  $output .= $self->render_html_start($title);
+  my @post_load = $self->get_post_load_functions;
+  $output .= $self->render_html_start($title,@post_load);
   $output .= $self->render_user_header;
   $output .= $self->render_busy_signal;
   $output .= $self->render_actionmenu;
@@ -725,9 +739,8 @@ sub render_body {
   my $global_config = $self->render_global_config;
 
   $output .= $self->render_tabbed_pages($main_page,$tracks,$upload_share,$global_config);
-  $output .= $self->render_bottom($features);
-
   $output .= $self->render_login_section;
+  $output .= $self->render_bottom($features);
 
   print $output;
 }
@@ -879,6 +892,17 @@ sub render_panels {
 	    ) . $drag_script;
     }
     return $html;
+}
+
+sub get_post_load_functions {
+    my $self = shift;
+    my @fun;
+    if (my $url = param('eurl')) {
+	my $trackname = $self->user_tracks->trackname_from_url($url);
+	push @fun,'Controller.select_tab("custom_tracks_page")';
+	push @fun,"reloadURL('$trackname','$url',true)";
+    }
+    return @fun;
 }
 
 sub scale_bar {
@@ -1158,7 +1182,6 @@ sub plugin_find {
   $settings->{name} = defined($search_string) ? $self->tr('Plugin_search_1',$search_string,$plugin_name)
                                               : $self->tr('Plugin_search_2',$plugin_name);		#:
   # do we really want to do this?!!
-  
   $self->write_auto($results);
   return $results;
 }
@@ -1301,15 +1324,10 @@ sub handle_plugins {
     return unless ($plugin_base);
 
     $self->init_plugins();
-
-    my $plugin;
-    if ($plugin_base   =~ /^plugin:([^:]+)/) {
-	my $name       = $1;
-	($plugin) = grep {$_->name eq $name } $self->plugins->plugins;
-    } else {
-	$plugin      = $self->plugins->plugin($plugin_base);
-    }
-    warn "an operation was requested on plugin $plugin_base, but this plugin has not been configured"
+    my ($id) = $plugin_base =~ /^plugin:(\w+)/;
+    $id    ||= $plugin_base;
+    my $plugin      = $self->plugins->plugin($id);
+    warn "an operation was requested on plugin $id, but this plugin has not been configured"
 	unless $plugin;
     return unless $plugin;
 
@@ -1435,12 +1453,17 @@ sub add_remote_tracks {
 
     warn "ADD_REMOTE_TRACKS(@$urls)" if DEBUG;
 
+    my @tracks;
+
     for my $url (@$urls) {
+	my $name = $user_tracks->trackname_from_url($url);
 	my ($result,$msg,$tracks) 
-	    = $user_tracks->import_url($url,1);
+	    = $user_tracks->mirror_url($name,$url,1);
 	warn "[$$] $url: result=$result, msg=$msg, tracks=@$tracks" if DEBUG;
+	push @tracks,@$tracks;
     }
-    my @tracks = $self->add_user_tracks($self->data_source);
+
+    push @tracks,$self->add_user_tracks($self->data_source);
     warn "[$$] adding tracks @tracks" if DEBUG;
     $self->add_track_to_state($_) foreach @tracks;
     $self->init_remote_sources();
@@ -1752,10 +1775,10 @@ sub default_category_open {
 sub default_tracks {
   my $self  = shift;
   my $state  = $self->state;
-  my @labels = $self->data_source->labels;
+#  my @labels = $self->data_source->labels;
+  my @labels = $self->potential_tracks;
 
   $state->{tracks}   = \@labels;
-  warn "order = @labels" if DEBUG;
 
   $state->{features}{$_} = {visible=>0,options=>0,limit=>0}
       foreach @labels;
@@ -1824,7 +1847,6 @@ sub cleanup_dangling_uploads {
 
 }
 
-
 sub add_track_to_state {
   my $self  = shift;
   my $label = shift;
@@ -1836,11 +1858,12 @@ sub add_track_to_state {
 
   # don't add invalid track
   my %potential_tracks = map {$_=>1} $self->potential_tracks;
-#  warn "invalid track $label" unless $potential_tracks{$label};
+  warn "invalid track $label" if DEBUG && !$potential_tracks{$label};
   return unless $potential_tracks{$label};
 
   my %current = map {$_=> 1} @{$state->{tracks}};
-  push @{$state->{tracks}},$label unless $current{$label};
+#  push @{$state->{tracks}},$label unless $current{$label};   # on bottom
+  unshift @{$state->{tracks}},$label unless $current{$label}; # on top (better)
 
   warn "[$$]ADD TRACK TO STATE WAS: ",
     join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n" if DEBUG;
@@ -2025,12 +2048,6 @@ sub update_tracks {
       $self->handle_quickie(\@add,\@style);
   }
 
-  if (my @url = param('eurl')) {
-      my $group_separator = GROUP_SEPARATOR;
-      my @unescaped = map {s/$group_separator/;/g;$_} @url;
-      $self->add_remote_tracks(\@unescaped);
-  }
-
   # selected tracks can be set by the 'l', 'label' or 't' parameter
   # the preferred parameter is 'l', because it implements correct
   # semantics for the label separator
@@ -2064,8 +2081,8 @@ sub update_tracks {
 
       my @matched;
        foreach my $s (@subs) {
-        map {push(@matched,$`) if ($s=~/\D(\d+)$/i && $1 == $_)} @ds;
-        map {s/\s.*//} @matched;
+        map {push(@matched,$`) if ($s=~/\D(\d+)\;*$/i && $1 == $_)} @ds;
+        map {s/\s*//} @matched;
        }
        $label.="/".join("+",@matched) if @matched;
       }
@@ -2654,11 +2671,6 @@ sub update_section_visibility {
   }
 }
 
-#sub update_external_sources {
-#  my $self = shift;
-#  $self->remote_sources->set_sources([param('eurl')]) if param('eurl');
-#}
-
 sub update_galaxy_url {
     my $self  = shift;
     my $state = shift;
@@ -2879,18 +2891,16 @@ sub load_plugin_annotators {
   my %default_plugin = map {$_=>1} map {s/^plugin:// && $_}
     grep {/^plugin:/} $source->default_labels;
 
-  my %listed = map {$_=>1} @{$state->{tracks}}; # are we already on the list?
-  my %listed_in_source = map {$_=>1} $source->configured_types; # are we already on the list?
+  my %listed           = $state->{tracks} ? map {$_=>1} @{$state->{tracks}} : (); # are we already on the list?
+  my %listed_in_source = map {$_=>1} $source->configured_types;                   # are we already on the list?
 
   for my $plugin ($self->plugins->plugins) {
     next unless $plugin->type eq 'annotator';
-    my $name = $plugin->name;
+    my $name = $plugin->id;  # use the ID "RestrictionAnnotator" rather than the name "Restriction Annotator"
     $name = "plugin:$name";
     $source->add_type($name,{}) unless $listed_in_source{$name}++;
     $state->{features}{$name} ||= {visible=>$label_visible{$name}||0,options=>0,limit=>0};
-    #push @{$state->{tracks}},$name unless $listed{$name}++;
   }
-
 }
 
 sub detail_tracks {
@@ -2961,13 +2971,12 @@ sub featurefiles_in_section {
     my %found;
 
     for my $label (keys %$external) {
-		$state->{features}{$label}{visible}   or next;
-		my $file     = $external->{$label}    or next;
-		my %sections = map {$_=>1} $self->featurefile_sections($label);
-		$label .= ":".lc $desired_section if $expand;
-		$found{$label}++ if $sections{lc $desired_section};
+	$state->{features}{$label}{visible}   or next;
+	my $file     = $external->{$label}    or next;
+	my %sections = map {$_=>1} $self->featurefile_sections($label);
+	$label .= ":".lc $desired_section if $expand;
+	$found{$label}++ if $sections{lc $desired_section};
     }
-    my $keys = keys %found;
     return keys %found;
 }
 
@@ -3066,6 +3075,7 @@ sub get_panel_renderer {
 						   -source         => $self->data_source,
 						   -settings       => $self->state,
 						   -language       => $self->language,
+						   -render         => $self,
 						  );}
 
 ################## image rendering code #############
@@ -3413,8 +3423,8 @@ sub external_data {
     my $max_segment  = $self->get_max_segment;
     my $search       = $self->get_search_object;
     my $meta_segment = $search->segment($segment);
-    my $too_big      =  $segment && ($segment->length > $max_segment+1);
-    if ($segment) {
+    my $too_big      =  $segment && ($segment->length > $max_segment);
+    if (!$too_big && $segment) {
 	my $search       = $self->get_search_object;
 	my $rel2abs      = $search->coordinate_mapper($segment,1);
 	my $rel2abs_slow = $search->coordinate_mapper($segment,0);
@@ -3442,11 +3452,16 @@ sub add_user_tracks {
     $self->state->{uploadid} ||= Bio::Graphics::Browser2::Util->generate_id;
     $uuid ||= $self->state->{uploadid};
 
-    my @user_tracks = $files->tracks($userdb->get_user_id($session->username));
+    my $userdata    = $self->user_tracks($uuid);
+    my @user_tracks = $userdata->tracks;
+
+#    warn "adding usertracks for $uuid, getting @user_tracks";
     for my $track (@user_tracks) {
-		my $config_path = $files->track_conf($track);
-		eval {$data_source->parse_user_file($config_path)};
+	my $config_path = $userdata->track_conf($track);
+	eval {$data_source->parse_user_file($config_path)};
     }
+
+    return @user_tracks;
 }
 
 # Delete the segments so that they can be recreated with new parameters

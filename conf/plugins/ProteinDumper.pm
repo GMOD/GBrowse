@@ -97,55 +97,61 @@ sub description {
 }
 
 sub dump {
-  my $self = shift;
-  my $segment = shift;
+    my $self = shift;
+    my $segment = shift;
 
-  unless ($segment) {
-    my $mime_type = $self->mime_type;
-    print start_html($self->name) if $mime_type =~ /html/;
-    print "No sequence specified.\n";
-    print end_html if $mime_type =~ /html/;
-    exit 0;
-  }
-
-  my $config  = $self->configuration;
-
-  my $ct = Bio::Tools::CodonTable->new;
-  $ct->id($config->{geneticcode});
-
-  my @filter  = grep { m/^(?:coding|CDS|transcript):/ } $self->selected_features;
-  $segment->absolute(1);
-
-  my @seqs;
-  for my $f ($segment->features(-types => \@filter)) {
-    my @cds = grep { $_->method =~ m/^CDS$/i } $f->sub_SeqFeature;
-    next unless @cds;
-
-    my $cds = join("", map { $_->seq } @cds);
-    if ( (my $phase = $cds[0]->phase) > 0) {
-      # some genefinders will predict incomplete genes, wherein
-      # initial exons may not be in phase 0; in which case, we have to
-      # turn the first incomplete codon into NNN
-      substr($cds, 0, $phase, "NNN");
+    unless ($segment) {
+	my $mime_type = $self->mime_type;
+	print start_html($self->name) if $mime_type =~ /html/;
+	print "No sequence specified.\n";
+	print end_html if $mime_type =~ /html/;
+	CORE::exit 0;
     }
 
-    push @seqs, Bio::Seq->new(-display_id => $f->display_id,
-			      -descr => $f->location->to_FTstring,
-			      -seq => $ct->translate($cds)
-			     );
-  }
+    my $config  = $self->configuration;
 
-  my $out = new Bio::SeqIO(-format => $config->{fileformat});
-  my $mime_type = $self->mime_type;
-  if ($mime_type =~ /html/) {
-    print start_html($segment->desc),h1($segment->desc), start_pre;
-    $out->write_seq(@seqs);
-    print end_pre();
-    print end_html;
-  } else {
-    $out->write_seq(@seqs);
-  }
-  undef $out;
+    my $ct = Bio::Tools::CodonTable->new;
+    $ct->id($config->{geneticcode});
+
+    my @filter  = $self->selected_features;
+    $segment->absolute(1);
+
+    my @seqs;
+
+    for my $f ($segment->features(-types => \@filter)) {
+	my @cds = $self->_collect_cds($f);
+	next unless @cds;
+
+	my $cds = join("", map { $self->_get_dna($_) } @cds);
+	if ( (my $phase = $cds[0]->phase) > 0) {
+	    # some genefinders will predict incomplete genes, wherein
+	    # initial exons may not be in phase 0; in which case, we have to
+	    # turn the first incomplete codon into NNN
+	    substr($cds, 0, $phase, "NNN");
+	}
+	
+	push @seqs, Bio::Seq->new(-display_id => $f->display_id,
+				  -descr => $f->location->to_FTstring,
+				  -seq => $ct->translate($cds)
+	    );
+    }
+
+    unless (@seqs) {
+	print "# no features with CDS parts found\n";
+	CORE::exit 0;
+    }
+
+    my $out = new Bio::SeqIO(-format => $config->{fileformat});
+    my $mime_type = $self->mime_type;
+    if ($mime_type =~ /html/) {
+	print start_html($segment->desc),h1($segment->desc), start_pre;
+	$out->write_seq(@seqs);
+	print end_pre();
+	print end_html;
+    } else {
+	$out->write_seq(@seqs);
+    }
+    undef $out;
 }
 
 sub mime_type {
@@ -280,6 +286,23 @@ sub gff_dump {
   }
   print end_pre() if $html;
   print end_html() if $html;
+}
+
+sub _collect_cds {
+    my $self = shift;
+    my $feature = shift;
+    if ($feature->type =~ /^CDS/i) {return $feature};
+    my @sub = $feature->get_SeqFeatures;
+    return unless @sub;
+    return map {$self->_collect_cds($_)} @sub;
+}
+
+sub _get_dna {
+    my $self = shift;
+    my $f    = shift;
+    my $s    = $f->seq;
+    return $s unless ref $s;
+    return $s->seq;
 }
 
 1;

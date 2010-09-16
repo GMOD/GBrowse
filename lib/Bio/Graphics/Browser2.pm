@@ -2,7 +2,7 @@ package Bio::Graphics::Browser2;
 # $Id$
 # Globals and utilities for GBrowse and friends
 
-our $VERSION = '2.13';
+our $VERSION = '2.15';
 
 use strict;
 use warnings;
@@ -239,6 +239,24 @@ sub openid_secret {
     return GBrowse::ConfigData->config('OpenIDConsumerSecret')
 }
 
+# uploads
+sub upload_db_adaptor {
+    my $self = shift;
+    return $self->setting(general=>'upload_db_adaptor') || $self->setting(general=>'userdb_adaptor');
+}
+sub upload_db_host {
+    my $self = shift;
+    return $self->setting(general=>'upload_db_host') || $self->setting(general=>'userdb_host') || 'localhost'
+}
+sub upload_db_user {
+    my $self = shift;
+    return $self->setting(general=>'upload_db_user') || $self->setting(general=>'userdb_user') || '';
+}
+sub upload_db_pass {
+    my $self = shift;
+    return $self->setting(general=>'upload_db_pass') || $self->setting(general=>'userdb_pass') || '';
+}
+
 sub session_driver {
     my $self = shift;
     my $driver = $self->setting(general=>'session driver');
@@ -264,7 +282,7 @@ sub session_args    {
 
 ## methods for dealing with data sources
 sub data_sources {
-  return sort shift->SUPER::configured_types();
+  return sort grep {!/^\s*=~/} shift->SUPER::configured_types();
 }
 
 sub data_source_description {
@@ -301,9 +319,10 @@ sub create_data_source {
   my $dsn  = shift;
   my $path = $self->data_source_path($dsn) or return;
   my ($regex_key) = grep { $dsn =~ /^$_$/ } map { $_ =~ s/^=~//; $_ } grep { $_ =~ /^=~/ } keys(%{$self->{config}});
+  my $name = $dsn;
   if ($regex_key) { $dsn = "=~".$regex_key; }
   my $source = Bio::Graphics::Browser2::DataSource->new($path,
-							$dsn,
+							$name,
 							$self->data_source_description($dsn),
 							$self) or return;
   if (my $adbs = $self->admin_dbs) {

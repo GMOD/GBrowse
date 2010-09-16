@@ -235,7 +235,7 @@ END
 
    DATA_SOURCE => 'Data Source',
 
-   UPLOADED_TRACKS => 'Uploaded Tracks',
+   UPLOADED_TRACKS => 'Custom Tracks',
 
    IMPORTED_TRACKS => 'Imported Tracks',
 
@@ -249,6 +249,8 @@ END
 
    UPLOAD_FILE => 'Upload a track file',
 
+   MIRROR_FILE  => 'Fetch track file from this URL',
+
    IMPORT_TRACK => 'Import a track URL',
 
    NEW_TRACK    => 'Create a new track',
@@ -256,6 +258,8 @@ END
    FROM_TEXT    => 'From text',
 
    FROM_FILE    => 'From a file',
+
+   FROM_URL    => 'From a URL',
 
    REMOVE       => 'Remove',
 
@@ -554,15 +558,15 @@ END
  SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
 To <b>export</b> this track to a different GBrowse genome browser,
 first copy the URL below, then go to the other GBrowse, 
-select the "Upload and Share Tracks" tab and
-paste the URL into the "Import tracks" section at the bottom.
+select the "Upload and Share Tracks" tab, click the "From a URL" link
+and paste in the URL.
 END
 
  SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
 To export all currently selected tracks to another GBrowse genome
 browser, first copy the URL below, then go to the other GBrowse,
-select the "Upload and Share Tracks" tab and
-paste the URL into the "Import tracks" section at the bottom.
+select the "Upload and Share Tracks" tab, click the "From a URL" link
+and paste in the URL.
 END
 
  SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,

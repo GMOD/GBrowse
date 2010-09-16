@@ -765,6 +765,13 @@ sub name {
   return "generic";
 }
 
+sub id {
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my ($id)  = $class =~ /(\w+)$/;
+    return $id;
+}
+
 # return nothing unless the plugin overides this method 
 sub verb {
   my $self = shift;

@@ -1593,7 +1593,7 @@ sub add_features_to_track {
 	  my $stt        = $self->subtrack_manager($l);
 	  my $is_summary = $is_summary{$l};
 
-	  $filters->{$l}->($feature) or next if $filters->{$l};
+	  $filters->{$l}->($feature) or next if $filters->{$l} && !$is_summary;
 	  $feature_count{$l}++;
 
 	  # -----------------------------------------------------------------------------

@@ -204,6 +204,8 @@ sub run {
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
 
+  warn "user = ",$self->session->username;
+
   warn "[$$] testing for asynchronous event()" if $debug;
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if $debug;

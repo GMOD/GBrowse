@@ -10,6 +10,7 @@
        The downside of this is that if you use track filters to distinguish one set of features from
        another, this will not be reflected in the summary density plots, which will show all features
        of the matching type regardless of the filter.
+     * Basic support for Google federated login via openid.
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports

@@ -585,7 +585,7 @@ sub do_delete_user {
 ##################################################################################
 sub do_check_openid {
     my ($url,$openid,$userid,$option) = @_;
-    warn "do_check_openid($openid,$userid)";
+    warn "do_check_openid($url,$openid,$userid)";
     my $return_to  = "$url?openid_confirm=1;page=$option;s=$userid;";
        $return_to .= "id=logout;" if $option ne "openid-add";
        #id=logout needed in case another user is already signed in

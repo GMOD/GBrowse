@@ -16,7 +16,7 @@ use File::Path 'mkpath';
 use Bio::Graphics::Browser2::DataSource;
 use Bio::Graphics::Browser2::Session;
 use GBrowse::ConfigData;
-use Carp 'croak','carp','confess';
+use Carp qw(croak carp confess cluck);
 
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 
@@ -439,7 +439,7 @@ sub authorized_session {
   if ($session->match_nonce($authority,CGI::remote_addr())) {
       return $session;
   } else {
-      warn "UNAUTHORIZED ATTEMPT";
+      cluck "UNAUTHORIZED ATTEMPT";
       return $self->session('xyzzy');
   }
 }

@@ -3906,10 +3906,16 @@ sub share_track {
 }
 
 ########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end
+sub translate {
+	my $self = shift;
+	my $lang = $self->language or return @_;
+	$lang->tr(@_);
+}
+
 sub tr {
-  my $self = shift;
-  my $lang = $self->language or return @_;
-  $lang->tr(@_);
+	my $self = shift;
+	my $lang = $self->language or return @_;
+	$lang->tr(@_);
 }
 
 1;

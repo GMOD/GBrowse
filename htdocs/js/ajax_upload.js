@@ -187,49 +187,29 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	script         += '}})';
 
 	var count = $$("div[id^=upload_]:not([id$=_status])").length;
-
-	var html = '<div id=UPLOAD_TAG style="' + ((count % 2)? '#AAAAAA' : '#CCCCCC') + 'padding: 5px;">'
-		     + '<form name=ajax_upload id="UPLOAD_TAG_form" onSubmit="SCRIPT" action="ACTION" enctype="multipart/form-data" method="POST">'
-		     + '<b>UPLOAD_PROMPT</b><br />';
-
-	if (field_type=='upload') {
-	   html += '<input type="hidden" name="action" value="upload_file" />'
-		      +'<input type="file" name="file" id="upload_field" />';
-	}
-	else if (field_type=='edit') {
-	   html += '<input type="hidden" name="action" value="upload_file" />'
-		     + '<input type="hidden" name="name"   value="UPLOAD_TAG" />'
-		     + '<textarea name="data" id="edit_field" rows="20" cols="100" wrap="off"></textarea>'
-		     + '<br />';
-	}
-	else {
-	   html += '<input type="hidden" name="action" value="import_track" />'
-		     + '<input type="text"   name="url" id="import_field" size="50" />';
-	}
-
-	html += '<input type="submit" name="submit"    value="Upload" />'
-		 + '<input type="hidden"  name="upload_id" value="UPLOAD_TAG" />'
-		 + '&nbsp;<a href="javascript:void(0)" onClick="Element.extend(this);this.up(\'div\').remove()">'
-		 + 'REMOVE_PROMPT</a>';
-
-	html  += '</form><div id="UPLOAD_TAG_status"></div></div>';
-
-	// do string subsitutions
-	html = html.gsub(/SCRIPT/,script);
-	html = html.gsub(/ACTION/,action);
-	html = html.gsub(/UPLOAD_TAG/,upload_tag);
-	html = html.gsub(/UPLOAD_PROMPT/,upload_prompt);
-	html = html.gsub(/REMOVE_PROMPT/,remove_prompt);
-	html = html.gsub(/HELP_LINK/,help_link);
-
-	var el = $(after_element);
-	el.insert({bottom:html});
-   
-	//Assign background colors
-	var fields = $$("div[id^=upload_]:not([id$=_status])");
-	for (i = 0; i < fields.length; i++) {
-		fields[i].setStyle("background-color: " + ((i % 2)? "#AAAAAA" : "#CCCCCC") + ";");
-	}
+	var form = new Element("form", {"name": "ajax_upload", "id": upload_tag + "_form", "onSubmit": script, "action": action, "enctype": "multipart/form-data", "method": "POST"});
+	var upload_text = new Element("b").update(upload_prompt);
+	if (field_type == 'upload') {
+		form.insert({bottom: new Element("input", {"type": "hidden", "name": action, "value": "upload_file"}) });
+		form.insert({bottom: new Element("input", {"type": "file", "name": "file", "id": "upload_field"}) });
+	} else if (field_type == 'edit') {
+		form.insert({bottom: new Element("input", {"type": "hidden", "name": action, "value": "upload_file"}) });
+		form.insert({bottom: new Element("input", {"type": "hidden", "name": "name", "value": upload_tag}) });
+		form.insert({bottom: new Element("textarea", {"name": "data", "id": "edit_field", "rows": 20, "cols": 100, "wrap": "off"}) });
+	} else {
+		form.insert({bottom: new Element("input", {"type": "hidden", "name": action, "value": "import_track"}) });
+		form.insert({bottom: new Element("input", {"type": "text", "name": "url", "id": "import_field", "size": 50}) });
+	};
+	form.insert({bottom: new Element("input", {"type": "submit", "name": "submit", "value": "Upload"}) });
+	form.insert({bottom: new Element("input", {"type": "hidden", "name": "upload_id", "value": upload_tag}) });
+	form.insert({bottom: "&nbsp;" });
+	form.insert({bottom: new Element("a", {"href": "javascript:void(0)", "onClick": "Element.extend(this);this.up(\'div\').remove()"}).update(remove_prompt) });
+	form.insert({bottom: new Element("div", {"id": upload_tag + "_status"}) });
+	
+	var container = new Element("div", {id: upload_tag});
+	container.setStyle({"background-color": ((count % 2)? '#AAAAAA' : '#CCCCCC'), "padding": "5px"});
+	container.insert({bottom: form}).insert({top: upload_text});
+	$(after_element).insert({bottom: container});
 }
 
 function changePermissions(fileid, sharing_policy) {

@@ -49,8 +49,8 @@ sub language { shift->{language}  }
 # Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {
     my $self = shift;
-    my $uploadid = $self->{uploadsid};
-	return $self->config->userdata($uploadid);
+    my $uploadsid = $self->{uploadsid};
+	return $self->config->userdata($uploadsid);
 }
 
 # Tracks - Returns an array of paths to a user's tracks.

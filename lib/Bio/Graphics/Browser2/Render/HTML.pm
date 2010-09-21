@@ -1499,6 +1499,7 @@ sub render_track_controls {
 	my $userid = $userdata->{userid};
 	my @track_labels = $userdata->labels($fileid);
 	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
+	my $globals = $self->globals;
 	
 	my $buttons = $self->data_source->globals->button_url;
     
@@ -1512,7 +1513,7 @@ sub render_track_controls {
 	my $controls = $toggle_details;
 	
 	# Conditional controls, based on the type of track.
-	if ($userdata->is_mine($fileid)) {
+	if (($globals->user_accounts == 1) || $userdata->is_mine($fileid)) {
 		# The delete icon,
 		$controls .= '&nbsp;' . img(
 			{
@@ -1524,7 +1525,7 @@ sub render_track_controls {
 		);
 	}
 	if ($type !~ /available/) {
-		if ($userdata->is_mine($fileid)) {
+		if (($globals->user_accounts == 1) || $userdata->is_mine($fileid)) {
 			# The sharing icon, if it's an upload.
 			$controls .= '&nbsp;' . img(
 				{
@@ -1576,8 +1577,8 @@ sub render_track_details {
 	my $description = div(
 		{
 			-id              => $fileid . "_description",
-			-onClick         => ($userdata->is_mine($fileid))? "Controller.edit_upload_description('$fileid',this)" : "",
-			-contentEditable => ($userdata->is_mine($fileid))? 'true' : 'false',
+			-onClick         => (($globals->user_accounts == 1) || $userdata->is_mine($fileid))? "Controller.edit_upload_description('$fileid',this)" : "",
+			-contentEditable => (($globals->user_accounts == 1) || $userdata->is_mine($fileid))? 'true' : 'false',
 		},
 		$userdata->description($fileid) || $self->translate('ADD_DESCRIPTION')
 	);
@@ -1678,6 +1679,7 @@ sub render_track_sharing {
 	my $fileid = shift;
 	my $userdata = $self->user_tracks;
 	my $userdb = $self->{userdb};
+	my $globals = $self->globals;
 	
 	#Building the users list.
 	my $sharing_policy = $userdata->permissions($fileid);
@@ -1686,7 +1688,7 @@ sub render_track_sharing {
 	my $userlist = join (", ", @users);
 	
 	my $sharing_content = b("Sharing:") . br() . "Track is ";
-	if ($userdata->is_mine($fileid) == 0) {
+	if (($globals->user_accounts == 0) || ($userdata->is_mine($fileid) == 0)) {
 		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? b("shared") . " with you." : b("public") . ".";
 	} else {
 		$sharing_content .= Select(

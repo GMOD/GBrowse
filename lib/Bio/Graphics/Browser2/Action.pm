@@ -10,6 +10,7 @@ use Bio::Graphics::Browser2::TrackDumper;
 use File::Basename 'basename';
 use JSON;
 use constant DEBUG => 0;
+use Data::Dumper;
 
 sub new {
     my $class  = shift;
@@ -365,7 +366,7 @@ sub ACTION_register_upload {
     my $name = $q->param('upload_name');
 
     if ($id && $name) {
-	$self->state->{uploads}{$id} = [$name,0];
+		$self->state->{uploads}{$id} = [$name,0];
     }
 
     return (204,'text/plain',undef);
@@ -429,6 +430,7 @@ sub ACTION_upload_file {
 }
 
 sub ACTION_import_track {
+	warn "Found the action";
     my $self = shift;
     my $q    = shift;
 
@@ -496,13 +498,13 @@ sub ACTION_upload_status {
 
     my $state      = $self->state;
     my $render     = $self->render;
-
+	
     if ($file_name = $state->{uploads}{$upload_id}[0]) {
-	my $usertracks = $render->user_tracks;
-	$status      = $usertracks->status($file_name);
-	return (200,'text/html',"<b>$file_name:</b> <i>$status</i>");
+		my $usertracks = $render->user_tracks;
+		$status		   = $usertracks->status($file_name);
+		return (200,'text/html', "<b>$file_name:</b> <i>$status</i>");
     } else {
-	return (500,'text/html',"not found");
+		return (500,'text/html', "not found");
     }
 }
 
@@ -531,11 +533,11 @@ sub ACTION_set_upload_description {
 
     my $state       = $self->state;
     my $render      = $self->render;
-    my $fileid = $q->param('fileid') or confess "No file ID given to set_upload_description.";
+    my $file = $q->param('file') or confess "No file given to set_upload_description.";
     my $new_description = $q->param('description') or confess "No new description given to set_upload_description.";
 
     my $usertracks = $render->user_tracks;
-    $usertracks->description($fileid, $new_description);
+    $usertracks->description($file, $new_description);
     return (204,'text/plain',undef);
 }
 

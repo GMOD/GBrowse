@@ -31,12 +31,10 @@ sub sources_dir_name   { 'SOURCES'   }
 sub new {
     my $class = shift;
 	my $globals = Bio::Graphics::Browser2->open_globals;
-	my $which = ($globals->user_accounts == 1)? "database" : "filesystem";
-	
-	if ($which =~ /filesystem/i) {
-		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
-	} elsif  ($which =~ /database/i) {
+	if ($globals->upload_db_adaptor =~ /(DBI|db)/) {
 		return Bio::Graphics::Browser2::UserTracks::Database->_new(@_);
+	} elsif ($globals->upload_db_adaptor =~ /memory/) {
+		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
 	} else {
 		croak "Could not determine whether to user Filesystem or Database.";
 	}
@@ -45,6 +43,7 @@ sub new {
 sub config   { shift->{config}    }
 sub state    { shift->{state}     }    
 sub language { shift->{language}  }
+sub database { return (shift->{globals}->upload_db_adaptor =~ /(DBI|db)/)? 1 : 0; } # If this changes, also change the constructor.
 
 # Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {
@@ -56,12 +55,10 @@ sub path {
 # Tracks - Returns an array of paths to a user's tracks.
 sub tracks {
     my $self = shift;
-    my $userdb = $self->{userdb};
-    my $globals = $self->{globals};
 	
 	my @tracks;
 	push (@tracks, $self->get_uploaded_files, $self->get_imported_files);
-	if ($globals->user_accounts == 1) {
+	if ($self->database == 1) {
 		push (@tracks, $self->get_added_public_files, $self->get_shared_files);
 	}
 	return @tracks;
@@ -206,6 +203,7 @@ sub max_filename {
 
 # Import URL - Imports a URL for use in the database.
 sub import_url {
+	warn "I got to the end of import_url";
     my $self = shift;
     my $url       = shift;
     my $overwrite = shift;
@@ -223,6 +221,7 @@ sub import_url {
     }
 
     my $filename = $self->trackname_from_url($url, !$overwrite);
+    
     my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
 							  $self->track_path($filename),
 							  $self->track_conf($filename),
@@ -251,8 +250,8 @@ sub import_url {
 
     $loader->set_processing_complete;
     $self->add_file($url, 1);
-
-    return (1,'',[$filename]);
+	
+    return (1, '', [$filename]);
 }
 
 # Attempts to reload a file into the database.

@@ -1336,10 +1336,10 @@ sub render_select_browser_link {
 # Render Upload & Share Section - Returns the content of the "Uploads and Shared Tracks" tab.
 sub render_upload_share_section {
     my $self = shift;
-    my $globals = $self->globals;
+    my $userdata = $self->user_tracks;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, 'Admin mode: Uploaded tracks are public') : "";
 	$html .= $self->render_custom_track_listing;
-	if ($globals->user_accounts == 1) {
+	if ($userdata->database == 1) {
 		$html .= $self->render_public_track_listing;
 	}
 	$html = div($html);
@@ -1377,7 +1377,7 @@ sub list_tracks {
 	my $globals	= $self->globals;
 	my $userdata = $self->user_tracks;
 	my $listing_type = shift // "";														#/
-	my @tracks = sort(($listing_type =~ /public/)? $userdata->get_public_files : shift // $userdata->tracks);
+	my @tracks = sort((($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : shift // $userdata->tracks);
 	$listing_type .= " available" if $listing_type =~ /public/;
 	
 	# Main track roll code.
@@ -1513,7 +1513,7 @@ sub render_track_controls {
 	my $controls = $toggle_details;
 	
 	# Conditional controls, based on the type of track.
-	if (($globals->user_accounts == 1) || $userdata->is_mine($fileid)) {
+	if ($userdata->is_mine($fileid)) {
 		# The delete icon,
 		$controls .= '&nbsp;' . img(
 			{
@@ -1525,7 +1525,7 @@ sub render_track_controls {
 		);
 	}
 	if ($type !~ /available/) {
-		if (($globals->user_accounts == 1) || $userdata->is_mine($fileid)) {
+		if ($userdata->is_mine($fileid)) {
 			# The sharing icon, if it's an upload.
 			$controls .= '&nbsp;' . img(
 				{
@@ -1577,8 +1577,8 @@ sub render_track_details {
 	my $description = div(
 		{
 			-id              => $fileid . "_description",
-			-onClick         => (($globals->user_accounts == 1) || $userdata->is_mine($fileid))? "Controller.edit_upload_description('$fileid',this)" : "",
-			-contentEditable => (($globals->user_accounts == 1) || $userdata->is_mine($fileid))? 'true' : 'false',
+			-onClick         => ($userdata->is_mine($fileid))? "Controller.edit_upload_description('$fileid',this)" : "",
+			-contentEditable => ($userdata->is_mine($fileid))? 'true' : 'false',
 		},
 		$userdata->description($fileid) || $self->translate('ADD_DESCRIPTION')
 	);
@@ -1586,7 +1586,7 @@ sub render_track_details {
 		{-style => "margin-left: 2em; display: inline-block;"},
 		$self->render_track_source_files($fileid)
 	);
-	my $sharing = ($globals->user_accounts == 1)? div(
+	my $sharing = ($userdata->database == 1)? div(
 		{
 			-style => "margin-left: 2em; display: inline-block;",
 			-class => "sharing"
@@ -1688,7 +1688,7 @@ sub render_track_sharing {
 	my $userlist = join (", ", @users);
 	
 	my $sharing_content = b("Sharing:") . br() . "Track is ";
-	if (($globals->user_accounts == 0) || ($userdata->is_mine($fileid) == 0)) {
+	if (($userdata->database == 0) && ($userdata->is_mine($fileid) == 0)) {
 		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? b("shared") . " with you." : b("public") . ".";
 	} else {
 		$sharing_content .= Select(

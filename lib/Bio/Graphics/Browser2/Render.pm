@@ -2274,6 +2274,8 @@ sub asynchronous_update_detail_scale_bar {
     };
 }
 
+#**
+
 sub asynchronous_update_sections {
     my $self          = shift;
     my $section_names = shift;
@@ -2354,12 +2356,12 @@ sub asynchronous_update_sections {
 
     # New Uploaded Data Section
     if ( $handle_section_name{'custom_tracks'}) {
-	$return_object->{'custom_tracks'} = $self->render_custom_track_listing();
+		$return_object->{'custom_tracks'} = $self->render_custom_track_listing();
     }
     
     # Public Files Section
     if ( $handle_section_name{'public_tracks'}) {
-	$return_object->{'public_tracks'} = $self->render_public_track_listing();
+		$return_object->{'public_tracks'} = $self->render_public_track_listing();
     }
 
     # Handle Remaining and Undefined Sections

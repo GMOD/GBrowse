@@ -50,33 +50,38 @@ AIM = {
 	}
 }
 
-// Start AJAX Upload - Sends the AJAX request and sets the busy indicator .
+// Start AJAX Upload - Sends the AJAX request and sets the busy indicator.
 function startAjaxUpload(upload_id) {
 	var status       = $(upload_id + '_status');
 	var upload_form  = $(upload_id + '_form');
 	upload_form.hide();
-	var cancel_script = 'Controller.cancel_upload("'+upload_id+'_status","'+upload_id+'");'
 
-	status.update( '<image src="' + Controller.button_url('spinner.gif') + '" />');
+	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
 	status.insert(new Element('span').update('<b>Uploading...</b>'));
-	status.insert(new Element('a', {   href: 'javascript:void(0)',	onClick: cancel_script	}).update(' Cancel'));
+	status.insert(new Element('a', {href: 'javascript:void(0)', onClick: "Controller.cancel_upload(\"" + upload_id + "_status\", \"" + upload_id + "\")" }).update(' Cancel'));
 
 	if (Ajax_Status_Updater == null)
-	  Ajax_Status_Updater = new Hash();
+		Ajax_Status_Updater = new Hash();
+		
 	var updater = new Ajax.PeriodicalUpdater(
-	   {success: status.down('span')},
-	   '#',
-	   {parameters: {   action: 'upload_status',
-		                upload_id: upload_id
-		            },
-		onSuccess: function(transport) {
-	   if (transport.responseText.match(/complete/)) {
-	   	    Ajax_Status_Updater.get(upload_id).stop();
-		        Controller.update_sections(new Array(custom_tracks_id, track_listing_id));
+		{success: status.down('span')},
+		'#',
+		{	parameters: {
+				action: 'upload_status',
+				upload_id: upload_id
+			},
+			onSuccess: function(transport) {
+				if (transport.responseText.match(/complete/)) {
+					Ajax_Status_Updater.get(upload_id).stop();
+					var sections = new Array(custom_tracks_id);
+					if (using_database())
+						sections.push(public_tracks_id);
+					Controller.update_sections(sections);
+				}
+			}
 		}
-		}
-	   });
-	Ajax_Status_Updater.set(upload_id,updater);
+	);
+	Ajax_Status_Updater.set(upload_id, updater);
 	return true;
 }
 
@@ -92,10 +97,10 @@ function completeAjaxUpload(response, upload_id, field_type) {
     	}
     }
     
-    console.log("AJAX Upload completed.");
-
 	if (r.success) {
-		var fields = new Array(track_listing_id, custom_tracks_id, public_tracks_id);
+		var fields = new Array(track_listing_id, custom_tracks_id)
+		if (using_database())
+			fields.push(public_tracks_id);
 		if (r.tracks != null && r.tracks.length > 0) {
 			Controller.add_tracks(
 				r.tracks,
@@ -124,11 +129,10 @@ function completeAjaxUpload(response, upload_id, field_type) {
 		     Ajax_Status_Updater.get(upload_id).stop();
 		Ajax_Status_Updater.unset(upload_id);
 		var status = $(upload_id + '_status');
-		var uploadName = r.uploadName;
-		var msg =  '<div style="background-color:pink">';
-		msg    +=  '<b>'+uploadName+'</b>: '+r.error_msg+'<br>';
-		msg    +=  '<a href="javascript:void(0)" onClick="\$\(\''+upload_id+'\').remove()">[Remove Message]</a>';
-		msg    +=  '</div>';
+		var msg =  new Element("div").setStyle({"background-color": "pink", "padding": "5px"});
+		msg.insert({bottom: new Element("b").update(r.uploadName) });
+		msg.insert({bottom: "&nbsp;" + r.error_msg + "&nbsp;"});
+		msg.insert({bottom: new Element("a", {href: "javascript:void(0)", onClick: "$('" + upload_id + "').remove()"}).update("[Remove Message]") });
 		status.update(msg);
 	}
 return true;
@@ -150,7 +154,10 @@ function deleteUpload (fileName) {
 				var tracks = transport.responseJSON.tracks;
 				if (tracks != null)
 					tracks.each(function(tid) { Controller.delete_track(tid) });
-				Controller.update_sections(new Array(custom_tracks_id, track_listing_id));
+				var sections = new Array(custom_tracks_id, track_listing_id);
+				if (using_database())
+					sections.push(public_tracks_id);
+				Controller.update_sections(sections);
 			}
 		}
 	);
@@ -204,11 +211,11 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	form.insert({bottom: new Element("input", {"type": "hidden", "name": "upload_id", "value": upload_tag}) });
 	form.insert({bottom: "&nbsp;" });
 	form.insert({bottom: new Element("a", {"href": "javascript:void(0)", "onClick": "Element.extend(this);this.up(\'div\').remove()"}).update(remove_prompt) });
-	form.insert({bottom: new Element("div", {"id": upload_tag + "_status"}) });
+	var status_box = new Element("div", {"id": upload_tag + "_status"});
 	
 	var container = new Element("div", {id: upload_tag});
 	container.setStyle({"background-color": ((count % 2)? '#AAAAAA' : '#CCCCCC'), "padding": "5px"});
-	container.insert({bottom: form}).insert({top: upload_text});
+	container.insert({bottom: form}).insert({top: upload_text}).insert({bottom: status_box});
 	$(after_element).insert({bottom: container});
 }
 
@@ -216,7 +223,6 @@ function changePermissions(fileid, sharing_policy) {
 	var title = $("upload_" + fileid).down("div[id$='_stat']");
 	if (title)
 		title.innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
-	console.log("Public ID: " + fileid + ", and Sharing Policy: " + sharing_policy);
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',
@@ -226,7 +232,10 @@ function changePermissions(fileid, sharing_policy) {
 				sharing_policy: sharing_policy
 			},
 			onSuccess: function (transport) {
-				Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
+				var sections = new Array(custom_tracks_id);
+				if (using_database())
+					sections.push(public_tracks_id);
+				Controller.update_sections(sections);
 			}
 		}
 	);
@@ -245,7 +254,11 @@ function shareFile(fileid, userid) {
 				userid: userid
 			},
 			onSuccess: function (transport) {
-				Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
+				var sections = new Array(custom_tracks_id);
+				console.log(using_database());
+				if (using_database())
+					sections.push(public_tracks_id);
+				Controller.update_sections(sections);
 			}
 		}
 	);
@@ -264,7 +277,10 @@ function unshareFile(fileid, userid) {
 				userid: userid
 			},
 			onSuccess: function (transport) {
-				Controller.update_sections(new Array(custom_tracks_id, public_tracks_id));
+				var sections = new Array(custom_tracks_id);
+				if (using_database())
+					sections.push(public_tracks_id);
+				Controller.update_sections(sections);
 			}
 		}
 	);

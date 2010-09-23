@@ -4,13 +4,12 @@ package Bio::Graphics::Browser2::Action;
 # dispatch
 
 use strict;
-use Carp qw(croak confess);
+use Carp qw(croak confess cluck);
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
 use File::Basename 'basename';
 use JSON;
 use constant DEBUG => 0;
-use Data::Dumper;
 
 sub new {
     my $class  = shift;
@@ -61,8 +60,7 @@ sub ACTION_navigate {
     my $source   = $self->data_source;
     my $settings = $self->settings;
 
-    my $action = $q->param('navigate') 
-	or croak "for the navigate action, a CGI argument named \"navigate\" must be present";
+    my $action = $q->param('navigate') or croak "for the navigate action, a CGI argument named \"navigate\" must be present";
 
     my $updated = $render->asynchronous_update_coordinates($action);
     $render->init_database() if $updated;
@@ -355,11 +353,12 @@ sub ACTION_authorize_login {
     my $openid   = $q->param('openid');   # or croak;
     my $remember = $q->param('remember'); # or croak;
 
-    my ($id,$nonce) = $self->render->authorize_user($username,$session,$remember,$openid);
+    my ($id,$nonce) = $self->render->authorize_user($username, $session, $remember, $openid);
     return (200,'application/json',{id=>$id,authority=>$nonce});
 }
 
 sub ACTION_register_upload {
+	cluck "register_upload called";
     my $self = shift;
     my $q    = shift;
     my $id   = $q->param('upload_id');
@@ -430,7 +429,6 @@ sub ACTION_upload_file {
 }
 
 sub ACTION_import_track {
-	warn "Found the action";
     my $self = shift;
     my $q    = shift;
 
@@ -452,19 +450,22 @@ sub ACTION_import_track {
     $session->flush();
     $session->unlock();
     
-    my ($result,$msg,$tracks) = $usertracks->import_url($url);
+    my ($result, $msg, $tracks) = $usertracks->import_url($url);
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
     $session->flush();
     $session->unlock();
 
-    my $return_object        = { success   => $result||0,
-				 error_msg => CGI::escapeHTML($msg),
-				 tracks    => $tracks ,
-				 uploadName=> $url,
-                               };
-    return (200,'text/html',JSON::to_json($return_object)) if $workaround;
-    return (200,'application/json',$return_object);
+    my $return_object = {
+    		success   => $result || 0,
+			error_msg => CGI::escapeHTML($msg),
+			tracks    => $tracks ,
+			uploadName=> $url,
+	};
+                               
+                                   
+    return (200, 'text/html', JSON::to_json($return_object)) if $workaround;
+    return (200, 'application/json', $return_object);
 }
 
 sub ACTION_delete_upload {

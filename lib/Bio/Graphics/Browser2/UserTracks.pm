@@ -203,7 +203,6 @@ sub max_filename {
 
 # Import URL - Imports a URL for use in the database.
 sub import_url {
-	warn "I got to the end of import_url";
     my $self = shift;
     my $url       = shift;
     my $overwrite = shift;
@@ -250,6 +249,8 @@ sub import_url {
 
     $loader->set_processing_complete;
     $self->add_file($url, 1);
+	
+	warn join ", ", (1, '', [$filename]);
 	
     return (1, '', [$filename]);
 }

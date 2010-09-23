@@ -269,7 +269,7 @@ var GBrowseController = Class.create({
 		var request_str = "action=update_sections" + param_str;
 		for (var i = 0; i < section_names.length; i++) {
 			if (spin)
-				$(section_names[i]).innerHTML = '<img src="' + this.button_url('spinner.gif') + '" alt="Working..." />';
+				$(section_names[i]).update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
 			request_str += "&section_names="+section_names[i];
 		}
 
@@ -875,7 +875,7 @@ var GBrowseController = Class.create({
 		if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
 			var file = description_box.up("div[id^='upload_']").id.sub("upload_","");
 			var description = description_box.innerHTML;
-			description_box.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+			description_box.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
 			new Ajax.Request(Controller.url, {
 				method:      'post',
 				parameters:{  
@@ -896,7 +896,7 @@ var GBrowseController = Class.create({
 			return true;
 		}
 		if (event.keyCode==Event.KEY_ESC) {
-			description_box.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+			description_box.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
 			var sections = new Array(custom_tracks_id);
 			if (using_database())
 				sections.push(public_tracks_id);
@@ -943,7 +943,8 @@ var GBrowseController = Class.create({
 			},
 			onCreate: function() {
 					if ($(editElement) != null) {
-						$(editElement).innerHTML = '<div id="'+upload_id+'_form'+'"></div>'+'<div id="'+upload_id+'_status'+'"></div>';
+						$(editElement).update().insert(new Element("div", {id: upload_id + "_form"}));
+						$(editElement).insert(new Element("div", {id: upload_id + "_status"}) );
 					}
 					startAjaxUpload(upload_id);
 			},
@@ -972,7 +973,7 @@ var GBrowseController = Class.create({
   	new Ajax.Request(Controller.url, {
 	    method:     'post',
 	    parameters: {
-	    		action:      'register_upload',
+	    	action:      'register_upload',
 			upload_id:   upload_id,
 			upload_name: upload_name
 	      }

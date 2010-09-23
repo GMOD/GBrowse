@@ -24,7 +24,6 @@ use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
 use Bio::Graphics::Browser2::UserTracks;
 use Bio::Graphics::Browser2::UserDB;
 use Bio::Graphics::Browser2::Session;
-use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -1831,7 +1830,7 @@ sub auto_open {
 sub cleanup_dangling_uploads {
     my $self  = shift;
     my $state = shift;
-
+	
     my %name_to_id;
     for my $id (keys %{$state->{uploads}}) {
 		unless ($state->{uploads}{$id}[0]) {

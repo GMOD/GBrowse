@@ -10,6 +10,7 @@ use Bio::Graphics::Browser2::TrackDumper;
 use File::Basename 'basename';
 use JSON;
 use constant DEBUG => 0;
+use Data::Dumper;
 
 sub new {
     my $class  = shift;
@@ -405,9 +406,9 @@ sub ACTION_upload_file {
     $session->flush();
     $session->unlock();
     
-    my ($result,$msg,$tracks,$pid) = $url  ? $usertracks->mirror_url($track_name,  $url, 1)
-                                    :$data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
-                                           : $usertracks->upload_file($track_name, $fh,  $content_type, 1);
+    my ($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name,  $url, 1)
+                                       :$data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
+                                              : $usertracks->upload_file($track_name, $fh,  $content_type, 1);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
@@ -419,23 +420,26 @@ sub ACTION_upload_file {
     $msg =~ s/\n.+\Z//s;
     $msg =~ s/[\n"]/ /g;
 
-    my $return_object        = { success   => $result||0,
-				 error_msg => CGI::escapeHTML($msg),
-				 tracks    => $tracks,
-				 uploadName=> $name,
-                               };
-    return (200,'text/html',JSON::to_json($return_object)) if $workaround;
-    return (200,'application/json',$return_object);
+    my $return_object = {
+    	success		=> $result || 0,
+		error_msg	=> CGI::escapeHTML($msg),
+		tracks		=> $tracks,
+		uploadName	=> $name,
+    };
+    
+    #return (200, 'text/html', JSON::to_json($return_object)) if $workaround;
+    return (200, 'application/json', $return_object);
 }
 
 sub ACTION_import_track {
     my $self = shift;
-    my $q    = shift;
-
+    my $q    = shift;	
+	
     my $url = $q->param('url') or 
-	return(200,'text/html',JSON::to_json({success=>0,
-					      error_msg=>'no URL provided'}
-	       ));
+	return(200, 'text/html', JSON::to_json({
+						success=>0,
+					    error_msg=>'no URL provided'
+	}));
 
     my $upload_id  = $q->param('upload_id');
     my $workaround = $q->param('workaround');
@@ -455,17 +459,17 @@ sub ACTION_import_track {
     delete $state->{uploads}{$upload_id};
     $session->flush();
     $session->unlock();
-
+    
     my $return_object = {
     		success   => $result || 0,
 			error_msg => CGI::escapeHTML($msg),
-			tracks    => $tracks ,
+			tracks    => $tracks,
 			uploadName=> $url,
 	};
                                
                                    
-    return (200, 'text/html', JSON::to_json($return_object)) if $workaround;
-    return (200, 'application/json', $return_object);
+    #return (200, 'text/html', JSON::to_json($return_object)) if $workaround;
+    return (200, 'application/json', {tracks => $tracks});
 }
 
 sub ACTION_delete_upload {
@@ -485,7 +489,7 @@ sub ACTION_delete_upload {
     }
     $usertracks->delete_file($file);
 
-    return (200,'application/json',{tracks=>\@tracks});
+    return (200, 'application/json', {tracks => \@tracks});
 }
 
 sub ACTION_upload_status {

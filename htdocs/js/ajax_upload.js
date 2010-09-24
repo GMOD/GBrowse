@@ -11,7 +11,7 @@ AIM = {
 	frame: function(c) {
 		var n = 'f' + Math.floor(Math.random() * 99999);
 		var d = document.createElement('DIV');
-		d.innerHTML = '<iframe style="display:none" src="about:blank" id="' + n + '" name="' + n + '" onload="AIM.loaded(\'' + n + '\')"></iframe>';
+		d.update( new Element("iframe", {src: "about:blank", id: n, name: n}).observe("load", function() { AIM.loaded(n) })).setStyle({display: "none"}));
 		document.body.appendChild(d);
  
 		if (c && typeof(c.onComplete) == 'function')
@@ -58,7 +58,7 @@ function startAjaxUpload(upload_id) {
 	// Create & insert the status update elements.
 	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
 	status.insert(new Element("span").update('<b>Uploading...</b>'));
-	status.insert(new Element("a", {href: 'javascript:void(0)', onClick: "Controller.cancel_upload(\"" + upload_id + "_status\", \"" + upload_id + "\")" }).update(' Cancel'));
+	status.insert(new Element("a", {href: 'javascript:void(0)'}).observe("click", function() { Controller.cancel_upload(upload_id + "_status", upload_id })).update(' Cancel'));
 	
 	// This hash stores all currently-loading status updaters.
 	if (Ajax_Status_Updater == null)
@@ -91,11 +91,13 @@ function startAjaxUpload(upload_id) {
 // Complete AJAX Upload - Runs the controller to add the track or, if there's an error, displays it.
 function completeAjaxUpload(response, upload_id, field_type) {
 	var r;
+	
 	// If any JSON data is available, evaluate it. If not, there's been a Perl error.
 	try {
 		r = response.evalJSON(true);
 	} catch(e) { 
-       r = {success:     false, 
+    	r = {
+       		success:     false, 
             uploadName: 'Uploaded file',
             error_msg:  'The server returned an error during upload'
     	}
@@ -158,7 +160,7 @@ function deleteUpload (fileName) {
 				file:  fileName
 			},
 		    onSuccess: function (transport) {
-				var tracks = transport.responseJSON.tracks;
+				var tracks = transport.evalJSON(true).tracks;
 				if (tracks != null)
 					tracks.each(function(tid) { Controller.delete_track(tid) });
 				var sections = new Array(custom_tracks_id, track_listing_id);
@@ -192,15 +194,23 @@ function editUpload (fileName, sourceFile) {
 function addAnUploadField(after_element, action, upload_prompt, remove_prompt, field_type, help_link) {
 	if (field_type == null) field_type = 'upload';
 	var upload_tag  = 'upload_' + Math.floor(Math.random() * 99999);
-	var script      = 'return AIM.submit(this,{onStart:  function() {';
-	script         += 'startAjaxUpload(\''+upload_tag+'\')';
-	script         += '},';
-	script         += 'onComplete: function(response) {'
-	script         += 'completeAjaxUpload(response,\''+upload_tag+'\',\''+field_type+'\')';
-	script         += '}})';
-
-	var count = $$("div[id^=upload_]:not([id$=_status])").length;
-	var form = new Element("form", {name: "ajax_upload", "id": upload_tag + "_form", onSubmit: script, action: action, enctype: "multipart/form-data", method: "POST"});
+	
+	// Create the form and attach the AJAX uploader event.
+	var form = new Element("form", {name: "ajax_upload", "id": upload_tag + "_form", action: action, enctype: "multipart/form-data", method: "POST"});
+	form.observe("submit", function() {
+		AIM.submit(this,
+			{
+				onStart: function() {
+					startAjaxUpload(upload_tag)
+				},
+				onComplete: function(response) {
+					completeAjaxUpload(response, upload_tag, field_type)
+				}
+			}
+		);
+	});
+	
+	// Fill in the appropriate form objects, for file, text, and URL uploads.
 	var upload_text = new Element("b").update(upload_prompt);
 	if (field_type == 'upload') {
 		form.insert({bottom: new Element("input", {type: "hidden", name: "action", value: "upload_file"}) });
@@ -216,9 +226,13 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	form.insert({bottom: new Element("input", {type: "submit", name: "submit", value: "Upload"}) });
 	form.insert({bottom: new Element("input", {type: "hidden", name: "upload_id", value: upload_tag}) });
 	form.insert({bottom: "&nbsp;" });
-	form.insert({bottom: new Element("a", {href: "javascript:void(0)", onClick: "Element.extend(this);this.up(\'div\').remove()"}).update(remove_prompt) });
+	var remove_link = new Element("a", {href: "javascript:void(0)"}).update(remove_prompt);
+	remove_link.observe("click", function() { this.up("div").remove() });
+	form.insert({bottom: remove_link});
 	var status_box = new Element("div", {id: upload_tag + "_status"});
 	
+	// Now wrap it in a DIV container and add it to the DOM.
+	var count = $$("div[id^=upload_]:not([id$=_status])").length;
 	var container = new Element("div", {id: upload_tag});
 	container.setStyle({"background-color": ((count % 2)? '#AAAAAA' : '#CCCCCC'), "padding": "5px"});
 	container.insert({bottom: form}).insert({top: upload_text}).insert({bottom: status_box});
@@ -250,7 +264,7 @@ function changePermissions(fileid, sharing_policy) {
 function shareFile(fileid, userid) {
 	var title = $("upload_" + fileid);
 	if (title)
-		title.down("div[id$='_stat']").innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+		title.down("div[id$='_stat']").update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',
@@ -261,7 +275,6 @@ function shareFile(fileid, userid) {
 			},
 			onSuccess: function (transport) {
 				var sections = new Array(custom_tracks_id);
-				console.log(using_database());
 				if (using_database())
 					sections.push(public_tracks_id);
 				Controller.update_sections(sections);
@@ -273,7 +286,7 @@ function shareFile(fileid, userid) {
 function unshareFile(fileid, userid) {
 	var title = $("upload_" + fileid);
 	if (title)
-		title.down("div[id$='_stat']").innerHTML = '<img src="' + Controller.button_url('spinner.gif') + '" />';
+		title.down("div[id$='_stat']").update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',

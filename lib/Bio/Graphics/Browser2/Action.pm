@@ -461,7 +461,6 @@ sub ACTION_import_track {
     $session->flush();
     $session->unlock();
     
-<<<<<<< .working
     my $return_object = {
     		success   => $result || 0,
 			error_msg => CGI::escapeHTML($msg),
@@ -472,17 +471,8 @@ sub ACTION_import_track {
                                    
     #return (200, 'text/html', JSON::to_json($return_object)) if $workaround;
     return (200, 'application/json', {tracks => $tracks});
-=======
-    my $return_object        = { success   => $result||0,
-				 error_msg => CGI::escapeHTML($msg),
-				 tracks    => $tracks ,
-				 uploadName=> $url,
-                               };
-    return (200,'text/html',JSON::to_json($return_object)) if $workaround;
-    return (200,'application/json',$return_object);
->>>>>>> .merge-right.r23849
 }
-
+    
 sub ACTION_delete_upload {
     my $self  = shift;
     my $q     = shift;

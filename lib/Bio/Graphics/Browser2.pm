@@ -16,13 +16,12 @@ use File::Path 'mkpath';
 use Bio::Graphics::Browser2::DataSource;
 use Bio::Graphics::Browser2::Session;
 use GBrowse::ConfigData;
-use Carp qw(croak carp confess cluck);
+use Carp 'croak','carp','confess';
 
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 my (%CONFIG_CACHE,$HAS_DBFILE,$HAS_STORABLE);
 
-# Open a globals object with a config file in the standard location.
 sub open_globals {
     my $self = shift;
     my $conf_dir  = $self->config_base;
@@ -35,7 +34,8 @@ sub new {
   my $class            = shift;
   my $config_file_path = shift;
 
-  # Cache the config info so we don't need to reparse in a persistent (e.g. modperl) environment
+  # this code caches the config info so that we don't need to 
+  # reparse in persistent (e.g. modperl) environment
   my $mtime            = (stat($config_file_path))[9] || 0;
   if (exists $CONFIG_CACHE{$config_file_path}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {
@@ -231,8 +231,8 @@ sub application_name       { shift->setting(general=>'application_name')      ||
 sub application_name_long  { shift->setting(general=>'application_name_long') || 'The Generic Genome Browser' }
 sub email_address          { shift->setting(general=>'email_address')         || 'noreply@gbrowse.com'        }
 sub smtp                   { shift->setting(general=>'smtp_gateway')          || 'smtp.res.oicr.on.ca'        }
-sub user_account_db        { shift->setting(general=>'user_account_db')       || 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse'  }
-sub user_accounts		   { shift->setting(general=>'user accounts')		  || 0 }
+sub user_account_db        { shift->setting(general=>'user_account_db')       
+				   || 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse'  }
 sub admin_account          { shift->setting(general=>'admin_account') }
 sub admin_dbs              { shift->setting(general=>'admin_dbs')     }
 sub openid_secret {
@@ -439,7 +439,7 @@ sub authorized_session {
   if ($session->match_nonce($authority,CGI::remote_addr())) {
       return $session;
   } else {
-      cluck "UNAUTHORIZED ATTEMPT";
+      warn "UNAUTHORIZED ATTEMPT";
       return $self->session('xyzzy');
   }
 }

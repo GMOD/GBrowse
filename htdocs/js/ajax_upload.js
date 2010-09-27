@@ -11,7 +11,7 @@ AIM = {
 	frame: function(c) {
 		var n = 'f' + Math.floor(Math.random() * 99999);
 		var d = document.createElement('DIV');
-		d.update( new Element("iframe", {src: "about:blank", id: n, name: n}).observe("load", function() { AIM.loaded(n) })).setStyle({display: "none"}));
+		d.update( new Element("iframe", {src: "about:blank", id: n, name: n}).observe("load", function() { AIM.loaded(n) })).setStyle({display: "none"});
 		document.body.appendChild(d);
  
 		if (c && typeof(c.onComplete) == 'function')
@@ -58,7 +58,7 @@ function startAjaxUpload(upload_id) {
 	// Create & insert the status update elements.
 	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
 	status.insert(new Element("span").update('<b>Uploading...</b>'));
-	status.insert(new Element("a", {href: 'javascript:void(0)'}).observe("click", function() { Controller.cancel_upload(upload_id + "_status", upload_id })).update(' Cancel'));
+	status.insert(new Element("a", {href: 'javascript:void(0)'}).observe("click", function() { Controller.cancel_upload(upload_id + "_status", upload_id) }).update(' Cancel') );
 	
 	// This hash stores all currently-loading status updaters.
 	if (Ajax_Status_Updater == null)
@@ -160,7 +160,7 @@ function deleteUpload (fileName) {
 				file:  fileName
 			},
 		    onSuccess: function (transport) {
-				var tracks = transport.evalJSON(true).tracks;
+				var tracks = transport.responseJSON.tracks;
 				if (tracks != null)
 					tracks.each(function(tid) { Controller.delete_track(tid) });
 				var sections = new Array(custom_tracks_id, track_listing_id);
@@ -186,8 +186,8 @@ function editUpload (fileName, sourceFile) {
 	$(editDiv).update("<p><b>Editing " + sourceFile + "</b></p>");
 	$(editDiv).insert({bottom: new Element("textarea", {id: editID, cols: "120", rows: "20", wrap: "off"}).update("fetching...") });
 	$(editDiv).insert({bottom: new Element("p")});
-	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: new Element("a", {href: "javascript:void(0)", onClick: "$(\"" + editDiv + "\").update()"}).update("[Cancel]") });
-	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button", {onClick: "Controller.uploadUserTrackSource(\"" + editID + "\", \"" + fileName +"\", \"" + sourceFile + "\", \"" + editDiv + "\")"}).update("Submit") });
+	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: new Element("a", {href: "javascript:void(0)"}).update("[Cancel]").observe("click", function() { $(editDiv).update()} ) });
+	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button").update("Submit").observe("click", function() { Controller.uploadUserTrackSource(editID, fileName, sourceFile, editDiv) }) });
 	Controller.downloadUserTrackSource(editID,fileName,sourceFile);
 }
 
@@ -196,7 +196,7 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	var upload_tag  = 'upload_' + Math.floor(Math.random() * 99999);
 	
 	// Create the form and attach the AJAX uploader event.
-	var form = new Element("form", {name: "ajax_upload", "id": upload_tag + "_form", action: action, enctype: "multipart/form-data", method: "POST"});
+	var form = new Element("form", {name: "ajax_upload", "id": upload_tag + "_form", action: action, method: "POST"});
 	form.observe("submit", function() {
 		AIM.submit(this,
 			{
@@ -226,15 +226,12 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	form.insert({bottom: new Element("input", {type: "submit", name: "submit", value: "Upload"}) });
 	form.insert({bottom: new Element("input", {type: "hidden", name: "upload_id", value: upload_tag}) });
 	form.insert({bottom: "&nbsp;" });
-	var remove_link = new Element("a", {href: "javascript:void(0)"}).update(remove_prompt);
-	remove_link.observe("click", function() { this.up("div").remove() });
-	form.insert({bottom: remove_link});
+	form.insert({bottom: new Element("a", {href: "javascript:void(0)"}).update(remove_prompt).observe("click", function() { this.up("div").remove() }) });
 	var status_box = new Element("div", {id: upload_tag + "_status"});
 	
 	// Now wrap it in a DIV container and add it to the DOM.
 	var count = $$("div[id^=upload_]:not([id$=_status])").length;
-	var container = new Element("div", {id: upload_tag});
-	container.setStyle({"background-color": ((count % 2)? '#AAAAAA' : '#CCCCCC'), "padding": "5px"});
+	var container = new Element("div", {id: upload_tag}).setStyle({"background-color": ((count % 2)? '#AAAAAA' : '#CCCCCC'), "padding": "5px"});
 	container.insert({bottom: form}).insert({top: upload_text}).insert({bottom: status_box});
 	$(after_element).insert({bottom: container});
 }

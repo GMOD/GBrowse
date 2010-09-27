@@ -4,7 +4,13 @@
      * Added code that allows callbacks to invoke Bio::Graphics::Browser2::Render->request()
        in order to get a hash that contains various information about the current state.
        Interesting keys include: search_str, ref, start, end, flip, tracks, features, userid, uploadid,
-       h_feat, width, grid.
+       h_feat, width, grid. (NOTE: please update documentation WIKI with some explanation of how to use this).
+     * Disable track filters when in summary mode, since the summary features generated when this
+       mode is active rarely have the structure and attributes expected by the writer of the filter.
+       The downside of this is that if you use track filters to distinguish one set of features from
+       another, this will not be reflected in the summary density plots, which will show all features
+       of the matching type regardless of the filter.
+     * Basic support for Google federated login via openid.
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports

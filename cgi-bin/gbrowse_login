@@ -3,15 +3,60 @@
 eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
 use strict;
-use Bio::Graphics::Browser2::UserDB;
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::Render;
 use CGI qw(:standard);
+use DBI;
+use Digest::SHA qw(sha1);
+use JSON;
+use LWP::UserAgent;
+#use LWPx::ParanoidAgent; (Better, but currently broken)
+use Net::SMTP;
+use Net::OpenID::Consumer;
+use Text::ParseWords 'quotewords';
+
+# Required modules:
+#    1. Net::SMTP
+#    1. Crypt::SSLeay & libssl-dev
+#    2. Net::OpenID::Consumer
+#    3. Math::BigInt
+#
+# If you need to sendmail via an SMTP server that requires
+# SASL and SSL authentication, you will need
+#
+#    1. Net::SMTP::SSL
+#    2. Authen::SASL
+
 
 our $VERSION = '$Id: gbrowse_login,v 1.1 2009-08-27 20:33:23 idavies Exp $';
 
 umask 022;
-   
-my $userdb = Bio::Graphics::Browser2::UserDB->new();
+
+our $Globals = Bio::Graphics::Browser2->open_globals;
+
+our $AppName       = $Globals->application_name;
+our $AppNameLong   = $Globals->application_name_long;
+our $ReturnAddress = $Globals->email_address;
+
+my $index = index($ENV{'HTTP_REFERER'},'?');
+my $url   = substr($ENV{'HTTP_REFERER'},0,$index);
+   $url  .= '/'  if $index == -1;
+
+my $smtp  = $Globals->smtp;
+my $dbi   = $Globals->user_account_db;
+my $login = DBI->connect($dbi);
+unless ($login) {
+    print header();
+    print "Error: Could not open login database.";
+    die "Could not open login database $dbi";
+}
 
 my %actions  = map {$_=>1} param('action');
 my %callback;
@@ -32,7 +77,7 @@ my $option   = param('option');
 
 if($actions{list_openid}) {
     print header('application/json');
-    $userdb->do_list_openid($user)  if $actions{list_openid};
+    do_list_openid($login,$user)  if $actions{list_openid};
     exit 0;
 }
 
@@ -47,25 +92,886 @@ if($actions{confirm_openid}) {
     }
 
     print header('application/json');
-    $userdb->do_confirm_openid(\%callback, $userid, $option);
+    do_confirm_openid($login,\%callback,$userid,$option);
     exit 0;
 }
 
 print header();
 
-$userdb->do_validate			($user, $pass, $remember)				if $actions{validate};
-$userdb->do_add_user_check		($user, $email, $pass, $userid)			if $actions{add_user_check};
-$userdb->do_add_user			($user, $email, $pass, $userid)			if $actions{add_user};
-$userdb->do_edit_confirmation	($email, $option)						if $actions{edit_confirmation};
-$userdb->do_confirm_account		($user, $confirm)						if $actions{confirm_account};
-$userdb->do_edit_details		($user, $column, $old, $new)			if $actions{edit_details};
-$userdb->do_email_info			($email)								if $actions{email_info};
-$userdb->do_delete_user			($user, $pass)							if $actions{delete_user};
+do_add_user_check    ($login,$smtp,$url,$user,$email,$pass,$userid)  if $actions{add_user_check};
+do_add_user          ($login,$smtp,$url,$user,$email,$pass,$userid)  if $actions{add_user};
+do_validate          ($login,$user,$pass,$remember)                  if $actions{validate};
+do_edit_details      ($login,$user,$column,$old,$new)                if $actions{edit_details};
+do_email_info        ($login,$smtp,$email)                           if $actions{email_info};
+do_edit_confirmation ($login,$smtp,$url,$email,$option)              if $actions{edit_confirmation};
+do_confirm_account   ($login,$user,$confirm)                         if $actions{confirm_account};
+do_delete_user       ($login,$user,$pass)                            if $actions{delete_user};
 
-$userdb->do_add_openid_user		($user, $openid, $userid, $remember)	if $actions{add_openid_user};
-$userdb->do_check_openid		($openid, $userid, $option)				if $actions{check_openid};
-$userdb->do_change_openid		($user, $pass, $openid, $option)		if $actions{change_openid};
+do_add_openid_user   ($login,$user,$openid,$userid,$remember)        if $actions{add_openid_user};
+do_check_openid      ($url,$openid,$userid,$option)                  if $actions{check_openid};
+do_change_openid     ($login,$url,$user,$pass,$openid,$option)       if $actions{change_openid};
 
 exit 0;
 
+##################################################################################
+# Get Header - Returns the message found at the top of all confirmation e-mails.
+##################################################################################
+sub get_header {
+    my $message  = "\nThank you for creating an account with $AppName: $AppNameLong\n\n";
+       $message .= "The account information found below is for your reference only. ";
+       $message .= "Please keep all account names and passwords in a safe location ";
+       $message .= "and do not share your password with others.";
+
+    return $message;
+}
+
+##################################################################################
+# Get Footer - Returns the message found at the bottom of all e-mails.
+##################################################################################
+sub get_footer {
+    my $message  = "Courtesy of $AppName Administration\n\n";
+       $message .= "This message and any attachments may contain confidential and/or ";
+       $message .= "privileged information for the sole use of the intended recipient. ";
+       $message .= "Any review or distribution by anyone other than the person for whom ";
+       $message .= "it was originally intended is strictly prohibited. If you have ";
+       $message .= "received this message in error, please contact the sender and delete ";
+       $message .= "all copies. Opinions, conclusions or other information contained in ";
+       $message .= "this message may not be that of the organization.";
+
+    return $message;
+}
+
+##################################################################################
+# Create Key - Generates a random string of a given length.
+##################################################################################
+sub create_key {
+    my $val = shift;
+    my $key;
+    my @char=('a'..'z','A'..'Z','0'..'9','_');
+    foreach (1..$val) {$key.=$char[rand @char];}
+    return $key;
+}
+
+##################################################################################
+# Check String - Checks that an e-mail or username is in the proper format.
+##################################################################################
+sub check_email {
+    if(shift =~ m/^(\w|\-|\_|\&|\+|\.)+\@((\w|\-|\_)+\.)+[a-zA-Z]{2,}$/) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+sub check_user {
+    if(shift =~ m/^([!-\[]|[\]-~])+$/) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+sub check_admin {
+    my $login = shift;
+    my $admin_name = $Globals->admin_account;
+    return unless $admin_name;
+    return $login eq $admin_name;
+}
+
+##################################################################################
+# Check Old Confirmations - Deletes any unconfirmed accounts more than 7 days old.
+##################################################################################
+sub check_old_confirmations {
+    my $login  = shift;
+    my $nowfun = nowfun();
+    my $delete = $login->prepare(
+        "DELETE FROM users WHERE confirmed=0 AND ($nowfun - last_login) >= 7000000");
+    $delete->execute()
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    return;
+}
+
+##################################################################################
+#################### N O N - O P E N I D   F U N C T I O N S #####################
+##################################################################################
+# Validate - Ensures that a non-openid user's credentials are correct.
+##################################################################################
+sub do_validate {
+    my ($login,$user,$pass,$remember) = @_;
+    my $update;
+
+    if(check_user($user)==0) {
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";
+	return;
+    }
+
+    my $nowfun = nowfun();
+    if($remember != 2) {
+        $update = $login->prepare(
+            "UPDATE users SET last_login=$nowfun,remember=$remember WHERE username=? AND pass=? AND confirmed=1");
+    } else {
+        $update = $login->prepare(
+            "UPDATE users SET last_login=$nowfun WHERE username=? AND pass=? AND confirmed=1");
+    }
+
+    # BUG: we should salt the password
+    $pass = sha1($pass);
+    $update->execute($user,$pass)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    my $rows = $update->rows;
+    if($rows == 1) {
+        check_old_confirmations($login);
+        if($remember != 2) {
+            my $select = $login->prepare(
+                "SELECT userid FROM users WHERE username=? AND pass=? AND confirmed=1");
+            $select->execute($user,$pass)
+                or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+            print "session",$select->fetchrow_array;
+        } else {
+            print "Success";
+        }
+    } elsif($rows == 0) {
+        print "Invalid username or password provided, please try again.";
+    } else {
+        print "Error: $rows rows returned, please consult your service host.";
+    }
+    return;
+}
+
+##################################################################################
+# Add User Check - Checks to see if the user has already been added.
+##################################################################################
+sub do_add_user_check {
+    my ($login,$smtp,$url,$user,$email,$pass,$userid) = @_;
+    if(check_email($email)==0) {print "Invalid e-mail address provided.";return;}
+    if(check_user($user)==0) {
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
+    }
+
+    my $select = $login->prepare(
+        "SELECT confirmed FROM users WHERE email=?");
+    $select->execute($email)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    my $confirmed = $select->fetchrow_array;
+    if($select->rows == 0) {
+        do_add_user($login,$smtp,$url,$user,$email,$pass,$userid);
+    } elsif($confirmed == 1) {
+        print "E-mail in use";
+    } elsif($confirmed == 0) {
+        print "Message Already Sent";
+    }
+
+    return;
+}
+
+##################################################################################
+# Add User - Adds a new non-openid user to the user database.
+##################################################################################
+sub do_add_user {
+    my ($login,$smtp,$url,$user,$email,$pass,$userid) = @_;
+    if(check_email($email)==0) {print "Invalid e-mail address provided.";return;}
+    if(check_user($user)==0) {
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";
+	return;
+    }
+    if(check_admin($user)) {
+	print "Invalid username. Try a different one."; 
+	return;
+    }
+
+    my $confirm = create_key('32');
+    my ($rows) = $login->selectrow_array(
+        "SELECT count(*) FROM users WHERE userid=? OR username=? OR email=?",
+	undef,
+	$userid,$user,$email);
+
+    if ($rows == 0) {
+        do_send_confirmation($smtp,$url,$email,$confirm,$user,$pass);
+    }
+
+    my $nowfun = nowfun();
+    my $insert = $login->prepare ("INSERT INTO users VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)");
+
+    # BUG: we should salt the password
+    $pass = sha1($pass);
+    if($insert->execute($userid,$user,$email,$pass,$confirm)) {
+        print "Success";
+    } else {
+        if(DBI->errstr =~ m/for key 1$/      || DBI->errstr =~ m/username is not unique/) {
+            print "Username already in use, please try another.";
+        } elsif(DBI->errstr =~ m/for key 3$/ || DBI->errstr =~ m/email is not unique/) {
+            print "E-mail address already in use, please provide another.";
+        } elsif(DBI->errstr =~ m/for key 2$/ || DBI->errstr =~ m/userid is not unique/) {
+            print "Session Error";
+        } else {
+            print "Error: ",DBI->errstr,".";
+        }
+    }
+    return;
+}
+
+##################################################################################
+# Send Confirmation - Sends an e-mail when a user creates a new non-openid account
+#                       to ensure that the user is valid and the e-mail exists.
+##################################################################################
+sub do_send_confirmation {
+    my ($smtp,$url,$email,$confirm,$user,$pass) = @_;
+    my $link = $url."?confirm=1;code=$confirm;id=logout";
+
+    my $message  = get_header();
+       $message .= "\n\n    Username: $user\n    Password: $pass\n    E-mail:   $email\n\n";
+       $message .= "To activate your account and complete the sign up process, please click ";
+       $message .= "on the following link:\n    $link\n\n\n";
+       $message .= get_footer();
+
+    my ($status,$err) = do_sendmail({smtp => $smtp,
+				     from       => $ReturnAddress,
+				     from_title => $AppName,
+				     to         => $email,
+				     subject    => "$AppName Account Activation",
+				     msg        => $message});
+    unless ($status) {
+	print $err;
+	die   "Error while sending outgoing email: $err";
+    }
+    return;
+}
+
+##################################################################################
+# Edit Confirmation - Deletes or resends unconfirmed information based on "option"
+##################################################################################
+sub do_edit_confirmation {
+    my ($login,$smtp,$url,$email,$option) = @_;
+
+    my $select = $login->prepare(
+        "SELECT username, userid FROM users WHERE email=?");
+    $select->execute($email)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    my ($user,$userid) = $select->fetchrow_array();
+
+    my $delete = $login->prepare(
+        "DELETE FROM users WHERE username=? AND userid=?");
+    $delete->execute($user,$userid)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    my $delete2 = $login->prepare(
+        "DELETE FROM openid_users WHERE username=? AND userid=?");
+    $delete2->execute($user,$userid)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    if($option == 1) {
+        my $pass = create_key('23');
+        do_add_user($login,$smtp,$url,$user,$email,$pass,$userid);
+    } else {
+        print "Your account has been successfully removed.";
+    }
+    return;
+}
+
+##################################################################################
+# Confirm Account - Activates a new account when the user follows the mailed link.
+##################################################################################
+sub do_confirm_account {
+    my ($login,$user,$confirm) = @_;
+
+    # BUG: we should salt the password
+    my $new_confirm = sha1($confirm);
+
+    my ($rows) = $login->selectrow_array(
+        "SELECT count(*) FROM users WHERE cnfrm_code=? AND confirmed=0",
+	undef,
+	$confirm);
+    if($rows != 1) {print "Already Active"; return;}
+
+    my $update = $login->prepare(
+        "UPDATE users SET confirmed=1,cnfrm_code=? WHERE username=? AND cnfrm_code=? AND confirmed=0");
+    $update->execute($new_confirm,$user,$confirm)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    $rows = $update->rows;
+    if($rows == 1) {
+        my $query = $login->prepare(
+            "SELECT userid FROM users WHERE username=? AND cnfrm_code=? AND confirmed=1");
+        $query->execute($user,$new_confirm)
+            or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+        print $query->fetchrow_array();
+    } elsif($rows == 0) {
+        print "Error: Incorrect username provided, please check your spelling and try again.";
+    } else {
+        print "Error: $rows rows returned, please consult your service host.";
+    }
+    return;
+}
+
+##################################################################################
+# Edit Details - Updates the user's e-mail or password depending on the "column"
+##################################################################################
+sub do_edit_details {
+    my ($login,$user,$column,$old,$new) = @_;
+
+    if($column eq 'email') {
+        if(check_email($new) == 0) {
+            print "New e-mail address is invalid, please try another.";return;}
+    }
+
+    # BUG: we should salt the password
+    $old = sha1($old) if($column eq 'pass');
+    $new = sha1($new) if($column eq 'pass');
+
+    my $querystring  = "UPDATE users       ";
+       $querystring .= "   SET $column  = ?";
+       $querystring .= " WHERE username = ?";
+       $querystring .= "   AND $column  = ?";
+
+    my $update = $login->prepare($querystring);
+    unless($update->execute($new,$user,$old)) {
+        if($column eq 'email') {
+            print "New e-mail already in use, please try another.";
+            die "Error: ",DBI->errstr;
+        } else {
+            print "Error: ",DBI->errstr,".";
+            die "Error: ",DBI->errstr;
+        }
+    }
+
+    if(DBI->errstr =~ m/for key 3$/) {
+        print "New e-mail already in use, please try another.";}
+
+    my $rows = $update->rows;
+    if($rows == 1) {
+        print "Success";
+    } elsif($rows == 0) {
+        print "Incorrect password provided, please check your spelling." if($column eq 'pass');
+        print "Incorrect e-mail provided, please check your spelling."   if($column eq 'email');
+    } else {
+        if(($column eq 'email') and ($rows == -1)) {
+            print "New e-mail already in use, please try another.";
+        } else {
+            print "Error: $rows rows returned, please consult your service host.";
+        }
+    }
+    return;
+}
+
+##################################################################################
+# E-mail Info - Sends an e-mail when a user has forgotten their password.
+##################################################################################
+sub do_email_info {
+    my ($login,$smtp,$email) = @_;
+    if(check_email($email)==0) {print "Invalid e-mail address provided.";return;}
+
+    my ($user,$rows,$openid_ref) = do_retrieve_user($login,$email);
+    my @openids = @$openid_ref;
+    my $openid  = "";
+    
+    if($rows != 1) {print $user; return;}
+
+    if(@openids) {foreach(@openids) {$openid .= "$_\n             ";}}
+    else {$openid = "None\n";}
+
+    my $pass = create_key('23');
+    my $message  = "\nYour password has been reset to the one seen below. To fix this,";
+       $message .= " select \"My Account\" from the log in menu and log in with the";
+       $message .= " credentials found below.\n\n    Username: $user\n    ";
+       $message .= "Password: $pass\n\n    OpenIDs: $openid\n\n";
+       $message .= get_footer();
+
+    my ($status,$err) = do_sendmail({smtp => $smtp,
+				     from       => $ReturnAddress,
+				     from_title => $AppName,
+				     to         => $email,
+				     subject    => "$AppName Account Information",
+				     msg        => $message
+				    });
+
+    if(!$status) {
+        print "Error: ",$err;
+        die "Error while sending outgoing email: ",$err;
+    }
+
+    # BUG: we should salt the password
+    my $secret = sha1($pass);
+    my $update = $login->prepare(
+        "UPDATE users SET pass=? WHERE username=? AND email=? AND confirmed=1");
+    $update->execute($secret,$user,$email)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    print "Success";
+    return;
+}
+
+##################################################################################
+# Retrieve User - Gets the username associated with a given e-mail.
+##################################################################################
+sub do_retrieve_user {
+    my ($login,$email) = @_;
+    my @openids;
+
+    my $users = $login->selectcol_arrayref(
+        "SELECT username FROM users WHERE email=? AND confirmed=1",
+	undef,
+	$email)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    my $rows = @$users;
+    if ($rows == 1) {
+        my $user  = $users->[0];
+        my $query = $login->prepare(
+            "SELECT openid_url FROM openid_users WHERE username=?");
+        $query->execute($user)
+            or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+        while (my $openid = $query->fetchrow_array) {
+            push (@openids,$openid);
+        }
+
+        return ($user,$rows,\@openids);
+    } elsif($rows == 0) {
+        return ("Sorry, an account does not exist for the e-mail provided.",$rows,\@openids);
+    } else {
+        return ("Error: $rows accounts match your e-mail, please consult your service host.",$rows,\@openids);
+    }
+}
+
+##################################################################################
+# Delete User - Removes a user from the database.
+##################################################################################
+sub do_delete_user {
+    my ($login,$user,$pass) = @_;
+    my $unseqpass = $pass;
+
+    # BUG we should salt the password
+    $pass = sha1($pass);
+
+    my ($sql,@bind);
+    if($unseqpass eq "") {
+        $sql  = "DELETE FROM users WHERE username=?";
+        @bind = $user;
+    } else {
+        $sql  = "DELETE FROM users WHERE username=? AND pass=?";
+        @bind = ($user,$pass);
+    }
+
+    my $delete = $login->prepare($sql);
+    $delete->execute(@bind)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+    my $rows = $delete->rows;
+    if($rows != 1) {
+        if($rows != 0) {
+            print "Error: $rows rows returned, please consult your service host.";
+        } else {
+            print "Incorrect password provided, please check your spelling and try again.";
+        }
+        return;
+    }
+
+    my $query = $login->prepare(
+        "DELETE FROM openid_users WHERE username=?");
+    if($query->execute($user)) {
+        print "Success";
+    } else {
+        print "Error: ",DBI->errstr,".";
+    }
+    return;
+}
+
+
+##################################################################################
+######################## O P E N I D   F U N C T I O N S #########################
+##################################################################################
+# Check OpenID - Sends a user to their openid host for confirmation.
+##################################################################################
+sub do_check_openid {
+    my ($url,$openid,$userid,$option) = @_;
+    warn "do_check_openid($url,$openid,$userid)";
+    my $return_to  = "$url?openid_confirm=1;page=$option;s=$userid;";
+       $return_to .= "id=logout;" if $option ne "openid-add";
+       #id=logout needed in case another user is already signed in
+
+    my $csr = Net::OpenID::Consumer->new(
+        ua              => LWP::UserAgent->new,
+        args            => CGI->new,
+        consumer_secret => sha1($ENV{'PERL5LIB'}.$ENV{'HTTP_USER_AGENT'}),
+        required_root   => "http://$ENV{'HTTP_HOST'}/"
+    );
+
+    my $claimed_identity = $csr->claimed_identity($openid)
+        or print "The URL provided is not a valid OpenID, please check your spelling and try again."
+        and die $csr->err;
+
+    my $check_url = $claimed_identity->check_url(
+        return_to  => $return_to,
+        trust_root => "http://$ENV{'HTTP_HOST'}/",
+        delayed_return => 1
+    );
+
+    print "Location: $check_url";
+    return;
+}
+
+##################################################################################
+# Confirm OpenID - Checks that the returned credentials are valid.
+##################################################################################
+sub do_confirm_openid {
+    my ($login,$callback,$userid,$option) = @_;
+    my ($error,@results,$select,$user,$only);
+
+    my $csr = Net::OpenID::Consumer->new(
+        ua              => LWP::UserAgent->new,
+        args            => $callback,
+        consumer_secret => sha1($ENV{'PERL5LIB'}.$ENV{'HTTP_USER_AGENT'}),
+        required_root   => "http://$ENV{'HTTP_HOST'}/"
+    );
+
+    if($option eq "openid-add") {
+        ($user,$only) = $login->selectrow_array(
+	    "SELECT username,openid_only FROM users WHERE userid=?",
+	    undef,
+	    $userid)
+            or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
+		and print JSON::to_json(\@results) and return);
+        unless (defined $user) {
+            push @results,{error=>"Error: Wrong session ID provided, please try again."};
+            print JSON::to_json(\@results);
+            return;
+        }
+    }
+
+    $csr->handle_server_response(
+        not_openid => sub {
+            push @results,{user=>$user,only=>$only,error=>"Invalid OpenID provided, please check your spelling."};
+            print JSON::to_json(\@results);
+        },
+        setup_required => sub {
+            push @results,{user=>$user,only=>$only,error=>"Error: Your OpenID requires setup."};
+            print JSON::to_json(\@results);
+        },
+        cancelled => sub {
+            push @results,{user=>$user,only=>$only,error=>"OpenID verification cancelled."};
+            print JSON::to_json(\@results);
+        },
+        verified => sub {
+            my $vident = shift;
+            if($option eq "openid-add") {
+                print JSON::to_json(do_add_openid_to_account($login,$userid,$user,$vident->url,$only));
+            } else {
+                print JSON::to_json(do_get_openid($login,$vident->url));
+            }
+        },
+        error => sub {
+            $error = $csr->err;
+            push @results,{user=>$user,only=>$only,error=>"Error validating identity: $error."};
+            print JSON::to_json(\@results);
+        }
+    );
+    return;
+}
+
+##################################################################################
+# Get OpenID - Check to see if the provided openid has been used before.
+##################################################################################
+sub do_get_openid {
+    my ($login,$openid) = @_;
+    my ($error,@results);
+
+    my $from = <<END;
+FROM users A, openid_users B
+ WHERE A.userid     = B.userid
+   AND A.username   = B.username
+   AND A.confirmed  = 1
+   AND B.openid_url = ?
+END
+;
+    my ($rows) = $login->selectrow_array(
+	"select count(*) $from",
+	undef,
+	$openid)
+	or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
+	    and return \@results);
+    
+    if($rows != 1) {
+        if($rows != 0) {
+            $error  = "Error: $rows rows returned, please consult your service host.";
+        } else {
+            $error  = "The OpenID provided has not been used before. ";
+            $error .= "Please create an account first before trying to edit your information.";
+        }
+        push @results,{error=>$error,openid=>$openid};
+        return \@results;
+    }
+
+    my $select = $login->prepare("SELECT A.username, A.userid,A.remember, A.openid_only $from");
+    $select->execute($openid)
+        or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
+        and return \@results);
+
+    my @info = $select->fetchrow_array;
+
+    my $nowfun = nowfun();
+    my $update = $login->prepare(
+        "UPDATE users SET last_login=$nowfun WHERE username=? AND userid=? AND confirmed=1");
+    $update->execute($info[0],$info[1])
+        or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
+        and return \@results);
+
+    push @results,{user=>$info[0],session=>$info[1],remember=>$info[2],only=>$info[3]};
+    return \@results;
+}
+
+##################################################################################
+# Change OpenID - Add or removes an openid from an account based on "option"
+##################################################################################
+sub do_change_openid {
+    my ($login,$url,$user,$pass,$openid,$option) = @_;
+    my $unseqpass = $pass;
+
+    # BUG: we should salt the password
+    $pass = sha1($pass);
+
+    my ($sql,@bind);
+    if($unseqpass eq "") {
+        $sql  = "SELECT userid FROM users WHERE username=? AND openid_only=1";
+        @bind = $user;
+    } else {
+        $sql  = "SELECT userid FROM users WHERE username=? AND pass=?";
+        @bind = ($user,$pass);
+    }
+
+    my $users = $login->selectrow_arrayref($sql,undef,@bind)
+        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    my $rows = @$users;
+
+    if($rows != 1) {
+        if($rows != 0) {
+            print "Error: $rows rows returned, please consult your service host.";
+        } else {
+            print "Incorrect password provided, please check your spelling and try again.";
+        }
+        return;
+    }
+
+    if ($option eq "add") {
+        do_check_openid($url,$openid,$users->[0],"openid-add");
+        return;
+    }
+
+    my $delete = $login->prepare(
+        "DELETE FROM openid_users WHERE userid=? AND username=? AND openid_url=?");
+    if($delete->execute($users->[0],$user,$openid)) {
+        print "Success";
+    } else {
+        if(DBI->errstr =~ m/for key 1$/) {
+            print "The OpenID provided is already in use, please try another.";
+        } else {
+            print "Error: ",DBI->errstr,".";
+        }
+    }
+    return;
+}
+
+##################################################################################
+# Add OpenID to Account - Adds a confirmed openid to an account.
+##################################################################################
+sub do_add_openid_to_account {
+    my ($login,$userid,$user,$openid,$only) = @_;
+    my ($error,@results);
+
+    my $insert = $login->prepare("INSERT INTO openid_users VALUES (?,?,?)");
+    if($insert->execute($userid,$user,$openid)) {
+        $error = "Success";
+    } else {
+        if(DBI->errstr =~ m/for key 1$/) {
+            $error = "The OpenID provided is already in use, please try another.";
+        } else {
+            $error = "Error: ".DBI->errstr.".";
+        }
+    }
+    push @results,{user=>$user,only=>$only,error=>$error};
+    return \@results;
+}
+
+##################################################################################
+# Add OpenID User - Adds a new openid user to the user database.
+##################################################################################
+sub do_add_openid_user {
+    my ($login,$user,$openid,$userid,$remember) = @_;
+
+    if(check_user($user)==0) {
+        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
+    }
+
+    my $confirm = sha1(create_key('32'));
+    my $pass    = sha1(create_key('32'));
+    my $email   = create_key('64');
+
+    my $nowfun = nowfun();
+    my $query = $login->prepare(
+        "INSERT INTO users (userid,username,email,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created) VALUES (?,?,?,?,?,1,1,?,$nowfun,$nowfun)"
+    );
+
+    # BUG: we should salt the password
+    $pass = sha1($pass);
+    if($query->execute($userid,$user,$email,$pass,$remember,$confirm)) {
+        my $insert = $login->prepare("INSERT INTO openid_users (userid,username,openid_url) VALUES (?,?,?)");
+        if($insert->execute($userid,$user,$openid)) {
+            print "Success";
+        } else {
+            if(DBI->errstr =~ m/for key 1$/) {
+                print "The OpenID provided is already in use, please try another.";
+            } else {
+                print "Error: ",DBI->errstr,".";
+            }
+        }
+    } else {
+        if(DBI->errstr =~ m/for key 1$/ || DBI->errstr =~ m/for key 3$/) {
+            #If the e-mail happens to match another, this will still be called.
+            print "Username already in use, please try another.";
+        } elsif(DBI->errstr =~ m/for key 2$/) {
+            print "Session Error";
+        } else {
+            print "Error: ",DBI->errstr,".";
+        }
+    }
+    return;
+}
+
+##################################################################################
+# List OpenID - Generates a list of openids associated with a user's account.
+##################################################################################
+sub do_list_openid {
+    my ($login,$user) = @_;
+    my ($error,@openids);
+
+    my $select = $login->prepare(
+        "SELECT openid_url FROM openid_users WHERE username=?");
+    $select->execute($user)
+        or ($error = DBI->errstr and push @openids,{error=>"Error: $error."}
+        and print JSON::to_json(\@openids) and die "Error: ",DBI->errstr);
+
+    while (my $openid = $select->fetchrow_array) {
+        push @openids,{name=>$openid};
+    }
+
+    unless (@openids) {
+        push @openids,{error=>"There are no OpenIDs currently associated with this account."}
+    }
+
+    my @results = sort {$a->{name} cmp $b->{name}} @openids;
+    print JSON::to_json(\@results);
+}
+
+# This handles outgoing email using either Net::SMTP or Net::SMTP::SSL
+# as required.
+# format of smtp argument is:
+#
+#      smtp.server.com:port:encryption:username:password
+#
+# This has up to five fields. Only the first field is required.
+#    The port is assumed to be 25 unless ssl encryption is specified, in
+#               which case it defaults to 465.
+#    protocol is either "plain" or "ssl", "plain" assumed.
+#    username and password may be required by the SMTP server to send 
+#               outgoing mail.
+sub do_sendmail {
+    my $args = shift;
+
+    eval {
+	my $smtp_info = $args->{smtp} or die "need SMTP argument";
+
+	my ($server,$port,$protocol,$username,$password) = split ':',$smtp_info;
+	$protocol ||= 'plain';
+	$port     ||= $protocol eq 'plain' ? 25 : 465;
+	$protocol =~ /plain|ssl/ or die 'encryption must be either "plain" or "ssl"';
+	
+	# At least some SMTP servers will refuse to accept mail
+	# unless From matches the authentication username.
+	my $smtp_from   = $username ? $username : $args->{from};
+
+	my $smtp_sender;
+	if ($protocol eq 'plain') {
+	    eval "require Net::SMTP" unless Net::SMTP->can('new');
+	    $smtp_sender = 'Net::SMTP';
+	} else {
+	    eval "require Net::SMTP::SSL" unless Net::SMTP::SSL->can('new');
+	    $smtp_sender = 'Net::SMTP::SSL';
+	}
+
+	my $smtp = $smtp_sender->new($server,
+				     Port    => $port,
+				     Debug  => 0,
+	    )
+	    or die "Could not connect to outgoing mail server $server";
+
+	if ($username) {
+	    $smtp->auth($username,$password) 
+		or die "Could not authenticate with outgoing mail server $server"
+	}
+
+	$smtp->mail("$smtp_from\n")                    or die $smtp->message;
+	$smtp->to("$args->{to}\n")                     or die $smtp->message;
+	$smtp->data()                                  or die $smtp->message;
+	$smtp->datasend("From: \"$args->{from_title}\" <$args->{from}>\n")
+	                                               or die $smtp->message;
+	$smtp->datasend("To: $args->{to}\n")           or die $smtp->message;
+	$smtp->datasend("Reply-to: $args->{from}\n")   or die $smtp->message;
+	$smtp->datasend("Subject: $args->{subject}\n") or die $smtp->message;
+	$smtp->datasend("\n")                          or die $smtp->message;
+	$smtp->datasend($args->{msg})                  or die $smtp->message;
+	$smtp->datasend("\n")                          or die $smtp->message;
+	$smtp->dataend()                               or die $smtp->message;
+	$smtp->quit();
+	
+    };
+    return (0,$@) if $@;
+    return (1,'');
+}
+
+# return the database-dependent function for determining current date & time
+sub nowfun {
+    return $dbi =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
+}
+
 __END__
+
+
+##################################################################################
+# Database - Copy this script into a file called login.sql and run with mysql
+#              to create the tables required by the login application.
+##################################################################################
+
+/*  Usage: mysql -u root < /location/login.sql  */
+
+DROP DATABASE IF EXISTS gbrowse_login;
+CREATE DATABASE gbrowse_login;
+
+GRANT ALL PRIVILEGES 
+ON gbrowse_login.* 
+TO 'gbrowse'@'localhost' identified by "gbrowse"
+WITH GRANT OPTION;
+
+use gbrowse_login;
+
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+    userid        varchar(32) not null UNIQUE key,
+    username      varchar(32) not null PRIMARY key,
+    email         varchar(64) not null UNIQUE key,
+    pass          varchar(32) not null,
+    remember          boolean not null,
+    openid_only       boolean not null,
+    confirmed         boolean not null,
+    cnfrm_code    varchar(32) not null,
+    last_login      timestamp not null,
+    created          datetime not null
+) ENGINE=InnoDB;
+
+DROP TABLE IF EXISTS openid_users;
+CREATE TABLE openid_users (
+    userid        varchar(32) not null,
+    username      varchar(32) not null,
+    openid_url   varchar(128) not null PRIMARY key
+) ENGINE=InnoDB;
+
+

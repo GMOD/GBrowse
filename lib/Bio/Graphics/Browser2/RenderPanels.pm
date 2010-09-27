@@ -13,6 +13,7 @@ use Bio::Graphics::Browser2::Render::Slave::Status;
 use IO::File;
 use Time::HiRes 'sleep','time';
 use POSIX 'WNOHANG','setsid';
+
 use CGI qw(:standard param escape unescape);
 
 use constant TRUE  => 1;
@@ -355,7 +356,6 @@ sub drag_and_drop {
   1;
 }
 
-# Returns the full HTML listing of all requested tracks.
 sub render_tracks {
     my $self     = shift;
     my $requests = shift;
@@ -381,14 +381,13 @@ sub render_tracks {
             height   => $height,
             url      => $url,
             status   => $status,
-	   		section  => $args->{section},
+	    section  => $args->{section},
         );
     }
     
     return \%result;
 }
 
-# Returns the HMTL to show a track with controls, title, arrows, etc.
 sub wrap_rendered_track {
     my $self   = shift;
     my %args   = @_;
@@ -669,7 +668,7 @@ sub run_remote_requests {
   my $settings   = $self->settings;
   my $lang       = $self->language;
   my %env        = map {$_=>$ENV{$_}}    grep /^(GBROWSE|HTTP)/,keys %ENV;
-  my %args       = map {$_=>$args->{$_}} grep /^-/,keys %$args;									#/
+  my %args       = map {$_=>$args->{$_}} grep /^-/,keys %$args;
 
   $args{$_}  = $args->{$_} foreach ('section','image_class','cache_extra');
 
@@ -1477,7 +1476,7 @@ sub select_features_menu {
 			   -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
 			   -onClick      => $subtrack_click
 			  },
-			  $self->language->tr('SHOWING_SUBTRACKS',$selected,$total));						#;
+			  $self->language->tr('SHOWING_SUBTRACKS',$selected,$total));
     
 }
 
@@ -1594,7 +1593,7 @@ sub add_features_to_track {
 	  my $stt        = $self->subtrack_manager($l);
 	  my $is_summary = $is_summary{$l};
 
-	  $filters->{$l}->($feature) or next if $filters->{$l};
+	  $filters->{$l}->($feature) or next if $filters->{$l} && !$is_summary;
 	  $feature_count{$l}++;
 
 	  # -----------------------------------------------------------------------------
@@ -2052,7 +2051,8 @@ sub get_cache_base {
     return $path;
 }
 
-# Returns the HTML image map from the cached image map data.
+# Convert the cached image map data
+# into HTML.
 sub map_html {
   my $self = shift;
   my $map  = shift;

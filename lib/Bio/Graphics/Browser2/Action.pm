@@ -4,7 +4,7 @@ package Bio::Graphics::Browser2::Action;
 # dispatch
 
 use strict;
-use Carp qw(croak confess cluck);
+use Carp 'croak';
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
 use File::Basename 'basename';
@@ -61,7 +61,8 @@ sub ACTION_navigate {
     my $source   = $self->data_source;
     my $settings = $self->settings;
 
-    my $action = $q->param('navigate') or croak "for the navigate action, a CGI argument named \"navigate\" must be present";
+    my $action = $q->param('navigate') 
+	or croak "for the navigate action, a CGI argument named \"navigate\" must be present";
 
     my $updated = $render->asynchronous_update_coordinates($action);
     $render->init_database() if $updated;
@@ -103,7 +104,8 @@ sub ACTION_update_sections {
     my $render  = $self->render;
     my @section_names = $q->param('section_names');
 
-    my $section_html = $render->asynchronous_update_sections( \@section_names );
+    my $section_html
+	= $render->asynchronous_update_sections( \@section_names );
 
     my $return_object = { section_html => $section_html, };
     return ( 200, 'application/json', $return_object );
@@ -354,19 +356,18 @@ sub ACTION_authorize_login {
     my $openid   = $q->param('openid');   # or croak;
     my $remember = $q->param('remember'); # or croak;
 
-    my ($id,$nonce) = $self->render->authorize_user($username, $session, $remember, $openid);
+    my ($id,$nonce) = $self->render->authorize_user($username,$session,$remember,$openid);
     return (200,'application/json',{id=>$id,authority=>$nonce});
 }
 
 sub ACTION_register_upload {
-	cluck "register_upload called";
     my $self = shift;
     my $q    = shift;
     my $id   = $q->param('upload_id');
     my $name = $q->param('upload_name');
 
     if ($id && $name) {
-		$self->state->{uploads}{$id} = [$name,0];
+	$self->state->{uploads}{$id} = [$name,0];
     }
 
     return (204,'text/plain',undef);
@@ -454,12 +455,13 @@ sub ACTION_import_track {
     $session->flush();
     $session->unlock();
     
-    my ($result, $msg, $tracks) = $usertracks->import_url($url);
+    my ($result,$msg,$tracks) = $usertracks->import_url($url);
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
     $session->flush();
     $session->unlock();
     
+<<<<<<< .working
     my $return_object = {
     		success   => $result || 0,
 			error_msg => CGI::escapeHTML($msg),
@@ -470,6 +472,15 @@ sub ACTION_import_track {
                                    
     #return (200, 'text/html', JSON::to_json($return_object)) if $workaround;
     return (200, 'application/json', {tracks => $tracks});
+=======
+    my $return_object        = { success   => $result||0,
+				 error_msg => CGI::escapeHTML($msg),
+				 tracks    => $tracks ,
+				 uploadName=> $url,
+                               };
+    return (200,'text/html',JSON::to_json($return_object)) if $workaround;
+    return (200,'application/json',$return_object);
+>>>>>>> .merge-right.r23849
 }
 
 sub ACTION_delete_upload {
@@ -483,9 +494,9 @@ sub ACTION_delete_upload {
     my @tracks     = $usertracks->labels($file);
     
     foreach (@tracks) {
-		my (undef,@db_args) = $self->data_source->db_settings($_);
-		Bio::Graphics::Browser2::DataBase->delete_database(@db_args);
-		$render->remove_track_from_state($_);
+	my (undef,@db_args) = $self->data_source->db_settings($_);
+	Bio::Graphics::Browser2::DataBase->delete_database(@db_args);
+	$render->remove_track_from_state($_);
     }
     $usertracks->delete_file($file);
 
@@ -503,13 +514,13 @@ sub ACTION_upload_status {
 
     my $state      = $self->state;
     my $render     = $self->render;
-	
+
     if ($file_name = $state->{uploads}{$upload_id}[0]) {
-		my $usertracks = $render->user_tracks;
-		$status		   = $usertracks->status($file_name);
-		return (200,'text/html', "<b>$file_name:</b> <i>$status</i>");
+	my $usertracks = $render->user_tracks;
+	$status      = $usertracks->status($file_name);
+	return (200,'text/html',"<b>$file_name:</b> <i>$status</i>");
     } else {
-		return (500,'text/html', "not found");
+	return (500,'text/html',"not found");
     }
 }
 
@@ -530,6 +541,7 @@ sub ACTION_cancel_upload {
     } else {
 	return (200,'text/html','<div class="error"><i>Not found</i></div>');
     }
+    
 }
 
 sub ACTION_set_upload_description {
@@ -538,48 +550,12 @@ sub ACTION_set_upload_description {
 
     my $state       = $self->state;
     my $render      = $self->render;
-    my $file = $q->param('file') or confess "No file given to set_upload_description.";
-    my $new_description = $q->param('description') or confess "No new description given to set_upload_description.";
+    my $upload_name = $q->param('upload_name') or croak;
+    my $upload_desc = $q->param('description') or croak;
 
     my $usertracks = $render->user_tracks;
-    $usertracks->description($file, $new_description);
+    $usertracks->description($upload_name,$upload_desc);
     return (204,'text/plain',undef);
-}
-
-sub ACTION_share_file {
-	my $self = shift;
-	my $q = shift;
-	my $render = $self->render;
-    my $fileid = $q->param('fileid') or confess "No file ID given to share_file.";
-    my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
-
-    my $usertracks = $render->user_tracks;
-    $usertracks->share($fileid, $userid);
-    return (204, 'text/plain', undef);
-}
-
-sub ACTION_unshare_file {
-	my $self = shift;
-	my $q = shift;
-	my $render = $self->render;
-    my $fileid = $q->param('fileid') or confess "No file ID given to unshare_file.";
-    my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
-
-    my $usertracks = $render->user_tracks;
-    $usertracks->unshare($fileid, $userid);
-    return (204, 'text/plain', undef);	
-}
-
-sub ACTION_change_permissions {
-	my $self = shift;
-	my $q = shift;
-	my $render = $self->render;
-    my $fileid = $q->param('fileid') or confess "No file ID given to change_permissions.";
-    my $new_policy = $q->param('sharing_policy') or confess "No new sharing policy given to change_permissions.";
-
-    my $usertracks = $render->user_tracks;
-    $usertracks->permissions($fileid, $new_policy);
-    return (204, 'text/plain', undef);	
 }
 
 sub ACTION_modifyUserData {

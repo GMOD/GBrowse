@@ -375,7 +375,6 @@ sub dsn {
     $d;
 }
 
-# Create a new database to hold a user's uploaded file.
 sub create_database {
     my $self      = shift;
     my $data_path = shift;
@@ -405,6 +404,7 @@ END
 	$dbh->do("drop database if exists `$data_path`");
 	$dbh->do("create database `$data_path`")
 	    or die "Could not create $data_path:",DBI->errstr,".\n",$mysql_usage;
+	
     } elsif ($backend eq 'DBI::SQLite') {
 	$self->dsn(File::Spec->catfile($data_path,'index.SQLite'));
     } else {
@@ -441,7 +441,6 @@ sub drop_databases {
     }
 }
 
-# MySQL Admin - Returns the string which defines the custom uploads DB MySQL connection details.
 sub mysql_admin {
     my $self = shift;
     my $globals    = $self->globals;
@@ -449,7 +448,7 @@ sub mysql_admin {
     my $db_user    = $globals->upload_db_user;
     my $db_pass    = $globals->upload_db_pass;
     eval "require DBI" unless DBI->can('connect');
-    my $dsn        = 'DBI:mysql:gbrowse_login;';
+    my $dsn        = 'DBI:mysql:';
     my @options;
     push @options,"host=$db_host"     if $db_host;
     push @options,"user=$db_user"     if $db_user;

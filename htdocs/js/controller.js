@@ -32,9 +32,6 @@ var galaxy_form_id          = 'galaxy_form';
 var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
 var userdata_table_id       = 'userdata_table_div';
-var userimport_table_id     = 'userimport_table_div';
-var custom_tracks_id		= 'custom_tracks';
-var public_tracks_id		= 'public_tracks';
 
 //  Sorta Constants
 var expired_limit  = 1;
@@ -42,300 +39,323 @@ var expired_limit  = 1;
 var GBrowseController = Class.create({
 
   // Class Utility Methods ******************************************
-
-	set_url:
-	function(url) {
-		this.url = url;
-	},
-
-	initialize:
-	function () {
-		this.url = document.URL;
-		this.gbtracks                 = new Hash(); // maps track ids to gbtrack objects
-		this.segment_observers        = new Hash();
-		this.retrieve_tracks          = new Hash();
-		this.ret_track_time_key       = new Hash();
-		this.gbtrackname_to_id        = new Hash(); // maps unique track ids to names
-		// segment_info holds the information used in rubber.js
-		this.segment_info;
-		this.last_update_key;
-		this.tabs;
-
-		//global config variables
-		this.globals = new Hash();
-
-	},
-
-	set_globals:
-	function(obj) {
-		for (var name in obj) {
-			this.globals.set(name, obj[name])
-		}
-
-		var me = this;
-
-		//generate *_url accessors
-		var mk_url_accessor = function( conf_name, acc_name) {
-			me[acc_name] = function(relpath) { return this.globals.get(conf_name) + '/' + relpath; }
-		};
-		mk_url_accessor( 'buttons',      'button_url'     );
-		mk_url_accessor( 'balloons',     'balloon_url'    );
-		mk_url_accessor( 'openid',       'openid_url'     );
-		mk_url_accessor( 'js',           'js_url'         );
-		mk_url_accessor( 'gbrowse_help', 'help_url'       );
-		mk_url_accessor( 'stylesheet',   'stylesheet_url' );
-	},
-
-	reset_after_track_load:
-	// This may be a little overkill to run these after every track update but
-	// since there is no "We're completely done with all the track updates for the
-	// moment" hook, I don't know of another way to make sure the tracks become
-	// draggable again
-	function () {
-		if ( null != $(overview_container_id) ){
-			create_drag(overview_container_id,'track');
-		}
-		if ( null != $(region_container_id) ){
-			create_drag(region_container_id,'track');
-		}
-		if ( null != $(detail_container_id) ){
-			create_drag(detail_container_id,'track');
-		}
-	},
   
-	register_track:
-	function (track_id,track_name,track_type,track_section) {
-		if (this.gbtracks.get(track_id) != null)
-			return;
+  set_url:
+  function(url) {
+    this.url = url;
+  },
 
-		var gbtrack = new GBrowseTrack(track_id,track_name,track_type,track_section); 
+  initialize:
+  function () {
+    this.url = document.URL;
+    this.gbtracks                 = new Hash(); // maps track ids to gbtrack objects
+    this.segment_observers        = new Hash();
+    this.retrieve_tracks          = new Hash();
+    this.ret_track_time_key       = new Hash();
+    this.gbtrackname_to_id        = new Hash(); // maps unique track ids to names
+    // segment_info holds the information used in rubber.js
+    this.segment_info;
+    this.last_update_key;
+    this.tabs;
 
-		this.gbtracks.set(track_id,gbtrack);
+    //global config variables
+    this.globals = new Hash();
 
-		if (this.gbtrackname_to_id.get(track_name) == null)
-			this.gbtrackname_to_id.set(track_name,new Hash());
-		this.gbtrackname_to_id.get(track_name).set(track_id,1);
+  },
 
-		if (track_type=="scale_bar"){
-			return gbtrack;
-		}
-		this.retrieve_tracks.set(track_id,true);
-		return gbtrack;
-	}, // end register_track
+  set_globals:
+  function(obj) {
+    for(var name in obj) {
+      this.globals.set(name, obj[name])
+    }
 
-	unregister_track:
-	function (track_name) {
-		var id_hash  = this.gbtrackname_to_id.get(track_name);
-		if (id_hash != null) {
-			var ids = id_hash.keys();
-			for (var i=0;i<ids.length;i++) this.gbtracks.unset(ids[i]);
-				this.gbtrackname_to_id.unset(track_name);
-		}
-	}, // end unregister_track
+    var me = this;
 
-	unregister_gbtrack:
-	function (gbtrack) {
-		var id_hash = this.gbtrackname_to_id.get(gbtrack.track_name);
-		if (id_hash != null)
-			id_hash.unset(gbtrack.track_id);
-		if (this.gbtracks.get(gbtrack.track_id) != null)
-			this.gbtracks.unset(gbtrack.track_id);
-	},
+    //generate *_url accessors
+    var mk_url_accessor = function( conf_name, acc_name) {
+      me[acc_name] = function(relpath) { return this.globals.get(conf_name) + '/' + relpath; }
+    };
+    mk_url_accessor( 'buttons',      'button_url'     );
+    mk_url_accessor( 'balloons',     'balloon_url'    );
+    mk_url_accessor( 'openid',       'openid_url'     );
+    mk_url_accessor( 'js',           'js_url'         );
+    mk_url_accessor( 'gbrowse_help', 'help_url'       );
+    mk_url_accessor( 'stylesheet',   'stylesheet_url' );
+  },
 
-	// Pass an iterator to execute something on each track
-	// Call as this.each_track(function(track){}) to iterate over all gbtracks.
-	// Call as this.each_track('track_name',function(track){}) to iterate over
-	// all tracks named 'track_name'
-	each_track:
-	function () {
-		if (arguments.length >= 2) {
-			var track_name = arguments[0];
-			var iterator   = arguments[1];
+  reset_after_track_load:
+  // This may be a little overkill to run these after every track update but
+  // since there is no "We're completely done with all the track updates for the
+  // moment" hook, I don't know of another way to make sure the tracks become
+  // draggable again
+  function () {
+    if ( null != $(overview_container_id) ){
+      create_drag(overview_container_id,'track');
+    }
+    if ( null != $(region_container_id) ){
+      create_drag(region_container_id,'track');
+    }
+    if ( null != $(detail_container_id) ){
+      create_drag(detail_container_id,'track');
+    }
+  },
+  
+  register_track:
+  function (track_id,track_name,track_type,track_section) {
 
-			if (this.gbtracks.get(track_name) != null) {
-				iterator(this.gbtracks.get(track_name));
-			} else if (this.gbtrackname_to_id.get(track_name) != null) {
-				var ids = this.gbtrackname_to_id.get(track_name).keys();
-				for (var i=0;i<ids.length;i++)
-				iterator(this.gbtracks.get(ids[i])); // I don't know why each() doesn't work here
-			}
-		} else {
-			var iterator   = arguments[0];
-			this.gbtracks.keys().each(
-				function(key) {
-					var track=this.gbtracks.get(key);
-					iterator(track);
-				}, this
-			);
-		}
-	}, //end each_track
+    if (this.gbtracks.get(track_id) != null)
+      return;
 
-	track_exists:
-	function (track_name) {
-		return this.gbtrackname_to_id.get(track_name) != null;
-	},
+    var gbtrack = new GBrowseTrack(track_id,track_name,track_type,track_section); 
+
+    this.gbtracks.set(track_id,gbtrack);
+
+    if (this.gbtrackname_to_id.get(track_name) == null)
+       this.gbtrackname_to_id.set(track_name,new Hash());
+    this.gbtrackname_to_id.get(track_name).set(track_id,1);
+
+    if (track_type=="scale_bar"){
+      return gbtrack;
+    }
+    this.retrieve_tracks.set(track_id,true);
+    return gbtrack;
+  }, // end register_track
+
+  unregister_track:
+  function (track_name) {
+    var id_hash  = this.gbtrackname_to_id.get(track_name);
+    if (id_hash != null) {
+       var ids = id_hash.keys();
+       for (var i=0;i<ids.length;i++) this.gbtracks.unset(ids[i]);
+       this.gbtrackname_to_id.unset(track_name);
+    }
+  }, // end unregister_track
+
+  unregister_gbtrack:
+  function (gbtrack) {
+      var id_hash = this.gbtrackname_to_id.get(gbtrack.track_name);
+      if (id_hash != null)
+           id_hash.unset(gbtrack.track_id);
+      if (this.gbtracks.get(gbtrack.track_id) != null)
+          this.gbtracks.unset(gbtrack.track_id);
+  },
+
+  // Pass an iterator to execute something on each track
+  // Call as this.each_track(function(track){}) to iterate over all gbtracks.
+  // Call as this.each_track('track_name',function(track){}) to iterate over
+  // all tracks named 'track_name'
+  each_track:
+  function () {
+     if (arguments.length >= 2) {
+       var track_name = arguments[0];
+       var iterator   = arguments[1];
+
+       if (this.gbtracks.get(track_name) != null) {
+          iterator(this.gbtracks.get(track_name));
+       } else if (this.gbtrackname_to_id.get(track_name) != null) {
+         var ids        = this.gbtrackname_to_id.get(track_name).keys();
+         for (var i=0;i<ids.length;i++)
+             iterator(this.gbtracks.get(ids[i])); // I don't know why each() doesn't work here
+       }
+
+     } else {
+       var iterator   = arguments[0];
+       this.gbtracks.keys().each(
+          function(key) {
+	     var track=this.gbtracks.get(key);
+             iterator(track);
+          },this);
+     }
+  }, //end each_track
+
+  track_exists:
+  function (track_name) {
+     return this.gbtrackname_to_id.get(track_name) != null;
+  },
 
 
-	// Sets the time key for the tracks so we know if one is outdated
-	set_last_update_keys:
-	function (track_keys) {
-		var last_update_key  = create_time_key();
-		this.last_update_key = last_update_key;
+  // Sets the time key for the tracks so we know if one is outdated
+  set_last_update_keys:
+  function (track_keys) {
+    var last_update_key  = create_time_key();
+    this.last_update_key = last_update_key;
 
-		var track_key_hash = new Hash;
-		for (var track_name in track_keys)
-			track_key_hash.set(track_name,1);
+    var track_key_hash = new Hash;
+    for (var track_name in track_keys)
+    	track_key_hash.set(track_name,1);
 
-		this.each_track(function(gbtrack) {
-			if (track_key_hash.get(gbtrack.track_name) != null) {
-				gbtrack.set_last_update_key(last_update_key);
-			}
-		});
-	}, // end set_last_update_keys
+    this.each_track(function(gbtrack) {
+        if (track_key_hash.get(gbtrack.track_name) != null) {
+	   gbtrack.set_last_update_key(last_update_key);
+	}
+    });
+  }, // end set_last_update_keys
 
-	// Sets the time key for a single track
-	set_last_update_key:
-	function (gbtrack) {
-		var last_update_key = create_time_key();
-		gbtrack.set_last_update_key(this.last_update_key);
-	},
+  // Sets the time key for a single track
+  set_last_update_key:
+  function (gbtrack) {
+    var last_update_key = create_time_key();
+    gbtrack.set_last_update_key(this.last_update_key);
+    
+  },
 
-	// Hides the detail tracks in case they shouldn't be displayed for some reason
-	hide_detail_tracks:
-	function () {
-		this.each_track(function(gbtrack) {
-			if (gbtrack.is_standard_track() && gbtrack.track_section == 'detail'){
-				$(gbtrack.track_image_id).setOpacity(0.2);
-			}    	
-		});
-	}, 
-	// DOM Utility Methods ********************************************
+  // Hides the detail tracks in case they shouldn't be displayed for some reason
+  hide_detail_tracks:
+  function () {
+    this.each_track(function(gbtrack) {
+        if (gbtrack.is_standard_track() 
+            && gbtrack.track_section == 'detail'){
+          $(gbtrack.track_image_id).setOpacity(0.2);
+        }    	
+    });
+  }, 
+  // DOM Utility Methods ********************************************
 
-	wipe_div:
-	function(div_id) {
-		$(div_id).innerHTML = '';
-	},
+  wipe_div:
+  function(div_id) {
+    $(div_id).innerHTML = '';
+  },
 
-	update_scale_bar:
-	function (bar_obj) {
-		var image_id = bar_obj.image_id;
-		var image = $(image_id);
-		image.setStyle({
-		background: "url(" + bar_obj.url + ") top left no-repeat",
-		width:      bar_obj.width+'px',
-		height:     bar_obj.height+'px',
-		display:    'block',
-		cursor:     'text'
-		});
-		image.setOpacity(1);
-		image.ancestors()[0].setStyle({width: bar_obj.width+'px'});
-	},
+  update_scale_bar:
+  function (bar_obj) {
+    var image_id = bar_obj.image_id;
+    var image = $(image_id);
+    image.setStyle({
+        background: "url(" + bar_obj.url + ") top left no-repeat",
+        width:      bar_obj.width+'px',
+        height:     bar_obj.height+'px',
+        display:    'block',
+        cursor:     'text'
+    });
+    image.setOpacity(1);
+    image.ancestors()[0].setStyle({width: bar_obj.width+'px'});
+  },
 
-	append_child_from_html:
-	function (child_html,parent_obj) {
-		//Append new html to the appropriate section This is a bit cludgy but we
-		//create a temp element, read the html into it and then move the div
-		//element back out.  This keeps the other tracks intact.
-		var tmp_element       = document.createElement("tmp_element");
-		tmp_element.innerHTML = child_html;
-		parent_obj.appendChild(tmp_element);
+  append_child_from_html:
+  function (child_html,parent_obj,onTop) {
+    //Append new html to the appropriate section This is a bit cludgy but we
+    //create a temp element, read the html into it and then move the div
+    //element back out.  This keeps the other tracks intact.
+    if (onTop == null) onTop = false;
 
-		// Move each child node but skip if it is a comment (class is undef)
-		if (tmp_element.hasChildNodes()) {
-			var children = tmp_element.childNodes;
-			for (var i = 0; i < children.length; i++) {
-				if (children[i].className == undefined){
-					continue;
-				}
-				parent_obj.appendChild(children[i]);
-			};
-		};
-		parent_obj.removeChild(tmp_element);
-	},
+    var tmp_element       = document.createElement("tmp_element");
+    tmp_element.innerHTML = child_html;
 
-	// Update Section Methods *****************************************
-	update_sections:
-	function(section_names, param_str, scroll_there, spin, onSuccessFunc) {
-		if (param_str==null){
-		    param_str = '';
-		}
-		if (scroll_there==null) {
-		    scroll_there=false;
-		}
-		if (spin == null) {
-		    spin = false;
-		}
-		
-		var request_str = "action=update_sections" + param_str;
-		for (var i = 0; i < section_names.length; i++) {
-			if (spin)
-				$(section_names[i]).update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
-			request_str += "&section_names="+section_names[i];
-		}
+    var tracks      = parent_obj.getElementsByClassName('track');
+    var first_track = tracks[0];
 
-		new Ajax.Request(Controller.url, {
-			method:     'post',
-			parameters: request_str,
-			onSuccess: function(transport) {
-				var results      = transport.responseJSON;
-				var section_html = results.section_html;
-				for (var section_name in section_html) {
-					html = section_html[section_name];
-					$(section_name).innerHTML = html;
-					if (scroll_there)
-						new Effect.ScrollTo(section_name);
-					if ((section_name=="search_form_objects") && ($('autocomplete_choices') != null))
-						initAutocomplete();
-					if (section_name == page_title_id)
-						document.title = $(section_name).innerHTML;
-					if (onSuccessFunc != null)
-						onSuccessFunc();
-				}
-			}
-		});
-	},
+    if (onTop && first_track != null) {
+	parent_obj.insertBefore(tmp_element,first_track[0]);
+    } else {
+	parent_obj.appendChild(tmp_element);
+    }
+    // Move each child node but skip if it is a comment (class is undef)
+    if (tmp_element.hasChildNodes()) {
+	var children = tmp_element.childNodes;
+	for (var i = 0; i < children.length; i++) {
+	    if (children[i].className == undefined){
+		continue;
+	    }
+	    if (onTop && first_track != null) {
+		parent_obj.insertBefore(children[i],first_track);
+	    } else {
+		parent_obj.appendChild(children[i]);
+	    }
+	}
+    }
+    parent_obj.removeChild(tmp_element);
+  },
 
-	// General option setting used for grid, cache and tooltips ******
-	set_display_option:
-	function(option, value) {
-		var param = {action: 'set_display_option'};
-		param[option] = value;
-		new Ajax.Request(Controller.url,
-			{
-				method: 'post', 
-				parameters: param,
-				onComplete:  function (transport) {
-					Controller.update_coordinates('left 0'); // causes an elegant panel refresh
-				} 
-			}
-		);
-	},
+  // Update Section Methods *****************************************
+  update_sections:
+  function(section_names, param_str, scroll_there, spin, onSuccessFunc) {
 
-	// Signal Change to Server Methods ********************************
-	set_track_visibility:
-	function(track_id,visible) {
-		var gbtrack  = this.gbtracks.get(track_id);
-		if (gbtrack == null) return;
+    if (param_str==null){
+        param_str = '';
+    }
+    if (scroll_there==null) {
+        scroll_there=false;
+    }
+    if (spin == null) {
+        spin = false;
+    }
 
-		var track_name = gbtrack.track_name;
+    var request_str = "action=update_sections" + param_str;
+    for (var i = 0; i < section_names.length; i++) {
+      if (spin)
+        $(section_names[i]).innerHTML = '<img src="' + this.button_url('spinner.gif') + '" alt="Working..." />';
+      request_str += "&section_names="+section_names[i];
+    }
 
-		this.each_track(track_id,function(gbtrack) {
+    new Ajax.Request(Controller.url,{
+      method:     'post',
+      parameters: request_str,
+      onSuccess: function(transport) {
+        var results      = transport.responseJSON;
+        var section_html = results.section_html;
+        for (var section_name in section_html){
+          html    = section_html[section_name];
+          $(section_name).innerHTML = html;
+	  if (scroll_there)
+	    new Effect.ScrollTo(section_name);
+	    if ((section_name=="search_form_objects") 
+	      && ($('autocomplete_choices') != null)) {
+	    	initAutocomplete();
+	    }
+	  if (section_name == page_title_id)
+	     document.title = $(section_name).innerHTML;
+	  if (onSuccessFunc != null) onSuccessFunc();
+        }
+      }
+    });
+  },
 
-			new Ajax.Request(Controller.url,{
-				method:     'post',
-				parameters: {
-					action:     'set_track_visibility',
-					visible:    visible,
-					track_name: track_name
-				},
-				onSuccess: function(transport) {
-					if (visible && gbtrack.get_last_update_key() == null ||	gbtrack.get_last_update_key() < Controller.last_update_key) {
-						Controller.rerender_track(gbtrack.track_id);
-					}
-				}
-			});
-		});
-	},
+  // General option setting used for grid, cache and tooltips ******
+   set_display_option:
+   function(option,value) {
+
+     var param = {action: 'set_display_option'};
+     param[option] = value;
+     new Ajax.Request(Controller.url,
+            {
+		    method: 'post', 
+		    parameters: param,
+		    onComplete:  function (transport) {
+		      Controller.update_coordinates('left 0'); // causes an elegant panel refresh
+		    } 
+            }
+     );
+
+   },
+
+  // Signal Change to Server Methods ********************************
+  set_track_visibility:
+  function(track_id,visible) {
+
+    var gbtrack  = this.gbtracks.get(track_id);
+    if (gbtrack == null) return;
+
+    var track_name = gbtrack.track_name;
+
+    this.each_track(track_id,function(gbtrack) {
+
+      new Ajax.Request(Controller.url,{
+        method:     'post',
+        parameters: {
+	  action:     'set_track_visibility',
+          visible:    visible,
+          track_name: track_name
+        },
+        onSuccess: function(transport) {
+          if (visible && 
+	      gbtrack.get_last_update_key() == null ||
+	      gbtrack.get_last_update_key() < Controller.last_update_key) {
+            Controller.rerender_track(gbtrack.track_id);
+          }
+        }
+      });
+    });
+  },
 
   // Kick-off Render Methods ****************************************
 
@@ -403,13 +423,13 @@ var GBrowseController = Class.create({
   }, // end scroll
 
   add_track:
-  function(track_name, onSuccessFunc, force) {
+  function(track_name, onSuccessFunc, force, onTop) {
     var track_names = new Array(track_name);
-    this.add_tracks(track_names,onSuccessFunc,force);
+    this.add_tracks(track_names,onSuccessFunc,force, onTop);
   },
 
   add_tracks:
-  function(track_names, onSuccessFunc, force) {
+  function(track_names, onSuccessFunc, force, onTop) {
 
     if (force == null) force=false;
 
@@ -456,7 +476,7 @@ var GBrowseController = Class.create({
           var html           = this_track_data.track_html;
           var panel_id       = this_track_data.panel_id;
 
-          Controller.append_child_from_html(html,$(panel_id));
+          Controller.append_child_from_html(html,$(panel_id),onTop);
 
           if (this_track_data.display_details == 0){
             $(ret_gbtrack.track_image_id).setOpacity(0);
@@ -722,13 +742,13 @@ var GBrowseController = Class.create({
   configure_plugin:
   function(div_id) {
     var plugin_base  = document.pluginform.plugin.value;
-    this.update_sections(new Array(div_id), '&plugin_base='+plugin_base,null,null,true);
-    new Effect.ScrollTo(div_id);
-    new Effect.BlindDown(div_id);
+    this.update_sections(new Array(div_id), '&plugin_base='+plugin_base,true,false,null);
+    Effect.BlindDown(div_id);
   },
 
   reconfigure_plugin:
   function(plugin_action,plugin_track_id,pc_div_id,plugin_type,form_element) {
+
     if (form_element==null)
        form_element = $("configure_plugin");
     else
@@ -745,6 +765,7 @@ var GBrowseController = Class.create({
         if (pc_div_id != null) Controller.wipe_div(pc_div_id); 
 
         if (plugin_type == 'annotator'){
+          ShowHideTrack(plugin_track_id,true);
 	  Controller.each_track(plugin_track_id,function(gbtrack) {
               Controller.rerender_track(gbtrack.track_id,true);
             });
@@ -787,7 +808,6 @@ var GBrowseController = Class.create({
       return false; 
     }
     else if (plugin_type == 'finder'){
-        alert('Searching for ' + $F('landmark_search_field') + ' via ' + $F('plugin'));
 	document.searchform.plugin_find.value  = $F('plugin');
 	document.searchform.force_submit.value = 1;
 	document.searchform.submit();
@@ -871,42 +891,36 @@ var GBrowseController = Class.create({
 
   set_upload_description:
   function(event) {
-		var description_box = event.findElement();
-		if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
-			var file = description_box.up("div[id^='upload_']").id.sub("upload_","");
-			var description = description_box.innerHTML;
-			description_box.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
-			new Ajax.Request(Controller.url, {
-				method:      'post',
-				parameters:{  
-					action: 'set_upload_description',
-					file: file,
-					description: description
-				},
-				onSuccess: function(transport) {
-					var sections = new Array(custom_tracks_id);
-					if (using_database())
-						sections.push(public_tracks_id);
-					Controller.update_sections(sections);
-				}
-			});
-			description_box.stopObserving('keypress');
-			description_box.stopObserving('blur');
-			description_box.blur();
-			return true;
-		}
-		if (event.keyCode==Event.KEY_ESC) {
-			description_box.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
-			var sections = new Array(custom_tracks_id);
-			if (using_database())
-				sections.push(public_tracks_id);
-			Controller.update_sections(sections);
-			description_box.stopObserving('keypress');
-			description_box.stopObserving('blur');
-			description_box.blur();
-			return true;
-		}
-		return false;
+      var el = event.findElement();
+      if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
+	  var upload_name = el.id.sub('_description$','');
+	  var desc        = el.innerHTML;
+	  el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+	  new Ajax.Request(Controller.url, {
+		      method:      'post',
+		      parameters:{  
+		          action: 'set_upload_description',
+			  upload_name: upload_name,
+			  description: desc
+		      },
+		      onSuccess: function(transport) {
+		      Controller.update_sections(new Array(userdata_table_id));
+		      }
+	       });
+	  el.stopObserving('keypress');
+	  el.stopObserving('blur');
+	  el.blur();
+	  return true;
+      }
+      if (event.keyCode==Event.KEY_ESC) {
+          el.innerHTML  = '<img src="' + Controller.button_url('spinner.gif') + '" alt="Working..." />';
+	  Controller.update_sections(new Array(userdata_table_id));
+	  el.stopObserving('keypress');
+	  el.stopObserving('blur');
+	  el.blur();
+	  return true;
+      }
+      return false;
   },
 
   // downloadUserTrackSource() is called to populate the user track edit field
@@ -925,46 +939,57 @@ var GBrowseController = Class.create({
 
   },
 
-	// uploadUserTrackSource() is called to submit a user track edit field
-	// to the server
-	uploadUserTrackSource:
-	function (sourceField,fileName,sourceFile,editElement) {
+  _modifyUserTrackSource:
+  function (param,statusElement,displayWhenDone) {
+     var upload_id  = 'upload_' + Math.floor(Math.random() * 99999);
+     param.upload_id = upload_id;
+     new Ajax.Request(Controller.url, {
+     	 method:       'post',
+	 parameters:   param,
+         onCreate:    function() {
+	      if ($(statusElement) != null) {
+	      	 $(statusElement).innerHTML = '<div id="'+upload_id+'_form'+'"></div>'
+                               		   +'<div id="'+upload_id+'_status'+'"></div>';
+	      }
+	      startAjaxUpload(upload_id);
+	     },
+         onSuccess:   function (transport) {
+	 	          if ($(statusElement) != null) $(statusElement).remove();
+			  var r = transport.responseJSON;
+			  Controller.add_tracks(r.tracks,null,false,true);
+			  r.tracks.each(function(t) {
+			  	      Controller.rerender_track(t,true,true);
+				      });
+		          var updater = Ajax_Status_Updater.get(upload_id);
+			  if (updater != null) updater.stop();
+		          Controller.update_sections(new Array(userdata_table_id,track_listing_id));
+			  if (displayWhenDone != null && displayWhenDone)
+			      Controller.select_tab('main_page');
+	               }
+         });
+     
+  },
 
-		var upload_id  = 'upload_' + Math.floor(Math.random() * 99999);
+  // uploadUserTrackSource() is called to submit a user track edit field
+  // to the server
+  uploadUserTrackSource:
+  function (sourceField,fileName,sourceFile,editElement) {
+      this._modifyUserTrackSource({ action:     'modifyUserData',
+				    track:      fileName,
+				    sourceFile: sourceFile,
+				    data:       $F(sourceField)
+                                   },
+	                          editElement);
+  },
 
-		new Ajax.Request(Controller.url, {
-			method:       'post',
-			parameters: {
-					action:     'modifyUserData',
-					track:      fileName,
-					sourceFile: sourceFile,
-					upload_id:  upload_id,
-					data:       $F(sourceField)
-			},
-			onCreate: function() {
-					if ($(editElement) != null) {
-						$(editElement).update().insert(new Element("div", {id: upload_id + "_form"}));
-						$(editElement).insert(new Element("div", {id: upload_id + "_status"}) );
-					}
-					startAjaxUpload(upload_id);
-			},
-			onSuccess: function (transport) {
-				if ($(editElement) != null)
-					$(editElement).remove();
-				var r = transport.responseJSON;
-				r.tracks.each(function(t) {
-					Controller.rerender_track(t,true,true);
-				});
-				var updater = Ajax_Status_Updater.get(upload_id);
-				if (updater != null)
-					updater.stop();
-				var sections = new Array(custom_tracks_id, track_listing_id);
-				if (using_database())
-					sections.push(public_tracks_id);
-				Controller.update_sections(sections);
-			}
-		});
-	},
+  // mirrorTrackSource() is called to mirror a URL to a track
+  mirrorTrackSource:
+  function (sourceURL,trackName,statusElement,displayWhenDone) {
+      this._modifyUserTrackSource( { action:     'upload_file',
+                                     name:       trackName,
+				     mirror_url: sourceURL },
+	                            statusElement,displayWhenDone);
+  },
 
 // monitor_upload is redundant and needs to be refactored
 // the idea is to register a new upload
@@ -973,7 +998,7 @@ var GBrowseController = Class.create({
   	new Ajax.Request(Controller.url, {
 	    method:     'post',
 	    parameters: {
-	    	action:      'register_upload',
+	    		action:      'register_upload',
 			upload_id:   upload_id,
 			upload_name: upload_name
 	      }
@@ -986,6 +1011,18 @@ var GBrowseController = Class.create({
      if (this.tabs != null) {
        this.tabs.select_tab(tab_id);
      }
+  },
+
+  wait_for_initialization:
+  function (html,callback) {
+      $('main').setOpacity(0.2);
+      var html = '<div id="dialog_123" style="position:absolute; left:50px; top:50px; border:5px double black; background: wheat; z-index:100">'
+                 + html
+                 +'</div>';
+      $('main').insert({before:html});
+      if (callback) callback();
+      $('main').setOpacity(1.0);
+      $('dialog_123').remove();
   }
 
 
@@ -993,38 +1030,31 @@ var GBrowseController = Class.create({
 
 var Controller = new GBrowseController; // singleton
 
-function using_database() {
-	return ($("public_tracks"))? true : false;
-}
-
 function initialize_page() {
 
-	// These statements initialize the tabbing
-	Controller.tabs = new TabbedSection(['main_page','track_page','custom_tracks_page','settings_page']);
+  // These statements initialize the tabbing
+  Controller.tabs = new TabbedSection(['main_page','track_page','custom_tracks_page','settings_page']);
 
-	//event handlers
-	[page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
-		if ($(el) != null) {
-		  Controller.segment_observers.set(el,1);
-		}
-	});
+  //event handlers
+    [page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
+    if ($(el) != null) {
+      Controller.segment_observers.set(el,1);
+    }
+  });
+  
+  // The next statement is to avoid the scalebars from being "out of sync"
+  // when manually advancing the browser with its forward/backward buttons.
+  // Unfortunately it causes an infinite loop when there are multiple regions!
+  if ($(detail_container_id) != null)
+      Controller.update_coordinates('left 0');
 
-	// The next statement is to avoid the scalebars from being "out of sync"
-	// when manually advancing the browser with its forward/backward buttons.
-	// Unfortunately it causes an infinite loop when there are multiple regions!
-	if ($(detail_container_id) != null)
-	  Controller.update_coordinates('left 0');
+  // These statements get the rubberbanding running.
+  Overview.prototype.initialize();
+  Region.prototype.initialize();
+  Details.prototype.initialize();
+  if ($('autocomplete_choices') != null) 
+       initAutocomplete();
 
-	// These statements get the rubberbanding running.
-	Overview.prototype.initialize();
-	Region.prototype.initialize();
-	Details.prototype.initialize();
-	if ($('autocomplete_choices') != null) 
-	   initAutocomplete();
-
-	var share_link = window.location.href.parseQuery().share_link;
-	if (share_link)
-		shareFile(share_link, "");
 }
 
 // set the colors for the rubberband regions

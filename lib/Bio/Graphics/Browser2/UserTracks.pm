@@ -4,8 +4,6 @@ package Bio::Graphics::Browser2::UserTracks;
 use strict;
 use Bio::Graphics::Browser2::DataSource;
 use Bio::Graphics::Browser2::DataLoader;
-use Bio::Graphics::Browser2::UserTracks::Filesystem;
-use Bio::Graphics::Browser2::UserTracks::Database;
 use File::Spec;
 use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
@@ -13,13 +11,23 @@ use IO::File;
 use IO::String;
 use File::Temp 'tempdir';
 use POSIX ();
-use Carp qw(croak cluck);
-use CGI 'param';
+use Carp 'croak';
 
 use constant DEBUG => 0;
 my $HASBIGWIG;
 
-# The intent of this is to provide a single unified interface for managing a user's uploaded and shared tracks.
+# The intent of this is to provide a single unified interface for managing
+# a user's uploaded and shared tracks.
+
+# It works on the basis of a file-based database with the following structure:
+#    base      -- e.g. /var/tmp/gbrowse2/userdata
+#    uploadid  -- e.g. dc39b67fb5278c0da0e44e9e174d0b40
+#    source    -- e.g. volvox
+#    concatenated path /var/tmp/gbrowse2/userdata/volvox/dc39b67fb5278c0da0e44e9e174d0b40
+
+# The concatenated path contains a series of directories named after the track.
+# Each directory has a .conf file that describes its contents and configuration.
+# There will also be data files associated with the configuration.
 
 # class methods
 sub busy_file_name     { 'BUSY'      }
@@ -29,45 +37,46 @@ sub mirrored_file_name { 'MIRRORED'  }
 sub sources_dir_name   { 'SOURCES'   }
 
 sub new {
-    my $class = shift;
-	my $globals = Bio::Graphics::Browser2->open_globals;
-	if ($globals->upload_db_adaptor =~ /(DBI|db)/) {
-		return Bio::Graphics::Browser2::UserTracks::Database->_new(@_);
-	} elsif ($globals->upload_db_adaptor =~ /memory/) {
-		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
-	} else {
-		croak "Could not determine whether to user Filesystem or Database.";
-	}
+    my $self = shift;
+    my ($config,$state,$lang,$uuid) = @_;
+    $uuid ||= $state->{uploadid};
+
+    return bless {
+	config   => $config,
+	state    => $state,
+	language => $lang,
+	uuid     => $uuid,
+    },ref $self || $self;
 }
 
 sub config   { shift->{config}    }
 sub state    { shift->{state}     }    
 sub language { shift->{language}  }
-sub database { return (shift->{globals}->upload_db_adaptor =~ /(DBI|db)/)? 1 : 0; } # If this changes, also change the constructor.
 
-# Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {
-    my $self = shift;
-    my $uploadsid = $self->{uploadsid};
-	return $self->config->userdata($uploadsid);
+    my $self   = shift;
+    my $uploadid = $self->{uuid} || '';
+    $self->config->userdata($uploadid);
 }
 
-# Tracks - Returns an array of paths to a user's tracks.
 sub tracks {
-    my $self = shift;
-	
-	my @tracks;
-	push (@tracks, $self->get_uploaded_files, $self->get_imported_files);
-	if ($self->database == 1) {
-		push (@tracks, $self->get_added_public_files, $self->get_shared_files);
-	}
-	return @tracks;
+    my $self     = shift;
+    my $path     = $self->path;
+    return unless $self->{uuid};
+
+    my @result;
+    opendir D,$path;
+    while (my $dir = readdir(D)) {
+	next if $dir =~ /^\.+$/;
+	push @result,$dir;
+    }
+    return @result;
 }
 
 sub is_mirrored {
     my $self  = shift;
-    my $filename = $self->filename(shift);
-    my $mirror_flag = $self->mirror_flag($filename);
+    my $track = shift;
+    my $mirror_flag = $self->mirror_flag($track);
     return unless -e $mirror_flag;
     open(my $i,$mirror_flag);
     my $url = <$i>;
@@ -77,210 +86,218 @@ sub is_mirrored {
 
 sub set_mirrored {
     my $self = shift;
-    my $filename = $self->filename(shift);
-    my $url = shift;
-    my $flagfile = $self->mirror_flag($filename);
+    my ($track_name,$url) = @_;
+    my $flagfile = $self->mirror_flag($track_name);
     open my $i,">",$flagfile or warn "can't open mirror file: $!";
     print $i $url;
     close $i;
 }
 
-# Returns the path to a file's conf file location.
 sub conf_files {
     my $self = shift;
     my $path = $self->path;
-    my $filename = $self->filename(shift);
-    return grep {-e $_} map {File::Spec->catfile($path, $filename, "$filename.conf")} $self->tracks;
+    return grep {-e $_} map {File::Spec->catfile($path,$_,"$_.conf")} $self->tracks;
 }
 
-# Returns path to the folder holding a track.
 sub track_path {
     my $self  = shift;
-    my $filename = $self->filename(shift);
-    return File::Spec->catfile($self->path, $filename);
+    my $track = shift;
+    return File::Spec->catfile($self->path,$track);
 }
 
-# Returns the full path to the track's data file.
 sub data_path {
     my $self = shift;
-	my $filename = $self->filename(shift);
-    my $datafile = shift;
-    return File::Spec->catfile($self->path, $filename, $self->sources_dir_name, $datafile);
+    my ($track,$datafile) = @_;
+    return File::Spec->catfile($self->path,$track,$self->sources_dir_name,$datafile);
 }
 
-# Returns the full path to the track's configuration file.
 sub track_conf {
-    my $self = shift;
-    my $filename = $self->filename(shift);
-    return File::Spec->catfile($self->path, $filename, "$filename.conf");
+    my $self  = shift;
+    my $track = shift;
+    return File::Spec->catfile($self->path,$track,"$track.conf");
 }
 
-# Returns a file handle to a conf file.
 sub conf_fh {
     my $self = shift;
-    my $filename = $self->filename(shift);
-    return Bio::Graphics::Browser2::UserConf->fh($self->track_conf($filename));
+    my $track = shift;
+    return Bio::Graphics::Browser2::UserConf->fh($self->track_conf($track));
 }
 
-# Returns the location of the import flag file.
 sub import_flag {
-    my $self = shift;
-    my $filename = $self->filename(shift);
-    return File::Spec->catfile($self->path, $filename, $self->imported_file_name);
+    my $self  = shift;
+    my $track = shift;
+    return File::Spec->catfile($self->path,
+			       $track,
+			       $self->imported_file_name);
 }
 
 sub mirror_flag {
-    my $self = shift;
-    my $filename = $self->filename(shift);
-    return File::Spec->catfile($self->path, $filename, $self->mirrored_file_name);
+    my $self  = shift;
+    my $track = shift;
+    return File::Spec->catfile($self->path,
+			       $track,
+			       $self->mirrored_file_name);
 }
 
-# Returns the modified time and size of a conf file.
+sub created {
+    my $self  = shift;
+    my $track = shift;
+    my $conf  = File::Spec->catfile($self->path,$track,"$track.conf");
+    return (stat($conf))[10];
+}
+
+sub modified {
+    my $self  = shift;
+    my $track = shift;
+    return ($self->conf_metadata($track))[1];
+}
+
 sub conf_metadata {
-    my $self = shift;
-    my $filename = $self->filename(shift);
-    my $conf = File::Spec->catfile($self->path, $filename, "$filename.conf");
-    my $name = basename($conf);
-    return ($name, (stat($conf))[9, 7]);
+    my $self  = shift;
+    my $track = shift;
+    my $conf  = File::Spec->catfile($self->path,$track,"$track.conf");
+    my $name  = basename($conf);
+    return ($name,(stat($conf))[9,7]);
 }
 
-# Source Files - Returns an array of source files (with details) associated with a specified track.
+sub description {
+    my $self  = shift;
+    my $track = shift;
+    my $desc  = File::Spec->catfile($self->path,$track,"$track.desc");
+    if (@_) {
+	warn "setting desc to @_" if DEBUG;
+	open my $f,">",$desc or return;
+	print $f join("\n",@_);
+	close $f;
+	return 1;
+    } else {
+	open my $f,"<",$desc or return;
+	my @lines = <$f>;
+	return join '',@lines;
+    }
+}
+
 sub source_files {
     my $self = shift;
-    my $fileid = shift;
-    my $filename = $self->filename($fileid);
-    my $path = File::Spec->catfile($self->track_path($fileid), $self->sources_dir_name);
-    
+    my $track = shift;
+    my $path = File::Spec->catfile($self->track_path($track),
+				   $self->sources_dir_name);
     my @files;
-    if (opendir my $dir, $path) {
-		while (my $f = readdir($dir)) {
-			my $path = File::Spec->catfile($path, $f);
-			next unless -f $path;
-			my ($size, $mtime) = (stat(_))[7,9];
-			push @files, [$f, $size, $mtime, $path];
-		}
+    if (opendir my $dir,$path) {
+	while (my $f = readdir($dir)) {
+	    my $path = File::Spec->catfile($path,$f);
+	    next unless -f $path;
+	    my ($size,$mtime) = (stat(_))[7,9];
+	    push @files,[$f,$size,$mtime,$path];
+	}
     }
     return @files;
 }
 
-# Trackname from URL - Gets a track name from a given URL
 sub trackname_from_url {
     my $self     = shift;
-    my $url      = $self->filename(shift);
+    my $url      = shift;
     my $uniquefy = shift;
 
     warn "trackname_from_url($url)" if DEBUG;
 
-    (my $filename = $url) =~ tr/a-zA-Z0-9_%^@.-/_/cs;
+    (my $track_name=$url) =~ tr!a-zA-Z0-9_%^@.-!_!cs;
 
-    if (length $filename > $self->max_filename) {
-		$filename = substr($filename, 0, $self->max_filename);
+    if (length $track_name > $self->max_filename) {
+	$track_name = substr($track_name,0,$self->max_filename);
     }
 
     my $unique = 0;
     while ($uniquefy && !$unique) {
-		my $path = $self->track_path($filename);
-		if (-e $path) {
-			$filename .= "-0" unless $filename =~ /-\d+$/;
-			$filename  =~ s/-(\d+)$/'-'.($1+1)/e; # add +1 to the trackname
-		} else {
-			$unique++;
-		}
+	my $path = $self->track_path($track_name);
+	if (-e $path) {
+	    $track_name .= "-0" unless $track_name =~ /-\d+$/;
+	    $track_name  =~ s/-(\d+)$/'-'.($1+1)/e; # add +1 to the trackname
+	} else {
+	    $unique++;
+	}
     }
 
-    my $path = $self->track_path($filename);
+    my $path = $self->track_path($track_name);
     rmtree($path) if -e $path;  # only happens if uniquefy = 0
     mkpath $path;
-    return $filename;
+    return $track_name;
 }
 
-# Max filename - Returns the maximum possible length for a file name.
 sub max_filename {
     my $self = shift;
-    my $length = POSIX::pathconf($self->path, &POSIX::_PC_NAME_MAX) || 255;
+    my $length = POSIX::pathconf($self->path,&POSIX::_PC_NAME_MAX) || 255;
     return $length - 4; # give enough room for the suffix
 }
 
-# Import URL - Imports a URL for use in the database.
 sub import_url {
     my $self = shift;
-    my $url       = shift;
-    my $overwrite = shift;
-    my $privacy_policy = shift // "private";													#/
-    my $username = $self->{username};
-    my $userdb = $self->{userdb};
-    my $userid = $self->{uploadid};
+
+    my ($url,$overwrite) = @_;
 
     my $key;
     if ($url =~ m!http://([^/]+).+/(\w+)/\?.*t=([^+;]+)!) {
-		my @tracks = split /\+/,$3;
-		$key = "Shared track from $1 (@tracks)";
-    } else {
-    	$key  = "Shared track from $url";
+	my @tracks = split /\+/,$3;
+	$key = "Shared track from $1 (@tracks)";
     }
+    else {$key  = "Shared track from $url";}
 
-    my $filename = $self->trackname_from_url($url, !$overwrite);
-    
-    my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
-							  $self->track_path($filename),
-							  $self->track_conf($filename),
+    my $track_name = $self->trackname_from_url($url,!$overwrite);
+    my $loader = Bio::Graphics::Browser2::DataLoader->new($track_name,
+							  $self->track_path($track_name),
+							  $self->track_conf($track_name),
 							  $self->config,
 							  $self->state->{uploadid});
     $loader->strip_prefix($self->config->seqid_prefix);
     $loader->set_status('starting import');
 
-    my $conf = $self->track_conf($filename);
-    open (my $f, "+>", $conf) or croak "Couldn't open $conf: $!";
-    my @data = $f;
+    my $conf = $self->track_conf($track_name);
+    open my $f,">",$conf or croak "Couldn't open $conf: $!";
 
     if ($url =~ /\.bam$/) {
-		print $f $self->remote_bam_conf($filename, $url, $key);
+	print $f $self->remote_bam_conf($track_name,$url,$key);
     } 
     elsif ($url =~ /\.bw$/) {
-		print $f $self->remote_bigwig_conf($filename, $url, $key);
+	print $f $self->remote_bigwig_conf($track_name,$url,$key);
     }
     else {
-		print $f $self->remote_mirror_conf($filename, $url, $key);
+	print $f $self->remote_mirror_conf($track_name,$url,$key);
     }
 
     close $f;
-    open my $i, ">", $self->import_flag($filename);
+    open my $i,">",$self->import_flag($track_name);
     close $i;
 
     $loader->set_processing_complete;
-    $self->add_file($url, 1);
-	
-    return (1, '', [$filename]);
+
+    return (1,'',[$track_name]);
 }
 
-# Attempts to reload a file into the database.
 sub reload_file {
-    my $self = shift;
-    my $filename = $self->filename(shift);
-    my @sources = $self->source_files($filename);
+    my $self  = shift;
+    my $track   = shift;
+    my @sources = $self->source_files($track);
     for my $s (@sources) {
-		my ($name, $size, $mtime, $path) = @$s;
-		rename $path, "$path.bak" or next;
-		my $io = IO::File->new("$path.bak") or next;
-		my ($result) = $self->upload_file($name, $io,'',1);
-		if ($result) {
-			unlink "$path.bak";
-		} else {
-			rename "$path.bak", $path;
-		}
+	my ($name,$size,$mtime,$path) = @$s;
+	rename $path,"$path.bak"            or next;
+	my $io = IO::File->new("$path.bak") or next;
+	my ($result) = $self->upload_file($name,$io,'',1);
+	if ($result) {
+	    unlink "$path.bak";
+	} else {
+	    rename "$path.bak",$path;
+	}
     }
 }
 
 sub mirror_url {
-    my $self = shift;
-    my $name = $self->filename(shift);
-    my $url = shift;
-    my $overwrite = shift;
+    my $self  = shift;
+    my ($name,$url,$overwrite) = @_;
 
     warn "mirroring..." if DEBUG;
 
     if ($url =~ /\.(bam|bw)$/ or $url =~ /\b(gbgff|das)\b/) {
-	return $self->import_url($url, $overwrite);
+	return $self->import_url($url,$overwrite);
     }
 
     # first we do a HEAD to validate that the thing exists
@@ -302,21 +319,20 @@ sub mirror_url {
     unless ($child) {
 	warn "printing from child..." if DEBUG;
 	$fh->writer();
-	$self->_print_url($agent, $url, $fh);
+	$self->_print_url($agent,$url,$fh);
 	CORE::exit 0;
     }
     $fh->reader;
-    my @result = $self->upload_file($name, $fh, $result->header('Content-Type') || 'text/plain', $overwrite);
-    $self->set_mirrored($name, $url);
+    my @result = $self->upload_file($name,$fh,$result->header('Content-Type')||'text/plain',$overwrite);
+    $self->set_mirrored($name,$url);
     return @result;
 }
 
-# Upload Data - Uploads a string of data entered as text (on the Upload & Share Tracks tab).
 sub upload_data {
     my $self = shift;
-    my ($file_name, $data, $content_type, $overwrite) = @_;
+    my ($file_name,$data,$content_type,$overwrite) = @_;
     my $io = IO::String->new($data);
-    $self->upload_file($file_name, $io, $content_type, $overwrite);
+    $self->upload_file($file_name,$io,$content_type,$overwrite);
 }
 
 sub upload_url {
@@ -336,63 +352,68 @@ sub upload_url {
     return @args;
 }
 
-# Upload File - Uploads a user's file, as called by the AJAX upload system (on the Upload & Share Tracks tab).
 sub upload_file {
     my $self = shift;
-    my ($file_name, $fh, $content_type, $overwrite) = @_;
+    my ($file_name,$fh,$content_type,$overwrite) = @_;
 
     warn "$file_name: OVERWRITE = $overwrite" if DEBUG;
 
-    my $filename = $self->trackname_from_url($file_name, !$overwrite);
-    my $userid = $self->{userid};
-    my $userdb = $self->{userdb};
-    
+    my $track_name = $self->trackname_from_url($file_name,!$overwrite);
     $content_type ||= '';
 
     if ($content_type eq 'application/gzip' or $file_name =~ /\.gz$/) {
-		$fh = $self->install_filter($fh,'gunzip -c');
+	$fh = $self->install_filter($fh,'gunzip -c');
     } elsif ($content_type eq 'application/bzip2' or $file_name =~ /\.bz2$/) {
-		$fh = $self->install_filter($fh,'bunzip2 -c');
+	$fh = $self->install_filter($fh,'bunzip2 -c');
     }
     
     # guess the file type from the first non-blank line
-    my ($type,$lines,$eol)   = $self->guess_upload_type($file_name, $fh);
+    my ($type,$lines,$eol)   = $self->guess_upload_type($file_name,$fh);
     $lines                 ||= [];
     my (@tracks,$fcgi);
 
-    my $result = eval {
-		local $SIG{TERM} = sub { die "cancelled" };
-		croak "Could not guess the type of the file $file_name"
-			unless $type;
+    my $result= eval {
+	local $SIG{TERM} = sub { die "cancelled" };
+	croak "Could not guess the type of the file $file_name"
+	    unless $type;
 
-		my $load = $self->get_loader($type, $file_name);
-		$load->eol_char($eol);
-		@tracks = $load->load($lines, $fh);
-		1;
+	my $load = $self->get_loader($type,$track_name);
+	$load->eol_char($eol);
+	@tracks = $load->load($lines,$fh);
+	1;
     };
-    
-    $self->add_file($file_name, 0);
 
     if ($@ =~ /cancelled/) {
-		$self->delete_file($file_name);
-		return (0,'Cancelled by user',[]);
+	$self->delete_file($track_name);
+	return (0,'Cancelled by user',[]);
     }
 
     my $msg = $@;
-    warn "UPLOAD ERROR: ", $msg if $msg;
-    $self->delete_file($file_name) unless $result;
-    return ($result, $msg, \@tracks);
+    warn "UPLOAD ERROR: ",$msg if $msg;
+    $self->delete_file($track_name) unless $result;
+    return ($result,$msg,\@tracks);
+}
+
+sub delete_file {
+    my $self = shift;
+    my $track_name  = shift;
+    my $loader = Bio::Graphics::Browser2::DataLoader->new($track_name,
+							  $self->track_path($track_name),
+							  $self->track_conf($track_name),
+							  $self->config,
+							  $self->state->{uploadid});
+    $loader->drop_databases($self->track_conf($track_name));
+    rmtree($self->track_path($track_name));
 }
 
 sub merge_conf {
-    my $self = shift;
-    my $filename = $self->filename(shift);
-    my $new_data = shift;
+    my $self       = shift;
+    my ($track_name,$new_data) = @_;
 
-    my $path = $self->track_conf($filename) or return;
+    my $path = $self->track_conf($track_name) or return;
 
     my @lines = split /\r\n|\r|\n/,$new_data;
-    my (%stanzas, $current_stanza);
+    my (%stanzas,$current_stanza);
     for (@lines) {
 	if (/^\[(.+)\]/) {
 	    $current_stanza = $1;
@@ -402,14 +423,14 @@ sub merge_conf {
 	}
     }
 
-    open my $fh, $path or croak "$path: $!";
+    open my $fh,$path or croak "$path: $!";
     my $merged = '';
     my @database;
     # read header with the [database] definition
     while (<$fh>) {
-		$merged .= $_;
-		push @database,$1 if /^\[(.+):database/;
-		last if /cut here/;
+	$merged .= $_;
+	push @database,$1 if /^\[(.+):database/;
+	last if /cut here/;
     }
 
     $merged .= "\n";
@@ -442,18 +463,18 @@ sub merge_conf {
 }
 
 sub labels {
-    my $self = shift;
-    my $filename = $self->filename(shift);
-    my $conf = $self->track_conf($filename) or return;
-    return grep {!/:(database|\d+)/} eval{ Bio::Graphics::FeatureFile->new(-file=>$conf)->labels };
+    my $self       = shift;
+    my $track_name = shift;
+    my $conf       = $self->track_conf($track_name) or return;
+    return grep {!/:(database|\d+)/} eval{Bio::Graphics::FeatureFile->new(-file=>$conf)->labels};
 }
 
-# Status - Returns the status of a DataLoader object for a specific file.
 sub status {
-    my $self = shift;
-    my $filename = $self->filename(shift);
-    my $loader = 'Bio::Graphics::Browser2::DataLoader';
-    my $load = $loader->new($filename,
+    my $self     = shift;
+    my $filename = shift;
+
+    my $loader   = 'Bio::Graphics::Browser2::DataLoader';
+    my $load   = $loader->new($filename,
 			      $self->track_path($filename),
 			      $self->track_conf($filename),
 			      $self->config,
@@ -462,18 +483,16 @@ sub status {
     return $load->get_status();
 }
 
-# Get Loader - Returns the loader of the appropriate DataLoader package type for a specific file.
 sub get_loader {
-    my $self = shift;
-    my $type = shift;
-    my $filename = $self->filename(shift);
-	
+    my $self   = shift;
+    my ($type,$track_name) = @_;
+
     my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";
     die $@ if $@;
-    my $loader = $module->new($filename,
-			      $self->track_path($filename),
-			      $self->track_conf($filename),
+    my $loader = $module->new($track_name,
+			      $self->track_path($track_name),
+			      $self->track_conf($track_name),
 			      $self->config,
 			      $self->state->{uploadid},
 	);
@@ -486,9 +505,9 @@ sub get_loader {
 # during this operation so that the info isn't lost.
 sub guess_upload_type {
     my $self = shift;
-    my ($type, $lines, $eol) = $self->_guess_upload_type(@_);
+    my ($type,$lines,$eol) = $self->_guess_upload_type(@_);
     $type = 'bigwig' if $type eq 'wiggle' && $self->has_bigwig;
-    return ($type, $lines, $eol);
+    return ($type,$lines,$eol);
 }
 
 sub _guess_upload_type {
@@ -560,7 +579,6 @@ sub has_bigwig {
     return $HASBIGWIG = $result || 0;
 }
 
-# Install Filter - Attaches a filter (such as GUNZIP or BUNZIP2) to a file handle.
 sub install_filter {
     my $self = shift;
     my ($in_fh,$command) = @_;
@@ -581,11 +599,11 @@ sub install_filter {
 
 sub remote_mirror_conf {
     my $self = shift;
-    my ($filename,$url,$key) = @_;
+    my ($track_name,$url,$key) = @_;
 
     return <<END;
 >>>>>>>>>>>>>> cut here <<<<<<<<<<<<
-[$filename]
+[$track_name]
 remote feature = $url
 category = My Tracks:Remote Tracks
 key      = $key
@@ -595,18 +613,18 @@ END
 
 sub remote_bam_conf {
     my $self = shift;
-    my ($filename,$url,$key) = @_;
+    my ($track_name,$url,$key) = @_;
 
     my $id = rand(1000);
     my $dbname = "remotebam_$id";
-    my $track_id = $filename;# . "_1";
+    my $track_id = $track_name;# . "_1";
 
     eval "require Bio::Graphics::Browser2::DataLoader::bam"
 	unless Bio::Graphics::Browser2::DataLoader::bam->can('new');
     my $loader = Bio::Graphics::Browser2::DataLoader::bam->new(
-	$filename,
-	$self->track_path($filename),
-	$self->track_conf($filename),
+	$track_name,
+	$self->track_path($track_name),
+	$self->track_conf($track_name),
 	$self->config,
 	$self->state->{uploadid});
     my $fasta  = $loader->get_fasta_file;
@@ -651,10 +669,10 @@ END
 
 sub remote_bigwig_conf {
     my $self = shift;
-    my ($filename,$url,$key) = @_;
+    my ($track_name,$url,$key) = @_;
     my $id = rand(1000);
     my $dbname = "remotebw_$id";
-    my $track_id = $filename;
+    my $track_id = $track_name;
     warn "remote_bigwig_conf";
     return <<END;
 [$dbname:database]
@@ -682,11 +700,6 @@ sub _print_url {
     my ($agent,$url,$fh) = @_;
     $agent->get($url,':content_cb' => sub { print $fh shift; });
 }
-
-# These methods are replaced by methods in Filesystem.pm and Database.pm
-# Many of these functions are called asynchronously, if you want to connect an AJAX call to one of these functions add a hook in Action.pm
-sub modified { warn "modified() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
-# Fill in more once this is all done.
 
 package Bio::Graphics::Browser2::UserConf;
 

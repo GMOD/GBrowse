@@ -27,36 +27,36 @@ use constant DEBUG => 0;
 use constant DEBUG_LOCK => DEBUG || 0;
 
 sub new {
-	my $class    = shift;
-	my %args     = @_;
-	my ($driver,$id,$session_args,$default_source,$lockdir,$locktype,$expire_time) 
-	  = @args{'driver','id','args','source','lockdir','locktype','expires'};
+  my $class    = shift;
+  my %args     = @_;
+  my ($driver,$id,$session_args,$default_source,$lockdir,$locktype,$expire_time) 
+      = @args{'driver','id','args','source','lockdir','locktype','expires'};
 
-	$CGI::Session::NAME = 'gbrowse_sess';     # custom cookie
-	$CGI::Session::Driver::file::NoFlock = 1; # flocking unnecessary because we roll our own
+  $CGI::Session::NAME = 'gbrowse_sess';     # custom cookie
+  $CGI::Session::Driver::file::NoFlock = 1; # flocking unnecessary because we roll our own
 
-	unless ($id) {
-		my $cookie = CGI::Cookie->fetch();
-		$id        = $cookie->{$CGI::Session::NAME}->value 
-		if $cookie && $cookie->{$CGI::Session::NAME};
-	}
-	my $self            = bless {
-		lockdir  => $lockdir,
-		locktype => $locktype,
-	},$class;
-	$self->lock_ex($id) if $id;
+  unless ($id) {
+      my $cookie = CGI::Cookie->fetch();
+      $id        = $cookie->{$CGI::Session::NAME}->value 
+	  if $cookie && $cookie->{$CGI::Session::NAME};
+  }
+  my $self            = bless {
+      lockdir  => $lockdir,
+      locktype => $locktype,
+  },$class;
+  $self->lock_ex($id) if $id;
 
-	$self->{session}    = CGI::Session->new($driver,$id,$session_args);
+  $self->{session}    = CGI::Session->new($driver,$id,$session_args);
 
-	# never expire private (authenticated) sessions
-	$expire_time = 0 if $self->private;
-	$self->{session}->expire($expire_time) 
-		if defined $expire_time;
+  # never expire private (authenticated) sessions
+  $expire_time = 0 if $self->private;
+  $self->{session}->expire($expire_time) 
+      if defined $expire_time;
 
-	warn "[$$] session fetch for ",$self->id if DEBUG;
-	$self->source($default_source) unless defined $self->source;
-	$self->{pid} = $$;
-	$self;
+  warn "[$$] session fetch for ",$self->id if DEBUG;
+  $self->source($default_source) unless defined $self->source;
+  $self->{pid} = $$;
+  $self;
 }
 
 sub session_argv {
@@ -278,8 +278,8 @@ sub match_nonce {
     $self->private || return;
     my $nonce = $self->{session}->param('.nonce');
     warn "id=",$self->id," matching $nonce against ",$new_nonce,"|",$salt if DEBUG;
-    warn "$nonce eq ",md5_hex($new_nonce, $salt)                          if DEBUG;
-    return $nonce eq md5_hex($new_nonce, $salt);
+    warn "$nonce eq ",md5_hex($new_nonce,$salt)                           if DEBUG;
+    return $nonce eq md5_hex($new_nonce,$salt);
 }
 
 sub config_hash {

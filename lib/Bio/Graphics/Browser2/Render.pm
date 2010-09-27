@@ -6,7 +6,7 @@ use warnings;
 use JSON;
 use Digest::MD5 'md5_hex';
 use CGI qw(:standard param request_method header url iframe img span div br center url_param);
-use Carp 'croak','cluck';
+use Carp qw(croak cluck);
 use File::Basename 'dirname','basename';
 use Text::Tabs;
 
@@ -22,8 +22,8 @@ use Bio::Graphics::Browser2::SubtrackTable;
 use Bio::Graphics::Browser2::TrackDumper;
 use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
 use Bio::Graphics::Browser2::UserTracks;
-use POSIX ":sys_wait_h";
-use POSIX ":sys_wait_h";
+use Bio::Graphics::Browser2::UserDB;
+use Bio::Graphics::Browser2::Session;
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -73,6 +73,8 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
+  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new();
+  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self->data_source, $self->state, $self->language, $self->state->{uploadid});
   $self;
 }
 
@@ -87,17 +89,17 @@ sub set_signal_handlers {
 }
 
 sub data_source {
-  my $self = shift;
-  my $d = $self->{data_source};
-  $self->{data_source} = shift if @_;
-  $d;
+	my $self = shift;
+	my $d = $self->{data_source};
+	$self->{data_source} = shift if @_;
+	$d;
 }
 
 sub session {
-  my $self = shift;
-  my $d = $self->{session};
-  $self->{session} = shift if @_;
-  $d;
+	my $self = shift;
+	my $d = $self->{session};
+	$self->{session} = shift if @_;
+	$d;
 }
 
 sub state {
@@ -127,7 +129,7 @@ sub is_admin {
     return $login eq $admin;
 }
 
-
+# User Tracks - Returns a list of a user's tracks.
 sub user_tracks {
     my $self  = shift;
     my $uuid  = shift;
@@ -137,7 +139,7 @@ sub user_tracks {
     my $class = $self->is_admin ? 'Bio::Graphics::Browser2::AdminTracks'
                                 : 'Bio::Graphics::Browser2::UserTracks';
     
-    $uuid  ||= $self->state->{uploadid} || '';
+    $uuid ||= $self->state->{uploadid} || '';
     warn "[$$] uuid  = $uuid" if DEBUG;
     return $self->{usertracks}{$uuid} 
        ||= $class->new($self->data_source,
@@ -204,8 +206,6 @@ sub run {
 
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
-
-  warn "user = ",$self->session->username;
 
   warn "[$$] testing for asynchronous event()" if $debug;
   if ($self->run_asynchronous_event) {
@@ -328,7 +328,7 @@ sub asynchronous_event {
     # legacy URLs
     my $dispatch = Bio::Graphics::Browser2::Action->new($self);
     if (my @result = $dispatch->handle_legacy_calls($CGI::Q,$self)) {
-	return @result;
+		return @result;
     }
 
     if ( my $track_name = param('display_citation') ) {
@@ -337,15 +337,15 @@ sub asynchronous_event {
     }
 
     elsif (my $action = param('action')) {
-	my $method   = "ACTION_${action}";
-	unless ($dispatch->can($method)) {
-	    return (401,'text/plain',"invalid action: '$action'");
-	}
-	return $dispatch->$method($CGI::Q);
+		my $method   = "ACTION_${action}";
+		unless ($dispatch->can($method)) {
+			return (401,'text/plain',"invalid action: '$action'");
+		}
+		return $dispatch->$method($CGI::Q);
     }
 
     else {
-	return;
+		return;
     }
 }
 
@@ -381,10 +381,6 @@ sub authorize_user {
     return ($id,$nonce);
 }
 
-sub format_autocomplete {
-    croak "implement in subclass";
-}
-
 sub background_track_render {
     my $self = shift;
 
@@ -410,12 +406,11 @@ sub background_track_render {
             cache_extra     => $cache_extra,
             external_tracks => $external
             );
-    }
-    else{
+    } else {
         $display_details = 0;
         $details_msg = h1(
 	    br(),
-            $self->tr(
+            $self->tr(															            	#}}}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label($self->get_max_segment),
             )
@@ -589,7 +584,7 @@ sub background_individual_track_render {
     {
         $display_details = 0;
         $details_msg     = h1(
-            $self->tr(
+            $self->tr(																            #)
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label(MAX_SEGMENT),
             )
@@ -597,7 +592,7 @@ sub background_individual_track_render {
         my %track_keys = ( $label => 0 );
         return ( \%track_keys, $display_details, $details_msg );
     }
-
+    
     my $cache_extra = $self->create_cache_extra();
 
     # Start rendering the detail and overview tracks
@@ -647,8 +642,8 @@ sub render_header {
   my $header = CGI::header(
       -cache_control =>'no-cache',
       -cookie  => [$cookie1,$cookie2],
-      -charset => $self->tr('CHARSET'),
-      );
+      -charset => $self->tr('CHARSET'),															#,
+  );
   print $header;
 }
 
@@ -754,18 +749,6 @@ sub render_body {
   print $output;
 }
 
-
-sub render_actionmenu {
-    my $self = shift;
-    croak "implement in subclass";
-}
-
-sub render_tabbed_pages {
-    my $self = shift;
-    my ($main,$upload_share,$config) = @_;
-    croak "implement in subclass";
-}
-
 sub render_login_section {
     my $self = shift;
     my $output = '';
@@ -778,19 +761,10 @@ sub render_login_section {
     return $output;
 }
 
-sub render_select_track_link {
-    croak "implement in subclass";
-}
-
 sub render_tracks_section {
     my $self = shift;
     return $self->render_toggle_track_table;
 }
-
-sub render_upload_share_section {
-    croak "implement in subclass";
-}
-
 
 sub generate_title {
     my $self     = shift;
@@ -802,35 +776,14 @@ sub generate_title {
 
     return $description unless $features;
     return !$features || !$state->{name}     ? $description
-         : @$features == 0                   ? $self->tr('NOT_FOUND',$state->{name})
+         : @$features == 0                   ? $self->tr('NOT_FOUND',$state->{name}) 			#
 	 : @$features == 1 ? "$description: ".
-				   $self->tr('SHOWING_FROM_TO',
+				   $self->tr('SHOWING_FROM_TO',													#)
 					     scalar $dsn->unit_label($features->[0]->length),
 					     $features->[0]->seq_id,
 					     $dsn->commas($features->[0]->start),
 					     $dsn->commas($features->[0]->end))
 	 : $description;
-}
-
-# never called, method in HTML.pm with same name is run instead
-sub render_top    {
-  my $self     = shift;
-  my $title    = shift;
-  croak "render_top() should not be called in parent class";
-}
-
-# never called, method in HTML.pm with same name is run instead
-sub render_title   {
-  my $self     = shift;
-  my $title    = shift;
-  croak "render_title() should not be called in parent class";
-}
-
-#never called, method in HTML.pm with same name is run instead
-sub render_navbar {
-  my $self = shift;
-  my $seg  = shift;
-  croak "render_navbar() should not be called in parent class";
 }
 
 # Provide segment info for rubberbanding
@@ -875,6 +828,7 @@ sub segment_info_object {
     return \%segment_info_object;
 }
 
+# Returns the HTML for the blank panel for a section (which will later be filled)
 sub render_panels {
     my $self    = shift;
     my $seg     = shift;
@@ -891,14 +845,14 @@ sub render_panels {
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
         my $panels_html    = $self->get_blank_panels( [$self->overview_tracks],
 						      'overview' );
-	my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
-	$html .= div(
-	    $self->toggle({tight=>1},
- 			  'Overview',
- 			  div({ -id => 'overview_panels', -class => 'track', -style=>'padding-bottom:3px' },
- 			      $scale_bar_html, $panels_html,
- 			  ))
- 	    ) . $drag_script;
+		my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
+		$html .= div(
+			$self->toggle({tight=>1},
+	 			  'Overview',
+	 			  div({ -id => 'overview_panels', -class => 'track', -style=>'padding-bottom:3px' },
+	 			      $scale_bar_html, $panels_html,
+	 			  ))
+	 	    ) . $drag_script;
     }
 
     if ( $section->{'regionview'} and $self->state->{region_size} ) {
@@ -924,7 +878,7 @@ sub render_panels {
 						      'detail');
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
         my $details_msg    = span({ -id => 'details_msg', },'');
-	my $clear_hilites  = $self->clear_highlights;
+		my $clear_hilites  = $self->clear_highlights;
         $html .= div(
             $self->toggle({tight=>1},
 			  'Details',
@@ -943,8 +897,6 @@ sub render_panels {
     }
     return $html;
 }
-
-sub clear_highlights { croak 'implement in subclass' }
 
 sub get_post_load_functions {
     my $self = shift;
@@ -1007,54 +959,6 @@ sub scale_bar {
         track_type => 'scale_bar',
     );
     return $html
-}
-
-
-#never called, method in HTML.pm with same name is run instead
-sub render_toggle_track_table {
-  my $self = shift;
-  croak "render_toggle_track_table() should not be called in parent class";
-}
-
-sub render_track_table {
-  my $self = shift;
-  croak "render_track_table() should not be called in parent class";
-}
-
-sub render_instructions {
-  my $self  = shift;
-  my $title = shift;
-  croak "render_instructions() should not be called in parent class";
-}
-sub render_multiple_choices {
-  my $self = shift;
-  croak "render_multiple_choices() should not be called in parent class";
-}
-
-sub render_global_config {
-  my $self = shift;
-  croak "render_global_config() should not be called in parent class";
-}
-
-sub render_toggle_external_table {
-  my $self = shift;
-  croak "render_toggle_external_table() should not be called in parent class";
-}
-
-sub render_toggle_userdata_table {
-  my $self = shift;
-  croak "render_toggle_userdata_table() should not be called in parent class";
-}
-
-sub render_bottom {
-  my $self = shift;
-  my $features = shift;
-  croak "render_bottom() should not be called in parent class";
-}
-
-sub html_frag {
-  my $self = shift;
-  croak "html_frag() should not be called in parent class";
 }
 
 sub init_database {
@@ -1231,7 +1135,7 @@ sub plugin_action {
   # the logic of this is obscure to me, but seems to have to do with activating plugins
   # via the URL versus via fill-out forms, which may go through a translation.
   if (param('plugin_do')) {
-    $action = $self->tr(param('plugin_do')) || $self->tr('Go');
+    $action = $self->tr(param('plugin_do')) || $self->tr('Go');									#}}){}
   }
 
   $action   ||=  param('plugin_action');
@@ -1274,13 +1178,13 @@ sub plugin_find {
 
   # nothing returned, so plug the keyword into the search box to save user's search
   unless ($results && @$results) {
-      $settings->{name} = $keyword ? $keyword : $self->tr('Plugin_search_2',$plugin_name);
+      $settings->{name} = $keyword ? $keyword : $self->tr('Plugin_search_2',$plugin_name);		#;
       return;
   }
 
   # Write informative information into the search box - not sure if this is the right thing to do.
   $settings->{name} = defined($search_string) ? $self->tr('Plugin_search_1',$search_string,$plugin_name)
-                                              : $self->tr('Plugin_search_2',$plugin_name);
+                                              : $self->tr('Plugin_search_2',$plugin_name);		#:
   # do we really want to do this?!!
   $self->write_auto($results);
   return $results;
@@ -1437,14 +1341,14 @@ sub handle_plugins {
 
     # for activating the plugin by URL
     if ( param('plugin_do') ) {
-        $plugin_action = $self->tr( param('plugin_do') ) || $self->tr('Go');
+        $plugin_action = $self->tr( param('plugin_do') ) || $self->tr('Go');					#{}{}{}{})()
     }
-
+	
     my $state  = $self->state();
     my $cookie = $self->create_cookie();
 
     ### CONFIGURE  ###############################################
-    if ($plugin_action eq $self->tr('Configure')) {
+    if ($plugin_action eq $self->tr('Configure')) { 											#}
 	$self->plugin_configuration_form($plugin);
 	return 1;
     }
@@ -1466,7 +1370,7 @@ sub handle_plugins {
 
     my $segment = $self->segment();
     if (    $plugin_type   eq 'dumper'
-        and $plugin_action eq $self->tr('Go')
+        and $plugin_action eq $self->tr('Go')													#{}{}{}{})()#
         and (  $segment
             or param('plugin_config')
             or $plugin->verb eq ( $self->tr('Import') || 'Import' ) )
@@ -1543,17 +1447,6 @@ sub cleanup {
   my $state = $self->state;
   $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}"
       if $state->{ref};  # to remember us by :-)
-}
-
-sub fatal_error {
-  my $self = shift;
-  my @msg  = @_;
-  croak 'Please call fatal_error() for a subclass of Bio::Graphics::Browser2::Render';
-}
-
-sub zoomBar {
-    my $self = shift;
-    croak 'Please define zoomBar() in a subclass of Bio::Graphics::Browser2::Render';
 }
 
 sub add_remote_tracks {
@@ -1638,7 +1531,7 @@ sub handle_download_userdata {
     my $is_text = -T $file;
 
     print CGI::header(-attachment   => $fname,
-		      -charset      => $self->tr('CHARSET'), # 'US-ASCII' ?
+		      -charset      => $self->tr('CHARSET'), # 'US-ASCII' ?								#,
 		      -type         => $is_text ? 'text/plain' : 'application/octet-stream');
 
     my $f = $ftype eq 'conf' ? $userdata->conf_fh($track)
@@ -1937,25 +1830,23 @@ sub auto_open {
 sub cleanup_dangling_uploads {
     my $self  = shift;
     my $state = shift;
-
-
+	
     my %name_to_id;
     for my $id (keys %{$state->{uploads}}) {
-	unless ($state->{uploads}{$id}[0]) {
-	    delete $state->{uploads}{$id};
-	    next;
-	}
-	$name_to_id{$state->{uploads}{$id}[0]}{$id}++;
+		unless ($state->{uploads}{$id}[0]) {
+			delete $state->{uploads}{$id};
+			next;
+		}
+		$name_to_id{$state->{uploads}{$id}[0]}{$id}++;
     }
-
 
     my $usertracks = $self->user_tracks;
     my %tracks = map {$_=>1} $usertracks->tracks();
 
     for my $k (keys %name_to_id) {
-	unless (exists $tracks{$k}) {
-	    delete $state->{uploads}{$_} foreach keys %{$name_to_id{$k}};
-	}
+		unless (exists $tracks{$k}) {
+			delete $state->{uploads}{$_} foreach keys %{$name_to_id{$k}};
+		}
     }
 
 }
@@ -2101,24 +1992,6 @@ sub reconfigure_track {
 	    }
 	}
     }
-}
-
-sub track_config {
-  my $self     = shift;
-  my $track_name    = shift;
-  croak "track_config() should not be called in parent class";
-}
-
-sub select_subtracks {
-  my $self       = shift;
-  my $track_name = shift;
-  croak "select_subtracks() should not be called in parent class";
-}
-
-sub share_track {
-  my $self     = shift;
-  my $track_name    = shift;
-  croak "share_track() should not be called in parent class";
 }
 
 sub update_options {
@@ -2400,6 +2273,8 @@ sub asynchronous_update_detail_scale_bar {
     };
 }
 
+#**
+
 sub asynchronous_update_sections {
     my $self          = shift;
     my $section_names = shift;
@@ -2479,9 +2354,13 @@ sub asynchronous_update_sections {
     }
 
     # New Uploaded Data Section
-    if ( $handle_section_name{'userdata_table_div'}) {
-	$return_object->{'userdata_table_div'}
-	    = $self->render_userdata_table();
+    if ( $handle_section_name{'custom_tracks'}) {
+		$return_object->{'custom_tracks'} = $self->render_custom_track_listing();
+    }
+    
+    # Public Files Section
+    if ( $handle_section_name{'public_tracks'}) {
+		$return_object->{'public_tracks'} = $self->render_public_track_listing();
     }
 
     # Handle Remaining and Undefined Sections
@@ -2512,6 +2391,8 @@ sub asynchronous_update_element {
             $source->commas( $segment->start ),
             $source->commas( $segment->end )
             );
+																								#}{}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
+	
     }
     elsif ( $element eq 'span' ) {  # this is the popup menu that shows ranges
         my $container
@@ -3515,10 +3396,10 @@ sub make_hilite_callback {
 sub categorize_track {
   my $self  = shift;
   my $label = shift;
-  return $self->tr('OVERVIEW') if $label =~ /:overview$/;
-  return $self->tr('REGION')   if $label =~ /:region$/;
-  return $self->tr('EXTERNAL') if $label =~ /^(http|ftp|file):/;
-  return $self->tr('ANALYSIS') if $label =~ /^plugin:/;
+  return $self->tr('OVERVIEW') if $label =~ /:overview$/;						#=
+  return $self->tr('REGION')   if $label =~ /:region$/;							#=
+  return $self->tr('EXTERNAL') if $label =~ /^(http|ftp|file):/;				#=
+  return $self->tr('ANALYSIS') if $label =~ /^plugin:/;							#=
 
   my $category;
   for my $l ($self->language->language) {
@@ -3529,7 +3410,7 @@ sub categorize_track {
   $category        ||= '';  # prevent uninit variable warnings
   $category         =~ s/^["']//;  # get rid of leading quotes
   $category         =~ s/["']$//;  # get rid of trailing quotes
-  return $category ||= $self->tr('GENERAL');
+  return $category ||= $self->tr('GENERAL');									#;
 }
 
 sub is_safari {
@@ -3564,11 +3445,14 @@ sub external_data {
     warn "FEATURE files = ",join ' ',%$f if DEBUG;
     return $self->{feature_files} = $f;
 }
-
+#
 # Supplement data source with user uploads
 sub add_user_tracks {
     my $self        = shift;
     my ($data_source,$uuid) = @_;
+    my $files = $self->{usertracks};
+    my $userdb = $self->{userdb};
+    my $session = $self->{session};
 
     return if $self->is_admin;  # admin user's tracks are already in main config file.
 
@@ -3611,10 +3495,10 @@ sub join_selected_tracks {
 
     my @selected = $self->visible_tracks;
     for (@selected) { # escape hyphens
-	if ((my $filter = $state->{features}{$_}{filter}{values})) {
-	    my @subtracks = grep {$filter->{$_}} keys %{$filter};
-	    $_ .= "/@subtracks";
-	}
+		if ((my $filter = $state->{features}{$_}{filter}{values})) {
+			my @subtracks = grep {$filter->{$_}} keys %{$filter};
+			$_ .= "/@subtracks";
+		}
     }
     return $self->join_tracks(\@selected);
 }
@@ -3684,7 +3568,7 @@ sub galaxy_link {
     warn "[$$] galaxy_link = $galaxy_url" if DEBUG;
     return '' unless $galaxy_url;
     my $clear_it  = $self->galaxy_clear;
-    my $submit_it = q(document.galaxyform.submit());
+    my $submit_it = q(document.galaxyform.submit());							#}) - Syntax highlight fixing.
     return "$clear_it;$submit_it";
 }
 
@@ -3714,7 +3598,7 @@ sub image_link {
     my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}
                              } map {/\s/?"$_":$_}
     grep {
-	$settings->{features}{$_}{options}
+		$settings->{features}{$_}{options}
     } @$tracks;
     $id        ||= ''; # to prevent uninit variable warnings
     my $img_url  = "$url/?name=$name;l=$selected;width=$width;id=$id";
@@ -3735,17 +3619,16 @@ sub add_hilites {
 
   # add feature hilighting
     if ($settings->{h_feat} && ref $settings->{h_feat} eq 'HASH') {
-	for my $h (keys %{$settings->{h_feat}}) {
-	    $$img_url .= ";h_feat=$h\@$settings->{h_feat}{$h}";
-	}
+		for my $h (keys %{$settings->{h_feat}}) {
+			$$img_url .= ";h_feat=$h\@$settings->{h_feat}{$h}";
+		}
     }
   # add region hilighting
     if ($settings->{h_region} && ref $settings->{h_region} eq 'ARRAY') {
-	for my $h (@{$settings->{h_region}}) {
-	    $$img_url .= ";h_region=$h";
-	}
+		for my $h (@{$settings->{h_region}}) {
+			$$img_url .= ";h_region=$h";
+		}
     }
-
 }
 
 sub svg_link {
@@ -3904,13 +3787,136 @@ sub generate_chrom_sizes {
     return 1;
 }
 
+# The following functions are implemented in HTML.pm (or any other Render subclass), are never called, and are here for debugging.
+sub format_autocomplete {
+    croak "implement in subclass";
+}
 
+sub render_actionmenu {
+    my $self = shift;
+    croak "implement in subclass";
+}
+
+sub render_tabbed_pages {
+    my $self = shift;
+    my ($main,$upload_share,$config) = @_;
+    croak "implement in subclass";
+}
+
+sub render_select_track_link {
+    croak "implement in subclass";
+}
+
+sub render_upload_share_section {
+    croak "implement in subclass";
+}
+
+sub render_top    {
+  my $self     = shift;
+  my $title    = shift;
+  croak "render_top() should not be called in parent class";
+}
+
+sub render_title   {
+  my $self     = shift;
+  my $title    = shift;
+  croak "render_title() should not be called in parent class";
+}
+
+sub render_navbar {
+  my $self = shift;
+  my $seg  = shift;
+  croak "render_navbar() should not be called in parent class";
+}
+
+sub clear_highlights { croak 'implement in subclass' }
+
+sub render_toggle_track_table {
+  my $self = shift;
+  croak "render_toggle_track_table() should not be called in parent class";
+}
+
+sub render_track_table {
+  my $self = shift;
+  croak "render_track_table() should not be called in parent class";
+}
+
+sub render_instructions {
+  my $self  = shift;
+  my $title = shift;
+  croak "render_instructions() should not be called in parent class";
+}
+sub render_multiple_choices {
+  my $self = shift;
+  croak "render_multiple_choices() should not be called in parent class";
+}
+
+sub render_global_config {
+  my $self = shift;
+  croak "render_global_config() should not be called in parent class";
+}
+
+sub render_toggle_external_table {
+  my $self = shift;
+  croak "render_toggle_external_table() should not be called in parent class";
+}
+
+sub render_toggle_userdata_table {
+  my $self = shift;
+  croak "render_toggle_userdata_table() should not be called in parent class";
+}
+
+sub render_bottom {
+  my $self = shift;
+  my $features = shift;
+  croak "render_bottom() should not be called in parent class";
+}
+
+sub html_frag {
+  my $self = shift;
+  croak "html_frag() should not be called in parent class";
+}
+
+sub fatal_error {
+  my $self = shift;
+  my @msg  = @_;
+  croak 'Please call fatal_error() for a subclass of Bio::Graphics::Browser2::Render';
+}
+
+sub zoomBar {
+    my $self = shift;
+    croak 'Please define zoomBar() in a subclass of Bio::Graphics::Browser2::Render';
+}
+
+sub track_config {
+  my $self     = shift;
+  my $track_name    = shift;
+  croak "track_config() should not be called in parent class";
+}
+
+sub select_subtracks {
+  my $self       = shift;
+  my $track_name = shift;
+  croak "select_subtracks() should not be called in parent class";
+}
+
+sub share_track {
+  my $self     = shift;
+  my $track_name    = shift;
+  croak "share_track() should not be called in parent class";
+}
 
 ########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end
+sub translate {
+	my $self = shift;
+	my $lang = $self->language or return @_;
+	$lang->tr(@_);
+}
+
 sub tr {
-  my $self = shift;
-  my $lang = $self->language or return @_;
-  $lang->tr(@_);
+	my $self = shift;
+	my $lang = $self->language or return @_;
+	$lang->tr(@_);
 }
 
 1;

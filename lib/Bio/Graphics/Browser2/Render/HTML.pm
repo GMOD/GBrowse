@@ -5,11 +5,12 @@ use warnings;
 use base 'Bio::Graphics::Browser2::Render';
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Browser2::SubtrackTable;
+use Bio::Graphics::Browser2::UserDB;
 use Bio::Graphics::Karyotype;
 use Bio::Graphics::Browser2::Util qw[citation url_label segment_str];
 use JSON;
 use Digest::MD5 'md5_hex';
-use Carp 'croak';
+use Carp qw(croak cluck);
 use CGI qw(:standard escape start_table end_table);
 use Text::Tabs;
 
@@ -22,6 +23,9 @@ use constant DEBUG => 0;
 use constant HAVE_SVG => eval "require GD::SVG; 1";
 our $CAN_PDF;
 
+# NOTE: Strange comments around col 97 are to fix syntax hilighting in gedit, and will be taken out
+
+# Render HTML Start - Returns the HTML for the browser's <head> section.
 sub render_html_start {
   my $self  = shift;
   my ($title,@actions) = @_;
@@ -34,13 +38,13 @@ sub render_html_start {
   return $html;
 }
 
+# Render Top - Returns the HTML for the top banner of the page.
 sub render_top {
     my $self = shift;
     my ($title,$features) = @_;
     my $err  =  $self->render_error_div;
     my $html = '';
 
-    $features ||= [];
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
     $html   .=  $self->html_frag('html1',$self->state);
@@ -48,6 +52,7 @@ sub render_top {
 	  . $self->toggle({nodiv=>1},'banner','',$html);
 }
 
+# Render Error DIV - Returns the HTML for the error display at the top of the page.
 sub render_error_div {
     my $self   = shift;
 
@@ -73,13 +78,14 @@ sub render_error_div {
 	).br();
 }
 
+# Render Tabbed Pages - Returns the HTML containing the tabs & the page DIVs to hold the content.
 sub render_tabbed_pages {
     my $self = shift;
     my ($main_html,$tracks_html,$custom_tracks_html,$settings_html,) = @_;
-    my $main_title          = $self->tr('MAIN_PAGE');
-    my $tracks_title        = $self->tr('SELECT_TRACKS');
-    my $custom_tracks_title = $self->tr('CUSTOM_TRACKS_PAGE');
-    my $settings_title      = $self->tr('SETTINGS_PAGE');
+    my $main_title          = $self->translate('MAIN_PAGE');
+    my $tracks_title        = $self->translate('SELECT_TRACKS');
+    my $custom_tracks_title = $self->translate('CUSTOM_TRACKS_PAGE');
+    my $settings_title      = $self->translate('SETTINGS_PAGE');
 
     my $html = '';
     $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
@@ -97,6 +103,7 @@ sub render_tabbed_pages {
     return $html;
 }
 
+# Render User Head - Returns any HTML for the <head> section specified by the user in GBrowse.conf.
 sub render_user_head {
     my $self = shift;
     my $settings = $self->state;
@@ -106,6 +113,7 @@ sub render_user_head {
     return $a || '';
 }
 
+# Render User Header - Returns any HTML for the top of the browser (the header) as specified by the user in GBrowse.conf.
 sub render_user_header {
     my $self = shift;
     my $settings = $self->state;
@@ -115,6 +123,7 @@ sub render_user_header {
     return $a || '';
 }
 
+# Render Bottom - Returns any HTML included in the footer specified by the user in GBrowse.conf.
 sub render_bottom {
   my $self = shift;
   my $features = shift; # not used
@@ -124,6 +133,7 @@ sub render_bottom {
   return $value."</div>".end_html();
 }
 
+# Render Navbar - Returns the HTML for the navigation bar along the top of the main browser page (in the "Search" node).
 sub render_navbar {
   my $self    = shift;
   my $segment = shift;
@@ -148,7 +158,7 @@ sub render_navbar {
   );
 
   my $search = $self->setting('no search')
-               ? '' : b($self->tr('Landmark')).':'.br().$searchform.$self->examples();
+               ? '' : b($self->translate('Landmark')).':'.br().$searchform.$self->examples();
 
   my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
 
@@ -174,14 +184,15 @@ sub render_navbar {
       . div( { -id => "plugin_configure_div"},'');
 }
 
+# Plugin Form - Returns the HTML for the plugin form in the main navigation bar.
 sub plugin_form {
     my $self     = shift;
     my $settings = $self->state;
 
     return $settings->{GALAXY_URL}
-    ? button(-name    => $self->tr('SEND_TO_GALAXY'),
+    ? button(-name    => $self->translate('SEND_TO_GALAXY'),
 	      -onClick  => $self->galaxy_link).
-       button(-name    => $self->tr('CANCEL'),
+       button(-name    => $self->translate('CANCEL'),
 	      -onClick => $self->galaxy_clear.";Controller.update_sections(['plugin_form'])",
        )
      : join '',(
@@ -192,7 +203,7 @@ sub plugin_form {
 	   end_form);
 }
 
-
+# Source Form - Returns the HTML for the source chooser in the main navigation bar.
 sub source_form {
     my $self = shift;
     join '',(
@@ -204,6 +215,7 @@ sub source_form {
     );
 }
 
+# Slider Form - Returns the HTML for the zooming controls with the "Flip" checkbox.
 sub sliderform {
     my $self    = shift;
     my $segment = shift;
@@ -212,12 +224,12 @@ sub sliderform {
 	return
 	    join '',(
 		start_form(-name=>'sliderform',-id=>'sliderform',-onSubmit=>'return false'),
-		b($self->tr('Scroll'). ': '),
+		b($self->translate('Scroll'). ': '),
 		$self->slidertable($segment),
 		b(
 		    checkbox(-name=>'flip',
 			     -checked=>$settings->{flip},-value=>1,
-			     -label=>$self->tr('Flip'),-override=>1,
+			     -label=>$self->translate('Flip'),-override=>1,
 			     -onClick => 'Controller.update_coordinates(this.name + " " + this.checked)',
 		    )
 		),
@@ -230,6 +242,7 @@ sub sliderform {
     }
 }
 
+# Render Search For Objects - Returns the "Landmark or Region" search box on the browser tab.
 sub render_search_form_objects {
     my $self     = shift;
     my $settings = $self->state;
@@ -254,10 +267,11 @@ sub render_search_form_objects {
 <div id="autocomplete_choices" class="autocomplete"></div>
 END
     }
-    $html .= submit( -name => $self->tr('Search') );
+    $html .= submit( -name => $self->translate('Search') );
     return $html;
 }
 
+# Render HTML Head - Returns the HTML for the beginning of the page (for CGI's start HTML function).
 sub render_html_head {
   my $self = shift;
   my ($dsn,$title,@other_initialization) = @_;
@@ -292,8 +306,6 @@ sub render_html_head {
   if (defined($plugin_onLoads{'settings_page'})) {
     $settings_page_onLoads .= $plugin_onLoads{'settings_page'};
   }
-  
-  
   
   my $onTabScript .= "function onTabLoad(tab_id) {\n";
   $onTabScript .= "if (tab_id == 'main_page_select') {$main_page_onLoads}\n";
@@ -397,7 +409,7 @@ sub render_html_head {
   # put all the html head arguments together
   my @args = (-title    => $title,
               -style    => \@stylesheets,
-              -encoding => $self->tr('CHARSET'),
+              -encoding => $self->translate('CHARSET'),
 	      -script   => \@scripts,
 	      -head     => \@extra_headers,
 	     );
@@ -420,8 +432,7 @@ sub render_html_head {
   return start_html(@args);
 }
 
-# renders a block of javascript that loads some of our global config
-# settings into the main controller object for use in client-side code
+# Render JS Controller Settings - Renders a block of javascript that loads some of our global config settings into the main controller object for use in client-side code.
 sub render_js_controller_settings {
     my ( $self ) = @_;
 
@@ -444,6 +455,7 @@ EOS
 
 }
 
+# Renders the settings which control the balloon styles on the page.
 sub render_balloon_settings {
     my $self   = shift;
     my $source = $self->data_source;
@@ -572,49 +584,50 @@ sub _render_select_menu {
 		$menu_html );
 }
 
+# Render Login - Returns the HTML for the login links on the top-right corner of the screen.
 sub render_login {
     my $self     = shift;
+    my $settings = $self->state;
+    return unless $settings->{head};
+    
     my $images   = $self->globals->openid_url;
     my $appname  = $self->globals->application_name;
     my $appnamel = $self->globals->application_name_long;
-    my $settings = $self->state;
     my $session  = $self->session;
-    my $style    = 'float:right;font-weight:bold;color:blue;cursor:pointer;';
-    my ($html,$title,$text,$click);
-    $click = 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');';
-    $html  = '';
+    my $style    = 'font-weight:bold;color:blue;cursor:pointer;';
+    my $login_controls  = '';
 
+	# Draw the visible HTML elements.
     if ($session->private) {
-        $html .= span({-style=>'float:right;font-weight:bold;color:black;'},
-                      'Welcome, '.$session->username) . br() .
-                 span({-style       => $style,
-		       -title       => 'Click here to log out from '.$session->username.'',
-		       -onMouseDown => 'location.href=\'?id=logout\';',
-		       -onMouseOver => 'this.style.textDecoration=\'underline\'',
-		       -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out') .
-		       span({-style=>'float:right;font-weight:bold;color:black;'}, '&nbsp; &nbsp;');
-
-        $title  = 'Click here to change your account settings';
-        $text   = 'My Account';
-        $click .= 'load_login_balloon(event,\''.$session->id.'\',\'';
-        $click .= $session->username.'\','.$session->using_openid.');';
-    } else {
-        $title  = 'Click here to log in or create a new account. This will allow you to access your settings and uploaded tracks from multiple computers.';
-        $text   = 'Log in / create account';
-        $click .= 'load_login_balloon(event,\''.$session->id.'\',false,false);';
-    }
-
-    $html .= span({-style => $style, -title => $title, -onMouseDown => $click,
+    	$login_controls .= span({-style => 'font-weight:bold;color:black;'}, 'Welcome, '.$session->username . '.');
+    	$login_controls .= '&nbsp; &nbsp;';
+        $login_controls .= span({
+        		  -style 	   => $style,
+        		  -title 	   => 'Click here to change your account settings',
+        		  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',\''.$session->username.'\','.$session->using_openid.');',
                   -onMouseOver => 'this.style.textDecoration=\'underline\'',
-                  -onMouseOut  => 'this.style.textDecoration=\'none\''}, $text);
-
-    return $settings->{head} ? $html : '';
-
-    my $container = span({-style=>'float:right;'},$html);
-
-    return $settings->{head} ? $container : '';
+                  -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'My Account');
+		$login_controls .= '&nbsp; &nbsp;';
+        $login_controls .= span({
+        		  -style       => $style,
+				  -title       => 'Click here to log out from '.$session->username.'.',
+				  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); location.href=\'?id=logout\';',
+				  -onMouseOver => 'this.style.textDecoration=\'underline\'',
+				  -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out');
+    } else {
+        $login_controls .= span({
+        		  -style	   => $style,
+        		  -title 	   => 'Click here to log in or create a new account. This will allow you to access your settings and uploaded tracks from multiple computers.',
+        		  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',false,false);',
+                  -onMouseOver => 'this.style.textDecoration=\'underline\'',
+                  -onMouseOut  => 'this.style.textDecoration=\'none\''},
+                  'Log in / create account');
+    }
+    my $container = span({-style => 'float:right;'}, $login_controls);
+    return $container;
 }
 
+# Renders the account confirmation screen.
 sub render_login_account_confirm {
     my $self     = shift;
     my $confirm  = shift;
@@ -630,6 +643,7 @@ sub render_login_account_confirm {
         : "";
 }
 
+# Renders the "Confirm OpenID" popup.
 sub render_login_openid_confirm {
     my $self            = shift;
     my $images          = $self->globals->openid_url;
@@ -649,6 +663,7 @@ sub render_login_openid_confirm {
         : "";
 }
 
+# Returns the HTML for the page's title, as displayed at the top.
 sub render_title {
     my $self  = shift;
     my $title = shift;
@@ -659,6 +674,7 @@ sub render_title {
 	: '';
 }
 
+# Renders the search & navigation instructions & examples.
 sub render_instructions {
   my $self     = shift;
   my $settings = $self->state;
@@ -669,9 +685,9 @@ sub render_instructions {
       $self->toggle('Instructions',
 		    div({-style=>'margin-left:2em'},
 			$self->setting('search_instructions') ||
-			$self->tr('SEARCH_INSTRUCTIONS',$oligo),
+			$self->translate('SEARCH_INSTRUCTIONS', $oligo),
 			$self->setting('navigation_instructions') ||
-			$self->tr('NAVIGATION_INSTRUCTIONS'),
+			$self->translate('NAVIGATION_INSTRUCTIONS'),
 			br(),
 			$self->examples(),
 			br(),$self->html_frag('html2',$self->state)
@@ -681,6 +697,7 @@ sub render_instructions {
   : '';
 }
 
+# Renders the HTML for the spinning "busy" signal on the top-left corner of the page.
 sub render_busy_signal {
     my $self = shift;
     return img({
@@ -691,46 +708,47 @@ sub render_busy_signal {
        });
 }
 
+# Renders the menu bar across the top of the browser.
 sub render_actionmenu {
     my $self  = shift;
     my $settings = $self->state;
 
-    my   @export_links=a({-href=>'?make_image=GD', -target=>'_blank'},     $self->tr('IMAGE_LINK'));
-    push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->tr('SVG_LINK'))
+    my   @export_links=a({-href=>'?make_image=GD', -target=>'_blank'},     $self->translate('IMAGE_LINK'));
+    push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->translate('SVG_LINK'))
 	if HAVE_SVG;
-    push @export_links,a({-href=>'?make_image=PDF',-target=>'_blank'}, $self->tr('PDF_LINK'))
+    push @export_links,a({-href=>'?make_image=PDF',-target=>'_blank'}, $self->translate('PDF_LINK'))
 	if HAVE_SVG && $self->can_generate_pdf;
 
-    push @export_links,a({-href=>$self->gff_dump_link},                    $self->tr('DUMP_GFF'));
-    push @export_links,a({-href=>$self->dna_dump_link},                    $self->tr('DUMP_SEQ'));
-    push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->tr('SEND_TO_GALAXY'))
+    push @export_links,a({-href=>$self->gff_dump_link},                    $self->translate('DUMP_GFF'));
+    push @export_links,a({-href=>$self->dna_dump_link},                    $self->translate('DUMP_SEQ'));
+    push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->translate('SEND_TO_GALAXY'))
 	if $self->data_source->global_setting('galaxy outgoing');
 
-    my $bookmark_link = a({-href=>'?action=bookmark'},$self->tr('BOOKMARK')),;
+    my $bookmark_link = a({-href=>'?action=bookmark'},$self->translate('BOOKMARK')),;
     my $share_link    = a({-href        => '#',
 			   -onMouseDown => "GBox.showTooltip(event,'url:?action=share_track;track=all')"},
-			  ($self->tr('SHARE_ALL') || "Share These Tracks" )),
+			  ($self->translate('SHARE_ALL') || "Share These Tracks" )),
 
     my $help_link     = a({-href=>$self->general_help(),
-			   -target=>'_new'},$self->tr('HELP_WITH_BROWSER'));
+			   -target=>'_new'},$self->translate('HELP_WITH_BROWSER'));
     my $about_gb_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_gbrowse')",
 			   -href        => 'javascript:void(0)',
 			   -style       => 'cursor:pointer'
 			  },
-			  $self->tr('ABOUT'));
+			  $self->translate('ABOUT'));
     my $about_dsn_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_dsn')",
 			       -href        => 'javascript:void(0)',
 			       -style       => 'cursor:pointer'
 			      },
-			      $self->tr('ABOUT_DSN'));
+			      $self->translate('ABOUT_DSN'));
     my $about_me_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_me')",
 			       -href        => 'javascript:void(0)',
 			       -style       => 'cursor:pointer'
 			      },
-			      $self->tr('ABOUT_ME'));
+			      $self->translate('ABOUT_ME'));
     my $plugin_link      = $self->plugin_links($self->plugins);
-    my $chrom_sizes_link = a({-href=>'?action=chrom_sizes'},$self->tr('CHROM_SIZES'));
-    my $reset_link       = a({-href=>'?reset=1',-class=>'reset_button'},    $self->tr('RESET'));
+    my $chrom_sizes_link = a({-href=>'?action=chrom_sizes'},$self->translate('CHROM_SIZES'));
+    my $reset_link       = a({-href=>'?reset=1',-class=>'reset_button'},    $self->translate('RESET'));
 
     my $login = $self->setting('user accounts') ? $self->render_login : '';
 
@@ -739,14 +757,14 @@ sub render_actionmenu {
 		       li({-class=>'dir'},'File',
 			  ul(li($bookmark_link),
 			     li($share_link),
-			     li({-class=>'dir'},a({-href=>'#'},$self->tr('EXPORT')),
+			     li({-class=>'dir'},a({-href=>'#'},$self->translate('EXPORT')),
 				ul(li(\@export_links))),
 			     $plugin_link ? li($plugin_link) : (),
 			     li($chrom_sizes_link),
 			     li($reset_link),
 			  )
 		       ),
-		       li({-class=>'dir'},$self->tr('HELP'),
+		       li({-class=>'dir'},$self->translate('HELP'),
 			  ul({-class=>'dropdown'},
 			     li($help_link),
 			     li({-class=>'divider'},''),
@@ -758,8 +776,7 @@ sub render_actionmenu {
     return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));
 }
 
-# for the subset of plugins that are named in the 'quicklink plugins' option, create
-# quick links for them.
+# For the subset of plugins that are named in the 'quicklink plugins' option, create quick links for them.
 sub plugin_links {
   my $self    = shift;
   my $plugins = shift;
@@ -771,7 +788,7 @@ sub plugin_links {
   my @result;
   for my $p (@plugins) {
     my $plugin = $plugins->plugin($p) or next;
-    my $action = "?plugin=$p;plugin_do=".$self->tr('Go');
+    my $action = "?plugin=$p;plugin_do=".$self->translate('Go');
     push @result,a({-href=>$action,-target=>'_new'},"[$labels->{$p}]");
   }
   return \@result;
@@ -822,7 +839,7 @@ sub render_track_filter {
 
     my $form         = $plugin->configure_form();
     my $plugin_type  = $plugin->type;
-    my $action       = $self->tr('Configure_plugin');
+    my $action       = $self->translate('Configure_plugin');
     my $name         = 'plugin:'.$plugin->name;
 
     return
@@ -833,7 +850,7 @@ sub render_track_filter {
 	    $form,
 	    button(
 		-name    => 'plugin_button',
-		-value   => $self->tr('search'),
+		-value   => $self->translate('search'),
 		-onClick => 'doPluginUpdate()',
 	    ),
 	    end_form(),
@@ -860,9 +877,7 @@ sub render_toggle_track_table {
   return $html;
 }
 
-# this draws the various config options
-  # This subroutine is invoked to draw the checkbox group underneath the main display.
-# It creates a hyperlinked set of feature names.
+# Render Track Table - Invoked to draw the checkbox group in the "Select Tracks" tab. It creates a hyperlinked set of feature names.
 sub render_track_table {
   my $self     = shift;
   my $settings = $self->state;
@@ -932,7 +947,7 @@ sub render_track_table {
        $labels{$label} .= ' ['. span({-class       =>'clickable',
 				      -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
 				      -onClick      => "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
-				     },i($self->tr('SELECT_SUBTRACKS',$selected,$total))).']';
+				     },i($self->translate('SELECT_SUBTRACKS',$selected,$total))).']';
    }
   }
 
@@ -953,20 +968,20 @@ sub render_track_table {
   autoEscape(0);
 
 
-  my %exclude = map {$_=>1} map {$self->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
+  my %exclude = map {$_=>1} map {$self->translate($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
   my ($user_tracks) = grep {/^My tracks/i} keys %track_groups;
   $exclude{$user_tracks}++ if $user_tracks;
   my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
 
-  my $all_on  = $self->tr('ALL_ON');
-  my $all_off = $self->tr('ALL_OFF');
+  my $all_on  = $self->translate('ALL_ON');
+  my $all_off = $self->translate('ALL_OFF');
 
   my (%seenit,%section_contents);
 
-  my @categories = ($self->tr('OVERVIEW'),
-		    $self->tr('REGION'),
+  my @categories = ($self->translate('OVERVIEW'),
+		    $self->translate('REGION'),
 		    @user_keys,
-		    $self->tr('ANALYSIS'),
+		    $self->translate('ANALYSIS'),
       );
   push @categories,$user_tracks if $user_tracks;
 
@@ -980,7 +995,7 @@ sub render_track_table {
     my $category_title   = (split m/(?<!\\):/,$category)[-1];
     $category_title      =~ s/\\//g;
 
-    if ($category eq $self->tr('REGION') 
+    if ($category eq $self->translate('REGION') 
 	&& !$self->setting('region segment')) {
      next;
     }
@@ -1045,19 +1060,20 @@ sub render_track_table {
 	       );
 }
 
+# Category Table - This returns the hash of the category table.
 sub category_table {
     my $self   = shift;
     my $tabledata  = $self->data_source->setting('category tables');
     my @tabledata  = shellwords($tabledata||'');
     my %categorytable=();
     while (@tabledata) {
-	my $category=shift(@tabledata);
-	my $rows=shift(@tabledata);
-	my @rows=split(/\s+/,$rows);
-	my $cols=shift(@tabledata);
-	my @cols=split(/\s+/,$cols);
-	$categorytable{$category}{row_labels}=\@rows;
-	$categorytable{$category}{col_labels}=\@cols;
+	    my $category=shift(@tabledata);
+	    my $rows=shift(@tabledata);
+	    my @rows=split(/\s+/,$rows);
+	    my $cols=shift(@tabledata);
+	    my @cols=split(/\s+/,$cols);
+	    $categorytable{$category}{row_labels}=\@rows;
+	    $categorytable{$category}{col_labels}=\@cols;
     }
     
     return \%categorytable; 
@@ -1072,29 +1088,28 @@ sub indent_categories {
     my $sort_index = 0;
 
     for my $category (@$categories) {
-	my $cont   = $contents->{$category} || '';
+	    my $cont   = $contents->{$category} || '';
 
-	my @parts  = map {s/\\//g; $_} split m/(?<!\\):/,$category;
-	$sort_order{$_} = $sort_index++ foreach @parts;
+	    my @parts  = map {s/\\//g; $_} split m/(?<!\\):/,$category;
+	    $sort_order{$_} = $sort_index++ foreach @parts;
 
-	my $i      = $category_hash;
+	    my $i      = $category_hash;
 
-	# we need to add phony __next__ and __contents__ keys to avoid
-	# the case in which the track sections are placed at different
-	# levels of the tree, for instance 
-	# "category=level1:level2" and "category=level1"
-	for my $index (0..$#parts) {
-	    $i = $i->{__next__}{$parts[$index]} ||= {};
-	    $i->{__contents__}                    = $cont 
-		                                    if $index == $#parts;
-	}
+	    # we need to add phony __next__ and __contents__ keys to avoid
+	    # the case in which the track sections are placed at different
+	    # levels of the tree, for instance 
+	    # "category=level1:level2" and "category=level1"
+	    for my $index (0..$#parts) {
+	        $i = $i->{__next__}{$parts[$index]} ||= {};
+	        $i->{__contents__}                    = $cont 
+		                                        if $index == $#parts;
+	    }
     }
     my $i               = 1;
     my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order);
 }
 
-# this turns the nested category/subcategory hashes into a prettily indented
-# tracks table
+# Nest Toggles - This turns the nested category/subcategory hashes into a prettily-indented tracks table.
 sub nest_toggles {
     my $self         = shift;
     my ($hash,$sort) = @_;
@@ -1106,26 +1121,27 @@ sub nest_toggles {
     for my $key (sort { 
 	           ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b
 		      }  keys %$hash) {
-	if ($key eq '__contents__') {
-	    $result .= $hash->{$key}."\n";
-	} elsif ($key eq '__next__') {
-	    $result .= $self->nest_toggles($hash->{$key},$sort);
-	} elsif ($hash->{$key}{__next__}) {
-	    my $id =  "${key}_section";
-	    $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
- 	    $result .= $self->toggle_section({on=>$settings->{section_visible}{$id}},
-					     $id,
-					     b($key).span({-class => "list",
-			            -id => "${id}_list"},""),
-					     div({-style=>'margin-left:1.5em;margin-right:1em'},
-						 $self->nest_toggles($hash->{$key},$sort)));
-	} else {
-	    $result .= $self->nest_toggles($hash->{$key},$sort);
-	}
+	    if ($key eq '__contents__') {
+	        $result .= $hash->{$key}."\n";
+	    } elsif ($key eq '__next__') {
+	        $result .= $self->nest_toggles($hash->{$key},$sort);
+	    } elsif ($hash->{$key}{__next__}) {
+	        my $id =  "${key}_section";
+	        $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
+     	    $result .= $self->toggle_section({on=>$settings->{section_visible}{$id}},
+					         $id,
+					         b($key).span({-class => "list",
+			                -id => "${id}_list"},""),
+					         div({-style=>'margin-left:1.5em;margin-right:1em'},
+						     $self->nest_toggles($hash->{$key},$sort)));
+	    } else {
+	        $result .= $self->nest_toggles($hash->{$key},$sort);
+	    }
     }
     return $result;
 }
 
+# Render Multiple Choices - 
 sub render_multiple_choices {
     my $self     = shift;
     my $features = shift;
@@ -1136,6 +1152,7 @@ sub render_multiple_choices {
     return $karyotype->to_html($terms2hilite);
 }
 
+# Render Global Config - Returns the HTML for the Preferences page.
 sub render_global_config {
     my $self     = shift;
     my $settings = $self->state;
@@ -1169,14 +1186,14 @@ sub render_global_config {
 		      TR(
 			  td( b(  checkbox(
 				      -name     => 'grid',
-				      -label    => $self->tr('SHOW_GRID'),
+				      -label    => $self->translate('SHOW_GRID'),
 				      -override => 1,
 				      -checked  => $settings->{grid} || 0,
 				      -onChange => 'Controller.set_display_option(this.name,this.checked ? 1 : 0)', 
 				  )
 			      )
 			  ),
-			  td( b( $self->tr('Image_width') ),
+			  td( b( $self->translate('Image_width') ),
 			      br,
 			      radio_group(
 				  -name     => 'width',
@@ -1187,8 +1204,8 @@ sub render_global_config {
 			      ),
 			  ),
 			  td( span(
-				  { -title => $self->tr('FEATURES_TO_HIGHLIGHT_HINT') },
-				  b( $self->tr('FEATURES_TO_HIGHLIGHT') ),
+				  { -title => $self->translate('FEATURES_TO_HIGHLIGHT_HINT') },
+				  b( $self->translate('FEATURES_TO_HIGHLIGHT') ),
 				  br,
 				  textfield(
 				      -id       => 'h_feat',
@@ -1200,7 +1217,7 @@ sub render_global_config {
 				  ),
 				  a({-href=>'javascript:void(0)',
 				     -onClick=>'Controller.set_display_option("h_feat","_clear_");$("h_feat").value=""'},
-				    $self->tr('CLEAR_HIGHLIGHTING'))
+				    $self->translate('CLEAR_HIGHLIGHTING'))
 			      ),
 			  ),
 		      ),
@@ -1208,7 +1225,7 @@ sub render_global_config {
 			  td( $self->data_source->cache_time
 			      ? ( b(  checkbox(
 					  -name     => 'cache',
-					  -label    => $self->tr('CACHE_TRACKS'),
+					  -label    => $self->translate('CACHE_TRACKS'),
 					  -override => 1,
 					  -checked  => $settings->{cache},
 					  -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
@@ -1221,8 +1238,8 @@ sub render_global_config {
 			  td('&nbsp;'),
 			  
 			  td( span(
-				  { -title => $self->tr('REGIONS_TO_HIGHLIGHT_HINT') },
-				  b( $self->tr('REGIONS_TO_HIGHLIGHT') ),
+				  { -title => $self->translate('REGIONS_TO_HIGHLIGHT_HINT') },
+				  b( $self->translate('REGIONS_TO_HIGHLIGHT') ),
 				  br,
 				  textfield(
 				      -id       => 'h_region',
@@ -1235,7 +1252,7 @@ sub render_global_config {
 				  a({-href=>'javascript:void(0)',
 				     -onClick=>'Controller.set_display_option("h_region","_clear_");$("h_region").value=""'
 				    },
-				    $self->tr('CLEAR_HIGHLIGHTING'))
+				    $self->translate('CLEAR_HIGHLIGHTING'))
 			      ),
 			  ),
 		      ),
@@ -1243,7 +1260,7 @@ sub render_global_config {
 			  td( { -align => 'left' },
 			      b(  checkbox(
 				      -name     => 'show_tooltips',
-				      -label    => $self->tr('SHOW_TOOLTIPS'),
+				      -label    => $self->translate('SHOW_TOOLTIPS'),
 				      -override => 1,
 				      -checked  => $settings->{show_tooltips},
 				      -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
@@ -1252,7 +1269,7 @@ sub render_global_config {
 			  ),
 			  td('&nbsp;'),
 			  td( $self->setting('region segment')
-			      ? ( b( $self->tr('Region_size') ),
+			      ? ( b( $self->translate('Region_size') ),
 				  br,
 				  popup_menu(
 				      -name     => 'region_size',
@@ -1270,7 +1287,7 @@ sub render_global_config {
 			  td( {   -colspan => 3,
 				  -align   => 'right'
 			      },
-			      b( submit( -name => $self->tr('Update_settings') ) )
+			      b( submit( -name => $self->translate('Update_settings') ) )
 			  )
 		      )
 	       )
@@ -1278,190 +1295,468 @@ sub render_global_config {
     return div($content);
 }
 
+# Clear Hilights - Returns the HTML for the "Clear Highligting" link.
 sub clear_highlights {
     my $self = shift;
     my $link = a({-style   => 'font-size:9pt',
 		  -href    => 'javascript:void(0)',
 		  -onClick => 'Controller.set_display_option("h_feat","_clear_");Controller.set_display_option("h_region","_clear_")'
 		 },
-		 $self->tr('CLEAR_HIGHLIGHTING'));
+		 $self->translate('CLEAR_HIGHLIGHTING'));
 }
-
+											
+# Render Select Track Link - Returns the HTML for the "Select Tracks" button on the main browser page.
 sub render_select_track_link {
     my $self  = shift;
-    my $title = $self->tr('SELECT_TRACKS');
+    my $title = $self->translate('SELECT_TRACKS');
     return button({-name=>$title,
-		   -onClick => "Controller.select_tab('track_page')"
+		    -onClick => "Controller.select_tab('track_page')"
 		  }
-	);
-		  
+	  );
 }
+
+# Render Select Browser Link - Returns the HTML for the "Back to Browser" button/link.
 sub render_select_browser_link {
     my $self  = shift;
     my $style  = shift || 'button';
 
-    my $title = $self->tr('BACK_TO_BROWSER');
+    my $title = $self->translate('BACK_TO_BROWSER');
     if ($style eq 'button') {
-	return button({-name=>$title,
-		       -onClick => "Controller.select_tab('main_page')"
-		      }
-	    );
+	    return button({-name=>$title,
+		           -onClick => "Controller.select_tab('main_page')"
+		          }
+	        );
     } elsif ($style eq 'link') {
-	return a({-href=>'javascript:void(0)',
-		  -onClick => "Controller.select_tab('main_page')"},
-		 $title);
+	    return a({-href=>'javascript:void(0)',
+		      -onClick => "Controller.select_tab('main_page')"},
+		     $title);
     }
 }
 
+# Render Upload & Share Section - Returns the content of the "Uploads and Shared Tracks" tab.
 sub render_upload_share_section {
     my $self = shift;
-    return $self->is_admin
-	? div(h2({-style=>'font-style:italic;background-color:yellow'}, # BUG: this is HTML - should not be here!!!
-		 'Admin mode: Uploaded tracks are public'),
-	      $self->render_toggle_userdata_table)
-	: div($self->render_toggle_userdata_table);
+    my $userdata = $self->user_tracks;
+    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, 'Admin mode: Uploaded tracks are public') : "";
+	$html .= $self->render_custom_track_listing;
+	if ($userdata->database == 1) {
+		$html .= $self->render_public_track_listing;
+	}
+	$html = div($html);
+	return $html;
+}
+# Render Custom Track Listing - Returns the HTML listing of public, uploaded, imported and shared tracks added to a session, and a section to add more.
+sub render_custom_track_listing {
+	my $self = shift;
+	my $html = h1("Custom Tracks");
+	
+	$html .= a( {
+					-href => $self->annotation_help.'#remote',
+					-target => '_blank'
+				},
+				i('['.$self->translate('HELP_FORMAT_IMPORT').']')
+			);
+	$html .= $self->list_tracks;
+	$html .= $self->add_userdata;
+	$html = div({-id => "custom_tracks"}, $html);
+	return $html;
 }
 
-sub render_toggle_userdata_table {
-    my $self = shift;
-    return div(
-	h2({-style=>'margin: 0px 0px 0px 0px;padding:5px 0px 5px 0px'},$self->tr('UPLOADED_TRACKS')),
-	a({-href=>$self->annotation_help,-target=>'_blank'},
-	  i('['.$self->tr('HELP_FORMAT_UPLOAD').']')),
-	$self->render_userdata_table(),
-	$self->userdata_upload(),
+# Render Public Track Listing - Returns the HTML listing of public tracks available to a user.
+sub render_public_track_listing {
+	my $self = shift;
+	my $html = h1("Public Tracks");
+	$html .= $self->list_tracks("public");
+	$html = div({-id => "public_tracks"}, $html);
+	return $html;
+}
+
+# List Tracks - Renders a visual listing of an array of tracks. No arguments creates the standard "my tracks" listing.
+sub list_tracks {
+	my $self = shift;
+	my $globals	= $self->globals;
+	my $userdata = $self->user_tracks;
+	my $listing_type = shift // "";														#/
+	my @tracks = sort((($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : shift // $userdata->tracks);
+	$listing_type .= " available" if $listing_type =~ /public/;
+	
+	# Main track roll code.
+	my $count = 0;
+    my @rows = map {
+		my $fileid = $_;
+		my $name = $userdata->filename($fileid);
+		my $type = $listing_type || $userdata->file_type($fileid);
+		
+		my ($background_color, $accent_color) = $self->track_listing_colors($count, $type);
+		my $controls = $self->render_track_controls($fileid, $type);
+		my $short_listing = $self->render_track_list_title($fileid, $type, $accent_color);
+		my $details = $self->render_track_details($fileid, $listing_type);
+		my $edit_field = div({-id => $fileid . "_editfield"}, '');
+		$count++;
+		div( {
+				-id		=> "upload_$fileid",
+				-class	=> "custom_track",
+				-style	=> "background-color: $background_color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;"
+			},
+			$short_listing,
+			$controls,
+			$details,
+			$edit_field
+		);
+    } @tracks;
+    return join '', @rows;
+}
+
+# Track Listing Colors (Count, Type) - Returns the accent & background color for the track listing of the specified type & count.
+sub track_listing_colors {
+	my $self = shift;
+	my $count = shift;
+	my $type = shift;
+	my ($background_color1, $background_color2, $accent_color1, $accent_color2);
+	if ($type =~ /upload/) {
+		$background_color1 = 'paleturquoise';
+		$background_color2 = 'lightblue';
+		$accent_color1 = '#8CBEBE';
+		$accent_color2 = '#8AADB8';
+	} elsif ($type =~ /import/) {
+		$background_color1 = 'palegreen';
+		$background_color2 = 'lightgreen';
+		$accent_color1 = '#7AC97A';
+		$accent_color2 = '#73BE73';
+	} elsif ($type =~ /public/) {
+		$background_color1 = '#AAAAAA';
+		$background_color2 = '#CCCCCC';
+		$accent_color1 = '#999999';
+		$accent_color2 = '#AAAAAA';
+	} elsif ($type =~ /shared/) {
+		$background_color1 = '#FFFF55';
+		$background_color2 = '#FFFF77';
+		$accent_color1 = '#CCCC44';
+		$accent_color2 = '#CCCC5F';
+	}
+	my $background_color = ($count % 2)? $background_color1 : $background_color2;
+	my $accent_color = ($count % 2)? $accent_color1 : $accent_color2;
+	return ($background_color, $accent_color);
+}
+
+# Render Track List Title (Track, Type, Accent Color) - Renders the visible HTML which is seen when the details are hidden.
+sub render_track_list_title {
+	my $self = shift;
+	my $fileid = shift;
+	my $type = shift;
+	my $accent_color = shift;
+	my $userdata = $self->user_tracks;
+	
+	my $short_name = $userdata->filename($fileid);
+	if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
+		my @tracks = split /\+/, $2;
+		$short_name = "Shared track from $1 (@tracks)";
+	} elsif (length $short_name > 40) {
+		$short_name =~ s/^(.{40}).+/$1.../;
+	}
+	
+	my @track_labels = $userdata->labels($fileid);
+	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
+	my $source_note = span({-style => "float: right; font-size: 16pt; font-family: Helvetica, Arial, Verdana, sans-serif; color: " . $accent_color . ";"}, $type);
+	my $go_there = join(' ',
+		map {
+			my $label = $_;
+			my $key   = $self->data_source->setting($label=>'key');
+			$key? (
+				'['.
+				a( {
+						-href    => 'javascript:void(0)',
+						-onClick => qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))
+					},
+					b($key)
+				).
+				']'
+			) : ''
+		} @track_labels);
+	my $stat = div(
+		{
+			-id => $fileid . "_stat",
+			-style=> "display: inline;"
+		},
+		''
+	);
+	my $title = h1({-style	=> "display: inline; font-size: 14pt;"}, $short_name);
+	
+	return span(
+		{-style => "display: inline-block; width: 60em;"},
+		$stat,
+		$title,
+		$go_there
+	) . $source_note;
+}
+
+# Render Track Controls (Track Name, Type) - Renders the HTML for the main track controls in the custom track listing.
+sub render_track_controls {
+	my $self = shift;
+	my $fileid = shift;
+	my $type = shift;
+	my $userdata = $self->user_tracks;
+	my $userid = $userdata->{userid};
+	my @track_labels = $userdata->labels($fileid);
+	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
+	my $globals = $self->globals;
+	
+	my $buttons = $self->data_source->globals->button_url;
+    
+	my $toggle_details = a(	
+		{
+			-href	  => "javascript: void(0);",
+			-onClick => "this.up().next('div.details').toggle();"
+		 },
+		 "Toggle Details"
+	);
+	my $controls = $toggle_details;
+	
+	# Conditional controls, based on the type of track.
+	if ($userdata->is_mine($fileid)) {
+		# The delete icon,
+		$controls .= '&nbsp;' . img(
+			{
+				-src     	 => "$buttons/trash.png",
+				-style  	 => 'cursor:pointer',
+				-onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
+				-onClick     => "deleteUpload('$fileid')"
+			}
+		);
+	}
+	if ($type !~ /available/) {
+		if ($userdata->is_mine($fileid)) {
+			# The sharing icon, if it's an upload.
+			$controls .= '&nbsp;' . img(
+				{
+					-src		  => "$buttons/share.png",
+					-style   	  => 'cursor:pointer',
+					-onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
+					-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
+				}
+			) if ($type =~ /upload/);
+		}
+		if ($type =~ /(public|shared)/) {
+			# The "remove" [x] link.
+			$controls .= '&nbsp;' . a(
+				{
+					-href     	 => "javascript: void(0)",
+					-onMouseOver => 'GBubble.showTooltip(event,"Remove from my session",0,200)',
+					-onClick     => "unshareFile('$fileid', '$userid')"
+				},
+				"[X]"
+			);
+		}
+	} else {
+		$controls .= '&nbsp;' . a(
+			{
+				-href	 => "javascript:void(0);",
+				-onClick => "shareFile('$fileid', '$userid')"
+			},
+			"[Add]"
+		);
+	}
+	
+	return div(
+		{
+			-class => "controls",
+			-style => "display: inline-block; padding: 0.15em;"
+		}, $controls
 	);
 }
 
-sub render_userdata_table {
-    my $self = shift;
-    my $html = div( {-id=>'userdata_table_div',-class=>'uploadbody'},
-		    scalar $self->list_userdata());
+# Render Track Details (Track Name[, Listing Type]) - Renders the track listing details section.
+sub render_track_details {
+	my $self = shift;
+	my $fileid = shift;
+	my $listing_type = shift // "";														#/
+	my $userdata = $self->user_tracks;
+	my $globals	= $self->globals;
+	my $random_id = 'upload_'.int rand(9999);
+	
+	my $description = div(
+		{
+			-id              => $fileid . "_description",
+			-onClick         => ($userdata->is_mine($fileid))? "Controller.edit_upload_description('$fileid',this)" : "",
+			-contentEditable => ($userdata->is_mine($fileid))? 'true' : 'false',
+		},
+		$userdata->description($fileid) || $self->translate('ADD_DESCRIPTION')
+	);
+	my $source_listing = div(
+		{-style => "margin-left: 2em; display: inline-block;"},
+		$self->render_track_source_files($fileid)
+	);
+	my $sharing = ($userdata->database == 1)? div(
+		{
+			-style => "margin-left: 2em; display: inline-block;",
+			-class => "sharing"
+		},
+		$self->render_track_sharing($fileid)
+	) : "";
+	
+	my $status    = $userdata->status($fileid) || 'complete';
+	my $status_box = div(
+			div({-id=>"${random_id}_form"},'&nbsp;'),
+			div({-id=>"${random_id}_status"},
+				i($status),
+				a(
+					{
+						-href    =>'javascript:void(0)',
+			  			-onClick => "Controller.monitor_upload('$random_id','$fileid')",
+			 		},
+			 		'Interrupted [Resume]'
+			 	)
+			)
+		 ) unless ($status =~ /complete/);
+			 
+	return div(
+		{
+			-style => ($listing_type =~ /public/)? "display: none;" : "display: block;",
+			-class => "details"
+		},
+		i($description),
+		$source_listing,
+		$sharing,
+		$status_box
+	);
+}
+
+# Render Track Source Files (Track) - Renders the HTML listing of a track's source files.
+sub render_track_source_files {
+	my $self = shift;
+	my $fileid = shift;
+	my $userdata = $self->user_tracks();
+	my @source_files = $userdata->source_files($fileid);
+	my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($fileid);
+	my $source_listing =
+		b('Source files:') .
+		ul(
+			{-style => "margin: 0; padding: 0; list-style: none;"},
+			li(
+				[map {
+					a( {
+							-href => "?userdata_download=$_->[0];track=$fileid",
+							-style	=> "display: inline-block; width: 15em;"
+						},
+							$_->[0]
+					).
+					span({-style => "display: inline-block; width: 15em;"}, scalar localtime($_->[2])).
+					span({-style => "display: inline-block; width: 10em;"}, $_->[1],'bytes').
+					span(
+						($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3])?
+						a( {
+								-href    => "javascript:void(0)",
+								-onClick => "editUploadData('$fileid','$_->[0]')"
+							},
+							'[edit]'
+						)
+					: '&nbsp;'
+					)
+				} @source_files]
+			),
+			li(
+				a( {
+						-href	=> "?userdata_download=conf;track=$fileid",
+						-style	=> "display: inline-block; width: 15em;"
+					},
+					$self->translate('CONFIGURATION')
+				).
+				span({-style => "display: inline-block; width: 15em;"}, scalar localtime $conf_modified).
+				span({-style => "display: inline-block; width: 10em;"}, "$conf_size bytes").
+				a({
+						-href    => "javascript:void(0)",
+						-onClick => "editUploadConf('$fileid')"
+					}, '[edit]'
+				)
+			)
+		);
+	return $source_listing;
+}
+
+# Render Track Sharing (Track) - Renders the HTML listing of a track's sharing properties.
+sub render_track_sharing {
+	my $self = shift;
+	my $fileid = shift;
+	my $userdata = $self->user_tracks;
+	my $userdb = $self->{userdb};
+	my $globals = $self->globals;
+	
+	#Building the users list.
+	my $sharing_policy = $userdata->permissions($fileid);
+	my @users = $userdata->shared_with($fileid);
+	$_ = b($userdb->get_username($_)) . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
+	my $userlist = join (", ", @users);
+	
+	my $sharing_content = b("Sharing:") . br() . "Track is ";
+	if (($userdata->database == 0) && ($userdata->is_mine($fileid) == 0)) {
+		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? b("shared") . " with you." : b("public") . ".";
+	} else {
+		$sharing_content .= Select(
+			{-onChange => "changePermissions('$fileid', this.options[this.selectedIndex].value.toLowerCase())"},
+			map {
+				option(
+					($sharing_policy =~ /$_/i)? {-selected => "selected"} : "",
+					"$_"
+				)
+			} qw(Private Casual Group Public)
+		);
+		
+		my $sharing_help = b("Private") . " - Visible only to me.<br>";
+		$sharing_help .= b("Casual") . " - Visible to me and anyone I send a link to, but not visible in the public tracks.<br>";
+		$sharing_help .= b("Group") . " - Visible to and anyone I add to the sharing group.<br>";
+		$sharing_help .= b("Public") . " - Visible to anyone.<br>";
+		
+		$sharing_content .= "&nbsp;" . a({-href => "javascript:void(0)", -onMouseOver => "GBubble.showTooltip(event,'$sharing_help',0,300);"}, "[?]");
+		$sharing_content .= "&nbsp;shared with " .  ($userlist? "$userlist" : "no one.") if ($sharing_policy =~ /(casual|group)/);
+		
+		if ($sharing_policy =~ /casual/) {
+			my $sharing_url = $userdata->sharing_link($fileid);
+			my $sharing_link = a({-href => $sharing_url}, $sharing_url);
+			$sharing_content .= br() . "Share with this link: ";
+			$sharing_content .= $sharing_link;
+		}
+		
+		if ($sharing_policy =~ /group/) {
+			my $add_box = "&nbsp;" . input(
+				{
+					-length => 20,
+					-value => "Enter a username here.",
+					-onFocus => "this.clear()"
+				}
+			);		
+			my $add_link = "&nbsp;" . a(
+				{
+					-href => "javascript: void(0)",
+					-onClick => "shareFile('$fileid', this.previous('input').getValue())",
+				},
+				"[Add]" );
+			$sharing_content .= $add_box . $add_link;
+		};
+	}
+	return $sharing_content;
+}
+
+
+# Userdata Import - Renders the "[Import a track URL]" link in the Imported Tracks section.
+sub userdata_import {
+    my $self     = shift;
+    my $html     = '';
+
+    my $url      = url(-absolute=>1,-path_info=>1);
+    $html   .= div({-id=>'import_list_start'},'');
+
+    my $import_label  = $self->translate('IMPORT_TRACK');
+    my $import_prompt = $self->translate('REMOTE_URL');
+    my $remove_label  = $self->translate('REMOVE');
+    my $help_link     = $self->annotation_help;
+    $html            .= div({-style=>'margin-left:10pt'},
+			   a({-href => "javascript:addAnUploadField('import_list_start','$url','$import_prompt','$remove_label','import','$help_link')",
+			      -id   => 'import_adder',
+			     },b("[$import_label]")));
     return $html;
 }
 
-sub list_userdata {
-    my $self = shift;
-    my $type = shift;
-
-    my $userdata = $self->user_tracks();
-
-    my @tracks   = $userdata->tracks();
-    my %modified = map {$_ => $userdata->modified($_) } @tracks;
-    @tracks      = sort @tracks;
-
-    my $buttons = $self->data_source->globals->button_url;
-    my $share   = "$buttons/share.png";
-    my $delete  = "$buttons/trash.png";
-
-    my $count = 0;
-    my @rows = map {
-	my $name          = $_;
-	my $short_name    = $name;
-
-	if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
-	    my @tracks = split /\+/,$2;
-	    $short_name = "Shared track from $1 (@tracks)";
-	} elsif (length $short_name > 40) {
-	    $short_name       =~ s/^(.{40}).+/$1.../;
-	}
-
-	my $description   = div(
-	    {
-		-id              => "${name}_description",
-		-onClick         => "Controller.edit_upload_description('$name',this)",
-		-contentEditable => 'true',
-	    },
-	    $userdata->description($_) || $self->tr('ADD_DESCRIPTION')
-	    );
-	my @track_labels        = $userdata->labels($name);
-	my $track_labels        = join '+',map {CGI::escape($_)} @track_labels;
-
-	my $status    = $userdata->status($name) || 'complete';
-	my $random_id = 'upload_'.int rand(9999);
-
-	my ($conf_name,$conf_modified,$conf_size) = $userdata->conf_metadata($name);
-	my $mirror_url = $userdata->is_mirrored($name);
-
-	my @source_files  = $userdata->source_files($name);
-	my $download_data = 
-	    table({-class=>'padded-table'},
-		  TR([map {
-		      th({-align=>'left'},
-			 a({-href=>$mirror_url || "?userdata_download=$_->[0];track=$name"},$_->[0])).
-			     td(scalar localtime($_->[2])).
-			     td($_->[1],'bytes').
-			     td(
-				 $mirror_url                                          ? a({-href    => "javascript:void(0)",
-											   -onClick => "reloadURL('$name','$mirror_url')"},"[reload from $mirror_url]")
-				 : ($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3]) ? a({-href    => "javascript:void(0)",
-											   -onClick => "editUploadData('$name','$_->[0]')"},'[edit]')
-				 : '&nbsp;'
-			     )
-		      } @source_files]),
-		  TR(th({-align=>'left'},
-			(a({-href=>"?userdata_download=conf;track=$name"},$self->tr('CONFIGURATION')))),
-		     td(scalar localtime $conf_modified),
-		     td("$conf_size bytes"),
-		     td(a({-href    => "javascript:void(0)",
-			   -onClick => "editUploadConf('$name')"},'[edit]'))
-		  ),
-	    );
-
-	my $go_there = join(' ',
-			    map {
-				my $label = $_;
-				my $key   = $self->data_source->setting($label=>'key');
-				$key ? (
-				    '['
-				    .a({-href    => 'javascript:void(0)',
-					-onClick => 
-					    qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))},
-				       b($key))
-				    .']'
-				    )
-				    : ''
-			    } @track_labels);
-	
-	my $color         = $count++%2 ? 'paleturquoise': 'lightblue';
-
-	div({-style=>"background-color:$color"},
-	    div({-id=>"${name}_stat"},''),
-	    img({-src     => $delete,
-		 -style   => 'cursor:pointer',
-		 -onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
-		 -onClick     => "deleteUploadTrack('$name')"
-		},'&nbsp;',
-	    (@source_files) 
-		? img({-src=>$share,
-		 -style   => 'cursor:pointer',
-		 -onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
-		 -onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
-		})
-	        : '',
-	    ),'&nbsp;',
-	    b($short_name),$go_there,br(), 
-	    i($description),
-	    div({-style=>'padding-left:10em'},
-		b('Source files:'),
-		$download_data),
-	    div({-id=>"${name}_editfield"},''),
-	    ($status !~ /complete/) 
-	      ? div(
-		div({-id=>"${random_id}_form"},'&nbsp;'),
-		div({-id=>"${random_id}_status"},i($status),
-		           a({-href    =>'javascript:void(0)',
-			      -onClick => 
-				  "Controller.monitor_upload('$random_id','$name')",
-			     },'Interrupted [Resume]')
-		)
-	      )
-	      : '',
-	    )
-    } @tracks;
-    return join '',@rows;
-}
-
+# Userdata Upload - Renders an "Add custom tracks" links in the Uploaded Tracks section.
 sub userdata_upload {
     my $self     = shift;
     my $url      = url(-absolute=>1,-path_info=>1);
@@ -1469,26 +1764,61 @@ sub userdata_upload {
     my $html     = '';
     $html       .= div({-id=>'upload_list_start'},'');
 
-    my $upload_label = $self->tr('UPLOAD_FILE');
-    my $mirror_label = $self->tr('MIRROR_FILE');
-    my $remove_label = $self->tr('REMOVE');
-
-    my $new_label    = $self->tr('NEW_TRACK');
-    my $from_text    = $self->tr('FROM_TEXT');
-    my $from_file    = $self->tr('FROM_FILE');
-    my $from_url     = $self->tr('FROM_URL');
+    my $upload_label = $self->translate('UPLOAD_FILE');
+	my $mirror_label = $self->translate('MIRROR_FILE');
+    my $remove_label = $self->translate('REMOVE');
+    my $new_label    = $self->translate('NEW_TRACK');
+    my $from_text    = $self->translate('FROM_TEXT');
+    my $from_file    = $self->translate('FROM_FILE');
+	my $from_url     = $self->translate('FROM_URL');
     my $help_link     = $self->annotation_help;
     $html         .= p({-style=>'margin-left:10pt;font-weight:bold'},
 		       'Add custom track(s):',
-		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',    '$remove_label', 'edit','$help_link')"},
+		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',   '$remove_label', 'edit','$help_link')"},
 			 "[$from_text]"),
 		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$mirror_label', '$remove_label', 'url','$help_link')"},
 			 "[$from_url]"),
 		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url','$upload_label',  '$remove_label' , 'upload','$help_link')",
 			  -id=>'file_adder',
 			 },"[$from_file]"));
-		       
+    return $html;
+}
 
+# Add User Data - Renders a link to add a custom track.
+sub add_userdata {
+	my $self = shift;
+	my $url      = url(-absolute=>1,-path_info=>1);
+
+    my $upload_label  = $self->translate('UPLOAD_FILE');
+    my $remove_label  = $self->translate('REMOVE');
+    my $new_label     = $self->translate('NEW_TRACK');
+    my $from_text     = $self->translate('FROM_TEXT');
+    my $from_file     = $self->translate('FROM_FILE');
+    my $help_link     = $self->annotation_help;
+    my $import_prompt = $self->translate('REMOTE_URL');
+    my $import_label  = $self->translate('IMPORT_TRACK');
+	
+	my $html = '';    
+    $html .= p({-style=>'margin-left:10pt;font-weight:bold'},
+		'Add custom track(s):',
+		a(
+			{-href=>"javascript:addAnUploadField('custom_list_start', '$url', '$new_label',   '$remove_label', 'edit','$help_link')"},
+			"[$from_text]"
+		),
+		a( {
+				-href=>"javascript:addAnUploadField('custom_list_start', '$url','$upload_label','$remove_label' , 'upload','$help_link')",
+				-id=>'file_adder',
+			},
+			"[$from_file]"
+		),
+		a( {
+				-href => "javascript:addAnUploadField('custom_list_start','$url','$import_prompt','$remove_label','import','$help_link')",
+				-id   => 'import_adder',
+			},
+			b("[$import_label]")
+		)
+	);
+	$html .= div({-id=>'custom_list_start'},'');
     return $html;
 }
 
@@ -1577,7 +1907,7 @@ sub examples {
   my @examples = shellwords($examples);
   return unless @examples;
   my @urls = map { a({-href=>"?name=".escape($_)},$_) } @examples;
-  return b($self->tr('Examples')).': '.join(', ',@urls).". ";
+  return b($self->translate('Examples')).': '.join(', ',@urls).". ";
 }
 
 ######################### code for the search box and navigation bar ###################
@@ -1616,19 +1946,19 @@ sub plugin_menu {
     '&nbsp;',
     button(
       -name     => 'plugin_action',
-      -value    => $self->tr('Configure'),
+      -value    => $self->translate('Configure'),
       -onClick => 'Controller.configure_plugin("plugin_configure_div");'
     ),
     '&nbsp;',
     button(
         -name    => 'plugin_action',
-        -value   => $self->tr('Go'),
+        -value   => $self->translate('Go'),
         -onClick => 'var select_box = document.pluginform.plugin;'
             . q{var plugin_type = select_box.options[select_box.selectedIndex].attributes.getNamedItem('plugin_type').value;}
             . 'Controller.plugin_go('
             . 'document.pluginform.plugin.value,'
             . 'plugin_type,' . '"'
-            . $self->tr('Go') . '",'
+            . $self->translate('Go') . '",'
             . '"form"' . ');',
         ),
   );
@@ -1650,11 +1980,11 @@ sub plugin_configuration_form {
 		  -name     => 'configure_plugin',
 		  -id       => 'configure_plugin',
 		  ),
-	  button(-value => $self->tr('Cancel'),
+	  button(-value => $self->translate('Cancel'),
  		 -onClick=>'Balloon.prototype.hideTooltip(1)'),
-	  button(-value => $self->tr('Configure_plugin'),
+	  button(-value => $self->translate('Configure_plugin'),
  		 -onClick=>'Controller.reconfigure_plugin('
-                 . '"'.$self->tr('Configure_plugin').'"'
+                 . '"'.$self->translate('Configure_plugin').'"'
                  . qq(, "plugin:$plugin_id")
                  . qq(, "plugin_configure_div")
                  . qq(, "$plugin_type")
@@ -1694,7 +2024,7 @@ sub wrap_plugin_configuration {
         push @buttons,
             button(
             -name    => 'plugin_button',
-            -value   => $self->tr('CANCEL'),
+            -value   => $self->translate('CANCEL'),
             -onClick => 'Controller.wipe_div("plugin_configure_div");'
             );
 
@@ -1705,9 +2035,9 @@ sub wrap_plugin_configuration {
         push @buttons,
             button(
             -name    => 'plugin_button',
-            -value   => $self->tr('Configure_plugin'),
+            -value   => $self->translate('Configure_plugin'),
             -onClick => 'Controller.reconfigure_plugin("'
-                . $self->tr('Configure_plugin') . '", "'
+                . $self->translate('Configure_plugin') . '", "'
                 . "plugin:$plugin_id"
                 . '","plugin_configure_div","'
                 . $plugin_type . '");'
@@ -1716,11 +2046,11 @@ sub wrap_plugin_configuration {
             push @buttons,
                 button(
                 -name    => 'plugin_button',
-                -value   => $self->tr('Find'),
+                -value   => $self->translate('Find'),
                 -onClick => 'Controller.plugin_go("'
                     . $plugin_base . '","'
                     . $plugin_type . '","'
-                    . $self->tr('Find') . '","'
+                    . $self->translate('Find') . '","'
                     . 'config' . '")',
                 );
         }
@@ -1728,11 +2058,11 @@ sub wrap_plugin_configuration {
             push @buttons,
                 button(
                 -name    => 'plugin_button',
-                -value   => $self->tr('Go'),
+                -value   => $self->translate('Go'),
                 -onClick => 'Controller.plugin_go("'
                     . $plugin_base . '","'
                     . $plugin_type . '","'
-                    . $self->tr('Go') . '","'
+                    . $self->translate('Go') . '","'
                     . 'config' . '")',
                 );
         }
@@ -1740,8 +2070,8 @@ sub wrap_plugin_configuration {
         # Start adding to the html
         $return_html .= h1(
               $plugin_type eq 'finder'
-            ? $self->tr('Find')
-            : $self->tr('Configure'),
+            ? $self->translate('Find')
+            : $self->translate('Configure'),
             $plugin_name,
         );
 	$return_html .= div({-style=>'font-size:small'},@plugin_description);
@@ -1755,11 +2085,11 @@ sub wrap_plugin_configuration {
             $button_html,;
     }
     else {
-        $return_html .= join '', p( $self->tr('Boring_plugin') ),
+        $return_html .= join '', p( $self->translate('Boring_plugin') ),
             b(
             button(
                 -name    => 'plugin_button',
-                -value   => $self->tr('CANCEL'),
+                -value   => $self->translate('CANCEL'),
                 -onClick => 'Controller.wipe_div("plugin_configure_div");'
             )
             );
@@ -1805,11 +2135,12 @@ sub do_plugin_header {
     print header(
         -cookie  => $cookie,
         -type    => $mime_type,
-        -charset => $self->tr('CHARSET'),
+        -charset => $self->translate('CHARSET'),
         $attachment ? ( -attachment => $attachment ) : (),
     );
 }
 
+# Slider Table - Returns the HTML for the zooming and panning controls.
 sub slidertable {
   my $self    = shift;
   my $state   = $self->state;
@@ -1877,7 +2208,7 @@ sub zoomBar {
 
   my ($length,$max) = @_;
 
-  my $show   = $self->tr('Show');
+  my $show   = $self->translate('Show');
 
   my %seen;
   my @r         = sort {$a<=>$b} $self->data_source->get_ranges();
@@ -1915,7 +2246,7 @@ sub source_menu {
       @sources         = sort {$descriptions{$a} cmp $descriptions{$b}} (@sources,$n);
   }
 
-  return b($self->tr('DATA_SOURCE')).br.
+  return b($self->translate('DATA_SOURCE')).br.
     ( $sources ?
       popup_menu(-name     => 'source',
 		 -values   => \@sources,
@@ -1982,7 +2313,7 @@ sub track_config {
     my $return_html = start_html();
 
     my $title   = div({-class=>'config-title'},$key);
-    my $dynamic = $self->tr('DYNAMIC_VALUE');
+    my $dynamic = $self->translate('DYNAMIC_VALUE');
 
     my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 10;
     my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
@@ -2063,7 +2394,7 @@ END
 		   td( {-colspan => 2}, $title));
 
     push @rows, TR({-class=>'general'},
-		   th( { -align => 'right' }, $self->tr('Show') ),
+		   th( { -align => 'right' }, $self->translate('Show') ),
 		   td( checkbox(
 			   -name     => 'show_track',
 			   -value    => $label,
@@ -2075,7 +2406,7 @@ END
         );
 
     push @rows,TR( {-class=>'general'},
-		   th( { -align => 'right' }, $self->tr('GLYPH') ),
+		   th( { -align => 'right' }, $self->translate('GLYPH') ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_glyph',
 			   -values  => \@all_glyphs,
@@ -2088,17 +2419,17 @@ END
 
     push @rows,TR( {-class => 'features',
 		    -id    => 'packing'},
-		   th( { -align => 'right' }, $self->tr('Packing') ),
+		   th( { -align => 'right' }, $self->translate('Packing') ),
 		   td( popup_menu(
 			   -name     => 'format_option',
 			   -values   => [ 0 .. 3 ],
 			   -override => 1,
 			   -default  => $state->{features}{$label}{options},
 			   -labels   => {
-			       0 => $self->tr('Auto'),
-			       1 => $self->tr('Compact'),
-			       2 => $self->tr('Expand'),
-			       3 => $self->tr('Expand_Label'),
+			       0 => $self->translate('Auto'),
+			       1 => $self->translate('Compact'),
+			       2 => $self->translate('Expand'),
+			       3 => $self->translate('Expand_Label'),
 			   }
 		       )
 		   )
@@ -2106,7 +2437,7 @@ END
 
     push @rows,TR({-class=>'xyplot',
 		   -style=>$g=~/xyplot/ ? 'display:table-row' : 'display:none'},
-		  th( { -align => 'right' }, $self->tr('XYPLOT_TYPE')),
+		  th( { -align => 'right' }, $self->translate('XYPLOT_TYPE')),
 		  td( $picker->popup_menu(
 			  -name    => 'conf_graph_type',
 			  -values  => [qw(histogram line points linepoints)],
@@ -2117,7 +2448,7 @@ END
         );
 
     push @rows,TR({-class=>'whiskers'},
-		  th( { -align => 'right' }, $self->tr('WHISKERS_TYPE')),
+		  th( { -align => 'right' }, $self->translate('WHISKERS_TYPE')),
 		  td( $picker->popup_menu(
 			  -name    => 'conf_graph_type_whiskers',
 			  -values  => [qw(whiskers boxes)],
@@ -2128,7 +2459,7 @@ END
         );
 
     push @rows,TR( {-class=>'xyplot features'},
-		   th( { -align => 'right' }, $self->tr('FG_COLOR') ),
+		   th( { -align => 'right' }, $self->translate('FG_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_fgcolor',
 			   $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
@@ -2145,7 +2476,7 @@ END
 
     push @rows,TR( {-class=>'xyplot density',
 		     -id   =>'bicolor_pivot_id'},
-                   th( { -align => 'right'}, $self->tr('BICOLOR_PIVOT')),
+                   th( { -align => 'right'}, $self->translate('BICOLOR_PIVOT')),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_bicolor_pivot',
 			   -values  => [qw(none zero mean value)],
@@ -2161,13 +2492,13 @@ END
     my $pv    = $p =~ /^[\d.-eE]+$/ ? $p : 0.0;
     push @rows,TR({-class =>'xyplot density',
 		   -id=>'switch_point_other'},
-		  th( {-align => 'right' },$self->tr('BICOLOR_PIVOT_VALUE')),
+		  th( {-align => 'right' },$self->translate('BICOLOR_PIVOT_VALUE')),
                   td( textfield(-name  => 'bicolor_pivot_value',
 				-value => $pv)));
     
 
     push @rows,TR({-class=>'switch_point_color xyplot density'}, 
-		  th( { -align => 'right' }, $self->tr('BICOLOR_PIVOT_POS_COLOR')),
+		  th( { -align => 'right' }, $self->translate('BICOLOR_PIVOT_POS_COLOR')),
 		   td( $picker->color_pick(
 			   'conf_pos_color',
 			   $data_source->semantic_fallback_setting( $label => 'pos_color', $length ),
@@ -2177,7 +2508,7 @@ END
         );
 
     push @rows,TR( {-class=>'switch_point_color xyplot density'}, 
-		   th( { -align => 'right' }, $self->tr('BICOLOR_PIVOT_NEG_COLOR') ),
+		   th( { -align => 'right' }, $self->translate('BICOLOR_PIVOT_NEG_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_neg_color',
 			   $data_source->semantic_fallback_setting( $label => 'neg_color', $length ),
@@ -2189,7 +2520,7 @@ END
     push @rows,TR( { -id    => 'bgcolor_picker',
 		     -class => 'xyplot density features',
 		   },
-		   th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
+		   th( { -align => 'right' }, $self->translate('BACKGROUND_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_bgcolor',
 			   $summary_mode ? 'black'
@@ -2206,7 +2537,7 @@ END
     # wiggle colors
     #######################
     push @rows,TR( {-class=>'whiskers'}, 
-		   th( { -align => 'right' }, $self->tr('WHISKER_MEAN_COLOR')),
+		   th( { -align => 'right' }, $self->translate('WHISKER_MEAN_COLOR')),
 		   td( $picker->color_pick(
 			   'conf_mean_color',
 			   $mean_color || 'black',
@@ -2216,7 +2547,7 @@ END
         );
 
     push @rows,TR( {-class=>'whiskers'}, 
-		   th( { -align => 'right' }, $self->tr('WHISKER_STDEV_COLOR') ),
+		   th( { -align => 'right' }, $self->translate('WHISKER_STDEV_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_stdev_color',
 			   $stdev_color || 'grey',
@@ -2226,7 +2557,7 @@ END
         );
 
     push @rows,TR( {-class=>'whiskers'}, 
-		   th( { -align => 'right' }, $self->tr('WHISKER_MAX_COLOR') ),
+		   th( { -align => 'right' }, $self->translate('WHISKER_MAX_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_max_color',
 			   $max_color || 'lightgrey',
@@ -2236,19 +2567,19 @@ END
         );
 
     push @rows,TR( {-class=>'xyplot density whiskers'},
-		   th( { -align => 'right' },$self->tr('SCALE_MIN')),
+		   th( { -align => 'right' },$self->translate('SCALE_MIN')),
 		   td( textfield(-name  => 'conf_min_score',
 				 -value => defined $override->{min_score} ? $override->{min_score}
 				                                          : $summary_mode ? 0 : $min_score))) if $quantitative;
 
     push @rows,TR(  {-class=>'xyplot density whiskers'},
-		    th( { -align => 'right' },$self->tr('SCALE_MAX')),
+		    th( { -align => 'right' },$self->translate('SCALE_MAX')),
 		    td( textfield(-name  => 'conf_max_score',
 				  -value => defined $override->{max_score} ? $override->{max_score}
 				  : $max_score)));
 
     push @rows,TR({-class=>'xyplot'},
-		  th( { -align => 'right' }, $self->tr('SHOW_VARIANCE')),
+		  th( { -align => 'right' }, $self->translate('SHOW_VARIANCE')),
 		  td(
 		      hidden(-name=>'conf_variance_band',-value=>0),
 		      checkbox(
@@ -2264,7 +2595,7 @@ END
         );
 
     push @rows,TR( {-class=>'features'},
-		   th( { -align => 'right' }, $self->tr('LINEWIDTH') ),
+		   th( { -align => 'right' }, $self->translate('LINEWIDTH') ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_linewidth',
 			   -current => $override->{'linewidth'},
@@ -2276,7 +2607,7 @@ END
 
     push @rows,TR( {-class=>'general'},
 		   th(
-		       { -align => 'right' }, $self->tr('HEIGHT') ),
+		       { -align => 'right' }, $self->translate('HEIGHT') ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_height',
 			   -current => $override->{'height'},
@@ -2290,11 +2621,11 @@ END
         );
     
     push @rows,TR({-class=>'features'},
-		  th( { -align => 'right' }, $self->tr('Limit') ),
+		  th( { -align => 'right' }, $self->translate('Limit') ),
 		  td( $picker->popup_menu(
 			  -name     => 'conf_feature_limit',
 			  -values   => [ 0, 5, 10, 25, 50, 100, 200, 500, 1000 ],
-			  -labels   => { 0 => $self->tr('NO_LIMIT') },
+			  -labels   => { 0 => $self->translate('NO_LIMIT') },
 			   -current  => $override->{feature_limit},
 			  -override => 1,
 			  -default  => $limit,
@@ -2303,7 +2634,7 @@ END
         );
     
     push @rows,TR({-class=>'features'},
-		  th( { -align => 'right' }, $self->tr('STRANDED') ),
+		  th( { -align => 'right' }, $self->translate('STRANDED') ),
 		  td( hidden(-name=>'conf_stranded',-value=>0),
 		      checkbox(
 			  -name    => 'conf_stranded',
@@ -2318,7 +2649,7 @@ END
         );
 
     push @rows,TR({-class=>'general'},
-		  th( { -align => 'right' }, $self->tr('APPLY_CONFIG')),
+		  th( { -align => 'right' }, $self->translate('APPLY_CONFIG')),
 		  td(textfield(
 			 -name    => 'apply_semantic',
 			 -override=> 1,
@@ -2328,7 +2659,7 @@ END
 		   ) unless $summary_mode;
 
     push @rows,TR({-class=>'general'},
-		  th( { -align => 'right' }, $self->tr('SHOW_SUMMARY')),
+		  th( { -align => 'right' }, $self->translate('SHOW_SUMMARY')),
 		  td(textfield(
 			 -name    => 'summary_mode',
 			 -override=> 1,
@@ -2348,15 +2679,15 @@ END
 		  td({-colspan=>2},
 		     button(
 			 -style   => 'background:pink',
-			 -name    => $self->tr('Revert'),
+			 -name    => $self->translate('Revert'),
 			 -onClick => $reset_js
 		     ), br, 
 		     button(
-			 -name    => $self->tr('Cancel'),
+			 -name    => $self->translate('Cancel'),
 			 -onClick => 'Balloon.prototype.hideTooltip(1)'
 		     ),
 		     button(
-			 -name    => $self->tr('Change'),
+			 -name    => $self->translate('Change'),
 			 -onClick => $submit_script
 		     ),
 		     hidden(-name=>'segment_length',-value=>$length),
@@ -2431,25 +2762,25 @@ sub download_track_menu {
     my $unload      = 'window.onbeforeunload=void(0)';
     my $byebye      = 'Balloon.prototype.hideTooltip(1)';
 
-    my $segment_str = segment_str($segment);
+    my $segment_str = segment_stranslate($segment);
 
     my $html = '';
     $html   .= div({-align=>'center'},
 		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key),br(),
 
-		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_REGION',$segment_str),
+		   button(-value   => $self->translate('DOWNLOAD_TRACK_DATA_REGION',$segment_str),
 			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid:$start..$end;l=$track;s=0;f=save+gff3';$byebye",
 		   ),br(),
 
-		   button(-value   => $self->tr('DOWNLOAD_TRACK_DATA_CHROM',$seqid),
+		   button(-value   => $self->translate('DOWNLOAD_TRACK_DATA_CHROM',$seqid),
 			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid;l=$track;s=0;f=save+gff3';$byebye",
 		   ),br(),
 
-		   button(-value=> $self->tr('DOWNLOAD_TRACK_DATA_ALL'),
+		   button(-value=> $self->translate('DOWNLOAD_TRACK_DATA_ALL'),
 			  -onClick => "$unload;location.href='?gbgff=1;l=$track;s=0;f=save+gff3';$byebye",
 		   )).
 
-		   button(-style=>"background:pink",-onClick=>"$byebye",-name=>$self->tr('CANCEL'));
+		   button(-style=>"background:pink",-onClick=>"$byebye",-name=>$self->translate('CANCEL'));
     return $html;
 }
 
@@ -2519,7 +2850,7 @@ sub share_track {
     $das .= "?$das_types";
 
     my $return_html = start_html();
-    $return_html .= h1( $self->tr( 'SHARE', $description ) );
+    $return_html .= h1( $self->translate( 'SHARE', $description ) );
 
     my $tsize = 72;
 
@@ -2534,7 +2865,7 @@ sub share_track {
 	}
 
 	$return_html .= p(
-	    $self->tr('SHARE_INSTRUCTIONS_BOOKMARK'),br(),
+	    $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'),br(),
 	    textfield(
 		-style    => 'background-color: wheat',
 		-readonly => 1,
@@ -2547,7 +2878,7 @@ sub share_track {
 
     $return_html .=
 	p(
-	    $self->tr(
+	    $self->translate(
 		$label eq 'all'
 		? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
 		: 'SHARE_INSTRUCTIONS_ONE_TRACK'
@@ -2561,7 +2892,7 @@ sub share_track {
 
     if ($das_types) {
         $return_html .= p(
-            $self->tr(
+            $self->translate(
                 $label eq 'all'
                 ? 'SHARE_DAS_INSTRUCTIONS_ALL_TRACKS'
                 : 'SHARE_DAS_INSTRUCTIONS_ONE_TRACK'
@@ -2578,15 +2909,13 @@ sub share_track {
     }
     $return_html .= 
 	button(
-		 -name    => $self->tr('OK'),
+		 -name    => $self->translate('OK'),
 		 -onClick => 'Balloon.prototype.hideTooltip(1)'
 		 );
 
     $return_html .= end_html();
     return div({-style=>'width:600px'},$return_html);
 }
-
-
 
 ################### various utilities ###################
 
@@ -2614,7 +2943,7 @@ sub toggle {
   my $page_settings = $self->state;
 
   my $id    = "\L${title}_panel\E";
-  my $label = $self->tr($title) || '';
+  my $label = $self->translate($title) || '';
   my $state = $self->data_source->section_setting($title)    or return '';
   return '' if $state eq 'off';
   my $visible = exists $page_settings->{section_visible}{$id} ? 
@@ -2695,25 +3024,7 @@ sub can_generate_pdf {
     }
 }
 
-sub format_autocomplete {
-    my $self     = shift;
-    my $features = shift;
-    my $partial  = shift;
-    my %names;
-    for my $f (@$features) {
-	my ($name) = grep {/$partial/i} ($f->display_name,eval{$f->aliases});
-	$names{$name}++;
-    }
-    my $html = "<ul>\n";
-    for my $n (sort keys %names) {
-	$n =~ s/($partial)/<b>$1<\/b>/i;
-	$html .= "<li>$n</li>\n";
-    }
-    $html .= "</ul>\n";
-    return $html;
-}
-
-## Truncated version (of track_config) for displaying citation only:
+# Truncated version (of track_config) for displaying citation only:
 sub display_citation {
     my $self        = shift;
     my $label       = shift;
@@ -2737,7 +3048,7 @@ sub display_citation {
      }
  				
    my $return_html = start_html(-title => $key, -head => \@stylesheets);
-   my $cit_txt = citation( $data_source, $label, $self->language ) || $self->tr('NO_CITATION');
+   my $cit_txt = citation( $data_source, $label, $self->language ) || $self->translate('NO_CITATION');
      
    if (my ($lim) = $slabel =~ /\:(\d+)$/) {
         $key .= " (at >$lim bp)";
@@ -2750,6 +3061,24 @@ sub display_citation {
            .= table( TR( td( { -valign => 'top' }, $citation ) ) );
    $return_html .= end_html();
    return $return_html;
+}
+
+sub format_autocomplete {
+    my $self     = shift;
+    my $features = shift;
+    my $partial  = shift;
+    my %names;
+    for my $f (@$features) {
+	my ($name) = grep {/$partial/i} ($f->display_name,eval{$f->aliases});
+	$names{$name}++;
+    }
+    my $html = "<ul>\n";
+    for my $n (sort keys %names) {
+	$n =~ s/($partial)/<b>$1<\/b>/i;
+	$html .= "<li>$n</li>\n";
+    }
+    $html .= "</ul>\n";
+    return $html;
 }
 
 1;

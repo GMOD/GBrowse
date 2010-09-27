@@ -127,8 +127,6 @@ function load_login_balloon(event,session,username,openid) {
                        'padding-left:16px;background-image:url('+ImgLocation+'/openid-logo.gif);' +
                        'background-repeat:no-repeat;border:solid;></td></tr>' +
                    '<tr><td colspan=2>' +
-                       '<image onClick=check_openid(\'https://www.google.com/accounts/o8/id\'); ' +
-                         'src='+ImgLocation+'/google-logo.gif alt=\'Google\' height=20px width=20px>' +
                        '<image onClick=login_openid_html(\'http://openid.aol.com/screenname\',22,10); ' +
                          'src='+ImgLocation+'/aim-logo.png alt=\'AIM\' height=20px width=20px>' +
                        '<image onClick=login_openid_html(\'http://blogname.blogspot.com/\',7,8); ' +

@@ -199,5 +199,5 @@ CREATE TABLE uploads (
     description				   text,
     creation_date			   datetime not null,
     modification_date		   datetime,
-    sharing_policy			   varchar(24) not null
+    sharing_policy			   ENUM('private', 'public', 'group', 'casual') not null
 );

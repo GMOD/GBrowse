@@ -75,7 +75,7 @@ function startAjaxUpload(upload_id) {
 				// If it's worked, stop the PeriodicalUpdater stored in the hash and update the screen.
 				if (transport.responseText.match(/complete/)) {
 					Ajax_Status_Updater.get(upload_id).stop();
-					var sections = new Array(custom_tracks_id);
+					var sections = new Array(custom_tracks_id, track_listing_id);
 					if (using_database())
 						sections.push(public_tracks_id);
 					Controller.update_sections(sections);
@@ -144,7 +144,7 @@ function completeAjaxUpload(response, upload_id, field_type) {
 		msg.insert({bottom: new Element("a", {href: "javascript:void(0)"}) }).observe("click", function() { $(upload_id).remove() }).down("a").update("[Remove Message]");
 		status.update(msg);
 	}
-return true;
+	return true;
 }
 
 // NOTE: these functions should be migrated to Controller
@@ -160,7 +160,7 @@ function deleteUpload (fileName) {
 				file:  fileName
 			},
 		    onSuccess: function (transport) {
-				var tracks = transport.evalJSON(true).tracks;
+				var tracks = transport.responseText.evalJSON(true).tracks;
 				if (tracks != null)
 					tracks.each(function(tid) { Controller.delete_track(tid) });
 				var sections = new Array(custom_tracks_id, track_listing_id);
@@ -274,7 +274,7 @@ function shareFile(fileid, userid) {
 				userid: userid
 			},
 			onSuccess: function (transport) {
-				var sections = new Array(custom_tracks_id);
+				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
 					sections.push(public_tracks_id);
 				Controller.update_sections(sections);
@@ -296,7 +296,7 @@ function unshareFile(fileid, userid) {
 				userid: userid
 			},
 			onSuccess: function (transport) {
-				var sections = new Array(custom_tracks_id);
+				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
 					sections.push(public_tracks_id);
 				Controller.update_sections(sections);

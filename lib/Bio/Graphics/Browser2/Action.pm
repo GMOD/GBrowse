@@ -427,8 +427,8 @@ sub ACTION_upload_file {
 		uploadName	=> $name,
     };
     
-    #return (200, 'text/html', JSON::to_json($return_object)) if $workaround;
-    return (200, 'application/json', $return_object);
+    return (200, 'text/html', JSON::to_json($return_object));
+    #return (200, 'application/json', $return_object);
 }
 
 sub ACTION_import_track {
@@ -466,10 +466,9 @@ sub ACTION_import_track {
 			tracks    => $tracks,
 			uploadName=> $url,
 	};
-                               
                                    
-    #return (200, 'text/html', JSON::to_json($return_object)) if $workaround;
-    return (200, 'application/json', {tracks => $tracks});
+    return (200, 'text/html', JSON::to_json($return_object));
+    #return (200, 'application/json', {tracks => $tracks});
 }
 
 sub ACTION_delete_upload {
@@ -488,8 +487,9 @@ sub ACTION_delete_upload {
 		$render->remove_track_from_state($_);
     }
     $usertracks->delete_file($file);
-
-    return (200, 'application/json', {tracks => \@tracks});
+    
+    return (200, 'text/html', JSON::to_json({tracks => \@tracks}));
+    #return (200, 'application/json', {tracks => \@tracks});
 }
 
 sub ACTION_upload_status {

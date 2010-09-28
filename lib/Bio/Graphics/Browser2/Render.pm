@@ -9,6 +9,7 @@ use CGI qw(:standard param request_method header url iframe img span div br cent
 use Carp qw(croak cluck);
 use File::Basename 'dirname','basename';
 use Text::Tabs;
+use Data::Dumper;
 
 use Bio::Graphics::Browser2::I18n;
 use Bio::Graphics::Browser2::PluginSet;
@@ -24,6 +25,7 @@ use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
 use Bio::Graphics::Browser2::UserTracks;
 use Bio::Graphics::Browser2::UserDB;
 use Bio::Graphics::Browser2::Session;
+use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -82,7 +84,7 @@ sub set_signal_handlers {
     my $self = shift;
     $SIG{CHLD} = sub{    my $kid; 
 			 do { 
-			     $kid = waitpid(-1, WNOHANG); 
+			     $kid = waitpid(-1, WNOHANG);
 			 } 
 			 while $kid > 0;
     };
@@ -207,6 +209,8 @@ sub run {
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
 
+  warn "user = ",$self->session->username;
+
   warn "[$$] testing for asynchronous event()" if $debug;
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if $debug;
@@ -271,32 +275,30 @@ sub init {
 # this prints out the HTTP data from an asynchronous event
 sub run_asynchronous_event {
     my $self = shift;
-    my ($status,$mime_type,$data,%headers) = $self->asynchronous_event
-	or return;
+    my ($status, $mime_type, $data, %headers) = $self->asynchronous_event or return;
 
     warn "[$$] asynchronous event returning status=$status, mime-type=$mime_type" if DEBUG;
 
     if ($status == 204) { # no content
-	print CGI::header( -status => '204 No Content',%headers );
-    }
-    elsif ($status == 302) { # redirect
-	print CGI::redirect($data,%headers);
-    }
-    elsif ($mime_type eq 'application/json') {
-	print CGI::header(-status=>$status,
-			  -cache_control => 'no-cache',
-			  -charset       => $self->tr('CHARSET'),
-			  -type  => $mime_type,
-			  ,%headers),
-	      JSON::to_json($data);
-    }
-    else {
-	print CGI::header(-status        => $status,
-			  -cache_control => 'no-cache',
-			  -charset       => $self->tr('CHARSET'),
-			  -type          => $mime_type,
-			  %headers),
-	$data;
+		print CGI::header( -status => '204 No Content', %headers );
+    } elsif ($status == 302) { # redirect
+		print CGI::redirect($data, %headers);
+    } elsif ($mime_type eq 'application/json') {
+		print CGI::header(
+			-status			=> $status,
+			-cache_control	=> 'no-cache',
+			-charset		=> $self->tr('CHARSET'),
+			-type			=> $mime_type,
+			%headers),
+			JSON::to_json($data);
+    } else {
+		print CGI::header(
+			-status        => $status,
+			-cache_control => 'no-cache',
+			-charset       => $self->tr('CHARSET'),
+			-type          => $mime_type,
+			%headers),
+			$data;
     }
     return 1;  # no further processing needed
 }
@@ -364,7 +366,7 @@ sub authorize_user {
         return ("error");
     } else {
         warn "Retrieving old session" if DEBUG;
-	$session = $self->globals->session($id);  # create/retrieve session
+		$session = $self->globals->session($id);  # create/retrieve session
     }
     
     my $nonce = Bio::Graphics::Browser2::Util->generate_id;

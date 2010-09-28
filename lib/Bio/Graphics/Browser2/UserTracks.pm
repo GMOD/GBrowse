@@ -250,8 +250,6 @@ sub import_url {
     $loader->set_processing_complete;
     $self->add_file($url, 1);
 	
-	warn join ", ", (1, '', [$filename]);
-	
     return (1, '', [$filename]);
 }
 
@@ -345,7 +343,7 @@ sub upload_file {
 
     warn "$file_name: OVERWRITE = $overwrite" if DEBUG;
 
-    my $filename = $self->trackname_from_url($file_name,!$overwrite);
+    my $filename = $self->trackname_from_url($file_name, !$overwrite);
     my $userid = $self->{userid};
     my $userdb = $self->{userdb};
     
@@ -381,9 +379,9 @@ sub upload_file {
     }
 
     my $msg = $@;
-    warn "UPLOAD ERROR: ",$msg if $msg;
+    warn "UPLOAD ERROR: ", $msg if $msg;
     $self->delete_file($file_name) unless $result;
-    return ($result,$msg,\@tracks);
+    return ($result, $msg, \@tracks);
 }
 
 sub merge_conf {

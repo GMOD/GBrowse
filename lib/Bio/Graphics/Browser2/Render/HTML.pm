@@ -45,6 +45,7 @@ sub render_top {
     my $err  =  $self->render_error_div;
     my $html = '';
 
+    $features ||= [];
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
     $html   .=  $self->html_frag('html1',$self->state);

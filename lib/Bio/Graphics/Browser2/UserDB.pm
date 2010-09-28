@@ -20,21 +20,21 @@ sub new {
   my $self = {};
   my $VERSION = '0.5';
   my $globals = Bio::Graphics::Browser2->open_globals;
-  my $credentials  = shift || $globals->user_account_db;
+  my $credentials  = shift || $globals->user_account_db or die "Cannot use UserDB without flag in GBrowse.conf set.";
   my $session = $globals->session;
-  
+
   my $login = DBI->connect($credentials);
   unless ($login) {
-      print header();
-      print "Error: Could not open login database.";
-      die "Could not open login database $credentials";
+    print header();
+    print "Error: Could not open login database.";
+    die "Could not open login database $credentials";
   }
-  
+
   return bless {
-	dbi => $login,
-	globals => $globals,
-  	session => $session,
-  	username => $session->username
+    dbi => $login,
+    globals => $globals,
+    session => $session,
+    username => $session->username
   }, ref $class || $class;
 }
 

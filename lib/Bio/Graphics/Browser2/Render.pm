@@ -54,10 +54,10 @@ my $STATE;         # stash state for use by callbacks
 sub new {
   my $class = shift;
 
-  my ($data_source,$session);
+  my ($data_source, $session);
 
   if (@_ == 2) {
-    ($data_source,$session) = @_;
+    ($data_source, $session) = @_;
   } elsif (@_ == 1) {
     my $globals = shift;
     my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
@@ -75,18 +75,16 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
-  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new();
+  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new() if $self->data_source->globals->user_account_db;
   $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self->data_source, $self->state, $self->language, $self->state->{uploadid});
   $self;
 }
 
 sub set_signal_handlers {
     my $self = shift;
-    $SIG{CHLD} = sub{    my $kid; 
-			 do { 
-			     $kid = waitpid(-1, WNOHANG);
-			 } 
-			 while $kid > 0;
+    $SIG{CHLD} = sub {
+    	my $kid; 
+		do { $kid = waitpid(-1, WNOHANG) } while $kid > 0;
     };
 }
 

@@ -31,7 +31,7 @@ sub sources_dir_name   { 'SOURCES'   }
 sub new {
     my $class = shift;
 	my $globals = Bio::Graphics::Browser2->open_globals;
-	if ($globals->upload_db_adaptor =~ /(DBI|db)/) {
+	if ($globals->upload_db_adaptor =~ /(DBI|db|sqlite)/) {
 		return Bio::Graphics::Browser2::UserTracks::Database->_new(@_);
 	} elsif ($globals->upload_db_adaptor =~ /memory/) {
 		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
@@ -43,7 +43,7 @@ sub new {
 sub config   { shift->{config}    }
 sub state    { shift->{state}     }    
 sub language { shift->{language}  }
-sub database { return (shift->{globals}->upload_db_adaptor =~ /(DBI|db)/)? 1 : 0; } # If this changes, also change the constructor.
+sub database { return (shift->{globals}->upload_db_adaptor =~ /(DBI|db|sqlite)/)? 1 : 0; } # If this changes, also change the constructor.
 
 # Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {
@@ -206,9 +206,8 @@ sub import_url {
     my $self = shift;
     my $url       = shift;
     my $overwrite = shift;
-    my $privacy_policy = shift // "private";													#/
+    my $privacy_policy = shift || "private";
     my $username = $self->{username};
-    my $userdb = $self->{userdb};
     my $userid = $self->{uploadid};
 
     my $key;
@@ -345,7 +344,6 @@ sub upload_file {
 
     my $filename = $self->trackname_from_url($file_name, !$overwrite);
     my $userid = $self->{userid};
-    my $userdb = $self->{userdb};
     
     $content_type ||= '';
 

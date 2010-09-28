@@ -5,7 +5,6 @@ use warnings;
 use base 'Bio::Graphics::Browser2::Render';
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Browser2::SubtrackTable;
-use Bio::Graphics::Browser2::UserDB;
 use Bio::Graphics::Karyotype;
 use Bio::Graphics::Browser2::Util qw[citation url_label segment_str];
 use JSON;
@@ -1377,7 +1376,7 @@ sub list_tracks {
 	my $self = shift;
 	my $globals	= $self->globals;
 	my $userdata = $self->user_tracks;
-	my $listing_type = shift // "";														#/
+	my $listing_type = shift || "";
 	my @tracks = sort((($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : shift // $userdata->tracks);
 	$listing_type .= " available" if $listing_type =~ /public/;
 	
@@ -1570,7 +1569,7 @@ sub render_track_controls {
 sub render_track_details {
 	my $self = shift;
 	my $fileid = shift;
-	my $listing_type = shift // "";														#/
+	my $listing_type = shift || "";
 	my $userdata = $self->user_tracks;
 	my $globals	= $self->globals;
 	my $random_id = 'upload_'.int rand(9999);
@@ -1678,14 +1677,14 @@ sub render_track_source_files {
 sub render_track_sharing {
 	my $self = shift;
 	my $fileid = shift;
-	my $userdata = $self->user_tracks;
-	my $userdb = $self->{userdb};
 	my $globals = $self->globals;
+	my $userdb = $self->{userdb} if $globals->user_accounts_db;
+	my $userdata = $self->user_tracks;
 	
 	#Building the users list.
 	my $sharing_policy = $userdata->permissions($fileid);
 	my @users = $userdata->shared_with($fileid);
-	$_ = b($userdb->get_username($_)) . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
+	$_ = b(($globals->user_accounts_db)? $userdb->get_username($_) : "an anonymous user") . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
 	my $userlist = join (", ", @users);
 	
 	my $sharing_content = b("Sharing:") . br() . "Track is ";
@@ -1721,7 +1720,7 @@ sub render_track_sharing {
 			my $add_box = "&nbsp;" . input(
 				{
 					-length => 20,
-					-value => "Enter a username here.",
+					-value => "Enter a " . (($globals->user_accounts_db)? "username or user ID" : "user ID") . " here.",
 					-onFocus => "this.clear()"
 				}
 			);		

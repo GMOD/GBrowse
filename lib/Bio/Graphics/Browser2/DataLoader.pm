@@ -350,11 +350,11 @@ sub category {
 
 sub backend {
     my $self = shift;
-    my $backend   = $self->globals->upload_db_adaptor;
+    my $backend = $self->globals->upload_db_adaptor;
     $backend = $self->guess_backend if $backend && $backend eq 'auto';
     unless ($backend) {
-	$backend = $self->guess_backend;
-	warn "No upload_db_adaptor option set in GBrowse.conf. Will try to use $backend.";
+		$backend = $self->guess_backend;
+		warn "No upload_db_adaptor option set in GBrowse.conf. Will try to use $backend.";
     }
     return $backend;
 }
@@ -383,32 +383,31 @@ sub create_database {
     my $backend   = $self->backend;
 
     if ($backend eq 'DBI::mysql') {
-	my $globals    = $self->settings->globals;
-	my $db_name    = 'userdata_'.md5_hex($data_path);
-	$data_path     = $db_name;
-	$db_name      .= ";host=".$globals->upload_db_host;
-	$db_name      .= ";user=".$globals->upload_db_user;
-	$db_name      .= ";password=".$globals->upload_db_pass;
-	$self->dsn($db_name);
-	my $mysql_admin = $self->mysql_admin;
+		my $globals    = $self->settings->globals;
+		my $db_name    = 'userdata_'.md5_hex($data_path);
+		$data_path     = $db_name;
+		$db_name      .= ";host=".$globals->upload_db_host;
+		$db_name      .= ";user=".$globals->upload_db_user;
+		$db_name      .= ";password=".$globals->upload_db_pass;
+		$self->dsn($db_name);
+		my $mysql_admin = $self->mysql_admin;
 
-	my $mysql_usage = <<END;
+		my $mysql_usage = <<END;
 For mysql to work as a backend to stored user data, you must set up the server
 so that the web server user (e.g. "www-data") has the privileges to create databases
 named "userdata_*". The usual way to do this is with the mysql shell:
 
  mysql> grant create on `userdata\_%`.* to www-data\@localhost
 END
-
-	my $dbh = DBI->connect($mysql_admin)
-	    or die DBI->errstr,".\n",$mysql_usage;
-	$dbh->do("drop database if exists `$data_path`");
-	$dbh->do("create database `$data_path`")
+		my $dbh = DBI->connect($mysql_admin)
+			or die DBI->errstr,".\n",$mysql_usage;
+		$dbh->do("drop database if exists `$data_path`");
+		$dbh->do("create database `$data_path`")
 	    or die "Could not create $data_path:",DBI->errstr,".\n",$mysql_usage;
     } elsif ($backend eq 'DBI::SQLite') {
-	$self->dsn(File::Spec->catfile($data_path,'index.SQLite'));
+		$self->dsn(File::Spec->catfile($data_path,'index.SQLite'));
     } else {
-	$self->dsn($data_path);
+		$self->dsn($data_path);
     }
 
     return Bio::DB::SeqFeature::Store->new(-adaptor=> $backend,
@@ -423,10 +422,10 @@ sub drop_databases {
     my (@dsns,$using_mysql);
     open my $f,$conf_path or (warn "Couldn't open $conf_path: $!" && return);
     while (<$f>) {
-	if (/-adaptor/) {
-	    $using_mysql = /DBI::mysql/;
-	}
-	push @dsns,$1 if /-dsn\s+(.+)/i && $using_mysql;
+		if (/-adaptor/) {
+			$using_mysql = /DBI::mysql/;
+		}
+		push @dsns,$1 if /-dsn\s+(.+)/i && $using_mysql;
     }
     close $f;
     

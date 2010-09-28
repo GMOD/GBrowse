@@ -327,7 +327,7 @@ sub do_add_user {
     } elsif(DBI->errstr =~ m/for key 2$/ || DBI->errstr =~ m/userid is not unique/) {
       print "Session Error";
     } else {
-      print "Error: ",DBI->errstr,".";
+      print "Error: ", DBI->errstr, ".";
     }
   }
   return;

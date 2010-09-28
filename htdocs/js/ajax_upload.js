@@ -11,7 +11,7 @@ AIM = {
 	frame: function(c) {
 		var n = 'f' + Math.floor(Math.random() * 99999);
 		var d = document.createElement('DIV');
-		d.update( new Element("iframe", {src: "about:blank", id: n, name: n}).observe("load", function() { AIM.loaded(n) })).setStyle({display: "none"}));
+		d.update( new Element("iframe", {src: "about:blank", id: n, name: n}).observe("load", function() { AIM.loaded(n) }).setStyle({display: "none"}));
 		document.body.appendChild(d);
  
 		if (c && typeof(c.onComplete) == 'function')
@@ -58,7 +58,7 @@ function startAjaxUpload(upload_id) {
 	// Create & insert the status update elements.
 	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
 	status.insert(new Element("span").update('<b>Uploading...</b>'));
-	status.insert(new Element("a", {href: 'javascript:void(0)'}).observe("click", function() { Controller.cancel_upload(upload_id + "_status", upload_id })).update(' Cancel'));
+	status.insert(new Element("a", {href: 'javascript:void(0)'}).observe("click", function() { Controller.cancel_upload(upload_id + "_status", upload_id) }).update(' Cancel'));
 	
 	// This hash stores all currently-loading status updaters.
 	if (Ajax_Status_Updater == null)
@@ -141,7 +141,7 @@ function completeAjaxUpload(response, upload_id, field_type) {
 		var msg =  new Element("div").setStyle({"background-color": "pink", "padding": "5px"});
 		msg.insert({bottom: new Element("b").update(r.uploadName) });
 		msg.insert({bottom: "&nbsp;" + r.error_msg + "&nbsp;"});
-		msg.insert({bottom: new Element("a", {href: "javascript:void(0)", onClick: "$('" + upload_id + "').remove()"}) }).down("a").update("[Remove Message]");
+		msg.insert({bottom: new Element("a", {href: "javascript:void(0)"}) }).observe("click", function() { $(upload_id).remove() }).down("a").update("[Remove Message]");
 		status.update(msg);
 	}
 return true;
@@ -186,8 +186,8 @@ function editUpload (fileName, sourceFile) {
 	$(editDiv).update("<p><b>Editing " + sourceFile + "</b></p>");
 	$(editDiv).insert({bottom: new Element("textarea", {id: editID, cols: "120", rows: "20", wrap: "off"}).update("fetching...") });
 	$(editDiv).insert({bottom: new Element("p")});
-	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: new Element("a", {href: "javascript:void(0)", onClick: "$(\"" + editDiv + "\").update()"}).update("[Cancel]") });
-	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button", {onClick: "Controller.uploadUserTrackSource(\"" + editID + "\", \"" + fileName +"\", \"" + sourceFile + "\", \"" + editDiv + "\")"}).update("Submit") });
+	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: new Element("a", {href: "javascript:void(0)"}).observe("click", function() { $(editDiv).update() }).update("[Cancel]") });
+	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button").observe("click", function() { Controller.uploadUserTrackSource(editID, fileName, sourceFile, editDiv) }).update("Submit") });
 	Controller.downloadUserTrackSource(editID,fileName,sourceFile);
 }
 

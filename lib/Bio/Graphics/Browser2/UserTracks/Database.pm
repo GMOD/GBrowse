@@ -17,7 +17,14 @@ sub _new {
 	my $globals = $config->globals;
 	my $session = $globals->session;
 
-    my $credentials = $globals->user_account_db;
+    my $credentials = $globals->upload_db_adaptor;
+    if ($credentials =~ /^(DBI:mysql)/) {
+		$credentials .= ";host=".$globals->upload_db_host;
+		$credentials .= ";user=".$globals->upload_db_user;
+		$credentials .= ";password=".$globals->upload_db_pass;
+	}
+	warn $credentials;
+	
     my $login = DBI->connect($credentials);
 	unless ($login) {
 		print header();
@@ -25,7 +32,7 @@ sub _new {
 		die "Could not open login database $credentials";
 	}
 	
-    return bless {
+    my $self = bless {
     	uploadsdb => $login,
 		config	  => $config,
 		state     => $state,
@@ -33,9 +40,12 @@ sub _new {
 		session	  => $session,
 		userid	  => $state->{userid},
 		uploadsid => $state->{uploadid}, #Renamed to avoid confusion with the ID of an upload.
+		username  => $state->{username} || "an anonymous user",
 		globals	  => $globals,
-		userdb	  => Bio::Graphics::Browser2::UserDB->new()
     }, ref $class || $class;
+    
+    $self->{userdb} = Bio::Graphics::Browser2::UserDB->new() if $globals->user_account_db;
+    return $self;
 }
 
 # Get File ID (Filename[, Owner ID]) - Returns a file's validated ID from the database.
@@ -130,10 +140,15 @@ sub share {
 	my $fileid = shift or confess "No input or invalid input given to share()";
 
 	# If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
-	my $userdb = $self->{userdb};
-	my $potential_userid = shift;
-	my $attempted_userid = $userdb->get_user_id($potential_userid);
-	my $userid = $attempted_userid || $potential_userid || $self->{userid};
+	my $userid;
+	if ($self->{globals}->user_account_db) {
+		my $userdb = $self->{userdb};
+		my $potential_userid = shift;
+		my $attempted_userid = $userdb->get_user_id($potential_userid);
+		$userid = $attempted_userid || $potential_userid || $self->{userid};
+	} else {
+		$userid = shift || $self->{userid};
+	}
 	
 	# Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
 	my $sharing_policy = $self->permissions($fileid);
@@ -157,10 +172,15 @@ sub unshare {
 	my $fileid = shift or confess "No input or invalid input given to unshare()";
 	
 	# If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
-	my $userdb = $self->{userdb};
-	my $potential_userid = shift;
-	my $attempted_userid = $userdb->get_user_id($potential_userid);
-	my $userid = $attempted_userid || $potential_userid || $self->{userid};
+	my $userid;
+	if ($self->{globals}->user_account_db) {
+		my $userdb = $self->{userdb};
+		my $potential_userid = shift;
+		my $attempted_userid = $userdb->get_user_id($potential_userid);
+		$userid = $attempted_userid || $potential_userid || $self->{userid};
+	} else {
+		$userid = shift || $self->{userid};
+	}
 	
 	# Users can remove themselves from the sharing lists of casual or public files; owners can remove people from casual or group items.
 	my $sharing_policy = $self->permissions($fileid);
@@ -199,8 +219,7 @@ sub field {
 			$self->update_modified($fileid);
 			return $result;
 		} else {
-			my $userdb = $self->{userdb};
-	    	warn "Field() was called to modify $field on " . $fileid . " by " . $uploadsid . ", a non-owner.";
+	    	warn "Field() was called to modify $field on " . $fileid . " by " . $self->{username} . ", a non-owner.";
 	    }
     } else {
     	return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
@@ -251,10 +270,10 @@ sub add_file {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
     my $filename = shift;
-    my $imported = shift // 0;																	#/
+    my $imported = shift || 0;
     my $description = $uploadsdb->quote(shift);
-    my $uploadsid = shift // $self->{uploadsid};												#/
-    my $shared = $uploadsdb->quote(shift // "private");											#/
+    my $uploadsid = shift || $self->{uploadsid};
+    my $shared = $uploadsdb->quote(shift || "private");
     
     if ($self->get_file_id($filename) == 0) {
 		my $fileid = md5_hex($uploadsid.$filename);
@@ -276,7 +295,7 @@ sub delete_file {
     my $uploadsid = $self->{uploadsid};
     my $filename = $self->filename($fileid);
     
-    if ($self->is_mine($fileid)) {
+    if ($self->is_mine($fileid) || !$filename) {
 		# First delete from the database.
 		my $uploadsdb = $self->{uploadsdb};
 		return $uploadsdb->do("DELETE FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
@@ -291,7 +310,7 @@ sub delete_file {
 		chdir $self->path;
 		rmtree($self->track_path($fileid));
     } else {
-		warn "Delete change on " . $filename . "requested by " . $self->{username} . " a non-owner.";
+		warn "Delete of " . $filename . " requested by " . $self->{username} . ", a non-owner.";
 	}
 }
 

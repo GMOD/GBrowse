@@ -31,19 +31,20 @@ sub sources_dir_name   { 'SOURCES'   }
 sub new {
     my $class = shift;
 	my $globals = Bio::Graphics::Browser2->open_globals;
-	if ($globals->upload_db_adaptor =~ /(DBI|db|sqlite)/) {
+	if ($globals->upload_db_adaptor =~ /(DB|db)/) {
 		return Bio::Graphics::Browser2::UserTracks::Database->_new(@_);
 	} elsif ($globals->upload_db_adaptor =~ /memory/) {
 		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
 	} else {
-		croak "Could not determine whether to user Filesystem or Database.";
+		warn "No upload_db_adaptor set in GBrowse.conf, defaulting to memory.";
+		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
 	}
 }
 
 sub config   { shift->{config}    }
 sub state    { shift->{state}     }    
 sub language { shift->{language}  }
-sub database { return (shift->{globals}->upload_db_adaptor =~ /(DBI|db|sqlite)/)? 1 : 0; } # If this changes, also change the constructor.
+sub database { return (shift->{globals}->upload_db_adaptor =~ /(DB|db)/)? 1 : 0; } # If this changes, also change the constructor.
 
 # Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {
@@ -166,7 +167,7 @@ sub source_files {
 # Trackname from URL - Gets a track name from a given URL
 sub trackname_from_url {
     my $self     = shift;
-    my $url      = $self->filename(shift);
+    my $url      = shift;
     my $uniquefy = shift;
 
     warn "trackname_from_url($url)" if DEBUG;
@@ -208,7 +209,6 @@ sub import_url {
     my $overwrite = shift;
     my $privacy_policy = shift || "private";
     my $username = $self->{username};
-    my $userid = $self->{uploadid};
 
     my $key;
     if ($url =~ m!http://([^/]+).+/(\w+)/\?.*t=([^+;]+)!) {
@@ -343,7 +343,6 @@ sub upload_file {
     warn "$file_name: OVERWRITE = $overwrite" if DEBUG;
 
     my $filename = $self->trackname_from_url($file_name, !$overwrite);
-    my $userid = $self->{userid};
     
     $content_type ||= '';
 
@@ -449,7 +448,7 @@ sub labels {
 # Status - Returns the status of a DataLoader object for a specific file.
 sub status {
     my $self = shift;
-    my $filename = $self->filename(shift);
+    my $filename = shift;
     my $loader = 'Bio::Graphics::Browser2::DataLoader';
     my $load = $loader->new($filename,
 			      $self->track_path($filename),
@@ -464,7 +463,7 @@ sub status {
 sub get_loader {
     my $self = shift;
     my $type = shift;
-    my $filename = $self->filename(shift);
+    my $filename = shift;
 	
     my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";

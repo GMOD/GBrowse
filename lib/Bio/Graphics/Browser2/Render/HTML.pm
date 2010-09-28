@@ -1678,13 +1678,13 @@ sub render_track_sharing {
 	my $self = shift;
 	my $fileid = shift;
 	my $globals = $self->globals;
-	my $userdb = $self->{userdb} if $globals->user_accounts_db;
+	my $userdb = $self->{userdb} if $globals->user_account_db;
 	my $userdata = $self->user_tracks;
 	
 	#Building the users list.
 	my $sharing_policy = $userdata->permissions($fileid);
 	my @users = $userdata->shared_with($fileid);
-	$_ = b(($globals->user_accounts_db)? $userdb->get_username($_) : "an anonymous user") . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
+	$_ = b(($globals->user_account_db)? $userdb->get_username($_) : "an anonymous user") . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
 	my $userlist = join (", ", @users);
 	
 	my $sharing_content = b("Sharing:") . br() . "Track is ";
@@ -1720,7 +1720,7 @@ sub render_track_sharing {
 			my $add_box = "&nbsp;" . input(
 				{
 					-length => 20,
-					-value => "Enter a " . (($globals->user_accounts_db)? "username or user ID" : "user ID") . " here.",
+					-value => "Enter a " . (($globals->user_account_db)? "username or user ID" : "user ID") . " here.",
 					-onFocus => "this.clear()"
 				}
 			);		

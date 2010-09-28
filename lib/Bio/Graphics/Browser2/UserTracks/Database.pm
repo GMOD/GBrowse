@@ -23,8 +23,6 @@ sub _new {
 		$credentials .= ";user=".$globals->upload_db_user;
 		$credentials .= ";password=".$globals->upload_db_pass;
 	}
-	warn $credentials;
-	
     my $login = DBI->connect($credentials);
 	unless ($login) {
 		print header();
@@ -80,7 +78,7 @@ sub filename {
 sub nowfun {
 	my $self = shift;
 	my $globals = $self->{globals};
-	return $globals->user_account_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
+	return $globals->upload_db_adaptor =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
 }
 
 # Get Uploaded Files () - Returns an array of the paths of files owned by the currently logged-in user. Can be publicly accessed.
@@ -214,7 +212,7 @@ sub field {
 			#Clean up the string
 			$value =~ s/^\s+//;
 			$value =~ s/\s+$//; 
-			my $now = $self->nowfun();
+			my $now = $self->nowfun;
 			my $result = $uploadsdb->do("UPDATE uploads SET $field = " . $uploadsdb->quote($value) . " WHERE uploadid = " . $uploadsdb->quote($fileid));
 			$self->update_modified($fileid);
 			return $result;
@@ -231,7 +229,7 @@ sub update_modified {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
     my $fileid = shift or confess "No input or invalid input given to update_modified()";
-    my $now = $self->nowfun();
+    my $now = $self->nowfun;
     return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = " . $uploadsdb->quote($fileid));
 }
 
@@ -277,7 +275,7 @@ sub add_file {
     
     if ($self->get_file_id($filename) == 0) {
 		my $fileid = md5_hex($uploadsid.$filename);
-		my $now = $self->nowfun();
+		my $now = $self->nowfun;
 		$filename = $uploadsdb->quote($filename);
 		$uploadsid = $uploadsdb->quote($uploadsid);
 		$fileid = $uploadsdb->quote($fileid);

@@ -391,6 +391,10 @@ sub render_html_head {
       $fill =~ s/^(\w+):[\d.]+$/$1/;
       $set_dragcolors = "set_dragcolors('$fill')";
   }
+  my $units   = $self->data_source->setting('units') || 'bp';
+  my $divider = $self->data_source->unit_divider;
+  my $set_units = "set_dragunits('$units',$divider)";
+
   my @extra_headers;
   push @extra_headers, $self->render_user_head;
 
@@ -405,17 +409,19 @@ sub render_html_head {
   
   # add body's onload arguments, including ones used by plugins
   my $autocomplete = '';
-  my $body_onLoads = "initialize_page();$set_dragcolors;$autocomplete";
-  while(my($keys, $values) = each(%plugin_onLoads)) {
-    if ($keys eq "body") {
-      $body_onLoads .= $values;
-    }
-  }
-  push @args,(-onLoad => "$body_onLoads");
+
+  # this looks wrong
+#  my $body_onLoads = "initialize_page();$set_dragcolors;$set_units;$autocomplete";
+#  while(my($keys, $values) = each(%plugin_onLoads)) {
+#    if ($keys eq "body") {
+#      $body_onLoads .= $values;
+#    }
+#  }
+#  push @args,(-onLoad => $body_onLoads);
 
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
   my $other_actions   = join ';',@other_initialization;
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $plugin_onloads; $other_actions");
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
 
   return start_html(@args);
 }
@@ -1877,12 +1883,14 @@ sub zoomBar {
 
   my ($length,$max) = @_;
 
+
   my $show   = $self->tr('Show');
 
   my %seen;
   my @r         = sort {$a<=>$b} $self->data_source->get_ranges();
-  my @ranges	= grep {!$seen{$_}++ && $_<=$max} sort {$b<=>$a} @r,$length;
+  $max         *= $self->data_source->unit_divider;
 
+  my @ranges	= grep {!$seen{$self->data_source->unit_label($_)}++ && $_<=$max} sort {$b<=>$a} @r,$length;
   my %labels    = map {$_=>$show.' '.$self->data_source->unit_label($_)} @ranges;
   return popup_menu(-class   => 'searchtitle',
 		    -name    => 'span',

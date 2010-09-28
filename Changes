@@ -11,6 +11,7 @@
        another, this will not be reflected in the summary density plots, which will show all features
        of the matching type regardless of the filter.
      * Basic support for Google federated login via openid.
+     * "unit label" and "unit divider" should now work as advertised.
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports
@@ -31,6 +32,7 @@
        Bio::DB::GFF database backend.
      * Fixed problems with losing all default tracks when first loading the browser (this was a bug
        introduced in SVN and never released.)
+     * You can now override the "buttons" images path in individual datasource files.
 
 2.14 Fri Aug 27 11:05:08 EDT 2010
      * Prevent a blank-screen crash when searching for chromosomes not in the database.

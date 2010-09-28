@@ -122,7 +122,8 @@ sub whole_seg {
 sub set_features_by_region {
     my $self = shift;
     my ($ref,$start,$stop) = @_;
-    my $features = $self->lookup_features($ref,$start,$stop);
+    my $divider  = $self->source->unit_divider;
+    my $features = $self->lookup_features($ref,$start/$divider,$stop/$divider);
     $self->features($features);
     return $features;
 }
@@ -221,7 +222,7 @@ sub lookup_features {
 
   my $db      = $self->db;
 
-  my $divisor = $source->global_setting('unit_divider') || 1;
+  my $divisor = $source->unit_divider;
   $start *= $divisor if defined $start;
   $stop  *= $divisor if defined $stop;
 

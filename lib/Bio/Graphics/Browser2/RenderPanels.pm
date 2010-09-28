@@ -956,6 +956,7 @@ sub render_scale_bar {
 		-label_position => 'left'
 		);
 	}
+
         $panel->add_track(
              $wide_segment,
             -glyph          => 'arrow',
@@ -963,7 +964,7 @@ sub render_scale_bar {
             -tick           => 2,
             -units_in_label => $no_tick_units,
             -units          => $units,
-            -unit_divider   => $source->global_setting('unit_divider') || 1,
+            -unit_divider   => $source->unit_divider,
             %add_track_extra_args,
         );
 

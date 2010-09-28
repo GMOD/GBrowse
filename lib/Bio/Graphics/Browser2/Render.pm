@@ -204,7 +204,7 @@ sub run {
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
 
-  warn "user = ",$self->session->username;
+#  warn "user = ",$self->session->username;
 
   warn "[$$] testing for asynchronous event()" if $debug;
   if ($self->run_asynchronous_event) {
@@ -798,6 +798,7 @@ sub generate_title {
     my $dsn         = $self->data_source;
     my $state       = $self->state;
     my $description = $dsn->description;
+    my $divider     = $self->data_source->unit_divider;
 
     return $description unless $features;
     return !$features || !$state->{name}     ? $description
@@ -806,8 +807,8 @@ sub generate_title {
 				   $self->tr('SHOWING_FROM_TO',
 					     scalar $dsn->unit_label($features->[0]->length),
 					     $features->[0]->seq_id,
-					     $dsn->commas($features->[0]->start),
-					     $dsn->commas($features->[0]->end))
+					     $dsn->commas($features->[0]->start/$divider),
+					     $dsn->commas($features->[0]->end/$divider))
 	 : $description;
 }
 
@@ -1540,8 +1541,7 @@ sub cleanup {
   my $self = shift;
   warn "cleanup()" if DEBUG;
   my $state = $self->state;
-  $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}"
-      if $state->{ref};  # to remember us by :-)
+  $state->{name} = $self->region_string if $state->{ref};  # to remember us by :-)
 }
 
 sub fatal_error {
@@ -2309,7 +2309,7 @@ sub update_coordinates {
       }
 
       # update our "name" state and the CGI parameter
-      $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
+      $state->{name} = $self->region_string;
       param(name => $state->{name});
 
       warn "name = $state->{name}" if DEBUG;
@@ -2491,7 +2491,7 @@ sub asynchronous_update_sections {
     return $return_object;
 }
 
-# asynchronous_update_element has been DEPRICATED
+# asynchronous_update_element has been DEPRECATED
 # in favor of asynchronous_update_sections
 sub asynchronous_update_element {
     my $self    = shift;
@@ -2503,13 +2503,14 @@ sub asynchronous_update_element {
         my $segment     = $self->segment;
         my $dsn         = $self->data_source;
         my $description = $dsn->description;
+	my $divider     = $dsn->unit_divider;
         return $description . '<br>'
             . $self->tr(
             'SHOWING_FROM_TO',
             scalar $source->unit_label( $segment->length ),
             $segment->seq_id,
-            $source->commas( $segment->start ),
-            $source->commas( $segment->end )
+            $source->commas( $segment->start/$divider ),
+            $source->commas( $segment->end/$divider )
             );
     }
     elsif ( $element eq 'span' ) {  # this is the popup menu that shows ranges
@@ -2637,11 +2638,22 @@ sub asynchronous_update_coordinates {
 	}
 
 	# update our "name" state and the CGI parameter
-	$state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
+	$state->{name} = $self->region_string;
     }
 
     $self->session->flush();
     $position_updated;
+}
+
+sub region_string {
+    my $self    = shift;
+    my $state   = $self->state;
+    my $source  = $self->data_source;
+    my $divider = $source->unit_divider;
+    $state->{name} = "$state->{ref}:".
+	              $source->commas($state->{start}/$divider).
+		      '..'.
+		      $source->commas($state->{stop}/$divider);
 }
 
 sub zoom_to_span {
@@ -3194,6 +3206,7 @@ sub get_panel_renderer {
   my $seg    = shift || $self->segment;
   my $whole  = shift || $self->whole_segment;
   my $region = shift || $self->region_segment;
+
   return Bio::Graphics::Browser2::RenderPanels->new(-segment        => $seg,
 						   -whole_segment  => $whole,
 						   -region_segment => $region,

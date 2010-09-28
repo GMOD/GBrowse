@@ -12,6 +12,9 @@ var selectAreaIsActive;
 
 // Constructor
 var SelectArea = function () {
+    this.background = 'yellow';
+    this.unit      = 'bp';
+    this.divider   = 1;
   return this;
 }
 
@@ -295,14 +298,16 @@ SelectArea.prototype.moveRubber = function(event) {
     self.overrideAutoSubmit = false;
   }
 
-  var unit = 'bp';
+  var unit     = self.unit;
+  var divider  = self.divider;
+  selectSequenceWidth /= divider;
   if (selectSequenceWidth > 1000 && selectSequenceWidth < 1000000) {
     selectSequenceWidth = selectSequenceWidth/1000;
-    unit = 'kbp';
+    unit = 'k'+unit;
   }
   else if (selectSequenceWidth > 1000000) {
     selectSequenceWidth = selectSequenceWidth/1000000;
-    unit = 'Mbp';
+    unit = 'M'+unit;
   }
 
   if (Math.floor(selectSequenceWidth) != selectSequenceWidth) {

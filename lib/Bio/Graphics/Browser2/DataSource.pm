@@ -253,7 +253,8 @@ sub unit_label {
   my $abs = abs($value);
 
   my $label;
-  $label = $abs >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
+  $label = $unit =~ /^[kcM]/ ? sprintf("%.4g %s",$value,$unit)
+         : $abs >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
          : $abs >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
          : $abs >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
 	 : $abs >= 1    ? sprintf("%.4g %s", $value,    $unit)
@@ -572,9 +573,14 @@ sub show_section {  # one of instructions, upload_tracks, search, overview, regi
     return $setting eq 'hide' || $setting eq 'off' ? 0 : 1;
 }
 
+sub unit_divider {
+    my $self = shift;
+    return $self->global_setting('unit_divider') || 1;    
+}
+
 sub get_ranges {
   my $self      = shift;
-  my $divisor   = $self->global_setting('unit_divider') || 1;
+  my $divisor   = $self->unit_divider;
   my $rangestr  = $self->global_setting('zoom levels')  || '100 1000 10000 100000 1000000 10000000';
   if ($divisor == 1 ) {
     return split /\s+/,$rangestr;

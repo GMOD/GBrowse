@@ -1572,7 +1572,7 @@ sub handle_quickie {
     my @features;
     foreach my $d (@$data) {
         my ( $reference, $type, $name, @segments )
-            = $self->parse_feature_stranslate($d);
+            = $self->parse_feature_str($d);
         push @features,
             Bio::Graphics::Feature->new(
             -ref  => $reference || '',
@@ -3636,7 +3636,7 @@ sub fcgi_request {
 	return $FCGI_REQUEST = 0;
     }
 
-    my $request  = FCGI::Request(\*STDIN,\*STDOUT,\*STDERR,\%ENV,0,FCGI::FAIL_ACCEPT_ON_INtranslate());
+    my $request  = FCGI::Request(\*STDIN,\*STDOUT,\*STDERR,\%ENV,0,FCGI::FAIL_ACCEPT_ON_INtr());
     return $FCGI_REQUEST = ($request && $request->IsFastCGI ? $request : 0);
 }
 
@@ -3897,7 +3897,7 @@ sub share_track {
   croak "share_track() should not be called in parent class";
 }
 
-########## note: "sub translate()" makes emacs' syntax coloring croak, so place this function at end
+########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end
 sub translate {
 	my $self = shift;
 	my $lang = $self->language or return @_;

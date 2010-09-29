@@ -280,7 +280,7 @@ sub run_asynchronous_event {
 		print CGI::header(
 			-status			=> $status,
 			-cache_control	=> 'no-cache',
-			-charset		=> $self->tr('CHARSET'),
+			-charset		=> $self->translate('CHARSET'),
 			-type			=> $mime_type,
 			%headers),
 			JSON::to_json($data);
@@ -288,7 +288,7 @@ sub run_asynchronous_event {
 		print CGI::header(
 			-status        => $status,
 			-cache_control => 'no-cache',
-			-charset       => $self->tr('CHARSET'),
+			-charset       => $self->translate('CHARSET'),
 			-type          => $mime_type,
 			%headers),
 			$data;
@@ -405,7 +405,7 @@ sub background_track_render {
         $display_details = 0;
         $details_msg = h1(
 	    br(),
-            $self->tr(															            	#}}}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
+            $self->translate(															            	#}}}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label($self->get_max_segment),
             )
@@ -579,7 +579,7 @@ sub background_individual_track_render {
     {
         $display_details = 0;
         $details_msg     = h1(
-            $self->tr(																            #)
+            $self->translate(
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label(MAX_SEGMENT),
             )
@@ -637,7 +637,7 @@ sub render_header {
   my $header = CGI::header(
       -cache_control =>'no-cache',
       -cookie  => [$cookie1,$cookie2],
-      -charset => $self->tr('CHARSET'),															#,
+      -charset => $self->translate('CHARSET'),
   );
   print $header;
 }
@@ -771,9 +771,9 @@ sub generate_title {
 
     return $description unless $features;
     return !$features || !$state->{name}     ? $description
-         : @$features == 0                   ? $self->tr('NOT_FOUND',$state->{name}) 			#
+         : @$features == 0                   ? $self->translate('NOT_FOUND',$state->{name})
 	 : @$features == 1 ? "$description: ".
-				   $self->tr('SHOWING_FROM_TO',													#)
+				   $self->translate('SHOWING_FROM_TO',
 					     scalar $dsn->unit_label($features->[0]->length),
 					     $features->[0]->seq_id,
 					     $dsn->commas($features->[0]->start),
@@ -992,7 +992,7 @@ sub region {
     my $plugin_action  = $self->plugin_action || '';
     my $current_plugin = $self->current_plugin;
     if ($current_plugin 
-	&& $plugin_action eq $self->tr('Find')
+	&& $plugin_action eq $self->translate('Find')
 	|| lc $plugin_action eq 'find') {
 	$region->features($self->plugin_find($current_plugin,$self->state->{name}));
     }
@@ -1130,7 +1130,7 @@ sub plugin_action {
   # the logic of this is obscure to me, but seems to have to do with activating plugins
   # via the URL versus via fill-out forms, which may go through a translation.
   if (param('plugin_do')) {
-    $action = $self->tr(param('plugin_do')) || $self->tr('Go');									#}}){}
+    $action = $self->translate(param('plugin_do')) || $self->translate('Go');
   }
 
   $action   ||=  param('plugin_action');
@@ -1173,13 +1173,13 @@ sub plugin_find {
 
   # nothing returned, so plug the keyword into the search box to save user's search
   unless ($results && @$results) {
-      $settings->{name} = $keyword ? $keyword : $self->tr('Plugin_search_2',$plugin_name);		#;
+      $settings->{name} = $keyword ? $keyword : $self->translate('Plugin_search_2',$plugin_name);
       return;
   }
 
   # Write informative information into the search box - not sure if this is the right thing to do.
-  $settings->{name} = defined($search_string) ? $self->tr('Plugin_search_1',$search_string,$plugin_name)
-                                              : $self->tr('Plugin_search_2',$plugin_name);		#:
+  $settings->{name} = defined($search_string) ? $self->translate('Plugin_search_1',$search_string,$plugin_name)
+                                              : $self->translate('Plugin_search_2',$plugin_name);
   # do we really want to do this?!!
   $self->write_auto($results);
   return $results;
@@ -1336,21 +1336,21 @@ sub handle_plugins {
 
     # for activating the plugin by URL
     if ( param('plugin_do') ) {
-        $plugin_action = $self->tr( param('plugin_do') ) || $self->tr('Go');					#{}{}{}{})()
+        $plugin_action = $self->translate( param('plugin_do') ) || $self->translate('Go');
     }
 	
     my $state  = $self->state();
     my $cookie = $self->create_cookie();
 
     ### CONFIGURE  ###############################################
-    if ($plugin_action eq $self->tr('Configure')) { 											#}
+    if ($plugin_action eq $self->translate('Configure')) {
 	$self->plugin_configuration_form($plugin);
 	return 1;
     }
     
 
     ### FIND #####################################################
-    if ( $plugin_action eq $self->tr('Find') ) {
+    if ( $plugin_action eq $self->translate('Find') ) {
 
         #$self->do_plugin_find( $state, $plugin_base, $features )
         #    or ( $plugin_action = 'Configure' );    #reconfigure
@@ -1365,10 +1365,10 @@ sub handle_plugins {
 
     my $segment = $self->segment();
     if (    $plugin_type   eq 'dumper'
-        and $plugin_action eq $self->tr('Go')													#{}{}{}{})()#
+        and $plugin_action eq $self->translate('Go')
         and (  $segment
             or param('plugin_config')
-            or $plugin->verb eq ( $self->tr('Import') || 'Import' ) )
+            or $plugin->verb eq ( $self->translate('Import') || 'Import' ) )
         )
     {
 	my $search      = $self->get_search_object();
@@ -1526,7 +1526,7 @@ sub handle_download_userdata {
     my $is_text = -T $file;
 
     print CGI::header(-attachment   => $fname,
-		      -charset      => $self->tr('CHARSET'), # 'US-ASCII' ?								#,
+		      -charset      => $self->translate('CHARSET'), # 'US-ASCII' ?
 		      -type         => $is_text ? 'text/plain' : 'application/octet-stream');
 
     my $f = $ftype eq 'conf' ? $userdata->conf_fh($track)
@@ -1572,7 +1572,7 @@ sub handle_quickie {
     my @features;
     foreach my $d (@$data) {
         my ( $reference, $type, $name, @segments )
-            = $self->parse_feature_str($d);
+            = $self->parse_feature_stranslate($d);
         push @features,
             Bio::Graphics::Feature->new(
             -ref  => $reference || '',
@@ -1944,7 +1944,7 @@ sub reconfigure_track {
 
     $state->{features}{$label}{visible}          = param('show_track') ? 1 : 0;
     $state->{features}{$label}{options}          = param('format_option');
-    my $dynamic = $self->tr('DYNAMIC_VALUE');
+    my $dynamic = $self->translate('DYNAMIC_VALUE');
     my $mode    = param('mode');
 
     my $length          = param('segment_length')  || 0;
@@ -2081,7 +2081,7 @@ sub update_tracks {
       my @matched;
        foreach my $s (@subs) {
         map {push(@matched,$`) if ($s=~/\D(\d+)\;*$/i && $1 == $_)} @ds;
-        map {s/\s*//} @matched;
+        map {s/\s*//} @matched;													#**
        }
        $label.="/".join("+",@matched) if @matched;
       }
@@ -2268,8 +2268,6 @@ sub asynchronous_update_detail_scale_bar {
     };
 }
 
-#**
-
 sub asynchronous_update_sections {
     my $self          = shift;
     my $section_names = shift;
@@ -2379,15 +2377,13 @@ sub asynchronous_update_element {
         my $dsn         = $self->data_source;
         my $description = $dsn->description;
         return $description . '<br>'
-            . $self->tr(
+            . $self->translate(
             'SHOWING_FROM_TO',
             scalar $source->unit_label( $segment->length ),
             $segment->seq_id,
             $source->commas( $segment->start ),
             $source->commas( $segment->end )
             );
-																								#}{}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
-	
     }
     elsif ( $element eq 'span' ) {  # this is the popup menu that shows ranges
         my $container
@@ -3391,10 +3387,10 @@ sub make_hilite_callback {
 sub categorize_track {
   my $self  = shift;
   my $label = shift;
-  return $self->tr('OVERVIEW') if $label =~ /:overview$/;						#=
-  return $self->tr('REGION')   if $label =~ /:region$/;							#=
-  return $self->tr('EXTERNAL') if $label =~ /^(http|ftp|file):/;				#=
-  return $self->tr('ANALYSIS') if $label =~ /^plugin:/;							#=
+  return $self->translate('OVERVIEW') if $label =~ /:overview$/;
+  return $self->translate('REGION')   if $label =~ /:region$/;
+  return $self->translate('EXTERNAL') if $label =~ /^(http|ftp|file):/;
+  return $self->translate('ANALYSIS') if $label =~ /^plugin:/;
 
   my $category;
   for my $l ($self->language->language) {
@@ -3405,7 +3401,7 @@ sub categorize_track {
   $category        ||= '';  # prevent uninit variable warnings
   $category         =~ s/^["']//;  # get rid of leading quotes
   $category         =~ s/["']$//;  # get rid of trailing quotes
-  return $category ||= $self->tr('GENERAL');									#;
+  return $category ||= $self->translate('GENERAL');
 }
 
 sub is_safari {
@@ -3640,7 +3636,7 @@ sub fcgi_request {
 	return $FCGI_REQUEST = 0;
     }
 
-    my $request  = FCGI::Request(\*STDIN,\*STDOUT,\*STDERR,\%ENV,0,FCGI::FAIL_ACCEPT_ON_INTR());
+    my $request  = FCGI::Request(\*STDIN,\*STDOUT,\*STDERR,\%ENV,0,FCGI::FAIL_ACCEPT_ON_INtranslate());
     return $FCGI_REQUEST = ($request && $request->IsFastCGI ? $request : 0);
 }
 
@@ -3901,17 +3897,17 @@ sub share_track {
   croak "share_track() should not be called in parent class";
 }
 
-########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end
+########## note: "sub translate()" makes emacs' syntax coloring croak, so place this function at end
 sub translate {
 	my $self = shift;
 	my $lang = $self->language or return @_;
-	$lang->tr(@_);
+	$lang->translate(@_);
 }
 
 sub tr {
 	my $self = shift;
 	my $lang = $self->language or return @_;
-	$lang->tr(@_);
+	$lang->translate(@_);
 }
 
 1;

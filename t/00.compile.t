@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 
+use lib "install_util";
 use File::Spec;
 use File::Basename;
 use FindBin;

@@ -29,7 +29,7 @@ sub mirrored_file_name { 'MIRRORED'  }
 sub sources_dir_name   { 'SOURCES'   }
 
 sub new {
-    my $class = shift;
+	my $class = shift;
 	my $globals = Bio::Graphics::Browser2->open_globals;
 	if ($globals->upload_db_adaptor =~ /(DB|db)/) {
 		return Bio::Graphics::Browser2::UserTracks::Database->_new(@_);
@@ -41,16 +41,13 @@ sub new {
 	}
 }
 
-sub config   { shift->{config}    }
-sub state    { shift->{state}     }    
-sub language { shift->{language}  }
 sub database { return (shift->{globals}->upload_db_adaptor =~ /(DB|db)/)? 1 : 0; } # If this changes, also change the constructor.
 
 # Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {
     my $self = shift;
     my $uploadsid = $self->{uploadsid};
-	return $self->config->userdata($uploadsid);
+	return $self->{config}->userdata($uploadsid);
 }
 
 # Tracks - Returns an array of paths to a user's tracks.
@@ -223,9 +220,9 @@ sub import_url {
     my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
 							  $self->track_path($filename),
 							  $self->track_conf($filename),
-							  $self->config,
-							  $self->state->{uploadid});
-    $loader->strip_prefix($self->config->seqid_prefix);
+							  $self->{config},
+							  $self->{uploadsid});
+    $loader->strip_prefix($self->{config}->seqid_prefix);
     $loader->set_status('starting import');
 
     my $conf = $self->track_conf($filename);
@@ -453,8 +450,8 @@ sub status {
     my $load = $loader->new($filename,
 			      $self->track_path($filename),
 			      $self->track_conf($filename),
-			      $self->config,
-			      $self->state->{uploadid},
+			      $self->{config},
+			      $self->{uploadsid},
 	);
     return $load->get_status();
 }
@@ -471,10 +468,10 @@ sub get_loader {
     my $loader = $module->new($filename,
 			      $self->track_path($filename),
 			      $self->track_conf($filename),
-			      $self->config,
-			      $self->state->{uploadid},
+			      $self->{config},
+			      $self->{uploadsid},
 	);
-    $loader->strip_prefix($self->config->seqid_prefix);
+    $loader->strip_prefix($self->{config}->seqid_prefix);
     return $loader;
 }
 
@@ -604,8 +601,8 @@ sub remote_bam_conf {
 	$filename,
 	$self->track_path($filename),
 	$self->track_conf($filename),
-	$self->config,
-	$self->state->{uploadid});
+	$self->{config},
+	$self->{uploadsid});
     my $fasta  = $loader->get_fasta_file;
 
     return <<END;
@@ -737,10 +734,10 @@ use base 'Bio::Graphics::Browser2::UserTracks';
 
 sub path {
     my $self    = shift;
-    my $globals   = $self->config->globals;
+    my $globals   = $self->{globals};
     my $admin_dbs = $globals->admin_dbs 
 	or return $self->SUPER::path;
-    my $source    = $self->config->name;
+    my $source    = $self->{config}->name;
     my $path      = File::Spec->catfile($admin_dbs,$source);
     return $path;
 }

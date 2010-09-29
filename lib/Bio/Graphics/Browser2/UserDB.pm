@@ -21,8 +21,8 @@ sub new {
   my $self = {};
   my $VERSION = '0.5';
   my $globals = Bio::Graphics::Browser2->open_globals;
+  my $session = shift;
   my $credentials  = shift || $globals->user_account_db or die "No credentials specified in GBrowse.conf.";
-  my $session = $globals->{session};
 
   my $login = DBI->connect($credentials);
   unless ($login) {

@@ -23,20 +23,14 @@ use Carp "cluck";
 sub _new {
 	my $class = shift;
 	my $VERSION = '0.3';
-	my ($config, $state, $lang) = @_;
-	my $globals = $config->globals;
-	my $session = $globals->{session};
-	my $userid = $state->{userid};
-	my $uploadsid = $state->{uploadid};
+	my $session = shift;
+	my $config = shift;
+	my $uploadsid = $session->page_settings->{uploadid};
 	
     return bless {
 		config		=> $config,
-		state		=> $state,
-		language	=> $lang,
 		uploadsid	=> $uploadsid,
-		globals		=> $globals,
-		session		=> $session,
-		userid		=> $userid
+		globals		=> $config->globals
     }, ref $class || $class;
 }
 

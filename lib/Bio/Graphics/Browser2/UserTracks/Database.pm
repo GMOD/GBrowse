@@ -13,9 +13,9 @@ use Carp qw(confess cluck);
 sub _new {
 	my $class = shift;
 	my $VERSION = '0.3';
-	my ($config, $state, $lang) = @_;
+	my $session = shift;
+	my $config = shift;
 	my $globals = $config->globals;
-	my $session = $globals->{session};
 
     my $credentials = $globals->upload_db_adaptor or die "No credentials given to uploads DB in GBrowse.conf";
     if ($credentials =~ /^(DBI:mysql)/) {
@@ -31,14 +31,11 @@ sub _new {
 	}
 	
     my $self = bless {
+    	config	  => $config,
     	uploadsdb => $login,
-		config	  => $config,
-		state     => $state,
-		language  => $lang,
-		session	  => $session,
-		userid	  => $state->{userid},
-		uploadsid => $state->{uploadid}, #Renamed to avoid confusion with the ID of an upload.
-		username  => $state->{username} || "an anonymous user",
+		userid	  => $session->id,
+		uploadsid => $session->page_settings->{uploadid}, #Renamed to avoid confusion with the ID of an upload.
+		username  => $session->username || "an anonymous user",
 		globals	  => $globals,
     }, ref $class || $class;
     

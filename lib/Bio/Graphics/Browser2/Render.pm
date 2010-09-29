@@ -76,8 +76,8 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
-  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new() if $self->data_source->globals->user_accounts;
-  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self->data_source, $self->state, $self->language, $self->state->{uploadid});
+  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new($session) if $self->data_source->globals->user_accounts;
+  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($session, $self->data_source);
   $self;
 }
 
@@ -143,11 +143,7 @@ sub user_tracks {
     $uuid ||= $self->state->{uploadid} || '';
     warn "[$$] uuid  = $uuid" if DEBUG;
     return $self->{usertracks}{$uuid} 
-       ||= $class->new($self->data_source,
-		       $self->state,
-		       $self->language,
-		       $uuid,
-	   );
+       ||= $class->new($self->session, $self->data_source);
 }
 
 sub remote_sources {

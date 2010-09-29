@@ -42,7 +42,7 @@ sub _new {
 		globals	  => $globals,
     }, ref $class || $class;
     
-    $self->{userdb} = Bio::Graphics::Browser2::UserDB->new() if $globals->user_account_db;
+    $self->{userdb} = Bio::Graphics::Browser2::UserDB->new() if $globals->user_accounts;
     return $self;
 }
 
@@ -139,7 +139,7 @@ sub share {
 
 	# If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
 	my $userid;
-	if ($self->{globals}->user_account_db) {
+	if ($self->{globals}->user_accounts) {
 		my $userdb = $self->{userdb};
 		my $potential_userid = shift;
 		my $attempted_userid = $userdb->get_user_id($potential_userid);
@@ -171,7 +171,7 @@ sub unshare {
 	
 	# If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
 	my $userid;
-	if ($self->{globals}->user_account_db) {
+	if ($self->{globals}->user_accounts) {
 		my $userdb = $self->{userdb};
 		my $potential_userid = shift;
 		my $attempted_userid = $userdb->get_user_id($potential_userid);

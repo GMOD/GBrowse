@@ -14,20 +14,21 @@ use Net::SMTP;
 use Net::OpenID::Consumer;
 use Text::ParseWords 'quotewords';
 use Digest::MD5 qw(md5_hex);
+use Carp "confess";
 
 sub new {
   my $class = shift;
   my $self = {};
   my $VERSION = '0.5';
   my $globals = Bio::Graphics::Browser2->open_globals;
-  my $credentials  = shift || $globals->user_account_db or die "Cannot use UserDB without flag in GBrowse.conf set.";
+  my $credentials  = shift || $globals->user_account_db or die "No credentials specified in GBrowse.conf.";
   my $session = $globals->session;
 
   my $login = DBI->connect($credentials);
   unless ($login) {
     print header();
     print "Error: Could not open login database.";
-    die "Could not open login database $credentials";
+    confess "Could not open login database $credentials";
   }
 
   return bless {

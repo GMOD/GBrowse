@@ -75,7 +75,7 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
-  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new() if $self->data_source->globals->user_account_db;
+  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new() if $self->data_source->globals->user_accounts;
   $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self->data_source, $self->state, $self->language, $self->state->{uploadid});
   $self;
 }

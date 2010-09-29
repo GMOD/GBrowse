@@ -25,7 +25,7 @@ sub _new {
 	my $VERSION = '0.3';
 	my ($config, $state, $lang) = @_;
 	my $globals = $config->globals;
-	my $session = $globals->session;
+	my $session = $globals->{session};
 	my $userid = $state->{userid};
 	my $uploadsid = $state->{uploadid};
 	

@@ -62,7 +62,7 @@ sub new {
     my $globals = shift;
     my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     my $authority    = param('authority') || CGI::cookie('authority');
-    $session = $globals->authorized_session($requested_id,$authority);
+    $session = $globals->authorized_session($requested_id, $authority);
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
   } else {
@@ -72,6 +72,7 @@ sub new {
   my $self = bless {},ref $class || $class;
   $self->data_source($data_source);
   $self->session($session);
+  $self->data_source->{session} = $session;
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();

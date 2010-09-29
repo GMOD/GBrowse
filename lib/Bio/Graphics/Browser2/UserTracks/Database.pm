@@ -15,9 +15,9 @@ sub _new {
 	my $VERSION = '0.3';
 	my ($config, $state, $lang) = @_;
 	my $globals = $config->globals;
-	my $session = $globals->session;
+	my $session = $globals->{session};
 
-    my $credentials = $globals->upload_db_adaptor;
+    my $credentials = $globals->upload_db_adaptor or die "No credentials given to uploads DB in GBrowse.conf";
     if ($credentials =~ /^(DBI:mysql)/) {
 		$credentials .= ";host=".$globals->upload_db_host;
 		$credentials .= ";user=".$globals->upload_db_user;

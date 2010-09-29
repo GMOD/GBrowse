@@ -162,12 +162,12 @@ DROP TABLE IF EXISTS uploads;
 CREATE TABLE uploads (
     uploadid	       	varchar(32) not null PRIMARY key,
     userid				varchar(32) not null,
-    path				   text,
+    path					   text,
     description				   text,
     imported                boolean not null,
     creation_date          datetime not null,
     modification_date      datetime,
-    sharing_policy             ENUM('private', 'public', 'group', 'casual') not null
+    sharing_policy             ENUM('private', 'public', 'group', 'casual') not null,
     users                      text
 ) ENGINE=InnoDB;
 

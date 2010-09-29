@@ -22,8 +22,6 @@ use constant DEBUG => 0;
 use constant HAVE_SVG => eval "require GD::SVG; 1";
 our $CAN_PDF;
 
-# NOTE: Strange comments around col 97 are to fix syntax hilighting in gedit, and will be taken out
-
 # Render HTML Start - Returns the HTML for the browser's <head> section.
 sub render_html_start {
   my $self  = shift;
@@ -1377,34 +1375,38 @@ sub list_tracks {
 	my $globals	= $self->globals;
 	my $userdata = $self->user_tracks;
 	my $listing_type = shift || "";
-	my @tracks = sort((($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : shift // $userdata->tracks);
+	my @tracks = sort((($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : shift || $userdata->tracks);
 	$listing_type .= " available" if $listing_type =~ /public/;
 	
 	# Main track roll code.
-	my $count = 0;
-    my @rows = map {
-		my $fileid = $_;
-		my $name = $userdata->filename($fileid);
-		my $type = $listing_type || $userdata->file_type($fileid);
+	if (@tracks) {
+		my $count = 0;
+		my @rows = map {
+			my $fileid = $_;
+			my $name = $userdata->filename($fileid);
+			my $type = $listing_type || $userdata->file_type($fileid);
 		
-		my ($background_color, $accent_color) = $self->track_listing_colors($count, $type);
-		my $controls = $self->render_track_controls($fileid, $type);
-		my $short_listing = $self->render_track_list_title($fileid, $type, $accent_color);
-		my $details = $self->render_track_details($fileid, $listing_type);
-		my $edit_field = div({-id => $fileid . "_editfield"}, '');
-		$count++;
-		div( {
-				-id		=> "upload_$fileid",
-				-class	=> "custom_track",
-				-style	=> "background-color: $background_color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;"
-			},
-			$short_listing,
-			$controls,
-			$details,
-			$edit_field
-		);
-    } @tracks;
-    return join '', @rows;
+			my ($background_color, $accent_color) = $self->track_listing_colors($count, $type);
+			my $controls = $self->render_track_controls($fileid, $type);
+			my $short_listing = $self->render_track_list_title($fileid, $type, $accent_color);
+			my $details = $self->render_track_details($fileid, $listing_type);
+			my $edit_field = div({-id => $fileid . "_editfield"}, '');
+			$count++;
+			div( {
+					-id		=> "upload_$fileid",
+					-class	=> "custom_track",
+					-style	=> "background-color: $background_color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;"
+				},
+				$short_listing,
+				$controls,
+				$details,
+				$edit_field
+			);
+		} @tracks;
+		return join '', @rows;
+    } else {
+    	return p("There are no " . $listing_type . " tracks yet.");
+    }
 }
 
 # Track Listing Colors (Count, Type) - Returns the accent & background color for the track listing of the specified type & count.

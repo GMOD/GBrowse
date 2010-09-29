@@ -76,7 +76,7 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
-  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new($session) if $self->data_source->globals->user_accounts;
+  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new if $self->data_source->globals->user_accounts;
   $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($session, $self->data_source);
   $self;
 }
@@ -3636,7 +3636,7 @@ sub fcgi_request {
 	return $FCGI_REQUEST = 0;
     }
 
-    my $request  = FCGI::Request(\*STDIN,\*STDOUT,\*STDERR,\%ENV,0,FCGI::FAIL_ACCEPT_ON_INtr());
+    my $request  = FCGI::Request(\*STDIN,\*STDOUT,\*STDERR,\%ENV,0,FCGI::FAIL_ACCEPT_ON_INTR());
     return $FCGI_REQUEST = ($request && $request->IsFastCGI ? $request : 0);
 }
 

@@ -39,7 +39,7 @@ sub _new {
 		globals	  => $globals,
     }, ref $class || $class;
     
-    $self->{userdb} = Bio::Graphics::Browser2::UserDB->new() if $globals->user_accounts;
+    $self->{userdb} = Bio::Graphics::Browser2::UserDB->new if $globals->user_accounts;
     return $self;
 }
 

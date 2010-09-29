@@ -10,8 +10,6 @@ use CGI qw(:standard);
 our $VERSION = '$Id: gbrowse_login,v 1.1 2009-08-27 20:33:23 idavies Exp $';
 
 umask 022;
-   
-my $userdb = Bio::Graphics::Browser2::UserDB->new();
 
 my %actions  = map {$_=>1} param('action');
 my %callback;
@@ -29,6 +27,8 @@ my $column   = param('column');
 my $confirm  = param('confirm');
 my $openid   = param('openid');
 my $option   = param('option');
+
+my $userdb = Bio::Graphics::Browser2::UserDB->new;
 
 if($actions{list_openid}) {
     print header('application/json');

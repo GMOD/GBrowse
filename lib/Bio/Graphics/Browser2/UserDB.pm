@@ -3,7 +3,6 @@ package Bio::Graphics::Browser2::UserDB;
 # $Id: UserDB.pm 23607 2010-07-30 17:34:25Z cnvandev $
 use strict;
 use Bio::Graphics::Browser2;
-use Bio::Graphics::Browser2::Session;
 use CGI qw(:standard);
 use DBI;
 use Digest::SHA qw(sha1);
@@ -14,14 +13,13 @@ use Net::SMTP;
 use Net::OpenID::Consumer;
 use Text::ParseWords 'quotewords';
 use Digest::MD5 qw(md5_hex);
-use Carp "confess";
+use Carp qw(confess cluck);
 
 sub new {
   my $class = shift;
   my $self = {};
   my $VERSION = '0.5';
   my $globals = Bio::Graphics::Browser2->open_globals;
-  my $session = shift;
   my $credentials  = shift || $globals->user_account_db or die "No credentials specified in GBrowse.conf.";
 
   my $login = DBI->connect($credentials);
@@ -34,8 +32,6 @@ sub new {
   return bless {
     dbi => $login,
     globals => $globals,
-    session => $session,
-    username => $session->username
   }, ref $class || $class;
 }
 
@@ -98,7 +94,7 @@ sub check_user {
 #Check Admin - Returns true if a user is an admin.
 sub check_admin {
   my $self = shift;
-  my $username = shift || $self->{username};
+  my $username = shift;
   my $globals = $self->{globals};
   my $admin_name = $globals->admin_account;
   return unless $admin_name;

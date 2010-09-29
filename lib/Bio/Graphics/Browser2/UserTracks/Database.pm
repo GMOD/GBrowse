@@ -19,9 +19,9 @@ sub _new {
 
     my $credentials = $globals->upload_db_adaptor or die "No credentials given to uploads DB in GBrowse.conf";
     if ($credentials =~ /^(DBI:mysql)/) {
-		$credentials .= ";host=".$globals->upload_db_host;
-		$credentials .= ";user=".$globals->upload_db_user;
-		$credentials .= ";password=".$globals->upload_db_pass;
+		$credentials .= ";host=".$globals->upload_db_host if $globals->upload_db_host;
+		$credentials .= ";user=".$globals->upload_db_user if $globals->upload_db_host;
+		$credentials .= ";password=".$globals->upload_db_pass if $globals->upload_db_host;
 	}
     my $login = DBI->connect($credentials);
 	unless ($login) {

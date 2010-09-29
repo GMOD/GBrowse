@@ -127,18 +127,18 @@ function load_login_balloon(event,session,username,openid) {
                        'padding-left:16px;background-image:url('+ImgLocation+'/openid-logo.gif);' +
                        'background-repeat:no-repeat;border:solid;></td></tr>' +
                    '<tr><td colspan=2>' +
-                       '<image onClick=check_openid(\'https://www.google.com/accounts/o8/id\'); ' +
+                       '<image style="cursor:pointer" onClick=check_openid(\'https://www.google.com/accounts/o8/id\'); ' +
                          'src='+ImgLocation+'/google-logo.gif alt=\'Google\' height=20px width=20px>' +
-                       '<image onClick=login_openid_html(\'http://openid.aol.com/screenname\',22,10); ' +
-                         'src='+ImgLocation+'/aim-logo.png alt=\'AIM\' height=20px width=20px>' +
-                       '<image onClick=login_openid_html(\'http://blogname.blogspot.com/\',7,8); ' +
-                         'src='+ImgLocation+'/blogspot-logo.png alt=\'Blogspot\' height=20px width=20px>' +
-                       '<image onClick=login_openid_html(\'http://username.livejournal.com/\',7,8); ' +
-                         'src='+ImgLocation+'/livejournal-logo.png alt=\'LiveJournal\' height=20px width=20px>' +
-                       '<image onClick=login_openid_html(\'http://username.myopenid.com/\',7,8); ' +
-                         'src='+ImgLocation+'/myopenid-logo.png alt=\'myOpenID\' height=20px width=20px>' +
-                       '<image onClick=login_openid_html(\'https://me.yahoo.com/username\',21,8); ' +
+                       '<image style="cursor:pointer" onClick=check_openid(\'https://me.yahoo.com/\'); ' +
                          'src='+ImgLocation+'/yahoo-logo.png alt=\'YAHOO\' height=20px width=20px>' +
+                       '<image style="cursor:pointer" onClick=login_openid_html(\'http://openid.aol.com/screenname\',22,10); ' +
+                         'src='+ImgLocation+'/aim-logo.png alt=\'AIM\' height=20px width=20px>' +
+                       '<image style="cursor:pointer" onClick=login_openid_html(\'http://blogname.blogspot.com/\',7,8); ' +
+                         'src='+ImgLocation+'/blogspot-logo.png alt=\'Blogspot\' height=20px width=20px>' +
+                       '<image style="cursor:pointer" onClick=login_openid_html(\'http://username.livejournal.com/\',7,8); ' +
+                         'src='+ImgLocation+'/livejournal-logo.png alt=\'LiveJournal\' height=20px width=20px>' +
+                       '<image style="cursor:pointer" onClick=login_openid_html(\'http://username.myopenid.com/\',7,8); ' +
+                         'src='+ImgLocation+'/myopenid-logo.png alt=\'myOpenID\' height=20px width=20px>' +
                    '</td></tr>' +
                  '</tbody>' +
 

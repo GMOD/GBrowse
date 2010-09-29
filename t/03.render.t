@@ -142,7 +142,7 @@ ok($render->state->{width},1024);
 # test navigation - first we pretend that we are setting position to ctgA:1..1000
 $CGI::Q = new CGI('ref=ctgA;start=1;end=1000');
 $render->update_coordinates;
-ok($render->state->{name},'ctgA:1..1000');
+ok($render->state->{name},'ctgA:1..1,000');
 ok($render->state->{ref},'ctgA');
 ok($render->state->{start},1);
 ok($render->state->{stop},1000);
@@ -154,12 +154,12 @@ $render->state->{seg_max} = 5000;
 # now we pretend that we've pressed the right button
 $CGI::Q = new CGI('right+500.x=yes;navigate=1');
 $render->update_coordinates;
-ok($render->state->{name},'ctgA:501..1500');
+ok($render->state->{name},'ctgA:501..1,500');
 
 # pretend we want to zoom in 50%
 $CGI::Q = new CGI('zoom+in+50%.x=yes;navigate=1');
 $render->update_coordinates;
-ok($render->state->{name},'ctgA:751..1250');
+ok($render->state->{name},'ctgA:751..1,250');
 my $segment = $render->segment;
 ok($segment->start,751);
 ok($segment->end,1250);
@@ -167,12 +167,12 @@ ok($segment->end,1250);
 # pretend that we've selected the popup menu to go to 100 bp
 $CGI::Q = new CGI('span=100;navigate=1');
 $render->update_coordinates;
-ok($render->state->{name},'ctgA:951..1050');
+ok($render->state->{name},'ctgA:951..1,050');
 
 # Do we clip properly? If I scroll right 5000 bp, then we should stick at 4901..5000
 $CGI::Q = new CGI('right+5000+bp.x=yes;navigate=1');
 $render->update_coordinates;
-ok($render->state->{name},'ctgA:4901..5000');
+ok($render->state->{name},'ctgA:4,901..5,000');
 
 # Is the asynchronous rendering working
 my ($render_object,$retrieve_object,$status,$mime);

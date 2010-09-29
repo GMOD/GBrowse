@@ -585,13 +585,13 @@ sub render_login {
     my $appnamel = $self->globals->application_name_long;
     my $settings = $self->state;
     my $session  = $self->session;
-    my $style    = 'float:right;font-weight:bold;color:blue;cursor:pointer;';
+    my $style    = 'float:right;font-weight:bold;color:blue;cursor:pointer;font-size:9pt';
     my ($html,$title,$text,$click);
     $click = 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');';
     $html  = '';
 
     if ($session->private) {
-        $html .= span({-style=>'float:right;font-weight:bold;color:black;'},
+        $html .= span({-style=>'float:right;font-weight:bold;color:black;font-size:9pt;'},
                       'Welcome, '.$session->username) . br() .
                  span({-style       => $style,
 		       -title       => 'Click here to log out from '.$session->username.'',
@@ -761,7 +761,7 @@ sub render_actionmenu {
 			     li($about_me_link),
 			  )),
 	);
-    return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));
+    return div({-class=>'datatitle',-style=>'height:32px'},$file_menu.$login.br({-clear=>'all'}));
 }
 
 # for the subset of plugins that are named in the 'quicklink plugins' option, create

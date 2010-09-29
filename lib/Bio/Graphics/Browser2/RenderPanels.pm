@@ -1428,7 +1428,7 @@ sub run_local_requests {
 	warn "render($label): $elapsed seconds ", ($@ ? "(error)" : "(ok)") if BENCHMARK;
 	
 	if ($@) {
-	    warn "RenderPanels error";
+	    warn "RenderPanels error: $@";
 #	    warn $@;
 	    if ($@ =~ /timeout/) {
 		$requests->{$label}->flag_error('Timeout; Try turning off tracks or looking at a smaller region.');

@@ -405,7 +405,7 @@ sub background_track_render {
         $display_details = 0;
         $details_msg = h1(
 	    br(),
-            $self->translate(															            	#}}}}){} - Temporarily fixes the syntax highlighting in emacs and gedit.
+            $self->translate(
                 'TOO_BIG',
                 scalar $self->data_source()->unit_label($self->get_max_segment),
             )

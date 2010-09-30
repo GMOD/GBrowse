@@ -1696,9 +1696,9 @@ sub render_track_sharing {
 	if (($userdata->database == 0) && ($userdata->is_mine($fileid) == 0)) {
 		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? $self->translate('SHARED_WITH_YOU') : $self->translate('SHARING_PUBLIC') . ".";
 	} else {
-		my %sharing_type_labels = ( private => $self->translate('SHARING_PRIVATE'), # sharing_type => label
-									casual  => $self->translate('SHARING_CASUAL'), 
-									group   => $self->translate('SHARING_GROUP'), 
+		my %sharing_type_labels = ( private => $self->translate('SHARING_PRIVATE'),
+									casual  => $self->translate('SHARING_CASUAL') ,
+									group   => $self->translate('SHARING_GROUP')  ,
 									public  => $self->translate('SHARING_PUBLIC') );
 		$sharing_content .= Select(
 			{-onChange => "changePermissions('$fileid', this.options[this.selectedIndex].value.toLowerCase())"},
@@ -1706,7 +1706,7 @@ sub render_track_sharing {
 				option(
                     {
 					 -value => $_,
-					 ($sharing_policy =~ /$_/i)? (-selected => "selected") : ""
+					 ($sharing_policy =~ /$_/i)? (-selected => "selected") : ()
 					},
 					$sharing_type_labels{$_}
 				)

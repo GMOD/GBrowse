@@ -587,7 +587,7 @@ END
    LOGIN_CREATE              => 'Log in / create account',
 
    #------------
-   # AJAX UPLOAD
+   # USER TRACKS
    #------------
 
    UPLOADING                 => 'Uploading...',
@@ -597,6 +597,33 @@ END
    FETCHING                  => 'fetching...',
    CANCELLING                => 'Cancelling',
    NOT_FOUND                 => 'Not Found',
+   ADMIN_MODE_WARNING        => 'Admin mode: Uploaded tracks are public',
+   SOURCE_FILES              => 'Source files:',
+   SHARE_WITH_OTHERS         => 'Share with other users',
+   RELOAD_FROM               => '[reload from %s]',
+   REMOVE_FROM_MY_SESSION    => 'Remove from my session',
+   INTERRUPTED_RESUME        => 'Interrupted [Resume]',
+   SHARING                   => 'Sharing:',
+   TRACK_IS                  => 'Track is',
+   SHARED_WITH_YOU           => '<b>shared</b> with you.',
+   SHARING_PRIVATE           => 'Private',
+   SHARING_CASUAL            => 'Casual',
+   SHARING_GROUP             => 'Group',
+   SHARING_PUBLIC            => 'Public',
+   SHARING_HELP              => '<b>Private</b> - Visible only to me.<br>'.
+		                '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
+		                '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
+		                '<b>Public</b> - Visible to anyone.',
+   SHARE_WITH_THIS_LINK      => 'Share with this link: ',
+   PUBLIC_TRACKS             => 'Public Tracks',
+   THERE_ARE_NO_TRACKS_YET   => 'There are no %s tracks yet.',
+   TOGGLE_DETAILS            => 'Toggle Details',
+   SHARED_WITH               => 'shared with',
+   NO_ONE                    => 'no one.',
+   ENTER_SOMETHING_HERE      => 'Enter a %s here.',
+   USERNAME_OR_USER_ID       => 'username or user ID',
+   USER_ID                   => 'user ID',
+   ADD_BUTTON                => '[Add]',
 
    #------
    # MISC.
@@ -632,11 +659,7 @@ END
                                 '<p>Your   userID is <b>%s</b></p>'.
                                 '<p>Your uploadID is <b>%s</b></p>',
 
-   ADMIN_MODE_WARNING        => 'Admin mode: Uploaded tracks are public',
-   SOURCE_FILES              => 'Source files:',
-   SHARE_WITH_OTHERS         => 'Share with other users',
    CLICK_MODIFY_SUBTRACK_SEL => 'Click to modify subtrack selections.',
-   RELOAD_FROM               => '[reload from %s]',
    EDIT_BUTTON               => '[edit]',
    CLICK_FOR_MORE            => 'Click for more',
    PLUGIN_BASE_CLASS_DUMP    => "This is the base class for all GBrowse plugins.\n".
@@ -650,8 +673,7 @@ END
    CHROM_NOT_FOUND_DETAILS   => 'Cannot display %s because the chromosome/contig named %s is not defined in the database.',
    NOT_RECOGNIZED_PLUGIN     => '%s is not a recognized plugin',
    NO_PLUGIN_SPECIFIED       => 'No plugin was specified.',
-   REMOVE_FROM_MY_SESSION    => 'Remove from my session',
-   INTERRUPTED_RESUME        => 'Interrupted [Resume]',
+   
 
 
 };

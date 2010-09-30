@@ -260,7 +260,7 @@ sub render_search_form_objects {
         my $spinner_url = $self->data_source->button_url.'/spinner.gif';
 	$html .= <<END
 <span id="indicator1" style="display: none">
-  <img src="$spinner_url" alt="$self->tr('WORKING')" />
+  <img src="$spinner_url" alt="$self->translate('WORKING')" />
 </span>
 <div id="autocomplete_choices" class="autocomplete"></div>
 END
@@ -600,29 +600,29 @@ sub render_login {
 
 	# Draw the visible HTML elements.
     if ($session->private) {
-    	$login_controls .= span({-style => 'font-weight:bold;color:black;'}, $self->tr('WELCOME', $session->username));
+    	$login_controls .= span({-style => 'font-weight:bold;color:black;'}, $self->translate('WELCOME', $session->username));
     	$login_controls .= '&nbsp; &nbsp;';
         $login_controls .= span({
         		  -style 	   => $style,
-        		  -title 	   => $self->tr('LOG_OUT_DESC', $session->username).'',
+        		  -title 	   => $self->translate('LOG_OUT_DESC', $session->username).'',
         		  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',\''.$session->username.'\','.$session->using_openid.');',
                   -onMouseOver => 'this.style.textDecoration=\'underline\'',
-                  -onMouseOut  => 'this.style.textDecoration=\'none\''}, $self->tr('MY_ACCOUNT'));
+                  -onMouseOut  => 'this.style.textDecoration=\'none\''}, $self->translate('MY_ACCOUNT'));
 		$login_controls .= '&nbsp; &nbsp;';
         $login_controls .= span({
         		  -style       => $style,
-				  -title       => $self->tr('CHANGE_SETTINGS_DESC'),
+				  -title       => $self->translate('CHANGE_SETTINGS_DESC'),
 				  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); location.href=\'?id=logout\';',
 				  -onMouseOver => 'this.style.textDecoration=\'underline\'',
 				  -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out');
     } else {
         $login_controls .= span({
         		  -style	   => $style,
-        		  -title 	   => $self->tr('LOGIN_CREATE_DESC'),
+        		  -title 	   => $self->translate('LOGIN_CREATE_DESC'),
         		  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',false,false);',
                   -onMouseOver => 'this.style.textDecoration=\'underline\'',
                   -onMouseOut  => 'this.style.textDecoration=\'none\''},
-                  $self->tr('LOGIN_CREATE'));
+                  $self->translate('LOGIN_CREATE'));
     }
     my $container = span({-style => 'float:right;'}, $login_controls);
     return $container;
@@ -705,7 +705,7 @@ sub render_busy_signal {
         -id    => 'busy_indicator',
         -src   => $self->data_source->button_url.'/spinner.gif',
         -style => 'position: fixed; top: 5px; left: 5px; display: none',
-        -alt   => $self->tr('WORKING')
+        -alt   => $self->translate('WORKING')
        });
 }
 
@@ -755,7 +755,7 @@ sub render_actionmenu {
 
     my $file_menu = ul({-id    => 'actionmenu',
 			-class => 'dropdown downdown-horizontal'},
-		       li({-class=>'dir'},$self->tr('FILE'),
+		       li({-class=>'dir'},$self->translate('FILE'),
 			  ul(li($bookmark_link),
 			     li($share_link),
 			     li({-class=>'dir'},a({-href=>'#'},$self->translate('EXPORT')),
@@ -924,7 +924,7 @@ sub render_track_table {
 	   $cit_txt =~ s/\s+\S+$//; 
 	   $cit_txt =~ s/\'/\&\#39;/g;
 	   $cit_txt =~ s/\"/\&\#34;/g;
-	   $cit_txt .= '... <i>' . $self->tr('CLICK_FOR_MORE') . '</i>';
+	   $cit_txt .= '... <i>' . $self->translate('CLICK_FOR_MORE') . '</i>';
        }
        $mouseover = "<b>$key</b>";
        $mouseover .= ": $cit_txt"                           if $cit_txt;
@@ -946,7 +946,7 @@ sub render_track_table {
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
        my $escaped_label = CGI::escape($label);
        $labels{$label} .= ' ['. span({-class       =>'clickable',
-				      -onMouseOver  => "GBubble.showTooltip(event,'".$self->tr('CLICK_MODIFY_SUBTRACK_SEL')."')",
+				      -onMouseOver  => "GBubble.showTooltip(event,'".$self->translate('CLICK_MODIFY_SUBTRACK_SEL')."')",
 				      -onClick      => "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
 				     },i($self->translate('SELECT_SUBTRACKS',$selected,$total))).']';
    }
@@ -1338,7 +1338,7 @@ sub render_select_browser_link {
 sub render_upload_share_section {
     my $self = shift;
     my $userdata = $self->user_tracks;
-    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->tr('ADMIN_MODE_WARNING')) : "";
+    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
 	$html .= $self->render_custom_track_listing;
 	if ($userdata->database == 1) {
 		$html .= $self->render_public_track_listing;
@@ -1349,7 +1349,7 @@ sub render_upload_share_section {
 # Render Custom Track Listing - Returns the HTML listing of public, uploaded, imported and shared tracks added to a session, and a section to add more.
 sub render_custom_track_listing {
 	my $self = shift;
-	my $html = h1("Custom Tracks");
+	my $html = h1($self->translate('UPLOADED_TRACKS'));
 	
 	$html .= a( {
 					-href => $self->annotation_help.'#remote',
@@ -1366,7 +1366,7 @@ sub render_custom_track_listing {
 # Render Public Track Listing - Returns the HTML listing of public tracks available to a user.
 sub render_public_track_listing {
 	my $self = shift;
-	my $html = h1("Public Tracks");
+	my $html = h1($self->translate('PUBLIC_TRACKS'));
 	$html .= $self->list_tracks("public");
 	$html = div({-id => "public_tracks"}, $html);
 	return $html;
@@ -1408,7 +1408,7 @@ sub list_tracks {
 		} @tracks;
 		return join '', @rows;
     } else {
-    	return p("There are no " . $listing_type . " tracks yet.");
+    	return p($self->translate('THERE_ARE_NO_TRACKS_YET',$listing_type));
     }
 }
 
@@ -1488,7 +1488,7 @@ sub render_track_list_title {
 	my $title = h1({-style	=> "display: inline; font-size: 14pt;"}, $short_name);
 	
 	return span(
-		{-style => "display: inline-block; width: 60em;"},
+		{-style => "display: inline-block;"},
 		$stat,
 		$title,
 		$go_there
@@ -1513,7 +1513,7 @@ sub render_track_controls {
 			-href	  => "javascript: void(0);",
 			-onClick => "this.up().next('div.details').toggle();"
 		 },
-		 "Toggle Details"
+		 $self->translate('TOGGLE_DETAILS')
 	);
 	my $controls = $toggle_details;
 	
@@ -1524,7 +1524,7 @@ sub render_track_controls {
 			{
 				-src     	 => "$buttons/trash.png",
 				-style  	 => 'cursor:pointer',
-				-onMouseOver => 'GBubble.showTooltip(event,"'.$self->tr('DELETE').'",0)',
+				-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('DELETE').'",0)',
 				-onClick     => "deleteUpload('$fileid')"
 			}
 		);
@@ -1536,7 +1536,7 @@ sub render_track_controls {
 				{
 					-src		  => "$buttons/share.png",
 					-style   	  => 'cursor:pointer',
-					-onMouseOver => 'GBubble.showTooltip(event,"'.$self->tr('SHARE_WITH_OTHERS').'",0)',
+					-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('SHARE_WITH_OTHERS').'",0)',
 					-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
 				}
 			) if ($type =~ /upload/);
@@ -1546,7 +1546,7 @@ sub render_track_controls {
 			$controls .= '&nbsp;' . a(
 				{
 					-href     	 => "javascript: void(0)",
-					-onMouseOver => 'GBubble.showTooltip(event,"'.$self->tr('REMOVE_FROM_MY_SESSION').'",0,200)',
+					-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('REMOVE_FROM_MY_SESSION').'",0,200)',
 					-onClick     => "unshareFile('$fileid', '$userid')"
 				},
 				"[X]"
@@ -1609,7 +1609,7 @@ sub render_track_details {
 						-href    =>'javascript:void(0)',
 			  			-onClick => "Controller.monitor_upload('$random_id','$fileid')",
 			 		},
-			 		$self->tr('INTERRUPTED_RESUME')
+			 		$self->translate('INTERRUPTED_RESUME')
 			 	)
 			)
 		 ) unless ($status =~ /complete/);
@@ -1634,7 +1634,7 @@ sub render_track_source_files {
 	my @source_files = $userdata->source_files($fileid);
 	my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($fileid);
 	my $source_listing =
-		b($self->tr('SOURCE_FILES')) .
+		b($self->translate('SOURCE_FILES')) .
 		ul(
 			{-style => "margin: 0; padding: 0; list-style: none;"},
 			li(
@@ -1653,7 +1653,7 @@ sub render_track_source_files {
 								-href    => "javascript:void(0)",
 								-onClick => "editUploadData('$fileid','$_->[0]')"
 							},
-							$self->tr('EDIT_BUTTON')
+							$self->translate('EDIT_BUTTON')
 						)
 					: '&nbsp;'
 					)
@@ -1671,7 +1671,7 @@ sub render_track_source_files {
 				a({
 						-href    => "javascript:void(0)",
 						-onClick => "editUploadConf('$fileid')"
-					}, $self->tr('EDIT_BUTTON')
+					}, $self->translate('EDIT_BUTTON')
 				)
 			)
 		);
@@ -1692,32 +1692,36 @@ sub render_track_sharing {
 	$_ = b(($globals->user_accounts)? $userdb->get_username($_) : "an anonymous user") . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
 	my $userlist = join (", ", @users);
 	
-	my $sharing_content = b("Sharing:") . br() . "Track is ";
+    my $sharing_content = b($self->translate('SHARING')) . br() . $self->translate('TRACK_IS') . " ";
 	if (($userdata->database == 0) && ($userdata->is_mine($fileid) == 0)) {
-		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? b("shared") . " with you." : b("public") . ".";
+		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? $self->translate('SHARED_WITH_YOU') : $self->translate('SHARING_PUBLIC') . ".";
 	} else {
+		my %sharing_type_labels = ( private => $self->translate('SHARING_PRIVATE'), # sharing_type => label
+									casual  => $self->translate('SHARING_CASUAL'), 
+									group   => $self->translate('SHARING_GROUP'), 
+									public  => $self->translate('SHARING_PUBLIC') );
 		$sharing_content .= Select(
 			{-onChange => "changePermissions('$fileid', this.options[this.selectedIndex].value.toLowerCase())"},
 			map {
 				option(
-					($sharing_policy =~ /$_/i)? {-selected => "selected"} : "",
-					"$_"
+                    {
+					 -value => $_,
+					 ($sharing_policy =~ /$_/i)? (-selected => "selected") : ""
+					},
+					$sharing_type_labels{$_}
 				)
-			} qw(Private Casual Group Public)
+			} qw(private casual group public)
 		);
 		
-		my $sharing_help = b("Private") . " - Visible only to me.<br>";
-		$sharing_help .= b("Casual") . " - Visible to me and anyone I send a link to, but not visible in the public tracks.<br>";
-		$sharing_help .= b("Group") . " - Visible to and anyone I add to the sharing group.<br>";
-		$sharing_help .= b("Public") . " - Visible to anyone.<br>";
+		my $sharing_help = $self->translate('SHARING_HELP');
 		
 		$sharing_content .= "&nbsp;" . a({-href => "javascript:void(0)", -onMouseOver => "GBubble.showTooltip(event,'$sharing_help',0,300);"}, "[?]");
-		$sharing_content .= "&nbsp;shared with " .  ($userlist? "$userlist" : "no one.") if ($sharing_policy =~ /(casual|group)/);
+		$sharing_content .= "&nbsp;" . $self->translate('SHARED_WITH') . " " .  ($userlist? "$userlist" : $self->translate('NO_ONE')) if ($sharing_policy =~ /(casual|group)/);
 		
 		if ($sharing_policy =~ /casual/) {
 			my $sharing_url = $userdata->sharing_link($fileid);
 			my $sharing_link = a({-href => $sharing_url}, $sharing_url);
-			$sharing_content .= br() . "Share with this link: ";
+			$sharing_content .= br() . $self->translate('SHARE_WITH_THIS_LINK');
 			$sharing_content .= $sharing_link;
 		}
 		
@@ -1725,7 +1729,7 @@ sub render_track_sharing {
 			my $add_box = "&nbsp;" . input(
 				{
 					-length => 20,
-					-value => "Enter a " . (($globals->user_accounts)? "username or user ID" : "user ID") . " here.",
+					-value => $self->translate('ENTER_SOMETHING_HERE', (($globals->user_accounts)? $self->translate('USERNAME_OR_USER_ID') : $self->translate('USER_ID'))),
 					-onFocus => "this.clear()"
 				}
 			);		
@@ -1734,7 +1738,7 @@ sub render_track_sharing {
 					-href => "javascript: void(0)",
 					-onClick => "shareFile('$fileid', this.previous('input').getValue())",
 				},
-				"[Add]" );
+				$self->translate('ADD_BUTTON') );
 			$sharing_content .= $add_box . $add_link;
 		};
 	}
@@ -1778,7 +1782,7 @@ sub userdata_upload {
 	my $from_url     = $self->translate('FROM_URL');
     my $help_link     = $self->annotation_help;
     $html         .= p({-style=>'margin-left:10pt;font-weight:bold'},
-		       $self->tr('ADD_YOUR_OWN_TRACKS') ,':',
+		       $self->translate('ADD_YOUR_OWN_TRACKS') ,':',
 		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',    '$remove_label', 'edit','$help_link')"},
 			 "[$from_text]"),
 		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$mirror_label', '$remove_label', 'url','$help_link')"},
@@ -1805,7 +1809,7 @@ sub add_userdata {
 	
 	my $html = '';    
     $html .= p({-style=>'margin-left:10pt;font-weight:bold'},
-		'Add custom track(s):',
+		$self->translate('ADD_YOUR_OWN_TRACKS'),
 		a(
 			{-href=>"javascript:addAnUploadField('custom_list_start', '$url', '$new_label',   '$remove_label', 'edit','$help_link')"},
 			"[$from_text]"

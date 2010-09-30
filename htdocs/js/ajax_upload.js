@@ -57,8 +57,8 @@ function startAjaxUpload(upload_id) {
 	
 	// Create & insert the status update elements.
 	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
-	status.insert(new Element("span").update('<b>Uploading...</b>'));
-	status.insert(new Element("a", {href: 'javascript:void(0)'}).observe("click", function() { Controller.cancel_upload(upload_id + "_status", upload_id) }).update(' Cancel'));
+	status.insert(new Element("span").update('<b>' + Controller.translate('UPLOADING') + '</b>'));
+	status.insert(new Element("a", {href: 'javascript:void(0)'}).observe("click", function() { Controller.cancel_upload(upload_id + "_status", upload_id) }).update(Controller.translate('CANCEL')));
 	
 	// This hash stores all currently-loading status updaters.
 	if (Ajax_Status_Updater == null)
@@ -99,7 +99,7 @@ function completeAjaxUpload(response, upload_id, field_type) {
     	r = {
        		success:     false, 
             uploadName: 'Uploaded file',
-            error_msg:  'The server returned an error during upload'
+            error_msg:  Controller.translate('UPLOAD_ERROR')
     	}
     }
     
@@ -141,7 +141,7 @@ function completeAjaxUpload(response, upload_id, field_type) {
 		var msg =  new Element("div").setStyle({"background-color": "pink", "padding": "5px"});
 		msg.insert({bottom: new Element("b").update(r.uploadName) });
 		msg.insert({bottom: "&nbsp;" + r.error_msg + "&nbsp;"});
-		msg.insert({bottom: new Element("a", {href: "javascript:void(0)"}) }).observe("click", function() { $(upload_id).remove() }).down("a").update("[Remove Message]");
+		msg.insert({bottom: new Element("a", {href: "javascript:void(0)"}) }).observe("click", function() { $(upload_id).remove() }).down("a").update(Controller.translate('REMOVE_MESSAGE'));
 		status.update(msg);
 	}
 	return true;
@@ -183,11 +183,11 @@ function editUploadConf (fileName) {
 function editUpload (fileName, sourceFile) {
 	var editDiv = fileName + "_editfield";
 	var editID  = 'edit_' + Math.floor(Math.random() * 99999);
-	$(editDiv).update("<p><b>Editing " + sourceFile + "</b></p>");
-	$(editDiv).insert({bottom: new Element("textarea", {id: editID, cols: "120", rows: "20", wrap: "off"}).update("fetching...") });
+	$(editDiv).update("<p><b>" + Controller.translate('EDITING_FILE', sourceFile) + "</b></p>");
+	$(editDiv).insert({bottom: new Element("textarea", {id: editID, cols: "120", rows: "20", wrap: "off"}).update(Controller.translate('FETCHING')) });
 	$(editDiv).insert({bottom: new Element("p")});
-	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: new Element("a", {href: "javascript:void(0)"}).observe("click", function() { $(editDiv).update() }).update("[Cancel]") });
-	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button").observe("click", function() { Controller.uploadUserTrackSource(editID, fileName, sourceFile, editDiv) }).update("Submit") });
+	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: new Element("a", {href: "javascript:void(0)"}).observe("click", function() { $(editDiv).update() }).update(Controller.translate('CANCEL')) });
+	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button").observe("click", function() { Controller.uploadUserTrackSource(editID, fileName, sourceFile, editDiv) }).update(Controller.translate('SUBMIT')) });
 	Controller.downloadUserTrackSource(editID,fileName,sourceFile);
 }
 
@@ -223,7 +223,7 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 		form.insert({bottom: new Element("input", {type: "hidden", name: "action", value: "import_track"}) });
 		form.insert({bottom: new Element("input", {type: "text", name: "url", id: "import_field", "size": 50}) });
 	};
-	form.insert({bottom: new Element("input", {type: "submit", name: "submit", value: "Upload"}) });
+	form.insert({bottom: new Element("input", {type: "submit", name: "submit", value: Controller.translate('UPLOAD')}) });
 	form.insert({bottom: new Element("input", {type: "hidden", name: "upload_id", value: upload_tag}) });
 	form.insert({bottom: "&nbsp;" });
 	var remove_link = new Element("a", {href: "javascript:void(0)"}).update(remove_prompt);
@@ -264,7 +264,7 @@ function changePermissions(fileid, sharing_policy) {
 function shareFile(fileid, userid) {
 	var title = $("upload_" + fileid);
 	if (title)
-		title.down("div[id$='_stat']").update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
+		title.down("div[id$='_stat']").update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING')}) );
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',

@@ -231,27 +231,40 @@ var GBrowseController = Class.create({
 		image.ancestors()[0].setStyle({width: bar_obj.width+'px'});
 	},
 
-	append_child_from_html:
-	function (child_html,parent_obj) {
-		//Append new html to the appropriate section This is a bit cludgy but we
-		//create a temp element, read the html into it and then move the div
-		//element back out.  This keeps the other tracks intact.
-		var tmp_element       = document.createElement("tmp_element");
-		tmp_element.innerHTML = child_html;
-		parent_obj.appendChild(tmp_element);
+  append_child_from_html:
+  function (child_html,parent_obj,onTop) {
+    //Append new html to the appropriate section This is a bit cludgy but we
+    //create a temp element, read the html into it and then move the div
+    //element back out.  This keeps the other tracks intact.
+    if (onTop == null) onTop = false;
 
-		// Move each child node but skip if it is a comment (class is undef)
-		if (tmp_element.hasChildNodes()) {
-			var children = tmp_element.childNodes;
-			for (var i = 0; i < children.length; i++) {
-				if (children[i].className == undefined){
-					continue;
-				}
-				parent_obj.appendChild(children[i]);
-			};
-		};
-		parent_obj.removeChild(tmp_element);
-	},
+    var tmp_element       = document.createElement("tmp_element");
+    tmp_element.innerHTML = child_html;
+
+    var tracks      = parent_obj.getElementsByClassName('track');
+    var first_track = tracks[0];
+
+    if (onTop && first_track != null) {
+	parent_obj.insertBefore(tmp_element,first_track[0]);
+    } else {
+	parent_obj.appendChild(tmp_element);
+    }
+    // Move each child node but skip if it is a comment (class is undef)
+    if (tmp_element.hasChildNodes()) {
+	var children = tmp_element.childNodes;
+	for (var i = 0; i < children.length; i++) {
+	    if (children[i].className == undefined){
+		continue;
+	    }
+	    if (onTop && first_track != null) {
+		parent_obj.insertBefore(children[i],first_track);
+	    } else {
+		parent_obj.appendChild(children[i]);
+	    }
+	}
+    }
+    parent_obj.removeChild(tmp_element);
+  },
 
 	// Update Section Methods *****************************************
 	update_sections:
@@ -269,7 +282,7 @@ var GBrowseController = Class.create({
 		var request_str = "action=update_sections" + param_str;
 		for (var i = 0; i < section_names.length; i++) {
 			if (spin)
-				$(section_names[i]).update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
+				$(section_names[i]).update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING')}) );
 			request_str += "&section_names="+section_names[i];
 		}
 
@@ -787,7 +800,6 @@ var GBrowseController = Class.create({
       return false; 
     }
     else if (plugin_type == 'finder'){
-        alert('Searching for ' + $F('landmark_search_field') + ' via ' + $F('plugin'));
 	document.searchform.plugin_find.value  = $F('plugin');
 	document.searchform.force_submit.value = 1;
 	document.searchform.submit();
@@ -813,7 +825,7 @@ var GBrowseController = Class.create({
       var innerdiv    = $('errormsg');
       var detailsdiv  = $('errordetails');
       if (innerdiv != null) {
-          var caption = detailsdiv.visible() ? 'Hide details' : 'Show details';
+          var caption = detailsdiv.visible() ? Controller.translate('HIDE_DETAILS') : Controller.translate('SHOW_DETAILS');
 	  innerdiv.innerHTML = message +
                                ' <span id="detailscaption" class="clickable" style="font-size:12pt" onClick="Controller.show_hide_errordetails()">'
 			       +caption
@@ -844,10 +856,10 @@ var GBrowseController = Class.create({
     if (detailsdiv == null) return;
     if (caption    == null) return;
     if (detailsdiv.visible()) {
-       caption.innerHTML="Show details";
+       caption.innerHTML=Controller.translate('SHOW_DETAILS');
        detailsdiv.hide();
     } else {
-       caption.innerHTML="Hide details";
+       caption.innerHTML=Controller.translate('HIDE_DETAILS');
        detailsdiv.show();
     }
  },
@@ -875,7 +887,7 @@ var GBrowseController = Class.create({
 		if (event.type=='blur' || event.keyCode==Event.KEY_RETURN) {
 			var file = description_box.up("div[id^='upload_']").id.sub("upload_","");
 			var description = description_box.innerHTML;
-			description_box.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
+			description_box.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING')}) );
 			new Ajax.Request(Controller.url, {
 				method:      'post',
 				parameters:{  
@@ -964,7 +976,28 @@ var GBrowseController = Class.create({
 				Controller.update_sections(sections);
 			}
 		});
-	},
+  },
+
+  // uploadUserTrackSource() is called to submit a user track edit field
+  // to the server
+  uploadUserTrackSource:
+  function (sourceField,fileName,sourceFile,editElement) {
+      this._modifyUserTrackSource({ action:     'modifyUserData',
+				    track:      fileName,
+				    sourceFile: sourceFile,
+				    data:       $F(sourceField)
+                                   },
+	                          editElement);
+  },
+
+  // mirrorTrackSource() is called to mirror a URL to a track
+  mirrorTrackSource:
+  function (sourceURL,trackName,statusElement,displayWhenDone) {
+      this._modifyUserTrackSource( { action:     'upload_file',
+                                     name:       trackName,
+				     mirror_url: sourceURL },
+	                            statusElement,displayWhenDone);
+  },
 
 // monitor_upload is redundant and needs to be refactored
 // the idea is to register a new upload
@@ -986,6 +1019,42 @@ var GBrowseController = Class.create({
      if (this.tabs != null) {
        this.tabs.select_tab(tab_id);
      }
+  },
+
+  wait_for_initialization:
+  function (html,callback) {
+      $('main').setOpacity(0.2);
+      var html = '<div id="dialog_123" style="position:absolute; left:50px; top:50px; border:5px double black; background: wheat; z-index:100">'
+                 + html
+                 +'</div>';
+      $('main').insert({before:html});
+      if (callback) callback();
+      $('main').setOpacity(1.0);
+      $('dialog_123').remove();
+  },
+
+  // Looks up a key in the language table. If not found, checks the defaults table.
+  // If the translation contains %s, substitutes additional parameters for each occurance of %s (in order)
+  // Usage: Controller.translate(key, [...])
+  translate:
+  function () {
+    var key = arguments[0];
+    var result;
+    if (typeof language_table !== undefined && language_table) { //If the language table exists
+      if (language_table[key]) {
+         result = language_table[key];
+      } else if (default_language_table[key]) {
+         result = default_language_table[key];
+      } else {
+         alert('The key "' + key + '" was not found in the translation table.');
+      }
+    } else {
+      alert('The key "' + key + '" could not be translated because the translation table is not loaded.');
+    }
+    for (var i = 1; i < arguments.length; i++) {
+      result = result.replace(/(%s)/i, arguments[i]);
+    }
+    return result;
   }
 
 

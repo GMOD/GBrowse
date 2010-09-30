@@ -722,12 +722,8 @@ sub render_body {
   }
 
   elsif ($region->feature_count > 0) { # feature but no segment? Admin error
-      my $message = 'Configuration error: Chromosome/contig not found!';
-      my $details = 'Cannot display '.
-	  $features->[0]->display_name.
-	  ' because the chromosome/contig named '.
-	  $features->[0]->seq_id.
-	  ' is not defined in the database.';
+      my $message = $self->translate('CHROM_NOT_FOUND');
+      my $details = $self->translate('CHROM_NOT_FOUND_DETAILS',  $features->[0]->display_name, $features->[0]->seq_id);
       $main_page .= script({-type=>'text/javascript'},"Controller.show_error('$message','$details')")
   }
 
@@ -2322,12 +2318,12 @@ sub asynchronous_update_sections {
             }
             else {
                 $return_object->{'plugin_configure_div'}
-                    = "$plugin_base is not a recognized plugin\n";
+                    = $self->translate('NOT_RECOGNIZED_PLUGIN',$plugin_base) . "\n";
             }
         }
         else {
             $return_object->{'plugin_configure_div'}
-                = "No plugin was specified.\n";
+                = $self->translate('NO_PLUGIN_SPECIFIED') . "\n";
         }
     }
 

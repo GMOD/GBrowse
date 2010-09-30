@@ -148,9 +148,9 @@ Overview.prototype.formatMenu = function() {
   this.menuHTML = this.selectMenu.innerHTML || '\
    <div style="padding:5px;text-align:center">\
      <b>SELECTION</b><hr>\
-     <a href="javascript:SelectArea.prototype.clearAndSubmit()">Zoom</a>\
+     <a href="javascript:SelectArea.prototype.clearAndSubmit()">' + Controller.translate('ZOOM') + '</a>\
      &nbsp;&nbsp;|&nbsp;&nbsp;\
-     <a href="javascript:SelectArea.prototype.cancelRubber()">Cancel</a>\
+     <a href="javascript:SelectArea.prototype.cancelRubber()">' + Controller.translate('CANCEL') + '</a>\
   </div>';
 }
 

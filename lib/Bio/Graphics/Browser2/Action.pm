@@ -526,9 +526,9 @@ sub ACTION_cancel_upload {
 	kill TERM=>$pid;
 	$usertracks->delete_file($file_name);
 	delete $state->{uploads}{$upload_id};
-	return (200,'text/html',"<div class='error'><b>$file_name:</b> <i>Cancelling</i></div>");
+	return (200,'text/html',"<div class='error'><b>$file_name:</b> <i>" . $self->render->tr('CANCELLING') . "</i></div>");
     } else {
-	return (200,'text/html','<div class="error"><i>Not found</i></div>');
+	return (200,'text/html',"<div class='error'><i>" . $self->render->tr('NOT_FOUND') . "</i></div>");
     }
 }
 
@@ -643,12 +643,12 @@ sub ACTION_chrom_sizes {
     unless ($sizes) {
 	return (200,
 		'text/plain',
-		"The chromosome sizes cannot be determined from this data source. Please contact the site administrator for help");
+                $self->render->tr('CHROM_SIZES_UNKNOWN'));
     }
     my $data;
     open my $f,'<',$sizes or return (200,
 				     'text/plain',
-				     "An error occurred when opening chromosome sizes file: $!");
+				     $self->render->tr('CHROM_SIZE_FILE_ERROR',$!));
     $data.= $_ while <$f>;
     close $f;
     my $build = $self->data_source->build_id || 'build_unknown';
@@ -668,18 +668,7 @@ sub ACTION_about_gbrowse {
 		 -align=>'right',
 		 -width=>'100',
 		}),
-	$q->p(
-	    $q->b(
-		"This is the Generic Genome Browser version $Bio::Graphics::Browser2::VERSION"
-	    )
-	    ),
-	$q->p(
-	    'It is part of the',$q->a({-href=>'http://www.gmod.org'},'Generic Model Organism (GMOD)'),
-	    'suite of genome analysis software tools.'),
-	$q->p(
-	    'The software is copyright 2002-2010 Cold Spring Harbor Laboratory,',
-	    'Ontario Institute for Cancer Research,',
-	    'and the University of California, Berkeley.')
+        $self->render->tr('ABOUT_GBROWSE', $Bio::Graphics::Browser2::VERSION)
 	);
     return (200,'text/html',$html)
 }
@@ -705,36 +694,36 @@ sub ACTION_about_dsn {
 	$html    .= $q->p({-style=>'margin-left:1em'},$metadata->{description});
 	my @lines;
 	push @lines,(
-	    $q->dt($q->b('Species:')),
+	    $q->dt($q->b($self->render->tr('SPECIES'))),
 	    $q->dd($q->a({-href=>"http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?name=$taxid"},
 			 $q->i($metadata->{species})))
 	) if $metadata->{species};
 
 	push @lines,(
-	    $q->dt($q->b('Build:')),
+	    $q->dt($q->b($self->render->tr('BUILD'))),
 	    $q->dd($build_link)
 	) if $build_link;
 
-	$html    .= $q->h1('Species and Build Information').
+	$html    .= $q->h1($self->render->tr('SPECIES_AND_BUILD_INFO')).
 	    $q->div({-style=>'margin-left:1em'},$q->dl(@lines)) if @lines;
 
 	my $attribution = '';
 
 	if (my $maintainer = $metadata->{maintainer}) {
             $maintainer    =~ s!<(.+)>!&lt;<a href="mailto:$1">$1</a>&gt;!;
-	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Maintained by $maintainer");
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->tr('MAINTAINED_BY', $maintainer));
 	}
         if (my $created    = $metadata->{created}) {
-	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Created $created");
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->tr('CREATED', $created));
         }
 	
         if (my $modified   = $metadata->{modified}) {
-	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Modified $modified");
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->tr('MODIFIED', $modified));
         }
 	$html .= "<hr>$attribution" if $attribution;
 	
     } else {
-	$html = $q->i('No further information on',$q->b($source->name),'is available.');
+	$html = $q->i($self->render->tr('NO_FURTHER_INFO_AVAILABLE',$source->name));
     }
     return (200,'text/html',$html)
 }
@@ -744,12 +733,7 @@ sub ACTION_about_me {
     my $q    = shift;
     my $state = $self->state;
 
-    my $html = $q->div(
-	$q->h2('Session IDs'),
-	$q->p('If you wish to use a script to upload or download browser data from this session',
-	      'you will need the user and/or upload IDs for the currently active session.'),
-	$q->p("Your   userID is",$q->b($state->{userid})),
-	$q->p("Your uploadID is",$q->b($state->{uploadid})));
+    my $html = $q->div($self->render->tr('ABOUT_ME_TEXT',$state->{userid},$state->{uploadid}));
     return (200,'text/html',$html);
 }
 
@@ -782,6 +766,23 @@ sub ACTION_list {
 		       $meta->{coordinates})."\n";
     }
     return (200,'text/plain',$text);
+}
+
+sub ACTION_get_translation_tables {
+    my $self = shift;
+    my $render   = $self->render;
+    
+    my $lang = $render->language;
+
+    my $language_table   = $lang->tr_table($lang->language);
+    my $default_table    = $lang->tr_table('POSIX');
+
+    my $languagesScript = "var language_table = "         . JSON::to_json($language_table) . ";\n";
+    $languagesScript   .= "var default_language_table = " . JSON::to_json($default_table)  . ";\n";
+
+    my %headers = (-cache_control => 'max-age=604800'); #Let the client cache for one week
+
+    return (200, 'text/javascript', $languagesScript, %headers);
 }
 
 1;

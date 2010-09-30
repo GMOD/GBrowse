@@ -120,18 +120,18 @@ Details.prototype.formatMenu = function() {
          </tr>\
          <tr>\
            <td>\
-             <a href="javascript:SelectArea.prototype.clearAndSubmit()">Zoom in</a>\
+             <a href="javascript:SelectArea.prototype.clearAndSubmit()">' + Controller.translate('ZOOM_IN') + '</a>\
            </td>\
          </tr>\
          <tr>\
            <td>\
-             <a href="javascript:SelectArea.prototype.clearAndRecenter()">Recenter on this region</a>\
+             <a href="javascript:SelectArea.prototype.clearAndRecenter()">' + Controller.translate('RECENTER_ON_REGION') + '</a>\
            </td>\
          </tr>\
          <tr>\
            <td onmouseup="SelectArea.prototype.cancelRubber()">\
              <a href="?plugin=FastaDumper;plugin_action=Go;name=SELECTION" target="_new">\
-              Dump selection as FASTA\
+              ' + Controller.translate('DUMP_AS_FASTA') + '\
              </a>\
            </td>\
          </tr>\

@@ -260,7 +260,7 @@ sub render_search_form_objects {
         my $spinner_url = $self->data_source->button_url.'/spinner.gif';
 	$html .= <<END
 <span id="indicator1" style="display: none">
-  <img src="$spinner_url" alt="Working..." />
+  <img src="$spinner_url" alt="$self->tr('WORKING')" />
 </span>
 <div id="autocomplete_choices" class="autocomplete"></div>
 END
@@ -312,6 +312,9 @@ sub render_html_head {
   $onTabScript .= "if (tab_id == 'settings_page_select') {$settings_page_onLoads}\n";
   $onTabScript .= "};";
   push (@scripts,({type=>"text/javascript"}, $onTabScript));
+
+  my $url = "?action=get_translation_tables;language=" . ($self->language_code)[0]; #Include language as a parameter to prevent browser from using wrong cache if user changes languages
+  push (@scripts,({src=>$url}));
   
   # drag-and-drop functions from scriptaculous
   push @scripts,{src=>"$js/$_"}
@@ -597,29 +600,29 @@ sub render_login {
 
 	# Draw the visible HTML elements.
     if ($session->private) {
-    	$login_controls .= span({-style => 'font-weight:bold;color:black;'}, 'Welcome, '.$session->username . '.');
+    	$login_controls .= span({-style => 'font-weight:bold;color:black;'}, $self->tr('WELCOME', $session->username));
     	$login_controls .= '&nbsp; &nbsp;';
         $login_controls .= span({
         		  -style 	   => $style,
-        		  -title 	   => 'Click here to change your account settings',
+        		  -title 	   => $self->tr('LOG_OUT_DESC', $session->username).'',
         		  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',\''.$session->username.'\','.$session->using_openid.');',
                   -onMouseOver => 'this.style.textDecoration=\'underline\'',
-                  -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'My Account');
+                  -onMouseOut  => 'this.style.textDecoration=\'none\''}, $self->tr('MY_ACCOUNT'));
 		$login_controls .= '&nbsp; &nbsp;';
         $login_controls .= span({
         		  -style       => $style,
-				  -title       => 'Click here to log out from '.$session->username.'.',
+				  -title       => $self->tr('CHANGE_SETTINGS_DESC'),
 				  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); location.href=\'?id=logout\';',
 				  -onMouseOver => 'this.style.textDecoration=\'underline\'',
 				  -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out');
     } else {
         $login_controls .= span({
         		  -style	   => $style,
-        		  -title 	   => 'Click here to log in or create a new account. This will allow you to access your settings and uploaded tracks from multiple computers.',
+        		  -title 	   => $self->tr('LOGIN_CREATE_DESC'),
         		  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',false,false);',
                   -onMouseOver => 'this.style.textDecoration=\'underline\'',
                   -onMouseOut  => 'this.style.textDecoration=\'none\''},
-                  'Log in / create account');
+                  $self->tr('LOGIN_CREATE'));
     }
     my $container = span({-style => 'float:right;'}, $login_controls);
     return $container;
@@ -702,7 +705,7 @@ sub render_busy_signal {
         -id    => 'busy_indicator',
         -src   => $self->data_source->button_url.'/spinner.gif',
         -style => 'position: fixed; top: 5px; left: 5px; display: none',
-        -alt   => "Working..."
+        -alt   => $self->tr('WORKING')
        });
 }
 
@@ -752,7 +755,7 @@ sub render_actionmenu {
 
     my $file_menu = ul({-id    => 'actionmenu',
 			-class => 'dropdown downdown-horizontal'},
-		       li({-class=>'dir'},'File',
+		       li({-class=>'dir'},$self->tr('FILE'),
 			  ul(li($bookmark_link),
 			     li($share_link),
 			     li({-class=>'dir'},a({-href=>'#'},$self->translate('EXPORT')),
@@ -921,7 +924,7 @@ sub render_track_table {
 	   $cit_txt =~ s/\s+\S+$//; 
 	   $cit_txt =~ s/\'/\&\#39;/g;
 	   $cit_txt =~ s/\"/\&\#34;/g;
-	   $cit_txt .= '... <i>Click for more</i>';
+	   $cit_txt .= '... <i>' . $self->tr('CLICK_FOR_MORE') . '</i>';
        }
        $mouseover = "<b>$key</b>";
        $mouseover .= ": $cit_txt"                           if $cit_txt;
@@ -943,7 +946,7 @@ sub render_track_table {
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
        my $escaped_label = CGI::escape($label);
        $labels{$label} .= ' ['. span({-class       =>'clickable',
-				      -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
+				      -onMouseOver  => "GBubble.showTooltip(event,'".$self->tr('CLICK_MODIFY_SUBTRACK_SEL')."')",
 				      -onClick      => "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
 				     },i($self->translate('SELECT_SUBTRACKS',$selected,$total))).']';
    }
@@ -1335,7 +1338,7 @@ sub render_select_browser_link {
 sub render_upload_share_section {
     my $self = shift;
     my $userdata = $self->user_tracks;
-    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, 'Admin mode: Uploaded tracks are public') : "";
+    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->tr('ADMIN_MODE_WARNING')) : "";
 	$html .= $self->render_custom_track_listing;
 	if ($userdata->database == 1) {
 		$html .= $self->render_public_track_listing;
@@ -1352,7 +1355,7 @@ sub render_custom_track_listing {
 					-href => $self->annotation_help.'#remote',
 					-target => '_blank'
 				},
-				i('['.$self->translate('HELP_FORMAT_IMPORT').']')
+				i('['.$self->translate('HELP_FORMAT_UPLOAD').']')
 			);
 	$html .= $self->list_tracks;
 	$html .= $self->add_userdata;
@@ -1521,7 +1524,7 @@ sub render_track_controls {
 			{
 				-src     	 => "$buttons/trash.png",
 				-style  	 => 'cursor:pointer',
-				-onMouseOver => 'GBubble.showTooltip(event,"Delete",0,100)',
+				-onMouseOver => 'GBubble.showTooltip(event,"'.$self->tr('DELETE').'",0)',
 				-onClick     => "deleteUpload('$fileid')"
 			}
 		);
@@ -1533,7 +1536,7 @@ sub render_track_controls {
 				{
 					-src		  => "$buttons/share.png",
 					-style   	  => 'cursor:pointer',
-					-onMouseOver => 'GBubble.showTooltip(event,"Share with other users",0)',
+					-onMouseOver => 'GBubble.showTooltip(event,"'.$self->tr('SHARE_WITH_OTHERS').'",0)',
 					-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
 				}
 			) if ($type =~ /upload/);
@@ -1543,7 +1546,7 @@ sub render_track_controls {
 			$controls .= '&nbsp;' . a(
 				{
 					-href     	 => "javascript: void(0)",
-					-onMouseOver => 'GBubble.showTooltip(event,"Remove from my session",0,200)',
+					-onMouseOver => 'GBubble.showTooltip(event,"'.$self->tr('REMOVE_FROM_MY_SESSION').'",0,200)',
 					-onClick     => "unshareFile('$fileid', '$userid')"
 				},
 				"[X]"
@@ -1606,7 +1609,7 @@ sub render_track_details {
 						-href    =>'javascript:void(0)',
 			  			-onClick => "Controller.monitor_upload('$random_id','$fileid')",
 			 		},
-			 		'Interrupted [Resume]'
+			 		$self->tr('INTERRUPTED_RESUME')
 			 	)
 			)
 		 ) unless ($status =~ /complete/);
@@ -1631,7 +1634,7 @@ sub render_track_source_files {
 	my @source_files = $userdata->source_files($fileid);
 	my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($fileid);
 	my $source_listing =
-		b('Source files:') .
+		b($self->tr('SOURCE_FILES')) .
 		ul(
 			{-style => "margin: 0; padding: 0; list-style: none;"},
 			li(
@@ -1650,7 +1653,7 @@ sub render_track_source_files {
 								-href    => "javascript:void(0)",
 								-onClick => "editUploadData('$fileid','$_->[0]')"
 							},
-							'[edit]'
+							$self->tr('EDIT_BUTTON')
 						)
 					: '&nbsp;'
 					)
@@ -1668,7 +1671,7 @@ sub render_track_source_files {
 				a({
 						-href    => "javascript:void(0)",
 						-onClick => "editUploadConf('$fileid')"
-					}, '[edit]'
+					}, $self->tr('EDIT_BUTTON')
 				)
 			)
 		);
@@ -1775,8 +1778,8 @@ sub userdata_upload {
 	my $from_url     = $self->translate('FROM_URL');
     my $help_link     = $self->annotation_help;
     $html         .= p({-style=>'margin-left:10pt;font-weight:bold'},
-		       'Add custom track(s):',
-		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',   '$remove_label', 'edit','$help_link')"},
+		       $self->tr('ADD_YOUR_OWN_TRACKS') ,':',
+		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',    '$remove_label', 'edit','$help_link')"},
 			 "[$from_text]"),
 		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$mirror_label', '$remove_label', 'url','$help_link')"},
 			 "[$from_url]"),

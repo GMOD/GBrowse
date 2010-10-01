@@ -1358,7 +1358,6 @@ sub render_custom_track_listing {
 				i('['.$self->translate('HELP_FORMAT_UPLOAD').']')
 			);
 	$html .= $self->list_tracks;
-	$html .= $self->add_userdata;
 	$html = div({-id => "custom_tracks"}, $html);
 	return $html;
 }
@@ -1367,7 +1366,12 @@ sub render_custom_track_listing {
 sub render_public_track_listing {
 	my $self = shift;
 	my $html = h1($self->translate('PUBLIC_TRACKS'));
-	$html .= $self->list_tracks("public");
+	if (@_) {
+		my @searched_tracks = $self->user_tracks->get_public_files(@_);
+		$html .= $self->list_tracks("public", @searched_tracks);
+	} else {
+		$html .= $self->list_tracks("public");
+	}
 	$html = div({-id => "public_tracks"}, $html);
 	return $html;
 }

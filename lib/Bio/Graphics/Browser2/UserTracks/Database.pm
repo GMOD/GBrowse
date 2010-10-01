@@ -15,14 +15,12 @@ sub _new {
 	my $VERSION = '0.4';
 	my ($data_source, $globals, $userid, $uploadsid);
 	if (@_ == 1) {
-		warn "I'm being called with Render";
 		my $render = shift;
 		$data_source = $render->data_source;
 		$globals = $data_source->globals;
 		$userid = $render->session->id;
 		$uploadsid = $render->session->page_settings->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
 	} else {
-		warn "I'm being called with Data Source and State";
 		$data_source = shift;
 		my $state = shift;
 		$globals = $data_source->globals;
@@ -30,16 +28,7 @@ sub _new {
 		$uploadsid = $state->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
 	}
 
-    my $credentials = $globals->upload_db_adaptor or die "No credentials given to uploads DB in GBrowse.conf";
-    if ($credentials =~ /^DBI:+mysql/) {
-    	if ($globals->upload_db_host && $globals->upload_db_user) {
-			$credentials = "DBI:mysql:gbrowse_login;host=".$globals->upload_db_host if $globals->upload_db_host;
-			$credentials .= ";user=".$globals->upload_db_user if $globals->upload_db_user;
-			$credentials .= ";password=".$globals->upload_db_pass if $globals->upload_db_pass;
-		} else {
-			$credentials = $globals->upload_db_adaptor;
-		}
-	}
+    my $credentials = $globals->uploads_db or die "No credentials given to uploads DB in GBrowse.conf";
     my $login = DBI->connect($credentials);
 	unless ($login) {
 		print header();

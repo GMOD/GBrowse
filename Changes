@@ -14,6 +14,7 @@
      * "unit label" and "unit divider" should now work as advertised.
      * Add commas to coordinates more liberally.
      * Maybe fixed failing t/00.compile.t test.
+     * Fixed problem with subtrack selection tables producing empty tracks under some conditions.
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports

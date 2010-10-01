@@ -1340,6 +1340,7 @@ sub render_upload_share_section {
     my $userdata = $self->user_tracks;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
 	$html .= $self->render_custom_track_listing;
+	$html .= $self->add_userdata;
 	if ($userdata->database == 1) {
 		$html .= $self->render_public_track_listing;
 	}

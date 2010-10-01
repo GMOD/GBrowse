@@ -31,17 +31,17 @@ sub sources_dir_name   { 'SOURCES'   }
 sub new {
 	my $class = shift;
 	my $globals = Bio::Graphics::Browser2->open_globals;
-	if ($globals->upload_db_adaptor =~ /(DB|db)/) {
+	if ($globals->uploads_db =~ /db/i) {
 		return Bio::Graphics::Browser2::UserTracks::Database->_new(@_);
-	} elsif ($globals->upload_db_adaptor =~ /memory/) {
+	} elsif ($globals->uploads_db =~ /filesystem/i) {
 		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
 	} else {
-		warn "No upload_db_adaptor set in GBrowse.conf, defaulting to memory.";
+		warn "No uploads_db set in GBrowse.conf, defaulting to memory.";
 		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
 	}
 }
 
-sub database { return (shift->{globals}->upload_db_adaptor =~ /(DB|db)/)? 1 : 0; } # If this changes, also change the constructor.
+sub database { return (shift =~ /database/i)? 1 : 0; } # If this changes, also change the constructor.
 
 # Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
 sub path {

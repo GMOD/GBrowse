@@ -252,36 +252,35 @@ sub load {
 
     $self->flag_busy(1);
     eval {
-	$self->set_status('starting load');
+	    $self->set_status('starting load');
 	
-	mkdir $self->sources_path or die $!;
-	my $source_file = IO::File->new($self->source_file,'>');
+	    mkdir $self->sources_path or die $!;
+	    my $source_file = IO::File->new($self->source_file,'>');
 
-	$self->open_conf;
-	$self->start_load;
+	    $self->open_conf;
+	    $self->start_load;
 
-	$self->set_status('load data');
+	    $self->set_status('load data');
 
-	my $eol   = $self->eol_char;
-	{
-	    local $/  = $eol if $eol;
+	    my $eol   = $self->eol_char;
+	    {
+	        local $/  = $eol if $eol;
+	        foreach (@$initial_lines) {
+		        $source_file->print($_) if $source_file;
+		        $self->load_line($_);
+	        }
 
-	    foreach (@$initial_lines) {
-		$source_file->print($_) if $source_file;
-		$self->load_line($_);
+	        my $count = @$initial_lines;
+	        while (<$fh>) {
+		        $source_file->print($_) if $source_file;
+		        $self->load_line($_);
+		        $self->set_status("loaded $count lines") if $count++ % 1000 == 0;
+	        }
+	        $source_file->close;
 	    }
 
-	    my $count = @$initial_lines;
-	    while (<$fh>) {
-		$source_file->print($_) if $source_file;
-		$self->load_line($_);
-		$self->set_status("loaded $count lines") if $count++ % 1000 == 0;
-	    }
-	    $source_file->close;
-	}
-
-	$self->finish_load;
-	$self->close_conf;
+	    $self->finish_load;
+	    $self->close_conf;
     };
     $self->flag_busy(0);
 
@@ -382,7 +381,7 @@ sub create_database {
 
     my $backend   = $self->backend;
 
-    if ($backend eq 'DBI::mysql') {
+    if ($backend =~ /DBI:+mysql/) {
 		my $globals    = $self->settings->globals;
 		my $db_name    = 'userdata_'.md5_hex($data_path);
 		$data_path     = $db_name;
@@ -410,9 +409,10 @@ END
 		$self->dsn($data_path);
     }
 
-    return Bio::DB::SeqFeature::Store->new(-adaptor=> $backend,
-					   -dsn    => $self->dsn,
-					   -create => 1);
+    return Bio::DB::SeqFeature::Store->new(
+                       -adaptor => $backend,
+					   -dsn     => $self->dsn,
+					   -create  => 1);
 }
 
 sub drop_databases {

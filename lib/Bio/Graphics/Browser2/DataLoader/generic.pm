@@ -219,7 +219,7 @@ sub {
 END
 }
 
-# shamelessly copied from Bio::Graphics:;FeatureFile.
+# shamelessly copied from Bio::Graphics::FeatureFile.
 sub _state_transition {
     my $self = shift;
     my ($current_state,$line) = @_;

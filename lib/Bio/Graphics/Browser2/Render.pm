@@ -77,7 +77,7 @@ sub new {
   $self->set_language();
   $self->set_signal_handlers();
   $self->{userdb} = Bio::Graphics::Browser2::UserDB->new if $self->data_source->globals->user_accounts;
-  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($session, $self->data_source);
+  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self);
   $self;
 }
 
@@ -143,7 +143,7 @@ sub user_tracks {
     $uuid ||= $self->state->{uploadid} || '';
     warn "[$$] uuid  = $uuid" if DEBUG;
     return $self->{usertracks}{$uuid} 
-       ||= $class->new($self->session, $self->data_source);
+       ||= $class->new($self);
 }
 
 sub remote_sources {
@@ -231,6 +231,8 @@ sub run {
 
   warn "[$$] session flush" if $debug;
   $self->session->flush;
+  
+  delete $self->{usertracks};
   warn "[$$] synchronous exit" if $debug;
 }
 
@@ -2349,7 +2351,7 @@ sub asynchronous_update_sections {
     
     # Public Files Section
     if ( $handle_section_name{'public_tracks'}) {
-		$return_object->{'public_tracks'} = $self->render_public_track_listing();
+		$return_object->{'public_tracks'} = $self->render_public_track_listing(@_); #Passing on any search terms.
     }
 
     # Handle Remaining and Undefined Sections
@@ -3444,9 +3446,8 @@ sub add_user_tracks {
     return if $self->is_admin;  # admin user's tracks are already in main config file.
 
     $self->state->{uploadid} ||= Bio::Graphics::Browser2::Util->generate_id;
-    $uuid ||= $self->state->{uploadid};
 
-    my $userdata    = $self->user_tracks($uuid);
+    my $userdata    = $self->user_tracks($self);
     my @user_tracks = $userdata->tracks;
 
 #    warn "adding usertracks for $uuid, getting @user_tracks";

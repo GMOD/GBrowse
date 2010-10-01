@@ -23,22 +23,32 @@ use Carp "cluck";
 sub _new {
 	my $class = shift;
 	my $VERSION = '0.3';
-	my $session = shift;
-	my $config = shift;
-	my $uploadsid = $session->page_settings->{uploadid};
+	
+	my ($data_source, $globals, $uploadsid);
+	if (@_ == 1) {
+		my $render = shift;
+		$data_source = $render->data_source;
+		$globals = $data_source->globals;
+		$uploadsid = $render->session->page_settings->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
+	} else {
+		$data_source = shift;
+		my $state = shift;
+		$globals = $data_source->globals;
+		$uploadsid = $state->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
+	}
 	
     return bless {
-		config		=> $config,
+		config		=> $data_source,
 		uploadsid	=> $uploadsid,
-		globals		=> $config->globals
+		globals		=> $globals
     }, ref $class || $class;
 }
 
 # Get Uploaded Files (User) - Returns an array of the paths of files owned by a user.
 sub get_uploaded_files {
     my $self = shift;
-    my $path = $self->path;
-	return unless $self->{uploadsid};	
+    return unless $self->{uploadsid};
+    my $path = $self->path;	
 	my @result;
 	opendir D, $path;
 	while (my $dir = readdir(D)) {
@@ -52,8 +62,8 @@ sub get_uploaded_files {
 # Get Imported Files (User) - Returns an array of files imported by a user.
 sub get_imported_files {
 	my $self = shift;
-	my $path = $self->path;
 	return unless $self->{uploadsid};
+	my $path = $self->path;
 	my @result;
 	opendir D, $path;
 	while (my $dir = readdir(D)) {
@@ -64,7 +74,7 @@ sub get_imported_files {
 	return @result;
 }
 
-# File Exists (Full Path[, Owner]) - Returns the number of results for a file (and optional owner), 0 if not found.
+# File Exists (Full Path[, Owner]) - Returns the number of results for a file, 0 if not found.
 sub file_exists {
     my $self = shift;
     my $path = shift;

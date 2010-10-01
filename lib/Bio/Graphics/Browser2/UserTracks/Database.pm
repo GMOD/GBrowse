@@ -12,16 +12,33 @@ use Carp qw(confess cluck);
 
 sub _new {
 	my $class = shift;
-	my $VERSION = '0.3';
-	my $session = shift;
-	my $config = shift;
-	my $globals = $config->globals;
+	my $VERSION = '0.4';
+	my ($data_source, $globals, $userid, $uploadsid);
+	if (@_ == 1) {
+		warn "I'm being called with Render";
+		my $render = shift;
+		$data_source = $render->data_source;
+		$globals = $data_source->globals;
+		$userid = $render->session->id;
+		$uploadsid = $render->session->page_settings->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
+	} else {
+		warn "I'm being called with Data Source and State";
+		$data_source = shift;
+		my $state = shift;
+		$globals = $data_source->globals;
+		$userid = $state->{userid};
+		$uploadsid = $state->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
+	}
 
     my $credentials = $globals->upload_db_adaptor or die "No credentials given to uploads DB in GBrowse.conf";
-    if ($credentials =~ /^(DBI:mysql)/) {
-		$credentials .= ";host=".$globals->upload_db_host if $globals->upload_db_host;
-		$credentials .= ";user=".$globals->upload_db_user if $globals->upload_db_host;
-		$credentials .= ";password=".$globals->upload_db_pass if $globals->upload_db_host;
+    if ($credentials =~ /^DBI:+mysql/) {
+    	if ($globals->upload_db_host && $globals->upload_db_user) {
+			$credentials = "DBI:mysql:gbrowse_login;host=".$globals->upload_db_host if $globals->upload_db_host;
+			$credentials .= ";user=".$globals->upload_db_user if $globals->upload_db_user;
+			$credentials .= ";password=".$globals->upload_db_pass if $globals->upload_db_pass;
+		} else {
+			$credentials = $globals->upload_db_adaptor;
+		}
 	}
     my $login = DBI->connect($credentials);
 	unless ($login) {
@@ -31,11 +48,10 @@ sub _new {
 	}
 	
     my $self = bless {
-    	config	  => $config,
+    	config	  => $data_source,
     	uploadsdb => $login,
-		userid	  => $session->id,
-		uploadsid => $session->page_settings->{uploadid}, #Renamed to avoid confusion with the ID of an upload.
-		username  => $session->username || "an anonymous user",
+		userid	  => $userid,
+		uploadsid => $uploadsid,
 		globals	  => $globals,
     }, ref $class || $class;
     
@@ -48,7 +64,7 @@ sub get_file_id {
 	my $self = shift;
 	my $filename = shift;
 	my $uploadsdb = $self->{uploadsdb};
-	my $uploadsid = shift // $self->{uploadsid};										#/
+	my $uploadsid = shift || $self->{uploadsid};
 	
 	# First, check my files.
 	my $uploads = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = " . $uploadsdb->quote($filename) . " AND userid = " . $uploadsdb->quote($uploadsid));
@@ -90,11 +106,13 @@ sub get_uploaded_files {
 # Get Public Files ([User ID]) - Returns an array of available public files that the user hasn't added.
 sub get_public_files {
     my $self = shift;
+    my $searchterm = shift;
     my $uploadsid = $self->{uploadsid} or return;
     my $uploadsdb = $self->{uploadsdb};
     my $userid = $self->{userid};
     my $sql = "SELECT uploadid FROM uploads WHERE sharing_policy = 'public'";
     $sql .= "AND (users IS NULL OR users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
+    $sql .= "AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
     $sql .= " ORDER BY uploadid";
     my $rows = $uploadsdb->selectcol_arrayref($sql);
     return @$rows;
@@ -138,11 +156,9 @@ sub share {
 	my $userid;
 	if ($self->{globals}->user_accounts) {
 		my $userdb = $self->{userdb};
-		my $potential_userid = shift;
-		my $attempted_userid = $userdb->get_user_id($potential_userid);
-		$userid = $attempted_userid || $potential_userid || $self->{userid};
+		$userid = $userdb->get_user_id(shift);
 	} else {
-		$userid = shift || $self->{userid};
+		$userid = shift;
 	}
 	
 	# Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
@@ -157,7 +173,7 @@ sub share {
 		$users .= ", " if $users;
 		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users . $userid) . "  WHERE uploadid = " . $uploadsdb->quote($fileid));
 	} else {
-		warn "Share() attempted in an illegal situation on $fileid by " . $self->{username} . ", a non-owner.";
+		warn "Share() attempted in an illegal situation on $fileid by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
 	}
 }
 
@@ -170,9 +186,7 @@ sub unshare {
 	my $userid;
 	if ($self->{globals}->user_accounts) {
 		my $userdb = $self->{userdb};
-		my $potential_userid = shift;
-		my $attempted_userid = $userdb->get_user_id($potential_userid);
-		$userid = $attempted_userid || $potential_userid || $self->{userid};
+		$userid = $userdb->get_user_id(shift) || $self->{userid};
 	} else {
 		$userid = shift || $self->{userid};
 	}
@@ -191,7 +205,7 @@ sub unshare {
 	
 		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users) . " WHERE uploadid = " . $uploadsdb->quote($fileid));
 	} else {
-		warn "Unshare() attempted in an illegal situation on $fileid by " . $self->{username} . ", a non-owner.";
+		warn "Unshare() attempted in an illegal situation on $fileid by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
 	}
 }
 
@@ -214,7 +228,7 @@ sub field {
 			$self->update_modified($fileid);
 			return $result;
 		} else {
-	    	warn "Field() was called to modify $field on " . $fileid . " by " . $self->{username} . ", a non-owner.";
+	    	warn "Field() was called to modify $field on " . $fileid . " by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid} ) . ", a non-owner.";
 	    }
     } else {
     	return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
@@ -253,7 +267,7 @@ sub description {
     	if ($self->is_mine($file)) {
 	    	return $self->field("description", $file, $value)
 	    } else {
-	    	warn "Change Description requested on $file by " . $self->{username} . ", a non-owner.";
+	    	warn "Change Description requested on $file by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid}) . ", a non-owner.";
 	    }
     } else {
     	return $self->field("description", $file)
@@ -278,7 +292,7 @@ sub add_file {
 		$fileid = $uploadsdb->quote($fileid);
 		return $uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy) VALUES ($fileid, $uploadsid, $filename, $description, $imported, $now, $now, $shared)");
     } else {
-		warn $self->{username} . " has already uploaded $filename.";
+		warn ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid}) . " has already uploaded $filename.";
     }
 }
 
@@ -305,7 +319,7 @@ sub delete_file {
 		chdir $self->path;
 		rmtree($self->track_path($fileid));
     } else {
-		warn "Delete of " . $filename . " requested by " . $self->{username} . ", a non-owner.";
+		warn "Delete of " . $filename . " requested by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid}) . ", a non-owner.";
 	}
 }
 
@@ -327,7 +341,7 @@ sub permissions {
 			$self->field("users", $fileid, $self->{userid}) if $new_permissions =~ /public/;
 			return $self->field("sharing_policy", $fileid, $new_permissions);
 		} else {
-			warn "Permissions change on " . $fileid . "requested by " . $self->{username} . " a non-owner.";
+			warn "Permissions change on " . $fileid . "requested by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid}) . " a non-owner.";
 		}
 	} else {
 		return $self->field("sharing_policy", $fileid);

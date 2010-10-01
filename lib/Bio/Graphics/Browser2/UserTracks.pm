@@ -52,13 +52,10 @@ sub path {
 
 # Tracks - Returns an array of paths to a user's tracks.
 sub tracks {
-    my $self = shift;
-	
+    my $self = shift;	
 	my @tracks;
 	push (@tracks, $self->get_uploaded_files, $self->get_imported_files);
-	if ($self->database == 1) {
-		push (@tracks, $self->get_added_public_files, $self->get_shared_files);
-	}
+	push (@tracks, $self->get_added_public_files, $self->get_shared_files) if ($self->database == 1);
 	return @tracks;
 }
 
@@ -94,7 +91,7 @@ sub conf_files {
 # Returns path to the folder holding a track.
 sub track_path {
     my $self  = shift;
-    my $filename = $self->filename(shift);
+    my $filename = shift;
     return File::Spec->catfile($self->path, $filename);
 }
 
@@ -147,7 +144,7 @@ sub source_files {
     my $self = shift;
     my $fileid = shift;
     my $filename = $self->filename($fileid);
-    my $path = File::Spec->catfile($self->track_path($fileid), $self->sources_dir_name);
+    my $path = File::Spec->catfile($self->track_path($filename), $self->sources_dir_name);
     
     my @files;
     if (opendir my $dir, $path) {
@@ -217,6 +214,8 @@ sub import_url {
 
     my $filename = $self->trackname_from_url($url, !$overwrite);
     
+    $self->add_file($url, 1);
+    
     my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
 							  $self->track_path($filename),
 							  $self->track_conf($filename),
@@ -244,7 +243,6 @@ sub import_url {
     close $i;
 
     $loader->set_processing_complete;
-    $self->add_file($url, 1);
 	
     return (1, '', [$filename]);
 }
@@ -359,7 +357,7 @@ sub upload_file {
 		croak "Could not guess the type of the file $file_name"
 			unless $type;
 
-		my $load = $self->get_loader($type, $file_name);
+		my $load = $self->get_loader($type, $filename);
 		$load->eol_char($eol);
 		@tracks = $load->load($lines, $fh);
 		1;
@@ -465,6 +463,7 @@ sub get_loader {
     my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";
     die $@ if $@;
+    
     my $loader = $module->new($filename,
 			      $self->track_path($filename),
 			      $self->track_conf($filename),

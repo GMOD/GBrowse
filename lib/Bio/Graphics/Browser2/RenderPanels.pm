@@ -1634,7 +1634,7 @@ sub add_features_to_track {
 	      }
 	  }
 
-	  if (!$is_summary && $stt && (my $id = $stt->feature_to_id_sub->($feature))) {
+	  if (!$is_summary && $stt && (defined (my $id = $stt->feature_to_id_sub->($feature)))) {
 	      $groups{$l}{$id} ||= Bio::Graphics::Feature->new(-type       => 'group',
 							       -primary_id => $id,
 							       -name       => $stt->id2label($id),

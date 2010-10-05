@@ -141,7 +141,11 @@ function completeAjaxUpload(response, upload_id, field_type) {
 		var msg =  new Element("div").setStyle({"background-color": "pink", "padding": "5px"});
 		msg.insert({bottom: new Element("b").update(r.uploadName) });
 		msg.insert({bottom: "&nbsp;" + r.error_msg + "&nbsp;"});
-		msg.insert({bottom: new Element("a", {href: "javascript:void(0)"}) }).observe("click", function() { $(upload_id).remove() }).down("a").update(Controller.translate('REMOVE_MESSAGE'));
+		var remove_link = new Element("a", {href: "javascript:void(0)"}).update(Controller.translate('REMOVE_MESSAGE'));
+		remove_link.observe("click", function() {
+			Effect.BlindUp($(upload_id), {duration: 0.25, afterFinish: function() { $(upload_id).remove() } });
+		});
+		msg.insert({bottom: remove_link});
 		status.update(msg);
 	}
 	return true;
@@ -227,16 +231,19 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	form.insert({bottom: new Element("input", {type: "hidden", name: "upload_id", value: upload_tag}) });
 	form.insert({bottom: "&nbsp;" });
 	var remove_link = new Element("a", {href: "javascript:void(0)"}).update(remove_prompt);
-	remove_link.observe("click", function() { this.up("div").remove() });
+	remove_link.observe("click", function() {
+		Effect.BlindUp($(upload_tag), {duration: 0.25, afterFinish: function() { $(upload_tag).remove() } });
+	});
 	form.insert({bottom: remove_link});
 	var status_box = new Element("div", {id: upload_tag + "_status"});
 	
 	// Now wrap it in a DIV container and add it to the DOM.
 	var count = $$("div[id^=upload_]:not([id$=_status])").length;
-	var container = new Element("div", {id: upload_tag});
+	var container = new Element("div");
 	container.setStyle({"background-color": ((count % 2)? '#AAAAAA' : '#CCCCCC'), "padding": "5px"});
 	container.insert({bottom: form}).insert({top: upload_text}).insert({bottom: status_box});
-	$(after_element).insert({bottom: container});
+	$(after_element).insert({bottom: container.wrap( new Element("div", {id: upload_tag, style: "display: none;"}) ) });
+	Effect.BlindDown($(upload_tag), {duration: 0.25});
 }
 
 function changePermissions(fileid, sharing_policy) {

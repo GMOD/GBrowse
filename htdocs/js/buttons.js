@@ -37,7 +37,7 @@ function gbCheck (button,state) {
   }
   gbTurnOff(a);
   button.checked = true;
-  list(a.substring(0, (a.length - "_section".length))); //The substring trims "_section" from the end of a list.
+  //list(a.substring(0, (a.length - "_section".length))); //The substring trims "_section" from the end of a list.
   return false;
 }
 

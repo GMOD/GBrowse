@@ -43,7 +43,7 @@ sub new {
 
 sub database { return (shift =~ /database/i) } # If this changes, also change the constructor.
 
-# Returns the path to a user's data folder. Uses userdata() from the DataSource object passed as $config to the constructor.
+# Path - Returns the path to a specified file's owner's (or just the logged-in user's) data folder.
 sub path {
     my $self = shift;
     my $file = shift;
@@ -89,9 +89,7 @@ sub set_mirrored {
 sub conf_files {
     my $self = shift;
     my $file = shift;
-    my $filename = $self->filename($file);
-    my $path = $self->path($file);
-    return grep {-e $_} map {File::Spec->catfile($path, $filename, "$filename.conf")} $self->tracks;
+    return grep {-e $_} map { $self->track_conf($file) } $self->tracks;
 }
 
 # Returns a verified path to the folder holding a track.
@@ -99,7 +97,8 @@ sub track_path {
     my $self  = shift;
     my $file = shift;
     my $filename = $self->filename($file);
-    return File::Spec->catfile($self->path($file), $filename);
+    my $folder_name = $self->escape_url($filename);
+    return File::Spec->catfile($self->path($file), $folder_name);
 }
 
 # Blindly attaches the userdata path to whatever filename you give it.
@@ -123,7 +122,8 @@ sub track_conf {
     my $self = shift;
     my $file = shift;
     my $filename = $self->filename($file);
-    return File::Spec->catfile($self->track_path($file), "$filename.conf");
+    my $conf_file = $self->escape_url($filename) . ".conf";
+    return File::Spec->catfile($self->track_path($file), $conf_file);
 }
 
 # Returns a file handle to a conf file.
@@ -179,21 +179,21 @@ sub source_files {
     return @files;
 }
 
-# Trackname from URL - Gets a track name from a given URL
-sub trackname_from_url {
-    my $self     = shift;
+# Escape URL - Gets an escaped name from a given URL.
+sub escape_url {
+	my $self     = shift;
     my $url      = shift;
     my $uniquefy = shift;
 
-    warn "trackname_from_url($url)" if DEBUG;
-
 	# Remove any illegal chars
     (my $filename = $url) =~ tr/a-zA-Z0-9_%^@.-/_/cs;
-
+	
+	# Cut the length at the maximum filename.
     if (length $filename > $self->max_filename) {
 		$filename = substr($filename, 0, $self->max_filename);
     }
-
+	
+	# If the file isn't unique, add a number on the end.
     my $unique = 0;
     while ($uniquefy && !$unique) {
 		my $path = $self->blind_track_path($filename);
@@ -204,6 +204,18 @@ sub trackname_from_url {
 			$unique++;
 		}
     }
+    return $filename;
+}
+
+# Trackname from URL - Gets a track name from a given URL and creates the folder to hold it.
+sub trackname_from_url {
+    my $self     = shift;
+    my $url      = shift;
+    my $uniquefy = shift;
+
+    warn "trackname_from_url($url)" if DEBUG;
+    
+    my $filename = $self->escape_url($url, $uniquefy);
 
     my $path = $self->blind_track_path($filename);
     rmtree($path) if -e $path;  # only happens if uniquefy = 0
@@ -235,7 +247,7 @@ sub import_url {
     }
 
     my $filename = $self->trackname_from_url($url, !$overwrite);
-    my $file = $self->add_file($url, 1);
+    my $file = $self->add_file($filename, 1);
     
     my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
 							  $self->track_path($file),

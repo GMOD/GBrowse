@@ -50,10 +50,10 @@ sub _new {
 		$creation_sql   .= "sharing_policy     " . (($credentials =~ /sqlite/i)? "ENUM('private', 'public', 'group', 'casual')" : "varchar(12)") . "not null,";
 		$creation_sql   .= "users                      text";
 		$creation_sql   .= ") ENGINE=InnoDB;";
-		$uploadsdb->do($creation_sql) or die "Could not create uploads database";	
+		$uploadsdb->do($creation_sql) or die "Could not create uploads database";
 	}
 	
-    my $self = bless {
+	my $self = bless {
     	config	  => $data_source,
     	uploadsdb => $uploadsdb,
 		userid	  => $userid,
@@ -68,7 +68,7 @@ sub _new {
     return $self;
 }
 
-# Get File ID (Filename[, Owner ID]) - Returns a file's validated ID from the database.
+# Get File ID (File ID [, Owner ID]) - Returns a file's validated ID from the database.
 sub get_file_id {
 	my $self = shift;
 	my $filename = shift;

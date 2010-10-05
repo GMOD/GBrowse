@@ -1651,7 +1651,7 @@ sub render_track_source_files {
 							$self->translate('EDIT_BUTTON')
 						)
 					: '&nbsp;'
-					) 
+					)
 				} @source_files]
 			),
 			li(

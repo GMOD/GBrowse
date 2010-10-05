@@ -15,7 +15,7 @@ use Data::Dumper;
 sub new {
     my $class  = shift;
     my $render = shift;
-    return bless \$render,ref $class || $class;
+    return bless \$render, ref $class || $class;
 }
 
 sub render {
@@ -450,15 +450,15 @@ sub ACTION_import_track {
 
     my $usertracks = $render->user_tracks;
     (my $track_name = $url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
-    $state->{uploads}{$upload_id} = [$track_name,$$];
-    $session->flush();
-    $session->unlock();
+    $state->{uploads}{$upload_id} = [$track_name, $$];
+    $session->flush;
+    $session->unlock;
     
     my ($result, $msg, $tracks) = $usertracks->import_url($url);
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
-    $session->flush();
-    $session->unlock();
+    $session->flush;
+    $session->unlock;
     
     my $return_object = {
     		success   => $result || 0,

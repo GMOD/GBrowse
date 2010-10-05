@@ -13,6 +13,8 @@ use Carp qw(confess cluck);
 sub _new {
 	my $class = shift;
 	my $VERSION = '0.4';
+	
+	# Database/Filesystem can be called with the data source and state, or just the render object.
 	my ($data_source, $globals, $userid, $uploadsid);
 	if (@_ == 1) {
 		my $render = shift;
@@ -27,24 +29,42 @@ sub _new {
 		$userid = $state->{userid};
 		$uploadsid = $state->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
 	}
-
+	
+	# Attempt to login to the database or die, and access the necessary tables or create them.
     my $credentials = $globals->uploads_db or die "No credentials given to uploads DB in GBrowse.conf";
-    my $login = DBI->connect($credentials);
-	unless ($login) {
+    my $uploadsdb = DBI->connect($credentials);
+	unless ($uploadsdb) {
 		print header();
-		print "Error: Could not open login database.";
-		die "Could not open login database $credentials";
+		print "Error: Could not open uploads database.";
+		die "Could not open uploads database with $credentials";
+	}
+	unless ($uploadsdb->do("SELECT * FROM uploads")) {
+		my $creation_sql = "CREATE TABLE uploads (";
+		$creation_sql   .= "uploadid	       	varchar(32) not null PRIMARY key,";
+		$creation_sql   .= "userid				varchar(32) not null,";
+		$creation_sql   .= "path					   text,";
+		$creation_sql   .= "description				   text,";
+		$creation_sql   .= "imported                boolean not null,";
+		$creation_sql   .= "creation_date          datetime not null,";
+		$creation_sql   .= "modification_date      datetime,";
+		$creation_sql   .= "sharing_policy     " . (($credentials =~ /sqlite/i)? "ENUM('private', 'public', 'group', 'casual')" : "varchar(12)") . "not null,";
+		$creation_sql   .= "users                      text";
+		$creation_sql   .= ") ENGINE=InnoDB;";
+		$uploadsdb->do($creation_sql) or die "Could not create uploads database";	
 	}
 	
     my $self = bless {
     	config	  => $data_source,
-    	uploadsdb => $login,
+    	uploadsdb => $uploadsdb,
 		userid	  => $userid,
 		uploadsid => $uploadsid,
 		globals	  => $globals,
     }, ref $class || $class;
     
-    $self->{userdb} = Bio::Graphics::Browser2::UserDB->new if $globals->user_accounts;
+    if ($globals->user_accounts) {
+	    $self->{userdb} = Bio::Graphics::Browser2::UserDB->new;
+    	$self->{username} = $self->{userdb}->get_username($self->{userid});
+    }
     return $self;
 }
 
@@ -72,8 +92,8 @@ sub get_file_id {
 # Filename (File ID) - Returns the filename of any given ID.
 sub filename {
 	my $self = shift;
-	my $fileid = shift or confess "No file ID given to filename().";
-	return $self->field("path", $fileid);
+	my $file = shift or confess "No file ID given to filename().";
+	return $self->field("path", $file);
 }
 
 # Now Function - return the database-dependent function for determining current date & time
@@ -139,62 +159,46 @@ sub get_shared_files {
 # Share (File[, Username OR User ID]) - Adds a public or shared track to a user's session.
 sub share {
 	my $self = shift;
-	my $fileid = shift or confess "No input or invalid input given to share()";
-
-	# If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
-	my $userid;
-	if ($self->{globals}->user_accounts) {
-		my $userdb = $self->{userdb};
-		$userid = $userdb->get_user_id(shift);
-	} else {
-		$userid = shift;
-	}
+	my $file = shift or confess "No input or invalid input given to share()";
+	my $userid = shift || $self->{userid};
 	
 	# Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
-	my $sharing_policy = $self->permissions($fileid);
-	if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($fileid) && ($sharing_policy =~ /group/))) {
+	my $sharing_policy = $self->permissions($file);
+	if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /group/))) {
 		# Get the current users.
 		my $uploadsdb = $self->{uploadsdb};
-		my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
+		my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
 	
 		#If we find the user's ID, it's already been added, just return that it worked.
 		return 1 if ($users =~ $userid);
 		$users .= ", " if $users;
-		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users . $userid) . "  WHERE uploadid = " . $uploadsdb->quote($fileid));
+		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users . $userid) . "  WHERE uploadid = " . $uploadsdb->quote($file));
 	} else {
-		warn "Share() attempted in an illegal situation on $fileid by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
+		warn "Share() attempted in an illegal situation on $file by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
 	}
 }
 
 # Unshare (File[, Username OR User ID]) - Removes an added public or shared track from a user's session. Can be publicly accessed.
 sub unshare {
 	my $self = shift;
-	my $fileid = shift or confess "No input or invalid input given to unshare()";
-	
-	# If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
-	my $userid;
-	if ($self->{globals}->user_accounts) {
-		my $userdb = $self->{userdb};
-		$userid = $userdb->get_user_id(shift) || $self->{userid};
-	} else {
-		$userid = shift || $self->{userid};
-	}
+	my $file = shift or confess "No input or invalid input given to unshare()";
+	my $userid = shift || $self->{userid};
 	
 	# Users can remove themselves from the sharing lists of casual or public files; owners can remove people from casual or group items.
-	my $sharing_policy = $self->permissions($fileid);
-	if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($fileid) && ($sharing_policy =~ /(casual|group)/))) {
+	my $sharing_policy = $self->permissions($file);
+	if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /(casual|group)/))) {
 		# Get the current users.
 		my $uploadsdb = $self->{uploadsdb};
-		my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
+		my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
 	
 		#If we find the user's ID, it's already been removed, just return that it worked.
 		return 1 if ($users !~ $userid);
 		$users =~ s/$userid(, )?//i;
 		$users =~ s/(, $)//i; #Not sure if this is the best way to remove a trailing ", "...probably not.
 	
-		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users) . " WHERE uploadid = " . $uploadsdb->quote($fileid));
+		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users) . " WHERE uploadid = " . $uploadsdb->quote($file));
 	} else {
-		warn "Unshare() attempted in an illegal situation on $fileid by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
+		warn "Unshare() attempted in an illegal situation on $file by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
 	}
 }
 
@@ -202,25 +206,25 @@ sub unshare {
 sub field {
     my $self = shift;
     my $field = shift or confess "No field specified.";
-    my $fileid = shift or confess "No input input given to field()";
+    my $file = shift or confess "No input input given to field()";
     my $value = shift;
     my $uploadsid = $self->{uploadsid};
     my $uploadsdb = $self->{uploadsdb};
     
     if ($value) {
-    	if ($self->is_mine($fileid)) {
+    	if ($self->is_mine($file)) {
 			#Clean up the string
 			$value =~ s/^\s+//;
 			$value =~ s/\s+$//; 
 			my $now = $self->nowfun;
-			my $result = $uploadsdb->do("UPDATE uploads SET $field = " . $uploadsdb->quote($value) . " WHERE uploadid = " . $uploadsdb->quote($fileid));
-			$self->update_modified($fileid);
+			my $result = $uploadsdb->do("UPDATE uploads SET $field = " . $uploadsdb->quote($value) . " WHERE uploadid = " . $uploadsdb->quote($file));
+			$self->update_modified($file);
 			return $result;
 		} else {
-	    	warn "Field() was called to modify $field on " . $fileid . " by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid} ) . ", a non-owner.";
+	    	warn "Field() was called to modify $field on " . $file . " by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid} ) . ", a non-owner.";
 	    }
     } else {
-    	return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
+    	return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
     }
 }
 
@@ -228,12 +232,12 @@ sub field {
 sub update_modified {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
-    my $fileid = shift or confess "No input or invalid input given to update_modified()";
+    my $file = shift or confess "No input or invalid input given to update_modified()";
     my $now = $self->nowfun;
-    return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = " . $uploadsdb->quote($fileid));
+    return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = " . $uploadsdb->quote($file));
 }
 
-# Created (File ID) - Returns creation date of $fileid, cannot be set.
+# Created (File ID) - Returns creation date of $file, cannot be set.
 sub created {
     my $self  = shift;
     my $file = shift or confess "No input or invalid input given to created()";
@@ -256,7 +260,7 @@ sub description {
     	if ($self->is_mine($file)) {
 	    	return $self->field("description", $file, $value)
 	    } else {
-	    	warn "Change Description requested on $file by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid}) . ", a non-owner.";
+	    	warn "Change Description requested on $file by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . ", a non-owner.";
 	    }
     } else {
     	return $self->field("description", $file)
@@ -278,112 +282,112 @@ sub add_file {
 		my $now = $self->nowfun;
 		$filename = $uploadsdb->quote($filename);
 		$uploadsid = $uploadsdb->quote($uploadsid);
-		$fileid = $uploadsdb->quote($fileid);
-		return $uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy) VALUES ($fileid, $uploadsid, $filename, $description, $imported, $now, $now, $shared)");
+		$uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy) VALUES (" . $uploadsdb->quote($fileid) . ", $uploadsid, $filename, $description, $imported, $now, $now, $shared)");
+		return $fileid;
     } else {
-		warn ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid}) . " has already uploaded $filename.";
+		warn (($self->{globals}->user_accounts)? $self->{username} : $self->{userid}), " has already uploaded $filename.";
     }
 }
 
 # Delete File (File ID) - Deletes $file_id from the database.
 sub delete_file {
 	my $self = shift;
-    my $fileid = shift or confess "No file ID given to delete()";
+    my $file = shift or confess "No file ID given to delete()";
     my $userid = $self->{userid};
     my $uploadsid = $self->{uploadsid};
-    my $filename = $self->filename($fileid);
+    my $filename = $self->filename($file);
     
-    if ($self->is_mine($fileid) || !$filename) {
+    if ($self->is_mine($file) || !$filename) {
 		# First delete from the database.
 		my $uploadsdb = $self->{uploadsdb};
-		return $uploadsdb->do("DELETE FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
+		return $uploadsdb->do("DELETE FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
 		
 		# Then remove the file - better to have a dangling file then a dangling reference to nothing.
 		my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
-								  $self->track_path($fileid),
-								  $self->track_conf($fileid),
+								  $self->track_path($file),
+								  $self->track_conf($file),
 								  $self->{config},
 								  $userid);
-		$loader->drop_databases($self->track_conf($fileid));
+		$loader->drop_databases($self->track_conf($file));
 		chdir $self->path;
-		rmtree($self->track_path($fileid));
+		rmtree($self->track_path($file));
     } else {
-		warn "Delete of " . $filename . " requested by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid}) . ", a non-owner.";
+		warn "Delete of " . $filename . " requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . ", a non-owner.";
 	}
 }
 
 # Is Imported (File) - Returns 1 if an already-added track is imported, 0 if not.
 sub is_imported {
 	my $self = shift;
-	my $fileid = shift or confess "No file ID given to is_imported()";
+	my $file = shift or confess "No file ID given to is_imported()";
 	my $uploadsdb = $self->{uploadsdb};
-	return $uploadsdb->selectrow_array("SELECT imported FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid)) || 0;
+	return $uploadsdb->selectrow_array("SELECT imported FROM uploads WHERE uploadid = " . $uploadsdb->quote($file)) || 0;
 }
 
 # Permissions (File[, New Permissions]) - Return or change the permissions.
 sub permissions {
 	my $self = shift;
-	my $fileid = shift or confess "No file ID given to permissions()";
+	my $file = shift or confess "No file ID given to permissions()";
 	my $new_permissions = shift;
 	if ($new_permissions) {
-		if ($self->is_mine($fileid)) {
-			$self->field("users", $fileid, $self->{userid}) if $new_permissions =~ /public/;
-			return $self->field("sharing_policy", $fileid, $new_permissions);
+		if ($self->is_mine($file)) {
+			$self->field("users", $file, $self->{userid}) if $new_permissions =~ /public/;
+			return $self->field("sharing_policy", $file, $new_permissions);
 		} else {
-			warn "Permissions change on " . $fileid . "requested by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($self->{userid}) : $self->{userid}) . " a non-owner.";
+			warn "Permissions change on " . $file . "requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . " a non-owner.";
 		}
 	} else {
-		return $self->field("sharing_policy", $fileid);
+		return $self->field("sharing_policy", $file);
 	}
 }
 
 # Is Mine (Filename) - Returns 1 if a track is owned by the logged-in (or specified) user, 0 if not.
 sub is_mine {
 	my $self = shift;
-	my $fileid = shift or confess "No file ID given to is_mine()";
-	my $owner = $self->owner($fileid);
+	my $file = shift or confess "No file ID given to is_mine()";
+	my $owner = $self->owner($file);
 	return ($owner eq $self->{uploadsid})? 1 : 0;
 }
 
 # Owner (Filename) - Returns the owner of the specified file.
 sub owner {
 	my $self = shift;
-	my $fileid = shift or confess "No file ID given to owner()";
+	my $file = shift or return;
 	my $uploadsdb = $self->{uploadsdb};
-	return $uploadsdb->selectrow_array("SELECT userid FROM uploads WHERE uploadid = " . $uploadsdb->quote($fileid));
+	return $uploadsdb->selectrow_array("SELECT userid FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
 }
 
 # Is Shared With Me (Filename) - Returns 1 if a track is shared with the logged-in (or specified) user, 0 if not.
 sub is_shared_with_me {
 	my $self = shift;
+	my $file = shift or confess "No file ID given to is_shared_with_me()";
 	my $uploadsdb = $self->{uploadsdb};
-	my $fileid = shift or confess "No file ID given to is_shared_with_me()";
-	my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE path = " . $uploadsdb->quote($fileid) . " AND users LIKE " . $uploadsdb->quote("%" . $self->{userid} . "%"));
+	my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE path = " . $uploadsdb->quote($file) . " AND users LIKE " . $uploadsdb->quote("%" . $self->{userid} . "%"));
 	return (@$results > 0);
 }
 
 # Sharing Link (File ID) - Generates the sharing link for a specific file.
 sub sharing_link {
 	my $self = shift;
-	my $fileid = shift or confess "No file ID given to sharing_link()";
-	return url(-full => 1, -path_info => 1) . "?share_link=" . $fileid;
+	my $file = shift or confess "No file ID given to sharing_link()";
+	return url(-full => 1, -path_info => 1) . "?share_link=" . $file;
 }
 
 # File Type (File ID) - Returns the type of a specified track, in relation to the user.
 sub file_type {
 	my $self = shift;
-	my $fileid = shift or confess "No file ID given to file_type()";
-	return "public" if ($self->permissions($fileid) =~ /public/);
-	if ($self->is_mine($fileid)) {
-		return $self->is_imported($fileid)? "imported" : "uploaded";
+	my $file = shift or confess "No file ID given to file_type()";
+	return "public" if ($self->permissions($file) =~ /public/);
+	if ($self->is_mine($file)) {
+		return $self->is_imported($file)? "imported" : "uploaded";
 	} else { return "shared" };
 }
 
 # Shared With (File ID) - Returns an array of users a track is shared with.
 sub shared_with {
 	my $self = shift;
-	my $fileid = shift or confess "No file ID given to shared_with()";
-	my $users_string = $self->field("users", $fileid);
+	my $file = shift or confess "No file ID given to shared_with()";
+	my $users_string = $self->field("users", $file);
 	return split(", ", $users_string);
 }
 

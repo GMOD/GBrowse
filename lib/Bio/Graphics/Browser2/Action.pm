@@ -506,7 +506,8 @@ sub ACTION_upload_status {
 	
     if ($file_name = $state->{uploads}{$upload_id}[0]) {
 		my $usertracks = $render->user_tracks;
-		$status		   = $usertracks->status($file_name);
+		my $file = $usertracks->database? $usertracks->get_file_id($file_name) : $file_name;
+		$status		   = $usertracks->status($file);
 		return (200,'text/html', "<b>$file_name:</b> <i>$status</i>");
     } else {
 		return (500,'text/html', "not found");
@@ -524,7 +525,8 @@ sub ACTION_cancel_upload {
     if ($state->{uploads}{$upload_id} && (my ($file_name,$pid) = @{$state->{uploads}{$upload_id}})) {
 	my $usertracks = $render->user_tracks;
 	kill TERM=>$pid;
-	$usertracks->delete_file($file_name);
+	my $file = $usertracks->get_file_id($file_name);
+	$usertracks->delete_file($file);
 	delete $state->{uploads}{$upload_id};
 	return (200,'text/html',"<div class='error'><b>$file_name:</b> <i>" . $self->render->tr('CANCELLING') . "</i></div>");
     } else {

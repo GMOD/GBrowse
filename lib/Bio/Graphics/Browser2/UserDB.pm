@@ -187,7 +187,7 @@ sub do_sendmail {
 }
 
 #################### N O N - O P E N I D   F U N C T I O N S #####################
-# Get User ID (User) - Returns a user's ID.
+# Get User ID (User) - Returns a confirmed user's ID.
 sub get_user_id {
     my $self = shift;
 	my $userdb = $self->{dbi};

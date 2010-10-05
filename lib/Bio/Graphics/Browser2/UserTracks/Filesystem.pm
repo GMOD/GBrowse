@@ -84,45 +84,46 @@ sub file_exists {
 # Add File - A placeholder function while UserTracks holds the file uploading bit.
 sub add_file {
 	my $self = shift;
-	return;
+	my $filename = shift;
+	return $filename;
 }
 
-# Delete File - Also pretty self-explanatory, deletes a user's file as called by the AJAX upload system (on the Upload & Share Tracks tab).
+# Delete File - Pretty self-explanatory.
 sub delete_file {
     my $self = shift;
-    my $track_name  = shift;
-    my $loader = Bio::Graphics::Browser2::DataLoader->new($track_name,
-							  $self->track_path($track_name),
-							  $self->track_conf($track_name),
+    my $file  = shift;
+    my $loader = Bio::Graphics::Browser2::DataLoader->new($file,
+							  $self->track_path($file),
+							  $self->track_conf($file),
 							  $self->{config},
-							  $self->{uploadid});
-    $loader->drop_databases($self->track_conf($track_name));
+							  $self->{uploadsid});
+    $loader->drop_databases($self->track_conf($file));
     chdir $self->path;
-    remove_tree($self->track_path($track_name));
+    remove_tree($self->track_path($file));
 }
 
 # Created (File) - Returns creation date of $track.
 sub created {
     my $self  = shift;
-    my $track = shift;
+    my $file = shift;
     my $path = $self->path;
-    my $conf  = File::Spec->catfile($path, $track, "$track.conf");
+    my $conf  = File::Spec->catfile($path, $file, "$file.conf");
     return (stat($conf))[10];
 }
 
 # Modified (File) - Returns date modified of $track.
 sub modified {
     my $self  = shift;
-    my $track = shift;
-    return ($self->conf_metadata($track))[1];
+    my $file = shift;
+    return ($self->conf_metadata($file))[1];
 }
 
 # Description (File[, Description]) - Returns a file's description, or changes the current description if defined.
 sub description {
     my $self  = shift;
-    my $track = shift;
+    my $file = shift;
     my $path = $self->path;
-    my $desc  = File::Spec->catfile($path, $track, "$track.desc");
+    my $desc  = File::Spec->catfile($path, $file, "$file.desc");
     if (@_) {
         open my $f,">",$desc or return;
         print $f join("\n",@_);
@@ -138,22 +139,23 @@ sub description {
 # Is Imported (File) - Returns 1 if an already-added track is imported, 0 if not.
 sub is_imported {
 	my $self = shift;
-	my $track = shift;
+	my $file = shift;
 	my $path = $self->path;
-	return (-e File::Spec->catfile($path, $track, $self->imported_file_name))? 1 : 0;
+	return (-e File::Spec->catfile($path, $file, $self->imported_file_name))? 1 : 0;
 }
 
 # File Type (File) - Returns the type of a specified track.
 sub file_type {
 	my $self = shift;
-	my $track = shift;
-	return $self->is_imported($track)? "imported" : "uploaded";
+	my $file = shift;
+	return $self->is_imported($file)? "imported" : "uploaded";
 }
 
 # Filename (File) - Returns the filename - is used basically in contrast with Database.pm's filename function, which is more involved.
 sub filename {
 	my $self = shift;
-	return shift;
+	my $file = shift;
+	return $file;
 }
 
 # Is Mine (File) - Returns if a file belongs to the logged-in user. Since this only works with logged-in users, is always true.
@@ -161,7 +163,9 @@ sub is_mine {
 	return 1;
 }
 
-
-
+# Owner (File) - Returns the owner of a file. It's basically used in contrast with Database.pm's owner function.
+sub owner {
+	return shift->{uploadsid};
+}
 
 1;

@@ -1344,9 +1344,10 @@ sub render_upload_share_section {
 	if ($userdata->database == 1) {
 		$html .= $self->render_public_track_listing;
 	}
-	$html = div($html);
+	$html = div({-style => 'margin-left: 1em; margin-right: 1em;'}, $html);
 	return $html;
 }
+
 # Render Custom Track Listing - Returns the HTML listing of public, uploaded, imported and shared tracks added to a session, and a section to add more.
 sub render_custom_track_listing {
 	my $self = shift;
@@ -1535,17 +1536,6 @@ sub render_track_controls {
 		);
 	}
 	if ($type !~ /available/) {
-		if ($userdata->is_mine($fileid)) {
-			# The sharing icon, if it's an upload.
-			$controls .= '&nbsp;' . img(
-				{
-					-src		  => "$buttons/share.png",
-					-style   	  => 'cursor:pointer',
-					-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('SHARE_WITH_OTHERS').'",0)',
-					-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
-				}
-			) if ($type =~ /upload/);
-		}
 		if ($type =~ /(public|shared)/) {
 			# The "remove" [x] link.
 			$controls .= '&nbsp;' . a(
@@ -1653,7 +1643,7 @@ sub render_track_source_files {
 					span({-style => "display: inline-block; width: 15em;"}, scalar localtime($_->[2])).
 					span({-style => "display: inline-block; width: 10em;"}, $_->[1],'bytes').
 					span(
-						($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3])?
+						($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3] && $userdata->is_mine($fileid))?
 						a( {
 								-href    => "javascript:void(0)",
 								-onClick => "editUploadData('$fileid','$_->[0]')"
@@ -1661,7 +1651,7 @@ sub render_track_source_files {
 							$self->translate('EDIT_BUTTON')
 						)
 					: '&nbsp;'
-					)
+					) 
 				} @source_files]
 			),
 			li(
@@ -1673,10 +1663,12 @@ sub render_track_source_files {
 				).
 				span({-style => "display: inline-block; width: 15em;"}, scalar localtime $conf_modified).
 				span({-style => "display: inline-block; width: 10em;"}, "$conf_size bytes").
-				a({
-						-href    => "javascript:void(0)",
-						-onClick => "editUploadConf('$fileid')"
-					}, $self->translate('EDIT_BUTTON')
+				span(
+					($userdata->is_mine($fileid))? a({
+							-href    => "javascript:void(0)",
+							-onClick => "editUploadConf('$fileid')"
+						}, $self->translate('EDIT_BUTTON')
+					) : "&nbsp;"
 				)
 			)
 		);
@@ -1698,8 +1690,8 @@ sub render_track_sharing {
 	my $userlist = join (", ", @users);
 	
     my $sharing_content = b($self->translate('SHARING')) . br() . $self->translate('TRACK_IS') . " ";
-	if (($userdata->database == 0) && ($userdata->is_mine($fileid) == 0)) {
-		$sharing_content .= ($sharing_policy =~ /(casual|group)/)? $self->translate('SHARED_WITH_YOU') : $self->translate('SHARING_PUBLIC') . ".";
+	if ($userdata->is_mine($fileid) == 0) {
+		$sharing_content .= b(($sharing_policy =~ /(casual|group)/)? lc $self->translate('SHARED_WITH_YOU') :  lc $self->translate('SHARING_PUBLIC')) . ".";
 	} else {
 		my %sharing_type_labels = ( private => $self->translate('SHARING_PRIVATE'),
 									casual  => $self->translate('SHARING_CASUAL') ,
@@ -1715,7 +1707,7 @@ sub render_track_sharing {
 					},
 					$sharing_type_labels{$_}
 				)
-			} qw(private casual group public)
+			} keys %sharing_type_labels
 		);
 		
 		my $sharing_help = $self->translate('SHARING_HELP');

@@ -1425,11 +1425,11 @@ sub galaxy_form { }
 sub delete_uploads {
     my $self = shift;
     my $userdata = $self->user_tracks;
-    my @files  = $userdata->tracks();
+    my @files  = $userdata->tracks;
     for my $file (@files) {
-	my @tracks = $userdata->labels($file);
-	$userdata->delete_file($file);
-	$self->remove_track_from_state($_) foreach @tracks;
+		my @tracks = $userdata->labels($userdata->get_file_id($file));
+		$userdata->delete_file($userdata->get_file_id($file));
+		$self->remove_track_from_state($_) foreach @tracks;
     }
     $self->data_source->clear_usertracks();
 }
@@ -1514,22 +1514,22 @@ sub write_auto {
 sub handle_download_userdata {
     my $self = shift;
     my $ftype    = param('userdata_download')    or return;
-    my $track    = param('track')                or return;
+    my $file   = param('track')                or return;
 
     my $userdata = $self->user_tracks;
-    my $file = $ftype eq 'conf' ? $userdata->track_conf($track)
-	                        : $userdata->data_path($track,$ftype);
+    my $download = $ftype eq 'conf' ? $userdata->track_conf($file)
+	                        : $userdata->data_path($file, $ftype);
 
-    my $fname = basename($file);
-    my $is_text = -T $file;
+    my $fname = basename($download);
+    my $is_text = -T $download;
 
     print CGI::header(-attachment   => $fname,
 		      -charset      => $self->translate('CHARSET'), # 'US-ASCII' ?
 		      -type         => $is_text ? 'text/plain' : 'application/octet-stream');
 
-    my $f = $ftype eq 'conf' ? $userdata->conf_fh($track)
-	                     : IO::File->new($file);
-    $f or croak "$file: $!";
+    my $f = $ftype eq 'conf' ? $userdata->conf_fh($file)
+	                     : IO::File->new($download);
+    $f or croak "$download: $!";
 
     if ($is_text) {
 	# try to make the file match the native line endings
@@ -3452,8 +3452,8 @@ sub add_user_tracks {
 
 #    warn "adding usertracks for $uuid, getting @user_tracks";
     for my $track (@user_tracks) {
-	my $config_path = $userdata->track_conf($track);
-	eval {$data_source->parse_user_file($config_path)};
+		my $config_path = $userdata->track_conf($track);
+		eval {$data_source->parse_user_file($config_path)};
     }
 
     return @user_tracks;

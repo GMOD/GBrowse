@@ -5,7 +5,7 @@ use strict;
 use IO::File;
 use File::Basename 'basename','dirname';
 use Fcntl ':flock';
-use Carp 'croak';
+use Carp 'croak', 'cluck';
 use Digest::MD5 'md5_hex';
 
 # for mysql to work, you must do something like this:
@@ -14,8 +14,7 @@ use Digest::MD5 'md5_hex';
 
 sub new {
     my $class = shift;
-    my ($track_name,$data_path,$conf_path,$settings,$userid) = @_;
-
+    my ($track_name, $data_path, $conf_path, $settings, $userid) = @_;
     my $loadid = substr($userid,0,6).'_'.$track_name;
     my $self = bless
     { name     => $track_name,
@@ -23,7 +22,7 @@ sub new {
       conf     => $conf_path,
       settings => $settings,
       loadid   => $loadid,
-    },ref $class || $class;
+    }, ref $class || $class;
     return $self;
  }
 
@@ -243,19 +242,19 @@ sub close_conf {
 
 sub source_file {
     my $self = shift;
-    return File::Spec->catfile($self->sources_path,$self->track_name);
+    return File::Spec->catfile($self->sources_path, $self->track_name);
 }
 
 sub load {
     my $self                = shift;
-    my ($initial_lines,$fh) = @_;
-
+    my ($initial_lines, $fh) = @_;
+    
     $self->flag_busy(1);
     eval {
 	    $self->set_status('starting load');
 	
 	    mkdir $self->sources_path or die $!;
-	    my $source_file = IO::File->new($self->source_file,'>');
+	    my $source_file = IO::File->new($self->source_file, '>');
 
 	    $self->open_conf;
 	    $self->start_load;

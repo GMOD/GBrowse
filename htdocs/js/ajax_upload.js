@@ -281,6 +281,9 @@ function shareFile(fileid, userid) {
 				userid: userid
 			},
 			onSuccess: function (transport) {
+				var tracks = transport.responseText.evalJSON(true).tracks;
+				if (tracks != null)
+					tracks.each(function(tid) { Controller.add_track(tid) });
 				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
 					sections.push(public_tracks_id);
@@ -303,6 +306,9 @@ function unshareFile(fileid, userid) {
 				userid: userid
 			},
 			onSuccess: function (transport) {
+				var tracks = transport.responseText.evalJSON(true).tracks;
+				if (tracks != null)
+					tracks.each(function(tid) { Controller.delete_track(tid) });
 				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
 					sections.push(public_tracks_id);
@@ -310,4 +316,25 @@ function unshareFile(fileid, userid) {
 			}
 		}
 	);
+}
+
+function searchPublic(keyword) {
+	Controller.busy();
+	new Ajax.Request(
+		document.URL, {
+			method: 'post',
+			parameters: {
+				action: 'update_sections',
+				section_names: public_tracks_id,
+				keyword: keyword,
+			},
+			onSuccess: function (transport) {
+				var html = transport.responseText.evalJSON(true).section_html[public_tracks_id];
+				$(public_tracks_id).update(html);
+				Controller.idle();
+				$("public_search_keyword").focus()
+			}
+		}
+	);
+	return false;
 }

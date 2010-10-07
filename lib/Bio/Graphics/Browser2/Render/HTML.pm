@@ -1367,10 +1367,21 @@ sub render_custom_track_listing {
 # Render Public Track Listing - Returns the HTML listing of public tracks available to a user.
 sub render_public_track_listing {
 	my $self = shift;
+	
 	my $html = h1($self->translate('PUBLIC_TRACKS'));
+	my $search = @_? $_[0] : "Enter a keyword or user";
+	$html .= div({-style => "background-color: #AAAAAA; width: 100%;"},
+		start_form({-action => "#", -onSubmit => "return searchPublic(\$('public_search_keyword').value);"}),
+		"Filter by keyword or user:",
+		input({-type => "text", -name => "keyword", -id => "public_search_keyword", -width => 50, -value => $search, -onClick => "this.value='';"}),
+		input({-type => "submit", -name => "user", -id => "public_search_user", -value => "Search"}),
+		end_form()
+	);
+	
 	if (@_) {
 		my @searched_tracks = $self->user_tracks->get_public_files(@_);
-		$html .= $self->list_tracks("public", @searched_tracks);
+		warn join ", ", @searched_tracks;
+		$html .= $self->list_tracks("public", \@searched_tracks) if @searched_tracks;
 	} else {
 		$html .= $self->list_tracks("public");
 	}
@@ -1384,8 +1395,16 @@ sub list_tracks {
 	my $globals	= $self->globals;
 	my $userdata = $self->user_tracks;
 	my $listing_type = shift || "";
-	my @tracks = sort((($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : shift || $userdata->tracks);
+	my $input = shift;
+	my @tracks;
+	if ($input) {
+		@tracks = sort(@$input);
+	} else {
+		@tracks = sort((($listing_type =~ /public/) && ($userdata->database == 1) && !$input)? $userdata->get_public_files : $userdata->tracks);
+	}
 	$listing_type .= " available" if $listing_type =~ /public/;
+	
+	warn join ", ", @tracks if $listing_type =~ /public/ && $input;
 	
 	# Main track roll code.
 	if (@tracks) {
@@ -1437,8 +1456,8 @@ sub track_listing_colors {
 	} elsif ($type =~ /public/) {
 		$background_color1 = '#AAAAAA';
 		$background_color2 = '#CCCCCC';
-		$accent_color1 = '#999999';
-		$accent_color2 = '#AAAAAA';
+		$accent_color1 = '#777777';
+		$accent_color2 = '#999999';
 	} elsif ($type =~ /shared/) {
 		$background_color1 = '#FFFF55';
 		$background_color2 = '#FFFF77';
@@ -1534,6 +1553,15 @@ sub render_track_controls {
 				-onClick     => "deleteUpload('$fileid')"
 			}
 		);
+		# The sharing icon, if it's an upload.
+		$controls .= '&nbsp;' . img(
+			{
+				-src         => "$buttons/share.png",
+				-style       => 'cursor:pointer',
+				-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('SHARE_WITH_OTHERS').'",0)',
+				-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
+			}
+		) if ($type =~ /upload/ && !$userdata->database);
 	}
 	if ($type !~ /available/) {
 		if ($type =~ /(public|shared)/) {

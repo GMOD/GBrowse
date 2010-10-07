@@ -49,7 +49,7 @@ sub _new {
 		$creation_sql   .= "modification_date      datetime,";
 		$creation_sql   .= "sharing_policy     " . (($credentials =~ /sqlite/i)? "ENUM('private', 'public', 'group', 'casual')" : "varchar(12)") . "not null,";
 		$creation_sql   .= "users                      text";
-		$creation_sql   .= ") ENGINE=InnoDB;";
+		$creation_sql   .= ")" . (($credentials =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
 		$uploadsdb->do($creation_sql) or die "Could not create uploads database";
 	}
 	
@@ -112,17 +112,24 @@ sub get_uploaded_files {
 	return @$rows;
 }
 
-# Get Public Files ([User ID]) - Returns an array of available public files that the user hasn't added.
+# Get Public Files ([Search Term]) - Returns an array of available public files that the user hasn't added. Will filter results if the extra parameter is given.
 sub get_public_files {
     my $self = shift;
     my $searchterm = shift;
     my $uploadsid = $self->{uploadsid} or return;
+    
+    # If we find a user from the term (ID or username), we'll search by user. Currently broken until I can either lookup a user's uploads ID, or just use the userids entirely.
+    #my $userdb = $self->{userdb};
+   	#my $search_id = $userdb->get_user_id($searchterm);
+   	my $search_id = 0;
+   	
     my $uploadsdb = $self->{uploadsdb};
     my $userid = $self->{userid};
     my $sql = "SELECT uploadid FROM uploads WHERE sharing_policy = 'public'";
-    $sql .= "AND (users IS NULL OR users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
-    $sql .= "AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
+    $sql .= " AND (users IS NULL OR users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
+    $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")";
     $sql .= " ORDER BY uploadid";
+    cluck $sql;
     my $rows = $uploadsdb->selectcol_arrayref($sql);
     return @$rows;
 }

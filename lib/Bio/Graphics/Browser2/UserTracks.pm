@@ -85,14 +85,14 @@ sub set_mirrored {
     close $i;
 }
 
-# Returns the path to a file's conf file location.
+# Conf Files (File) - Returns the paths to all tracks' conf files.
 sub conf_files {
     my $self = shift;
     my $file = shift;
     return grep {-e $_} map { $self->track_conf($file) } $self->tracks;
 }
 
-# Returns a verified path to the folder holding a track.
+# Track Path (File) - Returns a verified path to the folder holding a track.
 sub track_path {
     my $self  = shift;
     my $file = shift;
@@ -101,14 +101,14 @@ sub track_path {
     return File::Spec->catfile($self->path($file), $folder_name);
 }
 
-# Blindly attaches the userdata path to whatever filename you give it.
+# Blind Track Path (Filename) - Blindly attaches the userdata path to whatever filename you give it.
 sub blind_track_path {
 	my $self = shift;
 	my $filename = shift;
 	return File::Spec->catfile($self->path, $filename);
 }
 
-# Returns the full path to the track's data file.
+# Data Path (File, Data File) - Returns the full path to a track's original data file.
 sub data_path {
     my $self = shift;
 	my $file = shift;
@@ -117,7 +117,7 @@ sub data_path {
     return File::Spec->catfile($self->track_path($file), $self->sources_dir_name, $datafile);
 }
 
-# Returns the full path to the track's configuration file.
+# Track Conf (File) - Returns the full path to the track's configuration file.
 sub track_conf {
     my $self = shift;
     my $file = shift;
@@ -126,7 +126,7 @@ sub track_conf {
     return File::Spec->catfile($self->track_path($file), $conf_file);
 }
 
-# Returns a file handle to a conf file.
+# Conf FH (File) - Returns a file handle to a track's configuration file.
 sub conf_fh {
     my $self = shift;
     my $file = shift;
@@ -134,7 +134,7 @@ sub conf_fh {
     return Bio::Graphics::Browser2::UserConf->fh($self->track_conf($file));
 }
 
-# Returns the location of the import flag file.
+# Import Flag (File) - Returns a track's import flag file.
 sub import_flag {
     my $self = shift;
     my $file = shift;
@@ -142,7 +142,7 @@ sub import_flag {
     return File::Spec->catfile($self->track_path($file), $self->imported_file_name);
 }
 
-# Returns the location of the mirror flag.
+# Mirror Flag (File) - Returns the location of the mirror flag file.
 sub mirror_flag {
     my $self = shift;
     my $file = shift;
@@ -150,7 +150,7 @@ sub mirror_flag {
     return File::Spec->catfile($self->track_path($file), $self->mirrored_file_name);
 }
 
-# Returns the modified time and size of a conf file.
+# Conf Metadata (File) - Returns the modified time and size of a track's configuration file.
 sub conf_metadata {
     my $self = shift;
     my $file = shift;
@@ -160,7 +160,7 @@ sub conf_metadata {
     return ($name, (stat($conf))[9, 7]);
 }
 
-# Source Files - Returns an array of source files (with details) associated with a specified track.
+# Source Files (File) - Returns an array of source files (with details) associated with a specified track.
 sub source_files {
     my $self = shift;
     my $file = shift;
@@ -179,7 +179,7 @@ sub source_files {
     return @files;
 }
 
-# Escape URL - Gets an escaped name from a given URL.
+# Escape URL (URL[, Uniquefy]) - Gets an escaped name from a given URL.
 sub escape_url {
 	my $self     = shift;
     my $url      = shift;
@@ -207,7 +207,7 @@ sub escape_url {
     return $filename;
 }
 
-# Trackname from URL - Gets a track name from a given URL and creates the folder to hold it.
+# Trackname from URL (URL[, Uniquefy]) - Gets a track name from a given URL and creates the folder to hold it.
 sub trackname_from_url {
     my $self     = shift;
     my $url      = shift;
@@ -223,14 +223,14 @@ sub trackname_from_url {
     return $filename;
 }
 
-# Max filename - Returns the maximum possible length for a file name.
+# Max filename () - Returns the maximum possible length for a file name.
 sub max_filename {
     my $self = shift;
     my $length = POSIX::pathconf($self->path, &POSIX::_PC_NAME_MAX) || 255;
     return $length - 4; # give enough room for the suffix
 }
 
-# Import URL - Imports a URL for use in the database.
+# Import URL (URL, Overwrite[, Privacy Policy]) - Imports a URL for use in the database.
 sub import_url {
     my $self = shift;
     my $url       = shift;
@@ -280,7 +280,7 @@ sub import_url {
     return (1, '', [$filename]);
 }
 
-# Attempts to reload a file into the database.
+# Reload File (File) - Attempts to reload a file into the database.
 sub reload_file {
     my $self = shift;
     my $file = shift;
@@ -299,7 +299,7 @@ sub reload_file {
     }
 }
 
-# Mirror URL - Attempts to "mirror" a file on a URL, to avoid fetching it every time.
+# Mirror URL (Filename, URL, Overwrite?) - Attempts to "mirror" a file on a URL, to avoid fetching it every time.
 sub mirror_url {
     my $self = shift;
     my $filename = shift;
@@ -341,7 +341,7 @@ sub mirror_url {
     return @result;
 }
 
-# Upload Data - Uploads a string of data entered as text (on the Upload & Share Tracks tab).
+# Upload Data (Filename, Data, Content Type, Overwrite?) - Uploads a string of data entered as text (on the Upload & Share Tracks tab).
 sub upload_data {
     my $self = shift;
     my ($file_name, $data, $content_type, $overwrite) = @_;
@@ -349,6 +349,7 @@ sub upload_data {
     $self->upload_file($file_name, $io, $content_type, $overwrite);
 }
 
+# Upload URL (URL) - Uploads a file at a specified URL to the database.
 sub upload_url {
     my $self  = shift;
     my $url   = shift;
@@ -366,7 +367,7 @@ sub upload_url {
     return @args;
 }
 
-# Upload File - Uploads a user's file, as called by the AJAX upload system (on the Upload & Share Tracks tab) via Action.pm.
+# Upload File (Filename, File Handle, Content Type, Overwrite?) - Uploads a user's file, as called by the AJAX upload system (on the Upload & Share Tracks tab) via Action.pm.
 sub upload_file {
     my $self = shift;
     my ($file_name, $fh, $content_type, $overwrite) = @_;
@@ -411,6 +412,7 @@ sub upload_file {
     return ($result, $msg, \@tracks);
 }
 
+# Merge Conf (File, New Data) - Merges new data into a track's configuration file.
 sub merge_conf {
     my $self = shift;
     my $file = shift;
@@ -422,12 +424,12 @@ sub merge_conf {
     my @lines = split /\r\n|\r|\n/,$new_data;
     my (%stanzas, $current_stanza);
     for (@lines) {
-	if (/^\[(.+)\]/) {
-	    $current_stanza = $1;
-	    $stanzas{$current_stanza} = '';
-	} elsif ($current_stanza) {
-	    $stanzas{$current_stanza} .= "$_\n";
-	}
+		if (/^\[(.+)\]/) {
+			$current_stanza = $1;
+			$stanzas{$current_stanza} = '';
+		} elsif ($current_stanza) {
+			$stanzas{$current_stanza} .= "$_\n";
+		}
     }
 
     open my $fh, $path or croak "$path: $!";
@@ -469,6 +471,7 @@ sub merge_conf {
     close $fh;
 }
 
+#Labels (File) - Returns the track labels for a specified uploaded file.
 sub labels {
     my $self = shift;
     my $file = shift;
@@ -477,7 +480,7 @@ sub labels {
     return grep {!/:(database|\d+)/} eval{ Bio::Graphics::FeatureFile->new(-file=>$conf)->labels };
 }
 
-# Status - Returns the status of a DataLoader object for a specific file.
+# Status (File) - Returns the status of a DataLoader object for a specific file.
 sub status {
     my $self = shift;
     my $file = shift;
@@ -492,7 +495,7 @@ sub status {
     return $load->get_status();
 }
 
-# Get Loader - Returns the loader of the appropriate DataLoader package type for a specific file.
+# Get Loader (Type, File) - Returns the loader of the appropriate DataLoader package type for a specific file.
 sub get_loader {
     my $self = shift;
     my $type = shift;
@@ -594,7 +597,7 @@ sub has_bigwig {
     return $HASBIGWIG = $result || 0;
 }
 
-# Install Filter - Attaches a filter (such as GUNZIP or BUNZIP2) to a file handle.
+# Install Filter (File Handle, Command) - Attaches a filter (such as GUNZIP or BUNZIP2) to a file handle.
 sub install_filter {
     my $self = shift;
     my ($in_fh, $command) = @_;
@@ -725,8 +728,31 @@ sub _print_url {
 
 # These methods are replaced by methods in Filesystem.pm and Database.pm
 # Many of these functions are called asynchronously, if you want to connect an AJAX call to one of these functions add a hook in Action.pm
-sub modified { warn "modified() has been called without properly inheriting Filesystem.pm or Datbase.pm"; }
-# Fill in more once this is all done.
+sub get_file_id { warn "get_file_id() has been called, without properly inheriting subclass Datbase.pm"; }
+sub filename { warn "filename() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub nowfun { warn "nowfun() has been called, without properly inheriting subclass Datbase.pm"; }
+sub get_uploaded_files { warn "get_uploaded_files() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub get_public_files { warn "get_public_files() has been called, without properly inheriting subclass Datbase.pm"; }
+sub get_imported_files { warn "get_imported_files() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub get_shared_files { warn "get_shared_files() has been called, without properly inheriting subclass Datbase.pm"; }
+sub share { warn "share() has been called, without properly inheriting subclass Datbase.pm"; }
+sub unshare { warn "unshare() has been called, without properly inheriting subclass Datbase.pm"; }
+sub field { warn "field() has been called, without properly inheriting subclass Datbase.pm"; }
+sub update_modified { warn "update_modified() has been called, without properly inheriting subclass Datbase.pm"; }
+sub created { warn "created() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub modified { warn "modified() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub description { warn "description() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub add_file { warn "add_file() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub delete_file { warn "delete_file() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub is_imported { warn "is_imported() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub permissions { warn "permissions() has been called, without properly inheriting subclass Datbase.pm"; }
+sub is_mine { warn "is_mine() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub owner { warn "owner() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub is_shared_with_me { warn "is_shared_with_me() has been called, without properly inheriting subclass Datbase.pm"; }
+sub sharing_link { warn "sharing_link() has been called, without properly inheriting subclass Datbase.pm"; }
+sub file_type { warn "file_type() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub shared_with { warn "shared_with() has been called, without properly inheriting subclass Datbase.pm"; }
+sub file_exists { warn "file_exists() has been called, without properly inheriting subclass Filesystem.pm"; }
 
 package Bio::Graphics::Browser2::UserConf;
 

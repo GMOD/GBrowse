@@ -100,10 +100,13 @@ sub ACTION_update_sections {
     my $self    = shift;
     my $q       = shift;
 
-    my $render  = $self->render;
+    my $render = $self->render;
     my @section_names = $q->param('section_names');
-
-    my $section_html = $render->asynchronous_update_sections( \@section_names );
+    my $keyword = $q->param('keyword');
+    
+    my @args = (\@section_names);
+    push @args, $keyword if $keyword;
+    my $section_html = $render->asynchronous_update_sections( @args );
 
     my $return_object = { section_html => $section_html, };
     return ( 200, 'application/json', $return_object );
@@ -528,9 +531,9 @@ sub ACTION_cancel_upload {
 	my $file = $usertracks->get_file_id($file_name);
 	$usertracks->delete_file($file);
 	delete $state->{uploads}{$upload_id};
-	return (200,'text/html',"<div class='error'><b>$file_name:</b> <i>" . $self->render->tr('CANCELLING') . "</i></div>");
+	return (200,'text/html',"<div class='error'><b>$file_name:</b> <i>" . $self->render->translate('CANCELLING') . "</i></div>");
     } else {
-	return (200,'text/html',"<div class='error'><i>" . $self->render->tr('NOT_FOUND') . "</i></div>");
+	return (200,'text/html',"<div class='error'><i>" . $self->render->translate('NOT_FOUND') . "</i></div>");
     }
 }
 
@@ -556,8 +559,9 @@ sub ACTION_share_file {
     my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
 
     my $usertracks = $render->user_tracks;
+    my @tracks     = $usertracks->labels($fileid);
     $usertracks->share($fileid, $userid);
-    return (204, 'text/plain', undef);
+    return (200, 'text/plain', JSON::to_json({tracks => \@tracks}));
 }
 
 sub ACTION_unshare_file {
@@ -568,8 +572,9 @@ sub ACTION_unshare_file {
     my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
 
     my $usertracks = $render->user_tracks;
+    my @tracks     = $usertracks->labels($fileid);
     $usertracks->unshare($fileid, $userid);
-    return (204, 'text/plain', undef);	
+    return (200, 'text/plain', JSON::to_json({tracks => \@tracks}));	
 }
 
 sub ACTION_change_permissions {
@@ -645,12 +650,12 @@ sub ACTION_chrom_sizes {
     unless ($sizes) {
 	return (200,
 		'text/plain',
-                $self->render->tr('CHROM_SIZES_UNKNOWN'));
+                $self->render->translate('CHROM_SIZES_UNKNOWN'));
     }
     my $data;
     open my $f,'<',$sizes or return (200,
 				     'text/plain',
-				     $self->render->tr('CHROM_SIZE_FILE_ERROR',$!));
+				     $self->render->translate('CHROM_SIZE_FILE_ERROR',$!));
     $data.= $_ while <$f>;
     close $f;
     my $build = $self->data_source->build_id || 'build_unknown';
@@ -670,7 +675,7 @@ sub ACTION_about_gbrowse {
 		 -align=>'right',
 		 -width=>'100',
 		}),
-        $self->render->tr('ABOUT_GBROWSE', $Bio::Graphics::Browser2::VERSION)
+        $self->render->translate('ABOUT_GBROWSE', $Bio::Graphics::Browser2::VERSION)
 	);
     return (200,'text/html',$html)
 }
@@ -692,40 +697,40 @@ sub ACTION_about_dsn {
 	                 :$build ne '_' ? $q->b($build)
 			 :'';
 
-	$html     = $q->h1($self->render->tr('ABOUT_NAME',$source->description));
+	$html     = $q->h1($self->render->translate('ABOUT_NAME',$source->description));
 	$html    .= $q->p({-style=>'margin-left:1em'},$metadata->{description});
 	my @lines;
 	push @lines,(
-	    $q->dt($q->b($self->render->tr('SPECIES'))),
+	    $q->dt($q->b($self->render->translate('SPECIES'))),
 	    $q->dd($q->a({-href=>"http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?name=$taxid"},
 			 $q->i($metadata->{species})))
 	) if $metadata->{species};
 
 	push @lines,(
-	    $q->dt($q->b($self->render->tr('BUILD'))),
+	    $q->dt($q->b($self->render->translate('BUILD'))),
 	    $q->dd($build_link)
 	) if $build_link;
 
-	$html    .= $q->h1($self->render->tr('SPECIES_AND_BUILD_INFO')).
+	$html    .= $q->h1($self->render->translate('SPECIES_AND_BUILD_INFO')).
 	    $q->div({-style=>'margin-left:1em'},$q->dl(@lines)) if @lines;
 
 	my $attribution = '';
 
 	if (my $maintainer = $metadata->{maintainer}) {
             $maintainer    =~ s!<(.+)>!&lt;<a href="mailto:$1">$1</a>&gt;!;
-	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->tr('MAINTAINED_BY', $maintainer));
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->translate('MAINTAINED_BY', $maintainer));
 	}
         if (my $created    = $metadata->{created}) {
-	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->tr('CREATED', $created));
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->translate('CREATED', $created));
         }
 	
         if (my $modified   = $metadata->{modified}) {
-	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->tr('MODIFIED', $modified));
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->translate('MODIFIED', $modified));
         }
 	$html .= "<hr>$attribution" if $attribution;
 	
     } else {
-	$html = $q->i($self->render->tr('NO_FURTHER_INFO_AVAILABLE',$source->name));
+	$html = $q->i($self->render->translate('NO_FURTHER_INFO_AVAILABLE',$source->name));
     }
     return (200,'text/html',$html)
 }
@@ -735,7 +740,7 @@ sub ACTION_about_me {
     my $q    = shift;
     my $state = $self->state;
 
-    my $html = $q->div($self->render->tr('ABOUT_ME_TEXT',$state->{userid},$state->{uploadid}));
+    my $html = $q->div($self->render->translate('ABOUT_ME_TEXT',$state->{userid},$state->{uploadid}));
     return (200,'text/html',$html);
 }
 

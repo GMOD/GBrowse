@@ -1368,11 +1368,11 @@ sub render_custom_track_listing {
 sub render_public_track_listing {
 	my $self = shift;
 	
-	my $html = h1($self->translate('PUBLIC_TRACKS'));
+	my $html = h1({-style => "display: inline-block; margin-right: 1em;"}, $self->translate('PUBLIC_TRACKS'));
 	my $search = @_? $_[0] : "Enter a keyword or user";
-	$html .= div({-style => "background-color: #AAAAAA; width: 100%;"},
+	$html .= div({-style => "display: inline-block;"},
 		start_form({-action => "#", -onSubmit => "return searchPublic(\$('public_search_keyword').value);"}),
-		"Filter by keyword or user:",
+		"Filter:",
 		input({-type => "text", -name => "keyword", -id => "public_search_keyword", -width => 50, -value => $search, -onClick => "this.value='';"}),
 		input({-type => "submit", -name => "user", -id => "public_search_user", -value => "Search"}),
 		end_form()

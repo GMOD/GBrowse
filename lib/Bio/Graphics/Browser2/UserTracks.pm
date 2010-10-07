@@ -36,7 +36,7 @@ sub new {
 	} elsif ($globals->uploads_db =~ /(filesystem|memory)/i) {
 		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
 	} else {
-		warn "No uploads_db set in GBrowse.conf, defaulting to memory.";
+		warn "No uploads_db set in GBrowse.conf, defaulting to filesystem.";
 		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
 	}
 }

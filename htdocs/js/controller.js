@@ -807,13 +807,13 @@ var GBrowseController = Class.create({
   }, // end plugin_go
 
   cancel_upload:
-  function(destination,upload_id) {
+  function(destination, upload_id) {
        new Ajax.Updater(destination,
                         document.URL,{
               method:    'post',
               parameters: {
                               action: 'cancel_upload',
-			      upload_id: upload_id
+			     			  upload_id: upload_id
                           }
         });
   },

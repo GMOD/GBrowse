@@ -57,15 +57,22 @@ function startAjaxUpload(upload_id) {
 	
 	// Create & insert the status update elements.
 	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
-	status.insert(new Element("span").update('<b>' + Controller.translate('UPLOADING') + '</b>'));
-	status.insert(new Element("a", {href: 'javascript:void(0)'}).observe("click", function() { Controller.cancel_upload(upload_id + "_status", upload_id) }).update(Controller.translate('CANCEL')));
+	status.insert(new Element("span").update(Controller.translate('UPLOADING') + "&nbsp;"));
+	var cancel = new Element("a", {href: 'javascript:void(0)'}).update("[" + Controller.translate('CANCEL') + "]");
+	cancel.observe("click", function() {
+		Controller.cancel_upload(upload_id + "_status", upload_id)
+	});
+	status.insert({after: cancel});
 	
 	// This hash stores all currently-loading status updaters.
 	if (Ajax_Status_Updater == null)
 		Ajax_Status_Updater = new Hash();
 		
 	var updater = new Ajax.PeriodicalUpdater(
-		{success: status.down('span')},
+		{
+			success: status.down('span'),
+			frequency: 0.25	// Don't set this too low, otherwise the first status request will happen before the uploads hash (in $state) is updated.
+		},
 		'#',
 		{	parameters: {
 				action: 'upload_status',
@@ -121,7 +128,7 @@ function completeAjaxUpload(response, upload_id, field_type) {
 							var updater = Ajax_Status_Updater.get(upload_id);
 							if (updater != null)
 								updater.stop()
-							$(upload_id).remove();
+							Effect.BlindUp($(upload_id), {duration: 0.25, afterFinish: function() { $(upload_id).remove() } });
 						}
 					)
 				}
@@ -235,7 +242,7 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 		Effect.BlindUp($(upload_tag), {duration: 0.25, afterFinish: function() { $(upload_tag).remove() } });
 	});
 	form.insert({bottom: remove_link});
-	var status_box = new Element("div", {id: upload_tag + "_status"});
+	var status_box = new Element("span", {id: upload_tag + "_status", style: "margin-left: 0.5em; margin-right: 0.5em;"});
 	
 	// Now wrap it in a DIV container and add it to the DOM.
 	var count = $$("div[id^=upload_]:not([id$=_status])").length;
@@ -249,7 +256,7 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 function changePermissions(fileid, sharing_policy) {
 	var title = $("upload_" + fileid).down("div[id$='_stat']");
 	if (title)
-		title.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
+		title.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING')}) );
 	new Ajax.Request(
 		document.URL, {
 			method: 'post',

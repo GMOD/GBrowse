@@ -38,17 +38,18 @@ sub _new {
 		print "Error: Could not open uploads database.";
 		die "Could not open uploads database with $credentials";
 	}
-	unless ($uploadsdb->do("SELECT * FROM uploads")) {
+	unless ($uploadsdb->do("SELECT imported FROM uploads")) {
+		warn "Uploads table didn't exist, creating...";
 		my $creation_sql = "CREATE TABLE uploads (";
-		$creation_sql   .= "uploadid	       	varchar(32) not null PRIMARY key,";
-		$creation_sql   .= "userid				varchar(32) not null,";
-		$creation_sql   .= "path					   text,";
-		$creation_sql   .= "description				   text,";
-		$creation_sql   .= "imported                boolean not null,";
-		$creation_sql   .= "creation_date          datetime not null,";
-		$creation_sql   .= "modification_date      datetime,";
-		$creation_sql   .= "sharing_policy     " . (($credentials =~ /sqlite/i)? "ENUM('private', 'public', 'group', 'casual')" : "varchar(12)") . "not null,";
-		$creation_sql   .= "users                      text";
+		$creation_sql   .= "uploadid varchar(32) not null PRIMARY key, ";
+		$creation_sql   .= "userid varchar(32) not null, ";
+		$creation_sql   .= "path text, ";
+		$creation_sql   .= "description text, ";
+		$creation_sql   .= "imported boolean not null, ";
+		$creation_sql   .= "creation_date datetime not null, ";
+		$creation_sql   .= "modification_date datetime, ";
+		$creation_sql   .= "sharing_policy " . (($credentials =~ /mysql/i)? "ENUM('private', 'public', 'group', 'casual')" : "varchar(12)") . " not null, ";
+		$creation_sql   .= "users text";
 		$creation_sql   .= ")" . (($credentials =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
 		$uploadsdb->do($creation_sql) or die "Could not create uploads database";
 	}
@@ -100,7 +101,7 @@ sub filename {
 sub nowfun {
 	my $self = shift;
 	my $globals = $self->{globals};
-	return $globals->upload_db_adaptor =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
+	return $globals->uploads_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
 }
 
 # Get Uploaded Files () - Returns an array of the paths of files owned by the currently logged-in user. Can be publicly accessed.

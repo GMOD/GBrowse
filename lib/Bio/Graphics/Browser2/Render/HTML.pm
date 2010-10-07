@@ -1339,12 +1339,12 @@ sub render_upload_share_section {
     my $self = shift;
     my $userdata = $self->user_tracks;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
-	$html .= $self->render_custom_track_listing;
+	$html .= div({-id => "custom_tracks"}, $self->render_custom_track_listing);
 	$html .= $self->add_userdata;
 	if ($userdata->database == 1) {
 		$html .= $self->render_public_track_listing;
 	}
-	$html = div({-style => 'margin-left: 1em; margin-right: 1em;'}, $html);
+	$html = div({-style => 'margin: 1em;'}, $html);
 	return $html;
 }
 
@@ -1360,7 +1360,6 @@ sub render_custom_track_listing {
 				i('['.$self->translate('HELP_FORMAT_UPLOAD').']')
 			);
 	$html .= $self->list_tracks;
-	$html = div({-id => "custom_tracks"}, $html);
 	return $html;
 }
 

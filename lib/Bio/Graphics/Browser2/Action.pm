@@ -362,14 +362,14 @@ sub ACTION_authorize_login {
 }
 
 sub ACTION_register_upload {
-	cluck "register_upload called";
     my $self = shift;
     my $q    = shift;
     my $id   = $q->param('upload_id');
     my $name = $q->param('upload_name');
+    my $userdata = $self->render->usertracks;
 
     if ($id && $name) {
-		$self->state->{uploads}{$id} = [$name,0];
+		$self->state->{uploads}{$id} = [$userdata->escape_url($name),0];
     }
 
     return (204,'text/plain',undef);
@@ -524,16 +524,15 @@ sub ACTION_cancel_upload {
 
     my $state      = $self->state;
     my $render     = $self->render;
-
-    if ($state->{uploads}{$upload_id} && (my ($file_name,$pid) = @{$state->{uploads}{$upload_id}})) {
 	my $usertracks = $render->user_tracks;
+    if ($state->{uploads}{$upload_id} && (my ($file_name, $pid) = @{$state->{uploads}{$upload_id}})) {
 	kill TERM=>$pid;
-	my $file = $usertracks->get_file_id($file_name);
+	my $file = ($usertracks =~ /database/)? $usertracks->get_file_id($file_name) : $file_name;
 	$usertracks->delete_file($file);
 	delete $state->{uploads}{$upload_id};
-	return (200,'text/html',"<div class='error'><b>$file_name:</b> <i>" . $self->render->translate('CANCELLING') . "</i></div>");
+	return (200,'text/html',"<b>$file_name:</b> <i>" . $self->render->translate('CANCELLING') . "</i>");
     } else {
-	return (200,'text/html',"<div class='error'><i>" . $self->render->translate('NOT_FOUND') . "</i></div>");
+	return (200,'text/html',"<i>" . $self->render->translate('NOT_FOUND') . "</i>");
     }
 }
 
@@ -600,7 +599,7 @@ sub ACTION_modifyUserData {
     my $userdata = $self->render->user_tracks;
     my $state    = $self->state;
 
-    $state->{uploads}{$upload_id} = [$ftype,$$];
+    $state->{uploads}{$upload_id} = [$userdata->escape_url($ftype),$$];
 
     if ($ftype eq 'conf') {
 	$userdata->merge_conf($track,$text);

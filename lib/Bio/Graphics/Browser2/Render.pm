@@ -142,8 +142,8 @@ sub user_tracks {
     
     $uuid ||= $self->state->{uploadid} || '';
     warn "[$$] uuid  = $uuid" if DEBUG;
-    return $self->{usertracks}{$uuid} 
-       ||= $class->new($self);
+    $self->{usertracks}{$uuid} ||= $class->new($self);
+    return $self->{usertracks}{$uuid};
 }
 
 sub remote_sources {

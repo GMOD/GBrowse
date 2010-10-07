@@ -1678,7 +1678,6 @@ sub add_features_to_track {
     
     $track->add_feature($_) foreach values %$g;
     $feature_count{$l} += keys %$g;
-
   }
 
   # now reconfigure the tracks based on their counts

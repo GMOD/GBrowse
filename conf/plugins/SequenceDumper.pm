@@ -126,15 +126,17 @@ sub dump {
 			  );
   $seq->add_date(strftime("%d-%b-%Y",localtime));
   my $ps = $segment->primary_seq; 
-  $seq->primary_seq((ref $ps && $ps->seq) || $ps);
+  $seq->primary_seq(!ref $ps ? Bio::PrimarySeq->new(-seq=>$ps) : $ps);
   $segment->absolute(1);
   my $offset     = $segment->start - 1;
   my $segmentend = $segment->length;
   $seq->add_SeqFeature( map {
+      my $score = $_->score;
+      $score    = ref $score eq 'HASH' ? $score->{sumData}/$score->{validCount} : $score;
       my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
 					    -source_tag  => $_->source_tag,
 					    -frame       => eval{$_->phase}||eval{$_->frame}||undef,
-					    -score       => $_->score,
+					    -score       => $score,
 					    );
       for my $tag ( $_->get_all_tags ) {
 	  my %seen;

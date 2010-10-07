@@ -15,6 +15,8 @@
      * Add commas to coordinates more liberally.
      * Maybe fixed failing t/00.compile.t test.
      * Fixed problem with subtrack selection tables producing empty tracks under some conditions.
+     * Fixed SequenceDumper plugin to not crash on BigWig tracks.
+     * added # to the list of acceptable characters in feature IDs
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports

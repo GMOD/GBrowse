@@ -358,7 +358,8 @@ sub filter_feature_sub {
     return sub {
 	my $feature = shift;
 	my $id      = $to_id->($feature);
-	return      defined $selected->{$id};
+	return      unless defined $id;
+	return      exists $selected->{$id};
     }
 }
 

@@ -403,7 +403,7 @@ sub ACTION_upload_file {
 
     my $content_type = $fh ? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain';
 
-    my $track_name = $usertracks->trackname_from_url($name);
+    my $track_name = $usertracks->escape_url($name);
 
     $state->{uploads}{$upload_id} = [$track_name,$$];
     $session->flush();
@@ -411,7 +411,7 @@ sub ACTION_upload_file {
     
     my ($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name,  $url, 1)
                                        :$data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
-                                              : $usertracks->upload_file($track_name, $fh,  $content_type, 1);
+                                              : $usertracks->upload_file($track_name, $fh,  $content_type, 0);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};

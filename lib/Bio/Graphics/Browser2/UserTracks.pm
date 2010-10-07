@@ -216,8 +216,8 @@ sub trackname_from_url {
     warn "trackname_from_url($url)" if DEBUG;
     
     my $filename = $self->escape_url($url, $uniquefy);
-
     my $path = $self->blind_track_path($filename);
+    
     rmtree($path) if -e $path;  # only happens if uniquefy = 0
     mkpath $path;
     return $filename;
@@ -384,7 +384,7 @@ sub upload_file {
 		$fh = $self->install_filter($fh,'bunzip2 -c');
     }
     
-    my $file = $self->add_file($file_name, 0);
+    my $file = $self->add_file($filename);
     
     # guess the file type from the first non-blank line
     my ($type, $lines, $eol) = $self->guess_upload_type($file, $fh);

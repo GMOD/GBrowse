@@ -273,7 +273,7 @@ sub description {
     }
 }
 
-# Add File (Full Path[, Description, Sharing Policy, Owner's Uploads ID]) - Adds $file to the database under the current (or specified) owner.
+# Add File (Full Path[, Imported, Description, Sharing Policy, Owner's Uploads ID]) - Adds $file to the database under the current (or specified) owner.
 sub add_file {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
@@ -283,16 +283,12 @@ sub add_file {
     my $uploadsid = shift || $self->{uploadsid};
     my $shared = $uploadsdb->quote(shift || "private");
     
-    if ($self->get_file_id($filename) == 0) {
-		my $fileid = md5_hex($uploadsid.$filename);
-		my $now = $self->nowfun;
-		$filename = $uploadsdb->quote($filename);
-		$uploadsid = $uploadsdb->quote($uploadsid);
-		$uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy) VALUES (" . $uploadsdb->quote($fileid) . ", $uploadsid, $filename, $description, $imported, $now, $now, $shared)");
-		return $fileid;
-    } else {
-		warn (($self->{globals}->user_accounts)? $self->{username} : $self->{userid}), " has already uploaded $filename.";
-    }
+	my $fileid = md5_hex($uploadsid.$filename);
+	my $now = $self->nowfun;
+	$filename = $uploadsdb->quote($filename);
+	$uploadsid = $uploadsdb->quote($uploadsid);
+	$uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy) VALUES (" . $uploadsdb->quote($fileid) . ", $uploadsid, $filename, $description, $imported, $now, $now, $shared)");
+	return $fileid;
 }
 
 # Delete File (File ID) - Deletes $file_id from the database.

@@ -129,7 +129,6 @@ sub get_public_files {
     $sql .= " AND (users IS NULL OR users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
     $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")";
     $sql .= " ORDER BY uploadid";
-    cluck $sql;
     my $rows = $uploadsdb->selectcol_arrayref($sql);
     return @$rows;
 }
@@ -338,7 +337,8 @@ sub permissions {
 	my $new_permissions = shift;
 	if ($new_permissions) {
 		if ($self->is_mine($file)) {
-			$self->field("users", $file, $self->{userid}) if $new_permissions =~ /public/;
+			$self->field("users", $file, $self->{userid}) if $new_permissions =~ /public/; # Add it to the active user's session if it's being changed to public.
+			$self->unshare($file) if $new_permissions =~ /(group|casual)/ && ($self->field("users", $file) eq $self->{userid}); # If it's previously been public and had the active user added, remove it if it's being changed to casual or group.
 			return $self->field("sharing_policy", $file, $new_permissions);
 		} else {
 			warn "Permissions change on " . $file . "requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . " a non-owner.";

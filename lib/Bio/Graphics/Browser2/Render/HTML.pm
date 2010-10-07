@@ -1380,8 +1380,7 @@ sub render_public_track_listing {
 	
 	if (@_) {
 		my @searched_tracks = $self->user_tracks->get_public_files(@_);
-		warn join ", ", @searched_tracks;
-		$html .= $self->list_tracks("public", \@searched_tracks) if @searched_tracks;
+		$html .= $self->list_tracks("public", @searched_tracks) if @searched_tracks;
 	} else {
 		$html .= $self->list_tracks("public");
 	}
@@ -1395,16 +1394,9 @@ sub list_tracks {
 	my $globals	= $self->globals;
 	my $userdata = $self->user_tracks;
 	my $listing_type = shift || "";
-	my $input = shift;
-	my @tracks;
-	if ($input) {
-		@tracks = sort(@$input);
-	} else {
-		@tracks = sort((($listing_type =~ /public/) && ($userdata->database == 1) && !$input)? $userdata->get_public_files : $userdata->tracks);
-	}
+	# If we've been given input, use the input. If we've been given the public type, use that, or default to all of the current user's tracks.
+	my @tracks = sort( @_? @_ : (($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : $userdata->tracks);
 	$listing_type .= " available" if $listing_type =~ /public/;
-	
-	warn join ", ", @tracks if $listing_type =~ /public/ && $input;
 	
 	# Main track roll code.
 	if (@tracks) {

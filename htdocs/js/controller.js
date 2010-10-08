@@ -978,18 +978,6 @@ var GBrowseController = Class.create({
 		});
   },
 
-  // uploadUserTrackSource() is called to submit a user track edit field
-  // to the server
-  uploadUserTrackSource:
-  function (sourceField,fileName,sourceFile,editElement) {
-      this._modifyUserTrackSource({ action:     'modifyUserData',
-				    track:      fileName,
-				    sourceFile: sourceFile,
-				    data:       $F(sourceField)
-                                   },
-	                          editElement);
-  },
-
   // mirrorTrackSource() is called to mirror a URL to a track
   mirrorTrackSource:
   function (sourceURL,trackName,statusElement,displayWhenDone) {

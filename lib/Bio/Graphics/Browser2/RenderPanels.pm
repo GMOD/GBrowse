@@ -591,7 +591,7 @@ sub wrap_rendered_track {
     );
 
 
-    # Add arrows for pannning to details scalebar panel
+    # Add arrows for panning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
 # works with IE7, but looks awful. IE8 should support standard css opacity.
@@ -626,8 +626,18 @@ sub wrap_rendered_track {
 
 	$img = $pan_left2 . $pan_left . $img . $pan_right . $pan_right2;
     }
+    $img = div( { -id => "${label}_inner_div" }, $img ); #Should probably improve this
+	
+     if ($is_detail) {
+		my $image_pad = $self->image_padding;
+		my $padl      = $source->global_setting('pad_left');
+		my $padr      = $source->global_setting('pad_right');
+		$padl = $image_pad unless defined $padl;
+		$padr = $image_pad unless defined $padr;
+		$width = $settings->{width} + $padl + $padr;
+     }
      return div({-class=>'centered_block',
-		 -style=>"width:${width}px;position:relative"
+		 -style=>"width:${width}px;position:relative;overflow:hidden"
 		},
  	       ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
          . ( $map_html || '' );
@@ -940,6 +950,7 @@ sub render_scale_bar {
     $padl = $image_pad unless defined $padl;
     $padr = $image_pad unless defined $padr;
     my $width = $state->{'width'} * $self->overview_ratio() + $padl + $padr;
+    $width = $state->{'width'} * $self->overview_ratio() * $self->details_mult() + $padl + $padr if ($section eq 'detail');
 
     # no cached data, so do it ourselves
     unless ($gd) {
@@ -1872,7 +1883,7 @@ sub create_panel_args {
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
 	      -key_color    => $source->global_setting('key bgcolor')      || 'moccasin',
 	      -bgcolor      => $source->global_setting("$section bgcolor") || 'wheat',
-	      -width        => $settings->{width},
+	      -width        => $section eq 'detail'? $settings->{width} * $self->details_mult() : $settings->{width},
 	      -key_style    => $keystyle,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $image_class->gdMediumBoldFont->height+2,
@@ -2415,6 +2426,14 @@ sub hilite_regions_closure {
         }
 
     };
+}
+
+sub details_mult {
+	my $self = shift;
+    my $value = $self->source->global_setting('details multiplier') || 1;
+	$value = 0.1 if ($value < 0.1);  #lower limit 
+	$value = 25 if ($value > 25);	#set upper limit for performance reasons (prevent massive image files)
+	return $value;
 }
 
 sub hilite_fill {

@@ -804,10 +804,13 @@ sub segment_info_object {
         detail_stop          => $segment->end,
         'ref'                => $segment->seq_id,
         details_pixel_ratio  => $segment->length / $settings->{width},
-        detail_width         => $settings->{width} + 2 * $pad,
+        detail_width         => $settings->{width}*$renderer->details_mult() + 2 * $pad,
         overview_width       => $width + 2 * $pad,
+        details_mult         => $renderer->details_mult(),
     );
-
+     if ( $renderer->details_mult ) {
+        $segment_info_object{'details_mult'}       = $renderer->details_mult();
+    }
     if ( $settings->{region_size} ) {
         my ( $rstart, $rend )
             = $self->get_regionview_start_stop( $settings, $segment->start, $segment->end,

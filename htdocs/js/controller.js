@@ -101,6 +101,7 @@ var GBrowseController = Class.create({
 		if ( null != $(detail_container_id) ){
 			create_drag(detail_container_id,'track');
 		}
+		this.make_details_draggable();
 	},
   
 	register_track:
@@ -1043,7 +1044,122 @@ var GBrowseController = Class.create({
       result = result.replace(/(%s)/i, arguments[i]);
     }
     return result;
-  }
+  },
+
+	// Call a method on each track in the "Details" section (including the detail scale track)
+	each_details_track:
+	function (toCall) {
+		this.each_track(function(gbtrack) {
+			if (gbtrack.track_type == 'standard' && gbtrack.track_section == 'detail' || gbtrack.track_id == 'Detail Scale') {
+				toCall(gbtrack);
+			}
+		});
+	},
+
+	// Sets up each details track so that it can be dragged left and right. This needs to be cleaned up 
+	make_details_draggable:
+	function () {
+		var segment_info         = this.segment_info;
+
+		var details_mult         = parseFloat(segment_info.details_mult);
+		if (details_mult <= 1.0) { return; }
+
+		var detail_width         = parseInt(segment_info.detail_width);
+		var overview_width       = parseInt(segment_info.overview_width);
+		var region_width         = parseInt(segment_info.overview_width); //There is no region width in segment_info, but this should be the same
+		var region_start         = parseInt(segment_info.region_start);
+		var pad                  = parseInt(segment_info.image_padding);
+		var detail_start         = parseInt(segment_info.detail_start);
+		var detail_stop          = parseInt(segment_info.detail_stop);
+		var overview_pixel_ratio = parseFloat(segment_info.overview_pixel_ratio);
+		var region_pixel_ratio   = parseFloat(segment_info.region_pixel_ratio);
+
+		//Create overview position marker:
+		var overview_segment_start  = detail_start / overview_pixel_ratio + pad;           // # of pixels
+		var overview_segment_width  = (detail_stop - detail_start) / overview_pixel_ratio; //
+		if (!($('overview_marker'))) {
+			$('Overview Scale_inner_div').parentNode.insert("<div id='overview_marker'></div>");
+			$('overview_marker').style.backgroundColor = 'LightSalmon';
+			$('overview_marker').style.position = 'absolute';
+			$('overview_marker').style.borderLeft  = '1px solid red';
+			$('overview_marker').style.borderRight = '1px solid red';
+			$('overview_marker').style.top = '0px';
+			$('overview_marker').style.height = '100px';
+			$('overview_marker').setOpacity(0.5);  //Cross-browser setter (from Prototype)
+		}
+
+		// just testing this part
+		new Draggable($('overview_marker'), {
+			constraint:"horizontal",
+			zindex:0, //defaults to 1000, which we don't want
+			snap: function(x) {
+				return[ (x > overview_segment_start) ? (x < (overview_segment_start+overview_segment_width - overview_segment_width/details_mult) ? x : (overview_segment_start+overview_segment_width - overview_segment_width/details_mult) ) : overview_segment_start ];
+			},
+			onDrag: function () { update_pan_position(0-((parseInt($('overview_marker').style.left) - overview_segment_start)/overview_segment_width * (detail_width - 2*pad))) },
+			onEnd:  function () { update_pan_position(0-((parseInt($('overview_marker').style.left) - overview_segment_start)/overview_segment_width * (detail_width - 2*pad))) }
+    		});
+		// end of testing part
+
+		$('overview_marker').style.left  = Math.round(overview_segment_start) + 'px';
+		$('overview_marker').style.width = Math.round(overview_segment_width/details_mult) + 'px';
+
+
+		//Create region position marker:
+		var region_segment_start  = (detail_start - region_start) / region_pixel_ratio + pad;     // # of pixels
+		var region_segment_width  = (detail_stop - detail_start) / region_pixel_ratio;            //
+		if (!($('region_marker'))) {
+			$('Region Scale_inner_div').parentNode.insert("<div id='region_marker'></div>");
+			$('region_marker').style.backgroundColor = 'LightSalmon';
+			$('region_marker').style.position = 'absolute';
+			$('region_marker').style.borderLeft  = '1px solid red';
+			$('region_marker').style.borderRight = '1px solid red';
+			$('region_marker').style.top = '0px';
+			$('region_marker').style.height = '100px';
+			$('region_marker').setOpacity(0.5);  //Cross-browser setter (from Prototype)
+		}
+
+		// just testing this part
+		new Draggable($('region_marker'), {
+			constraint:"horizontal",
+			zindex:0, //defaults to 1000, which we don't want
+			snap: function(x) {
+				return[ (x > region_segment_start) ? (x < (region_segment_start+region_segment_width - region_segment_width/details_mult) ? x : (region_segment_start+region_segment_width - region_segment_width/details_mult) ) : region_segment_start ];
+			},
+			onDrag: function () { update_pan_position(0-((parseInt($('region_marker').style.left) - region_segment_start)/region_segment_width * (detail_width - 2*pad))) },
+			onEnd:  function () { update_pan_position(0-((parseInt($('region_marker').style.left) - region_segment_start)/region_segment_width * (detail_width - 2*pad))) }
+    		});
+		// end of testing part
+
+		$('region_marker').style.left  = Math.round(region_segment_start) + 'px';
+		$('region_marker').style.width = Math.round(region_segment_width/details_mult) + 'px';
+
+
+		this.each_details_track(function(gbtrack) {
+			new Draggable(gbtrack.get_image_div(), {
+				constraint:"horizontal",
+				zindex:0, //defaults to 1000, which we don't want
+				snap: function(x) {
+					return[ (x < 0) ? (x > -(detail_width - overview_width) ? x : -(detail_width - overview_width) ) : 0 ];
+				},
+				onDrag: function () { update_pan_position(parseInt(gbtrack.get_image_div().style.left)) },
+				onEnd:  function () { update_pan_position(parseInt(gbtrack.get_image_div().style.left)) }
+	    		});
+		});
+
+		function update_pan_position(x) { 
+			Controller.each_details_track(function(gbt) {
+				gbt.get_image_div().style.left = x + 'px';
+			});
+
+			var overview_pan_offset = 0 - overview_segment_width * x / (detail_width - 2*pad);
+			$('overview_marker').style.left = Math.round(overview_segment_start + overview_pan_offset) + 'px';
+
+			var region_pan_offset = 0 - region_segment_width * x / (detail_width - 2*pad);
+			$('region_marker').style.left = Math.round(region_segment_start + region_pan_offset) + 'px';
+		}
+
+		update_pan_position(- Math.round((detail_width - overview_width)/2)); //start in middle
+	}
 
 
 });

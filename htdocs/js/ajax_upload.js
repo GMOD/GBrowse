@@ -194,11 +194,17 @@ function editUploadConf (fileName) {
 function editUpload (fileName, sourceFile) {
 	var editDiv = fileName + "_editfield";
 	var editID  = 'edit_' + Math.floor(Math.random() * 99999);
+	$(editDiv).hide();
 	$(editDiv).update("<p><b>" + Controller.translate('EDITING_FILE', sourceFile) + "</b></p>");
 	$(editDiv).insert({bottom: new Element("textarea", {id: editID, cols: "120", rows: "20", wrap: "off"}).update(Controller.translate('FETCHING')) });
 	$(editDiv).insert({bottom: new Element("p")});
-	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: new Element("a", {href: "javascript:void(0)"}).observe("click", function() { $(editDiv).update() }).update(Controller.translate('CANCEL')) });
+	var cancel = new Element("a", {href: "javascript:void(0)"}).update(Controller.translate('CANCEL'))
+	cancel.observe("click", function() {
+		Effect.BlindUp($(editDiv), {duration: 0.5, afterFinish: function() { $(editDiv).hide() } });
+	})
+	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: cancel});
 	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button").observe("click", function() { Controller.uploadUserTrackSource(editID, fileName, sourceFile, editDiv) }).update(Controller.translate('SUBMIT')) });
+	Effect.BlindDown($(editDiv), {duration: 0.5});
 	Controller.downloadUserTrackSource(editID,fileName,sourceFile);
 }
 

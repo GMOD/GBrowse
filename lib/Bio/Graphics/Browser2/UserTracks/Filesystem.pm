@@ -140,15 +140,14 @@ sub description {
 sub is_imported {
 	my $self = shift;
 	my $file = shift;
-	my $path = $self->path;
-	return (-e File::Spec->catfile($path, $file, $self->imported_file_name))? 1 : 0;
+	return (-e File::Spec->catfile($self->track_path($file), $self->imported_file_name))? 1 : 0;
 }
 
 # File Type (File) - Returns the type of a specified track.
 sub file_type {
 	my $self = shift;
 	my $file = shift;
-	return $self->is_imported($file)? "imported" : "uploaded";
+	return ($self->is_imported($file) || $self->is_mirrored($file))? "imported" : "uploaded";
 }
 
 # Filename (File) - Returns the filename - is used basically in contrast with Database.pm's filename function, which is more involved.

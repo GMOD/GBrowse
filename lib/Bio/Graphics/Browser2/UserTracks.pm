@@ -67,7 +67,7 @@ sub is_mirrored {
     my $filename = $self->filename($file);
     my $mirror_flag = $self->mirror_flag($file);
     return unless -e $mirror_flag;
-    open(my $i,$mirror_flag);
+    open(my $i, $mirror_flag);
     my $url = <$i>;
     close $i;
     return $url;
@@ -80,6 +80,7 @@ sub set_mirrored {
     my $filename = $self->filename($file);
     my $url = shift;
     my $flagfile = $self->mirror_flag($file);
+    cluck $flagfile;
     open my $i,">", $flagfile or warn "can't open mirror file: $!";
     print $i $url;
     close $i;
@@ -277,7 +278,7 @@ sub import_url {
 
     $loader->set_processing_complete;
 	
-    return (1, '', [$filename]);
+    return (1, '', [$filename], $file);
 }
 
 # Reload File (File) - Attempts to reload a file into the database.
@@ -305,7 +306,7 @@ sub mirror_url {
     my $filename = shift;
     my $url = shift;
     my $overwrite = shift;
-
+    
     warn "mirroring..." if DEBUG;
 
     if ($url =~ /\.(bam|bw)$/ or $url =~ /\b(gbgff|das)\b/) {
@@ -335,10 +336,44 @@ sub mirror_url {
 		CORE::exit 0;
     }
     $fh->reader;
-    my @result = $self->upload_file($filename, $fh, $result->header('Content-Type') || 'text/plain', $overwrite);
-    my $file = $self->get_file_id($filename);
+
+    my $filename = $self->trackname_from_url($filename, !$overwrite);
+    
+    my $content_type = $result->header('Content-Type') || 'text/plain';
+
+    if ($content_type eq 'application/gzip' or $filename =~ /\.gz$/) {
+		$fh = $self->install_filter($fh,'gunzip -c');
+    } elsif ($content_type eq 'application/bzip2' or $filename =~ /\.bz2$/) {
+		$fh = $self->install_filter($fh,'bunzip2 -c');
+    }
+    
+    my $file = $self->add_file($filename, 1);
+    
+    # guess the file type from the first non-blank line
+    my ($type, $lines, $eol) = $self->guess_upload_type($file, $fh);
+    $lines ||= [];
+    my (@tracks, $fcgi);
+
+    my $result = eval {
+		local $SIG{TERM} = sub { die "cancelled" };
+		croak "Could not guess the type of the file $filename"	unless $type;
+
+		my $load = $self->get_loader($type, $file);
+		$load->eol_char($eol);
+		@tracks = $load->load($lines, $fh);
+		1;
+    };
+
+    if ($@ =~ /cancelled/) {
+		$self->delete_file($file);
+		return (0,'Cancelled by user',[]);
+    }
+
+    my $msg = $@;
+    warn "UPLOAD ERROR: ", $msg if $msg;
+    $self->delete_file($file) unless $result;
     $self->set_mirrored($file, $url);
-    return @result;
+    return ($result, $msg, \@tracks);
 }
 
 # Upload Data (Filename, Data, Content Type, Overwrite?) - Uploads a string of data entered as text (on the Upload & Share Tracks tab).

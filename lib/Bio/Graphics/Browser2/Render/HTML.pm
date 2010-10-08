@@ -1340,12 +1340,39 @@ sub render_upload_share_section {
     my $userdata = $self->user_tracks;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
 	$html .= div({-id => "custom_tracks"}, $self->render_custom_track_listing);
-	$html .= $self->add_userdata;
+	$html .= $self->userdata_upload;
 	if ($userdata->database == 1) {
 		$html .= $self->render_public_track_listing;
 	}
 	$html = div({-style => 'margin: 1em;'}, $html);
 	return $html;
+}
+
+# Userdata Upload - Renders an "Add custom tracks" links in the Uploaded Tracks section.
+sub userdata_upload {
+    my $self     = shift;
+    my $url      = url(-absolute=>1,-path_info=>1);
+
+    my $html     = '';
+    my $upload_label = $self->translate('UPLOAD_FILE');
+	my $mirror_label = $self->translate('MIRROR_FILE');
+    my $remove_label = $self->translate('REMOVE');
+    my $new_label    = $self->translate('NEW_TRACK');
+    my $from_text    = $self->translate('FROM_TEXT');
+    my $from_file    = $self->translate('FROM_FILE');
+	my $from_url     = $self->translate('FROM_URL');
+    my $help_link     = $self->annotation_help;
+    $html         .= p({-style=>'margin-left:10pt;font-weight:bold'},
+		       $self->translate('ADD_YOUR_OWN_TRACKS') ,':',
+		       a({-href=>"javascript:addAnUploadField('custom_list_start', '$url', '$new_label',    '$remove_label', 'edit','$help_link')"},
+			 "[$from_text]"),
+		       a({-href=>"javascript:addAnUploadField('custom_list_start', '$url', '$mirror_label', '$remove_label', 'url','$help_link')"},
+			 "[$from_url]"),
+		       a({-href=>"javascript:addAnUploadField('custom_list_start', '$url','$upload_label',  '$remove_label' , 'upload','$help_link')",
+			  -id=>'file_adder',
+			 },"[$from_file]"));
+	$html       .= div({-id=>'custom_list_start'},'');
+    return $html;
 }
 
 # Render Custom Track Listing - Returns the HTML listing of public, uploaded, imported and shared tracks added to a session, and a section to add more.
@@ -1647,6 +1674,7 @@ sub render_track_source_files {
 	my $userdata = $self->user_tracks();
 	my @source_files = $userdata->source_files($fileid);
 	my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($fileid);
+	my $mirror_url = $userdata->is_mirrored($fileid);
 	my $source_listing =
 		b($self->translate('SOURCE_FILES')) .
 		ul(
@@ -1654,8 +1682,8 @@ sub render_track_source_files {
 			li(
 				[map {
 					a( {
-							-href => "?userdata_download=$_->[0];track=$fileid",
-							-style	=> "display: inline-block; width: 15em;"
+							-href => $mirror_url || "?userdata_download=$_->[0];track=$fileid",
+							-style	=> "display: inline-block; width: 30em; overflow: hidden;"
 						},
 							$_->[0]
 					).
@@ -1663,20 +1691,27 @@ sub render_track_source_files {
 					span({-style => "display: inline-block; width: 10em;"}, $_->[1],'bytes').
 					span(
 						($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3] && $userdata->is_mine($fileid))?
-						a( {
-								-href    => "javascript:void(0)",
-								-onClick => "editUploadData('$fileid','$_->[0]')"
-							},
-							$self->translate('EDIT_BUTTON')
-						)
-					: '&nbsp;'
+							$mirror_url?
+							a( {
+									-href => "javascript:void(0)",
+									-onClick => "reloadURL('$fileid','$mirror_url')"
+								},
+								"[reload from $mirror_url]"
+							) : 
+							a( {
+									-href    => "javascript:void(0)",
+									-onClick => "editUploadData('$fileid','$_->[0]')"
+								},
+								$self->translate('EDIT_BUTTON')
+							)
+						: '&nbsp;'
 					)
 				} @source_files]
 			),
 			li(
 				a( {
 						-href	=> "?userdata_download=conf;track=$fileid",
-						-style	=> "display: inline-block; width: 15em;"
+						-style	=> "display: inline-block; width: 30em;"
 					},
 					$self->translate('CONFIGURATION')
 				).
@@ -1759,92 +1794,6 @@ sub render_track_sharing {
 		};
 	}
 	return $sharing_content;
-}
-
-
-# Userdata Import - Renders the "[Import a track URL]" link in the Imported Tracks section.
-sub userdata_import {
-    my $self     = shift;
-    my $html     = '';
-
-    my $url      = url(-absolute=>1,-path_info=>1);
-    $html   .= div({-id=>'import_list_start'},'');
-
-    my $import_label  = $self->translate('IMPORT_TRACK');
-    my $import_prompt = $self->translate('REMOTE_URL');
-    my $remove_label  = $self->translate('REMOVE');
-    my $help_link     = $self->annotation_help;
-    $html            .= div({-style=>'margin-left:10pt'},
-			   a({-href => "javascript:addAnUploadField('import_list_start','$url','$import_prompt','$remove_label','import','$help_link')",
-			      -id   => 'import_adder',
-			     },b("[$import_label]")));
-    return $html;
-}
-
-# Userdata Upload - Renders an "Add custom tracks" links in the Uploaded Tracks section.
-sub userdata_upload {
-    my $self     = shift;
-    my $url      = url(-absolute=>1,-path_info=>1);
-
-    my $html     = '';
-    $html       .= div({-id=>'upload_list_start'},'');
-
-    my $upload_label = $self->translate('UPLOAD_FILE');
-	my $mirror_label = $self->translate('MIRROR_FILE');
-    my $remove_label = $self->translate('REMOVE');
-    my $new_label    = $self->translate('NEW_TRACK');
-    my $from_text    = $self->translate('FROM_TEXT');
-    my $from_file    = $self->translate('FROM_FILE');
-	my $from_url     = $self->translate('FROM_URL');
-    my $help_link     = $self->annotation_help;
-    $html         .= p({-style=>'margin-left:10pt;font-weight:bold'},
-		       $self->translate('ADD_YOUR_OWN_TRACKS') ,':',
-		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$new_label',    '$remove_label', 'edit','$help_link')"},
-			 "[$from_text]"),
-		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url', '$mirror_label', '$remove_label', 'url','$help_link')"},
-			 "[$from_url]"),
-		       a({-href=>"javascript:addAnUploadField('upload_list_start', '$url','$upload_label',  '$remove_label' , 'upload','$help_link')",
-			  -id=>'file_adder',
-			 },"[$from_file]"));
-    return $html;
-}
-
-# Add User Data - Renders a link to add a custom track.
-sub add_userdata {
-	my $self = shift;
-	my $url      = url(-absolute=>1,-path_info=>1);
-
-    my $upload_label  = $self->translate('UPLOAD_FILE');
-    my $remove_label  = $self->translate('REMOVE');
-    my $new_label     = $self->translate('NEW_TRACK');
-    my $from_text     = $self->translate('FROM_TEXT');
-    my $from_file     = $self->translate('FROM_FILE');
-    my $help_link     = $self->annotation_help;
-    my $import_prompt = $self->translate('REMOTE_URL');
-    my $import_label  = $self->translate('IMPORT_TRACK');
-	
-	my $html = '';    
-    $html .= p({-style=>'margin-left:10pt;font-weight:bold'},
-		$self->translate('ADD_YOUR_OWN_TRACKS'),
-		a(
-			{-href=>"javascript:addAnUploadField('custom_list_start', '$url', '$new_label',   '$remove_label', 'edit','$help_link')"},
-			"[$from_text]"
-		),
-		a( {
-				-href=>"javascript:addAnUploadField('custom_list_start', '$url','$upload_label','$remove_label' , 'upload','$help_link')",
-				-id=>'file_adder',
-			},
-			"[$from_file]"
-		),
-		a( {
-				-href => "javascript:addAnUploadField('custom_list_start','$url','$import_prompt','$remove_label','import','$help_link')",
-				-id   => 'import_adder',
-			},
-			b("[$import_label]")
-		)
-	);
-	$html .= div({-id=>'custom_list_start'},'');
-    return $html;
 }
 
 sub segment2link {

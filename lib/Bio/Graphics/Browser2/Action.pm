@@ -388,6 +388,8 @@ sub ACTION_upload_file {
 	return(200,'text/html',JSON::to_json({success=>0,
 					      error_msg=>'empty file'}
 	       ));
+	       
+	cluck $url;
 
     my $upload_id = $q->param('upload_id');
 
@@ -397,7 +399,7 @@ sub ACTION_upload_file {
 
     my $usertracks = $render->user_tracks;
     my $name       = $fh  ? basename($fh) 
-	            :$url ? $url
+	           			: $url ? $url
                           : $q->param('name');
     $name  ||= 'Uploaded file';
 
@@ -409,9 +411,9 @@ sub ACTION_upload_file {
     $session->flush();
     $session->unlock();
     
-    my ($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name,  $url, 1)
-                                       :$data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
-                                              : $usertracks->upload_file($track_name, $fh,  $content_type, 0);
+    my ($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1)
+                                       :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1)
+                                              : $usertracks->upload_file($track_name, $fh, $content_type, 0);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
@@ -592,7 +594,7 @@ sub ACTION_modifyUserData {
     my $self = shift;
     my $q    = shift;
     my $ftype     = $q->param('sourceFile');
-    my $track     = $q->param('track');
+    my $file     = $q->param('file');
     my $text      = $q->param('data');
     my $upload_id = $q->param('upload_id');
 
@@ -602,12 +604,12 @@ sub ACTION_modifyUserData {
     $state->{uploads}{$upload_id} = [$userdata->escape_url($ftype),$$];
 
     if ($ftype eq 'conf') {
-	$userdata->merge_conf($track,$text);
+	$userdata->merge_conf($file, $text);
     } else {
-	$userdata->upload_data($track,$text,'text/plain',1); # overwrite
+	$userdata->upload_data($file, $text, 'text/plain', 1); # overwrite
     }
     delete $state->{uploads}{$upload_id};
-    my @tracks     = $userdata->labels($track);
+    my @tracks     = $userdata->labels($file);
     $self->render->track_config($_,'revert') foreach @tracks;
     return (200,'application/json',{tracks=>\@tracks});
 }

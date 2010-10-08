@@ -32,7 +32,6 @@ var galaxy_form_id          = 'galaxy_form';
 var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
 var userdata_table_id       = 'userdata_table_div';
-var userimport_table_id     = 'userimport_table_div';
 var custom_tracks_id		= 'custom_tracks';
 var public_tracks_id		= 'public_tracks';
 
@@ -922,71 +921,83 @@ var GBrowseController = Class.create({
 		return false;
   },
 
-  // downloadUserTrackSource() is called to populate the user track edit field
-  // with source or configuration data for the track
-  downloadUserTrackSource:
-  function (destination,fileName,sourceFile) {
-      new Ajax.Updater(destination,
-                       document.URL, 
-		       {
-		         method:     'post',
-			 parameters: {
-			     userdata_download: sourceFile,
-                                         track: fileName
-			 }
-		       });
+    // downloadUserTrackSource() is called to populate the user track edit field
+    // with source or configuration data for the track
+    downloadUserTrackSource:
+    function (destination, fileid, sourceFile) {
+        new Ajax.Updater(
+            destination,
+            document.URL, 
+            {
+                method: 'post',
+                parameters: {
+                    userdata_download: sourceFile,
+                    track: fileid
+                }
+            }
+        );
+    },
 
-  },
+    _modifyUserTrackSource:
+    function (param, statusElement, displayWhenDone) {
+        var upload_id  = 'upload_' + Math.floor(Math.random() * 99999);
+        param.upload_id = upload_id;
+        new Ajax.Request(Controller.url, {
+            method: 'post',
+            parameters: param,
+            onCreate: function() {
+                if ($(statusElement) != null) {
+                    $(statusElement).update();
+                    $(statusElement).insert(new Element("div", {id: upload_id + "_form"}));
+                    $(statusElement).insert(new Element("div", {id: upload_id + "_status"}));
+                }
+                startAjaxUpload(upload_id);
+            },
+            onSuccess: function (transport) {
+                if ($(statusElement) != null) $(statusElement).remove();
+                    var r = transport.responseJSON;
+                Controller.add_tracks(r.tracks,null,false,true);
+                r.tracks.each(function(t) {
+                 Controller.rerender_track(t,true,true);
+                });
+                var updater = Ajax_Status_Updater.get(upload_id);
+                if (updater != null) updater.stop();
+                    Controller.update_sections(new Array(custom_tracks_id, track_listing_id));
+                if (displayWhenDone != null && displayWhenDone)
+                    Controller.select_tab('main_page');
+            }
+        });
 
-	// uploadUserTrackSource() is called to submit a user track edit field
-	// to the server
-	uploadUserTrackSource:
-	function (sourceField,fileName,sourceFile,editElement) {
+    },
 
-		var upload_id  = 'upload_' + Math.floor(Math.random() * 99999);
+    // uploadUserTrackSource() is called to submit a user track edit field
+    // to the server
+    uploadUserTrackSource:
+    function (sourceField, fileid, sourceFile, editElement) {
+        this._modifyUserTrackSource(
+            {
+                action: 'modifyUserData',
+                file: fileid,
+                sourceFile: sourceFile,
+                data: $F(sourceField)
+            },
+            editElement
+        );
+    },
 
-		new Ajax.Request(Controller.url, {
-			method:       'post',
-			parameters: {
-					action:     'modifyUserData',
-					track:      fileName,
-					sourceFile: sourceFile,
-					upload_id:  upload_id,
-					data:       $F(sourceField)
-			},
-			onCreate: function() {
-					if ($(editElement) != null) {
-						$(editElement).update().insert(new Element("div", {id: upload_id + "_form"}));
-						$(editElement).insert(new Element("div", {id: upload_id + "_status"}) );
-					}
-					startAjaxUpload(upload_id);
-			},
-			onSuccess: function (transport) {
-				if ($(editElement) != null)
-					$(editElement).remove();
-				var r = transport.responseJSON;
-				r.tracks.each(function(t) {
-					Controller.rerender_track(t,true,true);
-				});
-				var updater = Ajax_Status_Updater.get(upload_id);
-				if (updater != null)
-					updater.stop();
-				var sections = new Array(custom_tracks_id, track_listing_id);
-				if (using_database())
-					sections.push(public_tracks_id);
-				Controller.update_sections(sections);
-			}
-		});
-  },
-
-  // mirrorTrackSource() is called to mirror a URL to a track
-  mirrorTrackSource:
-  function (sourceURL,trackName,statusElement,displayWhenDone) {
-      this._modifyUserTrackSource( { action:     'upload_file',
-                                     name:       trackName,
-				     mirror_url: sourceURL },
-	                            statusElement,displayWhenDone);
-  },
+    // mirrorTrackSource() is called to mirror a URL to a track
+    mirrorTrackSource:
+    function (sourceURL, trackName, statusElement, displayWhenDone) {
+        this._modifyUserTrackSource(
+            {
+                action: 'upload_file',
+                file: trackName,
+                mirror_url: sourceURL
+            },
+            statusElement,
+            displayWhenDone
+        );
+    },
 
 // monitor_upload is redundant and needs to be refactored
 // the idea is to register a new upload
@@ -1011,7 +1022,7 @@ var GBrowseController = Class.create({
   },
 
   wait_for_initialization:
-  function (html,callback) {
+  function (html, callback) {
       $('main').setOpacity(0.2);
       var html = '<div id="dialog_123" style="position:absolute; left:50px; top:50px; border:5px double black; background: wheat; z-index:100">'
                  + html

@@ -183,16 +183,16 @@ function deleteUpload (fileName) {
 	);
 }
 
-function editUploadData (fileName,sourceFile) {
-	editUpload(fileName,sourceFile);
+function editUploadData (fileid, sourceFile) {
+	editUpload(fileid, sourceFile);
 }
 
-function editUploadConf (fileName) {
-	editUpload(fileName,'conf');
+function editUploadConf (fileid) {
+	editUpload(fileid, 'conf');
 }
 
-function editUpload (fileName, sourceFile) {
-	var editDiv = fileName + "_editfield";
+function editUpload (fileid, sourceFile) {
+	var editDiv = fileid + "_editfield";
 	var editID  = 'edit_' + Math.floor(Math.random() * 99999);
 	$(editDiv).hide();
 	$(editDiv).update("<p><b>" + Controller.translate('EDITING_FILE', sourceFile) + "</b></p>");
@@ -203,9 +203,14 @@ function editUpload (fileName, sourceFile) {
 		Effect.BlindUp($(editDiv), {duration: 0.5, afterFinish: function() { $(editDiv).hide() } });
 	})
 	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: cancel});
-	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button").observe("click", function() { Controller.uploadUserTrackSource(editID, fileName, sourceFile, editDiv) }).update(Controller.translate('SUBMIT')) });
+	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button").observe("click", function() { Controller.uploadUserTrackSource(editID, fileid, sourceFile, editDiv) }).update(Controller.translate('SUBMIT')) });
 	Effect.BlindDown($(editDiv), {duration: 0.5});
-	Controller.downloadUserTrackSource(editID,fileName,sourceFile);
+	Controller.downloadUserTrackSource(editID, fileid, sourceFile);
+}
+
+function reloadURL (fileid, mirrorURL) {
+	var statusDiv = fileid + "_editfield";
+	Controller.mirrorTrackSource(mirrorURL, fileid, statusDiv);
 }
 
 function addAnUploadField(after_element, action, upload_prompt, remove_prompt, field_type, help_link) {
@@ -236,6 +241,9 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 		form.insert({bottom: new Element("input", {type: "hidden", name: "action", value: "upload_file"}) });
 		form.insert({bottom: new Element("input", {type: "hidden", name: "name", value: upload_tag}) });
 		form.insert({bottom: new Element("textarea", {name: "data", id: "edit_field", rows: 20, cols: 100, wrap: "off"}) });
+	} else if (field_type=='url') {
+		form.insert({bottom: new Element("input", {type: "hidden", name: "action", value: "upload_file"}) });
+		form.insert({bottom: new Element("input", {type: "text", name: "mirror_url", size: "100"}) });
 	} else {
 		form.insert({bottom: new Element("input", {type: "hidden", name: "action", value: "import_track"}) });
 		form.insert({bottom: new Element("input", {type: "text", name: "url", id: "import_field", "size": 50}) });

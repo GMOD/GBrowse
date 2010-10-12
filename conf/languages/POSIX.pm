@@ -195,6 +195,10 @@ END
    KEY_POSITION => 'Key position',
 
    UPLOAD      => 'Upload',
+   
+   IMPORT      => 'Import',
+   
+   MIRROR      => 'Mirror',
 
    NEW         => 'New...',
 
@@ -624,6 +628,8 @@ END
    USERNAME_OR_USER_ID       => 'username or user ID',
    USER_ID                   => 'user ID',
    ADD_BUTTON                => '[Add]',
+   EDIT_BUTTON               => '[edit]',
+   OVERWRITE                 => 'If this file exists, overwrite it.',
 
    #------
    # MISC.
@@ -660,7 +666,6 @@ END
                                 '<p>Your uploadID is <b>%s</b></p>',
 
    CLICK_MODIFY_SUBTRACK_SEL => 'Click to modify subtrack selections.',
-   EDIT_BUTTON               => '[edit]',
    CLICK_FOR_MORE            => 'Click for more',
    PLUGIN_BASE_CLASS_DUMP    => "This is the base class for all GBrowse plugins.\n".
                                 "The fact that you're seeing this means that the author of ".

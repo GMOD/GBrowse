@@ -369,7 +369,7 @@ sub ACTION_register_upload {
     my $userdata = $self->render->usertracks;
 
     if ($id && $name) {
-		$self->state->{uploads}{$id} = [$userdata->escape_url($name),0];
+		$self->state->{uploads}{$id} = [$userdata->escape_url($name), 0];
     }
 
     return (204,'text/plain',undef);
@@ -378,19 +378,20 @@ sub ACTION_register_upload {
 sub ACTION_upload_file {
     my $self = shift;
     my $q    = shift;
+    
+    warn "I got to upload_file";
 
-    my $fh   = $q->param('file');
+    my $fh = $q->param('file');
     my $data = $q->param('data');
-    my $url  = $q->param('mirror_url');
+    my $url = $q->param('mirror_url');
     my $workaround = $q->param('workaround');
+    my $overwrite = $q->param('overwrite') || 0;
 
     ($fh || $data || $url) or 
 	return(200,'text/html',JSON::to_json({success=>0,
 					      error_msg=>'empty file'}
 	       ));
-	       
-	cluck $url;
-
+	
     my $upload_id = $q->param('upload_id');
 
     my $render   = $self->render;
@@ -398,12 +399,12 @@ sub ACTION_upload_file {
     my $session  = $render->session;
 
     my $usertracks = $render->user_tracks;
-    my $name       = $fh  ? basename($fh) 
+    my $name       = $fh ? basename($fh) 
 	           			: $url ? $url
                           : $q->param('name');
     $name  ||= 'Uploaded file';
 
-    my $content_type = $fh ? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain';
+    my $content_type = "text/plain"; #? fh? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain'; - seems to be a problem with UploadInfo().
 
     my $track_name = $usertracks->escape_url($name);
 
@@ -413,7 +414,7 @@ sub ACTION_upload_file {
     
     my ($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1)
                                        :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1)
-                                              : $usertracks->upload_file($track_name, $fh, $content_type, 0);
+                                              : $usertracks->upload_file($track_name, $fh, $content_type, !$overwrite);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};

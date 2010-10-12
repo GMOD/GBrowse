@@ -1451,7 +1451,7 @@ sub list_tracks {
 		} @tracks;
 		return join '', @rows;
     } else {
-    	return p($self->translate('THERE_ARE_NO_TRACKS_YET',$listing_type));
+    	return p($self->translate('THERE_ARE_NO_TRACKS_YET', $listing_type));
     }
 }
 
@@ -1694,9 +1694,9 @@ sub render_track_source_files {
 							$mirror_url?
 							a( {
 									-href => "javascript:void(0)",
-									-onClick => "reloadURL('$fileid','$mirror_url')"
+									-onClick => "reloadURL('" . $_->[0] . "','$mirror_url')"
 								},
-								"[reload from $mirror_url]"
+								$self->translate('RELOAD_FROM', $mirror_url)
 							) : 
 							a( {
 									-href    => "javascript:void(0)",

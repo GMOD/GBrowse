@@ -80,7 +80,6 @@ sub set_mirrored {
     my $filename = $self->filename($file);
     my $url = shift;
     my $flagfile = $self->mirror_flag($file);
-    cluck $flagfile;
     open my $i,">", $flagfile or warn "can't open mirror file: $!";
     print $i $url;
     close $i;
@@ -419,7 +418,7 @@ sub upload_file {
 		$fh = $self->install_filter($fh,'bunzip2 -c');
     }
     
-    my $file = $self->add_file($filename);
+    my $file = $self->filename($filename)? $filename : $self->add_file($filename);
     
     # guess the file type from the first non-blank line
     my ($type, $lines, $eol) = $self->guess_upload_type($file, $fh);

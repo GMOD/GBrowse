@@ -949,7 +949,7 @@ var GBrowseController = Class.create({
                 if ($(statusElement) != null) {
                     $(statusElement).update();
                     $(statusElement).insert(new Element("div", {id: upload_id + "_form"}));
-                    $(statusElement).insert(new Element("div", {id: upload_id + "_status"}));
+                    $(statusElement).insert(new Element("span", {id: upload_id + "_status"}));
                 }
                 startAjaxUpload(upload_id);
             },

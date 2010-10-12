@@ -57,17 +57,18 @@ function startAjaxUpload(upload_id) {
 	
 	// Create & insert the status update elements.
 	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
-	status.insert(new Element("span").update(Controller.translate('UPLOADING') + "&nbsp;"));
+	status.insert(new Element("span").update(Controller.translate('UPLOADING')));
 	var cancel = new Element("a", {href: 'javascript:void(0)'}).update("[" + Controller.translate('CANCEL') + "]");
 	cancel.observe("click", function() {
 		Controller.cancel_upload(upload_id + "_status", upload_id)
 	});
 	status.insert({after: cancel});
+	status.insert({after: "&nbsp;"});
 	
 	// This hash stores all currently-loading status updaters.
 	if (Ajax_Status_Updater == null)
 		Ajax_Status_Updater = new Hash();
-		
+	
 	var updater = new Ajax.PeriodicalUpdater(
 		{
 			success: status.down('span'),
@@ -237,18 +238,21 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	if (field_type == 'upload') {
 		form.insert({bottom: new Element("input", {type: "hidden", name: "action", value: "upload_file"}) });
 		form.insert({bottom: new Element("input", {type: "file", name: "file", id: "upload_field"}) });
+		form.insert({bottom: new Element("input", {type: "submit", name: "submit", value: Controller.translate('UPLOAD')}) });
 	} else if (field_type == 'edit') {
 		form.insert({bottom: new Element("input", {type: "hidden", name: "action", value: "upload_file"}) });
 		form.insert({bottom: new Element("input", {type: "hidden", name: "name", value: upload_tag}) });
 		form.insert({bottom: new Element("textarea", {name: "data", id: "edit_field", rows: 20, cols: 100, wrap: "off"}) });
+		form.insert({bottom: new Element("input", {type: "submit", name: "submit", value: Controller.translate('UPLOAD')}) });
 	} else if (field_type=='url') {
 		form.insert({bottom: new Element("input", {type: "hidden", name: "action", value: "upload_file"}) });
 		form.insert({bottom: new Element("input", {type: "text", name: "mirror_url", size: "100"}) });
+		form.insert({bottom: new Element("input", {type: "submit", name: "submit", value: Controller.translate('IMPORT')}) });
 	} else {
 		form.insert({bottom: new Element("input", {type: "hidden", name: "action", value: "import_track"}) });
 		form.insert({bottom: new Element("input", {type: "text", name: "url", id: "import_field", "size": 50}) });
+		form.insert({bottom: new Element("input", {type: "submit", name: "submit", value: Controller.translate('IMPORT')}) });
 	};
-	form.insert({bottom: new Element("input", {type: "submit", name: "submit", value: Controller.translate('UPLOAD')}) });
 	form.insert({bottom: new Element("input", {type: "hidden", name: "upload_id", value: upload_tag}) });
 	form.insert({bottom: "&nbsp;" });
 	var remove_link = new Element("a", {href: "javascript:void(0)"}).update(remove_prompt);
@@ -256,6 +260,11 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 		Effect.BlindUp($(upload_tag), {duration: 0.25, afterFinish: function() { $(upload_tag).remove() } });
 	});
 	form.insert({bottom: remove_link});
+	if (field_type == "upload") {
+		form.insert({bottom: new Element("br")});
+		form.insert({bottom: new Element("input", {type: "checkbox", name: "overwrite", id: "overwrite"}) });
+		form.insert({bottom: new Element("label", {"for": "overwrite"}).update(Controller.translate('OVERWRITE')) });
+	}
 	var status_box = new Element("span", {id: upload_tag + "_status", style: "margin-left: 0.5em; margin-right: 0.5em;"});
 	
 	// Now wrap it in a DIV container and add it to the DOM.
@@ -302,13 +311,13 @@ function shareFile(fileid, userid) {
 				userid: userid
 			},
 			onSuccess: function (transport) {
-				var tracks = transport.responseText.evalJSON(true).tracks;
-				if (tracks != null)
-					tracks.each(function(tid) { Controller.add_track(tid) });
 				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
 					sections.push(public_tracks_id);
 				Controller.update_sections(sections);
+				var tracks = transport.responseText.evalJSON(true).tracks;
+				if (tracks != null)
+					tracks.each(function(tid) { Controller.add_track(tid) });
 			}
 		}
 	);
@@ -327,13 +336,13 @@ function unshareFile(fileid, userid) {
 				userid: userid
 			},
 			onSuccess: function (transport) {
-				var tracks = transport.responseText.evalJSON(true).tracks;
-				if (tracks != null)
-					tracks.each(function(tid) { Controller.delete_track(tid) });
 				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
 					sections.push(public_tracks_id);
 				Controller.update_sections(sections);
+				var tracks = transport.responseText.evalJSON(true).tracks;
+				if (tracks != null)
+					tracks.each(function(tid) { Controller.delete_track(tid) });
 			}
 		}
 	);

@@ -808,18 +808,17 @@ sub segment_info_object {
         overview_width       => $width + 2 * $pad,
         details_mult         => $renderer->details_mult(),
     );
-     if ( $renderer->details_mult ) {
+    if ( $renderer->details_mult ) {
         $segment_info_object{'details_mult'}       = $renderer->details_mult();
     }
     if ( $settings->{region_size} ) {
-        my ( $rstart, $rend )
-            = $self->get_regionview_start_stop( $settings, $segment->start, $segment->end,
-            $whole_segment->start, $whole_segment->end );
+        my ( $rstart, $rend ) = ( $self->region_segment->start, $self->region_segment->end );
         my $rlen  = abs( $rend - $rstart );
         my $ratio = $rlen / $width;
         $segment_info_object{'region_start'}       = $rstart;
         $segment_info_object{'region_stop'}        = $rend;
         $segment_info_object{'region_pixel_ratio'} = $rlen / $width;
+        $segment_info_object{'region_width'}       = $width + 2 * $pad;
     }
     return \%segment_info_object;
 }
@@ -3325,35 +3324,6 @@ sub drag_script {
  // ]]>
  </script>
 END
-}
-
-=head2 get_regionview_start_stop
-
- usage
-
-Description
-
-=cut
-
-sub get_regionview_start_stop {
-  my $self = shift;
-  my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;
-  my $regionview_length = $settings->{region_size};
-  if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
-    $regionview_length = $detail_end - $detail_start + 1;
-  }
-  my $midpoint = ($detail_end + $detail_start) / 2;
-  my $regionview_start = int($midpoint - $regionview_length/2 + 1);
-  my $regionview_end = int($midpoint + $regionview_length/2);
-  if ($regionview_start < $whole_start) {
-    $regionview_start = 1;
-    $regionview_end   = $regionview_length;
-  }
-  if ($regionview_end > $whole_end) {
-    $regionview_start = $whole_end - $regionview_length + 1;
-    $regionview_end   = $whole_end;
-  }
-  return ($regionview_start, $regionview_end);
 }
 
 ##################### utilities #####################

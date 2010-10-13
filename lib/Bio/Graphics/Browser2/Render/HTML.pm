@@ -352,6 +352,7 @@ sub render_html_head {
       ajax_upload.js
       tabs.js
       track_configure.js
+      track_pan.js
       controller.js
     );
 

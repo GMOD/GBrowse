@@ -2737,7 +2737,7 @@ sub download_track_menu {
     my $unload      = 'window.onbeforeunload=void(0)';
     my $byebye      = 'Balloon.prototype.hideTooltip(1)';
 
-    my $segment_str = segment_stranslate($segment);
+    my $segment_str = segment_str($segment);
 
     my $html = '';
     $html   .= div({-align=>'center'},

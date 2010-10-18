@@ -151,11 +151,12 @@ sub errstr {
 }
 
 sub put_data {
-    my $self            = shift;
-    my ($gd,$map)       = @_;
-    $self->{data}{gd}   = $gd->can('gd2') ? $gd->gd2 : $gd;
-    $self->{data}{map}  = $map;
-    my $datafile        = $self->datafile;
+    my $self              = shift;
+    my ($gd,$map,$titles) = @_;
+    $self->{data}{gd}     = $gd->can('gd2') ? $gd->gd2 : $gd;
+    $self->{data}{map}    = $map;
+    $self->{data}{titles} = $titles;
+    my $datafile          = $self->datafile;
     store $self->{data},$datafile;
     $self->unlock;
     unlink $self->errorfile if -e $self->errorfile;
@@ -200,6 +201,12 @@ sub map {
     my $self = shift;
     my $data = $self->get_data or return;
     return $data->{map};
+}
+
+sub titles {
+    my $self = shift;
+    my $data = $self->get_data or return;
+    return $data->{titles};
 }
 
 sub width {

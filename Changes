@@ -1,3 +1,9 @@
+2.20
+    * Chris -- describe your changes
+    * Tony -- describe your changes
+    * Subtrack labels now float on top of the underlying image data so that they show even when
+      scrolling around.
+
 2.16
      * Added code to recognize and strip whitespace from search coordinates. This 
        allows "chr1:2,000 .. 1,180,000" to work as a search term.

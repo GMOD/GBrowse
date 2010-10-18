@@ -388,11 +388,13 @@ sub render_tracks {
 	
 	my $response  = $requests->{$label};
 	my $map       = $response->map;
+	my $titles    = $response->titles;
 	my $width     = $response->width;
 	my $height    = $response->height;
 	my $imagedata = $response->gd;
 
 	$results{$label} = {map       => $map,
+			    titles    => $titles,
 			    width     => $width,
 			    height    => $height,
 			    imagedata => eval{$imagedata->gd2}};

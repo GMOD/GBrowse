@@ -33,3 +33,9 @@ IMG.trackimg      {
 .titlebar:hover {
 	     background:lightsteelblue; 
 	      }
+.subtrack {
+    z-index:11;
+    position:absolute;
+    font-weight:bold;
+    font-size: 9pt;
+}

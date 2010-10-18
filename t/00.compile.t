@@ -46,6 +46,7 @@ sub compiles_ok {
             diag "stdout: $stdout";
             diag "stderr: $stderr";
         }
+	chomp $stdout;
         is( $stdout, '', "$cat_path nothing on stdout" );
     }
 }

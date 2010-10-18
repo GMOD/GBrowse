@@ -367,6 +367,7 @@ sub render_tracks {
         my $data   = $requests->{$label};
         my $gd     = eval{$data->gd} or next;
         my $map    = $data->map;
+        my $titles = $data->titles;
         my $width  = $data->width;
         my $height = $data->height;
         my $url    = $self->source->generate_image($gd);
@@ -380,8 +381,9 @@ sub render_tracks {
             width    => $width,
             height   => $height,
             url      => $url,
+	    titles   => $titles,
             status   => $status,
-	   		section  => $args->{section},
+	    section  => $args->{section},
         );
     }
     
@@ -397,6 +399,7 @@ sub wrap_rendered_track {
     my $width  = $args{'width'};
     my $height = $args{'height'};
     my $url    = $args{'url'};
+    my $titles = $args{'titles'};
 
     # track_type Used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
@@ -636,12 +639,16 @@ sub wrap_rendered_track {
 		$padr = $image_pad unless defined $padr;
 		$width = $settings->{width} + $padl + $padr;
      }
-     return div({-class=>'centered_block',
-		 -style=>"width:${width}px;position:relative;overflow:hidden"
-		},
- 	       ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
-         . ( $map_html || '' );
 
+    my $subtrack_labels = join '',map {
+	my ($label,$left,$top) = @$_;
+	div({-class=>'subtrack',-style=>"top:${top}px;left:20px"},$label);
+    } @$titles;
+    return div({-class=>'centered_block',
+		-style=>"width:${width}px;position:relative;overflow:hidden"
+	       },
+ 	       ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $img . $pad_img )
+	. ( $map_html || '' );
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 
@@ -763,10 +770,12 @@ sub run_remote_requests {
 	    my $contents = Storable::thaw($response->content);
 	    for my $label (keys %$contents) {
 		my $map = $contents->{$label}{map}        
-		or die "Expected a map from remote server, but got nothing!";
+		  or die "Expected a map from remote server, but got nothing!";
+		my $titles = $contents->{$label}{titles}        
+		  or die "Expected titles from remote server, but got nothing!";
 		my $gd2 = $contents->{$label}{imagedata}  
-		or die "Expected imagedata from remote server, but got nothing!";
-		$requests->{$label}->put_data($gd2,$map);
+		  or die "Expected imagedata from remote server, but got nothing!";
+		$requests->{$label}->put_data($gd2,$map,$titles);
 	    }
 	    $slave_status->mark_up($url);
 	}
@@ -958,6 +967,7 @@ sub render_scale_bar {
         my $no_tick_units = $source->global_setting('no tick units');
 
 	if ($args{section} eq 'detail') {
+	    warn "width = $state->{width}, details_mult=",$self->details_mult;
 	    my $scale_feature = $self->make_scale_feature($wide_segment,
 							  $state->{width});
 	    $panel->add_track(
@@ -1020,7 +1030,7 @@ sub render_image_pad {
 	my $panel = Bio::Graphics::Panel->new(@panel_args);
 	$cache->lock;
 	my $gd = $panel->gd;
-	$cache->put_data($gd,'');
+	$cache->put_data($gd,'',[]);
     }
 
     my $gd = $cache->gd;
@@ -1048,6 +1058,7 @@ sub make_scale_feature {
     my ($segment,$width) = @_;
     return unless $segment;
     my $length = $segment->length;
+    $length   /= $self->details_mult;
 
     # how long is 1/5 of the width?
     my $scale        = $length/$width;
@@ -1066,7 +1077,7 @@ sub make_scale_feature {
     $label       .= ' '; # more attractive
     my $size     = $guesstimate/$scale;
     my $left     = ($width-$size)/2;
-    my $start    = int ($segment->start + $left * $scale);
+    my $start    = int (($segment->start + $segment->end)/2 - $guesstimate/2);
     my $end      = $start + $guesstimate - 1;
 
     return Bio::Graphics::Feature->new(-display_name => $label,
@@ -1341,7 +1352,8 @@ sub run_local_requests {
 	my $multiple_tracks = $base =~ /^(http|ftp|file|das|plugin):/ 
 	    || $source->code_setting($base=>'remote feature');
 
-        my @keystyle = ( -key_style => 'between' )
+        my @keystyle = ( -key_style    => 'between',
+	    )
             if $multiple_tracks;
 
 	my $key = $source->setting( $base => 'key' ) || '' ;
@@ -1376,11 +1388,12 @@ sub run_local_requests {
 	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" } unless $has_sigset;
 	    alarm($timeout);
 
-	    my ($gd,$map);
+	    my ($gd,$map,$titles);
 
 	    if (my $hide = $source->semantic_setting($label=>'hide',$self->segment_length)) {
-		$gd  = $self->render_hidden_track($hide,$args);
-		$map = [];
+		$gd     = $self->render_hidden_track($hide,$args);
+		$map    = [];
+		$titles = [];
 	    }
 
 	    else {
@@ -1421,7 +1434,9 @@ sub run_local_requests {
 		}
 
 		# == generate the images and maps in background==
-		$gd  = $panel->gd;
+		$gd     = $panel->gd;
+		$titles = $panel->key_boxes;
+		foreach (@$titles) {splice (@$_,-1)}  # don't want to store all track config data to cache!
 		$self->debugging_rectangles($gd,scalar $panel->boxes)
 		    if DEBUGGING_RECTANGLES;
 		$map = $self->make_map( scalar $panel->boxes,
@@ -1429,7 +1444,7 @@ sub run_local_requests {
 					\%trackmap, 0 );
 	    }
 
-	    $requests->{$label}->put_data($gd, $map );
+	    $requests->{$label}->put_data($gd, $map, $titles );
 	    alarm(0);
 	};
 	alarm(0);
@@ -1651,7 +1666,8 @@ sub add_features_to_track {
 							       -name       => $stt->id2label($id),
 							       -start      => $segment->start,
 							       -end        => $segment->end,
-							       -seq_id    => $segment->seq_id);
+							       -seq_id     => $segment->seq_id,
+		  );
 	      $has_subtracks{$l}++;
 	      $groups{$l}{$id}->add_segment($feature);
 	      next;
@@ -1885,6 +1901,7 @@ sub create_panel_args {
 	      -bgcolor      => $source->global_setting("$section bgcolor") || 'wheat',
 	      -width        => $section eq 'detail'? $settings->{width} * $self->details_mult() : $settings->{width},
 	      -key_style    => $keystyle,
+              -suppress_key => 1,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $image_class->gdMediumBoldFont->height+2,
               -pad_bottom   => 3,
@@ -2430,7 +2447,7 @@ sub hilite_regions_closure {
 
 sub details_mult {
 	my $self = shift;
-    my $value = $self->source->global_setting('details multiplier') || 1;
+	my $value = $self->source->global_setting('details multiplier') || 1;
 	$value = 0.1 if ($value < 0.1);  #lower limit 
 	$value = 25 if ($value > 25);	#set upper limit for performance reasons (prevent massive image files)
 	return $value;

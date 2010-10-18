@@ -1678,6 +1678,7 @@ sub add_features_to_track {
     
     $track->add_feature($_) foreach values %$g;
     $feature_count{$l} += keys %$g;
+
   }
 
   # now reconfigure the tracks based on their counts
@@ -2170,10 +2171,19 @@ sub do_description {
 sub make_link {
   my $self     = shift;
   my ($feature,$panel,$label,$track)  = @_;
+  my $label_fix = $label;
+
+  if (ref $label && $label->{name}){ 
+    $label_fix = $label->{name};
+    if ($label_fix =~/^(plugin)\:/){$label_fix = join(":",($',$1));}
+  }
 
   my $data_source = $self->source;
   my $ds_name     = $data_source->name;
 
+  my $link     = $data_source->code_setting($label_fix,'link');
+
+  if (! defined $link) {
   if ($feature->can('url')) {
     my $link = $feature->url;
     return $link if defined $link;
@@ -2182,13 +2192,14 @@ sub make_link {
       if $label
       && $label =~ /^[a-zA-Z_]/
       && $label->isa('Bio::Graphics::FeatureFile');
+  }
+
 
   $panel ||= 'Bio::Graphics::Panel';
   $label ||= $data_source->feature2label($feature);
   $label ||= 'general';
 
   # most specific -- a configuration line
-  my $link     = $data_source->code_setting($label,'link');
 
   # less specific - a smart feature
   $link        = $feature->make_link if $feature->can('make_link') && !defined $link;

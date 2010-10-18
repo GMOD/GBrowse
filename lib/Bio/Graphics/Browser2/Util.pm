@@ -103,6 +103,11 @@ sub citation {
   my $data_source = shift;
   my $label       = shift;
   my $language    = shift;
+  if ($label =~ /^plugin\:/) { 
+    my $label_fix = $'; 
+    $label_fix =~ s/\:detail$//;
+    $label = join(":",($label_fix,'plugin'));
+  }
   my $c;
   if ($language) {
     for my $l ($language->language) {

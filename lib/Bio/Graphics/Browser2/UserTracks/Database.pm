@@ -63,20 +63,20 @@ sub _new {
 	# If a required column doesn't exist, add it.
 	my $sth = $uploadsdb->prepare("SELECT * from uploads LIMIT 1");
 	$sth->execute;
-	my $alter_sql = "ALTER TABLE uploads ADD (";
-	my @columns_to_create;
-	my $run = 0;
 	if (@{$sth->{NAME_lc}} != keys %columns) {
-	    warn "Database schema is incorrect, adding missing columns";
+	    my $alter_sql = "ALTER TABLE uploads ADD (";
+	    my @columns_to_create;
+	    my $run = 0;
 	    foreach (keys %columns) {
 	        unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
         	    push @columns_to_create, "$_ " . $columns{$_};
         	    $run++;
         	}
 	    }
+	    warn "Uploads database schema is incorrect, adding @columns_to_create column(s).";
+	    $alter_sql .= (join ", ", @columns_to_create) . ");";
+    	$uploadsdb->do($alter_sql) if $run;
 	}
-	$alter_sql .= (join ", ", @columns_to_create) . ");";
-	$uploadsdb->do($alter_sql) if $run;
 	
 	my $self = bless {
     	config	  => $data_source,

@@ -285,7 +285,7 @@ sub add_file {
     my $imported = shift || 0;
     my $description = $uploadsdb->quote(shift);
     my $uploadsid = shift || $self->{uploadsid};
-    my $shared = $uploadsdb->quote(shift || "private");
+    my $shared = $uploadsdb->quote(shift || ($self =~ /admin/)? "public" : "private");
     
 	my $fileid = md5_hex($uploadsid.$filename);
 	my $now = $self->nowfun;

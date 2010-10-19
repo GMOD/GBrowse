@@ -803,7 +803,7 @@ sub segment_info_object {
         detail_start         => $segment->start,
         detail_stop          => $segment->end,
         'ref'                => $segment->seq_id,
-        details_pixel_ratio  => $segment->length / $settings->{width},
+        details_pixel_ratio  => $segment->length / ($settings->{width} * $renderer->details_mult()),
         detail_width         => $settings->{width}*$renderer->details_mult() + 2 * $pad,
         overview_width       => $width + 2 * $pad,
         details_mult         => $renderer->details_mult(),
@@ -2260,11 +2260,15 @@ sub asynchronous_update_detail_scale_bar {
 
     my $image_id = DETAIL_SCALE_LABEL . "_image";
 
+    my ($scale_size, $scale_label) = $renderer->calculate_scale_size($seg->length/$renderer->details_mult, $width/$renderer->details_mult);
+
     return {
-        url      => $url,
-        height   => $height,
-        width    => $width,
-        image_id => $image_id,
+        url         => $url,
+        height      => $height,
+        width       => $width,
+        image_id    => $image_id,
+        scale_size  => $scale_size,
+        scale_label => $scale_label,
     };
 }
 

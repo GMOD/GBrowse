@@ -2,7 +2,11 @@
     * User uploads can be run in the usual file-based mode or with a new database-driven system that
       supports sharing files between users based on public, group, casual (with a sharing link)
       and private permissions.
-    * Tony -- describe your changes
+    * Added the ability to load wider details images. Detail tracks can then be dragged left and right
+      without having to load more data from the server. To enable, add a property to the conf file
+      called "details multiplier" and give it a value greater than 1 (3 is recommended).
+    * Internationalization has been updated so that almost all strings in GBrowse can now be translated,
+      including strings in javascript.
     * Subtrack labels now float on top of the underlying image data so that they show even when
       scrolling around.
 

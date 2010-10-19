@@ -389,9 +389,22 @@ var GBrowseController = Class.create({
                     Controller.update_scale_bar(overview_scale_bar_hash);
                 if (region_scale_bar_hash)
                     Controller.update_scale_bar(region_scale_bar_hash);
-                if (detail_scale_bar_hash)
+                if (detail_scale_bar_hash){
                     Controller.update_scale_bar(detail_scale_bar_hash);
+                    var detail_width         = Controller.segment_info.detail_width;
+                    var details_pixel_ratio  = Controller.segment_info.details_pixel_ratio;
+                    var scale_width          = Math.round(detail_scale_bar_hash.scale_size / details_pixel_ratio);
+                    var scale_left           = Math.round((Controller.segment_info.overview_width - scale_width) / 2) - 30;
 
+                    var scale_div = $("detail_scale_scale");
+                    if (scale_div) {
+                        scale_div.innerHTML = detail_scale_bar_hash.scale_label + 
+                            "<span style='display: inline-block; margin-left:5px; margin-bottom:4px; border-left: 1px solid black; border-right: 1px solid black; height:8px'>" +
+                            "<span style='display: inline-block; border-bottom: 1px solid black; height: 4px; width:" + scale_width + "px'</div></div>";
+
+                        scale_div.setStyle({ left: scale_left+'px' });
+                    }
+                }
                 // Update the segment sections
                 Controller.update_sections( Controller.segment_observers.keys());
                 $('details_msg').innerHTML = results.details_msg;
@@ -404,8 +417,10 @@ var GBrowseController = Class.create({
 
     scroll:
     function (direction,length_units) {
-        var length = this.segment_info.detail_stop - this.segment_info.detail_start + 1;
-        this.update_coordinates(direction + ' ' + Math.round(length_units*length));
+        if (!TrackPan.scroll(direction,length_units)) {
+            var length = this.segment_info.detail_stop - this.segment_info.detail_start + 1;
+            this.update_coordinates(direction + ' ' + Math.round(length_units*length));
+        }
     }, // end scroll
 
     add_track:

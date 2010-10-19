@@ -593,6 +593,14 @@ sub wrap_rendered_track {
         }
     );
 
+    my $image_pad = $self->image_padding;
+    my $padl      = $source->global_setting('pad_left');
+    my $padr      = $source->global_setting('pad_right');
+    $padl = $image_pad unless defined $padl;
+    $padr = $image_pad unless defined $padr;
+    $width = $settings->{width} + $padl + $padr;
+
+    my $overlay_div = '';
 
     # Add arrows for panning to details scalebar panel
     if ($is_scalebar && $is_detail) {
@@ -626,29 +634,23 @@ sub wrap_rendered_track {
                                -onClick => "Controller.scroll('right',1)",
                              }
             );
-
-	$img = $pan_left2 . $pan_left . $img . $pan_right . $pan_right2;
-    }
-    $img = div( { -id => "${label}_inner_div" }, $img ); #Should probably improve this
 	
-     if ($is_detail) {
-		my $image_pad = $self->image_padding;
-		my $padl      = $source->global_setting('pad_left');
-		my $padr      = $source->global_setting('pad_right');
-		$padl = $image_pad unless defined $padl;
-		$padr = $image_pad unless defined $padr;
-		$width = $settings->{width} + $padl + $padr;
-     }
+	my $scale_div = div( { -id => "detail_scale_scale", -style => "position:absolute; top:5px", }, "" );
+
+        $overlay_div = div( { -id => "${label}_overlay_div", -style => "width:${width}px; position:absolute; top:0px; left:0px", }, $pan_left2 . $pan_left . $pan_right . $pan_right2 . $scale_div);
+    }
+
+    my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
 
     my $subtrack_labels = join '',map {
 	my ($label,$left,$top) = @$_;
 	div({-class=>'subtrack',-style=>"top:${top}px;left:20px"},$label);
     } @$titles;
+
     return div({-class=>'centered_block',
-		-style=>"width:${width}px;position:relative;overflow:hidden"
-	       },
- 	       ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $img . $pad_img )
-	. ( $map_html || '' );
+		 -style=>"width:${width}px;position:relative;overflow:hidden"
+		},
+                ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 
@@ -966,18 +968,6 @@ sub render_scale_bar {
         my $units = $source->global_setting('units') || '';
         my $no_tick_units = $source->global_setting('no tick units');
 
-	if ($args{section} eq 'detail') {
-	    warn "width = $state->{width}, details_mult=",$self->details_mult;
-	    my $scale_feature = $self->make_scale_feature($wide_segment,
-							  $state->{width});
-	    $panel->add_track(
-		$scale_feature,
-		-glyph    => 'span',
-		-label    => 1,
-		-height   => 6,
-		-label_position => 'left'
-		);
-	}
         $panel->add_track(
              $wide_segment,
             -glyph          => 'arrow',
@@ -1053,12 +1043,9 @@ sub label_density {
       || 10;
 }
 
-sub make_scale_feature {
+sub calculate_scale_size {
     my $self      = shift;
-    my ($segment,$width) = @_;
-    return unless $segment;
-    my $length = $segment->length;
-    $length   /= $self->details_mult;
+    my ($length,$width) = @_;
 
     # how long is 1/5 of the width?
     my $scale        = $length/$width;
@@ -1072,8 +1059,25 @@ sub make_scale_feature {
     elsif ($base < 5) { $base = 5 }
     else              { $base = 10};
     $guesstimate = $base * $exp;
-
     my $label    = $self->source->unit_label($guesstimate);
+
+    return ($guesstimate, $label);
+}
+
+sub log10 { log(shift)/log(10) }
+
+# Deprecated. This method was used to add the scale to the detail scale track. This is now done in javascript.
+sub make_scale_feature {
+    my $self      = shift;
+    my ($segment,$width) = @_;
+    return unless $segment;
+
+    my $length   = $segment->length / $self->details_mult;
+
+    my ($guesstimate, $label) = $self->calculate_scale_size($length, $width);
+
+    my $scale = $segment->length/$width;
+
     $label       .= ' '; # more attractive
     my $size     = $guesstimate/$scale;
     my $left     = ($width-$size)/2;
@@ -1085,8 +1089,6 @@ sub make_scale_feature {
 				       -end          => $end,
 				       -seq_id       => $segment->seq_id);
 }
-
-sub log10 { log(shift)/log(10) }
 
 sub make_map {
   my $self = shift;

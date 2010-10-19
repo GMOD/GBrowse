@@ -24,8 +24,10 @@ var GBrowseTrackPan = Class.create({
 	// 0 < x < 1: somewhere in the middle
 	update_pan_position:
 	function (x) {
-		if      (x > 0.99) { x = 1; } // x must be between 0 and 1
-		else if (x < 0.01) { x = 0; } // 
+		if      (x > 1) { x = 1; } // x must be between 0 and 1
+		else if (x < 0) { x = 0; } // 
+
+		this.x = x;
 
 		var pos = Math.round(- x * this.detail_draggable_width) + 'px';
 
@@ -60,10 +62,10 @@ var GBrowseTrackPan = Class.create({
 			},
 			onDrag: function () { TrackPan.update_pan_position((parseInt($('overview_marker').style.left) - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) },
 			onEnd:  function () { TrackPan.update_pan_position((parseInt($('overview_marker').style.left) - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) }
-    	});
+		});
 
 		$('overview_marker').style.left  = this.overview_segment_start + 'px';
-		$('overview_marker').style.width = Math.round(this.overview_segment_width/this.details_mult) + 'px';
+		$('overview_marker').style.width = Math.floor(this.overview_segment_width/this.details_mult) + 'px';
 	},
 
 	// Creates the semi-transparent div that marks the current view on the region track
@@ -91,7 +93,7 @@ var GBrowseTrackPan = Class.create({
 	    	});
 		}
 		$('region_marker').style.left  = this.region_segment_start + 'px';
-		$('region_marker').style.width = Math.round(this.region_segment_width/this.details_mult) + 'px';
+		$('region_marker').style.width = Math.floor(this.region_segment_width/this.details_mult) + 'px';
 	},
 
 
@@ -127,7 +129,7 @@ var GBrowseTrackPan = Class.create({
 		this.create_region_pos_marker();
 
 		this.each_details_track(function(gbtrack) {
-			if (gbtrack.track_id == 'Detail Scale') {       // Special case for detail scale track
+			if (gbtrack.track_id == 'Detail Scale') {       // Special case for detail scale track - dragging it interferes with segment selection
 				gbtrack.get_image_div().makePositioned();
 				return;
 			}
@@ -141,6 +143,21 @@ var GBrowseTrackPan = Class.create({
 		});
 
 		this.update_pan_position(0.5); // start in the middle
+	},
+
+	//Similar to Controller scroll method
+	scroll:
+	function (direction,length_units) {
+		var newPos = this.x;
+		if (direction == 'right') {
+			if (this.x >= 0.95) { return false; }
+			newPos += length_units/(this.details_mult-1);
+		} if (direction == 'left') {
+			if (this.x <= 0.05) { return false; }
+			newPos -= length_units/(this.details_mult-1);
+		}
+		this.update_pan_position(newPos);
+		return true;
 	}
 
 });

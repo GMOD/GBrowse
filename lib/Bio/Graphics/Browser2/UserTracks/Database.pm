@@ -38,22 +38,45 @@ sub _new {
 		print "Error: Could not open uploads database.";
 		die "Could not open uploads database with $credentials";
 	}
-	unless ($uploadsdb->do("SELECT imported FROM uploads")) {
+	
+	my %columns = (
+	    uploadid => "varchar(32) not null PRIMARY key",
+		userid => "varchar(32) not null",
+		path => "text",
+		description => "text",
+		imported => "boolean not null",
+		creation_date => "datetime not null",
+		modification_date => "datetime",
+		sharing_policy => (($credentials =~ /mysql/i)? "ENUM('private', 'public', 'group', 'casual')" : "varchar(12)") . " not null",
+		users => "text",
+		public_users => "text"
+	);
+	
+	# If the database doesn't exist, create it.
+	unless ($uploadsdb->do("SELECT imported FROM uploads LIMIT 1")) {
 		warn "Uploads table didn't exist, creating...";
-		my $creation_sql = "CREATE TABLE uploads (";
-		$creation_sql   .= "uploadid varchar(32) not null PRIMARY key, ";
-		$creation_sql   .= "userid varchar(32) not null, ";
-		$creation_sql   .= "path text, ";
-		$creation_sql   .= "description text, ";
-		$creation_sql   .= "imported boolean not null, ";
-		$creation_sql   .= "creation_date datetime not null, ";
-		$creation_sql   .= "modification_date datetime, ";
-		$creation_sql   .= "sharing_policy " . (($credentials =~ /mysql/i)? "ENUM('private', 'public', 'group', 'casual')" : "varchar(12)") . " not null, ";
-		$creation_sql   .= "users text, ";
-		$creation_sql   .= "public_users text";
-		$creation_sql   .= ")" . (($credentials =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
+		# This creates the SQL to make the table.       This middle section is simply outputting %columns as "$key $value, ";
+		my $creation_sql = "CREATE TABLE uploads (" . (join ", ", map { "$_ " . $columns{$_} } keys %columns) . ")" . (($credentials =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
 		$uploadsdb->do($creation_sql) or die "Could not create uploads database";
 	}
+	
+	# If a required column doesn't exist, add it.
+	my $sth = $uploadsdb->prepare("SELECT * from uploads LIMIT 1");
+	$sth->execute;
+	my $alter_sql = "ALTER TABLE uploads ADD (";
+	my @columns_to_create;
+	my $run = 0;
+	if (@{$sth->{NAME_lc}} != keys %columns) {
+	    warn "Database schema is incorrect, adding missing columns";
+	    foreach (keys %columns) {
+	        unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
+        	    push @columns_to_create, "$_ " . $columns{$_};
+        	    $run++;
+        	}
+	    }
+	}
+	$alter_sql .= (join ", ", @columns_to_create) . ");";
+	$uploadsdb->do($alter_sql) if $run;
 	
 	my $self = bless {
     	config	  => $data_source,
@@ -176,12 +199,12 @@ sub share {
 		# Get the current users.
 		my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
 		my $uploadsdb = $self->{uploadsdb};
-		my $users = $uploadsdb->selectrow_array("SELECT $users_field FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
+		my $users = $self->field($users_field, $file);
 	
 		#If we find the user's ID, it's already been added, just return that it worked.
 		return 1 if ($users =~ $userid);
 		$users .= ", " if $users;
-		return $uploadsdb->do("UPDATE uploads SET $users_field = " . $uploadsdb->quote($users . $userid) . "  WHERE uploadid = " . $uploadsdb->quote($file));
+		return $self->field($users_field, $file, $users);
 	} else {
 		warn "Share() attempted in an illegal situation on $file by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
 	}
@@ -199,14 +222,14 @@ sub unshare {
 		# Get the current users.
 		my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
 		my $uploadsdb = $self->{uploadsdb};
-		my $users = $uploadsdb->selectrow_array("SELECT $users_field FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
+		my $users = $self->field($users_field, $file);
 	
 		#If we find the user's ID, it's already been removed, just return that it worked.
 		return 1 if ($users !~ $userid);
 		$users =~ s/$userid(, )?//i;
 		$users =~ s/(, $)//i; #Not sure if this is the best way to remove a trailing ", "...probably not.
 	
-		return $uploadsdb->do("UPDATE uploads SET $users_field = " . $uploadsdb->quote($users) . " WHERE uploadid = " . $uploadsdb->quote($file));
+		return $self->field($users_field, $file, $users);
 	} else {
 		warn "Unshare() attempted in an illegal situation on $file by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
 	}
@@ -244,7 +267,7 @@ sub update_modified {
     my $uploadsdb = $self->{uploadsdb};
     my $file = shift or confess "No input or invalid input given to update_modified()";
     my $now = $self->nowfun;
-    return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = " . $uploadsdb->quote($file));
+    return $self->field("modification_date", $file, $now);
 }
 
 # Created (File ID) - Returns creation date of $file, cannot be set.
@@ -327,7 +350,7 @@ sub is_imported {
 	my $self = shift;
 	my $file = shift or confess "No file ID given to is_imported()";
 	my $uploadsdb = $self->{uploadsdb};
-	return $uploadsdb->selectrow_array("SELECT imported FROM uploads WHERE uploadid = " . $uploadsdb->quote($file)) || 0;
+	return $self->field("imported", $file) || 0;
 }
 
 # Permissions (File[, New Permissions]) - Return or change the permissions.
@@ -360,7 +383,7 @@ sub owner {
 	my $self = shift;
 	my $file = shift or return;
 	my $uploadsdb = $self->{uploadsdb};
-	return $uploadsdb->selectrow_array("SELECT userid FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
+	return $self->field("userid", $file);
 }
 
 # Is Shared With Me (Filename) - Returns 1 if a track is shared with the logged-in (or specified) user, 0 if not.
@@ -368,7 +391,7 @@ sub is_shared_with_me {
 	my $self = shift;
 	my $file = shift or confess "No file ID given to is_shared_with_me()";
 	my $uploadsdb = $self->{uploadsdb};
-	my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE path = " . $uploadsdb->quote($file) . " AND users LIKE " . $uploadsdb->quote("%" . $self->{userid} . "%"));
+	my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE uploadid = " . $uploadsdb->quote($file) . " AND users LIKE " . $uploadsdb->quote("%" . $self->{userid} . "%"));
 	return (@$results > 0);
 }
 

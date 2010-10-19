@@ -1440,7 +1440,7 @@ sub list_tracks {
 			my $edit_field = div({-id => $fileid . "_editfield"}, '');
 			$count++;
 			div( {
-					-id		=> "upload_$fileid",
+					-id		=> "$fileid",
 					-class	=> "custom_track",
 					-style	=> "background-color: $background_color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;"
 				},
@@ -1643,8 +1643,8 @@ sub render_track_details {
 	
 	my $status    = $userdata->status($fileid) || 'complete';
 	my $status_box = div(
-			div({-id=>"${random_id}_form"},'&nbsp;'),
-			div({-id=>"${random_id}_status"},
+			div({-id=>"${random_id}_form", -style=>"display: none;"},'&nbsp;'),
+			div({-id=>"${random_id}_status", -style=>"display: none;"},
 				i($status),
 				a(
 					{
@@ -1654,7 +1654,7 @@ sub render_track_details {
 			 		$self->translate('INTERRUPTED_RESUME')
 			 	)
 			)
-		 ) unless ($status =~ /complete/);
+		 );
 			 
 	return div(
 		{

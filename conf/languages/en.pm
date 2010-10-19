@@ -598,8 +598,8 @@ END
    UPLOAD_ERROR              => 'The server returned an error during upload',
    REMOVE_MESSAGE            => '[Remove Message]',
    EDITING_FILE              => 'Editing %s',
-   FETCHING                  => 'fetching...',
-   CANCELLING                => 'Cancelling',
+   FETCHING                  => 'Fetching...',
+   CANCELLING                => 'Cancelling...',
    NOT_FOUND                 => 'Not Found',
    ADMIN_MODE_WARNING        => 'Admin mode: Uploaded tracks are public',
    SOURCE_FILES              => 'Source files:',
@@ -615,9 +615,9 @@ END
    SHARING_GROUP             => 'Group',
    SHARING_PUBLIC            => 'Public',
    SHARING_HELP              => '<b>Private</b> - Visible only to me.<br>'.
-		                '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
-		                '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
-		                '<b>Public</b> - Visible to anyone.',
+							    '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
+							    '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
+							    '<b>Public</b> - Visible to anyone.',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
    PUBLIC_TRACKS             => 'Public Tracks',
    THERE_ARE_NO_TRACKS_YET   => 'There are no %s tracks yet.',
@@ -630,6 +630,10 @@ END
    ADD_BUTTON                => '[Add]',
    EDIT_BUTTON               => '[edit]',
    OVERWRITE                 => 'If this file exists, overwrite it.',
+   CHANGING_PERMISSIONS		 => 'Changing sharing permissions...',
+   ADDING                    => 'Adding...',
+   REMOVING                  => 'Removing...',
+   ERROR                     => 'The server returned an error.',
 
    #------
    # MISC.

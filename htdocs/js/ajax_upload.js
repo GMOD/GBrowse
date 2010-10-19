@@ -1,8 +1,9 @@
 /** This nice bit of software is used courtesy of the webtoolkit group; the file 
-    was renamed to be more informative.
+    was renamed to be more informative. It is an alternative to XMLHTTP requests
+    that allows for files to be uploaded (which Javascript doesn't).
     
 	AJAX IFRAME METHOD (AIM)
-	http://www.webtoolkit.info/
+	http://www.webtoolkit.info/ajax-file-upload.html
 **/
 
 var Ajax_Status_Updater;
@@ -49,21 +50,80 @@ AIM = {
 	}
 }
 
-// Start AJAX Upload - Sends the AJAX request and sets the busy indicator.
-function startAjaxUpload(upload_id) {
-	var status       = $(upload_id + '_status');
-	var upload_form  = $(upload_id + '_form');
-	upload_form.hide();
+function selectUpload(upload_id) {
+    if (upload_container = $$("div#" + upload_id)[0].down("div.upload_field")) // We're dealing with an upload field.
+		status_selector = "*#" + upload_id + "_status";
+	else if(upload_container = $$("div.custom_track#" + upload_id)[0])	// We're dealing with an uploaded file in the main listing.
+		status_selector = "div[id$='_status']";
+	else    // Couldn't find the item, return false.
+		return false;
+    var status_container = upload_container.down(status_selector);
+	return {upload: upload_container, status: status_container};
+}
+
+// Visually indicates an upload (whether uploaded already, or in the process of uploading) as "busy".
+function showUploadBusy(upload_id, message) {
+	message = typeof(message) != 'undefined' ? message : Controller.translate('WORKING');
+	var spinner = new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING'), "class": "busy_signal"});
+	var containers = selectUpload(upload_id);
 	
-	// Create & insert the status update elements.
-	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
-	status.insert(new Element("span").update(Controller.translate('UPLOADING')));
+	// If it's condensed, just show the spinner. If the details are shown, show the message too.
+	if (!containers.upload.down("div.details").visible())
+    	containers.upload.down("h1").insert({top: spinner});
+    else {
+	    containers.status.update();
+        containers.status.insert({bottom: spinner});
+        containers.status.insert({bottom: "&nbsp;"});
+        containers.status.insert({bottom: message});
+        if (!containers.status.visible())
+		    Effect.BlindDown(containers.status, {duration: 0.25});
+	}
+	return true;
+}
+
+// Clears a busy indicator.
+function clearUploadBusy(upload_id) {
+    var containers = selectUpload(upload_id);
+    var spinner;
+    if (spinner = containers.status.down("img.busy_signal"))
+    	Effect.BlindUp(containers.status, {duration: 0.25, afterFinish: function() { spinner.remove() } });
+    return true;
+}
+
+// Displays an error for an upload
+function showUploadError(upload_id, message) {
+	var error_class = "upload_error";
+	message = typeof(message) != 'undefined' ? message : Controller.translate('ERROR');
+	var container = selectUpload(upload_id);
+	var msg =  new Element("div", {"class": error_class}).setStyle({backgroundColor: "pink", "padding": "5px"});
+	msg.insert({bottom: new Element("b").update("Error:") });
+	msg.insert({bottom: "&nbsp;" + message + "&nbsp;"});
+	var remove_link = new Element("a", {href: "javascript:void(0)"}).update(Controller.translate('REMOVE_MESSAGE'));
+	remove_link.observe("click", function() {
+	    Effect.BlindUp(container.status, {
+	        duration: 0.25, afterFinish: function() {
+	            container.status.down("div." + error_class).remove()
+	        }
+	    })
+	});
+	msg.insert({bottom: remove_link});
+	container.status.update(msg);
+	if (!container.status.visible())
+		Effect.BlindDown(container.status, {duration: 0.25});
+}
+
+// Monitors and displays an upload's current status
+function monitorUploadStatus(upload_id) {
+    showUploadBusy(upload_id);
+    var containers = selectUpload(upload_id);
+    // Create & insert the status update elements.
+	containers.status.insert(new Element("span").update(Controller.translate('UPLOADING')));
 	var cancel = new Element("a", {href: 'javascript:void(0)'}).update("[" + Controller.translate('CANCEL') + "]");
 	cancel.observe("click", function() {
 		Controller.cancel_upload(upload_id + "_status", upload_id)
 	});
-	status.insert({after: cancel});
-	status.insert({after: "&nbsp;"});
+	containers.status.insert({after: cancel});
+	containers.status.insert({after: "&nbsp;"});
 	
 	// This hash stores all currently-loading status updaters.
 	if (Ajax_Status_Updater == null)
@@ -71,8 +131,8 @@ function startAjaxUpload(upload_id) {
 	
 	var updater = new Ajax.PeriodicalUpdater(
 		{
-			success: status.down('span'),
-			frequency: 0.25	// Don't set this too low, otherwise the first status request will happen before the uploads hash (in $state) is updated.
+			success: containers.status.down('span'),
+			frequency: 0.1	// Don't set this too low, otherwise the first status request will happen before the uploads hash (in $state) is updated.
 		},
 		'#',
 		{	parameters: {
@@ -94,6 +154,19 @@ function startAjaxUpload(upload_id) {
 	// Add the PeriodicalUpdater object to the Ajax_Status_Updater hash, so it can be found by onSuccess once it's done.
 	Ajax_Status_Updater.set(upload_id, updater);
 	return true;
+}
+
+// Start AJAX Upload - Sends the AJAX request and sets the busy indicator.
+function startAjaxUpload(upload_id) {
+	var upload_form  = $(upload_id + '_form');
+	if (upload_form)
+		upload_form.hide();
+	monitorUploadStatus(upload_id);
+}
+
+function cleanRemove(element, speed) {
+	speed = typeof(speed) != 'undefined' ? speed : 0.25;
+	Effect.BlindUp(element, {duration: speed, afterFinish: function() { element.remove() } });
 }
 
 // Complete AJAX Upload - Runs the controller to add the track or, if there's an error, displays it.
@@ -129,7 +202,7 @@ function completeAjaxUpload(response, upload_id, field_type) {
 							var updater = Ajax_Status_Updater.get(upload_id);
 							if (updater != null)
 								updater.stop()
-							Effect.BlindUp($(upload_id), {duration: 0.25, afterFinish: function() { $(upload_id).remove() } });
+							cleanRemove($(upload_id));
 						}
 					)
 				}
@@ -138,32 +211,23 @@ function completeAjaxUpload(response, upload_id, field_type) {
 			// If no tracks were returned, just stop the updater & remove the upload field.
 			var updater = Ajax_Status_Updater.get(upload_id);
 			if (updater != null) updater.stop();
-			$(upload_id).remove();
+			cleanRemove($(upload_id));
 		}
 	} else {
 		// Remove the updater, and display the error returned.
 		if (Ajax_Status_Updater.get(upload_id) !=null)
 		     Ajax_Status_Updater.get(upload_id).stop();
 		Ajax_Status_Updater.unset(upload_id);
-		var status = $(upload_id + '_status');
-		var msg =  new Element("div").setStyle({"background-color": "pink", "padding": "5px"});
-		msg.insert({bottom: new Element("b").update(r.uploadName) });
-		msg.insert({bottom: "&nbsp;" + r.error_msg + "&nbsp;"});
-		var remove_link = new Element("a", {href: "javascript:void(0)"}).update(Controller.translate('REMOVE_MESSAGE'));
-		remove_link.observe("click", function() {
-			Effect.BlindUp($(upload_id), {duration: 0.25, afterFinish: function() { $(upload_id).remove() } });
-		});
-		msg.insert({bottom: remove_link});
-		status.update(msg);
+		showUploadError(upload_id, r.uploadName + "&nbsp;" + r.error_msg + "&nbsp;");
 	}
+	clearUploadBusy(upload_id);
 	return true;
 }
 
 // NOTE: these functions should be migrated to Controller
 
 function deleteUpload (fileName) {
-   var indicator = fileName + "_stat";
-   $(indicator).update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
+   showUploadBusy(fileName, "Deleting...");
    new Ajax.Request(
 	   document.URL, {
 		    method: 'post',
@@ -196,15 +260,23 @@ function editUpload (fileid, sourceFile) {
 	var editDiv = fileid + "_editfield";
 	var editID  = 'edit_' + Math.floor(Math.random() * 99999);
 	$(editDiv).hide();
+	
+	//Add the fields, cancel link and submit button.
 	$(editDiv).update("<p><b>" + Controller.translate('EDITING_FILE', sourceFile) + "</b></p>");
 	$(editDiv).insert({bottom: new Element("textarea", {id: editID, cols: "120", rows: "20", wrap: "off"}).update(Controller.translate('FETCHING')) });
 	$(editDiv).insert({bottom: new Element("p")});
+	
 	var cancel = new Element("a", {href: "javascript:void(0)"}).update(Controller.translate('CANCEL'))
-	cancel.observe("click", function() {
-		Effect.BlindUp($(editDiv), {duration: 0.5, afterFinish: function() { $(editDiv).hide() } });
-	})
+	cancel.observe("click", function() { Effect.BlindUp($(editDiv), {duration: 0.5 }) });
 	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: cancel});
-	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: new Element("button").observe("click", function() { Controller.uploadUserTrackSource(editID, fileid, sourceFile, editDiv) }).update(Controller.translate('SUBMIT')) });
+	
+	var submit = new Element("button").update(Controller.translate('SUBMIT'));
+	submit.observe("click", function() {
+		Controller.uploadUserTrackSource(editID, fileid, sourceFile, editDiv);
+		Effect.BlindUp($(editDiv), {duration: 0.5 });
+	})
+	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: submit });
+	
 	Effect.BlindDown($(editDiv), {duration: 0.5});
 	Controller.downloadUserTrackSource(editID, fileid, sourceFile);
 }
@@ -230,7 +302,7 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 					completeAjaxUpload(response, upload_tag, field_type)
 				}
 			}
-		);
+		)
 	});
 	
 	// Fill in the appropriate form objects, for file, text, and URL uploads.
@@ -256,9 +328,7 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	form.insert({bottom: new Element("input", {type: "hidden", name: "upload_id", value: upload_tag}) });
 	form.insert({bottom: "&nbsp;" });
 	var remove_link = new Element("a", {href: "javascript:void(0)"}).update(remove_prompt);
-	remove_link.observe("click", function() {
-		Effect.BlindUp($(upload_tag), {duration: 0.25, afterFinish: function() { $(upload_tag).remove() } });
-	});
+	remove_link.observe("click", function() { cleanRemove($(upload_tag)) });
 	form.insert({bottom: remove_link});
 	if (field_type == "upload") {
 		form.insert({bottom: new Element("br")});
@@ -269,19 +339,18 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	
 	// Now wrap it in a DIV container and add it to the DOM.
 	var count = $$("div[id^=upload_]:not([id$=_status])").length;
-	var container = new Element("div");
-	container.setStyle({"background-color": ((count % 2)? '#AAAAAA' : '#CCCCCC'), "padding": "5px"});
+	var container = new Element("div").addClassName("upload_field " + field_type);
+	container.setStyle({backgroundColor: ((count % 2)? '#AAAAAA' : '#CCCCCC'), "padding": "5px"});
 	container.insert({bottom: form}).insert({top: upload_text}).insert({bottom: status_box});
 	$(after_element).insert({bottom: container.wrap( new Element("div", {id: upload_tag, style: "display: none;"}) ) });
 	Effect.BlindDown($(upload_tag), {duration: 0.25});
 }
 
 function changePermissions(fileid, sharing_policy) {
-	var title = $("upload_" + fileid).down("div[id$='_stat']");
-	if (title)
-		title.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING')}) );
+	showUploadBusy(fileid, Controller.translate('CHANGING_PERMISSIONS'));
 	new Ajax.Request(
-		document.URL, {
+		document.URL,
+		{
 			method: 'post',
 			parameters: {
 				action: 'change_permissions',
@@ -299,11 +368,10 @@ function changePermissions(fileid, sharing_policy) {
 }
 
 function shareFile(fileid, userid) {
-	var title = $("upload_" + fileid);
-	if (title)
-		title.down("div[id$='_stat']").update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING')}) );
+	showUploadBusy(fileid, Controller.translate('ADDING'));
 	new Ajax.Request(
-		document.URL, {
+		document.URL,
+		{
 			method: 'post',
 			parameters: {
 				action: 'share_file',
@@ -324,11 +392,10 @@ function shareFile(fileid, userid) {
 }
 
 function unshareFile(fileid, userid) {
-	var title = $("upload_" + fileid);
-	if (title)
-		title.down("div[id$='_stat']").update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
+	showUploadBusy(fileid, Controller.translate('REMOVING'));
 	new Ajax.Request(
-		document.URL, {
+		document.URL,
+		{
 			method: 'post',
 			parameters: {
 				action: 'unshare_file',
@@ -351,7 +418,8 @@ function unshareFile(fileid, userid) {
 function searchPublic(keyword) {
 	Controller.busy();
 	new Ajax.Request(
-		document.URL, {
+		document.URL,
+		{
 			method: 'post',
 			parameters: {
 				action: 'update_sections',
@@ -366,5 +434,4 @@ function searchPublic(keyword) {
 			}
 		}
 	);
-	return false;
 }

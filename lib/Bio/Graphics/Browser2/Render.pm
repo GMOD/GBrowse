@@ -897,9 +897,9 @@ sub get_post_load_functions {
     my $self = shift;
     my @fun;
     if (my $url = param('eurl')) {
-	my $trackname = $self->user_tracks->trackname_from_url($url);
-	push @fun,'Controller.select_tab("custom_tracks_page")';
-	push @fun,"reloadURL('$trackname','$url',true)";
+	    my $trackname = $self->user_tracks->escape_url($url);
+	    push @fun,'Controller.select_tab("custom_tracks_page")';
+	    push @fun,"reloadURL('$trackname','$url',true)";
     }
     return @fun;
 }
@@ -1455,7 +1455,7 @@ sub add_remote_tracks {
     my @tracks;
 
     for my $url (@$urls) {
-	my $name = $user_tracks->trackname_from_url($url);
+	my $name = $user_tracks->create_track_folder($url);
 	my ($result,$msg,$tracks) 
 	    = $user_tracks->mirror_url($name,$url,1);
 	warn "[$$] $url: result=$result, msg=$msg, tracks=@$tracks" if DEBUG;

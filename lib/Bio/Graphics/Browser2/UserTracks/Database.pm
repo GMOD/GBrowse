@@ -49,7 +49,8 @@ sub _new {
 		$creation_sql   .= "creation_date datetime not null, ";
 		$creation_sql   .= "modification_date datetime, ";
 		$creation_sql   .= "sharing_policy " . (($credentials =~ /mysql/i)? "ENUM('private', 'public', 'group', 'casual')" : "varchar(12)") . " not null, ";
-		$creation_sql   .= "users text";
+		$creation_sql   .= "users text, ";
+		$creation_sql   .= "public_users text";
 		$creation_sql   .= ")" . (($credentials =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
 		$uploadsdb->do($creation_sql) or die "Could not create uploads database";
 	}
@@ -127,7 +128,7 @@ sub get_public_files {
     my $uploadsdb = $self->{uploadsdb};
     my $userid = $self->{userid};
     my $sql = "SELECT uploadid FROM uploads WHERE sharing_policy = 'public'";
-    $sql .= " AND (users IS NULL OR users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
+    $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
     $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")";
     $sql .= " ORDER BY uploadid";
     my $rows = $uploadsdb->selectcol_arrayref($sql);
@@ -148,7 +149,7 @@ sub get_added_public_files {
 	my $self = shift;
 	my $userid = $self->{userid} or return;
 	my $uploadsdb = $self->{uploadsdb};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE sharing_policy = 'public' AND users LIKE " . $uploadsdb->quote('%' . $userid . '%') . " ORDER BY uploadid");
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE sharing_policy = 'public' AND public_users LIKE " . $uploadsdb->quote('%' . $userid . '%') . " ORDER BY uploadid");
     return @$rows;
 }
 
@@ -173,13 +174,14 @@ sub share {
 	my $sharing_policy = $self->permissions($file);
 	if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /group/))) {
 		# Get the current users.
+		my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
 		my $uploadsdb = $self->{uploadsdb};
-		my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
+		my $users = $uploadsdb->selectrow_array("SELECT $users_field FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
 	
 		#If we find the user's ID, it's already been added, just return that it worked.
 		return 1 if ($users =~ $userid);
 		$users .= ", " if $users;
-		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users . $userid) . "  WHERE uploadid = " . $uploadsdb->quote($file));
+		return $uploadsdb->do("UPDATE uploads SET $users_field = " . $uploadsdb->quote($users . $userid) . "  WHERE uploadid = " . $uploadsdb->quote($file));
 	} else {
 		warn "Share() attempted in an illegal situation on $file by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
 	}
@@ -195,15 +197,16 @@ sub unshare {
 	my $sharing_policy = $self->permissions($file);
 	if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /(casual|group)/))) {
 		# Get the current users.
+		my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
 		my $uploadsdb = $self->{uploadsdb};
-		my $users = $uploadsdb->selectrow_array("SELECT users FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
+		my $users = $uploadsdb->selectrow_array("SELECT $users_field FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
 	
 		#If we find the user's ID, it's already been removed, just return that it worked.
 		return 1 if ($users !~ $userid);
 		$users =~ s/$userid(, )?//i;
 		$users =~ s/(, $)//i; #Not sure if this is the best way to remove a trailing ", "...probably not.
 	
-		return $uploadsdb->do("UPDATE uploads SET users = " . $uploadsdb->quote($users) . " WHERE uploadid = " . $uploadsdb->quote($file));
+		return $uploadsdb->do("UPDATE uploads SET $users_field = " . $uploadsdb->quote($users) . " WHERE uploadid = " . $uploadsdb->quote($file));
 	} else {
 		warn "Unshare() attempted in an illegal situation on $file by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
 	}
@@ -334,8 +337,7 @@ sub permissions {
 	my $new_permissions = shift;
 	if ($new_permissions) {
 		if ($self->is_mine($file)) {
-			$self->field("users", $file, $self->{userid}) if $new_permissions =~ /public/; # Add it to the active user's session if it's being changed to public.
-			$self->unshare($file) if $new_permissions =~ /(group|casual)/ && ($self->field("users", $file) eq $self->{userid}); # If it's previously been public and had the active user added, remove it if it's being changed to casual or group.
+			$self->field("public_users", $file, $self->{userid}) if $new_permissions =~ /public/; # Add it to the active user's session if it's being changed to public.
 			return $self->field("sharing_policy", $file, $new_permissions);
 		} else {
 			warn "Permissions change on " . $file . "requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . " a non-owner.";

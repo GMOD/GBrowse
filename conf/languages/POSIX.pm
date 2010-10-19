@@ -630,6 +630,9 @@ END
    ADD_BUTTON                => '[Add]',
    EDIT_BUTTON               => '[edit]',
    OVERWRITE                 => 'If this file exists, overwrite it.',
+   CHANGING_PERMISSIONS		 => 'Changing sharing permissions...',
+   ADDING                    => 'Adding...',
+   REMOVING                  => 'Removing...',
 
    #------
    # MISC.

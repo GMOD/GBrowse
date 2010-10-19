@@ -1,5 +1,7 @@
 2.20
-    * Chris -- describe your changes
+    * User uploads can be run in the usual file-based mode or with a new database-driven system that
+      supports sharing files between users based on public, group, casual (with a sharing link)
+      and private permissions.
     * Tony -- describe your changes
     * Subtrack labels now float on top of the underlying image data so that they show even when
       scrolling around.

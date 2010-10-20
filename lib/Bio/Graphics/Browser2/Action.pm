@@ -378,8 +378,6 @@ sub ACTION_register_upload {
 sub ACTION_upload_file {
     my $self = shift;
     my $q    = shift;
-    
-    warn "I got to upload_file";
 
     my $fh = $q->param('file');
     my $data = $q->param('data');
@@ -392,7 +390,6 @@ sub ACTION_upload_file {
 					      error_msg=>'empty file'}
 	       ));
 	
-    my $upload_id = $q->param('upload_id');
 
     my $render   = $self->render;
     my $state    = $self->state;
@@ -414,7 +411,7 @@ sub ACTION_upload_file {
     
     my ($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1)
                                        :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1)
-                                              : $usertracks->upload_file($track_name, $fh, $content_type, !$overwrite);
+                                              : $usertracks->upload_file($track_name, $fh, $content_type, $overwrite);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
@@ -545,7 +542,7 @@ sub ACTION_set_upload_description {
 
     my $state       = $self->state;
     my $render      = $self->render;
-    my $file = $q->param('file') or confess "No file given to set_upload_description.";
+    my $file = $q->param('upload_id') or confess "No file given to set_upload_description.";
     my $new_description = $q->param('description') or confess "No new description given to set_upload_description.";
 
     my $usertracks = $render->user_tracks;

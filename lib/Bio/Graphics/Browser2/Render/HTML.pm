@@ -1695,7 +1695,7 @@ sub render_track_source_files {
 							$mirror_url?
 							a( {
 									-href => "javascript:void(0)",
-									-onClick => "reloadURL('" . $_->[0] . "','$mirror_url')"
+									-onClick => "reloadURL('$fileid','$mirror_url')"
 								},
 								$self->translate('RELOAD_FROM', $mirror_url)
 							) : 

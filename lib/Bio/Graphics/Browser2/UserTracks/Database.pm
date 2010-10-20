@@ -204,6 +204,7 @@ sub share {
 		#If we find the user's ID, it's already been added, just return that it worked.
 		return 1 if ($users =~ $userid);
 		$users .= ", " if $users;
+		$users .= $userid;
 		return $self->field($users_field, $file, $users);
 	} else {
 		warn "Share() attempted in an illegal situation on $file by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
@@ -267,7 +268,8 @@ sub update_modified {
     my $uploadsdb = $self->{uploadsdb};
     my $file = shift or confess "No input or invalid input given to update_modified()";
     my $now = $self->nowfun;
-    return $self->field("modification_date", $file, $now);
+    # Do not swap out this line for a field() call, since it's used inside field().
+    return $uploadsdb->do("UPDATE uploads SET modification_date = " . $uploadsdb->quote($now) . " WHERE uploadid = " . $uploadsdb->quote($file));
 }
 
 # Created (File ID) - Returns creation date of $file, cannot be set.

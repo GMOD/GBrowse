@@ -418,7 +418,8 @@ sub upload_file {
 		$fh = $self->install_filter($fh,'bunzip2 -c');
     }
     
-    my $file = $self->filename($filename)? $filename : $self->add_file($filename);
+    my $fileid = $self->get_file_id($filename);
+    my $file = $fileid? $fileid : $self->add_file($filename);
     
     # guess the file type from the first non-blank line
     my ($type, $lines, $eol) = $self->guess_upload_type($file, $fh);

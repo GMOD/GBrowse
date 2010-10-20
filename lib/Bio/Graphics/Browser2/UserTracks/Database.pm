@@ -191,7 +191,15 @@ sub get_shared_files {
 sub share {
 	my $self = shift;
 	my $file = shift or confess "No input or invalid input given to share()";
-	my $userid = shift || $self->{userid};
+	
+	# If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
+	my $userid;
+	if ($self->{globals}->user_accounts) {
+		my $userdb = $self->{userdb};
+		$userid = $userdb->get_user_id(shift);
+	} else {
+		$userid = shift || $self->{userid};
+	}
 	
 	# Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
 	my $sharing_policy = $self->permissions($file);
@@ -211,7 +219,7 @@ sub share {
 	}
 }
 
-# Unshare (File[, Username OR User ID]) - Removes an added public or shared track from a user's session. Can be publicly accessed.
+# Unshare (File[, Username OR User ID]) - Removes an added public or shared track from a user's session.
 sub unshare {
 	my $self = shift;
 	my $file = shift or confess "No input or invalid input given to unshare()";
@@ -245,7 +253,7 @@ sub field {
     my $uploadsid = $self->{uploadsid};
     my $uploadsdb = $self->{uploadsdb};
     
-    if ($value) {
+    if (defined $value) {
     	if ($self->is_mine($file)) {
 			#Clean up the string
 			$value =~ s/^\s+//;

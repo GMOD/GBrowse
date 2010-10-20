@@ -389,7 +389,8 @@ sub ACTION_upload_file {
 	return(200,'text/html',JSON::to_json({success=>0,
 					      error_msg=>'empty file'}
 	       ));
-	
+	       
+	my $upload_id = $q->param('workaround');
 
     my $render   = $self->render;
     my $state    = $self->state;
@@ -478,7 +479,7 @@ sub ACTION_delete_upload {
     my $self  = shift;
     my $q     = shift;
 
-    my $file   = $q->param('file') or croak;
+    my $file   = $q->param('upload_id') or croak;
     my $render = $self->render;
 
     my $usertracks = $render->user_tracks;

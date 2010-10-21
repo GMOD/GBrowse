@@ -1,3 +1,12 @@
+=head1 Out of date
+
+This document is quite old and largely out of date.  There is full support
+for PostgreSQL for use with both Bio::DB::GFF and Bio::DB::SeqFeature::Store
+adaptors in BioPerl.  There is an Oracle adaptor for Bio::DB::GFF, but I
+don't know if it is currently functional, as I don't know if anybody is
+using it.  I don't know of any efforts to port the Bio::DB::SeqFeature::Store
+adaptor to Oracle.
+
 =head1 Oracle and PostgreSQL
 
 Support for various databases and database schemas are coming.  Right

@@ -9,6 +9,7 @@ use DBI;
 use Digest::MD5 qw(md5_hex);
 use CGI qw(param url);
 use Carp qw(confess cluck);
+use File::Path qw(rmtree);
 
 sub _new {
 	my $class = shift;
@@ -67,6 +68,7 @@ sub _new {
 	    my $alter_sql = "ALTER TABLE uploads ADD (";
 	    my @columns_to_create;
 	    my $run = 0;
+	    # If we don't find a specific column, add its SQL to the columns_to_create array.
 	    foreach (keys %columns) {
 	        unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
         	    push @columns_to_create, "$_ " . $columns{$_};
@@ -337,19 +339,24 @@ sub delete_file {
     my $filename = $self->filename($file);
     
     if ($self->is_mine($file) || !$filename) {
-		# First delete from the database.
-		my $uploadsdb = $self->{uploadsdb};
-		return $uploadsdb->do("DELETE FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
+        my $path = $self->track_path($file);
+        
+        if ($filename) {
+    		# First delete from the database - better to have a dangling file then a dangling reference to nothing.
+	    	my $uploadsdb = $self->{uploadsdb};
+	    	$uploadsdb->do("DELETE FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
+	    }
 		
-		# Then remove the file - better to have a dangling file then a dangling reference to nothing.
+		# Now remove the backend database.
 		my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
-								  $self->track_path($file),
+								  $path,
 								  $self->track_conf($file),
 								  $self->{config},
 								  $userid);
 		$loader->drop_databases($self->track_conf($file));
-		chdir $self->path;
-		rmtree($self->track_path($file));
+		
+		# Then remove the file if it exists.
+        rmtree($path) or warn "Could not delete $path: $!" if -e $path;
     } else {
 		warn "Delete of " . $filename . " requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . ", a non-owner.";
 	}

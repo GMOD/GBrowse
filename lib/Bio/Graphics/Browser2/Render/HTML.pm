@@ -1343,7 +1343,7 @@ sub render_upload_share_section {
 	$html .= div({-id => "custom_tracks"}, $self->render_custom_track_listing);
 	$html .= $self->userdata_upload;
 	if ($userdata->database == 1) {
-		$html .= $self->render_public_track_listing;
+		$html .= div({-id => "public_tracks"}, $self->render_public_track_listing);
 	}
 	$html = div({-style => 'margin: 1em;'}, $html);
 	return $html;
@@ -1398,10 +1398,11 @@ sub render_public_track_listing {
 	my $html = h1({-style => "display: inline-block; margin-right: 1em;"}, $self->translate('PUBLIC_TRACKS'));
 	my $search = @_? $_[0] : "Enter a keyword or user";
 	$html .= div({-style => "display: inline-block;"},
-		start_form({-action => "#", -onSubmit => "return searchPublic(\$('public_search_keyword').value);"}),
+	                                                          # The return is necessary - see searchPublic() in ajax_uploads.js for info.
+		start_form({-action => "javascript:void(0);", -onsubmit => "return searchPublic(\$('public_search_keyword').value);"}),
 		"Filter:",
 		input({-type => "text", -name => "keyword", -id => "public_search_keyword", -width => 50, -value => $search, -onClick => "this.value='';"}),
-		input({-type => "submit", -name => "user", -id => "public_search_user", -value => "Search"}),
+		input({-type => "submit", -value => "Search"}),
 		end_form()
 	);
 	
@@ -1411,7 +1412,6 @@ sub render_public_track_listing {
 	} else {
 		$html .= $self->list_tracks("public");
 	}
-	$html = div({-id => "public_tracks"}, $html);
 	return $html;
 }
 
@@ -1436,8 +1436,8 @@ sub list_tracks {
 			my ($background_color, $accent_color) = $self->track_listing_colors($count, $type);
 			my $controls = $self->render_track_controls($fileid, $type);
 			my $short_listing = $self->render_track_list_title($fileid, $type, $accent_color);
-			my $details = $self->render_track_details($fileid, $listing_type);
-			my $edit_field = div({-id => $fileid . "_editfield"}, '');
+			my $details = $self->render_track_details($fileid, @tracks? 1 : 0);
+			my $edit_field = div({-id => $fileid . "_editfield", -style => "display: none;"}, '');
 			$count++;
 			div( {
 					-id		=> "$fileid",
@@ -1612,11 +1612,11 @@ sub render_track_controls {
 	);
 }
 
-# Render Track Details (Track Name[, Listing Type]) - Renders the track listing details section.
+# Render Track Details (Track Name, Display?) - Renders the track listing details section.
 sub render_track_details {
 	my $self = shift;
 	my $fileid = shift;
-	my $listing_type = shift || "";
+	my $display = shift || 0;
 	my $userdata = $self->user_tracks;
 	my $globals	= $self->globals;
 	my $random_id = 'upload_'.int rand(9999);
@@ -1658,7 +1658,7 @@ sub render_track_details {
 			 
 	return div(
 		{
-			-style => ($listing_type =~ /public/)? "display: none;" : "display: block;",
+			-style => $display? "display: block;" : "display: none;",
 			-class => "details"
 		},
 		i($description),

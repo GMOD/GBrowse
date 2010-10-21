@@ -883,7 +883,7 @@ var GBrowseController = Class.create({
                 method:      'post',
                 parameters:{  
                     action: 'set_upload_description',
-                    file: file,
+                    upload_id: file,
                     description: description
                 },
                 onSuccess: function(transport) {
@@ -937,6 +937,11 @@ var GBrowseController = Class.create({
             method: 'post',
             parameters: param,
             onCreate: function() {
+                if ($(statusElement) != null) {
+                    $(statusElement).update();
+                    $(statusElement).insert(new Element("div", {id: upload_id + "_form"}));
+                    $(statusElement).insert(new Element("div", {id: upload_id + "_status"}));
+                }
                 startAjaxUpload(upload_id);
             },
             onSuccess: function (transport) {
@@ -948,8 +953,11 @@ var GBrowseController = Class.create({
                 var updater = Ajax_Status_Updater.get(upload_id);
                 if (updater != null)
                     updater.stop();
-                clearUploadBusy(upload_id);
-                Controller.update_sections(new Array(custom_tracks_id, track_listing_id));
+                
+                var sections = new Array(custom_tracks_id, track_listing_id);
+				if (using_database())
+					sections.push(public_tracks_id);
+				Controller.update_sections(sections);
                 if (displayWhenDone != null && displayWhenDone)
                     Controller.select_tab('main_page');
             }
@@ -961,7 +969,7 @@ var GBrowseController = Class.create({
     // to the server
     uploadUserTrackSource:
     function (sourceField, fileid, sourceFile, editElement) {
-        showUploadBusy(fileid, "Uploading a new source...");
+        //showUploadBusy(fileid, "Uploading a new source...");
         this._modifyUserTrackSource(
             {
                 action: 'modifyUserData',
@@ -976,12 +984,12 @@ var GBrowseController = Class.create({
     // mirrorTrackSource() is called to mirror a URL to a track
     mirrorTrackSource:
     function (sourceURL, fileid, statusElement, displayWhenDone) {
-        showUploadBusy(fileid, "Reloading source...");
+        //showUploadBusy(fileid, "Reloading source...");
         this._modifyUserTrackSource(
             {
                 action: 'upload_file',
-                file: fileid,
-                mirror_url: sourceURL
+                mirror_url: sourceURL,
+                overwrite: 1
             },
             statusElement,
             displayWhenDone

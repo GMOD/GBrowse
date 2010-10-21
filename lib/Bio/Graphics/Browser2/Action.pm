@@ -390,7 +390,7 @@ sub ACTION_upload_file {
 					      error_msg=>'empty file'}
 	       ));
 	       
-	my $upload_id = $q->param('workaround');
+	my $upload_id = $q->param('upload_id');
 
     my $render   = $self->render;
     my $state    = $self->state;

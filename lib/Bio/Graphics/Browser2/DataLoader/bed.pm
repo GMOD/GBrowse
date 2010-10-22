@@ -8,6 +8,7 @@ use Carp 'croak';
 use File::Basename 'basename';
 use base 'Bio::Graphics::Browser2::DataLoader::generic';
 
+use constant TOO_SMALL_FOR_SUMMARY_MODE => 10000;  # don't go into summary mode
 my @COLORS = qw(blue red orange brown mauve peach 
                 green cyan black yellow cyan papayawhip coral);
 
@@ -28,6 +29,7 @@ sub load_line {
 
 sub finish_load {
     my $self = shift;
+    my $line_count = shift;
 
     $self->set_status('creating database');
     $self->loader->finish_load();
@@ -42,6 +44,8 @@ sub finish_load {
 
     my $trackno   = 0;
     my $loadid    = $self->loadid;
+    my $summary   = $line_count < TOO_SMALL_FOR_SUMMARY_MODE ? 'show summary = 0' : '';
+
     $self->set_status('creating configuration');
 
     print $conf <<END;
@@ -76,6 +80,7 @@ thin_utr = 1
 utr_color= $bgcolor
 fgcolor  = $bgcolor
 bgcolor  = $bgcolor
+$summary
 
 END
    }   
@@ -111,6 +116,7 @@ utr_color = $bgcolor
 fgcolor  = $bgcolor
 bump     = $bump
 bgcolor  = $bgcolor
+$summary
 
 END
    }

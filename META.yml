@@ -3,6 +3,7 @@ abstract: 'The GMOD Generic Genome Browser'
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
 build_requires:
+  Capture::Tiny: 0
   ExtUtils::CBuilder: 0
 configure_requires:
   Module::Build: 0.36
@@ -37,7 +38,7 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser2:
     file: lib/Bio/Graphics/Browser2.pm
-    version: 2.15
+    version: 2.16
   Bio::Graphics::Browser2::Action:
     file: lib/Bio/Graphics/Browser2/Action.pm
   Bio::Graphics::Browser2::AdminTracks:
@@ -183,7 +184,6 @@ requires:
   Bio::Graphics: 2.09
   Bio::Root::Version: 1.005009001
   CGI::Session: 4.02
-  Capture::Tiny: 0
   Digest::MD5: 0
   ExtUtils::CBuilder: 0
   File::Temp: 0
@@ -196,4 +196,4 @@ requires:
   perl: 5.008
 resources:
   license: http://dev.perl.org/licenses/
-version: 2.15
+version: 2.16

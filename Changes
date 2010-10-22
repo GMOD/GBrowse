@@ -17,6 +17,7 @@
      * Fixed problem with subtrack selection tables producing empty tracks under some conditions.
      * Fixed SequenceDumper plugin to not crash on BigWig tracks.
      * added # to the list of acceptable characters in feature IDs
+     * uploaded files won't use the summary mode unless the number of lines loaded exceeds 10,000
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports

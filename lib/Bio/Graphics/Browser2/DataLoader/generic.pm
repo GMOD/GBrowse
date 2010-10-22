@@ -10,6 +10,8 @@ use base 'Bio::Graphics::Browser2::DataLoader';
 my @COLORS = qw(blue red orange brown mauve peach green cyan 
                 black yellow cyan papayawhip coral);
 
+use constant TOO_SMALL_FOR_SUMMARY_MODE => 10000;  # don't go into summary mode
+
 my $DUMPING_FIXED;  # flag that we patched Bio::SeqFeature::Lite
 
 sub start_load {
@@ -39,7 +41,8 @@ sub Loader {
 }
 
 sub finish_load {
-    my $self = shift;
+    my $self  = shift;
+    my $line_count = shift;
 
     $self->set_status('creating database');
     $self->loader->finish_load();
@@ -53,6 +56,7 @@ sub finish_load {
 
     my $trackno   = 0;
     my $loadid    = $self->loadid;
+    my $inhibit_summary = $line_count < TOO_SMALL_FOR_SUMMARY_MODE;
     $self->set_status('creating configuration');
     
     print $conf <<END;
@@ -79,6 +83,7 @@ END
 		print $conf "[$trackname]\n";
 		print $conf "database = $loadid\n" ;
 		print $conf "category = $category\n";
+		print $conf "show summary = 0\n" if $inhibit_summary;
 	    } elsif ($line =~ /^feature/) {
 		$seen_feature++;
 		print $conf $line,"\n";
@@ -113,6 +118,7 @@ END
 
 	    my $color = $COLORS[rand @COLORS];
 	    my $category  = $self->category;
+	    my $summary   = $inhibit_summary ? 'show summary = 0' : '';
 	    print $conf <<END;
 [$trackname]
 database = $loadid
@@ -126,6 +132,7 @@ connector = solid
 balloon hover = \$description
 category    = $category
 key         = $t
+$summary
 
 END
 	}

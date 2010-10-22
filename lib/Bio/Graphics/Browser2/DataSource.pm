@@ -1165,7 +1165,7 @@ sub _setting {
 sub code_setting {
     my $self    = shift;
     my $base = $self->{_user_tracks};
-    if ($base && exists $base->{config}{$_[0]}) {
+    if ($base && exists $base->{config}{$_[0]||''}) {
 	return $self->_setting(@_);  # don't allow code_setting on user tracks
     } else {
  	return $self->SUPER::code_setting(@_);

@@ -261,6 +261,7 @@ sub load {
 
 	    $self->set_status('load data');
 
+	    my $count = 0;
 	    my $eol   = $self->eol_char;
 	    {
 	        local $/  = $eol if $eol;
@@ -269,7 +270,7 @@ sub load {
 		        $self->load_line($_);
 	        }
 
-	        my $count = @$initial_lines;
+	        $count = @$initial_lines;
 	        while (<$fh>) {
 		        $source_file->print($_) if $source_file;
 		        $self->load_line($_);
@@ -278,7 +279,7 @@ sub load {
 	        $source_file->close;
 	    }
 
-	    $self->finish_load;
+	    $self->finish_load($count);
 	    $self->close_conf;
     };
     $self->flag_busy(0);

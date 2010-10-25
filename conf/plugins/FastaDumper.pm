@@ -61,6 +61,9 @@ sub dump {
       exit 0;
     }
 
+    my $render = $self->renderer;
+    my $f      = $render->external_data;
+
     my $config  = $self->configuration;
     my $dna = lc $segment->dna;
     my $browser = $self->browser_config();

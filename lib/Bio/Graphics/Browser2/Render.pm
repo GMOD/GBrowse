@@ -180,6 +180,11 @@ sub debug {
     return $self->{debug} = DEBUG || $self->data_source->global_setting('debug');
 }
 
+sub DESTROY {
+    my $self = shift;
+    warn "$self: destroy she said" if DEBUG;
+}
+
 
 ###################################################################################
 #
@@ -1208,16 +1213,9 @@ sub init_plugins {
   my @plugin_path = shellwords($self->data_source->globals->plugin_path);
 
   my $plugins = $PLUGINS{$source} 
-    ||= Bio::Graphics::Browser2::PluginSet->new($self->data_source,
-						$self->state,
-						$self->language,
-						@plugin_path);
+    ||= Bio::Graphics::Browser2::PluginSet->new($self->data_source,@plugin_path);
   $self->fatal_error("Could not initialize plugins") unless $plugins;
-  $plugins->configure($self->db,
-		      $self->state,
-		      $self->language,
-		      $self->session,
-		      $self->get_search_object);
+  $plugins->configure($self);
   $self->plugins($plugins);
   $self->load_plugin_annotators();
   $plugins;
@@ -1540,6 +1538,7 @@ sub delete_uploads {
 sub cleanup {
   my $self = shift;
   warn "cleanup()" if DEBUG;
+  $self->plugins->destroy;
   my $state = $self->state;
   $state->{name} = $self->region_string if $state->{ref};  # to remember us by :-)
 }

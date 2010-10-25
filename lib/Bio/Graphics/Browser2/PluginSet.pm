@@ -12,7 +12,6 @@ use constant DEBUG=>0;
 sub new {
   my $package       = shift;
   my $config        = shift;
-  my $page_settings = shift;
   my @search_path    = @_;
   my %plugin_list    = ();
 
@@ -69,7 +68,14 @@ sub language {
 
 sub configure {
   my $self     = shift;
-  my ($database,$page_settings,$language,$session,$search) = @_;
+  my $render   = shift;
+
+  my $database      = $render->db;
+  my $page_settings = $render->state;
+  my $language      = $render->language;
+  my $session       = $render->session;
+  my $search        = $render->get_search_object;
+
   my $conf     = $self->config;
   my $plugins  = $self->plugins;
   my $conf_dir = $conf->globals->config_base;
@@ -79,6 +85,7 @@ sub configure {
 
     eval {
       my $p = $plugins->{$name};
+      $p->renderer($render);
       $p->database($database);
       $p->browser_config($conf);
       $p->config_path($conf_dir);
@@ -106,6 +113,7 @@ sub configure {
 	  my $setting_name = 'plugin:'.$p->name;
 	  $p->page_settings->{features}{$setting_name}{visible} = 1;
       }
+
     };
 
     warn "$name: $@" if $@;
@@ -113,6 +121,17 @@ sub configure {
 
 
   $self->set_filters();  # allow filter plugins to adjust the data source
+}
+
+sub destroy {
+    my $self = shift;
+    my $plugins  = $self->plugins;
+    for my $name (keys %$plugins) {
+	eval {
+	    my $p = $plugins->{$name};
+	    $p->renderer(undef);
+	};
+    }
 }
 
 sub set_filters {

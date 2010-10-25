@@ -277,6 +277,13 @@ hashref must be scalars or array references.
 See CONFIGURATION METHODS for instructions on how to create and
 maintain the plugin's persistent configuration information.
 
+=item $renderer = $self->renderer
+
+This method returns a copy of the Render object, which provides access
+to the internal workings of the page layout engine. You will need to 
+troll the Bio::Graphics::Browser2::Render source code to understand
+how to use this object.
+
 =item $database = $self->database
 
 This method returns a copy of the default database.  Depending on the
@@ -814,6 +821,13 @@ sub configuration {
   $d;
 }
 
+sub renderer {
+    my $self = shift;
+    my $d    = $self->{render};
+    $self->{render} = shift if @_;
+    $d;
+}
+
 sub configure_form {
   return;
 }
@@ -997,6 +1011,11 @@ sub stylesheets {
 sub onLoads {
   my $self = shift;
   return;
+}
+
+sub DESTROY {
+    my $self = shift;
+#    warn "$self is destroyed";
 }
 
 

@@ -209,11 +209,11 @@ var GBrowseTrackPan = Class.create({
 		var newPos = this.x;
 		if (direction == 'right') {
 			var new_stop = this.get_stop() + length_units * this.viewable_segment_length;
-			if (new_stop > this.detail_stop) { return false; }
+			if (new_stop > this.detail_stop + 10) { return false; }
 			newPos += length_units/(this.details_mult-1);
 		} if (direction == 'left') {
 			var new_start = this.get_start() - length_units * this.viewable_segment_length;
-			if (new_start < this.detail_start) { return false; }
+			if (new_start < this.detail_start - 10) { return false; }
 			newPos -= length_units/(this.details_mult-1);
 		}
 		this.update_pan_position(newPos);

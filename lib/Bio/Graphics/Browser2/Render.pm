@@ -2187,12 +2187,8 @@ sub update_coordinates {
       $state->{name} = "$state->{ref}:$state->{view_start}..$state->{view_stop}";
       param(name => $state->{name});
 
-      my $length = ($state->{view_stop} - $state->{view_start} + 1);
-      my $length_to_load = $length * $self->details_mult;
-      my $start_to_load  = $state->{view_start} - $length * ($self->details_mult - 1) / 2;
-      my $stop_to_load   = $start_to_load + $length_to_load - 1;
-      $state->{start} = $start_to_load;
-      $state->{stop}  = $stop_to_load;
+      # Take details multiplier into account
+      ($state->{start}, $state->{stop}) = $self->how_much_to_load($state->{view_start}, $state->{view_stop});
 
       warn "name = $state->{name}" if DEBUG;
   }
@@ -2513,13 +2509,8 @@ sub asynchronous_update_coordinates {
 	    $state->{view_stop}  -= $delta;
 	}
 
-        my $length = ($state->{view_stop} - $state->{view_start});
-        my $length_to_load = $length * $self->details_mult;
-        my $start_to_load  = $state->{view_start} - $length * ($self->details_mult - 1) / 2;
-        my $stop_to_load   = $start_to_load + $length_to_load;
-
-        $state->{start} = $start_to_load;
-        $state->{stop}  = $stop_to_load;
+        # Take details multiplier into account
+        ($state->{start}, $state->{stop}) = $self->how_much_to_load($state->{view_start}, $state->{view_stop});
 
 	unless (defined $state->{ref}) {
 	    warn "Reverting coordinates to last known good region (user probably hit 'back' button).";
@@ -2541,6 +2532,20 @@ sub asynchronous_update_coordinates {
 
     $self->session->flush();
     $position_updated;
+}
+
+sub how_much_to_load {
+    my $self = shift;
+    my $view_start = shift;
+    my $view_stop  = shift;
+
+    my $length         = $view_stop - $view_start;
+    my $length_to_load = $length * $self->details_mult;
+
+    my $start_to_load  = int($view_start - $length * ($self->details_mult - 1) / 2);
+    my $stop_to_load   = $start_to_load + $length_to_load;
+
+    return ($start_to_load, $stop_to_load);
 }
 
 sub zoom_to_span {

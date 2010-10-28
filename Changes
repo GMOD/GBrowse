@@ -5,6 +5,13 @@
     * Added the ability to load wider details images. Detail tracks can then be dragged left and right
       without having to load more data from the server. To enable, add a property to the conf file
       called "details multiplier" and give it a value greater than 1 (3 is recommended).
+    * Overview and scale tracks now show markers for both the currently viewed segment and the entire segment
+      that is loaded.  The loaded segment colours can be set with the settings "loaded_segment_fill" and 
+      "loaded_segment_outline"
+    * Currently viewed position markers are now drawn with javascript with opacity set to 0.5 (this was 
+      necessary so that position markers can move as the user drags tracks). Therefore the markers will 
+      show up as a lighter colour than before, so settings 'hilite fill' and 'hilite outline' may need to
+      be updated
     * Internationalization has been updated so that almost all strings in GBrowse can now be translated,
       including strings in javascript.
     * Subtrack labels now float on top of the underlying image data so that they show even when

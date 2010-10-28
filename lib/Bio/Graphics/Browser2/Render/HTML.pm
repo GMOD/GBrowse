@@ -2137,12 +2137,12 @@ sub slidertable {
     (image_button(-src     => "$buttonsDir/green_l2.gif",
 		  -name=>"left $full",
 		  -title   => "left $full_title",
-		  -onClick => "Controller.update_coordinates(this.name)"
+		  -onClick => "Controller.scroll('left', 1)"
      ),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
 		  -title=>"left $half_title",
-		  -onClick => "Controller.update_coordinates(this.name)"
+		  -onClick => "Controller.scroll('left', 0.5)"
      ),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/mminus.png",
@@ -2163,12 +2163,12 @@ sub slidertable {
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
 		  -title=>"right $half_title",
-		  -onClick => "Controller.update_coordinates(this.name)"
+		  -onClick => "Controller.scroll('right', 0.5)"
      ),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
 		  -title=>"right $full_title",
-		  -onClick => "Controller.update_coordinates(this.name)"
+		  -onClick => "Controller.scroll('right', 1)"
      ),
      '&nbsp;',
     );

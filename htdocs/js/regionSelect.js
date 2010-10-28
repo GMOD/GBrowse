@@ -49,7 +49,7 @@ Region.prototype.initialize = function() {
   }
 
 
-  var p = i.parentNode;
+  var p = i.parentNode.parentNode;
   i = self.replaceImage(i);
 
   self.top     = self.elementLocation(i,'y1');

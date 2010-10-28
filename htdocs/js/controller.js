@@ -373,8 +373,10 @@ var GBrowseController = Class.create({
         new Ajax.Request(Controller.url, {
             method:     'post',
             parameters: {
-                action:   'navigate',  // 'action'   triggers an async call
-                navigate: action       // 'navigate' is an argument passed to the async routine
+                action:     'navigate',  // 'action'   triggers an async call
+                navigate:   action,      // 'navigate' is an argument passed to the async routine
+                view_start: Math.round(TrackPan.get_start()),
+                view_stop:  Math.round(TrackPan.get_stop())
             },
             onSuccess: function(transport) {
                 var results                 = transport.responseJSON;
@@ -393,7 +395,7 @@ var GBrowseController = Class.create({
                     Controller.update_scale_bar(detail_scale_bar_hash);
                     var detail_width         = Controller.segment_info.detail_width;
                     var details_pixel_ratio  = Controller.segment_info.details_pixel_ratio;
-                    var scale_width          = Math.round(detail_scale_bar_hash.scale_size / details_pixel_ratio);
+                    var scale_width          = Math.round(detail_scale_bar_hash.scale_size / details_pixel_ratio) - 1;
                     var scale_left           = Math.round((Controller.segment_info.overview_width - scale_width) / 2) - 30;
 
                     var scale_div = $("detail_scale_scale");
@@ -418,8 +420,8 @@ var GBrowseController = Class.create({
     scroll:
     function (direction,length_units) {
         if (!TrackPan.scroll(direction,length_units)) {
-            var length = this.segment_info.detail_stop - this.segment_info.detail_start + 1;
-            this.update_coordinates(direction + ' ' + Math.round(length_units*length));
+            var view_length = (parseInt(Controller.segment_info.detail_stop) - parseInt(Controller.segment_info.detail_start)) / parseFloat(Controller.segment_info.details_mult);
+            this.update_coordinates(direction + ' ' + Math.round(length_units*view_length));
         }
     }, // end scroll
 

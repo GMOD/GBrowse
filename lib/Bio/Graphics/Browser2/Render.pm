@@ -798,6 +798,8 @@ sub segment_info_object {
         || 0;
     my $max = $self->get_max_segment;
     my $width = ( $settings->{width} * OVERVIEW_RATIO );
+    my $image_width  = $self->get_image_width;
+    my $detail_width = $self->get_detail_image_width;
 
     my %segment_info_object = (
         image_padding        => $pad,
@@ -808,14 +810,14 @@ sub segment_info_object {
         detail_start         => $segment->start,
         detail_stop          => $segment->end,
         'ref'                => $segment->seq_id,
-        details_pixel_ratio  => $segment->length / ($settings->{width} * $renderer->details_mult()),
-        detail_width         => $settings->{width}*$renderer->details_mult() + 2 * $pad,
-        overview_width       => $width + 2 * $pad,
-        details_mult         => $renderer->details_mult(),
+        details_pixel_ratio  => $segment->length / ($settings->{width} * $self->details_mult()),
+        detail_width         => $detail_width,
+        overview_width       => $image_width,
+        details_mult         => $self->details_mult(),
+        hilite_fill          => $self->data_source->global_setting('hilite fill')    || 'red',  # Not sure if there's a
+        hilite_outline       => $self->data_source->global_setting('hilite outline') || 'gray', # better place for this
+        flip                 => $settings->{flip},
     );
-    if ( $renderer->details_mult ) {
-        $segment_info_object{'details_mult'}       = $renderer->details_mult();
-    }
     if ( $settings->{region_size} ) {
         my ( $rstart, $rend ) = ( $self->region_segment->start, $self->region_segment->end );
         my $rlen  = abs( $rend - $rstart );
@@ -823,7 +825,7 @@ sub segment_info_object {
         $segment_info_object{'region_start'}       = $rstart;
         $segment_info_object{'region_stop'}        = $rend;
         $segment_info_object{'region_pixel_ratio'} = $rlen / $width;
-        $segment_info_object{'region_width'}       = $width + 2 * $pad;
+        $segment_info_object{'region_width'}       = $image_width;
     }
     return \%segment_info_object;
 }
@@ -1719,8 +1721,13 @@ sub _update_state {
 	$state->{seg_max} = $whole_segment->end;
 	
 	$state->{ref}     ||= $seg->seq_id;
-	$state->{start}   ||= $seg->start;
-	$state->{stop}    ||= $seg->end;
+	$state->{view_start}   ||= $seg->start; # The user has selected the area that they want to see. Therefore, this
+	$state->{view_stop}    ||= $seg->stop;  # will be the view_start and view_stop, rather than just start and stop.
+	                                        # asynchronous_update_coordinates will multiply this by the correct factor
+	                                        # to find the size of the segment to load
+
+	$state->{start}   ||= $seg->start;      # Set regular start and stop as well, just to be safe
+	$state->{stop}    ||= $seg->end;        # 
 	
 	# Automatically open the tracks with found features in them
 	$self->auto_open();
@@ -2124,22 +2131,22 @@ sub update_coordinates {
   # my $divider  = $self->setting('unit_divider') || 1;
   if (param('ref')) {
     $state->{ref}   = param('ref');
-    $state->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
-    $state->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
-    $state->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+    $state->{view_start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
+    $state->{view_stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
+    $state->{view_stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
     $position_updated++;
   }
 
   elsif (param('q')) {
       warn "param(q) = ",param('q') if DEBUG;
       $state->{search_str} = param('q');
-      @{$state}{'ref','start','stop'} 
+      @{$state}{'ref','view_start','view_stop'} 
           = Bio::Graphics::Browser2::Region->parse_feature_name($state->{search_str});
       $position_updated++;
   }
 
   # quench uninit variable warning
-  my $current_span = length($state->{stop}||'') ? ($state->{stop} - $state->{start} + 1) 
+  my $current_span = length($state->{view_stop}||'') ? ($state->{view_stop} - $state->{view_start} + 1) 
                                                 : 0;
   my $new_span     = param('span');
   if ($new_span && $current_span != $new_span) {
@@ -2164,30 +2171,39 @@ sub update_coordinates {
   }
 
   if ($position_updated) { # clip and update param
-      if (defined $state->{seg_min} && $state->{start} < $state->{seg_min}) {
-	  my $delta = $state->{seg_min} - $state->{start};
-	  $state->{start} += $delta;
-	  $state->{stop}  += $delta;
+      if (defined $state->{seg_min} && $state->{view_start} < $state->{seg_min}) {
+	  my $delta = $state->{seg_min} - $state->{view_start};
+	  $state->{view_start} += $delta;
+	  $state->{view_stop}  += $delta;
       }
 
-      if (defined $state->{seg_max} && $state->{stop}  > $state->{seg_max}) {
-	  my $delta = $state->{stop} - $state->{seg_max};
-	  $state->{start} -= $delta;
-	  $state->{stop}  -= $delta;
+      if (defined $state->{seg_max} && $state->{view_stop}  > $state->{seg_max}) {
+	  my $delta = $state->{view_stop} - $state->{seg_max};
+	  $state->{view_start} -= $delta;
+	  $state->{view_stop}  -= $delta;
       }
 
       # update our "name" state and the CGI parameter
-      $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
+      $state->{name} = "$state->{ref}:$state->{view_start}..$state->{view_stop}";
       param(name => $state->{name});
+
+      my $length = ($state->{view_stop} - $state->{view_start} + 1);
+      my $length_to_load = $length * $self->details_mult;
+      my $start_to_load  = $state->{view_start} - $length * ($self->details_mult - 1) / 2;
+      my $stop_to_load   = $start_to_load + $length_to_load - 1;
+      $state->{start} = $start_to_load;
+      $state->{stop}  = $stop_to_load;
 
       warn "name = $state->{name}" if DEBUG;
   }
 
   elsif (param('name')) {
-      $state->{backup_region} = [$state->{ref},$state->{start},$state->{stop}] if $state->{ref};
+      $state->{backup_region} = [$state->{ref},$state->{start},$state->{stop},$state->{view_start},$state->{view_stop}] if $state->{ref};
       undef $state->{ref};  # no longer valid
       undef $state->{start};
       undef $state->{stop};
+      undef $state->{view_start};
+      undef $state->{view_stop};
       $state->{name}       = $state->{search_str} = param('name');
       $state->{dbid}       = param('dbid'); # get rid of this
   }
@@ -2259,7 +2275,7 @@ sub asynchronous_update_detail_scale_bar {
 
     my $image_id = DETAIL_SCALE_LABEL . "_image";
 
-    my ($scale_size, $scale_label) = $renderer->calculate_scale_size($seg->length/$renderer->details_mult, $width/$renderer->details_mult);
+    my ($scale_size, $scale_label) = $renderer->calculate_scale_size($seg->length/$self->details_mult, $width/$self->details_mult);
 
     return {
         url         => $url,
@@ -2485,23 +2501,30 @@ sub asynchronous_update_coordinates {
     }
 
     if ($position_updated) { # clip and update param
-	if (defined $whole_segment_start && $state->{start} < $whole_segment_start) {
-	    my $delta = $whole_segment_start - $state->{start};
-	    $state->{start} += $delta;
-	    $state->{stop}  += $delta;
+	if (defined $whole_segment_start && $state->{view_start} < $whole_segment_start) {
+	    my $delta = $whole_segment_start - $state->{view_start};
+	    $state->{view_start} += $delta;
+	    $state->{view_stop}  += $delta;
 	}
 
-	if (defined $whole_segment_stop && $state->{stop}  > $whole_segment_stop) {
-	    my $delta = $state->{stop} - $whole_segment_stop;
-	    $state->{start} -= $delta;
-	    $state->{stop}  -= $delta;
+	if (defined $whole_segment_stop && $state->{view_stop}  > $whole_segment_stop) {
+	    my $delta = $state->{view_stop} - $whole_segment_stop;
+	    $state->{view_start} -= $delta;
+	    $state->{view_stop}  -= $delta;
 	}
-	
+
+        my $length = ($state->{view_stop} - $state->{view_start});
+        my $length_to_load = $length * $self->details_mult;
+        my $start_to_load  = $state->{view_start} - $length * ($self->details_mult - 1) / 2;
+        my $stop_to_load   = $start_to_load + $length_to_load;
+
+        $state->{start} = $start_to_load;
+        $state->{stop}  = $stop_to_load;
 
 	unless (defined $state->{ref}) {
 	    warn "Reverting coordinates to last known good region (user probably hit 'back' button).";
 	    if ($state->{backup_region}) { # last known working region
-		@{$state}{'ref','start','stop'} = @{$state->{backup_region}};
+		@{$state}{'ref','start','stop','view_start','view_stop'} = @{$state->{backup_region}};
 	    } else {
 		$state->{name} = param('name') || param('q') || url_param('name') || url_param('q'); # get the region somehow!!
 		if (my $seg = $self->segment) {
@@ -2513,7 +2536,7 @@ sub asynchronous_update_coordinates {
 	}
 
 	# update our "name" state and the CGI parameter
-	$state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
+	$state->{name} = "$state->{ref}:$state->{view_start}..$state->{view_stop}";
     }
 
     $self->session->flush();
@@ -2536,17 +2559,17 @@ sub move_to_name {
     my $new_stop  = $3;
 
     $state->{ref} = $new_chr;
-    $state->{start} = $new_start;
-    $state->{stop}  = $new_stop;
+    $state->{view_start} = $new_start;
+    $state->{view_stop}  = $new_stop;
     $self->background_track_render();
   }
 }
 
-  my $current_span = $state->{stop} - $state->{start} + 1;
-  my $center	    = int(($current_span / 2)) + $state->{start};
+  my $current_span = $state->{view_stop} - $state->{view_start} + 1;
+  my $center	    = int(($current_span / 2)) + $state->{view_start};
   my $range	    = int(($span)/2);
-  $state->{start}   = $center - $range;
-  $state->{stop }   = $state->{start} + $span - 1;
+  $state->{view_start}   = $center - $range;
+  $state->{view_stop }   = $state->{view_start} + $span - 1;
 }
 
 sub move_segment {
@@ -2557,8 +2580,8 @@ sub move_segment {
     my $new_start = $1;
     my $new_stop  = $2;
 
-    $state->{start} = $new_start;
-    $state->{stop}  = $new_stop;
+    $state->{view_start} = $new_start;
+    $state->{view_stop}  = $new_stop;
   }
 }
 
@@ -2572,8 +2595,8 @@ sub scroll {
   $scroll_data    =~ s/\.[xy]$//; # get rid of imagemap button cruft
   my $scroll_distance = $self->unit_to_value($scroll_data);
 
-  $state->{start} += $flip * $scroll_distance;
-  $state->{stop}  += $flip * $scroll_distance;
+  $state->{view_start} += $flip * $scroll_distance;
+  $state->{view_stop}  += $flip * $scroll_distance;
 }
 
 sub zoom {
@@ -2583,22 +2606,22 @@ sub zoom {
 
   $zoom_data    =~ s/\.[xy]$//; # get rid of imagemap button cruft
   my $zoom_distance = $self->unit_to_value($zoom_data);
-  my $span          = $state->{stop} - $state->{start} + 1;
-  my $center	    = int($span / 2) + $state->{start};
+  my $span          = $state->{view_stop} - $state->{view_start} + 1;
+  my $center	    = int($span / 2) + $state->{view_start};
   my $range	    = int($span * (1-$zoom_distance)/2);
   $range            = 1 if $range < 1;
 
   my $newstart      = $center - $range;
   my $newstop       = $center + $range - 1;
   
-  if ($newstart==$state->{start} && $newstop==$state->{stop}) {
+  if ($newstart==$state->{view_start} && $newstop==$state->{view_stop}) {
       if ($zoom_distance < 0) {$newstart--;$newstop++};
       if ($zoom_distance > 0) {$newstart++;$newstop--};
   }
   if ($newstop-$newstart <=2) {$newstop++}  # don't go down to 2 bp level!
 
-  $state->{start}   = $newstart;
-  $state->{stop}    = $newstop;
+  $state->{view_start}   = $newstart;
+  $state->{view_stop}    = $newstop;
 }
 
 sub position_from_overview {
@@ -3149,6 +3172,19 @@ sub get_blank_panels {
 sub get_image_width {
     my $self = shift;
     my $state = $self->state;
+    my $image_width = $state->{'width'} + $self->get_total_pad_width;
+    return $image_width;
+}
+
+sub get_detail_image_width {
+    my $self = shift;
+    my $state = $self->state;
+    my $image_width = $state->{'width'} * $self->details_mult + $self->get_total_pad_width;
+    return $image_width;
+}
+
+sub get_total_pad_width {
+    my $self = shift;
     my $source = $self->data_source;
     my $renderer  = $self->get_panel_renderer($self->thin_segment,
 					      $self->thin_whole_segment,
@@ -3159,9 +3195,15 @@ sub get_image_width {
     my $image_pad = $renderer->image_padding;
     $padl = $image_pad unless defined $padl;
     $padr = $image_pad unless defined $padr;
+    return $padl + $padr;
+}
 
-    my $image_width = $state->{'width'} + $padl + $padr;
-    return $image_width;
+sub details_mult {
+	my $self = shift;
+	my $value = $self->data_source->global_setting('details multiplier') || 1;
+	$value = 1  if ($value < 1);  #lower limit 
+	$value = 25 if ($value > 15); #set upper limit for performance reasons (prevent massive image files)
+	return $value;
 }
 
 sub render_deferred {

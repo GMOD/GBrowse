@@ -89,10 +89,8 @@ SelectArea.prototype.recenter = function(event) {
   var coord  = self.flip ? Math.round(self.segmentEnd - deltaSequenceStart)
                          : Math.round(self.segmentStart + deltaSequenceStart);
 
-  var detailsStart = parseInt(self.detailStart);
-  var detailsEnd = parseInt(self.detailEnd);
   var end  = self.segmentEnd;
-  var span = Math.abs(detailsEnd - detailsStart);
+  var span = Math.abs(TrackPan.viewable_segment_length);
   var half = Math.round(span/2);
 
   // don't fall off the ends

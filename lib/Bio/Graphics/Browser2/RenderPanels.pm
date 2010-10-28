@@ -593,12 +593,7 @@ sub wrap_rendered_track {
         }
     );
 
-    my $image_pad = $self->image_padding;
-    my $padl      = $source->global_setting('pad_left');
-    my $padr      = $source->global_setting('pad_right');
-    $padl = $image_pad unless defined $padl;
-    $padr = $image_pad unless defined $padr;
-    $width = $settings->{width} + $padl + $padr;
+    my $view_width = $self->render->get_image_width;
 
     my $overlay_div = '';
 
@@ -608,27 +603,27 @@ sub wrap_rendered_track {
 # works with IE7, but looks awful. IE8 should support standard css opacity.
 #	$style      .= ';filter:alpha(opacity=30);moz-opacity:0.35';
         my $pan_left   =  img({
-	    -style   => $style . ';left:10px',
+	    -style   => $style . ';left:15px',
 	    -class   => 'panleft',
 	    -src     => "$buttons/panleft.png",
 	    -onClick => "Controller.scroll('left',0.5)"
 			      },
 	    );
  	my $pan_left2  =  img({
-             -style   => $style . ';left:-3px',
+             -style   => $style . ';left:2px',
              -class   => 'panleft',
              -src     => "$buttons/panleft2.png",
              -onClick => "Controller.scroll('left',1)",
                                },
              );
 
-	my $pan_right  = img({ -style   => $style . ';right:10px',
+	my $pan_right  = img({ -style   => $style . ';right:15px',
 			       -class   => 'panright',
 			       -src     => "$buttons/panright.png",
 			       -onClick => "Controller.scroll('right',0.5)",
 			     }
 	    );
-        my $pan_right2  = img({ -style   => $style . ';right:-3px',
+        my $pan_right2  = img({ -style   => $style . ';right:2px',
                                -class   => 'panright',
                                -src     => "$buttons/panright2.png",
                                -onClick => "Controller.scroll('right',1)",
@@ -637,7 +632,7 @@ sub wrap_rendered_track {
 	
 	my $scale_div = div( { -id => "detail_scale_scale", -style => "position:absolute; top:5px", }, "" );
 
-        $overlay_div = div( { -id => "${label}_overlay_div", -style => "width:${width}px; position:absolute; top:0px; left:0px", }, $pan_left2 . $pan_left . $pan_right . $pan_right2 . $scale_div);
+        $overlay_div = div( { -id => "${label}_overlay_div", -style => "width:${view_width}px; position:absolute; top:0px; left:0px", }, $pan_left2 . $pan_left . $pan_right . $pan_right2 . $scale_div);
     }
 
     my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
@@ -648,7 +643,7 @@ sub wrap_rendered_track {
     } @$titles;
 
     return div({-class=>'centered_block',
-		 -style=>"width:${width}px;position:relative;overflow:hidden"
+		 -style=>"width:${view_width}px;position:relative;overflow:hidden"
 		},
                 ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
 }
@@ -952,16 +947,7 @@ sub render_scale_bar {
 
     my $panel = Bio::Graphics::Panel->new( @panel_args, );
 
-    # I don't understand why I need to add the pad to the width, since the
-    # other panels don't do it but in order for the scale bar to be the same
-    # size as the other panels, I need to do it.
-    my $image_pad = $self->image_padding;
-    my $padl      = $source->global_setting('pad_left');
-    my $padr      = $source->global_setting('pad_right');
-    $padl = $image_pad unless defined $padl;
-    $padr = $image_pad unless defined $padr;
-    my $width = $state->{'width'} * $self->overview_ratio() + $padl + $padr;
-    $width = $state->{'width'} * $self->overview_ratio() * $self->details_mult() + $padl + $padr if ($section eq 'detail');
+    my $width = ($section eq 'detail')? $self->render->get_detail_image_width : $self->render->get_image_width;
 
     # no cached data, so do it ourselves
     unless ($gd) {
@@ -1072,7 +1058,7 @@ sub make_scale_feature {
     my ($segment,$width) = @_;
     return unless $segment;
 
-    my $length   = $segment->length / $self->details_mult;
+    my $length   = $segment->length / $self->render->details_mult;
 
     my ($guesstimate, $label) = $self->calculate_scale_size($length, $width);
 
@@ -1882,8 +1868,8 @@ sub create_panel_args {
     $postgrid  = hilite_regions_closure(
 	            [$detail_start,
 		     $detail_stop,
-		     $self->hilite_fill(),
-		     $self->hilite_outline()
+		     $self->loaded_segment_fill(),
+		     $self->loaded_segment_outline()
 		    ]);
   }
   elsif ($section eq 'detail'){
@@ -1901,7 +1887,7 @@ sub create_panel_args {
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
 	      -key_color    => $source->global_setting('key bgcolor')      || 'moccasin',
 	      -bgcolor      => $source->global_setting("$section bgcolor") || 'wheat',
-	      -width        => $section eq 'detail'? $settings->{width} * $self->details_mult() : $settings->{width},
+	      -width        => $section eq 'detail'? $settings->{width} * $self->render->details_mult() : $settings->{width},
 	      -key_style    => $keystyle,
               -suppress_key => 1,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
@@ -2447,22 +2433,14 @@ sub hilite_regions_closure {
     };
 }
 
-sub details_mult {
-	my $self = shift;
-	my $value = $self->source->global_setting('details multiplier') || 1;
-	$value = 0.1 if ($value < 0.1);  #lower limit 
-	$value = 25 if ($value > 25);	#set upper limit for performance reasons (prevent massive image files)
-	return $value;
+sub loaded_segment_fill {
+    my $self = shift;
+    return $self->source->global_setting('loaded segment fill') || 'none';
 }
 
-sub hilite_fill {
+sub loaded_segment_outline {
     my $self = shift;
-    return $self->source->global_setting('hilite fill') || 'yellow';
-}
-
-sub hilite_outline {
-    my $self = shift;
-    return $self->source->global_setting('hilite outline') || 'yellow';
+    return $self->source->global_setting('loaded segment outline') || 'gray';
 }
 
 1;

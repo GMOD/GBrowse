@@ -36,7 +36,7 @@ Details.prototype.initialize = function() {
   
 
   //var p = document.getElementById('panels');
-  var p = i.parentNode;
+  var p = i.parentNode.parentNode;
   self.height      = self.elementLocation(i,'height');
   self.panelHeight = self.elementLocation(p,'height');
   self.width       = self.elementLocation(i,'width');

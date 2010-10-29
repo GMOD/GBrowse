@@ -49,10 +49,6 @@ Overview.prototype.initialize = function() {
   var p = i.parentNode.parentNode;
   i = self.replaceImage(i);
 
-  self.top     = self.elementLocation(i,'y1');
-  self.bottom  = self.elementLocation(i,'y2');
-  self.left    = self.elementLocation(i,'x1');
-  self.right   = self.elementLocation(i,'x2');
   self.selectLayer = p.parentNode.parentNode;
 
 
@@ -103,7 +99,7 @@ Overview.prototype.getSegment = function(i) {
   if (actualWidth > expectedWidth) {
     this.padLeft     += actualWidth - expectedWidth;
   }
-  this.pixelStart   = this.left  + this.padLeft;
+  this.pixelStart   = this.padLeft;
 }
 
 Overview.prototype.loadSegmentInfo = function() {
@@ -137,11 +133,7 @@ Overview.prototype.loadSegmentInfo = function() {
     this.padLeft     += actualWidth - expectedWidth;
   }
 
-  // We fetch the left margin again because the controller can change 
-  // the size & position of the section after it is created.
-  this.left       = this.elementLocation(document.getElementById(this.imageId),'x1');
-
-  this.pixelStart = this.left  + this.padLeft;
+  this.pixelStart = this.padLeft;
 }
 
 Overview.prototype.formatMenu = function() {

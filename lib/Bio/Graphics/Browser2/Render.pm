@@ -851,7 +851,7 @@ sub render_panels {
 		$html .= div(
 			$self->toggle({tight=>1},
 	 			  'Overview',
-	 			  div({ -id => 'overview_panels', -class => 'track', -style=>'padding-bottom:3px' },
+	 			  div({ -id => 'overview_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width.'px' },
 	 			      $scale_bar_html, $panels_html,
 	 			  ))
 	 	    ) . $drag_script;
@@ -867,7 +867,7 @@ sub render_panels {
         $html .= div(
             $self->toggle({tight=>1},
                 'Region',
-                div({ -id => 'region_panels', -class => 'track', -style=>'padding-bottom:3px' },
+                div({ -id => 'region_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width.'px'  },
                     $scale_bar_html, $panels_html,
                 )
             )
@@ -884,7 +884,7 @@ sub render_panels {
         $html .= div(
             $self->toggle({tight=>1},
 			  'Details',
-			  div({ -id => 'detail_panels', -class => 'track'},
+			  div({ -id => 'detail_panels', -class => 'track', -style=>'margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width.'px' },
 			      $details_msg,
 			      $scale_bar_html, 
 			      $panels_html,

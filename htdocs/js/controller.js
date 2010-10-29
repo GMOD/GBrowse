@@ -387,12 +387,18 @@ var GBrowseController = Class.create({
                 var detail_scale_bar_hash   = results.detail_scale_bar;
                 Controller.set_last_update_keys(track_keys);
 
-                if (overview_scale_bar_hash)
+                if (overview_scale_bar_hash) {
                     Controller.update_scale_bar(overview_scale_bar_hash);
-                if (region_scale_bar_hash)
+                    $('overview_panels').setStyle({width: overview_scale_bar_hash.width+'px'});
+                }
+                if (region_scale_bar_hash) {
                     Controller.update_scale_bar(region_scale_bar_hash);
-                if (detail_scale_bar_hash){
+                    $('region_panels').setStyle({width: region_scale_bar_hash.width+'px'});
+                }
+                if (detail_scale_bar_hash) {
                     Controller.update_scale_bar(detail_scale_bar_hash);
+                    $('detail_panels').setStyle({width: overview_scale_bar_hash.width+'px'}); //overview_scale_bar_hash contains the image width, not the width to display
+
                     var detail_width         = Controller.segment_info.detail_width;
                     var details_pixel_ratio  = Controller.segment_info.details_pixel_ratio;
                     var scale_width          = Math.round(detail_scale_bar_hash.scale_size / details_pixel_ratio) - 1;

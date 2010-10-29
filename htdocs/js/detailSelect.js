@@ -42,11 +42,6 @@ Details.prototype.initialize = function() {
   self.width       = self.elementLocation(i,'width');
   self.selectLayer = p.parentNode.parentNode;
 
-  self.top     = self.elementLocation(i,'y1');
-  self.bottom  = self.elementLocation(i,'y2');
-  self.left    = self.elementLocation(i,'x1');
-  self.right   = self.elementLocation(i,'x2');
-
 //   try {
 //       detailBalloon = new Balloon();
 //       detailBalloon.vOffset  = 1;
@@ -86,7 +81,7 @@ Details.prototype.loadSegmentInfo = function() {
   this.ref          = segment_info.ref;
   this.segmentStart = parseInt(segment_info.detail_start);
   this.segmentEnd   = parseInt(segment_info.detail_stop);
-  this.flip         = document.sliderform.flip.checked;
+  this.flip         = segment_info.flip;
   this.padLeft      = parseInt(segment_info.image_padding);
   this.pixelToDNA   = parseFloat(segment_info.details_pixel_ratio);
   this.detailStart  = parseInt(segment_info.detail_start);
@@ -102,7 +97,7 @@ Details.prototype.loadSegmentInfo = function() {
 
   // We fetch the left margin again because the controller can change 
   // the size & position of the section after it is created.
-  this.left       = this.elementLocation(document.getElementById(this.imageId),'x1');
+  this.left       = this.elementLocation(document.getElementById(this.imageId),'x1') - this.elementLocation(this.selectLayer,'x1');
 
   this.pixelStart   = this.left  + this.padLeft;
 }

@@ -593,8 +593,6 @@ sub wrap_rendered_track {
         }
     );
 
-    my $view_width = $self->render->get_image_width;
-
     my $overlay_div = '';
 
     # Add arrows for panning to details scalebar panel
@@ -632,7 +630,7 @@ sub wrap_rendered_track {
 	
 	my $scale_div = div( { -id => "detail_scale_scale", -style => "position:absolute; top:5px", }, "" );
 
-        $overlay_div = div( { -id => "${label}_overlay_div", -style => "width:${view_width}px; position:absolute; top:0px; left:0px", }, $pan_left2 . $pan_left . $pan_right . $pan_right2 . $scale_div);
+        $overlay_div = div( { -id => "${label}_overlay_div", -style => "position:absolute; top:0px; width:100%; left:0px", }, $pan_left2 . $pan_left . $pan_right . $pan_right2 . $scale_div);
     }
 
     my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
@@ -643,7 +641,7 @@ sub wrap_rendered_track {
     } @$titles;
 
     return div({-class=>'centered_block',
-		 -style=>"width:${view_width}px;position:relative;overflow:hidden"
+		 -style=>"position:relative;overflow:hidden"
 		},
                 ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
 }

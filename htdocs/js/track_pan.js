@@ -48,7 +48,7 @@ var GBrowseTrackPan = Class.create({
 	create_overview_pos_marker:
 	function() {
 		if (!($('overview_marker'))) {
-			$('Overview Scale_inner_div').parentNode.insert("<div id='overview_marker'></div>");
+			$('overview_panels').insert("<div id='overview_marker'></div>");
 			$('overview_marker').setStyle({
 				backgroundColor: this.marker_fill,
 				position:        'absolute',
@@ -63,7 +63,7 @@ var GBrowseTrackPan = Class.create({
 				borderLeft:      '1px solid ' + this.marker_outline,
 				borderRight:     '1px solid ' + this.marker_outline,
 				width:           '100%',
-				height:          '100px',
+				height:          '200px',
 				opacity:         0.5 
 			});
 			nonDraggable.style.pointerEvents = 'none'; // This lets the user click "through" the element, so
@@ -94,7 +94,7 @@ var GBrowseTrackPan = Class.create({
 	create_region_pos_marker:
 	function() {
 		if (!($('region_marker'))) {
-			$('Region Scale_inner_div').parentNode.insert("<div id='region_marker'></div>");
+			$('region_panels').insert("<div id='region_marker'></div>");
 			$('region_marker').setStyle({
 				backgroundColor: this.marker_fill,
 				position:        'absolute',
@@ -109,7 +109,7 @@ var GBrowseTrackPan = Class.create({
 				borderLeft:      '1px solid ' + this.marker_outline,
 				borderRight:     '1px solid ' + this.marker_outline,
 				width:           '100%',
-				height:          '100px',
+				height:          '200px',
 				opacity:         0.5 
 			});
 			nonDraggable.style.pointerEvents = 'none'; // This lets the user click "through" the element, so

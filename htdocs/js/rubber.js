@@ -163,21 +163,13 @@ SelectArea.prototype.startRubber = function(self,event) {
   // deal with drag/select artifacts
   self.disableSelection(self.selectLayer);
 
-  self.selectPixelStart = self.eventLocation(event,'x');
+  self.selectPixelStart = self.eventLocation(event,'x') - self.elementLocation(self.selectLayer,'x1');
 
   YAHOO.util.Dom.setStyle(self.selectBox,'visibility','hidden');
   YAHOO.util.Dom.setStyle(self.selectBox,'left',self.selectPixelStart+'px');
   YAHOO.util.Dom.setStyle(self.selectBox,'width','2px');
   YAHOO.util.Dom.setStyle(self.selectBox,'text-align', 'center');	
   YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
-  
-  // height of select box to match height of detail panel
-  var h = self.elementLocation(self.selectLayer,'height');
-  YAHOO.util.Dom.setStyle(self.selectBox,'height',h+'px');
-  
-  // vertical offset may also need adjusting
-  var t = self.elementLocation(self.selectLayer,'y1');
-  YAHOO.util.Dom.setStyle(self.selectBox,'top',t+'px');
 
   var spanReport = self.spanReport || self.createAndAppend('p',self.selectBox,'spanReport');
   YAHOO.util.Dom.setStyle(spanReport,'color',self.fontColor||'black');
@@ -218,7 +210,7 @@ SelectArea.prototype.moveRubber = function(event) {
 
   var self = currentSelectArea;
   var selectPixelStart = self.selectPixelStart;
-  var selectPixelEnd   = self.eventLocation(event,'x');
+  var selectPixelEnd   = self.eventLocation(event,'x') - self.elementLocation(self.selectLayer,'x1');
   var selectPixelWidth = Math.abs(selectPixelStart - selectPixelEnd);
 
   var rev, left;
@@ -376,7 +368,8 @@ SelectArea.prototype.addSelectBox = function(view) {
 // this was breaking IE for some reason
 //  YAHOO.util.Dom.setStyle(box,'display', 'inline');
   YAHOO.util.Dom.setStyle(box,'visibility', 'hidden');
-  YAHOO.util.Dom.setStyle(box,'top',this.top+'px');
+  YAHOO.util.Dom.setStyle(box,'top','0px');
+  YAHOO.util.Dom.setStyle(box,'height','100%');
   YAHOO.util.Dom.setStyle(box,'left','0px');
   YAHOO.util.Dom.setStyle(box,'z-index',100);
   YAHOO.util.Dom.setStyle(box,'border',this.border||'none');

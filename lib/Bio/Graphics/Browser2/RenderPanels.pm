@@ -1991,7 +1991,8 @@ sub create_track_args {
   }
 
   if (my $stt = $self->subtrack_manager($label)) {
-      push @default_args,(-sort_order => $stt->sort_feature_sub);
+      my $sub = $stt->sort_feature_sub;
+      push @default_args,(-sort_order => $sub);
   }
 
   my @args;

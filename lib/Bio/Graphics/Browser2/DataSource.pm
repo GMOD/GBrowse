@@ -643,7 +643,7 @@ sub feature2label {
     || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
 
   my $dbid = eval{$feature->gbrowse_dbid};
-
+  
   (my $basetype = $type) =~ s/:.+$//;
   my @label = $self->type2label($type,$length,$dbid);
   push @label,$self->type2label($basetype,$length,$dbid);
@@ -659,6 +659,7 @@ sub invert_types {
   my $self    = shift;
   my $config  = shift;
   return unless $config;
+
   my %inverted;
   for my $label (keys %{$config}) {
     my $feature = $self->setting($label => 'feature') or next;
@@ -788,6 +789,11 @@ sub db_settings {
   my $length= shift;
 
   $track ||= 'general';
+
+  if ($track =~ /(.+):(\d+)$/) {  # in the case that we get called with foo:499
+      $track  = $1;
+      $length = $2;
+  }
 
   # caching to avoid calling setting() too many times
   my $semantic_label = $self->semantic_label($track,$length);

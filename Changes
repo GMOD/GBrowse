@@ -20,6 +20,8 @@
      * uploaded files won't use the summary mode unless the number of lines loaded exceeds 10,000
      * Modified plugin base class to make it possible to get at the underlying renderer object
        by calling renderer() method.
+     * Fixed regression in which database option wasn't propagating from base track to semantic 
+       zoom tracks.
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports

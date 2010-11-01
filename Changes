@@ -22,6 +22,8 @@
        by calling renderer() method.
      * Fixed regression in which database option wasn't propagating from base track to semantic 
        zoom tracks.
+     * Fixed SequenceDumper behavior on GFF dumping.
+     * Removed brackets from list of naughty search characters to fix bug 3030462
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports

@@ -154,7 +154,7 @@ function startAjaxUpload(upload_id) {
 					Ajax_Status_Updater.get(upload_id).stop();
 					var sections = new Array(custom_tracks_id, track_listing_id);
 					if (using_database())
-						sections.push(public_tracks_id);
+						sections.push(community_tracks_id);
 					Controller.update_sections(sections);
 				}
 			}
@@ -183,7 +183,7 @@ function completeAjaxUpload(response, upload_id, field_type) {
 	if (r.success) {
 		var fields = new Array(track_listing_id, custom_tracks_id)
 		if (using_database())
-			fields.push(public_tracks_id);
+			fields.push(community_tracks_id);
 		// Add any tracks returned to the Controller.
 		if (r.tracks != null && r.tracks.length > 0) {
 			Controller.add_tracks(
@@ -245,7 +245,7 @@ function deleteUpload(upload_id) {
 					tracks.each(function(tid) { Controller.delete_track(tid) });
 				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
-					sections.push(public_tracks_id);
+					sections.push(community_tracks_id);
 				Controller.update_sections(sections);
 			}
 		}
@@ -303,7 +303,6 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 		AIM.submit(this,
 			{
 				onStart: function() {
-				    console.log(upload_tag);
 					startAjaxUpload(upload_tag);
 				},
 				onComplete: function(response) {
@@ -368,7 +367,7 @@ function changePermissions(fileid, sharing_policy) {
 			onSuccess: function (transport) {
 				var sections = new Array(custom_tracks_id);
 				if (using_database())
-					sections.push(public_tracks_id);
+					sections.push(community_tracks_id);
 				Controller.update_sections(sections);
 			}
 		}
@@ -389,7 +388,7 @@ function shareFile(fileid, userid) {
 			onSuccess: function (transport) {
 				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
-					sections.push(public_tracks_id);
+					sections.push(community_tracks_id);
 				Controller.update_sections(sections);
 				var tracks = transport.responseText.evalJSON(true).tracks;
 				if (tracks != null)
@@ -413,7 +412,7 @@ function unshareFile(fileid, userid) {
 			onSuccess: function (transport) {
 				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
-					sections.push(public_tracks_id);
+					sections.push(community_tracks_id);
 				Controller.update_sections(sections);
 				var tracks = transport.responseText.evalJSON(true).tracks;
 				if (tracks != null)
@@ -431,12 +430,12 @@ function searchPublic(keyword) {
 			method: 'post',
 			parameters: {
 				action: 'update_sections',
-				section_names: public_tracks_id,
+				section_names: community_tracks_id,
 				keyword: keyword,
 			},
 			onSuccess: function (transport) {
-				var html = transport.responseText.evalJSON(true).section_html[public_tracks_id];
-				$(public_tracks_id).update(html);
+				var html = transport.responseText.evalJSON(true).section_html[community_tracks_id];
+				$(community_tracks_id).update(html);
 				Controller.idle();
 				$("public_search_keyword").focus()
 			}

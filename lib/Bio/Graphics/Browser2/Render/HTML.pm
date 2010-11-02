@@ -79,24 +79,27 @@ sub render_error_div {
 # Render Tabbed Pages - Returns the HTML containing the tabs & the page DIVs to hold the content.
 sub render_tabbed_pages {
     my $self = shift;
-    my ($main_html,$tracks_html,$custom_tracks_html,$settings_html,) = @_;
-    my $main_title          = $self->translate('MAIN_PAGE');
-    my $tracks_title        = $self->translate('SELECT_TRACKS');
-    my $custom_tracks_title = $self->translate('CUSTOM_TRACKS_PAGE');
-    my $settings_title      = $self->translate('SETTINGS_PAGE');
+    my ($main_html,$tracks_html,$community_tracks_html,$custom_tracks_html,$settings_html,) = @_;
+    my $main_title             = $self->translate('MAIN_PAGE');
+    my $tracks_title           = $self->translate('SELECT_TRACKS');
+    my $community_tracks_title = $self->translate('PUBLIC_TRACKS_PAGE');
+    my $custom_tracks_title    = $self->translate('CUSTOM_TRACKS_PAGE');
+    my $settings_title         = $self->translate('SETTINGS_PAGE');
 
     my $html = '';
     $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
-		   div({-id=>'tabbed_menu',-class=>'tabmenu'},
-		       span({id=>'main_page_select'},         $main_title),
-		       span({id=>'track_page_select'},        $tracks_title),
-		       span({id=>'custom_tracks_page_select'},$custom_tracks_title),
-		       span({id=>'settings_page_select'},     $settings_title),
-		   ),
-		   div({-id=>'main_page',         -class=>'tabbody'}, $main_html),
-		   div({-id=>'track_page',        -class=>'tabbody'}, $tracks_html),
-		   div({-id=>'custom_tracks_page',-class=>'tabbody'}, $custom_tracks_html),
-		   div({-id=>'settings_page',     -class=>'tabbody'}, $settings_html),
+	           div({-id=>'tabbed_menu',-class=>'tabmenu'},
+	           span({id=>'main_page_select'},               $main_title),
+	           span({id=>'track_page_select'},              $tracks_title),
+	           span({id=>'community_tracks_page_select'},   $community_tracks_title),
+	           span({id=>'custom_tracks_page_select'},      $custom_tracks_title),
+	           span({id=>'settings_page_select'},           $settings_title),
+	       ),
+	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
+	   div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
+	   div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html),
+	   div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
+	   div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),
 	);
     return $html;
 }
@@ -285,29 +288,23 @@ sub render_html_head {
   
   # Set any onTabLoad functions
   my $main_page_onLoads = "";
-#  my $track_page_onLoads = "checkLists();";
   my $track_page_onLoads = '';
+  my $community_track_page_onLoads = '';
   my $custom_track_page_onLoads = "";
   my $settings_page_onLoads = "";
   
   # Get plugin onTabLoad functions for each tab, if any
   my %plugin_onLoads = map ($_->onLoads, @plugin_list);
-  if (defined($plugin_onLoads{'main_page'})) {
-    $main_page_onLoads .= $plugin_onLoads{'main_page'};
-  }
-  if (defined($plugin_onLoads{'track_page'})) {
-    $track_page_onLoads .= $plugin_onLoads{'track_page'};
-  }
-  if (defined($plugin_onLoads{'custom_track_page'})) {
-    $custom_track_page_onLoads .= $plugin_onLoads{'custom_track_page'};
-  }
-  if (defined($plugin_onLoads{'settings_page'})) {
-    $settings_page_onLoads .= $plugin_onLoads{'settings_page'};
-  }
+  $main_page_onLoads .= $plugin_onLoads{'main_page'} if $plugin_onLoads{'main_page'};
+  $track_page_onLoads .= $plugin_onLoads{'track_page'} if $plugin_onLoads{'track_page'};
+  $custom_track_page_onLoads .= $plugin_onLoads{'custom_track_page'} if $plugin_onLoads{'custom_track_page'};
+  $community_track_page_onLoads .= $plugin_onLoads{'community_track_page'} if $plugin_onLoads{'community_track_page'};
+  $settings_page_onLoads .= $plugin_onLoads{'settings_page'} if $plugin_onLoads{'settings_page'};
   
   my $onTabScript .= "function onTabLoad(tab_id) {\n";
   $onTabScript .= "if (tab_id == 'main_page_select') {$main_page_onLoads}\n";
   $onTabScript .= "if (tab_id == 'track_page_select') {$track_page_onLoads}\n";
+  $onTabScript .= "if (tab_id == 'community_track_page_select') {$community_track_page_onLoads}\n";
   $onTabScript .= "if (tab_id == 'custom_track_page_select') {$custom_track_page_onLoads}\n";
   $onTabScript .= "if (tab_id == 'settings_page_select') {$settings_page_onLoads}\n";
   $onTabScript .= "};";
@@ -1038,7 +1035,7 @@ sub render_track_table {
 				      -label=>$all_on,-onClick=>"gbCheck(this,1);"),
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				      -label=>$all_off,-onClick=>"gbCheck(this,0);")
-			    ).span({-class => "list",
+			    )."&nbsp;".span({-class => "list",
 			            -id => "${id}_list",
 			            -style => "display: none;"},"")
 			    .br()   if exists $track_groups{$category};
@@ -1335,16 +1332,23 @@ sub render_select_browser_link {
     }
 }
 
-# Render Upload & Share Section - Returns the content of the "Uploads and Shared Tracks" tab.
-sub render_upload_share_section {
+# Render Community Tracks Section - Returns the content of the "Community Tracks" tab.
+sub render_community_tracks_section {
+    my $self = shift;
+    my $userdata = $self->user_tracks;
+    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
+	$html .= div({-id => "community_tracks"}, $self->render_community_track_listing);
+	$html = div({-style => 'margin: 1em;'}, $html);
+	return $html;
+}
+
+# Render Custom Tracks Section - Returns the content of the "Custom Tracks" tab.
+sub render_custom_tracks_section {
     my $self = shift;
     my $userdata = $self->user_tracks;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
 	$html .= div({-id => "custom_tracks"}, $self->render_custom_track_listing);
 	$html .= $self->userdata_upload;
-	if ($userdata->database == 1) {
-		$html .= div({-id => "public_tracks"}, $self->render_public_track_listing);
-	}
 	$html = div({-style => 'margin: 1em;'}, $html);
 	return $html;
 }
@@ -1376,6 +1380,33 @@ sub userdata_upload {
     return $html;
 }
 
+# Render Community Track Listing - Returns the HTML listing of public tracks available to a user.
+sub render_community_track_listing {
+	my $self = shift;
+	my $globals	= $self->globals;
+	my $html = h1({-style => "display: inline-block; margin-right: 1em;"}, $self->translate('COMMUNITY_TRACKS'));
+	my $search = @_? $_[0] : "Enter a keyword or user";
+	
+	my @searched_tracks = $self->user_tracks->get_public_files(@_) if @_;
+	my $count = @_? @searched_tracks : $globals->public_files;
+	$html .= span({-style => "display: inline-block;"},
+	                                                          # The return is necessary - see searchPublic() in ajax_uploads.js for info.
+		start_form({-action => "javascript:void(0);", -onsubmit => "return searchPublic(\$('public_search_keyword').value);"}),
+		"Showing the top " . b($count) . " " . (($count != 1)? "files" : "file") . ". ", 
+		"Filter:",
+		input({-type => "text", -name => "keyword", -id => "public_search_keyword", -width => 50, -value => $search, -onClick => "this.value='';"}),
+		input({-type => "submit", -value => "Search"}),
+		end_form()
+	);
+	
+	if (@_) {
+		$html .= @searched_tracks? $self->list_tracks("public", @searched_tracks) : p($self->translate('NO_PUBLIC_RESULTS', $_[0])) if @_;
+	} else {
+		$html .= $self->list_tracks("public");
+	}
+	return $html;
+}
+
 # Render Custom Track Listing - Returns the HTML listing of public, uploaded, imported and shared tracks added to a session, and a section to add more.
 sub render_custom_track_listing {
 	my $self = shift;
@@ -1391,38 +1422,13 @@ sub render_custom_track_listing {
 	return $html;
 }
 
-# Render Public Track Listing - Returns the HTML listing of public tracks available to a user.
-sub render_public_track_listing {
-	my $self = shift;
-	
-	my $html = h1({-style => "display: inline-block; margin-right: 1em;"}, $self->translate('PUBLIC_TRACKS'));
-	my $search = @_? $_[0] : "Enter a keyword or user";
-	$html .= div({-style => "display: inline-block;"},
-	                                                          # The return is necessary - see searchPublic() in ajax_uploads.js for info.
-		start_form({-action => "javascript:void(0);", -onsubmit => "return searchPublic(\$('public_search_keyword').value);"}),
-		"Filter:",
-		input({-type => "text", -name => "keyword", -id => "public_search_keyword", -width => 50, -value => $search, -onClick => "this.value='';"}),
-		input({-type => "submit", -value => "Search"}),
-		end_form()
-	);
-	
-	if (@_) {
-		my @searched_tracks = $self->user_tracks->get_public_files(@_);
-		$html .= $self->list_tracks("public", @searched_tracks) if @searched_tracks;
-	} else {
-		$html .= $self->list_tracks("public");
-	}
-	return $html;
-}
-
 # List Tracks - Renders a visual listing of an array of tracks. No arguments creates the standard "my tracks" listing.
 sub list_tracks {
 	my $self = shift;
-	my $globals	= $self->globals;
 	my $userdata = $self->user_tracks;
 	my $listing_type = shift || "";
 	# If we've been given input, use the input. If we've been given the public type, use that, or default to all of the current user's tracks.
-	my @tracks = sort( @_? @_ : (($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : $userdata->tracks);
+	my @tracks = sort( @_? @_ : (($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : $userdata->tracks );
 	$listing_type .= " available" if $listing_type =~ /public/;
 	
 	# Main track roll code.
@@ -1496,7 +1502,7 @@ sub render_track_list_title {
 	my $accent_color = shift;
 	my $userdata = $self->user_tracks;
 	
-	my $short_name = $userdata->filename($fileid);
+	my $short_name = $userdata->title($fileid);
 	if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
 		my @tracks = split /\+/, $2;
 		$short_name = "Shared track from $1 (@tracks)";
@@ -1529,7 +1535,14 @@ sub render_track_list_title {
 		},
 		''
 	);
-	my $title = h1({-style	=> "display: inline; font-size: 14pt;"}, $short_name);
+	my $title = h1(
+	    {
+	        -style => "display: inline; font-size: 14pt;",
+	        -onClick         => ($userdata->is_mine($fileid))? "Controller.edit_upload_title('$fileid', this)" : "",
+			-contentEditable => ($userdata->is_mine($fileid))? 'true' : 'false',
+	    },
+	    $short_name
+	);
 	
 	return span(
 		{-style => "display: inline-block;"},
@@ -1624,7 +1637,7 @@ sub render_track_details {
 	my $description = div(
 		{
 			-id              => $fileid . "_description",
-			-onClick         => ($userdata->is_mine($fileid))? "Controller.edit_upload_description('$fileid',this)" : "",
+			-onClick         => ($userdata->is_mine($fileid))? "Controller.edit_upload_description('$fileid', this)" : "",
 			-contentEditable => ($userdata->is_mine($fileid))? 'true' : 'false',
 		},
 		$userdata->description($fileid) || $self->translate('ADD_DESCRIPTION')

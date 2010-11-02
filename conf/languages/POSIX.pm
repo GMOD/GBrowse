@@ -486,9 +486,10 @@ other browser and enter it as a new DAS source. <i>Quantitative tracks
 ("wiggle" files) and uploaded files can not be shared using DAS.</i>
 END
 
-    MAIN_PAGE          => 'Browser',
-    CUSTOM_TRACKS_PAGE => 'Upload and Share Tracks',
-    SETTINGS_PAGE      => 'Preferences',
+    MAIN_PAGE             => 'Browser',
+    CUSTOM_TRACKS_PAGE    => 'Custom Tracks',
+    COMMUNITY_TRACKS_PAGE => 'Community Tracks',
+    SETTINGS_PAGE         => 'Preferences',
 
     DOWNLOAD_TRACK_DATA_REGION => 'Download track data across region %s',
     DOWNLOAD_TRACK_DATA_CHROM => 'Download track data across ENTIRE chromosome %s',
@@ -615,12 +616,14 @@ END
    SHARING_GROUP             => 'Group',
    SHARING_PUBLIC            => 'Public',
    SHARING_HELP              => '<b>Private</b> - Visible only to me.<br>'.
-		                '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
-		                '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
-		                '<b>Public</b> - Visible to anyone.',
+		                        '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
+		                        '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
+		                        '<b>Public</b> - Visible to anyone.',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
    PUBLIC_TRACKS             => 'Public Tracks',
+   COMMUNITY_TRACKS          => 'Community Tracks',
    THERE_ARE_NO_TRACKS_YET   => 'There are no %s tracks yet.',
+   NO_PUBLIC_RESULTS         => 'There are no community tracks that match "%s"',
    TOGGLE_DETAILS            => 'Toggle Details',
    SHARED_WITH               => 'shared with',
    NO_ONE                    => 'no one.',

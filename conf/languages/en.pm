@@ -487,7 +487,8 @@ other browser and enter it as a new DAS source. <i>Quantitative tracks
 END
 
     MAIN_PAGE          => 'Browser',
-    CUSTOM_TRACKS_PAGE => 'Upload and Share Tracks',
+    CUSTOM_TRACKS_PAGE => 'Custom Tracks',
+    PUBLIC_TRACKS_PAGE => 'Community Tracks',
     SETTINGS_PAGE      => 'Preferences',
 
     DOWNLOAD_TRACK_DATA_REGION => 'Download track data across region %s',
@@ -620,7 +621,9 @@ END
 							    '<b>Public</b> - Visible to anyone.',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
    PUBLIC_TRACKS             => 'Public Tracks',
+   COMMUNITY_TRACKS          => 'Community Tracks',
    THERE_ARE_NO_TRACKS_YET   => 'There are no %s tracks yet.',
+   NO_PUBLIC_RESULTS         => 'There are no community tracks that match "%s"',
    TOGGLE_DETAILS            => 'Toggle Details',
    SHARED_WITH               => 'shared with',
    NO_ONE                    => 'no one.',

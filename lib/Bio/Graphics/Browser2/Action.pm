@@ -548,10 +548,24 @@ sub ACTION_set_upload_description {
     my $state       = $self->state;
     my $render      = $self->render;
     my $file = $q->param('upload_id') or confess "No file given to set_upload_description.";
-    my $new_description = $q->param('description') or confess "No new description given to set_upload_description.";
+    my $new_description = $q->param('description');
 
     my $usertracks = $render->user_tracks;
     $usertracks->description($file, $new_description);
+    return (204,'text/plain',undef);
+}
+
+sub ACTION_set_upload_title {
+    my $self = shift;
+    my $q    = shift;
+
+    my $state       = $self->state;
+    my $render      = $self->render;
+    my $file = $q->param('upload_id') or confess "No file given to set_upload_title.";
+    my $new_title = $q->param('title') or confess "No new title given to set_upload_title.";
+
+    my $usertracks = $render->user_tracks;
+    $usertracks->title($file, $new_title);
     return (204,'text/plain',undef);
 }
 

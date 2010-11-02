@@ -28,11 +28,82 @@ sub new {
     print "Error: Could not open login database.";
     confess "Could not open login database $credentials";
   }
-
-  return bless {
+  
+  my $self = bless {
     dbi => $login,
     globals => $globals,
   }, ref $class || $class;
+  
+  my $users_columns = {
+    userid => "varchar(32) not null UNIQUE key",
+    uploadsid => "varchar(32) not null",
+    username => "varchar(32) not null PRIMARY key",
+    email => "varchar(64) not null UNIQUE key",
+    pass => "varchar(32) not null",
+    remember => "boolean not null",
+    openid_only => "boolean not null",
+    confirmed => "boolean not null",
+    cnfrm_code => "varchar(32) not null",
+    last_login => "timestamp not null",
+    created => "datetime not null"
+  };
+  
+  my $openid_columns = {
+    userid => "varchar(32) not null",
+    username => "varchar(32) not null",
+    openid_url => "varchar(128) not null PRIMARY key"
+  };
+  
+  $self->check_db($login, "users", $users_columns);
+  $self->check_db($login, "openid_users", $openid_columns);
+
+  return $self;
+}
+
+# Check DB (DBI, Name, Columns) - Makes sure the named DB is there and follows the schema needed.
+sub check_db {
+    my $self = shift;
+    my $data_source = shift;
+    my $name = shift;
+    my $columns = shift;
+    my $type = $data_source->get_info(17); # Returns the database type.
+
+    # If the database doesn't exist, create it.
+    unless ($data_source->do("SELECT * FROM $name LIMIT 1")) {
+        warn ucfirst $name . " table didn't exist, creating...";
+        # This creates the SQL to make the table.       This middle section is simply outputting %columns as "$key $value, ";
+        my $creation_sql = "CREATE TABLE $name (" . (join ", ", map { "$_ " . $$columns{$_} } keys %$columns) . ")" . (($type =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
+        $data_source->do($creation_sql) or die "Could not create $name database";
+    }
+
+    # If a required column doesn't exist, add it.
+    my $sth = $data_source->prepare("SELECT * from $name LIMIT 1");
+    $sth->execute;
+    if (@{$sth->{NAME_lc}} != keys %$columns) {
+        my $alter_sql = "ALTER TABLE $name ADD (";
+        my @columns_to_create;
+        my $run = 0;
+        # If we don't find a specific column, add its SQL to the columns_to_create array.
+        foreach (keys %$columns) {
+            # MySQL supports ENUM, if not switch to an appropriate varchar().
+            if (($type =~ /mysql/i) && ($$columns{$_} =~ /^ENUM\(/i)) {
+                #Check for any suffixes - "NOT NULL" or whatever.
+                my @options = ($$columns{$_} =~ m/^ENUM\('(.*)'\)/i);
+                my @suffix = ($$columns{$_} =~ m/([^\)]+)$/);
+                my @values = split /',\w*'/, $options[0];
+                my $length = max(map length $_, @values);
+                $$columns{$_} = "varchar($length)" . $suffix[0];
+            }
+            unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
+              push @columns_to_create, "$_ " . $$columns{$_};
+              $run++;
+            }
+        }
+        warn ucfirst $name . " database schema is incorrect, adding " . @columns_to_create . " missing column" . (@columns_to_create > 1)? "s." : ".";
+        $alter_sql .= (join ", ", @columns_to_create) . ");";
+        $data_source->do($alter_sql) if $run;
+    }
+    return $data_source;
 }
 
 # Get Header - Returns the message found at the top of all confirmation e-mails.
@@ -196,6 +267,14 @@ sub get_user_id {
     my $user_id = ($db_lookup? $db_lookup : $potential_userid);
     my $confirmed_user = $userdb->selectcol_arrayref("SELECT userid FROM users");
     return $user_id if join(" ", @$confirmed_user) =~ $user_id;
+}
+
+# Get Uploads ID (User ID) - Returns a user's Uploads ID.
+sub get_uploads_id {
+    my $self = shift;
+	my $userdb = $self->{dbi};
+    my $userid = $userdb->quote(shift);
+    return $userdb->selectrow_array("SELECT uploadsid FROM users WHERE userid = $userid");
 }
 
 # Get Username (User ID) - Returns a user's username, given their ID.

@@ -737,10 +737,11 @@ sub render_body {
   $main_page .= $self->render_select_track_link;
 
   my $tracks        = $self->render_tracks_section;
-  my $upload_share  = $self->render_upload_share_section;
+  my $community     = $self->render_community_tracks_section;
+  my $custom        = $self->render_custom_tracks_section;
   my $global_config = $self->render_global_config;
 
-  $output .= $self->render_tabbed_pages($main_page,$tracks,$upload_share,$global_config);
+  $output .= $self->render_tabbed_pages($main_page,$tracks,$community,$custom,$global_config);
   $output .= $self->render_login_section;
   $output .= $self->render_bottom($features);
 
@@ -2365,14 +2366,14 @@ sub asynchronous_update_sections {
         $return_object->{'tracks_panel'} = $self->render_track_table();
     }
 
-    # New Uploaded Data Section
+    # New Custom Tracks Section
     if ( $handle_section_name{'custom_tracks'}) {
 		$return_object->{'custom_tracks'} = $self->render_custom_track_listing();
     }
     
-    # Public Files Section
-    if ( $handle_section_name{'public_tracks'}) {
-		$return_object->{'public_tracks'} = $self->render_public_track_listing(@_); #Passing on any search terms.
+    # Community Tracks Section
+    if ( $handle_section_name{'community_tracks'}) {
+		$return_object->{'community_tracks'} = $self->render_community_track_listing(@_); #Passing on any search terms.
     }
 
     # Handle Remaining and Undefined Sections

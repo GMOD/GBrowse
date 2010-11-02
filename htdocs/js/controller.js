@@ -33,7 +33,7 @@ var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
 var userdata_table_id       = 'userdata_table_div';
 var custom_tracks_id        = 'custom_tracks';
-var public_tracks_id        = 'public_tracks';
+var community_tracks_id     = 'community_tracks';
 
 //  Sorta Constants
 var expired_limit  = 1;
@@ -862,6 +862,63 @@ var GBrowseController = Class.create({
             detailsdiv.show();
         }
     },
+    
+    edit_upload_title:
+    function(upload_name, title_element) {
+        if (title_element == null)
+            return true;
+        title_element.setStyle({
+            border: '2px',
+            inset:  'black',
+            backgroundColor:'beige',
+            padding:'5px 5px 5px 5px'
+        });
+        var r = document.createRange();
+        r.selectNodeContents(title_element);
+        window.getSelection().addRange(r);
+        Event.observe(title_element, 'keypress', this.set_upload_title);
+        Event.observe(title_element, 'blur', this.set_upload_title);
+    },
+
+    set_upload_title:
+    function(event) {
+        var title_element = event.findElement();
+        if (event.type == 'blur' || event.keyCode == Event.KEY_RETURN) {
+            var file = title_element.up("div.custom_track").id;
+            var title = title_element.innerHTML;
+            title_element.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING')}) );
+            new Ajax.Request(Controller.url, {
+                method:      'post',
+                parameters:{  
+                    action: 'set_upload_title',
+                    upload_id: file,
+                    title: title
+                },
+                onSuccess: function(transport) {
+                    var sections = new Array(custom_tracks_id);
+                    if (using_database())
+                        sections.push(community_tracks_id);
+                    Controller.update_sections(sections);
+                }
+            });
+            title_element.stopObserving('keypress');
+            title_element.stopObserving('blur');
+            title_element.blur();
+            return true;
+        }
+        if (event.keyCode == Event.KEY_ESC) {
+            title_element.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
+            var sections = new Array(custom_tracks_id);
+            if (using_database())
+                sections.push(community_tracks_id);
+            Controller.update_sections(sections);
+            title_element.stopObserving('keypress');
+            title_element.stopObserving('blur');
+            title_element.blur();
+            return true;
+        }
+        return false;
+    },
 
     edit_upload_description:
     function(upload_name,container_element) {
@@ -897,7 +954,7 @@ var GBrowseController = Class.create({
                 onSuccess: function(transport) {
                     var sections = new Array(custom_tracks_id);
                     if (using_database())
-                        sections.push(public_tracks_id);
+                        sections.push(community_tracks_id);
                     Controller.update_sections(sections);
                 }
             });
@@ -910,7 +967,7 @@ var GBrowseController = Class.create({
             description_box.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
             var sections = new Array(custom_tracks_id);
             if (using_database())
-                sections.push(public_tracks_id);
+                sections.push(community_tracks_id);
             Controller.update_sections(sections);
             description_box.stopObserving('keypress');
             description_box.stopObserving('blur');
@@ -964,7 +1021,7 @@ var GBrowseController = Class.create({
                 
                 var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
-					sections.push(public_tracks_id);
+					sections.push(community_tracks_id);
 				Controller.update_sections(sections);
                 if (displayWhenDone != null && displayWhenDone)
                     Controller.select_tab('main_page');
@@ -1067,13 +1124,16 @@ var GBrowseController = Class.create({
 var Controller = new GBrowseController; // singleton
 
 function using_database() {
-	return ($("public_tracks"))? true : false;
+	return ($(community_tracks_id))? true : false;
 }
 
 function initialize_page() {
-
+    checkSummaries();
 	// These statements initialize the tabbing
-	Controller.tabs = new TabbedSection(['main_page','track_page','custom_tracks_page','settings_page']);
+	var tabs = $$("div.tabbody").collect( function(element) {
+	    return element.id;
+	});
+	Controller.tabs = new TabbedSection(tabs);
 
 	//event handlers
 	[page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {

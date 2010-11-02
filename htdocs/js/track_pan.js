@@ -41,6 +41,17 @@ var GBrowseTrackPan = Class.create({
 
 		$('overview_marker').style.left = Math.round(this.overview_segment_start + this.overview_draggable_width * x) + 'px';
 		$('region_marker').style.left   = Math.round(this.region_segment_start   + this.region_draggable_width   * x) + 'px';
+
+		if (this.get_start() > 0 && this.get_stop() > 0) {
+			if (document.searchform) {
+				document.searchform.name.value = this.ref + ':' + this.get_start() + '..' + this.get_stop();
+			}
+
+			var page_title = this.description + ': ' + Controller.translate('SHOWING_FROM_TO',
+					    this.length_label, this.ref, this.get_start(), this.get_stop());
+			document.title = page_title;
+			$('page_title').update(page_title);
+		} 
 	},
 
 	// Creates the semi-transparent div that marks the current view on the overview track
@@ -86,7 +97,11 @@ var GBrowseTrackPan = Class.create({
 		}
 
 		$('overview_marker').style.left  = this.overview_segment_start + 'px';
-		$('overview_marker').style.width = Math.round(this.overview_segment_width/this.details_mult) - 2 + 'px';
+		var width = Math.round(this.overview_segment_width/this.details_mult) - 2;
+		if (width < 1) {
+			width = 1;
+		}
+		$('overview_marker').style.width = width + 'px';
 	},
 
 	// Creates the semi-transparent div that marks the current view on the region track
@@ -131,7 +146,11 @@ var GBrowseTrackPan = Class.create({
 			}
 		}
 		$('region_marker').style.left  = this.region_segment_start + 'px';
-		$('region_marker').style.width = Math.round(this.region_segment_width/this.details_mult) - 2 + 'px';
+		var width = Math.round(this.region_segment_width/this.details_mult) - 2;
+		if (width < 1) {
+			width = 1;
+		}
+		$('region_marker').style.width = width + 'px';
 	},
 
 
@@ -150,9 +169,14 @@ var GBrowseTrackPan = Class.create({
 		this.detail_stop          = parseInt(segment_info.detail_stop);
 		this.overview_pixel_ratio = parseFloat(segment_info.overview_pixel_ratio);
 		this.region_pixel_ratio   = parseFloat(segment_info.region_pixel_ratio);
+		this.ref                  = segment_info.ref;
+		this.description          = segment_info.description;
+		this.length_label         = segment_info.length_label;
 		this.marker_fill          = segment_info.hilite_fill;
 		this.marker_outline       = segment_info.hilite_outline;
 		this.flip                 = segment_info.flip;
+		this.initial_view_start   = parseInt(segment_info.initial_view_start);
+		this.initial_view_stop    = parseInt(segment_info.initial_view_stop);
 
 		this.overview_segment_start  = Math.round(this.detail_start / this.overview_pixel_ratio + this.pad);          // # of pixels
 		this.overview_segment_width  = Math.ceil((this.detail_stop - this.detail_start) / this.overview_pixel_ratio); //
@@ -199,8 +223,12 @@ var GBrowseTrackPan = Class.create({
 				}
 			});
 		});
-
-		this.update_pan_position(0.5); // start in the middle
+		
+		var scroll_to = 0.5; // start in the middle (by default)
+		if (this.initial_view_start >= 0) {
+			scroll_to = this.position_from_start(this.initial_view_start);
+		}
+		this.update_pan_position(scroll_to); 
 	},
 
 	//Similar to Controller scroll method
@@ -209,15 +237,22 @@ var GBrowseTrackPan = Class.create({
 		var newPos = this.x;
 		if (direction == 'right') {
 			var new_stop = this.get_stop() + length_units * this.viewable_segment_length;
-			if (new_stop > this.detail_stop + 10) { return false; }
+			if (new_stop > this.detail_stop + this.viewable_segment_length*0.1) { return false; }
 			newPos += length_units/(this.details_mult-1);
 		} if (direction == 'left') {
 			var new_start = this.get_start() - length_units * this.viewable_segment_length;
-			if (new_start < this.detail_start - 10) { return false; }
+			if (new_start < this.detail_start - this.viewable_segment_length*0.1) { return false; }
 			newPos -= length_units/(this.details_mult-1);
 		}
 		this.update_pan_position(newPos);
 		return true;
+	},
+
+	position_from_start:
+	function(start) {
+		var scrollable_segment_length = this.viewable_segment_length * (this.details_mult - 1);
+		var coord = (start - this.detail_start)  / scrollable_segment_length;
+		return coord;
 	},
 
 	get_start:

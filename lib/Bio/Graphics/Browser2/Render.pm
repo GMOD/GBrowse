@@ -777,17 +777,17 @@ sub generate_title {
          : @$features == 0                   ? $self->translate('NOT_FOUND',$state->{name})
 	 : @$features == 1 ? "$description: ".
 				   $self->translate('SHOWING_FROM_TO',
-					     scalar $dsn->unit_label($features->[0]->length),
-					     $features->[0]->seq_id,
-					     $dsn->commas($features->[0]->start),
-					     $dsn->commas($features->[0]->end))
+					     scalar $dsn->unit_label($state->{view_stop} - $state->{view_start}),
+					     $state->{ref},
+					     $dsn->commas($state->{view_start}),
+					     $dsn->commas($state->{view_stop}))
 	 : $description;
 }
 
-# Provide segment info for rubberbanding
+# Provide segment info for rubberbanding and panning
 sub segment_info_object {
     my $self          = shift;
-    my $settings      = $self->state;
+    my $state         = $self->state;
     my $segment       = $self->segment;
     my $whole_segment = $self->whole_segment;
 
@@ -797,7 +797,7 @@ sub segment_info_object {
         || $renderer->image_padding
         || 0;
     my $max = $self->get_max_segment;
-    my $width = ( $settings->{width} * OVERVIEW_RATIO );
+    my $width = ( $state->{width} * OVERVIEW_RATIO );
     my $image_width  = $self->get_image_width;
     my $detail_width = $self->get_detail_image_width;
 
@@ -810,15 +810,19 @@ sub segment_info_object {
         detail_start         => $segment->start,
         detail_stop          => $segment->end,
         'ref'                => $segment->seq_id,
-        details_pixel_ratio  => $segment->length / ($settings->{width} * $self->details_mult()),
+        details_pixel_ratio  => $segment->length / ($state->{width} * $self->details_mult()),
         detail_width         => $detail_width,
         overview_width       => $image_width,
         details_mult         => $self->details_mult(),
         hilite_fill          => $self->data_source->global_setting('hilite fill')    || 'red',  # Not sure if there's a
         hilite_outline       => $self->data_source->global_setting('hilite outline') || 'gray', # better place for this
-        flip                 => $settings->{flip},
+        flip                 => $state->{flip},
+        initial_view_start   => $state->{view_start},
+        initial_view_stop    => $state->{view_stop},
+        length_label         => scalar $self->data_source->unit_label($state->{view_stop} - $state->{view_start}),
+        description          => $self->data_source->description,
     );
-    if ( $settings->{region_size} ) {
+    if ( $state->{region_size} ) {
         my ( $rstart, $rend ) = ( $self->region_segment->start, $self->region_segment->end );
         my $rlen  = abs( $rend - $rstart );
         my $ratio = $rlen / $width;
@@ -2538,12 +2542,31 @@ sub how_much_to_load {
     my $self = shift;
     my $view_start = shift;
     my $view_stop  = shift;
+    my $state = $self->state;
 
     my $length         = $view_stop - $view_start;
-    my $length_to_load = $length * $self->details_mult;
+    my $length_to_load = int($length * $self->details_mult);
 
-    my $start_to_load  = int($view_start - $length * ($self->details_mult - 1) / 2);
-    my $stop_to_load   = $start_to_load + $length_to_load;
+    my ($start_to_load, $stop_to_load);
+
+    if (defined $state->{seg_min} && defined $state->{seg_max} && $length_to_load > ($state->{seg_max} - $state->{seg_min})) {
+        $start_to_load = $state->{seg_min};
+        $stop_to_load  = $state->{seg_max};
+    } else {
+        $start_to_load  = int($view_start - $length * ($self->details_mult - 1) / 2);
+
+        if (defined $state->{seg_min} && $start_to_load < $state->{seg_min}) {
+            $start_to_load = $state->{seg_min};
+        }
+
+        $stop_to_load   = $start_to_load + $length_to_load;
+
+        if (defined $state->{seg_max} && $stop_to_load > $state->{seg_max}) {
+            my $delta = $stop_to_load - $state->{seg_max};
+            $start_to_load -= $delta;
+            $stop_to_load  -= $delta;
+        }
+    }
 
     return ($start_to_load, $stop_to_load);
 }

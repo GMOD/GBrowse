@@ -3,6 +3,8 @@ package Bio::Graphics::Browser2::RenderPanels;
 use strict;
 use warnings;
 
+use GD 'gdTransparent','gdStyled';
+
 use Bio::Graphics;
 use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
@@ -2423,8 +2425,9 @@ sub hilite_regions_closure {
             # -- otherwise it looks funny.
             if ( $fgcolor && $fgcolor ne 'none' ) {
                 my $c = $panel->translate_color($fgcolor);
-                $gd->line( $left + $start, 0, $left + $start, $bottom, $c );
-                $gd->line( $left + $end,   0, $left + $end,   $bottom, $c );
+                $gd->setStyle($c,$c,gdTransparent,gdTransparent);#,gdTransparent,gdTransparent,gdTransparent);
+                $gd->line( $left + $start, 0, $left + $start, $bottom, gdStyled );
+                $gd->line( $left + $end,   0, $left + $end,   $bottom, gdStyled );
             }
         }
 

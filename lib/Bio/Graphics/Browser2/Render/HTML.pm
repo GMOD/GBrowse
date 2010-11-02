@@ -2122,7 +2122,7 @@ sub slidertable {
 
   # try to avoid reopening the database -- recover segment
   # and whole segment lengths from our stored state if available
-  my $span  = $self->thin_segment->length;
+  my $span  = $state->{view_stop} - $state->{view_start} + 1;
   my $max   = $self->thin_whole_segment->length;
 
   my $buttonsDir    = $self->data_source->button_url;

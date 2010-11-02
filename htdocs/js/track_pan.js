@@ -64,25 +64,24 @@ var GBrowseTrackPan = Class.create({
 				backgroundColor: this.marker_fill,
 				position:        'absolute',
 				top:             '0px',
-				height:          '12px',
-				opacity:         0.9  // Cross-browser opacity setter (from Prototype)
-			});
-			var nonDraggable = new Element('div');
-			$('overview_marker').insert({top: nonDraggable});
-			nonDraggable.setStyle({
-				backgroundColor: this.marker_fill,
 				borderLeft:      '1px solid ' + this.marker_outline,
 				borderRight:     '1px solid ' + this.marker_outline,
-				width:           '100%',
 				height:          '200px',
-				opacity:         0.5 
+				opacity:         0.55,
+				cursor:          'text'
 			});
-			nonDraggable.style.pointerEvents = 'none'; // This lets the user click "through" the element, so
-				// rubber dragging still works.  Prototype does not support setting this style yet, but
-				// some browsers do: Firefox 3.6+, Safari 4.0+, and Chrome.
+			var drag_handle = new Element('div');
+			$('overview_marker').insert({top: drag_handle});
+			drag_handle.setStyle({
+				backgroundColor: 'black',
+				width:           '100%',
+				height:          '12px',
+				opacity:         0.2  // Cross-browser opacity setter (from Prototype)
+			});
+			$('overview_marker').onmousedown = Overview.prototype.startSelection; // Rubber band selection
 
 			if (this.details_mult > 1.0) {  //No need to be draggable if viewport is same size as loaded image
-				$('overview_marker').setStyle({cursor: 'move'});
+				drag_handle.setStyle({cursor: 'move'});
 
 				new Draggable($('overview_marker'), {
 					constraint: 'horizontal',
@@ -90,6 +89,7 @@ var GBrowseTrackPan = Class.create({
 					snap: function(x) {
 						return[ (x > TrackPan.overview_segment_start) ? (x < (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ? x : (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ) : TrackPan.overview_segment_start ];
 					},
+					handle: drag_handle,
 					onDrag: function () { TrackPan.update_pan_position((parseInt($('overview_marker').style.left) - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) },
 					onEnd:  function () { TrackPan.update_pan_position((parseInt($('overview_marker').style.left) - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) }
 				});
@@ -114,25 +114,24 @@ var GBrowseTrackPan = Class.create({
 				backgroundColor: this.marker_fill,
 				position:        'absolute',
 				top:             '0px',
-				height:          '12px',
-				opacity:         0.9  // Cross-browser opacity setter (from Prototype)
-			});
-			var nonDraggable = new Element('div');
-			$('region_marker').insert({top: nonDraggable});
-			nonDraggable.setStyle({
-				backgroundColor: this.marker_fill,
 				borderLeft:      '1px solid ' + this.marker_outline,
 				borderRight:     '1px solid ' + this.marker_outline,
-				width:           '100%',
 				height:          '200px',
-				opacity:         0.5 
+				opacity:         0.55,
+				cursor:          'text'
 			});
-			nonDraggable.style.pointerEvents = 'none'; // This lets the user click "through" the element, so
-				// rubber dragging still works.  Prototype does not support setting this style yet, but
-				// some browsers do: Firefox 3.6+, Safari 4.0+, and Chrome.
+			var drag_handle = new Element('div');
+			$('region_marker').insert({top: drag_handle});
+			drag_handle.setStyle({
+				backgroundColor: 'black',
+				width:           '100%',
+				height:          '12px',
+				opacity:         0.2  // Cross-browser opacity setter (from Prototype)
+			});
+			$('region_marker').onmousedown = Region.prototype.startSelection; // Rubber band selection
 
 			if (this.details_mult > 1.0) {  //No need to be draggable if viewport is same size as loaded image
-				$('region_marker').setStyle({cursor: 'move'});
+				drag_handle.setStyle({cursor: 'move'});
 
 				new Draggable($('region_marker'), {
 					constraint: 'horizontal',
@@ -140,6 +139,7 @@ var GBrowseTrackPan = Class.create({
 					snap: function(x) {
 						return[ (x > TrackPan.region_segment_start) ? (x < (TrackPan.region_segment_start + TrackPan.region_draggable_width) ? x : (TrackPan.region_segment_start + TrackPan.region_draggable_width) ) : TrackPan.region_segment_start ];
 					},
+					handle: drag_handle,
 					onDrag: function () { TrackPan.update_pan_position((parseInt($('region_marker').style.left) - TrackPan.region_segment_start) / TrackPan.region_draggable_width) },
 					onEnd:  function () { TrackPan.update_pan_position((parseInt($('region_marker').style.left) - TrackPan.region_segment_start) / TrackPan.region_draggable_width) }
 		    		});

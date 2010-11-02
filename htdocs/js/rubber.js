@@ -104,12 +104,18 @@ SelectArea.prototype.recenter = function(event) {
     end = start;
     start = tmp;
   }
-    
-  self.currentSegment = self.ref + ':' + start + '..' + end;
-  if (document.searchform) {
-    document.searchform.name.value = self.currentSegment;
+  
+  if (start >= this.detailStart && end <= this.detailEnd) {
+    // The segment is already loaded - just scroll to it
+    var scroll_to = TrackPan.position_from_start(start);
+    TrackPan.update_pan_position(scroll_to); 
+  } else {
+    self.currentSegment = self.ref + ':' + start + '..' + end;
+    if (document.searchform) {
+      document.searchform.name.value = self.currentSegment;
+    }
+    self.submit();
   }
-  self.submit();
 }
 
 // Cross-browser element coordinates

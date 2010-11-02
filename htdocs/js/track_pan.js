@@ -68,7 +68,8 @@ var GBrowseTrackPan = Class.create({
 				borderRight:     '1px solid ' + this.marker_outline,
 				height:          '200px',
 				opacity:         0.55,
-				cursor:          'text'
+				cursor:          'text',
+				zIndex:          5
 			});
 			var drag_handle = new Element('div');
 			$('overview_marker').insert({top: drag_handle});
@@ -85,7 +86,6 @@ var GBrowseTrackPan = Class.create({
 
 				new Draggable($('overview_marker'), {
 					constraint: 'horizontal',
-					zindex: 0, // defaults to 1000, which we don't want
 					snap: function(x) {
 						return[ (x > TrackPan.overview_segment_start) ? (x < (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ? x : (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ) : TrackPan.overview_segment_start ];
 					},
@@ -118,7 +118,8 @@ var GBrowseTrackPan = Class.create({
 				borderRight:     '1px solid ' + this.marker_outline,
 				height:          '200px',
 				opacity:         0.55,
-				cursor:          'text'
+				cursor:          'text',
+				zIndex:          5
 			});
 			var drag_handle = new Element('div');
 			$('region_marker').insert({top: drag_handle});
@@ -135,7 +136,6 @@ var GBrowseTrackPan = Class.create({
 
 				new Draggable($('region_marker'), {
 					constraint: 'horizontal',
-					zindex: 0, // defaults to 1000, which we don't want
 					snap: function(x) {
 						return[ (x > TrackPan.region_segment_start) ? (x < (TrackPan.region_segment_start + TrackPan.region_draggable_width) ? x : (TrackPan.region_segment_start + TrackPan.region_draggable_width) ) : TrackPan.region_segment_start ];
 					},

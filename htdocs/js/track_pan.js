@@ -71,6 +71,7 @@ var GBrowseTrackPan = Class.create({
 				cursor:          'text',
 				zIndex:          5
 			});
+			$('overview_marker').onmousedown = Overview.prototype.startSelection; // Rubber band selection
 		}
 		if (this.details_mult > 1.0 && !this.overview_draggable) {
 			var drag_handle = new Element('div');
@@ -81,7 +82,6 @@ var GBrowseTrackPan = Class.create({
 				height:          '12px',
 				opacity:         0.2  // Cross-browser opacity setter (from Prototype)
 			});
-			$('overview_marker').onmousedown = Overview.prototype.startSelection; // Rubber band selection
 
 			if (this.details_mult > 1.0) {  //No need to be draggable if viewport is same size as loaded image
 				drag_handle.setStyle({cursor: 'move'});

@@ -1,3 +1,8 @@
+2.17
+     * Track configuration dialog now allows for control of autoscaling behavior in quantitative
+       glyphs.
+     * Support for vista_plot glyph added to config dialog.
+
 2.16
      * Added code to recognize and strip whitespace from search coordinates. This 
        allows "chr1:2,000 .. 1,180,000" to work as a search term.

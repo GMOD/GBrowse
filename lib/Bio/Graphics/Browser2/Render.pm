@@ -2079,9 +2079,14 @@ sub reconfigure_track {
 	$s =~ s/^conf_//;
 	next unless defined $value;
 
-	if ($s eq 'graph_type_whiskers') {
-	    next unless $glyph =~ /whiskers/;
-	    $s = 'graph_type';
+	if ($s =~ /(\w+)_subtype/) {
+	    next unless $1 eq $glyph;
+	    $s = 'glyph_subtype';
+	} elsif ($s =~ /(\w+)_autoscale/) {
+	    my $g = $1;
+	    next if $g eq 'wiggle' && $glyph !~ /wiggle|vista/;
+	    next if $g eq 'xyplot' && $glyph !~ /xyplot|density/;
+	    $s = 'autoscale';
 	}
 
 	my $configured_value = $source->semantic_fallback_setting($label=>$s,$semantic_len);
@@ -2099,6 +2104,11 @@ sub reconfigure_track {
 	    }
 	}
     }
+    if (defined $o->{autoscale} && $o->{autoscale} ne 'none') { undef $o->{min_score}; undef $o->{max_score} }
+#    {
+#	local $Data::Dumper::Sortkeys=1;
+#	warn Data::Dumper::Dumper($o);
+#    }
 }
 
 sub track_config {

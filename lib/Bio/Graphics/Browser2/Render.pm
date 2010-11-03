@@ -3253,7 +3253,7 @@ sub details_mult_from_setting {
 
 sub details_mult {
     my $self = shift;
-    return $self->state->{details_mult} || details_mult_from_setting;
+    return $self->state->{details_mult} || $self->details_mult_from_setting;
 }
 
 sub render_deferred {

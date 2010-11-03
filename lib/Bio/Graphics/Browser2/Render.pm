@@ -2193,7 +2193,7 @@ sub update_coordinates {
       param(name => $state->{name});
 
       # Take details multiplier into account
-      ($state->{start}, $state->{stop}) = $self->how_much_to_load($state->{view_start}, $state->{view_stop});
+      $self->update_state_from_details_mult;
 
       warn "name = $state->{name}" if DEBUG;
   }
@@ -2512,10 +2512,16 @@ sub asynchronous_update_coordinates {
 	    my $delta = $state->{view_stop} - $whole_segment_stop;
 	    $state->{view_start} -= $delta;
 	    $state->{view_stop}  -= $delta;
+
+            if ($state->{view_start} < 0) {
+                # Segment requested is larger than the whole segment
+                $state->{view_start} = $whole_segment_start;
+	        $state->{view_stop}  = $whole_segment_stop;
+            }
 	}
 
         # Take details multiplier into account
-        ($state->{start}, $state->{stop}) = $self->how_much_to_load($state->{view_start}, $state->{view_stop});
+        $self->update_state_from_details_mult;
 
 	unless (defined $state->{ref}) {
 	    warn "Reverting coordinates to last known good region (user probably hit 'back' button).";
@@ -2539,22 +2545,30 @@ sub asynchronous_update_coordinates {
     $position_updated;
 }
 
-sub how_much_to_load {
+sub update_state_from_details_mult {
     my $self = shift;
-    my $view_start = shift;
-    my $view_stop  = shift;
     my $state = $self->state;
 
+    my $view_start = $state->{view_start};
+    my $view_stop  = $state->{view_stop};
+
+    my $details_mult = $self->details_mult_from_setting;
+
     my $length         = $view_stop - $view_start;
-    my $length_to_load = int($length * $self->details_mult);
+    my $length_to_load = int($length * $details_mult);
 
     my ($start_to_load, $stop_to_load);
 
     if (defined $state->{seg_min} && defined $state->{seg_max} && $length_to_load > ($state->{seg_max} - $state->{seg_min})) {
         $start_to_load = $state->{seg_min};
         $stop_to_load  = $state->{seg_max};
+        if ($length <= ($state->{seg_max} - $state->{seg_min}) && $length > 0) {
+            $details_mult = ($state->{seg_max} - $state->{seg_min}) / $length;
+        } else {
+            $details_mult = 1;
+        }
     } else {
-        $start_to_load  = int($view_start - $length * ($self->details_mult - 1) / 2);
+        $start_to_load  = int($view_start - $length * ($details_mult - 1) / 2);
 
         if (defined $state->{seg_min} && $start_to_load < $state->{seg_min}) {
             $start_to_load = $state->{seg_min};
@@ -2569,7 +2583,9 @@ sub how_much_to_load {
         }
     }
 
-    return ($start_to_load, $stop_to_load);
+    $state->{details_mult} = $details_mult;
+    $state->{start} = $start_to_load;
+    $state->{stop}  = $stop_to_load;
 }
 
 sub zoom_to_span {
@@ -3227,12 +3243,17 @@ sub get_total_pad_width {
     return $padl + $padr;
 }
 
+sub details_mult_from_setting {
+    my $self = shift;
+    my $value = $self->data_source->global_setting('details multiplier') || 1;
+    $value = 1  if ($value < 1);  #lower limit 
+    $value = 25 if ($value > 15); #set upper limit for performance reasons (prevent massive image files)
+    return $value;
+}
+
 sub details_mult {
-	my $self = shift;
-	my $value = $self->data_source->global_setting('details multiplier') || 1;
-	$value = 1  if ($value < 1);  #lower limit 
-	$value = 25 if ($value > 15); #set upper limit for performance reasons (prevent massive image files)
-	return $value;
+    my $self = shift;
+    return $self->state->{details_mult} || details_mult_from_setting;
 }
 
 sub render_deferred {

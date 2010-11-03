@@ -71,6 +71,8 @@ var GBrowseTrackPan = Class.create({
 				cursor:          'text',
 				zIndex:          5
 			});
+		}
+		if (this.details_mult > 1.0 && !this.overview_draggable) {
 			var drag_handle = new Element('div');
 			$('overview_marker').insert({top: drag_handle});
 			drag_handle.setStyle({
@@ -84,7 +86,7 @@ var GBrowseTrackPan = Class.create({
 			if (this.details_mult > 1.0) {  //No need to be draggable if viewport is same size as loaded image
 				drag_handle.setStyle({cursor: 'move'});
 
-				new Draggable($('overview_marker'), {
+				this.overview_draggable = new Draggable($('overview_marker'), {
 					constraint: 'horizontal',
 					snap: function(x) {
 						return[ (x > TrackPan.overview_segment_start) ? (x < (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ? x : (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ) : TrackPan.overview_segment_start ];
@@ -94,6 +96,10 @@ var GBrowseTrackPan = Class.create({
 					onEnd:  function () { TrackPan.update_pan_position((parseInt($('overview_marker').style.left) - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) }
 				});
 			}
+		} else if (this.details_mult <= 1.0 && this.overview_draggable) {
+			//No need to be draggable if viewport is same size as loaded image
+			this.overview_draggable = false;
+			$('overview_marker').innerHTML = '';
 		}
 
 		$('overview_marker').style.left  = this.overview_segment_start + 'px';
@@ -121,6 +127,9 @@ var GBrowseTrackPan = Class.create({
 				cursor:          'text',
 				zIndex:          5
 			});
+			$('region_marker').onmousedown = Region.prototype.startSelection; // Rubber band selection
+		}
+		if (this.details_mult > 1.0 && !this.region_draggable) {
 			var drag_handle = new Element('div');
 			$('region_marker').insert({top: drag_handle});
 			drag_handle.setStyle({
@@ -129,22 +138,24 @@ var GBrowseTrackPan = Class.create({
 				height:          '12px',
 				opacity:         0.2  // Cross-browser opacity setter (from Prototype)
 			});
-			$('region_marker').onmousedown = Region.prototype.startSelection; // Rubber band selection
 
-			if (this.details_mult > 1.0) {  //No need to be draggable if viewport is same size as loaded image
-				drag_handle.setStyle({cursor: 'move'});
+			drag_handle.setStyle({cursor: 'move'});
 
-				new Draggable($('region_marker'), {
-					constraint: 'horizontal',
-					snap: function(x) {
-						return[ (x > TrackPan.region_segment_start) ? (x < (TrackPan.region_segment_start + TrackPan.region_draggable_width) ? x : (TrackPan.region_segment_start + TrackPan.region_draggable_width) ) : TrackPan.region_segment_start ];
-					},
-					handle: drag_handle,
-					onDrag: function () { TrackPan.update_pan_position((parseInt($('region_marker').style.left) - TrackPan.region_segment_start) / TrackPan.region_draggable_width) },
-					onEnd:  function () { TrackPan.update_pan_position((parseInt($('region_marker').style.left) - TrackPan.region_segment_start) / TrackPan.region_draggable_width) }
-		    		});
-			}
+			this.region_draggable = new Draggable($('region_marker'), {
+				constraint: 'horizontal',
+				snap: function(x) {
+					return[ (x > TrackPan.region_segment_start) ? (x < (TrackPan.region_segment_start + TrackPan.region_draggable_width) ? x : (TrackPan.region_segment_start + TrackPan.region_draggable_width) ) : TrackPan.region_segment_start ];
+				},
+				handle: drag_handle,
+				onDrag: function () { TrackPan.update_pan_position((parseInt($('region_marker').style.left) - TrackPan.region_segment_start) / TrackPan.region_draggable_width) },
+				onEnd:  function () { TrackPan.update_pan_position((parseInt($('region_marker').style.left) - TrackPan.region_segment_start) / TrackPan.region_draggable_width) }
+	    		});
+		} else if (this.details_mult <= 1.0 && this.region_draggable) {
+			//No need to be draggable if viewport is same size as loaded image
+			this.region_draggable = null;
+			$('region_marker').innerHTML = '';
 		}
+
 		$('region_marker').style.left  = this.region_segment_start + 'px';
 		var width = Math.round(this.region_segment_width/this.details_mult) - 2;
 		if (width < 1) {
@@ -178,23 +189,28 @@ var GBrowseTrackPan = Class.create({
 		this.initial_view_start   = parseInt(segment_info.initial_view_start);
 		this.initial_view_stop    = parseInt(segment_info.initial_view_stop);
 
-		this.overview_segment_start  = Math.round(this.detail_start / this.overview_pixel_ratio + this.pad);          // # of pixels
-		this.overview_segment_width  = Math.ceil((this.detail_stop - this.detail_start) / this.overview_pixel_ratio); //
+		this.overview_segment_start   = Math.round(this.detail_start / this.overview_pixel_ratio + this.pad);          // # of pixels
+		this.overview_segment_width   = Math.ceil((this.detail_stop - this.detail_start) / this.overview_pixel_ratio); //
 
-		this.region_segment_start  = Math.round((this.detail_start - this.region_start) / this.region_pixel_ratio + this.pad); // # of pixels
-		this.region_segment_width  = Math.ceil((this.detail_stop  - this.detail_start) / this.region_pixel_ratio);             //
+		this.region_segment_start     = Math.round((this.detail_start - this.region_start) / this.region_pixel_ratio + this.pad); // # of pixels
+		this.region_segment_width     = Math.ceil((this.detail_stop  - this.detail_start) / this.region_pixel_ratio);             //
 
 		this.detail_draggable_width   = Math.ceil(this.detail_width - this.overview_width);
 		this.overview_draggable_width = Math.ceil(this.overview_segment_width - this.overview_segment_width/this.details_mult);
 		this.region_draggable_width   = Math.ceil(this.region_segment_width - this.region_segment_width/this.details_mult);
 
-		this.viewable_segment_length = Math.round((this.detail_stop - this.detail_start) / this.details_mult);
+		this.viewable_segment_length  = Math.round((this.detail_stop - this.detail_start) / this.details_mult);
 
 		this.create_overview_pos_marker();
 		this.create_region_pos_marker();
 
 		if (this.details_mult <= 1.0) {
 			this.x = 0;
+
+			this.each_details_track(function(gbtrack) {
+				gbtrack.get_image_div().setStyle({left:'0px'});
+			});
+
 			return; //No need to be draggable if viewport is same size as loaded image
 		}
 
@@ -231,7 +247,6 @@ var GBrowseTrackPan = Class.create({
 		this.update_pan_position(scroll_to); 
 	},
 
-	//Similar to Controller scroll method
 	scroll:
 	function (direction,length_units) {
 		var newPos = this.x;

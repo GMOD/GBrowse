@@ -80,9 +80,11 @@ sub render_error_div {
 sub render_tabbed_pages {
     my $self = shift;
     my ($main_html,$tracks_html,$community_tracks_html,$custom_tracks_html,$settings_html,) = @_;
+    my $uses_database = $self->user_tracks->database;
+    
     my $main_title             = $self->translate('MAIN_PAGE');
     my $tracks_title           = $self->translate('SELECT_TRACKS');
-    my $community_tracks_title = $self->translate('PUBLIC_TRACKS_PAGE');
+    my $community_tracks_title = $self->translate('PUBLIC_TRACKS_PAGE') if $uses_database;
     my $custom_tracks_title    = $self->translate('CUSTOM_TRACKS_PAGE');
     my $settings_title         = $self->translate('SETTINGS_PAGE');
 
@@ -91,13 +93,13 @@ sub render_tabbed_pages {
 	           div({-id=>'tabbed_menu',-class=>'tabmenu'},
 	           span({id=>'main_page_select'},               $main_title),
 	           span({id=>'track_page_select'},              $tracks_title),
-	           span({id=>'community_tracks_page_select'},   $community_tracks_title),
+	           $uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
 	           span({id=>'custom_tracks_page_select'},      $custom_tracks_title),
 	           span({id=>'settings_page_select'},           $settings_title),
 	       ),
 	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
 	   div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
-	   div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html),
+	   $uses_database?div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html) : "",
 	   div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
 	   div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),
 	);
@@ -277,7 +279,8 @@ sub render_html_head {
   my $self = shift;
   my ($dsn,$title,@other_initialization) = @_;
   my @plugin_list = $self->plugins->plugins;
-
+  my $uses_database = $self->user_tracks->database;
+  
   return if $self->{started_html}++;
 
   $title =~ s/<[^>]+>//g; # no markup in the head
@@ -297,14 +300,14 @@ sub render_html_head {
   my %plugin_onLoads = map ($_->onLoads, @plugin_list);
   $main_page_onLoads .= $plugin_onLoads{'main_page'} if $plugin_onLoads{'main_page'};
   $track_page_onLoads .= $plugin_onLoads{'track_page'} if $plugin_onLoads{'track_page'};
-  $custom_track_page_onLoads .= $plugin_onLoads{'custom_track_page'} if $plugin_onLoads{'custom_track_page'};
+  $custom_track_page_onLoads .= $plugin_onLoads{'custom_track_page'} if $plugin_onLoads{'custom_track_page'} && $uses_database;
   $community_track_page_onLoads .= $plugin_onLoads{'community_track_page'} if $plugin_onLoads{'community_track_page'};
   $settings_page_onLoads .= $plugin_onLoads{'settings_page'} if $plugin_onLoads{'settings_page'};
   
   my $onTabScript .= "function onTabLoad(tab_id) {\n";
   $onTabScript .= "if (tab_id == 'main_page_select') {$main_page_onLoads}\n";
   $onTabScript .= "if (tab_id == 'track_page_select') {$track_page_onLoads}\n";
-  $onTabScript .= "if (tab_id == 'community_track_page_select') {$community_track_page_onLoads}\n";
+  $onTabScript .= "if (tab_id == 'community_track_page_select') {$community_track_page_onLoads}\n" if $uses_database;
   $onTabScript .= "if (tab_id == 'custom_track_page_select') {$custom_track_page_onLoads}\n";
   $onTabScript .= "if (tab_id == 'settings_page_select') {$settings_page_onLoads}\n";
   $onTabScript .= "};";
@@ -1387,22 +1390,43 @@ sub render_community_track_listing {
 	my $self = shift;
 	my $globals	= $self->globals;
 	my $html = h1({-style => "display: inline-block; margin-right: 1em;"}, $self->translate('COMMUNITY_TRACKS'));
-	my $search = @_? $_[0] : "Enter a keyword or user";
+	my $search = $_[0] || "";
+	my $offset = $_[1] || 0;
+	my $usertracks = $self->user_tracks;
 	
-	my @searched_tracks = $self->user_tracks->get_public_files(@_) if @_;
-	my $count = @_? @searched_tracks : $globals->public_files;
+	my @requested_tracks = $usertracks->get_public_files(@_) if @_;
+	
+	# Calculate the value for the next pagination
+	my $total_tracks = $usertracks->public_count($search);
+	my $track_limit = $search? $#requested_tracks : $globals->public_files;
+	my $tracks_before = ($track_limit < $offset)? $track_limit : $offset;
+	my $tracks_after = ($track_limit < ($total_tracks - $offset - $track_limit))? $track_limit : ($total_tracks - $offset - $track_limit);
+	my $previous_offset = $offset - $tracks_before;
+	my $next_offset = $offset + $track_limit;
+	my $tracks_displayed = ($track_limit < (@requested_tracks? ($#requested_tracks + 1) : $total_tracks))? $track_limit : (@requested_tracks? ($#requested_tracks + 1) : $total_tracks);
+	
+	# Create the HTML for the title & header
 	$html .= span({-style => "display: inline-block;"},
-	                                                          # The return is necessary - see searchPublic() in ajax_uploads.js for info.
-		start_form({-action => "javascript:void(0);", -onsubmit => "return searchPublic(\$('public_search_keyword').value);"}),
-		"Showing the top " . b($count) . " " . (($count != 1)? "files" : "file") . ". ", 
+		start_form({-action => "javascript:void(0);", -onsubmit => "return searchPublic(\$('public_search_keyword').value);"}), # The return here is necessary to stop the form from ACTUALLY submitting.
 		"Filter:",
-		input({-type => "text", -name => "keyword", -id => "public_search_keyword", -width => 50, -value => $search, -onClick => "this.value='';"}),
+		input({
+		    -type => "text",
+		    -name => "keyword",
+		    -id => "public_search_keyword",
+		    -width => 50,
+		    -value => ($search || $self->translate('ENTER_KEYWORD')) . ($self->globals->user_accounts? (" " . $self->translate('OR_USER')) : ""),
+		    -onClick => "this.value='';"
+		}),
 		input({-type => "submit", -value => "Search"}),
+		($tracks_before > 0)? a({-href => '#', -onClick => "return searchPublic(\"$search\", $previous_offset);"}, "[" . $self->translate('PREVIOUS_N', $tracks_before) . "]") . "&nbsp;" : "",
+		$self->translate('SHOWING_TOP_PUBLIC_FILES', $tracks_displayed, $total_tracks),
+		($tracks_after > 0)? "&nbsp;" . a({-href => '#', -onClick => "return searchPublic(\"$search\", $next_offset);"}, "[" . $self->translate('NEXT_N', $tracks_after) . "]") : "",
 		end_form()
 	);
 	
+	# Add the results
 	if (@_) {
-		$html .= @searched_tracks? $self->list_tracks("public", @searched_tracks) : p($self->translate('NO_PUBLIC_RESULTS', $_[0])) if @_;
+		$html .= @requested_tracks? $self->list_tracks("public", @requested_tracks) : p($self->translate('NO_PUBLIC_RESULTS', $_[0])) if @_;
 	} else {
 		$html .= $self->list_tracks("public");
 	}
@@ -1430,7 +1454,7 @@ sub list_tracks {
 	my $userdata = $self->user_tracks;
 	my $listing_type = shift || "";
 	# If we've been given input, use the input. If we've been given the public type, use that, or default to all of the current user's tracks.
-	my @tracks = sort( @_? @_ : (($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : $userdata->tracks );
+	my @tracks = @_? @_ : (($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : $userdata->tracks;
 	$listing_type .= " available" if $listing_type =~ /public/;
 	
 	# Main track roll code.
@@ -1540,8 +1564,8 @@ sub render_track_list_title {
 	my $title = h1(
 	    {
 	        -style => "display: inline; font-size: 14pt;",
-	        -onClick         => ($userdata->is_mine($fileid))? "Controller.edit_upload_title('$fileid', this)" : "",
-			-contentEditable => ($userdata->is_mine($fileid))? 'true' : 'false',
+	        -onClick         => ($userdata->is_mine($fileid) && $userdata->database)? "Controller.edit_upload_title('$fileid', this)" : "",
+			-contentEditable => ($userdata->is_mine($fileid) && $userdata->database)? 'true' : 'false',
 	    },
 	    $short_name
 	);
@@ -1783,7 +1807,11 @@ sub render_track_sharing {
 		my $sharing_help = $self->translate('SHARING_HELP');
 		
 		$sharing_content .= "&nbsp;" . a({-href => "javascript:void(0)", -onMouseOver => "GBubble.showTooltip(event,'$sharing_help',0,300);"}, "[?]");
-		$sharing_content .= "&nbsp;" . $self->translate('SHARED_WITH') . " " .  ($userlist? "$userlist" : $self->translate('NO_ONE')) if ($sharing_policy =~ /(casual|group)/);
+		$sharing_content .= "&nbsp;" . $self->translate('SHARED_WITH') . "&nbsp;" .  ($userlist? "$userlist" : $self->translate('NO_ONE')) if ($sharing_policy =~ /(casual|group)/);
+		if ($sharing_policy =~ /public/) {
+		    my $count = $userdata->public_users($fileid);
+		    $sharing_content .= "&nbsp;" . $self->translate('USED_BY') . "&nbsp;" .  ($count? b($count) . "&nbsp;" . $self->translate('USERS') . "." : $self->translate('NO_ONE'));
+		}
 		
 		if ($sharing_policy =~ /casual/) {
 			my $sharing_url = $userdata->sharing_link($fileid);

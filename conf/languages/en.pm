@@ -620,6 +620,8 @@ END
 							    '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
 							    '<b>Public</b> - Visible to anyone.',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
+   USERS                     => 'users',
+   USED_BY                   => 'used by',
    PUBLIC_TRACKS             => 'Public Tracks',
    COMMUNITY_TRACKS          => 'Community Tracks',
    THERE_ARE_NO_TRACKS_YET   => 'There are no %s tracks yet.',
@@ -637,6 +639,12 @@ END
    ADDING                    => 'Adding...',
    REMOVING                  => 'Removing...',
    ERROR                     => 'The server returned an error.',
+   ENTER_KEYWORD             => 'Enter a keyword',
+   OR_USER                   => 'or user',
+   SHOWING_TOP_PUBLIC_FILES  => 'Showing %s out of %s file(s)',
+   FOUND_N_FILES             => 'Found %s file(s)',
+   NEXT_N                    => 'Next %s',
+   PREVIOUS_N                => 'Previous %s',
 
    #------
    # MISC.

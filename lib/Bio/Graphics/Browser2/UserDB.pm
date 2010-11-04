@@ -17,7 +17,6 @@ use Carp qw(confess cluck);
 
 sub new {
   my $class = shift;
-  my $self = {};
   my $VERSION = '0.5';
   my $globals = Bio::Graphics::Browser2->open_globals;
   my $credentials  = shift || $globals->user_account_db or die "No credentials specified in GBrowse.conf.";

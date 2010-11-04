@@ -107,10 +107,10 @@ sub ACTION_update_sections {
     my $render = $self->render;
     my @section_names = $q->param('section_names');
     my $keyword = $q->param('keyword');
+    my $offset = $q->param('offset');
     
     my @args = (\@section_names);
-    push @args, $keyword if $keyword;
-    my $section_html = $render->asynchronous_update_sections( @args );
+    my $section_html = $render->asynchronous_update_sections(\@section_names, $keyword, $offset);
 
     my $return_object = { section_html => $section_html, };
     return ( 200, 'application/json', $return_object );

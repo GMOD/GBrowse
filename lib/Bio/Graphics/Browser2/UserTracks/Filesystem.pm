@@ -167,4 +167,9 @@ sub owner {
 	return shift->{uploadsid};
 }
 
+# Title (File) - Returns the title of a file, which is the filename.
+sub title {
+    return shift->filename(shift);
+}
+
 1;

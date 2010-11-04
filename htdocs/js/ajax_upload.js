@@ -422,7 +422,7 @@ function unshareFile(fileid, userid) {
 	);
 }
 
-function searchPublic(keyword) {
+function searchPublic(keyword, offset) {
 	Controller.busy();
 	new Ajax.Request(
 		document.URL,
@@ -432,6 +432,7 @@ function searchPublic(keyword) {
 				action: 'update_sections',
 				section_names: community_tracks_id,
 				keyword: keyword,
+				offset: offset
 			},
 			onSuccess: function (transport) {
 				var html = transport.responseText.evalJSON(true).section_html[community_tracks_id];

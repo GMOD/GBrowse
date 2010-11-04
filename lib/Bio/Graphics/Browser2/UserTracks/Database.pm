@@ -65,6 +65,7 @@ sub _new {
         public_count => "int"
     };
     $self->check_db($uploadsdb, "uploads", $uploads_columns);
+    $self->check_files;
     
     # Check to see if user accounts are enabled, set some globals just in case.
     if ($globals->user_accounts) {
@@ -120,6 +121,32 @@ sub check_db {
     return $data_source;
 }
 
+# Check Files () - Makes sure a user's files are all in the database, adds them if not.
+sub check_files {
+    my $self = shift;
+    my $uploadsid = $self->{uploadsid} or return;
+    my $uploadsdb = $self->{uploadsdb};
+    
+    # Get the files from the database.
+    my $files_in_db = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = " . $uploadsdb->quote($uploadsid));
+    my @files_in_db = @$files_in_db;
+    
+    # Get the files in the folder.
+    my $path = $self->path;	
+	my @files_in_folder;
+	opendir D, $path;
+	while (my $dir = readdir(D)) {
+		next if $dir =~ /^\.+$/;
+		push @files_in_folder, $dir;
+	}
+	
+	foreach my $file (@files_in_folder) {
+	    my $found = grep(/$file/, @files_in_db);
+	    $self->add_file($file) unless $found;
+	    warn "File \"$file\" found in the \"$uploadsid\" folder without metadata, added to database." unless $found;
+	}
+}
+
 # Get File ID (File ID [, Owner ID]) - Returns a file's validated ID from the database.
 sub get_file_id {
     my $self = shift;
@@ -164,26 +191,57 @@ sub get_uploaded_files {
     return @$rows;
 }
 
-# Get Public Files ([Search Term]) - Returns an array of available public files that the user hasn't added. Will filter results if the extra parameter is given.
+# Get Public Files ([Search Term, Offset]) - Returns an array of available public files that the user hasn't added. Will filter results if the extra parameter is given.
 sub get_public_files {
     my $self = shift;
     my $searchterm = shift;
+    my $offset = shift;
     my $uploadsid = $self->{uploadsid} or return;
     my $globals = $self->{globals};
     my $count = $globals->public_files;
     
-    # If we find a user from the term (ID or username), we'll search by user. Currently broken until I can either lookup a user's uploads ID, or just use the userids entirely.
-    my $userdb = $self->{userdb};
-    my $search_id = $userdb->get_uploads_id($userdb->get_user_id($searchterm));
+    my $search_id;
+    if ($self->{globals}->user_accounts) {
+        # If we find a user from the term (ID or username), we'll search by user.
+        my $userdb = $self->{userdb};
+        $search_id = $userdb->get_uploads_id($userdb->get_user_id($searchterm));
+    }
+    
+    # Make sure we're not looking for files outside of the range.
+    my $public_count = $self->public_count;
+    $offset = ($offset > $public_count)? $public_count : $offset;
     
     my $uploadsdb = $self->{uploadsdb};
     my $userid = $self->{userid};
-    my $sql = "SELECT uploadid FROM uploads WHERE sharing_policy = 'public'";
+    my $sql = "SELECT uploadid FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public");
     $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
-    $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")";
-    $sql .= " ORDER BY uploadid LIMIT $count";
+    $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
+    $sql .= " ORDER BY public_count DESC LIMIT $count";
+    $sql .= " OFFSET $offset" if $offset;
     my $rows = $uploadsdb->selectcol_arrayref($sql);
     return @$rows;
+}
+
+# Public Count ([Search Term]) - Returns the total number of public files available to a user. 
+sub public_count {
+    my $self = shift;
+    my $searchterm = shift;
+    my $uploadsid = $self->{uploadsid} or return;
+    my $uploadsdb = $self->{uploadsdb};
+    
+    my $search_id;
+    if ($self->{globals}->user_accounts) {
+        # If we find a user from the term (ID or username), we'll search by user.
+        my $userdb = $self->{userdb} ;
+        my $search_id = $userdb->get_uploads_id($userdb->get_user_id($searchterm));
+    }
+    
+    my $userid = $self->{userid};
+    my $sql = "SELECT count(*) FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public");
+    $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
+    $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
+    
+    return $uploadsdb->selectrow_array($sql);
 }
 
 # Get Imported Files () - Returns an array of files imported by a user.
@@ -236,13 +294,19 @@ sub share {
         # Get the current users.
         my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
         my $uploadsdb = $self->{uploadsdb};
-        my $users = $self->field($users_field, $file);
+        my @users = split ", ", $self->field($users_field, $file);
     
         #If we find the user's ID, it's already been added, just return that it worked.
-        return 1 if ($users =~ $userid);
-        $users .= ", " if $users;
-        $users .= $userid;
-        return $self->field($users_field, $file, $users);
+        return 1 if grep $userid, @users;
+        push @users, $userid;
+        
+        # Update the public count if needed.
+        if ($sharing_policy =~ /public/) {
+            my $public_count = @users;
+            $self->field("public_count", $file, $public_count);
+        }
+        
+        return $self->field($users_field, $file, join ", ", @users);
     } else {
         warn "Share() attempted in an illegal situation on a $sharing_policy file ($file) by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
     }
@@ -260,14 +324,20 @@ sub unshare {
         # Get the current users.
         my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
         my $uploadsdb = $self->{uploadsdb};
-        my $users = $self->field($users_field, $file);
+        my @users = split ", ", $self->field($users_field, $file);
     
         #If we find the user's ID, it's already been removed, just return that it worked.
-        return 1 if ($users !~ $userid);
-        $users =~ s/$userid(, )?//i;
-        $users =~ s/(, $)//i; #Not sure if this is the best way to remove a trailing ", "...probably not.
-    
-        return $self->field($users_field, $file, $users);
+        return 1 unless grep { $_ eq $userid } @users;
+        my ($index) = grep { $users[$_] eq $userid } 0 .. $#users;
+        splice @users, $index;
+        
+        # Update the public count if needed.
+        if ($sharing_policy =~ /public/) {
+            my $public_count = @users;
+            $self->field("public_count", $file, $public_count);
+        }
+        
+        return $self->field($users_field, $file, join ", ", @users);
     } else {
         warn "Unshare() attempted in an illegal situation on a $sharing_policy file ($file) by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
     }
@@ -304,7 +374,7 @@ sub update_modified {
     my $file = shift or confess "No input or invalid input given to update_modified()";
     my $now = $self->nowfun;
     # Do not swap out this line for a field() call, since it's used inside field().
-    return $uploadsdb->do("UPDATE uploads SET modification_date = " . $uploadsdb->quote($now) . " WHERE uploadid = " . $uploadsdb->quote($file));
+    return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = " . $uploadsdb->quote($file));
 }
 
 # Created (File ID) - Returns creation date of $file, cannot be set.
@@ -418,7 +488,7 @@ sub permissions {
     my $new_permissions = shift;
     if ($new_permissions) {
         if ($self->is_mine($file)) {
-            $self->field("public_users", $file, $self->{userid}) if $new_permissions =~ /public/; # Add it to the active user's session if it's being changed to public.
+            $self->share($file, $self->{userid}) if $new_permissions =~ /public/; # If we're switching to public permissions, share with the user so it doesn't disappear.
             return $self->field("sharing_policy", $file, $new_permissions);
         } else {
             warn "Permissions change on " . $file . "requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . " a non-owner.";

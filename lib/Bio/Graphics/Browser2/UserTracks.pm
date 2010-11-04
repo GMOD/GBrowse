@@ -336,7 +336,7 @@ sub mirror_url {
     }
     $fh->reader;
 
-    my $filename = $self->trackname_from_url($filename, !$overwrite);
+    $filename = $self->trackname_from_url($filename, !$overwrite);
     
     my $content_type = $result->header('Content-Type') || 'text/plain';
 
@@ -353,7 +353,7 @@ sub mirror_url {
     $lines ||= [];
     my (@tracks, $fcgi);
 
-    my $result = eval {
+    my $mirror_result = eval {
 		local $SIG{TERM} = sub { die "cancelled" };
 		croak "Could not guess the type of the file $filename"	unless $type;
 
@@ -370,9 +370,9 @@ sub mirror_url {
 
     my $msg = $@;
     warn "UPLOAD ERROR: ", $msg if $msg;
-    $self->delete_file($file) unless $result;
+    $self->delete_file($file) unless $mirror_result;
     $self->set_mirrored($file, $url);
-    return ($result, $msg, \@tracks);
+    return ($mirror_result, $msg, \@tracks);
 }
 
 # Upload Data (Filename, Data, Content Type, Overwrite?) - Uploads a string of data entered as text (on the Upload & Share Tracks tab).

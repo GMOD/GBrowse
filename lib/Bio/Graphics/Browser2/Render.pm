@@ -737,7 +737,7 @@ sub render_body {
   $main_page .= $self->render_select_track_link;
 
   my $tracks        = $self->render_tracks_section;
-  my $community     = $self->render_community_tracks_section;
+  my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;
   my $global_config = $self->render_global_config;
 

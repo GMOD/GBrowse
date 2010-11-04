@@ -947,7 +947,7 @@ sub render_scale_bar {
 
     my $panel = Bio::Graphics::Panel->new( @panel_args, );
 
-    my $width = ($section eq 'detail')? $self->render->get_detail_image_width : $self->render->get_image_width;
+    my $width = ($section eq 'detail')? $self->render->get_detail_image_width($state) : $self->render->get_image_width($state);
 
     # no cached data, so do it ourselves
     unless ($gd) {

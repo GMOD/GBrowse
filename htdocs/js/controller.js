@@ -1117,6 +1117,21 @@ var GBrowseController = Class.create({
       result = result.replace(/(%s)/i, arguments[i]);
     }
     return result;
+  },
+
+  make_image_link:
+  function(type) {
+    var url = '?make_image=' + type;
+    url += ';view_start=' + TrackPan.get_start();
+    url += ';view_stop='  + TrackPan.get_stop();
+    url += ';view_width=' + TrackPan.width_no_pad;
+    window.open(url);
+  },
+
+  gbgff_link:
+  function(url) {
+    url += ';q=' + TrackPan.ref + ':' + TrackPan.get_start() + '..' + TrackPan.get_stop();
+    window.location.href = url;
   }
 
 });

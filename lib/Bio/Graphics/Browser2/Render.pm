@@ -481,12 +481,12 @@ sub add_tracks {
 	    
 		my $track_key        = $track_keys->{$track_id};
 		my $track_section    = $self->get_section_from_label($track_id);
-		my $image_width      = $self->get_image_width;
+		my $image_width      = $self->get_image_width($self->state);
 		my $image_element_id = $track_name . "_image";
 
 		my $track_html;
 		if ( $track_section eq 'detail' and not $display_details ) {
-		    my $image_width = $self->get_image_width;
+		    my $image_width = $self->get_image_width($self->state);
 		    $track_html .= $self->render_grey_track(
 			track_id         => $track_name,
 			image_width      => $image_width,
@@ -799,8 +799,8 @@ sub segment_info_object {
         || 0;
     my $max = $self->get_max_segment;
     my $width = ( $state->{width} * OVERVIEW_RATIO );
-    my $image_width  = $self->get_image_width;
-    my $detail_width = $self->get_detail_image_width;
+    my $image_width  = $self->get_image_width($state);
+    my $detail_width = $self->get_detail_image_width($state);
 
     my %segment_info_object = (
         image_padding        => $pad,
@@ -814,6 +814,7 @@ sub segment_info_object {
         details_pixel_ratio  => $segment->length / ($state->{width} * $self->details_mult()),
         detail_width         => $detail_width,
         overview_width       => $image_width,
+        width_no_pad         => $state->{width},
         details_mult         => $self->details_mult(),
         hilite_fill          => $self->data_source->global_setting('hilite fill')    || 'red',  # Not sure if there's a
         hilite_outline       => $self->data_source->global_setting('hilite outline') || 'gray', # better place for this
@@ -856,7 +857,7 @@ sub render_panels {
 		$html .= div(
 			$self->toggle({tight=>1},
 	 			  'Overview',
-	 			  div({ -id => 'overview_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width.'px' },
+	 			  div({ -id => 'overview_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px' },
 	 			      $scale_bar_html, $panels_html,
 	 			  ))
 	 	    ) . $drag_script;
@@ -872,7 +873,7 @@ sub render_panels {
         $html .= div(
             $self->toggle({tight=>1},
                 'Region',
-                div({ -id => 'region_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width.'px'  },
+                div({ -id => 'region_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px'  },
                     $scale_bar_html, $panels_html,
                 )
             )
@@ -889,7 +890,7 @@ sub render_panels {
         $html .= div(
             $self->toggle({tight=>1},
 			  'Details',
-			  div({ -id => 'detail_panels', -class => 'track', -style=>'margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width.'px' },
+			  div({ -id => 'detail_panels', -class => 'track', -style=>'margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px' },
 			      $details_msg,
 			      $scale_bar_html, 
 			      $panels_html,
@@ -3190,7 +3191,7 @@ sub get_blank_panels {
     my $settings = $self->state;
 
     my $html  = '';
-    my $image_width = $self->get_image_width;
+    my $image_width = $self->get_image_width($settings);
     foreach my $track_name ( @{ $track_names || [] } ) {
 
 	my $divname = $self->trackname_to_id($track_name,$section);
@@ -3216,14 +3217,14 @@ sub get_blank_panels {
 
 sub get_image_width {
     my $self = shift;
-    my $state = $self->state;
+    my $state = shift;
     my $image_width = $state->{'width'} + $self->get_total_pad_width;
     return $image_width;
 }
 
 sub get_detail_image_width {
     my $self = shift;
-    my $state = $self->state;
+    my $state = shift;
     my $image_width = $state->{'width'} * $self->details_mult + $self->get_total_pad_width;
     return $image_width;
 }
@@ -3384,7 +3385,7 @@ sub render_deferred_track {
     }
     elsif ($cache->status eq 'ERROR') {
 	warn "[$$] rendering error track" if DEBUG;
-        my $image_width = $self->get_image_width;
+        my $image_width = $self->get_image_width($self->state);
         $result_html   .= $self->render_error_track(
 						  track_id       => $track_id,
 						  image_width      => $image_width,
@@ -3392,7 +3393,7 @@ sub render_deferred_track {
 						  image_element_id => $track_id . "_image",
 						  error_message    => 'Track rendering error: '.$cache->errstr)
      } else {
-        my $image_width = $self->get_image_width;
+        my $image_width = $self->get_image_width($self->state);
         $result_html .= $self->render_grey_track(
 						 track_id         => $track_id,
 						 image_width      => $image_width,
@@ -3599,7 +3600,9 @@ sub gff_dump_link {
        $q->param(-name=>'gbgff',   -value=>'Save');
        $q->param(-name=>'m',       -value=>'application/x-gff3');
   }
-  $q->param('q'=>$segment->seq_id.':'.$segment->start.'..'.$segment->end);
+
+  # This will now be detemined and added on the client side
+  #$q->param('q'=>$segment->seq_id.':'.$segment->start.'..'.$segment->end);
 
   # we probably need this ?
   $q->param(-name=>'id',      -value=>$upload_id);
@@ -3648,8 +3651,10 @@ sub image_link {
     my ($base,$s) = $self->globals->gbrowse_base;
     my $url      = "$base/gbrowse_img/$s";
     my $tracks   = $settings->{tracks};
-    my $width    = $settings->{width};
-    my $name     = "$settings->{ref}:$settings->{start}..$settings->{stop}";
+    my $width    = param('view_width') || $settings->{width};
+    my $start    = param('view_start') || $settings->{start};
+    my $stop     = param('view_stop')  || $settings->{stop};
+    my $name     = "$settings->{ref}:$start..$stop";
     my $selected = $self->join_selected_tracks;
     my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}
                              } map {/\s/?"$_":$_}

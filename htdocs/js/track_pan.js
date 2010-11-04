@@ -77,10 +77,10 @@ var GBrowseTrackPan = Class.create({
 			var drag_handle = new Element('div');
 			$('overview_marker').insert({top: drag_handle});
 			drag_handle.setStyle({
-				backgroundColor: 'black',
+				backgroundColor: this.marker_outline,
 				width:           '100%',
 				height:          '12px',
-				opacity:         0.2  // Cross-browser opacity setter (from Prototype)
+				opacity:         0.6  // Cross-browser opacity setter (from Prototype)
 			});
 
 			if (this.details_mult > 1.0) {  //No need to be draggable if viewport is same size as loaded image
@@ -133,10 +133,10 @@ var GBrowseTrackPan = Class.create({
 			var drag_handle = new Element('div');
 			$('region_marker').insert({top: drag_handle});
 			drag_handle.setStyle({
-				backgroundColor: 'black',
+				backgroundColor: this.marker_outline,
 				width:           '100%',
 				height:          '12px',
-				opacity:         0.2  // Cross-browser opacity setter (from Prototype)
+				opacity:         0.6  // Cross-browser opacity setter (from Prototype)
 			});
 
 			drag_handle.setStyle({cursor: 'move'});
@@ -188,6 +188,7 @@ var GBrowseTrackPan = Class.create({
 		this.flip                 = segment_info.flip;
 		this.initial_view_start   = parseInt(segment_info.initial_view_start);
 		this.initial_view_stop    = parseInt(segment_info.initial_view_stop);
+		this.width_no_pad         = parseInt(segment_info.width_no_pad);
 
 		this.overview_segment_start   = Math.round(this.detail_start / this.overview_pixel_ratio + this.pad);          // # of pixels
 		this.overview_segment_width   = Math.ceil((this.detail_stop - this.detail_start) / this.overview_pixel_ratio); //

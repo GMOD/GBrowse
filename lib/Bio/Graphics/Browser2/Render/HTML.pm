@@ -712,14 +712,16 @@ sub render_actionmenu {
     my $self  = shift;
     my $settings = $self->state;
 
-    my   @export_links=a({-href=>'?make_image=GD', -target=>'_blank'},     $self->translate('IMAGE_LINK'));
-    push @export_links,a({-href=>'?make_image=GD::SVG',-target=>'_blank'}, $self->translate('SVG_LINK'))
+    my   @export_links=a({-href=>'#',-onclick=>'Controller.make_image_link("GD")'},      $self->translate('IMAGE_LINK'));
+    push @export_links,a({-href=>'#',-onclick=>'Controller.make_image_link("GD::SVG")'}, $self->translate('SVG_LINK'))
 	if HAVE_SVG;
-    push @export_links,a({-href=>'?make_image=PDF',-target=>'_blank'}, $self->translate('PDF_LINK'))
+    push @export_links,a({-href=>'#',-onclick=>'Controller.make_image_link("PDF")'},     $self->translate('PDF_LINK'))
 	if HAVE_SVG && $self->can_generate_pdf;
 
-    push @export_links,a({-href=>$self->gff_dump_link},                    $self->translate('DUMP_GFF'));
-    push @export_links,a({-href=>$self->dna_dump_link},                    $self->translate('DUMP_SEQ'));
+    # Pass the gff link to a javascript function which will add the missing parameters that are determined client-side
+    push @export_links,a({-href=>'#',-onclick=>"Controller.gbgff_link('". $self->gff_dump_link ."')"}, $self->translate('DUMP_GFF'));
+    push @export_links,a({-href=>'#',-onclick=>"Controller.gbgff_link('". $self->dna_dump_link ."')"}, $self->translate('DUMP_SEQ'));
+
     push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->translate('SEND_TO_GALAXY'))
 	if $self->data_source->global_setting('galaxy outgoing');
 

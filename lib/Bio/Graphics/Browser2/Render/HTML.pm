@@ -1408,6 +1408,7 @@ sub render_community_track_listing {
 	# Create the HTML for the title & header
 	$html .= span({-style => "display: inline-block;"},
 		start_form({-action => "javascript:void(0);", -onsubmit => "return searchPublic(\$('public_search_keyword').value);"}), # The return here is necessary to stop the form from ACTUALLY submitting.
+		input({-type => "hidden", -name => "offset", -value => $offset, -id => "community_display_offset"}),
 		"Filter:",
 		input({
 		    -type => "text",

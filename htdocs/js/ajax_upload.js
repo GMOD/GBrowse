@@ -355,6 +355,7 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 
 function changePermissions(fileid, sharing_policy) {
 	showUploadBusy(fileid, Controller.translate('CHANGING_PERMISSIONS'));
+	var offset = $("community_display_offset").value;
 	new Ajax.Request(
 		document.URL,
 		{
@@ -368,7 +369,7 @@ function changePermissions(fileid, sharing_policy) {
 				var sections = new Array(custom_tracks_id);
 				if (using_database())
 					sections.push(community_tracks_id);
-				Controller.update_sections(sections);
+				Controller.update_sections(sections, "&offset=" + offset);
 			}
 		}
 	);
@@ -376,6 +377,7 @@ function changePermissions(fileid, sharing_policy) {
 
 function shareFile(fileid, userid) {
 	showUploadBusy(fileid, Controller.translate('ADDING'));
+	var offset = $("community_display_offset").value;
 	new Ajax.Request(
 		document.URL,
 		{
@@ -389,7 +391,7 @@ function shareFile(fileid, userid) {
 				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
 					sections.push(community_tracks_id);
-				Controller.update_sections(sections);
+				Controller.update_sections(sections, "&offset=" + offset);
 				var tracks = transport.responseText.evalJSON(true).tracks;
 				if (tracks != null)
 					tracks.each(function(tid) { Controller.add_track(tid) });
@@ -400,6 +402,7 @@ function shareFile(fileid, userid) {
 
 function unshareFile(fileid, userid) {
 	showUploadBusy(fileid, Controller.translate('REMOVING'));
+	var offset = $("community_display_offset").value;
 	new Ajax.Request(
 		document.URL,
 		{
@@ -413,7 +416,7 @@ function unshareFile(fileid, userid) {
 				var sections = new Array(custom_tracks_id, track_listing_id);
 				if (using_database())
 					sections.push(community_tracks_id);
-				Controller.update_sections(sections);
+				Controller.update_sections(sections, "&offset=" + offset);
 				var tracks = transport.responseText.evalJSON(true).tracks;
 				if (tracks != null)
 					tracks.each(function(tid) { Controller.delete_track(tid) });

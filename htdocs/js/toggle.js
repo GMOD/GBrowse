@@ -170,7 +170,8 @@ function visibility (element_name,is_visible) {
       element.show();
       show_control.hide();
       hide_control.show();
-      track_list.hide();
+      if (track_list != null)
+          track_list.hide();
       if (break_element != null)
         break_element.hide();
    } else {
@@ -179,7 +180,8 @@ function visibility (element_name,is_visible) {
       element.hide();
       hide_control.hide();
       show_control.show();
-      track_list.show();
+      if (track_list != null)
+        track_list.show();
       if (break_element != null)
         break_element.show();
    }

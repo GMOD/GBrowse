@@ -327,6 +327,9 @@ sub ACTION_set_display_option {
 
 sub ACTION_bookmark {
     my $self = shift;
+    my $q    = shift;
+    $self->state->{start} = $q->param('view_start') || $self->state->{start};
+    $self->state->{stop}  = $q->param('view_stop')  || $self->state->{stop};
     return (302,undef,$self->render->bookmark_link($self->state));
 }
 

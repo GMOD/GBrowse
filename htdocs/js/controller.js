@@ -1132,6 +1132,14 @@ var GBrowseController = Class.create({
   function(url) {
     url += ';q=' + TrackPan.ref + ':' + TrackPan.get_start() + '..' + TrackPan.get_stop();
     window.location.href = url;
+  },
+
+  bookmark_link:
+  function() {
+    var url = '?action=bookmark';
+    url += ';view_start=' + TrackPan.get_start();
+    url += ';view_stop='  + TrackPan.get_stop();
+    window.location.href = url;
   }
 
 });

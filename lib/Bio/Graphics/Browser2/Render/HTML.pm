@@ -728,7 +728,7 @@ sub render_actionmenu {
     push @export_links,a({-href=>'javascript:'.$self->galaxy_link},        $self->translate('SEND_TO_GALAXY'))
 	if $self->data_source->global_setting('galaxy outgoing');
 
-    my $bookmark_link = a({-href=>'?action=bookmark'},$self->translate('BOOKMARK')),;
+    my $bookmark_link = a({-href=>'#',-onclick=>'Controller.bookmark_link()'},$self->translate('BOOKMARK')),;
     my $share_link    = a({-href        => '#',
 			   -onMouseDown => "GBox.showTooltip(event,'url:?action=share_track;track=all')"},
 			  ($self->translate('SHARE_ALL') || "Share These Tracks" )),

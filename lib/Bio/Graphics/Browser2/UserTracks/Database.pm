@@ -95,28 +95,44 @@ sub check_db {
     my $sth = $data_source->prepare("SELECT * from $name LIMIT 1");
     $sth->execute;
     if (@{$sth->{NAME_lc}} != keys %$columns) {
-        my $alter_sql = "ALTER TABLE $name ADD (";
+        my $alter_sql = "ALTER TABLE $name ADD (" unless $type =~ /sqlite/i;
         my @columns_to_create;
         my $run = 0;
-        # If we don't find a specific column, add its SQL to the columns_to_create array.
-        foreach (keys %$columns) {
-            # MySQL supports ENUM, if not switch to an appropriate varchar().
-            if (($type =~ /mysql/i) && ($$columns{$_} =~ /^ENUM\(/i)) {
-                #Check for any suffixes - "NOT NULL" or whatever.
-                my @options = ($$columns{$_} =~ m/^ENUM\('(.*)'\)/i);
-                my @suffix = ($$columns{$_} =~ m/([^\)]+)$/);
-                my @values = split /',\w*'/, $options[0];
-                my $length = max(map length $_, @values);
-                $$columns{$_} = "varchar($length)" . $suffix[0];
+        
+        # SQLite doesn't support altering to add multiple columns or ENUMS, so it gets special treatment.
+        if ($type =~ /sqlite/i) {
+            # If we don't find a specific column, add its SQL to the columns_to_create array.
+            foreach (keys %$columns) {
+                # SQLite doesn't support ENUMs, so convert to a varchar.
+                if ($$columns{$_} =~ /^ENUM\(/i) {
+                    #Check for any suffixes - "NOT NULL" or whatever.
+                    my @options = ($$columns{$_} =~ m/^ENUM\('(.*)'\)/i);
+                    my @suffix = ($$columns{$_} =~ m/([^\)]+)$/);
+                    my @values = split /',\w*'/, $options[0];
+                    my $length = max(map length $_, @values);
+                    $$columns{$_} = "varchar($length)" . $suffix[0];
+                }
+                
+                # Now add each column individually
+                unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
+                    my $alter_sql = "ALTER TABLE $name ADD COLUMN $_ " . $$columns{$_} . ";";
+                    $data_source->do($alter_sql);
+                }
             }
-            unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
-              push @columns_to_create, "$_ " . $$columns{$_};
-              $run++;
+        } else {
+            # If we don't find a specific column, add its SQL to the columns_to_create array.
+            foreach (keys %$columns) {
+                unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
+                    push @columns_to_create, "$_ " . $$columns{$_};
+                    $run++;
+                }
             }
+            
+            # Now add all the columns
+            warn ucfirst $name . " database schema is incorrect, adding " . @columns_to_create . " missing column" . ((@columns_to_create > 1)? "s." : ".");
+            $alter_sql .= (join ", ", @columns_to_create) . ");";
+            $data_source->do($alter_sql) if $run;
         }
-        warn ucfirst $name . " database schema is incorrect, adding " . @columns_to_create . " missing column" . (@columns_to_create > 1)? "s." : ".";
-        $alter_sql .= (join ", ", @columns_to_create) . ");";
-        $data_source->do($alter_sql) if $run;
     }
     return $data_source;
 }

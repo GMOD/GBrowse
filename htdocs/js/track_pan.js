@@ -291,7 +291,7 @@ var GBrowseTrackPan = Class.create({
 var TrackPan = new GBrowseTrackPan; // Just make one copy of the object. Controller accesses it through this name
 
 Event.observe(window, 'load', function() {
-  Event.observe(document, 'keydown', function(e){ 
+  Event.observe(document, (Prototype.Browser.WebKit)? 'keydown' : 'keypress', function(e){ 
 	var code;
 	if (!e) var e = window.event;
 	if (e.keyCode) code = e.keyCode;

@@ -33,7 +33,7 @@ sub _new {
     }
     
     # Attempt to login to the database or die, and access the necessary tables or create them.
-    my $credentials = $globals->uploads_db or die "No credentials given to uploads DB in GBrowse.conf";
+    my $credentials = $globals->uploads_db or warn "No credentials given to uploads DB in GBrowse.conf";
     my $uploadsdb = DBI->connect($credentials);
     unless ($uploadsdb) {
         print header();
@@ -311,9 +311,9 @@ sub share {
         my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
         my $uploadsdb = $self->{uploadsdb};
         my @users = split ", ", $self->field($users_field, $file);
-    
+
         #If we find the user's ID, it's already been added, just return that it worked.
-        return 1 if grep $userid, @users;
+        return 1 if grep { $_ eq $userid } @users;
         push @users, $userid;
         
         # Update the public count if needed.

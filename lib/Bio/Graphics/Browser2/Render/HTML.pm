@@ -1786,7 +1786,9 @@ sub render_track_sharing {
 	
     my $sharing_content = b($self->translate('SHARING')) . br() . $self->translate('TRACK_IS') . " ";
 	if ($userdata->is_mine($fileid) == 0) {
-		$sharing_content .= b(($sharing_policy =~ /(casual|group)/)? lc $self->translate('SHARED_WITH_YOU') :  lc $self->translate('SHARING_PUBLIC')) . ".";
+	    my $count = $userdata->public_users($fileid);
+		$sharing_content .= b(($sharing_policy =~ /(casual|group)/)? lc $self->translate('SHARED_WITH_YOU') :  lc $self->translate('SHARING_PUBLIC'));
+	    $sharing_content .= ", " . $self->translate('USED_BY') . "&nbsp;" .  ($count? b($count) . "&nbsp;" . $self->translate('USERS') . "." : $self->translate('NO_ONE'));
 	} else {
 		my %sharing_type_labels = ( private => $self->translate('SHARING_PRIVATE'),
 									casual  => $self->translate('SHARING_CASUAL') ,

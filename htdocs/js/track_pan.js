@@ -290,4 +290,16 @@ var GBrowseTrackPan = Class.create({
 
 var TrackPan = new GBrowseTrackPan; // Just make one copy of the object. Controller accesses it through this name
 
-
+Event.observe(window, 'load', function() {
+  Event.observe(document, 'keydown', function(e){ 
+	var code;
+	if (!e) var e = window.event;
+	if (e.keyCode) code = e.keyCode;
+	else if (e.which) code = e.which;
+    if (code == 37)
+        TrackPan.scroll("left", 0.15);
+    else if (code == 39)
+        TrackPan.scroll("right", 0.15);
+	
+  });
+});

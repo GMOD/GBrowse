@@ -1377,6 +1377,10 @@ sub handle_plugins {
             or $plugin->verb eq ( $self->translate('Import') || 'Import' ) )
         )
     {
+        $segment->{start} = param('view_start') || $segment->{start}; # We only care about the segment the user is actually
+        $segment->{stop}  = param('view_stop')  || $segment->{stop};  # viewing, not the whole segment that he/she has loaded
+        $segment->{end}   = param('view_stop')  || $segment->{end};   #
+
 	my $search      = $self->get_search_object();
 	my $metasegment = $search->segment($segment);
         $self->do_plugin_header( $plugin, $cookie );

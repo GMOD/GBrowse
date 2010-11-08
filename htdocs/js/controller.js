@@ -787,6 +787,8 @@ var GBrowseController = Class.create({
             Controller.update_sections(new Array(track_listing_id),null,null,false);
         } else if (plugin_type == 'dumper') {
             var loc_str = "?plugin="+plugin_base+";plugin_action="+encodeURI(plugin_action);
+            loc_str += ';view_start=' + TrackPan.get_start();
+            loc_str += ';view_stop='  + TrackPan.get_stop();
             if(source == 'config'){
                 var form_element = $("configure_plugin");
                 window.open(loc_str + ";" + form_element.serialize());

@@ -44,11 +44,11 @@ var GBrowseTrackPan = Class.create({
 
 		if (this.get_start() > 0 && this.get_stop() > 0) {
 			if (document.searchform) {
-				document.searchform.name.value = this.ref + ':' + this.get_start() + '..' + this.get_stop();
+				document.searchform.name.value = this.ref + ':' + addCommas(this.get_start()) + '..' + addCommas(this.get_stop());
 			}
 
 			var page_title = this.description + ': ' + Controller.translate('SHOWING_FROM_TO',
-					    this.length_label, this.ref, this.get_start(), this.get_stop());
+					    this.length_label, this.ref, addCommas(this.get_start()), addCommas(this.get_stop()));
 			document.title = page_title;
 			$('page_title').update(page_title);
 		} 
@@ -303,3 +303,17 @@ Event.observe(window, 'load', function() {
 	
   });
 });
+
+function addCommas(number)
+{
+	number += '';
+	var x = number.split('.');
+	var whole_part = x[0];
+	var decimal_part = x.length > 1 ? '.' + x[1] : '';
+	var regex = /(\d+)(\d{3})/;
+	while (regex.test(whole_part)) {
+		whole_part = whole_part.replace(regex, '$1' + ',' + '$2');
+	}
+	return whole_part + decimal_part;
+}
+

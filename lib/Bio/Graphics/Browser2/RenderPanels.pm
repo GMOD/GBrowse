@@ -603,36 +603,22 @@ sub wrap_rendered_track {
 # works with IE7, but looks awful. IE8 should support standard css opacity.
 #	$style      .= ';filter:alpha(opacity=30);moz-opacity:0.35';
         my $pan_left   =  img({
-	    -style   => $style . ';left:15px',
+	    -style   => $style . ';left:5px',
 	    -class   => 'panleft',
 	    -src     => "$buttons/panleft.png",
 	    -onClick => "Controller.scroll('left',0.5)"
-			      },
-	    );
- 	my $pan_left2  =  img({
-             -style   => $style . ';left:2px',
-             -class   => 'panleft',
-             -src     => "$buttons/panleft2.png",
-             -onClick => "Controller.scroll('left',1)",
-                               },
-             );
+	});
 
-	my $pan_right  = img({ -style   => $style . ';right:15px',
-			       -class   => 'panright',
-			       -src     => "$buttons/panright.png",
-			       -onClick => "Controller.scroll('right',0.5)",
-			     }
-	    );
-        my $pan_right2  = img({ -style   => $style . ';right:2px',
-                               -class   => 'panright',
-                               -src     => "$buttons/panright2.png",
-                               -onClick => "Controller.scroll('right',1)",
-                             }
-            );
+	my $pan_right  = img({ 
+	    -style   => $style . ';right:5px',
+	    -class   => 'panright',
+	    -src     => "$buttons/panright.png",
+	    -onClick => "Controller.scroll('right',0.5)",
+	});
 	
 	my $scale_div = div( { -id => "detail_scale_scale", -style => "position:absolute; top:5px", }, "" );
 
-        $overlay_div = div( { -id => "${label}_overlay_div", -style => "position:absolute; top:0px; width:100%; left:0px", }, $pan_left2 . $pan_left . $pan_right . $pan_right2 . $scale_div);
+        $overlay_div = div( { -id => "${label}_overlay_div", -style => "position:absolute; top:0px; width:100%; left:0px", }, $pan_left . $pan_right . $scale_div);
     }
 
     my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this

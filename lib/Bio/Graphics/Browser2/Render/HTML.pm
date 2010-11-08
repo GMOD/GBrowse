@@ -2769,12 +2769,24 @@ sub track_citation {
 sub download_track_menu {
     my $self  = shift;
     my $track = shift;
+    my $view_start = shift;
+    my $view_stop  = shift;
 
     my $state       = $self->state();
     my $data_source = $self->data_source();
-    my $segment     = $track =~ /:overview$/ ? $self->thin_whole_segment
-                     :$track =~ /:region$/   ? $self->thin_region_segment
-                                             : $self->thin_segment;
+
+    my $segment;
+    if ($track =~ /:overview$/) {
+        $segment = $self->thin_whole_segment;
+    } elsif ($track =~ /:region$/) {
+        $segment = $self->thin_region_segment;
+    } else {
+        $segment = $self->thin_segment;
+        $segment->{start} = $view_start || $segment->{start};
+        $segment->{stop}  = $view_stop  || $segment->{stop};
+        $segment->{end}   = $view_stop  || $segment->{end};
+    }
+
     my $seqid       = $segment->seq_id;
     my $start       = $segment->start;
     my $end         = $segment->end;

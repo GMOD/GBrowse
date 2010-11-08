@@ -492,7 +492,7 @@ sub wrap_rendered_track {
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
     my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
 
-    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label',true)" unless $label =~ /^(http|ftp)/;
+    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
     my $title;
     if ($label =~ /^file:/) {

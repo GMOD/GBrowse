@@ -145,7 +145,9 @@ sub ACTION_download_track_menu {
     my $self = shift;
     my $q    = shift;
     my $track_name = $q->param('track') or croak;
-    my $html       = $self->render->download_track_menu($track_name);
+    my $view_start = $q->param('view_start');
+    my $view_stop  = $q->param('view_stop');
+    my $html       = $self->render->download_track_menu($track_name,$view_start,$view_stop);
     return ( 200, 'text/html', $html );
 }
 

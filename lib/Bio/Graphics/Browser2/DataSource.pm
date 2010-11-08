@@ -413,7 +413,11 @@ sub show_summary {
     my $c  = $settings->{features}{$label}{summary_mode_len}
           || $self->semantic_fallback_setting($label=>'show summary',$length);
     my $g  = $self->semantic_fallback_setting($label=>'glyph',$length);
-    return 0 if $g =~ /wiggle|xyplot|density/;  # don't summarize wiggles or xyplots
+    my $class = 'Bio::Graphics::Glyph::'.$g;
+    eval "require $class" unless $class->can('new');
+
+    return 0 if    $class->isa('Bio::Graphics::Glyph::xyplot')
+	        or $class->isa('Bio::Graphics::Glyph::minmax');
     return 0 if $self->semantic_fallback_setting($label=>'global feature',$length);
     return 0 unless $c;
     $c =~ s/_//g;  

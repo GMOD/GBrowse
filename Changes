@@ -2,6 +2,7 @@
      * Track configuration dialog now allows for control of autoscaling behavior in quantitative
        glyphs.
      * Support for vista_plot glyph added to config dialog.
+     * Fixed behavior of GBox balloons so that the scroll bar doesn't overrun the contents.
 
 2.16
      * Added code to recognize and strip whitespace from search coordinates. This 

@@ -477,7 +477,7 @@ END
 
  GLYPH            => 'Shape',
 
- XYPLOT_TYPE      => 'xyplot subtype',
+ XYPLOT_TYPE      => 'plot style',
 
  WHISKERS_TYPE      => 'whiskers subtype',
 

@@ -2020,11 +2020,13 @@ sub track_config {
     }
 
     my $db           = $data_source->open_database($label,$length);
-    my $quantitative = $glyph =~ /wiggle/ || ref($db) =~ /bigwig/i;
+    my $quantitative = $glyph =~ /wiggle|vista|xy|density/ || ref($db) =~ /bigwig/i;
     my $can_whisker  = $quantitative && ref($db) =~ /bigwig/i;
+    my $vista        = $glyph =~ /vista/;
 
     unless (@glyph_select) { # reasonable defaults
 	@glyph_select = $can_whisker  ? qw(wiggle_xyplot wiggle_density wiggle_whiskers)
+		       :$vista        ? 'vista_plot'
                        :$quantitative ? qw(wiggle_xyplot wiggle_density)
 	                              : qw(arrow anchored_arrow box crossbox dashed_line diamond 
                                          dna dot dumbbell ellipse gene line primers saw_teeth segments 
@@ -2090,18 +2092,33 @@ END
     for my $glyph (@all_glyphs) {
 	my $class = "Bio\:\:Graphics\:\:Glyph\:\:$glyph";
 	eval "require $class" unless $class->can('new');
-	my $subtypes = eval{$class->options->{glyph_subtype}} or next;
-	my $options  = $subtypes->[0];
-	next unless ref $options eq 'ARRAY';
-	push @rows,(TR {-class => $glyph,
-			-id    => "conf_${glyph}_subtype"},
-		    th({-align => 'right'}, $glyph,$self->tr('Subtype')),
-		    td($picker->popup_menu(
-			   -name     => "conf_${glyph}_subtype",
-			   -values   => $options,
-			   -override => 1,
-			   -default => ref $glyph_subtype eq 'CODE' ? $dynamic : $glyph_subtype,
-			   -current  => $override->{'glyph_subtype'})));
+	if (my $subtypes = eval{$class->options->{glyph_subtype}}) {
+	    my $options  = $subtypes->[0];
+	    next unless ref $options eq 'ARRAY';
+	    push @rows,(TR {-class => $glyph,
+			    -id    => "conf_${glyph}_subtype"},
+			th({-align => 'right'}, $glyph,$self->tr('Subtype')),
+			td($picker->popup_menu(
+			       -name     => "conf_${glyph}_subtype",
+			       -values   => $options,
+			       -override => 1,
+			       -default => ref $glyph_subtype eq 'CODE' ? $dynamic : $glyph_subtype,
+			       -current  => $override->{'glyph_subtype'})));
+	}
+	if (my $subgraphs = eval{$class->options->{graph_type}}) {
+	    my $options  = $subgraphs->[0];
+	    next unless ref $options eq 'ARRAY';
+	    push @rows,(TR {-class => $glyph,
+			    -id    => "conf_graph_type"},
+			th({-align => 'right'}, $self->tr('XYplot_type')),
+			td($picker->popup_menu(
+			       -name     => "conf_graph_type",
+			       -values   => $options,
+			       -override => 1,
+			       -default => ref $graph_type eq 'CODE' ? $dynamic : $graph_type,
+			       -current  => $override->{'graph_type'})));
+	}
+	
     }
 
     push @rows,TR( {-class => 'features',

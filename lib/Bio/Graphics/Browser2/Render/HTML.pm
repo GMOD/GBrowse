@@ -820,7 +820,7 @@ sub render_track_filter {
     my $form         = $plugin->configure_form();
     my $plugin_type  = $plugin->type;
     my $action       = $self->tr('Configure_plugin');
-    my $name         = 'plugin:'.$plugin->name;
+    my $name         = $plugin->name;
 
     return
  	div({-id=>'track select',-style=>'padding-top:8px'},
@@ -828,6 +828,7 @@ sub render_track_filter {
 			    -name    => 'configure_plugin',
 			    -onSubmit=> 'return false'}),
 	    $form,
+	    hidden(-name=>'plugin',-value=>$name),
 	    button(
 		-name    => 'plugin_button',
 		-value   => $self->tr('search'),

@@ -26,6 +26,7 @@ use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
+use constant TRACE_RUN            => 0;
 use constant TRACE                => 0; # shows top level events
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
 use constant REGION_SCALE_LABEL   => 'Region Scale';
@@ -201,7 +202,7 @@ sub run {
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string() if $debug;
+       query_string() if $debug || TRACE_RUN;
 
   $self->set_source() && return;
   my $state = $self->state;
@@ -1212,8 +1213,7 @@ sub init_plugins {
   my $source      = $self->data_source->name;
   my @plugin_path = shellwords($self->data_source->globals->plugin_path);
 
-  my $plugins = $PLUGINS{$source} 
-    ||= Bio::Graphics::Browser2::PluginSet->new($self->data_source,@plugin_path);
+  my $plugins = $PLUGINS{$source} ||= Bio::Graphics::Browser2::PluginSet->new($self->data_source,@plugin_path);
   $self->fatal_error("Could not initialize plugins") unless $plugins;
   $plugins->configure($self);
   $self->plugins($plugins);

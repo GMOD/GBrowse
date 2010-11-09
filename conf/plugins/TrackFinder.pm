@@ -47,10 +47,10 @@ sub configure_form {
   $html .= div({-class=>'searchbody'}, 
 	   	   b('Search: ').textfield(-id         => 'plugin_TrackFinderKeywords',
 					   -name       => $self->config_name('keywords'),
- 					   -onKeyPress => "if (typeof(timeOutID) != 'undefined') clearTimeout(timeOutID);timeOutID= setTimeout('doPluginUpdate()',1000)",
+ 					   -onKeyDown => "Controller.busy();if (typeof(timeOutID) != 'undefined') clearTimeout(timeOutID);timeOutID= setTimeout('Controller.idle();doPluginUpdate()',500)",
 					   -override   => 1,
 					   -value      => $current_config->{keywords},
-					   -onChange   => 'doPluginUpdate()',
+					   -onChange   => 'Controller.busy();doPluginUpdate();Controller.idle()',
       		),
       	 input({-type => 'checkbox',
       	        -id => 'stickySearch',
@@ -80,6 +80,7 @@ sub filter_tracks {
       do {push @result,$l; next LABEL} if $l =~ /^(plugin|file|http|das)/;
 
       my $aggregate_text = join ' ',map {$source->code_setting($l=>$_)} qw(key citation keywords select);
+      $aggregate_text   ||= $l;
       my $labels         = $source->subtrack_scan_list($l);
       $aggregate_text   .= " @$labels" if $labels && @$labels;
 

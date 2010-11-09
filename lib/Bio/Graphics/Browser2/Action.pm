@@ -237,6 +237,8 @@ sub ACTION_set_track_visibility {
 sub ACTION_reconfigure_plugin {
     my $self   = shift;
     my $q      = shift;
+    my $plugin = $q->param('plugin');
+    # currently we reinit all plugins, not just the one involved
     $self->render->init_plugins();
     return (204,'text/plain',undef);
 }

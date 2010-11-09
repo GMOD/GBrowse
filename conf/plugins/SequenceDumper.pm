@@ -72,7 +72,7 @@ my @FORMATS = ( 'fasta'   => ['Fasta',        undef],
 		'raw'     => ['Raw sequence', undef],
 		'game'    => ['GAME (XML)',   'xml'],
 		'bsml'    => ['BSML (XML)',   'xml'],
-		'gff'     => ['GFF',          undef],
+		'gff'     => ['GFF3',          undef],
 	      );
 
 # initialize @ORDER using the even-numbered elements of the array
@@ -91,7 +91,7 @@ unshift @ORDER,'gff';
 my %FORMATS = @FORMATS;
 my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 @ISA = qw(Bio::Graphics::Browser2::Plugin);
 
@@ -126,15 +126,17 @@ sub dump {
 			  );
   $seq->add_date(strftime("%d-%b-%Y",localtime));
   my $ps = $segment->primary_seq; 
-  $seq->primary_seq((ref $ps && $ps->seq) || $ps);
+  $seq->primary_seq(!ref $ps ? Bio::PrimarySeq->new(-seq=>$ps) : $ps);
   $segment->absolute(1);
   my $offset     = $segment->start - 1;
   my $segmentend = $segment->length;
   $seq->add_SeqFeature( map {
+      my $score = $_->score;
+      $score    = ref $score eq 'HASH' ? $score->{sumData}/$score->{validCount} : $score;
       my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
 					    -source_tag  => $_->source_tag,
 					    -frame       => eval{$_->phase}||eval{$_->frame}||undef,
-					    -score       => $_->score,
+					    -score       => $score,
 					    );
       for my $tag ( $_->get_all_tags ) {
 	  my %seen;
@@ -266,7 +268,7 @@ sub gff_dump {
   print start_html($segment) if $html;
   
   print h1($segment),start_pre() if $html;
-  print "##gff-version 2\n";
+  print "##gff-version 3\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
   print "##source gbrowse SequenceDumper\n";
@@ -276,11 +278,12 @@ sub gff_dump {
   $segment->absolute(0);
   my $iterator = $segment->get_seq_stream(-types => \@feature_types) or return;
   while (my $f = $iterator->next_seq) {
-    print $f->gff_string,"\n";
-    for my $s ($f->sub_SeqFeature) {
-      print $s->gff_string,"\n";
-    }
+      eval{$f->version(3)};
+      my $s =$f->gff_string(1);
+      chomp($s);
+      print $s,"\n";
   }
+
   print end_pre() if $html;
   print end_html() if $html;
 }

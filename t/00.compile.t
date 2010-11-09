@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 
+use lib "install_util";
 use File::Spec;
 use File::Basename;
 use FindBin;
@@ -57,7 +58,9 @@ sub missing_recommend {
     $modname =~ s/\.pm$//;
     $modname =~ s![\\/]!::!g;
 
-    $missing_recommends ||= Module::Build->current->prereq_failures->{recommends} || {};
+    $missing_recommends 
+	||= Module::Build->current->prereq_failures ?  Module::Build->current->prereq_failures->{recommends} 
+                                                    :  {};
     return $missing_recommends->{$modname};
 }
 

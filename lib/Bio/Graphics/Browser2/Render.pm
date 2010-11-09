@@ -772,6 +772,7 @@ sub generate_title {
     my $dsn         = $self->data_source;
     my $state       = $self->state;
     my $description = $dsn->description;
+    my $divider     = $self->data_source->unit_divider;
 
     return $description unless $features;
     return !$features || !$state->{name}     ? $description
@@ -1451,8 +1452,7 @@ sub cleanup {
   warn "cleanup()" if DEBUG;
   $self->plugins->destroy;
   my $state = $self->state;
-  $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}"
-      if $state->{ref};  # to remember us by :-)
+  $state->{name} = $self->region_string if $state->{ref};  # to remember us by :-)
 }
 
 sub add_remote_tracks {
@@ -1983,9 +1983,14 @@ sub reconfigure_track {
 	$s =~ s/^conf_//;
 	next unless defined $value;
 
-	if ($s eq 'graph_type_whiskers') {
-	    next unless $glyph =~ /whiskers/;
-	    $s = 'graph_type';
+	if ($s =~ /(\w+)_subtype/) {
+	    next unless $1 eq $glyph;
+	    $s = 'glyph_subtype';
+	} elsif ($s =~ /(\w+)_autoscale/) {
+	    my $g = $1;
+	    next if $g eq 'wiggle' && $glyph !~ /wiggle|vista/;
+	    next if $g eq 'xyplot' && $glyph !~ /xyplot|density/;
+	    $s = 'autoscale';
 	}
 
 	my $configured_value = $source->semantic_fallback_setting($label=>$s,$semantic_len);
@@ -2003,6 +2008,11 @@ sub reconfigure_track {
 	    }
 	}
     }
+    if (defined $o->{autoscale} && $o->{autoscale} ne 'none') { undef $o->{min_score}; undef $o->{max_score} }
+#    {
+#	local $Data::Dumper::Sortkeys=1;
+#	warn Data::Dumper::Dumper($o);
+#    }
 }
 
 sub update_options {
@@ -2389,7 +2399,7 @@ sub asynchronous_update_sections {
     return $return_object;
 }
 
-# asynchronous_update_element has been DEPRICATED
+# asynchronous_update_element has been DEPRECATED
 # in favor of asynchronous_update_sections
 sub asynchronous_update_element {
     my $self    = shift;
@@ -2401,13 +2411,14 @@ sub asynchronous_update_element {
         my $segment     = $self->segment;
         my $dsn         = $self->data_source;
         my $description = $dsn->description;
+	my $divider     = $dsn->unit_divider;
         return $description . '<br>'
             . $self->translate(
             'SHOWING_FROM_TO',
             scalar $source->unit_label( $segment->length ),
             $segment->seq_id,
-            $source->commas( $segment->start ),
-            $source->commas( $segment->end )
+            $source->commas( $segment->start/$divider ),
+            $source->commas( $segment->end/$divider )
             );
     }
     elsif ( $element eq 'span' ) {  # this is the popup menu that shows ranges
@@ -2591,6 +2602,17 @@ sub update_state_from_details_mult {
     $state->{details_mult} = $details_mult;
     $state->{start} = $start_to_load;
     $state->{stop}  = $stop_to_load;
+}
+
+sub region_string {
+    my $self    = shift;
+    my $state   = $self->state;
+    my $source  = $self->data_source;
+    my $divider = $source->unit_divider;
+    $state->{name} = "$state->{ref}:".
+	              $source->commas($state->{start}/$divider).
+		      '..'.
+		      $source->commas($state->{stop}/$divider);
 }
 
 sub zoom_to_span {
@@ -3143,6 +3165,7 @@ sub get_panel_renderer {
   my $seg    = shift || $self->segment;
   my $whole  = shift || $self->whole_segment;
   my $region = shift || $self->region_segment;
+
   return Bio::Graphics::Browser2::RenderPanels->new(-segment        => $seg,
 						   -whole_segment  => $whole,
 						   -region_segment => $region,

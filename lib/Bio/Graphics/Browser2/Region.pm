@@ -122,7 +122,8 @@ sub whole_seg {
 sub set_features_by_region {
     my $self = shift;
     my ($ref,$start,$stop) = @_;
-    my $features = $self->lookup_features($ref,$start,$stop);
+    my $divider  = $self->source->unit_divider;
+    my $features = $self->lookup_features($ref,$start/$divider,$stop/$divider);
     $self->features($features);
     return $features;
 }
@@ -199,7 +200,7 @@ sub search_db {
   my $args = shift;
   my ($features);
   if (my $name = $args->{-search_term}) {
-      $name =~ tr/a-zA-Z0-9.'"_*?: ;+-\///cd;  # remove rude characters
+      $name =~ tr/a-zA-Z0-9.'"_*?: ;+-\/\#\[\]//cd;  # remove rude/naughty characters
       my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
       $features =  $self->lookup_features($ref,$start,$stop,$class,$name,$id);
   }
@@ -221,7 +222,7 @@ sub lookup_features {
 
   my $db      = $self->db;
 
-  my $divisor = $source->global_setting('unit_divider') || 1;
+  my $divisor = $source->unit_divider;
   $start *= $divisor if defined $start;
   $stop  *= $divisor if defined $stop;
 

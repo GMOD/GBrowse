@@ -44,8 +44,10 @@ case "$1" in
 		if [ "$PRELOAD" != "" ]; then
                     PRELOAD_DB="--preload $PRELOAD"
 	        fi
-		ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.$port.pid $PRELOAD_DB"
-		su $USER -s /bin/sh -c "nice -n $NICE $DAEMON $ARGS"
+		PID="$RUNDIR/$NAME.$port.pid"
+		ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $PID $PRELOAD_DB"
+		/bin/sh -c "nice -n $NICE $DAEMON $ARGS"
+		chown $USER $PID
 		echo -n "$port "
 	    fi
 	done
@@ -62,8 +64,7 @@ case "$1" in
             echo -n "$port "
         done
 	if [ "$killed" -ne 1 ]; then
-	    base=`basename $DAEMON`
-	    killall -q -r $base || true
+	    ps -ef| grep $DAEMON | grep -v grep | awk '{ print $2 }' | xargs kill -TERM || true
         fi
 	echo "."
 	;;

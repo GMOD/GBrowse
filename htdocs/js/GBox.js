@@ -157,24 +157,24 @@ Box.prototype.setBalloonStyle = function(vOrient,hOrient) {
   // Make sure the box is vertically contained in the window
   var boxTop    = self.getLoc(box,'y1');
   var boxBottom = self.getLoc(box,'y2');
-  var deltaTop      = boxTop < self.pageTop ? self.pageTop - boxTop : 0;
-  var deltaBottom   = boxBottom > self.pageBottom ? boxBottom - self.pageBottom : 0;
+  
+  if (boxBottom > self.pageBottom) {
+      var delta    = boxBottom - self.pageBottom;
+      var newTop   = boxTop - delta;
+      self.setStyle(box,'top',newTop);
+      boxBottom = self.pageBottom;
+      boxTop    = newTop;
+  } 
 
-  if (vOrient == 'up' && deltaTop) {
-    var newHeight = boxHeight - deltaTop;
-    if (newHeight > (self.padding*2)) {
-      self.setStyle('contents','height',newHeight);
+  if (boxTop < self.pageTop) {
       self.setStyle(box,'top',self.pageTop+self.padding);
-      self.setStyle(box,'height',newHeight);
-    }
-  }
-
-  if (vOrient == 'down' && deltaBottom) {
-    var newHeight = boxHeight - deltaBottom - scrollBar;
-    if (newHeight > (self.padding*2) + scrollBar) {
-      self.setStyle('contents','height',newHeight);
-      self.setStyle(box,'height',newHeight);
-    }
+      boxTop    = self.pageTop+self.padding;
+      boxBottom = boxTop + boxHeight;
+      if (boxBottom > self.pageBottom) {
+	  var newHeight = (self.pageBottom - boxTop) - 2*self.padding;
+	  self.setStyle(box,'height',newHeight);
+	  self.setStyle('contents','height',newHeight - 2*self.padding);
+      }
   }
 
   self.hOrient = hOrient;

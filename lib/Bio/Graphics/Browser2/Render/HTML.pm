@@ -405,6 +405,10 @@ sub render_html_head {
       $fill =~ s/^(\w+):[\d.]+$/$1/;
       $set_dragcolors = "set_dragcolors('$fill')";
   }
+  my $units   = $self->data_source->setting('units') || 'bp';
+  my $divider = $self->data_source->unit_divider;
+  my $set_units = "set_dragunits('$units',$divider)";
+
   my @extra_headers;
   push @extra_headers, $self->render_user_head;
 
@@ -419,17 +423,10 @@ sub render_html_head {
   
   # add body's onload arguments, including ones used by plugins
   my $autocomplete = '';
-  my $body_onLoads = "initialize_page();$set_dragcolors;$autocomplete";
-  while(my($keys, $values) = each(%plugin_onLoads)) {
-    if ($keys eq "body") {
-      $body_onLoads .= $values;
-    }
-  }
-  push @args,(-onLoad => "$body_onLoads");
 
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
   my $other_actions   = join ';',@other_initialization;
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $plugin_onloads; $other_actions");
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
 
   return start_html(@args);
 }
@@ -596,12 +593,12 @@ sub render_login {
     my $appname  = $self->globals->application_name;
     my $appnamel = $self->globals->application_name_long;
     my $session  = $self->session;
-    my $style    = 'font-weight:bold;color:blue;cursor:pointer;';
+    my $style    = 'font-weight:bold;color:blue;cursor:pointer;font-size:9pt;';
     my $login_controls  = '';
 
 	# Draw the visible HTML elements.
     if ($session->private) {
-    	$login_controls .= span({-style => 'font-weight:bold;color:black;'}, $self->translate('WELCOME', $session->username));
+    	$login_controls .= span({-style => 'font-weight:bold;color:black;font-size:9pt;'}, $self->translate('WELCOME', $session->username));
     	$login_controls .= '&nbsp; &nbsp;';
         $login_controls .= span({
         		  -style 	   => $style,
@@ -777,7 +774,7 @@ sub render_actionmenu {
 			     li($about_me_link),
 			  )),
 	);
-    return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));
+    return div({-class=>'datatitle',-style=>'height:32px'},$file_menu.$login.br({-clear=>'all'}));
 }
 
 # For the subset of plugins that are named in the 'quicklink plugins' option, create quick links for them.
@@ -2233,8 +2230,9 @@ sub zoomBar {
 
   my %seen;
   my @r         = sort {$a<=>$b} $self->data_source->get_ranges();
-  my @ranges	= grep {!$seen{$_}++ && $_<=$max} sort {$b<=>$a} @r,$length;
+  $max         *= $self->data_source->unit_divider;
 
+  my @ranges	= grep {!$seen{$self->data_source->unit_label($_)}++ && $_<=$max} sort {$b<=>$a} @r,$length;
   my %labels    = map {$_=>$show.' '.$self->data_source->unit_label($_)} @ranges;
   return popup_menu(-class   => 'searchtitle',
 		    -name    => 'span',
@@ -2347,11 +2345,13 @@ sub track_config {
     # options for wiggle & xy plots
     my $min_score= $data_source->semantic_fallback_setting( $label => 'min_score' ,     $length);
     my $max_score= $data_source->semantic_fallback_setting( $label => 'max_score' ,     $length);
-    $min_score = $dynamic unless defined $min_score;
-    $max_score = $dynamic unless defined $max_score;
+    $min_score = -1 unless defined $min_score;
+    $max_score = +1 unless defined $max_score;
+    my $autoscale = $data_source->semantic_fallback_setting( $label => 'autoscale' ,     $length);
 
     my $bicolor_pivot= $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,     $length);
     my $graph_type = $data_source->semantic_fallback_setting( $label => 'graph_type' ,     $length);
+    my $glyph_subtype = $data_source->semantic_fallback_setting( $label => 'glyph_subtype' ,     $length);
 
     # options for wiggle_whiskers
     my $max_color   = $data_source->semantic_fallback_setting( $label => 'max_color' ,   $length);
@@ -2371,11 +2371,13 @@ sub track_config {
     }
 
     my $db           = $data_source->open_database($label,$length);
-    my $quantitative = $glyph =~ /wiggle/ || ref($db) =~ /bigwig/i;
+    my $quantitative = $glyph =~ /wiggle|vista|xy|density/ || ref($db) =~ /bigwig/i;
     my $can_whisker  = $quantitative && ref($db) =~ /bigwig/i;
+    my $vista        = $glyph =~ /vista/;
 
     unless (@glyph_select) { # reasonable defaults
 	@glyph_select = $can_whisker  ? qw(wiggle_xyplot wiggle_density wiggle_whiskers)
+		       :$vista        ? 'vista_plot'
                        :$quantitative ? qw(wiggle_xyplot wiggle_density)
 	                              : qw(arrow anchored_arrow box crossbox dashed_line diamond 
                                          dna dot dumbbell ellipse gene line primers saw_teeth segments 
@@ -2428,15 +2430,47 @@ END
 
     push @rows,TR( {-class=>'general'},
 		   th( { -align => 'right' }, $self->translate('GLYPH') ),
-		   td( $picker->popup_menu(
-			   -name    => 'conf_glyph',
-			   -values  => \@all_glyphs,
-			   -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
-			   -current => $override->{'glyph'},
-			   -scripts => {-id=>'glyph_picker_id',-onChange => 'track_configure.glyph_select($(\'config_table\'),this)'}
-		       )
+		   td($picker->popup_menu(
+			  -name    => 'conf_glyph',
+			  -values  => \@all_glyphs,
+			  -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
+			  -current => $override->{'glyph'},
+			  -scripts => {-id=>'glyph_picker_id',-onChange => 'track_configure.glyph_select($(\'config_table\'),this)'}
+		      )
 		   )
-        );
+	);
+
+    for my $glyph (@all_glyphs) {
+	my $class = "Bio\:\:Graphics\:\:Glyph\:\:$glyph";
+	eval "require $class" unless $class->can('new');
+	if (my $subtypes = eval{$class->options->{glyph_subtype}}) {
+	    my $options  = $subtypes->[0];
+	    next unless ref $options eq 'ARRAY';
+	    push @rows,(TR {-class => $glyph,
+			    -id    => "conf_${glyph}_subtype"},
+			th({-align => 'right'}, $glyph,$self->tr('Subtype')),
+			td($picker->popup_menu(
+			       -name     => "conf_${glyph}_subtype",
+			       -values   => $options,
+			       -override => 1,
+			       -default => ref $glyph_subtype eq 'CODE' ? $dynamic : $glyph_subtype,
+			       -current  => $override->{'glyph_subtype'})));
+	}
+	if (my $subgraphs = eval{$class->options->{graph_type}}) {
+	    my $options  = $subgraphs->[0];
+	    next unless ref $options eq 'ARRAY';
+	    push @rows,(TR {-class => $glyph,
+			    -id    => "conf_graph_type"},
+			th({-align => 'right'}, $self->tr('XYplot_type')),
+			td($picker->popup_menu(
+			       -name     => "conf_graph_type",
+			       -values   => $options,
+			       -override => 1,
+			       -default => ref $graph_type eq 'CODE' ? $dynamic : $graph_type,
+			       -current  => $override->{'graph_type'})));
+	}
+	
+    }
 
     push @rows,TR( {-class => 'features',
 		    -id    => 'packing'},
@@ -2454,29 +2488,6 @@ END
 			   }
 		       )
 		   )
-        );
-
-    push @rows,TR({-class=>'xyplot',
-		   -style=>$g=~/xyplot/ ? 'display:table-row' : 'display:none'},
-		  th( { -align => 'right' }, $self->translate('XYPLOT_TYPE')),
-		  td( $picker->popup_menu(
-			  -name    => 'conf_graph_type',
-			  -values  => [qw(histogram line points linepoints)],
-			  -default => ref $graph_type eq 'CODE' ? $dynamic : $graph_type,
-			  -current => $override->{'graph_type'},
-		      )
-		  )
-        );
-
-    push @rows,TR({-class=>'whiskers'},
-		  th( { -align => 'right' }, $self->translate('WHISKERS_TYPE')),
-		  td( $picker->popup_menu(
-			  -name    => 'conf_graph_type_whiskers',
-			  -values  => [qw(whiskers boxes)],
-			  -default => ref $graph_type eq 'CODE' ? $dynamic : $graph_type,
-			  -current => $override->{'graph_type'},
-		      )
-		  )
         );
 
     push @rows,TR( {-class=>'xyplot features'},
@@ -2587,17 +2598,53 @@ END
 		   )
         );
 
-    push @rows,TR( {-class=>'xyplot density whiskers'},
-		   th( { -align => 'right' },$self->translate('SCALE_MIN')),
-		   td( textfield(-name  => 'conf_min_score',
-				 -value => defined $override->{min_score} ? $override->{min_score}
-				                                          : $summary_mode ? 0 : $min_score))) if $quantitative;
+    push @rows,TR({-class=>'xyplot autoscale',
+                   -id  => "xyplot_autoscale"
+		  },
+		    th( { -align => 'right' },$self->tr('AUTOSCALING')),
+		    td( $picker->popup_menu(
+			    -name    => "conf_xyplot_autoscale",
+			    -values  => [qw(none local)],
+			    -labels  => {none=>'fixed',local=>'scale to view'},
+			    -default => $autoscale,
+			    -current => $override->{autoscale},
+			    -scripts => {-onChange => 'track_configure.autoscale_select(this,$(\'glyph_picker_id\'))',
+					 -id  => "conf_xyplot_autoscale"
+}		       )));
 
-    push @rows,TR(  {-class=>'xyplot density whiskers'},
-		    th( { -align => 'right' },$self->translate('SCALE_MAX')),
-		    td( textfield(-name  => 'conf_max_score',
-				  -value => defined $override->{max_score} ? $override->{max_score}
-				  : $max_score)));
+    push @rows,TR({-class=>'wiggle vista_plot autoscale',
+		   -id   => 'wiggle_autoscale'},
+		    th( { -align => 'right' },$self->translate('AUTOSCALING')),
+		    td( $picker->popup_menu(
+			    -name    => "conf_wiggle_autoscale",
+			    -values  => [qw(none local chromosome global)],
+			    -labels  => {none=>'fixed',
+					 local=>'scale to local min/max',
+					 chromosome=>'scale to chromosome min/max',
+					 global=>'scale to genome min/max'},
+			    -default => $autoscale,
+			    -current => $override->{autoscale},
+			    -scripts => {-onChange => 'track_configure.autoscale_select(this,$(\'glyph_picker_id\'))',
+					 -id       => "conf_wiggle_autoscale"
+			    }
+		       )));
+
+    push @rows,TR( {-class=> 'xyplot density whiskers vista_plot',
+		    -id   => 'fixed_minmax'
+		   },
+		   th( { -align => 'right' },$self->translate('SCALING')),
+		   td( textfield(-name  => 'conf_min_score',
+				 -class => 'score_bounds',
+				 -size  => 5,
+				 -value => defined $override->{min_score} ? $override->{min_score}
+				                                          : $summary_mode ? 0 : $min_score),
+		   '-',
+		   textfield(-name  => 'conf_max_score',
+			     -class => 'score_bounds',
+			     -size  => 5,
+			     -value => defined $override->{max_score} ? $override->{max_score}
+			                                              : $max_score)))
+	if $quantitative;
 
     push @rows,TR({-class=>'xyplot'},
 		  th( { -align => 'right' }, $self->translate('SHOW_VARIANCE')),
@@ -2674,6 +2721,7 @@ END
 		  td(textfield(
 			 -name    => 'apply_semantic',
 			 -override=> 1,
+			 -size    => 10,
 			 -value   => $semantic_override||$semantic_level),' bp',
 		     hidden(-name=>'delete_semantic',-value=>$semantic_override)
 		  ),
@@ -2684,6 +2732,7 @@ END
 		  td(textfield(
 			 -name    => 'summary_mode',
 			 -override=> 1,
+			 -size    => 7,
 			 -value   => $state->{features}{$label}{summary_mode_len}
 			 || $summary_length),' bp'
 		  )

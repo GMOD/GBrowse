@@ -1195,6 +1195,24 @@ function set_dragcolors(color) {
      detailsObject.background  = color;
 }
 
+// set the colors for the rubberband regions
+function set_dragunits(unit,divider) {
+    if (unit == null)    unit    = 'bp';
+    if (divider == null) divider = 1;
+    if (overviewObject != null) {
+	overviewObject.unit    = unit;
+        overviewObject.divider = divider;
+    }
+    if (regionObject != null) {
+	regionObject.unit      = unit;
+	regionObject.divider   = divider;
+    }
+    if (detailsObject != null) {
+	detailsObject.unit    = unit;
+	detailsObject.divider = divider;
+    }
+}
+
 function create_time_key () {
     time_obj = new Date();
     return time_obj.getTime();

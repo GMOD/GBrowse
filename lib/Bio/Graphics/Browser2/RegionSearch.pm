@@ -93,7 +93,6 @@ sub init_databases {
 
     my $source = $self->source;
     my $labels = $track_labels || [$source->labels];
-#    my $labels = $track_labels || [$source->dbs];
 
     my $renderfarm = $self->source->global_setting('renderfarm');
 

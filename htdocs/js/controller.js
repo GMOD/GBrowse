@@ -100,7 +100,7 @@ var GBrowseController = Class.create({
 		if ( null != $(detail_container_id) ){
 			create_drag(detail_container_id,'track');
 		}
-		TrackPan.make_details_draggable();
+		TrackPan.update_draggables();
 	},
   
     register_track:
@@ -361,6 +361,8 @@ var GBrowseController = Class.create({
 
         this.busy();
 
+        TrackPan.grey_out_markers();
+
         //Grey out image
         this.each_track(function(gbtrack) {
             if ($(gbtrack.track_image_id) != null)
@@ -417,6 +419,7 @@ var GBrowseController = Class.create({
                 Controller.update_sections( Controller.segment_observers.keys());
                 $('details_msg').innerHTML = results.details_msg;
                 Controller.get_multiple_tracks(track_keys);
+                TrackPan.make_details_draggable();
                 if (results.display_details == 0)
                     Controller.hide_detail_tracks();
             } // end onSuccess

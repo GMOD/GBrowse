@@ -67,14 +67,15 @@ var GBrowseTrackPan = Class.create({
 				borderLeft:      '1px solid ' + this.marker_outline,
 				borderRight:     '1px solid ' + this.marker_outline,
 				height:          '200px',
-				opacity:         0.55,
 				cursor:          'text',
 				zIndex:          5
 			});
 			$('overview_marker').onmousedown = Overview.prototype.startSelection; // Rubber band selection
 		}
-		if (this.details_mult > 1.0 && !this.overview_draggable) {
+		$('overview_marker').setOpacity(0.55);
+		if (this.details_mult > 1.0) {
 			var drag_handle = new Element('div');
+			$('overview_marker').innerHTML = '';
 			$('overview_marker').insert({top: drag_handle});
 			drag_handle.setStyle({
 				backgroundColor: this.marker_outline,
@@ -96,9 +97,9 @@ var GBrowseTrackPan = Class.create({
 					onEnd:  function () { TrackPan.update_pan_position((parseInt($('overview_marker').style.left) - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) }
 				});
 			}
-		} else if (this.details_mult <= 1.0 && this.overview_draggable) {
+		} else if (this.details_mult <= 1.0) {
 			//No need to be draggable if viewport is same size as loaded image
-			this.overview_draggable = false;
+			this.overview_draggable.destroy();
 			$('overview_marker').innerHTML = '';
 		}
 
@@ -123,14 +124,15 @@ var GBrowseTrackPan = Class.create({
 				borderLeft:      '1px solid ' + this.marker_outline,
 				borderRight:     '1px solid ' + this.marker_outline,
 				height:          '200px',
-				opacity:         0.55,
 				cursor:          'text',
 				zIndex:          5
 			});
 			$('region_marker').onmousedown = Region.prototype.startSelection; // Rubber band selection
 		}
-		if (this.details_mult > 1.0 && !this.region_draggable) {
+		$('region_marker').setOpacity(0.55);
+		if (this.details_mult > 1.0) {
 			var drag_handle = new Element('div');
+			$('region_marker').innerHTML = '';
 			$('region_marker').insert({top: drag_handle});
 			drag_handle.setStyle({
 				backgroundColor: this.marker_outline,
@@ -150,9 +152,9 @@ var GBrowseTrackPan = Class.create({
 				onDrag: function () { TrackPan.update_pan_position((parseInt($('region_marker').style.left) - TrackPan.region_segment_start) / TrackPan.region_draggable_width) },
 				onEnd:  function () { TrackPan.update_pan_position((parseInt($('region_marker').style.left) - TrackPan.region_segment_start) / TrackPan.region_draggable_width) }
 	    		});
-		} else if (this.details_mult <= 1.0 && this.region_draggable) {
+		} else if (this.details_mult <= 1.0) {
 			//No need to be draggable if viewport is same size as loaded image
-			this.region_draggable = null;
+			this.region_draggable.destroy();
 			$('region_marker').innerHTML = '';
 		}
 
@@ -162,6 +164,47 @@ var GBrowseTrackPan = Class.create({
 			width = 1;
 		}
 		$('region_marker').style.width = width + 'px';
+	},
+
+	grey_out_markers:
+	function () {
+		if ($('overview_marker')) { $('overview_marker').setOpacity(0.2); }
+		if ($('region_marker'))   { $('region_marker').setOpacity(0.2); }
+	},
+
+	make_track_draggable:
+	function (gbtrack) {
+		if (gbtrack.track_id == 'Detail Scale') {       // Special case for detail scale track - dragging it interferes with segment selection
+			gbtrack.get_image_div().makePositioned();
+			return;
+		}
+		new Draggable(gbtrack.get_image_div(), {
+			constraint: 'horizontal',
+			zindex: 0, // defaults to 1000, which we don't want because it covers labels
+			snap:   function (x) { return[ (x < 0) ? ((x > -TrackPan.detail_draggable_width) ? x : -TrackPan.detail_draggable_width ) : 0 ]; },
+			onDrag: function ()  { 
+				if (TrackPan.flip) {
+					TrackPan.update_pan_position(1 + parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
+				} else {
+					TrackPan.update_pan_position(0 - parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
+				}
+			},
+			onEnd:  function ()  { 
+				if (TrackPan.flip) {
+					TrackPan.update_pan_position(1 + parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
+				} else {
+					TrackPan.update_pan_position(0 - parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
+				}
+			}
+		});
+	},
+
+	// Called by controller when the loaded tracks may have changed. Makes sure all tracks are draggable, and 
+	// updates new tracks to the correct position.
+	update_draggables:
+	function () {
+		this.each_details_track(TrackPan.make_track_draggable);
+		this.update_pan_position(this.x);
 	},
 
 
@@ -215,31 +258,7 @@ var GBrowseTrackPan = Class.create({
 			return; //No need to be draggable if viewport is same size as loaded image
 		}
 
-		this.each_details_track(function(gbtrack) {
-			if (gbtrack.track_id == 'Detail Scale') {       // Special case for detail scale track - dragging it interferes with segment selection
-				gbtrack.get_image_div().makePositioned();
-				return;
-			}
-			new Draggable(gbtrack.get_image_div(), {
-				constraint: 'horizontal',
-				zindex: 0, // defaults to 1000, which we don't want because it covers labels
-				snap:   function (x) { return[ (x < 0) ? ((x > -TrackPan.detail_draggable_width) ? x : -TrackPan.detail_draggable_width ) : 0 ]; },
-				onDrag: function ()  { 
-					if (TrackPan.flip) {
-						TrackPan.update_pan_position(1 + parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
-					} else {
-						TrackPan.update_pan_position(0 - parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
-					}
-				},
-				onEnd:  function ()  { 
-					if (TrackPan.flip) {
-						TrackPan.update_pan_position(1 + parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
-					} else {
-						TrackPan.update_pan_position(0 - parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
-					}
-				}
-			});
-		});
+		this.each_details_track(TrackPan.make_track_draggable);
 		
 		var scroll_to = 0.5; // start in the middle (by default)
 		if (this.initial_view_start >= 0) {

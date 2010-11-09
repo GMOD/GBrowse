@@ -63,8 +63,8 @@ sub ACTION_navigate {
 
     my $action = $q->param('navigate') or croak "for the navigate action, a CGI argument named \"navigate\" must be present";
 
-    $render->state->{view_start} = ($q->param('view_start') >= 0)? $q->param('view_start') : $render->state->{view_start},
-    $render->state->{view_stop}  = ($q->param('view_stop')  >= 0)? $q->param('view_stop')  : $render->state->{view_stop},
+    $render->state->{view_start} = ($q->param('view_start') && $q->param('view_start') >= 0)? $q->param('view_start') : $render->state->{view_start},
+    $render->state->{view_stop}  = ($q->param('view_stop')  && $q->param('view_stop')  >= 0)? $q->param('view_stop')  : $render->state->{view_stop},
 
     my $updated = $render->asynchronous_update_coordinates($action);
 

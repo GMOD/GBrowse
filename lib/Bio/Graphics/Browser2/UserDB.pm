@@ -193,12 +193,11 @@ sub get_user_id {
     my $self = shift;
 	my $userdb = $self->{dbi};
     my $potential_userid = shift;
-    my $warn = shift;
     my $name_lookup = $userdb->selectrow_array("SELECT userid FROM users WHERE username = " . $userdb->quote($potential_userid) . " LIMIT 1");
     $potential_userid = $name_lookup if $name_lookup;
     my $uploads_lookup = $userdb->selectrow_array("SELECT userid FROM users WHERE uploadsid = " . $userdb->quote($potential_userid) . " LIMIT 1");
     my $user_id = ($uploads_lookup? $uploads_lookup : $potential_userid);
-    my $confirmed_user = $userdb->selectcol_arrayref("SELECT userid FROM users LIMIT 1");
+    my $confirmed_user = $userdb->selectcol_arrayref("SELECT userid FROM users");
     return $user_id if join(" ", @$confirmed_user) =~ $user_id;
 }
 

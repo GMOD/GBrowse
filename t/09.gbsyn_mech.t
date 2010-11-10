@@ -12,7 +12,22 @@ my $gbsyn_url = "$base_url/gbrowse_syn";
 
 my $mech = Test::WWW::Mechanize->new;
 
-$mech->get_ok( $gbsyn_url, 'got the bare gbrowse_syn page' );
+$mech->get_ok( $gbsyn_url, 'got the default gbrowse_syn page' );
+
+# follow the first example link and check that it's OK
+$mech->follow_link_ok(
+    {
+        url_regex => qr/^?search_src=/,
+    },
+    'followed first example link',
+   );
+
+# check each of the images on the example view
+for my $image ( $mech->images ) {
+
+    $mech->get_ok( $image->url );
+
+}
 
 done_testing;
 

@@ -22,8 +22,8 @@ use Legacy::Graphics::Browser;
 use Legacy::Graphics::Browser::Util;
 use Legacy::Graphics::Browser::Synteny;
 use Legacy::Graphics::Browser::PageSettings;
-use Legacy::DB::SyntenyIO;
-use Legacy::DB::SyntenyBlock;
+use Bio::DB::SyntenyIO;
+use Bio::DB::SyntenyBlock;
 
 
 use constant OVERVIEW_RATIO     => 0.9;
@@ -103,7 +103,7 @@ $CONF->search_src($page_settings->{search_src});
 $CONF->source($page_settings->{source});
 $MAP = db_map();
 
-$SYNTENY_IO = Legacy::DB::SyntenyIO->new($CONF->setting('join'));
+$SYNTENY_IO = Bio::DB::SyntenyIO->new($CONF->setting('join'));
 
 my $segment = landmark2segment($page_settings);
 
@@ -1189,7 +1189,7 @@ sub aggregate {
     if (@$grp > 1) {
       my @coords  = sort {$a<=>$b} map {$_->start,$_->end}   @$grp;
       my @tcoords = sort {$a<=>$b} map {$_->tstart,$_->tend} @$grp;
-      my $hit = Legacy::DB::SyntenyBlock->new($grp->[0]->name."_aggregate");
+      my $hit = Bio::DB::SyntenyBlock->new($grp->[0]->name."_aggregate");
       $hit->add_part($grp->[0]->src,$grp->[0]->tgt);
       $hit->start(shift @coords);
       $hit->end(pop @coords);

@@ -1,4 +1,4 @@
-package Legacy::DB::SyntenyBlock;
+package Bio::DB::SyntenyBlock;
 
 use strict;
 use constant SRC    => 0;

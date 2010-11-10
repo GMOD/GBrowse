@@ -41,8 +41,8 @@ var GBrowseTrackPan = Class.create({
 			gbt.get_image_div().style.left = pos;
 		});
 
-		$('overview_marker').style.left = Math.round(this.overview_segment_start + this.overview_draggable_width * x) + 'px';
-		$('region_marker').style.left   = Math.round(this.region_segment_start   + this.region_draggable_width   * x) + 'px';
+		if ($('overview_marker')) { $('overview_marker').style.left = Math.round(this.overview_segment_start + this.overview_draggable_width * x) + 'px'; }
+		if ($('region_marker'))   { $('region_marker').style.left   = Math.round(this.region_segment_start   + this.region_draggable_width   * x) + 'px'; }
 
 		if (this.get_start() > 0 && this.get_stop() > 0) {
 			if (document.searchform) {
@@ -60,6 +60,8 @@ var GBrowseTrackPan = Class.create({
 	// If it already exists, updates its width based on the segment size
 	create_overview_pos_marker:
 	function() {
+		if (!($('overview_panels'))) { return; }
+
 		if (!($('overview_marker'))) {
 			$('overview_panels').insert("<div id='overview_marker'></div>");
 			$('overview_marker').setStyle({
@@ -101,7 +103,7 @@ var GBrowseTrackPan = Class.create({
 			}
 		} else if (this.details_mult <= 1.0) {
 			//No need to be draggable if viewport is same size as loaded image
-			this.overview_draggable.destroy();
+			if (this.overview_draggable) { this.overview_draggable.destroy(); }
 			$('overview_marker').innerHTML = '';
 		}
 
@@ -117,6 +119,8 @@ var GBrowseTrackPan = Class.create({
 	// If it already exists, updates its width and position based on the segment and region sizes
 	create_region_pos_marker:
 	function() {
+		if (!($('region_panels'))) { return; }
+
 		if (!($('region_marker'))) {
 			$('region_panels').insert("<div id='region_marker'></div>");
 			$('region_marker').setStyle({
@@ -156,7 +160,7 @@ var GBrowseTrackPan = Class.create({
 	    		});
 		} else if (this.details_mult <= 1.0) {
 			//No need to be draggable if viewport is same size as loaded image
-			this.region_draggable.destroy();
+			if (this.region_draggable) { this.region_draggable.destroy(); }
 			$('region_marker').innerHTML = '';
 		}
 
@@ -205,8 +209,10 @@ var GBrowseTrackPan = Class.create({
 	// updates new tracks to the correct position.
 	update_draggables:
 	function () {
-		this.each_details_track(TrackPan.make_track_draggable);
-		this.update_pan_position(this.x);
+		if (this.details_mult > 1) {
+			this.each_details_track(TrackPan.make_track_draggable);
+			this.update_pan_position(this.x);
+		}
 	},
 
 

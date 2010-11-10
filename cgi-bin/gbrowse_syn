@@ -62,133 +62,144 @@ use constant SETTINGS =>
       species    => undef
       );
 
-use vars qw($INVALID_SRC $CONF_DIR $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSION $SYNTENY_IO @hits);
 
-# initialization
-$CONF_DIR   = conf_dir($CONF_DIR);
+our $INVALID_SRC;
+our $SCONF;
+our $CONF;
+our $MAP;
+our $SYNTENY_IO;
+our @hits;
 
+run();
+exit 0;
 
-# error if no data sources configured 
-my $go;
-while (<$CONF_DIR/*.synconf>) {
-  $go++;
-}
-unless ($go) {
-  print header,  start_html('No data source');
-  print warning("No data source configured for GBrowse_syn\n"); 
-  print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
+########################### HELPER SUBS ########################################
 
-  print <<END;
+sub run {
+
+    # initialization
+    $CONF_DIR   = conf_dir($CONF_DIR);
+
+    # error if no data sources configured 
+    my $go;
+    while (<$CONF_DIR/*.synconf>) {
+        $go++;
+    }
+    unless ($go) {
+        print header,  start_html('No data source');
+        print warning("No data source configured for GBrowse_syn\n"); 
+        print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
+
+        print <<END;
 <iframe style="frameborder:0;width:800px;height:2000px" src="/gbrowse2/gbrowse_syn_help.html">
 </iframe>
 END
-;
-  print end_html;
-  exit 0;
-}
-
-
-# search soure (general) configuration
-$CONF       = Legacy::Graphics::Browser::Synteny->new();
-$CONF->read_configuration($CONF_DIR,'synconf');
-
-# species-specific configuration
-my $extension = $CONF->setting('config_extension') || EXTENSION;
-$SCONF      = open_config($CONF_DIR,$extension);
-
-my ($page_settings,$session) = page_settings();
-my $source = $page_settings->{source};
-$CONF->page_settings($page_settings);
-$CONF->search_src($page_settings->{search_src});
-$CONF->source($page_settings->{source});
-$MAP = db_map();
-
-$SYNTENY_IO = Bio::DB::SyntenyIO->new($CONF->setting('join'));
-
-my $segment = landmark2segment($page_settings);
-
-if ($segment) {
-  my $name = format_segment($segment);
-  
-  if (ref $segment ne 'Bio::DB::GFF::RelSegment') {
-    redirect(url()."?name=$name");
-  }
-
-  $CONF->current_segment($segment);
-  param(name => $name);
-  $page_settings->{name} = $name;
-}
-
-my @reset = (0,0);
-if (param('reset')) {
-  @reset = (1, 'All settings have been reset to their default values');
-}
-$CONF->print_page_top($CONF->setting('description'),@reset,$session);
-
-# warning if trying to search with no species
-if (!$segment && param('name') && !$CONF->page_settings("search_src")) {
-  print warning("Error: select a species to search");
-}
-
-# Which aligned species have been asked for
-my @requested_species  = _unique(@{$page_settings->{species}});
-if (!@requested_species) {
-  my $search_src = $page_settings->{search_src} || '';
-  unless ($search_src && $search_src ne 'nosrc' && $MAP->{$search_src}->{db}) {
-    $INVALID_SRC = $search_src;
-  }
-  @requested_species  = grep {$_ ne $search_src} grep {$MAP->{$_}->{db}} keys %$MAP;
-}
-
-if ($segment) {
-
-  @hits = map {$SYNTENY_IO->get_synteny_by_range(-src   => $page_settings->{search_src},
-						 -ref   => $segment->abs_ref,
-						 -start => $segment->abs_start,
-						 -end   => $segment->abs_end,
-						 -tgt   => $_) } @requested_species;
-}
-
-my $header = $CONF->setting('header');
-$header = &$header if ref $header;
-print $header || h1($CONF->setting('description'));
-
-if ($INVALID_SRC) {
-  print warning("Species '$INVALID_SRC' is not configured for this database");
-}
-
-search_form($segment);
-
-print overview_panel($CONF->whole_segment($segment),$segment) if $segment;
-
-if ($segment) {
-  # make sure no hits go off-screen
-  remap_coordinates($_) for @hits;
-  
-  segment_info($page_settings,$segment);
-
-  my %species = map {$_->src2 => 1} @hits;  
-  my @species = sort keys %species;
-
-  # either display ref species + 2 repeating or 'all in one'
-  if ($page_settings->{display} eq 'expanded') {
-    while (my @pair = splice @species, 0, 2) {
-      draw_image($page_settings,\@hits,@pair);
+        ;
+        print end_html;
+        exit 0;
     }
-  }
-  else {
-    draw_image($page_settings,\@hits,@species);
-  } 
-} 
 
-options_table();
-print end_form();
-print $CONF->footer || end_html();
 
-# remember former source for the checkbox
-$page_settings->{old_src} = $CONF->search_src;
-exit 0;
+    # search soure (general) configuration
+    $CONF       = Legacy::Graphics::Browser::Synteny->new();
+    $CONF->read_configuration($CONF_DIR,'synconf');
 
+    # species-specific configuration
+    my $extension = $CONF->setting('config_extension') || EXTENSION;
+    $SCONF      = open_config($CONF_DIR,$extension);
+
+    my ($page_settings,$session) = page_settings();
+    my $source = $page_settings->{source};
+    $CONF->page_settings($page_settings);
+    $CONF->search_src($page_settings->{search_src});
+    $CONF->source($page_settings->{source});
+    $MAP = db_map();
+
+    $SYNTENY_IO = Bio::DB::SyntenyIO->new($CONF->setting('join'));
+
+    my $segment = landmark2segment($page_settings);
+
+    if ($segment) {
+        my $name = format_segment($segment);
+
+        if (ref $segment ne 'Bio::DB::GFF::RelSegment') {
+            redirect(url()."?name=$name");
+        }
+
+        $CONF->current_segment($segment);
+        param(name => $name);
+        $page_settings->{name} = $name;
+    }
+
+    my @reset = (0,0);
+    if (param('reset')) {
+        @reset = (1, 'All settings have been reset to their default values');
+    }
+    $CONF->print_page_top($CONF->setting('description'),@reset,$session);
+
+    # warning if trying to search with no species
+    if (!$segment && param('name') && !$CONF->page_settings("search_src")) {
+        print warning("Error: select a species to search");
+    }
+
+    # Which aligned species have been asked for
+    my @requested_species  = _unique(@{$page_settings->{species}});
+    if (!@requested_species) {
+        my $search_src = $page_settings->{search_src} || '';
+        unless ($search_src && $search_src ne 'nosrc' && $MAP->{$search_src}->{db}) {
+            $INVALID_SRC = $search_src;
+        }
+        @requested_species  = grep {$_ ne $search_src} grep {$MAP->{$_}->{db}} keys %$MAP;
+    }
+
+    if ($segment) {
+
+        @hits = map {$SYNTENY_IO->get_synteny_by_range(-src   => $page_settings->{search_src},
+                                                       -ref   => $segment->abs_ref,
+                                                       -start => $segment->abs_start,
+                                                       -end   => $segment->abs_end,
+                                                       -tgt   => $_) } @requested_species;
+    }
+
+    my $header = $CONF->setting('header');
+    $header = &$header if ref $header;
+    print $header || h1($CONF->setting('description'));
+
+    if ($INVALID_SRC) {
+        print warning("Species '$INVALID_SRC' is not configured for this database");
+    }
+
+    search_form($segment);
+
+    print overview_panel($CONF->whole_segment($segment),$segment) if $segment;
+
+    if ($segment) {
+        # make sure no hits go off-screen
+        remap_coordinates($_) for @hits;
+
+        segment_info($page_settings,$segment);
+
+        my %species = map {$_->src2 => 1} @hits;  
+        my @species = sort keys %species;
+
+        # either display ref species + 2 repeating or 'all in one'
+        if ($page_settings->{display} eq 'expanded') {
+            while (my @pair = splice @species, 0, 2) {
+                draw_image($page_settings,\@hits,@pair);
+            }
+        } else {
+            draw_image($page_settings,\@hits,@species);
+        } 
+    } 
+
+    options_table();
+    print end_form();
+    print $CONF->footer || end_html();
+
+    # remember former source for the checkbox
+    $page_settings->{old_src} = $CONF->search_src;
+
+}
 
 sub species_chooser {
   # pointless if < 3 species

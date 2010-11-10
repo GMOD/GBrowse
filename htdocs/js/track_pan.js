@@ -13,7 +13,9 @@ var GBrowseTrackPan = Class.create({
 	function (toCall) {
 		Controller.each_track(function(gbtrack) {
 			if (gbtrack.track_type == 'standard' && gbtrack.track_section == 'detail' || gbtrack.track_id == 'Detail Scale') {
-				toCall(gbtrack);
+				if (gbtrack.get_image_div()) { // only worry about tracks that have loaded		
+					toCall(gbtrack);
+				}
 			}
 		});
 	},

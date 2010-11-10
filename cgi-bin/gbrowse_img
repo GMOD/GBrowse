@@ -283,7 +283,7 @@ sub render_tracks {
 						      image_class       => $format,
 						      flip              => $flip,
 						      -key_style        => 'between',
-						      suppress_key      => 0,
+						      -suppress_key     => 0,
 						      }
 						  );
     

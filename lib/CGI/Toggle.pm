@@ -91,7 +91,7 @@ sub toggle_section {
 		      -class => 'el_visible'},
 		     @section_body);
   my @result = $config{nodiv} ? ($show_ctl.$hide_ctl,$content) 
-                              : div({-class=>'cusor:pointer'},$show_ctl.$hide_ctl,$content);
+                              : div({-class=>'cursor:pointer'},$show_ctl.$hide_ctl,$content);
   return wantarray ? @result : "@result";
 }
 

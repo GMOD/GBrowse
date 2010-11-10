@@ -12,6 +12,7 @@ use Digest::MD5 'md5_hex';
 use Carp qw(croak cluck);
 use CGI qw(:standard escape start_table end_table);
 use Text::Tabs;
+use POSIX qw(floor);
 
 use constant JS    => '/gbrowse2/js';
 use constant ANNOTATION_EDIT_ROWS => 25;
@@ -598,7 +599,7 @@ sub render_login {
 
 	# Draw the visible HTML elements.
     if ($session->private) {
-    	$login_controls .= span({-style => 'font-weight:bold;color:black;font-size:9pt;'}, $self->translate('WELCOME', $session->username));
+    	$login_controls .= span({-style => 'font-weight:bold;color:black;'}, $self->translate('WELCOME', $session->username));
     	$login_controls .= '&nbsp; &nbsp;';
         $login_controls .= span({
         		  -style 	   => $style,
@@ -774,7 +775,7 @@ sub render_actionmenu {
 			     li($about_me_link),
 			  )),
 	);
-    return div({-class=>'datatitle',-style=>'height:32px'},$file_menu.$login.br({-clear=>'all'}));
+    return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));
 }
 
 # For the subset of plugins that are named in the 'quicklink plugins' option, create quick links for them.
@@ -968,7 +969,7 @@ sub render_track_table {
 
   autoEscape(0);
 
-
+  # Get the list of all the categories needed.
   my %exclude = map {$_=>1} map {$self->translate($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
   my ($user_tracks) = grep {/^My tracks/i} keys %track_groups;
   $exclude{$user_tracks}++ if $user_tracks;
@@ -989,12 +990,24 @@ sub render_track_table {
   my $c_default = $source->category_default;
 
   my @titles; # for sorting
-
+    
+  # For each category, create the appropriately-nested node. "My Tracks" node positions comes from the track's config file.
+  my $usertracks = $self->user_tracks;
   foreach my $category (@categories) {
     next if $seenit{$category}++;
     my $id = "${category}_section";
     my $category_title   = (split m/(?<!\\):/,$category)[-1];
     $category_title      =~ s/\\//g;
+    
+    my $file_id;
+    if ($usertracks->database && $category =~ /Uploaded Tracks/) {
+        $file_id = $usertracks->get_file_id($category_title);
+        $category_title = $usertracks->title($file_id);
+        
+        # Re-write the category labels appropriately.
+        #$category =~ s/Uploaded Tracks/Community Tracks/ if $usertracks->database && $usertracks->permissions($file_id) eq "public";
+        #$category =~ s/Uploaded Tracks/Custom Tracks/;
+    }
 
     if ($category eq $self->translate('REGION') 
 	&& !$self->setting('region segment')) {
@@ -1026,7 +1039,8 @@ sub render_track_table {
                    : exists $settings->{section_visible}{$id} 
                         ? $settings->{section_visible}{$id} 
                         : $c_default;
-
+                        
+      # Get the content for this track.
       my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
 						   $id,
 						   b(ucfirst $category_title),
@@ -1039,7 +1053,7 @@ sub render_track_table {
 				      -label=>$all_off,-onClick=>"gbCheck(this,0);")
 			    )."&nbsp;".span({-class => "list",
 			            -id => "${id}_list",
-			            -style => "display: none;"},"")
+			            -style => "display: " . ($visible? "none" : "inline") . ";"},"")
 			    .br()   if exists $track_groups{$category};
       $section_contents{$category} = div($control.$section);
     }
@@ -1394,37 +1408,48 @@ sub render_community_track_listing {
 	my @requested_tracks = $usertracks->get_public_files(@_) if @_;
 	
 	# Calculate the value for the next pagination
+	my $max_files = $globals->public_files;
 	my $total_tracks = $usertracks->public_count($search);
-	my $track_limit = $search? $#requested_tracks : $globals->public_files;
-	my $tracks_before = ($track_limit < $offset)? $track_limit : $offset;
-	my $tracks_after = ($track_limit < ($total_tracks - $offset - $track_limit))? $track_limit : ($total_tracks - $offset - $track_limit);
-	my $previous_offset = $offset - $tracks_before;
+	my $track_limit = $search? @requested_tracks : $max_files;
+	my $tracks_displayed = ($track_limit < (@requested_tracks? @requested_tracks : $total_tracks))? $track_limit : (@requested_tracks? @requested_tracks : $total_tracks);
+	my $tracks_remaining = $total_tracks - ($offset + $tracks_displayed);
+	my $tracks_before = $offset;
+	
+	my $tracks_next = ($track_limit < $tracks_remaining)? $track_limit : $tracks_remaining;
 	my $next_offset = $offset + $track_limit;
-	my $tracks_displayed = ($track_limit < (@requested_tracks? ($#requested_tracks + 1) : $total_tracks))? $track_limit : (@requested_tracks? ($#requested_tracks + 1) : $total_tracks);
+	my $tracks_previous = ($max_files < $tracks_before)? $max_files : $tracks_before;
+	my $previous_offset = $offset - $globals->public_files;
+	
+	my $first_number = $offset + 1;
+	my $last_number = $offset + $tracks_displayed;
 	
 	# Create the HTML for the title & header
 	$html .= span({-style => "display: inline-block;"},
 		start_form({-action => "javascript:void(0);", -onsubmit => "return searchPublic(\$('public_search_keyword').value);"}), # The return here is necessary to stop the form from ACTUALLY submitting.
 		input({-type => "hidden", -name => "offset", -value => $offset, -id => "community_display_offset"}),
-		"Filter:",
+		ucfirst $self->translate('FILTER') . ":",
 		input({
 		    -type => "text",
 		    -name => "keyword",
 		    -id => "public_search_keyword",
 		    -width => 50,
-		    -value => ($search || $self->translate('ENTER_KEYWORD')) . ($self->globals->user_accounts? (" " . $self->translate('OR_USER')) : ""),
+		    -value => $search || ($self->globals->user_accounts? $self->translate('ENTER_KEYWORD') . " " . $self->translate('OR_USER') : $self->translate('ENTER_KEYWORD')),
 		    -onClick => "this.value='';"
 		}),
 		input({-type => "submit", -value => "Search"}),
-		($tracks_before > 0)? a({-href => '#', -onClick => "return searchPublic(\"$search\", $previous_offset);"}, "[" . $self->translate('PREVIOUS_N', $tracks_before) . "]") . "&nbsp;" : "",
-		$self->translate('SHOWING_TOP_PUBLIC_FILES', $tracks_displayed, $total_tracks),
-		($tracks_after > 0)? "&nbsp;" . a({-href => '#', -onClick => "return searchPublic(\"$search\", $next_offset);"}, "[" . $self->translate('NEXT_N', $tracks_after) . "]") : "",
+		($tracks_previous > 0)? a({-href => '#', -onClick => "return searchPublic(\"$search\", $previous_offset);"}, "[" . $self->translate('PREVIOUS_N', $tracks_previous) . "]") . "&nbsp;" : "",
+		ucfirst $self->translate('SHOWING'). " "
+		. (($total_tracks > 0)? $self->translate('N_TO_N_OUT_OF', $first_number, $last_number) : "") . " " 
+		. $self->translate('N_FILES', $total_tracks)
+		. ($search? (" " . $self->translate("MATCHING", $search)) : "")
+		. ".",
+		($tracks_next > 0)? "&nbsp;" . a({-href => '#', -onClick => "return searchPublic(\"$search\", $next_offset);"}, "[" . $self->translate('NEXT_N', $tracks_next) . "]") : "",
 		end_form()
 	);
 	
 	# Add the results
 	if (@_) {
-		$html .= @requested_tracks? $self->list_tracks("public", @requested_tracks) : p($self->translate('NO_PUBLIC_RESULTS', $_[0])) if @_;
+		$html .= @requested_tracks? $self->list_tracks("public", @requested_tracks) : p($self->translate('NO_PUBLIC_RESULTS', $search));
 	} else {
 		$html .= $self->list_tracks("public");
 	}
@@ -1525,6 +1550,8 @@ sub render_track_list_title {
 	my $type = shift;
 	my $accent_color = shift;
 	my $userdata = $self->user_tracks;
+	my $globals = $self->globals;
+	my $userdb = $self->{userdb} if $globals->user_accounts;
 	
 	my $short_name = $userdata->title($fileid);
 	if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
@@ -1562,16 +1589,20 @@ sub render_track_list_title {
 	my $title = h1(
 	    {
 	        -style => "display: inline; font-size: 14pt;",
-	        -onClick         => ($userdata->is_mine($fileid) && $userdata->database)? "Controller.edit_upload_title('$fileid', this)" : "",
-			-contentEditable => ($userdata->is_mine($fileid) && $userdata->database)? 'true' : 'false',
+	        -onClick         => ($userdata->database && $userdata->is_mine($fileid))? "Controller.edit_upload_title('$fileid', this)" : "",
+			-contentEditable => ($userdata->database && $userdata->is_mine($fileid))? 'true' : 'false',
 	    },
 	    $short_name
 	);
+	my $owner_id = $userdata->owner($fileid);
+	my $owner_name = ($owner_id eq $self->state->{uploadid})? "you" : $userdb->get_username($userdb->get_user_id($owner_id));
+	my $owner = ($globals->user_accounts && $type =~ "public")? $self->translate("UPLOADED_BY") . " " . b($owner_name) : "";
 	
 	return span(
 		{-style => "display: inline-block;"},
 		$stat,
 		$title,
+		$owner,
 		$go_there
 	) . $source_note;
 }
@@ -1588,16 +1619,8 @@ sub render_track_controls {
 	my $globals = $self->globals;
 	
 	my $buttons = $self->data_source->globals->button_url;
-    
-	my $toggle_details = a(	
-		{
-			-href	  => "javascript: void(0);",
-			-onClick => "this.up().next('div.details').toggle();"
-		 },
-		 $self->translate('TOGGLE_DETAILS')
-	);
-	my $controls = $toggle_details;
 	
+	my $controls;
 	# Conditional controls, based on the type of track.
 	if ($userdata->is_mine($fileid)) {
 		# The delete icon,

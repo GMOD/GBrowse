@@ -641,10 +641,16 @@ END
    ERROR                     => 'The server returned an error.',
    ENTER_KEYWORD             => 'Enter a keyword',
    OR_USER                   => 'or user',
-   SHOWING_TOP_PUBLIC_FILES  => 'Showing %s out of %s file(s)',
-   FOUND_N_FILES             => 'Found %s file(s)',
+   SHOWING                   => 'showing',
+   N_TO_N_OUT_OF             => '%s to %s out of',
+   N_FILES                   => '%s file(s)',
+   FOUND_N_FILES             => 'found %s file(s)',
    NEXT_N                    => 'Next %s',
    PREVIOUS_N                => 'Previous %s',
+   UPLOADED_BY               => 'uploaded by',
+   MATCHING                  => 'matching "<b>%s</b>"',
+   PAGE                      => 'page',
+   FILTER                    => 'filter',
 
    #------
    # MISC.

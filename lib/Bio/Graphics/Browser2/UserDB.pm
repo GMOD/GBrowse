@@ -19,8 +19,8 @@ sub new {
   my $class = shift;
   my $VERSION = '0.5';
   my $globals = Bio::Graphics::Browser2->open_globals;
-  my $credentials  = shift || $globals->user_account_db or die "No credentials specified in GBrowse.conf.";
-
+  my $credentials  = $globals->user_account_db or die "No credentials specified in GBrowse.conf.";
+  
   my $login = DBI->connect($credentials);
   unless ($login) {
     print header();
@@ -31,94 +31,9 @@ sub new {
   my $self = bless {
     dbi => $login,
     globals => $globals,
-  }, ref $class || $class;
-  
-  my $users_columns = {
-    userid => "varchar(32) not null UNIQUE key",
-    uploadsid => "varchar(32) not null",
-    username => "varchar(32) not null PRIMARY key",
-    email => "varchar(64) not null UNIQUE key",
-    pass => "varchar(32) not null",
-    remember => "boolean not null",
-    openid_only => "boolean not null",
-    confirmed => "boolean not null",
-    cnfrm_code => "varchar(32) not null",
-    last_login => "timestamp not null",
-    created => "datetime not null"
-  };
-  
-  my $openid_columns = {
-    userid => "varchar(32) not null",
-    username => "varchar(32) not null",
-    openid_url => "varchar(128) not null PRIMARY key"
-  };
-  
-  $self->check_db($login, "users", $users_columns);
-  $self->check_db($login, "openid_users", $openid_columns);
+  }, ref $class || $class;  
 
   return $self;
-}
-
-# Check DB (DBI, Name, Columns) - Makes sure the named DB is there and follows the schema needed.
-sub check_db {
-    my $self = shift;
-    my $data_source = shift;
-    my $name = shift;
-    my $columns = shift;
-    my $type = $data_source->get_info(17); # Returns the database type.
-
-    # If the database doesn't exist, create it.
-    unless ($data_source->do("SELECT * FROM $name LIMIT 1")) {
-        warn ucfirst $name . " table didn't exist, creating...";
-        # This creates the SQL to make the table.       This middle section is simply outputting %columns as "$key $value, ";
-        my $creation_sql = "CREATE TABLE $name (" . (join ", ", map { "$_ " . $$columns{$_} } keys %$columns) . ")" . (($type =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
-        $data_source->do($creation_sql) or die "Could not create $name database";
-    }
-
-    # If a required column doesn't exist, add it.
-    my $sth = $data_source->prepare("SELECT * from $name LIMIT 1");
-    $sth->execute;
-    if (@{$sth->{NAME_lc}} != keys %$columns) {
-        my $alter_sql = "ALTER TABLE $name ADD (" unless $type =~ /sqlite/i;
-        my @columns_to_create;
-        my $run = 0;
-        
-        # SQLite doesn't support altering to add multiple columns or ENUMS, so it gets special treatment.
-        if ($type =~ /sqlite/i) {
-            # If we don't find a specific column, add its SQL to the columns_to_create array.
-            foreach (keys %$columns) {
-                # SQLite doesn't support ENUMs, so convert to a varchar.
-                if ($$columns{$_} =~ /^ENUM\(/i) {
-                    #Check for any suffixes - "NOT NULL" or whatever.
-                    my @options = ($$columns{$_} =~ m/^ENUM\('(.*)'\)/i);
-                    my @suffix = ($$columns{$_} =~ m/([^\)]+)$/);
-                    my @values = split /',\w*'/, $options[0];
-                    my $length = max(map length $_, @values);
-                    $$columns{$_} = "varchar($length)" . $suffix[0];
-                }
-                
-                # Now add each column individually
-                unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
-                    my $alter_sql = "ALTER TABLE $name ADD COLUMN $_ " . $$columns{$_} . ";";
-                    $data_source->do($alter_sql);
-                }
-            }
-        } else {
-            # If we don't find a specific column, add its SQL to the columns_to_create array.
-            foreach (keys %$columns) {
-                unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
-                    push @columns_to_create, "$_ " . $$columns{$_};
-                    $run++;
-                }
-            }
-            
-            # Now add all the columns
-            warn ucfirst $name . " database schema is incorrect, adding " . @columns_to_create . " missing column" . ((@columns_to_create > 1)? "s." : ".");
-            $alter_sql .= (join ", ", @columns_to_create) . ");";
-            $data_source->do($alter_sql) if $run;
-        }
-    }
-    return $data_source;
 }
 
 # Get Header - Returns the message found at the top of all confirmation e-mails.
@@ -278,9 +193,12 @@ sub get_user_id {
     my $self = shift;
 	my $userdb = $self->{dbi};
     my $potential_userid = shift;
-    my $db_lookup = $userdb->selectrow_array("SELECT userid FROM users WHERE username = " . $userdb->quote($potential_userid));
-    my $user_id = ($db_lookup? $db_lookup : $potential_userid);
-    my $confirmed_user = $userdb->selectcol_arrayref("SELECT userid FROM users");
+    my $warn = shift;
+    my $name_lookup = $userdb->selectrow_array("SELECT userid FROM users WHERE username = " . $userdb->quote($potential_userid) . " LIMIT 1");
+    $potential_userid = $name_lookup if $name_lookup;
+    my $uploads_lookup = $userdb->selectrow_array("SELECT userid FROM users WHERE uploadsid = " . $userdb->quote($potential_userid) . " LIMIT 1");
+    my $user_id = ($uploads_lookup? $uploads_lookup : $potential_userid);
+    my $confirmed_user = $userdb->selectcol_arrayref("SELECT userid FROM users LIMIT 1");
     return $user_id if join(" ", @$confirmed_user) =~ $user_id;
 }
 

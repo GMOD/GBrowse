@@ -49,118 +49,12 @@ sub _new {
         globals      => $globals,
     }, ref $class || $class;
     
-    # Make sure the schema's OK. If the schema changes, add it here.
-    my $uploads_columns = {
-        uploadid => "varchar(32) not null PRIMARY key",
-        userid => "varchar(32) not null",
-        path => "text",
-        title => "text",
-        description => "text",
-        imported => "boolean not null",
-        creation_date => "datetime not null",
-        modification_date => "datetime",
-        sharing_policy => "ENUM('private', 'public', 'group', 'casual') not null",
-        users => "text",
-        public_users => "text",
-        public_count => "int"
-    };
-    $self->check_db($uploadsdb, "uploads", $uploads_columns);
-    $self->check_files;
-    
     # Check to see if user accounts are enabled, set some globals just in case.
     if ($globals->user_accounts) {
         $self->{userdb} = Bio::Graphics::Browser2::UserDB->new;
         $self->{username} = $self->{userdb}->get_username($self->{userid});
     }
     return $self;
-}
-
-# Check DB (DBI, Name, Columns) - Makes sure the named DB is there and follows the schema needed.
-sub check_db {
-    my $self = shift;
-    my $data_source = shift;
-    my $name = shift;
-    my $columns = shift;
-    my $type = $data_source->get_info(17); # Returns the database type.
-
-    # If the database doesn't exist, create it.
-    unless ($data_source->do("SELECT * FROM $name LIMIT 1")) {
-        warn ucfirst $name . " table didn't exist, creating...";
-        # This creates the SQL to make the table.       This middle section is simply outputting %columns as "$key $value, ";
-        my $creation_sql = "CREATE TABLE $name (" . (join ", ", map { "$_ " . $$columns{$_} } keys %$columns) . ")" . (($type =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
-        $data_source->do($creation_sql) or die "Could not create $name database";
-    }
-
-    # If a required column doesn't exist, add it.
-    my $sth = $data_source->prepare("SELECT * from $name LIMIT 1");
-    $sth->execute;
-    if (@{$sth->{NAME_lc}} != keys %$columns) {
-        my $alter_sql = "ALTER TABLE $name ADD (" unless $type =~ /sqlite/i;
-        my @columns_to_create;
-        my $run = 0;
-        
-        # SQLite doesn't support altering to add multiple columns or ENUMS, so it gets special treatment.
-        if ($type =~ /sqlite/i) {
-            # If we don't find a specific column, add its SQL to the columns_to_create array.
-            foreach (keys %$columns) {
-                # SQLite doesn't support ENUMs, so convert to a varchar.
-                if ($$columns{$_} =~ /^ENUM\(/i) {
-                    #Check for any suffixes - "NOT NULL" or whatever.
-                    my @options = ($$columns{$_} =~ m/^ENUM\('(.*)'\)/i);
-                    my @suffix = ($$columns{$_} =~ m/([^\)]+)$/);
-                    my @values = split /',\w*'/, $options[0];
-                    my $length = max(map length $_, @values);
-                    $$columns{$_} = "varchar($length)" . $suffix[0];
-                }
-                
-                # Now add each column individually
-                unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
-                    my $alter_sql = "ALTER TABLE $name ADD COLUMN $_ " . $$columns{$_} . ";";
-                    $data_source->do($alter_sql);
-                }
-            }
-        } else {
-            # If we don't find a specific column, add its SQL to the columns_to_create array.
-            foreach (keys %$columns) {
-                unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
-                    push @columns_to_create, "$_ " . $$columns{$_};
-                    $run++;
-                }
-            }
-            
-            # Now add all the columns
-            warn ucfirst $name . " database schema is incorrect, adding " . @columns_to_create . " missing column" . ((@columns_to_create > 1)? "s." : ".");
-            $alter_sql .= (join ", ", @columns_to_create) . ");";
-            $data_source->do($alter_sql) if $run;
-        }
-    }
-    return $data_source;
-}
-
-# Check Files () - Makes sure a user's files are all in the database, adds them if not.
-sub check_files {
-    my $self = shift;
-    my $uploadsid = $self->{uploadsid} or return;
-    my $uploadsdb = $self->{uploadsdb};
-    
-    # Get the files from the database.
-    my $files_in_db = $uploadsdb->selectcol_arrayref("SELECT path FROM uploads WHERE userid = " . $uploadsdb->quote($uploadsid));
-    my @files_in_db = @$files_in_db;
-    
-    # Get the files in the folder.
-    my $path = $self->path;	
-	my @files_in_folder;
-	opendir D, $path;
-	while (my $dir = readdir(D)) {
-		next if $dir =~ /^\.+$/;
-		push @files_in_folder, $dir;
-	}
-	
-	foreach my $file (@files_in_folder) {
-	    my $found = grep(/$file/, @files_in_db);
-	    $self->add_file($file) unless $found;
-	    warn "File \"$file\" found in the \"$uploadsid\" folder without metadata, added to database." unless $found;
-	}
 }
 
 # Get File ID (File ID [, Owner ID]) - Returns a file's validated ID from the database.
@@ -238,7 +132,7 @@ sub get_public_files {
     return @$rows;
 }
 
-# Public Count ([Search Term]) - Returns the total number of public files available to a user. 
+# Public Count ([Search Term]) - Returns the total number of public files available to a user.  Will filter results if a search parameter is given.
 sub public_count {
     my $self = shift;
     my $searchterm = shift;
@@ -249,14 +143,13 @@ sub public_count {
     if ($self->{globals}->user_accounts) {
         # If we find a user from the term (ID or username), we'll search by user.
         my $userdb = $self->{userdb} ;
-        my $search_id = $userdb->get_uploads_id($userdb->get_user_id($searchterm));
+        $search_id = $userdb->get_uploads_id($userdb->get_user_id($searchterm));
     }
     
     my $userid = $self->{userid};
     my $sql = "SELECT count(*) FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public");
     $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
-    $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
-    
+    $sql .= $search_id? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
     return $uploadsdb->selectrow_array($sql);
 }
 
@@ -504,8 +397,9 @@ sub permissions {
     my $new_permissions = shift;
     if ($new_permissions) {
         if ($self->is_mine($file)) {
+            my $result = $self->field("sharing_policy", $file, $new_permissions);
             $self->share($file, $self->{userid}) if $new_permissions =~ /public/; # If we're switching to public permissions, share with the user so it doesn't disappear.
-            return $self->field("sharing_policy", $file, $new_permissions);
+            return $result;
         } else {
             warn "Permissions change on " . $file . "requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . " a non-owner.";
         }

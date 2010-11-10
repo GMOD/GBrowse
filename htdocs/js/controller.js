@@ -302,6 +302,7 @@ var GBrowseController = Class.create({
                     if (onSuccessFunc != null)
                         onSuccessFunc();
                 }
+                checkSummaries();
             }
         });
     },

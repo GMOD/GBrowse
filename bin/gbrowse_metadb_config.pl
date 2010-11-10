@@ -6,6 +6,7 @@ use Bio::Graphics::Browser2 "open_globals";
 use CGI::Session;
 use Digest::MD5 qw(md5_hex);
 use Getopt::Long;
+use List::Util;
 
 # First, collect all the flags - or output the correct usage, if none listed.
 my ($dsn, $admin, $pprompt, $which_db, $force);
@@ -140,11 +141,16 @@ sub check_table {
 
     # If the database doesn't exist, create it.
     unless ($data_source->do("SELECT * FROM $name LIMIT 1")) {
-        warn ucfirst $name . " table didn't exist, creating...";
-        my @column_descriptors = map { "$_ " . $$columns{$_} } keys %$columns; # This simply outputs %columns as "$key $value, ";
+        print STDERR ucfirst $name . " table didn't exist, creating...";
+        my @column_descriptors = map { "$_ " . escape_enums($$columns{$_}) } keys %$columns; # This simply outputs %columns as "$key $value, ";
         my $creation_sql = "CREATE TABLE $name (" . (join ", ", @column_descriptors) . ")" . (($type =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
-        $data_source->do($creation_sql) or die "Could not create $name database.\n" . DBI->errstr;
-        $data_source->do("GRANT ALL PRIVILEGES on $name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") or die DBI->errstr;
+        $data_source->do($creation_sql) or die "Could not create $name database.\n";
+        
+        if ($type =~ /mysql/) {
+            my $db_user = $dsn =~ /user=([^;]+)/;
+            my $db_pass = $dsn =~ /password=([^;]+)/;
+            $data_source->do("GRANT ALL PRIVILEGES on $name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") or die DBI->errstr;
+        }
     }
 
     # If a required column doesn't exist, add it.
@@ -160,15 +166,7 @@ sub check_table {
         if ($type =~ /sqlite/i) {
             # If we don't find a specific column, add its SQL to the columns_to_create array.
             foreach (keys %$columns) {
-                # SQLite doesn't support ENUMs, so convert to a varchar.
-                if ($$columns{$_} =~ /^ENUM\(/i) {
-                    #Check for any suffixes - "NOT NULL" or whatever.
-                    my @options = ($$columns{$_} =~ m/^ENUM\('(.*)'\)/i);
-                    my @suffix = ($$columns{$_} =~ m/([^\)]+)$/);
-                    my @values = split /',\w*'/, $options[0];
-                    my $length = max(map length $_, @values);
-                    $$columns{$_} = "varchar($length)" . $suffix[0];
-                }
+                $$columns{$_} = escape_enums($$columns{$_});
                 
                 # Now add each column individually
                 unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
@@ -190,9 +188,6 @@ sub check_table {
                     $run++;
                 }
             }
-        
-            my $db_user = $dsn =~ /user=([^;]+)/;
-            my $db_pass = $dsn =~ /password=([^;]+)/;
             
             # Now add all the columns
             warn ucfirst $name . " database schema is incorrect, adding " . @columns_to_create . " missing column" . ((@columns_to_create > 1)? "s." : ".");
@@ -296,4 +291,19 @@ sub add_file {
 # Now Function - return the database-dependent function for determining current date & time
 sub nowfun {
     return $globals->uploads_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
+}
+
+# Escape Enums (type string) - If the string contains an ENUM, returns a compatible data type that works with SQLite.
+sub escape_enums {
+    my $string = shift;
+    # SQLite doesn't support ENUMs, so convert to a varchar.
+    if ($string =~ /^ENUM\(/i) {
+        #Check for any suffixes - "NOT NULL" or whatever.
+        my @options = ($string =~ m/^ENUM\('(.*)'\)/i);
+        my @suffix = ($string =~ m/([^\)]+)$/);
+        my @values = split /',\w*'/, $options[0];
+        my $length = List::Util::max(map length $_, @values);
+        $string = "varchar($length)" . $suffix[0];
+    }
+    return $string;
 }

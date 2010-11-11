@@ -76,7 +76,11 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
-  $self->{userdb} = Bio::Graphics::Browser2::UserDB->new($self) if $self->data_source->globals->user_accounts;
+  if ($self->data_source->globals->user_accounts) {
+      $self->{userdb} = Bio::Graphics::Browser2::UserDB->new($self);
+      $self->{userdb}->check_uploads_id($session->id, $session->page_settings->{uploadid}) unless $session->page_settings->{uploads_id_checked};
+      $session->page_settings->{uploads_id_checked} = ($self->{userdb}->get_uploads_id($session->id))? 1 : 0;
+  }
   $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self);
   $self;
 }

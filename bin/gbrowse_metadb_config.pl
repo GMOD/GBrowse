@@ -275,7 +275,7 @@ sub check_files {
 sub add_file {    
     my $uploadsdb = shift;
     my $filename = shift;
-    my $imported = 0;
+    my $imported = ($filename =~ /http_/)? 1 : 0;
     my $description = $uploadsdb->quote("");
     my $uploadsid = shift;
     my $shared = $uploadsdb->quote("private");

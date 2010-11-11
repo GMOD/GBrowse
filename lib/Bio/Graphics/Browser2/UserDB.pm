@@ -206,7 +206,7 @@ sub get_uploads_id {
     my $self = shift;
 	my $userdb = $self->{dbi};
     my $userid = $userdb->quote(shift);
-    return $userdb->selectrow_array("SELECT uploadsid FROM users WHERE userid = $userid");
+    return $userdb->selectrow_array("SELECT uploadsid FROM users WHERE userid = $userid LIMIT 1");
 }
 
 # Get Username (User ID) - Returns a user's username, given their ID.
@@ -215,6 +215,22 @@ sub get_username {
 	my $userdb = $self->{dbi};
     my $userid = $userdb->quote(shift);
     return $userdb->selectrow_array("SELECT username FROM users WHERE userid = $userid") || "an anonymous user";
+}
+
+# Check Uploads ID (User ID, Uploads ID) - Makes sure a user's ID is in the database.
+sub check_uploads_id {
+    my $self = shift;
+    my $userdb = $self->{dbi};
+    my $userid = shift;
+    my $uploadsid = shift;
+    my $get_handle = $userdb->prepare("SELECT uploadsid FROM users WHERE userid = ? LIMIT 1");
+    $get_handle->execute($userid);
+    my $id_from_db = $get_handle->fetchrow_array;
+    unless ($id_from_db) {
+        my $update_handle = $userdb->prepare("UPDATE users SET uploadsid = ? WHERE userid = ?");
+        $update_handle->execute($uploadsid, $userid);
+    }
+    return $uploadsid;
 }
 
 # Validate - Ensures that a non-openid user's credentials are correct.
@@ -321,7 +337,7 @@ sub do_add_user {
   }
 
   my $nowfun = $self->nowfun();
-  my $insert = $userdb->prepare ("INSERT INTO users VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)");
+  my $insert = $userdb->prepare ("INSERT INTO users (userid, username, email, pass, remember, openid_only, confirmed, cnfrm_code, last_login, created) VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)");
 
   # BUG: we should salt the password
   $pass = sha1($pass);

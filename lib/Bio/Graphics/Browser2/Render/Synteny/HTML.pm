@@ -11,8 +11,12 @@ use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
 use List::Util qw/min max sum/;
 use Digest::MD5 'md5_hex';
-use Bio::Graphics::Browser2;
+
 use Bio::Graphics;
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::Render::HTML;
+
+use base 'Bio::Graphics::Browser2::Render::HTML';
 
 # Legacy libraries from 1.7 branch
 # will slowly replace these
@@ -22,7 +26,6 @@ use Legacy::Graphics::Browser::Synteny;
 use Legacy::Graphics::Browser::PageSettings;
 use Bio::DB::SyntenyIO;
 use Bio::DB::SyntenyBlock;
-
 
 use constant OVERVIEW_RATIO     => 0.9;
 use constant OVERVIEW_BGCOLOR   => 'gainsboro';
@@ -67,11 +70,6 @@ our $CONF;
 our $MAP;
 our $SYNTENY_IO;
 our @hits;
-
-
-sub new {
-    bless {@_}, shift;
-}
 
 sub run {
 
@@ -202,6 +200,7 @@ END
 }
 
 sub species_chooser {
+
   # pointless if < 3 species
   return '' if keys %$MAP < 3;
   my $src = $CONF->search_src();

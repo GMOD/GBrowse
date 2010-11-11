@@ -86,7 +86,7 @@ sub run {
 
     # print help and exit if there are no synteny sources defined
     my $conf_dir  = $self->globals->conf_dir;
-    unless( grep { $self->globals->setting( $_ => type ) eq 'synteny' }
+    unless( grep { $self->globals->setting( $_ => 'type' ) eq 'synteny' }
             $self->globals->data_sources
            ) {
         return $self->print_syn_help;

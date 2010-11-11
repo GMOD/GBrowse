@@ -320,17 +320,27 @@ var GBrowseTrackPan = Class.create({
 var TrackPan = new GBrowseTrackPan; // Just make one copy of the object. Controller accesses it through this name
 
 Event.observe(window, 'load', function() {
-  Event.observe(document, (Prototype.Browser.WebKit)? 'keydown' : 'keypress', function(e){ 
-	var code;
-	if (!e) var e = window.event;
-	if (e.keyCode) code = e.keyCode;
-	else if (e.which) code = e.which;
-    if (code == 37)
-        TrackPan.scroll("left", 0.15);
-    else if (code == 39)
-        TrackPan.scroll("right", 0.15);
-	
-  });
+	if (!document.activeElement) {
+		return; // only allow keyboard panning for browsers that support document.activeElement
+	}
+
+	Event.observe(document, (Prototype.Browser.WebKit)? 'keydown' : 'keypress', function(e) { 
+		if (document.activeElement.tagName == 'INPUT' || document.activeElement.tagName == 'TEXTAREA')
+			return;
+
+		var code;
+		if (!e)
+			var e = window.event;
+		if (e.keyCode)
+			code = e.keyCode;
+		else if (e.which)
+			code = e.which;
+
+		if (code == 37)
+			TrackPan.scroll("left", 0.15);
+		else if (code == 39)
+			TrackPan.scroll("right", 0.15);
+	});
 });
 
 function addCommas(number)

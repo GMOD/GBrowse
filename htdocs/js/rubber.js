@@ -15,7 +15,7 @@ var SelectArea = function () {
     this.background = 'yellow';
     this.unit      = 'bp';
     this.divider   = 1;
-  return this;
+    return this;
 }
 
 // replace image or image button that will conflict with drag selection
@@ -162,7 +162,7 @@ SelectArea.prototype.startRubber = function(self,event) {
   self.scalebar.onmouseover = nullfunc;
  
   // set the selectbox bgcolor
-  self.setOpacity(self.selectBox,self.opacity||0.5);  
+  self.setOpacity(self.selectBox,self.opacity||0.4);  
 
   // deal with drag/select artifacts
   self.disableSelection(self.selectLayer);
@@ -176,7 +176,19 @@ SelectArea.prototype.startRubber = function(self,event) {
   YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
   
   // height of select box to match height of detail panel
-  var h = self.elementLocation(self.selectLayer,'height');
+  var h;
+
+  if (Controller.gbrowse_syn && self.type == 'details') {
+    var detailsWrappers = document.getElementsByName('detailWrapper');
+    var index = detailsWrappers.length - 1;
+    var lastDetailsWrapper = detailsWrappers[index]; 
+    
+    h = self.elementLocation(lastDetailsWrapper,'height') + self.elementLocation(self.scalebar,'height') + 12;
+  }
+  else {
+    h = self.elementLocation(self.selectLayer,'height');
+  }
+
   YAHOO.util.Dom.setStyle(self.selectBox,'height',h+'px');
   
   // vertical offset may also need adjusting
@@ -238,9 +250,12 @@ SelectArea.prototype.moveRubber = function(event) {
   // Coordinates of selected sequence
   var deltaPixelStart      = left - self.pixelStart;
   var deltaSequenceStart   = deltaPixelStart * self.pixelToDNA;
+
   self.selectSequenceStart = self.flip ? Math.round(self.segmentEnd - deltaSequenceStart) 
                                        : Math.round(self.segmentStart + deltaSequenceStart);
+
   var selectSequenceWidth  = Math.round(selectPixelWidth * self.pixelToDNA);
+
   self.selectSequenceEnd   = self.flip ? self.selectSequenceStart - selectSequenceWidth 
                                        : self.selectSequenceStart + selectSequenceWidth;
 
@@ -286,15 +301,15 @@ SelectArea.prototype.moveRubber = function(event) {
   YAHOO.util.Dom.setStyle(self.selectBox,'visibility','visible');
 
   // warning if max segment size exceeded
-  var tooBig;
   if (self.max_segment && selectSequenceWidth > self.max_segment) {
-    self.setOpacity(self.selectBox,self.opacity||0.5,'red');
+    self.setOpacity(self.selectBox,self.opacity||0.4,'red');
     self.overrideAutoSubmit = true;
-    tooBig = true;
+    self.tooBig = true;
   }
   else {
-    self.setOpacity(self.selectBox,self.opacity||0.5);
+    self.setOpacity(self.selectBox,self.opacity||0.4);
     self.overrideAutoSubmit = false;
+    self.tooBig = false;
   }
 
   var unit     = self.unit;
@@ -315,6 +330,9 @@ SelectArea.prototype.moveRubber = function(event) {
 
   if (selectPixelWidth > 20) {
     self.spanReport.innerHTML = selectSequenceWidth+' '+unit;
+    if (self.tooBig) {
+      self.spanReport.innerHTML += '<br>Too big!';
+    } 
   }
   else {
     self.spanReport.innerHTML = ' ' ;
@@ -343,7 +361,11 @@ SelectArea.prototype.disableSelection = function(el) {
 
 // Builds the popup menu that appears when selection is complete
 SelectArea.prototype.addSelectMenu = function(view) {
-
+    
+  if (this.type == 'details' && Controller.gbrowse_syn) {
+    this.fontColor  = 'white';
+    this.background = 'blue';
+  }
   var menu =  document.getElementById(view+'SelectMenu'); 
   if (menu) {
     this.autoSubmit = false;
@@ -360,6 +382,7 @@ SelectArea.prototype.addSelectMenu = function(view) {
 
   // optional style -- check if a custom menu has styles set already
   var existingStyle = new String(menu.getAttribute('style'));
+
   if (existingStyle) {
     if (!existingStyle.match(/width/i))      YAHOO.util.Dom.setStyle(menu,'width',this.menuWidth||'200px');
     if (!existingStyle.match(/font/i))       YAHOO.util.Dom.setStyle(menu,'font','12px sans-serif');
@@ -436,6 +459,12 @@ SelectArea.prototype.stopRubber = function(event) {
   balloonIsSuppressed = false;
   if (!selectAreaIsActive) return false;
   var self = currentSelectArea;
+  
+  if (self.tooBig) {
+      self.cancelRubber();
+      return false;
+  }
+
   if (!self.moved) {
     self.cancelRubber();
     self.recenter();
@@ -548,6 +577,7 @@ SelectArea.prototype.submit = function() {
   var self = currentSelectArea;
   if (Controller.gbrowse_syn) {
     Controller.update_coordinates(self.currentSegment);
+    self.setOpacity(document.getElementById('details'),0.3);
   }
   else if (self.currentSegment) {
     Controller.update_coordinates("set segment " + self.currentSegment);

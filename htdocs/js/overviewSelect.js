@@ -3,7 +3,7 @@
  overviewSelect.js -- a DHTML library for drag/rubber-band selection in gbrowse
                       This class handles overview-specific configuration.
 
- Sheldon McKay <mckays@cshl.edu>
+ Sheldon McKay <sheldon.mckay@gmail.com>
  $Id$
 
 */
@@ -21,6 +21,7 @@ var Overview = function () {
   this.fontColor  = 'blue';
   this.border     = '1px solid black';
   this.menuWidth  = '160px';
+  this.type       = 'overview';
   return this;
 }
 
@@ -30,10 +31,6 @@ Overview.prototype = new SelectArea();
 // Overview-specific config.
 Overview.prototype.initialize = function() {
   var self = new Overview;
-
-  // not ready for non drag and drop implementation
-  //var dnd = document.mainform.drag_and_drop;
-  //if (!dnd || !dnd.checked) return false;
 
   var i = document.getElementById(self.imageId);
   if (!i) return false;
@@ -54,24 +51,6 @@ Overview.prototype.initialize = function() {
   self.left    = self.elementLocation(i,'x1');
   self.right   = self.elementLocation(i,'x2');
   self.selectLayer = p.parentNode.parentNode;
-
-
-//   try {
-//       overviewBalloon = new Balloon();
-//       overviewBalloon.vOffset  = 1;
-//       overviewBalloon.showOnly = 2; // just show twice
-//       var helpFunction = function(event) {
-// 	  if (!event) {
-// 	      event = window.event;
-// 	  }
-// 	  var help = '<b>Overview:</b> Click here to recenter or click and drag left or right to select a region';
-// 	  overviewBalloon.showTooltip(event,help,0,250);
-//       }
-//       i.onmouseover = helpFunction;
-//   }
-//   catch(e) {
-//       i.setAttribute('title','click and drag to select a region');
-//   }
 
   self.scalebar = i;
 
@@ -96,6 +75,7 @@ Overview.prototype.getSegment = function(i) {
   this.detailEnd    = parseInt(document.mainform.detail_stop.value);
   this.padLeft      = parseInt(document.mainform.image_padding.value);
   this.pixelToDNA   = parseFloat(document.mainform.overview_pixel_ratio.value);
+  this.max_segment  = parseFloat(document.mainform.max_segment.value);
   this.flip         = 0;
 
   var actualWidth   = this.elementLocation(i,'width');
@@ -116,7 +96,6 @@ Overview.prototype.loadSegmentInfo = function() {
     this.getSegment(i);
     return true;
   }
-
 
   var segment_info = Controller.segment_info;
 

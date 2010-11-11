@@ -3,7 +3,7 @@
  detailsSelect.js -- a DHTML library for drag/rubber-band selection in gbrowse
                       This class handles details-specific configuration.
 
- Sheldon McKay <mckays@cshl.edu>
+ Sheldon McKay <sheldon.mckay@gmail.com>
  $Id$
 
 */
@@ -15,10 +15,12 @@ var detailBalloon;
 var Details = function () {
   this.imageId    = 'Detail Scale_image';
   this.marginTop  = '35px';
-  this.background = 'yellow';
-  this.fontColor  = 'blue';
+  this.background = 'blue';
+  this.fontColor  = 'black';
   this.border     = '1px solid black';
   this.menuWidth  = '200px';
+  this.type       = 'details';
+  this.opacity    = 0.6;
   return this;
 }
 
@@ -33,7 +35,6 @@ Details.prototype.initialize = function() {
   if (!i) return false;
 
   i = self.replaceImage(i);
-  
 
   //var p = document.getElementById('panels');
   var p = i.parentNode;
@@ -46,23 +47,6 @@ Details.prototype.initialize = function() {
   self.bottom  = self.elementLocation(i,'y2');
   self.left    = self.elementLocation(i,'x1');
   self.right   = self.elementLocation(i,'x2');
-
-//   try {
-//       detailBalloon = new Balloon();
-//       detailBalloon.vOffset  = 1;
-//       detailBalloon.showOnly = 2; // just show twice
-//       var helpFunction = function(event) {
-// 	  if (!event) {
-// 	      event = window.event;
-// 	  }
-// 	  var help = '<b>Scalebar:</b> Click here to recenter or click and drag left or right to select a region';
-// 	  detailBalloon.showTooltip(event,help,0,250);
-//       }
-//       i.onmouseover = helpFunction;
-//   }
-//   catch(e) {
-//       i.setAttribute('title','click and drag to select a region');
-//   }
 
   self.scalebar = i;
   self.addSelectMenu('detail');
@@ -80,7 +64,13 @@ Details.prototype.loadSegmentInfo = function() {
   // get the segment info from gbrowse CGI parameters
   
   var i = document.getElementById(self.imageId);
-  
+
+  // Uh oh! We must be in GBrowse_syn!
+  if (Controller.gbrowse_syn) {
+      this.getSegment(i);
+      return true;
+  }
+
   var segment_info = Controller.segment_info;
 
   this.ref          = segment_info.ref;
@@ -107,8 +97,34 @@ Details.prototype.loadSegmentInfo = function() {
   this.pixelStart   = this.left  + this.padLeft;
 }
 
+
+Details.prototype.getSegment = function(i) {
+    this.ref          = document.mainform.ref.value;
+    this.segmentStart = parseInt(document.mainform.detail_start.value);
+    this.segmentEnd   = parseInt(document.mainform.detail_stop.value);
+    this.padLeft      = parseInt(document.mainform.image_padding.value);
+    this.pixelToDNA   = parseFloat(document.mainform.detail_pixel_ratio.value);
+    this.detailStart  = this.segmentStart;
+    this.detailEnd    = this.segmentEnd;     
+
+    this.flip         = 0;
+    
+    var actualWidth   = this.elementLocation(i,'width');
+    var expectedWidth = parseInt(document.mainform.overview_width.value);
+    if (actualWidth > expectedWidth) {
+	this.padLeft     += actualWidth - expectedWidth;
+    }
+    this.pixelStart   = this.left  + this.padLeft;
+}
+
+
 Details.prototype.formatMenu = function() {
-  this.menuHTML = this.selectMenu.innerHTML || '\
+  this.menuHTML = this.selectMenu.innerHTML; 
+  if (this.menuHTML) {
+      return false;
+  }
+
+  this.menuHTML = '\
   <table style="width:100%">\
          <tr>\
            <th style="background:lightgrey;cell-padding:5">\
@@ -127,7 +143,10 @@ Details.prototype.formatMenu = function() {
            <td>\
              <a href="javascript:SelectArea.prototype.clearAndRecenter()">Recenter on this region</a>\
            </td>\
-         </tr>\
+         </tr>';
+
+  if (!Controller.gbrowse_syn) {       
+    this.menuHTML += '\
          <tr>\
            <td onmouseup="SelectArea.prototype.cancelRubber()">\
              <a href="?plugin=FastaDumper;plugin_action=Go;name=SELECTION" target="_new">\
@@ -136,5 +155,9 @@ Details.prototype.formatMenu = function() {
            </td>\
          </tr>\
        </table>';
+  }
+  else {
+    this.menuHTML += '</table>';
+  }
 }
 

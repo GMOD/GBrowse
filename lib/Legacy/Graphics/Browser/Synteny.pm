@@ -759,13 +759,15 @@ sub print_page_top {
   my @onload;
   push @onload, $self->setting('onload') if $self->setting('onload');
   push @onload, "alert('$alert')"        if $alert;
-  push @onload, 'Overview.prototype.initialize()'; 
+  push @onload, 'Overview.prototype.initialize()';
+  push @onload, 'Details.prototype.initialize()';
+ 
 
   # push all needed javascript files onto top of page
   my $js            = $self->globals->js_url || '/gbrowse2/js';
   my @js;
   push @js, qw(yahoo-dom-event.js balloon.config.js balloon.js);
-  push @js, qw(rubber.js overviewSelect.js);
+  push @js, qw(rubber.js overviewSelect.js detailSelect.js);
 
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args, (-script => \@scripts);

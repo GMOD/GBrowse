@@ -3,7 +3,7 @@
  regionSelect.js -- a DHTML library for drag/rubber-band selection in gbrowse
                       This class handles region-specific configuration.
 
- Sheldon McKay <mckays@cshl.edu>
+ Sheldon McKay <sheldon.mckay@gmail.com>
  $Id$
 
 */

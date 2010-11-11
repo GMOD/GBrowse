@@ -3,6 +3,9 @@
 eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
 our $CONF_DIR  = "$ENV{GBROWSE_CONF}/synteny";
 our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
 our $BIOGRAPHICS_VERSION   = 1.8;
@@ -15,6 +18,7 @@ use List::Util qw/min max sum/;
 use Digest::MD5 'md5_hex';
 use Bio::Graphics::Browser2;
 use Bio::Graphics;
+use Data::Dumper;
 
 # Legacy libraries from 1.7 branch
 # will slowly replace these
@@ -24,7 +28,7 @@ use Legacy::Graphics::Browser::Synteny;
 use Legacy::Graphics::Browser::PageSettings;
 use Legacy::DB::SyntenyIO;
 use Legacy::DB::SyntenyBlock;
-
+use CGI::Pretty 'html3';
 
 use constant OVERVIEW_RATIO     => 0.9;
 use constant OVERVIEW_BGCOLOR   => 'gainsboro';
@@ -67,7 +71,6 @@ use vars qw($INVALID_SRC $CONF_DIR $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSI
 # initialization
 $CONF_DIR   = conf_dir($CONF_DIR);
 
-
 # error if no data sources configured 
 my $go;
 while (<$CONF_DIR/*.synconf>) {
@@ -88,8 +91,8 @@ END
 }
 
 
-# search soure (general) configuration
-$CONF       = Legacy::Graphics::Browser::Synteny->new();
+# search source (general) configuration
+$CONF = Legacy::Graphics::Browser::Synteny->new();
 $CONF->read_configuration($CONF_DIR,'synconf');
 
 # species-specific configuration
@@ -159,9 +162,10 @@ if ($INVALID_SRC) {
 
 search_form($segment);
 
-print overview_panel($CONF->whole_segment($segment),$segment) if $segment;
-
 if ($segment) {
+  print overview_panel($CONF->whole_segment($segment),$segment) if $segment;
+  print reference_panel($CONF->whole_segment($segment),$segment) if $segment;
+
   # make sure no hits go off-screen
   remap_coordinates($_) for @hits;
   
@@ -179,10 +183,10 @@ if ($segment) {
   else {
     draw_image($page_settings,\@hits,@species);
   } 
-} 
-
+ }
 options_table();
 print end_form();
+
 print $CONF->footer || end_html();
 
 # remember former source for the checkbox
@@ -282,7 +286,6 @@ sub _type_from_box {
   return ($feature,$fname);
 }
 
-
 sub draw_image {
   my ($page_settings,$hits,@species) = @_;
   my ($toggle_section,@hits);
@@ -310,7 +313,6 @@ sub draw_image {
     $CONF->name2hit( $_->name => $_ );
   }
  
-
   # relate hits into "span" sorted by target contig/chromosomes
   # %span = ( target_database,target_contig => { target, contig, start, end } } )
   my (%span,$hit2span,%instance);
@@ -766,12 +768,13 @@ END
               'Details'                                    : # or a sub-set
                join(', ',@species);
   my $map_name = md5_hex($label);
+  
   print toggle( $label,
-		table( {-width=>'100%'},
-		       Tr( td( {-align=>'center', -class => 'databody'},
-			       img({-src=>$url,-border=>0,-usemap=>'#'.$map_name} )))
-		       ),
-		);
+	  table( {-name => 'detailWrapper', style=>'margin:auto'},
+		 Tr( td( {-align=>'center', -class => 'databody'},
+			 img({-src=>$url,-border=>0,-usemap=>'#'.$map_name, -id => 'details'} )))
+	  ),
+      );
   
   my $map = Map({-name=>$map_name},reverse @map_items);
   $map =~ s/\</\n\</g;
@@ -872,7 +875,9 @@ sub segment2image {
     $SCONF->setting('general','pad_right' => $pr);
   }
 
+
   return ($img,$boxes,$segment);
+
 }
 
 sub _isref {
@@ -1225,34 +1230,49 @@ sub belong_together {
 
 
 sub overview_panel {
-  my ($whole_segment,$segment) = @_;
-  return '' if $SCONF->section_setting('overview') eq 'hide';
-  my $image = overview($whole_segment,$segment);
-  my $ref = $MAP->{$CONF->page_settings("search_src")}->{desc};
-  return toggle('Overview',
-                table({-border=>0,-width=>'100%'},
-		      TR(th("<center>Reference genome: <i>$ref</i></center>")),
-                      TR({-class=>'databody'},
-                         td({-align=>'center'},$image)
+    my ($whole_segment,$segment) = @_;
+    return '' if $SCONF->section_setting('overview') eq 'hide';
+    my $image = overview($whole_segment,$segment);
+    my $ref = $MAP->{$CONF->page_settings("search_src")}->{desc};
+    return toggle('Overview',
+		  table({-border=>0,-width=>'100%'},
+			TR(th("<center>Reference genome: <i>$ref</i></center>")),
+			TR({-class=>'databody'},
+			   td({-align=>'center'},$image)
                         )
-                     )
-		);
+		  )
+	);
+}
+
+sub reference_panel {
+    my ($whole_segment,$segment) = @_;
+    return '' if $SCONF->section_setting('overview') eq 'hide';
+    my $image = overview($segment,$segment,1);
+    my $ref = $MAP->{$CONF->page_settings("search_src")}->{desc};
+    return toggle('Selection',
+		  table({-border=>0,-width=>'100%'},
+			TR(th("<center>Selected reference genome coordinates")),
+			TR({-class=>'databody'},
+			   td({-align=>'center'},$image)
+                        )
+		  )
+	);
 }
 
 sub overview {
-  my ($region_segment,$segment) = @_;
+  my ($region_segment,$segment,$wide) = @_;
   return unless $segment;
   my $width = $CONF->page_settings('imagewidth')   || IMAGE_WIDTH;
-  $width *= $CONF->setting('overview_ratio') || OVERVIEW_RATIO;
+  $width *= $CONF->setting('overview_ratio') || OVERVIEW_RATIO unless $wide;
   $CONF->width($width);
   
   # the postgrid will be invoked to hilite the currently selected region
-  my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
+  my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']) unless $wide;
 
   # reference genome
   my $ref = $MAP->{$CONF->page_settings("search_src")}->{desc};
 
-  my ($overview)   = $CONF->render_panels(
+    my ($overview)   = $CONF->render_panels(
 						  {
 						    length         => $segment->length,
 						    section        => 'overview',
@@ -1262,9 +1282,7 @@ sub overview {
 						    lang           => $SCONF->language,
 						    keystyle       => 'left',
 						    settings       => $CONF->page_settings(),
-						    scale_map_type => 'centering_map',
 						    cache_extra    => [$segment->start,$segment->end],
-						    do_map         => 1,
 						    drag_n_drop    => 0,
 						    image_button   => 0,
 						    -grid          => 0,
@@ -1273,13 +1291,9 @@ sub overview {
 						  }
 						  );
 
-  # make sure overview is busy with redirects
-  #my $server =$ENV{SERVER_NAME};
-  #if ($server) {
-  #  $overview =~ s/src="/src="http:\/\/$server\//;
-  #}
-
-  return div({-id=>'overview',-class=>'track'},$overview);
+  
+  $overview =~ s/Overview/Detail/ if $wide;
+  return div({-id => $wide ? 'referenceview' : 'overview',-class=>'track'},$overview);
 }
 
 sub toggle {
@@ -1702,16 +1716,18 @@ sub segment_info {
   my $padr   = $CONF->setting('pad_right') || $CONF->image_padding;
   my $max    = $CONF->setting('max segment') || MAX_SEGMENT;
   my $width  = ($settings->{width} * OVERVIEW_RATIO);
-
+  my $dwidth = $settings->{width};
   hide(image_padding        => $padl);
   hide(max_segment          => $max);
   hide(overview_start       => $whole_segment->start);
   hide(overview_stop        => $whole_segment->end);
   hide(overview_pixel_ratio => $whole_segment->length/$width);
+  hide(detail_pixel_ratio   => $segment->length/$dwidth);
   hide(overview_width       => $width + $padl + $padr);
   hide(detail_start         => $segment->start);
   hide(detail_stop          => $segment->end);
   hide(overview_width       => $width + $padl + $padr);
+  hide(detail_width         => $dwidth + $padl + $padr);
 }
 
 sub hide {

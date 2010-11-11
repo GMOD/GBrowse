@@ -2,7 +2,7 @@
 
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
- Sheldon McKay <mckays@cshl.edu>
+ Sheldon McKay <sheldon.mckay@gmail.com>
  $Id$
 
 */
@@ -23,7 +23,6 @@ SelectArea.prototype.replaceImage = function(image) {
   var src    = image.getAttribute('src');
   var name   = image.getAttribute('name');
   var isIE   = document.all && !window.opera; 
-
 
   var id = image.getAttribute('id');
   var width  = this.elementLocation(image,'width');

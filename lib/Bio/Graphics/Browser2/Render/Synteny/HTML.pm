@@ -67,19 +67,6 @@ our $SCONF;
 
 sub run_asynchronous_event { 0 }
 
-sub print_syn_help {
-    my $self = shift;
-    print header,  start_html('No data source');
-    print warning("No data source configured for GBrowse_syn\n"); 
-    print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
-
-    print <<END;
-<iframe style="frameborder:0;width:800px;height:2000px" src="/gbrowse2/gbrowse_syn_help.html">
-</iframe>
-END
-    print end_html;
-}
-
 sub run {
 
     my $self = shift;
@@ -1750,6 +1737,19 @@ sub hide {
   print hidden( -name     => $name,
                 -value    => $value,
                 -override => 1 ), "\n";
+}
+
+sub print_syn_help {
+    my $self = shift;
+    print header,  start_html('No data source');
+    print warning("No data source configured for GBrowse_syn\n"); 
+    print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
+
+    print <<END;
+<iframe style="frameborder:0;width:800px;height:2000px" src="/gbrowse2/gbrowse_syn_help.html">
+</iframe>
+END
+    print end_html;
 }
 
 

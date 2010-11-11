@@ -2,9 +2,7 @@ package Bio::Graphics::Browser2::Render::Synteny::HTML;
 use strict;
 use warnings;
 
-our $CONF_DIR  = "$ENV{GBROWSE_CONF}/synteny";
-our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
-our $BIOGRAPHICS_VERSION   = 1.8;
+our $VERSION;
 
 use CGI qw/:standard Map Area delete_all/;
 use CGI::Carp 'fatalsToBrowser';
@@ -70,12 +68,11 @@ sub run {
 
     my $self = shift;
 
-    # initialization
-    $CONF_DIR   = conf_dir($CONF_DIR);
+    my $conf_dir  = conf_dir("$ENV{GBROWSE_CONF}/synteny");
 
-    # error if no data sources configured 
+    # error if no data sources configured
     my $go;
-    while (<$CONF_DIR/*.synconf>) {
+    while (<$conf_dir/*.synconf>) {
         $go++;
     }
     unless ($go) {
@@ -95,11 +92,11 @@ END
 
     # search soure (general) configuration
     $CONF       = Legacy::Graphics::Browser::Synteny->new();
-    $CONF->read_configuration($CONF_DIR,'synconf');
+    $CONF->read_configuration($conf_dir,'synconf');
 
     # species-specific configuration
     my $extension = $CONF->setting('config_extension') || EXTENSION;
-    $SCONF      = open_config($CONF_DIR,$extension);
+    $SCONF      = open_config($conf_dir,$extension);
 
     my ($page_settings,$session) = $self->page_settings();
     my $source = $page_settings->{source};

@@ -456,7 +456,8 @@ sub ACTION_install {
     }
 
     print STDERR "\n***INSTALLATION COMPLETE***\n";
-    print STDERR "Load http://localhost/$base for demo and documentation\n";
+    print STDERR "Load http://localhost/$base for demo and documentation.\n";
+    print STDERR "Visit the http://gmod.org for information on setting up databases for users and custom tracks.\n"
 }
 
 sub ACTION_install_slave {

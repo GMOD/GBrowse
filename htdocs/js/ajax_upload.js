@@ -393,8 +393,10 @@ function shareFile(fileid, userid) {
 					sections.push(community_tracks_id);
 				Controller.update_sections(sections, "&offset=" + offset);
 				var tracks = transport.responseText.evalJSON(true).tracks;
-				if (tracks != null)
-					tracks.each(function(tid) { Controller.add_track(tid) });
+				if (tracks != null) {
+					Controller.add_tracks(tracks);
+					tracks.each(function(tid) { ShowHideTrack(tid, 1)});
+			    }
 			}
 		}
 	);
@@ -419,7 +421,7 @@ function unshareFile(fileid, userid) {
 				Controller.update_sections(sections, "&offset=" + offset);
 				var tracks = transport.responseText.evalJSON(true).tracks;
 				if (tracks != null)
-					tracks.each(function(tid) { Controller.delete_track(tid) });
+					tracks.each(function(tid) { Controller.delete_tracks(tid) });
 			}
 		}
 	);

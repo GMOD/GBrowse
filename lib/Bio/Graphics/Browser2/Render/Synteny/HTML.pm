@@ -64,29 +64,31 @@ use constant SETTINGS =>
 our $SCONF;
 our $CONF;
 
+sub run_asynchronous_event { 0 }
+
+sub print_syn_help {
+    my $self = shift;
+    print header,  start_html('No data source');
+    print warning("No data source configured for GBrowse_syn\n"); 
+    print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
+
+    print <<END;
+<iframe style="frameborder:0;width:800px;height:2000px" src="/gbrowse2/gbrowse_syn_help.html">
+</iframe>
+END
+    print end_html;
+}
+
 sub run {
 
     my $self = shift;
 
-    my $conf_dir  = conf_dir("$ENV{GBROWSE_CONF}/synteny");
-
-    # error if no data sources configured
-    my $go;
-    while (<$conf_dir/*.synconf>) {
-        $go++;
-    }
-    unless ($go) {
-        print header,  start_html('No data source');
-        print warning("No data source configured for GBrowse_syn\n"); 
-        print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
-
-        print <<END;
-<iframe style="frameborder:0;width:800px;height:2000px" src="/gbrowse2/gbrowse_syn_help.html">
-</iframe>
-END
-        ;
-        print end_html;
-        return;
+    # print help and exit if there are no synteny sources defined
+    my $conf_dir  = $self->globals->conf_dir;
+    unless( grep { $self->globals->setting( $_ => type ) eq 'synteny' }
+            $self->globals->data_sources
+           ) {
+        return $self->print_syn_help;
     }
 
 

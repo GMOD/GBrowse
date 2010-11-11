@@ -430,7 +430,7 @@ sub background_track_render {
 				cache_extra     => $cache_extra, 
 				external_tracks => $external,
 	    )
-        if ( $self->state->{region_size} );
+        if ( $self->state->{region_size} && $self->data_source->show_section('region') );
 
     $requests{'overview'} =
         $self->render_deferred( labels          => [ $self->expand_track_names($self->overview_tracks) ],
@@ -438,7 +438,8 @@ sub background_track_render {
 				section         => 'overview', 
 				cache_extra     => $cache_extra, 
 				external_tracks => $external,
-	    );
+	    )
+        if ( $self->data_source->show_section('overview') );
 
     my (%track_keys,%seenit);
     for my $section (keys %requests) {
@@ -2303,6 +2304,7 @@ sub asynchronous_update_detail_scale_bar {
         url         => $url,
         height      => $height,
         width       => $width,
+        view_width  => $self->get_image_width($self->state),
         image_id    => $image_id,
         scale_size  => $scale_size,
         scale_label => $scale_label,

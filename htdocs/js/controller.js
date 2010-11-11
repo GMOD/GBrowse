@@ -401,7 +401,7 @@ var GBrowseController = Class.create({
                 }
                 if (detail_scale_bar_hash) {
                     Controller.update_scale_bar(detail_scale_bar_hash);
-                    $('detail_panels').setStyle({width: overview_scale_bar_hash.width+'px'}); //overview_scale_bar_hash contains the image width, not the width to display
+                    $('detail_panels').setStyle({width: detail_scale_bar_hash.view_width+'px'});
 
                     var detail_width         = Controller.segment_info.detail_width;
                     var details_pixel_ratio  = Controller.segment_info.details_pixel_ratio;

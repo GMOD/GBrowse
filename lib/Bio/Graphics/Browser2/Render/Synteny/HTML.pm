@@ -25,6 +25,7 @@ use Legacy::Graphics::Browser::PageSettings;
 use Bio::DB::SyntenyIO;
 use Bio::DB::SyntenyBlock;
 
+use constant TRACE              => 0;
 use constant OVERVIEW_RATIO     => 0.9;
 use constant OVERVIEW_BGCOLOR   => 'gainsboro';
 use constant IMAGE_WIDTH        => 800;
@@ -91,6 +92,9 @@ sub run {
         return $self->print_syn_help;
     }
 
+    # redirect to the appropriate URL for the default datasource if we
+    # don't have a specified one
+    $self->set_source() && return;
 
     # search soure (general) configuration
     $CONF       = Legacy::Graphics::Browser::Synteny->new();

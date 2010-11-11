@@ -2,7 +2,7 @@ package Bio::Graphics::Browser2::Render::Synteny::HTML;
 use strict;
 use warnings;
 
-our $VERSION;
+our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
 
 use CGI qw/:standard Map Area delete_all/;
 use CGI::Carp 'fatalsToBrowser';
@@ -1595,7 +1595,7 @@ sub default_settings {
   $settings ||= {};
   $settings->{width}       = $CONF->setting('default width') || $CONF->width;
   $settings->{source}      = $CONF->source;
-  $settings->{v}           = $VERSION;
+  $settings->{v}           = $VERSION || '2.0';
   $settings->{grid}        = 1;
 
   my %default = SETTINGS;

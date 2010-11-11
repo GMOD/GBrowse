@@ -1205,5 +1205,7 @@ sub subtrack_scan_list {
     return \@ids;
 }
 
+sub is_synteny { 0 }
+
 1;
 

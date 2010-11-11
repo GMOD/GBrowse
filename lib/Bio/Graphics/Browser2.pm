@@ -14,6 +14,7 @@ use File::Basename 'dirname','basename';
 use Text::ParseWords 'shellwords';
 use File::Path 'mkpath';
 use Bio::Graphics::Browser2::DataSource;
+use Bio::Graphics::Browser2::DataSource::Synteny;
 use Bio::Graphics::Browser2::Session;
 use GBrowse::ConfigData;
 use Carp 'croak','carp','confess';
@@ -321,10 +322,17 @@ sub create_data_source {
   my ($regex_key) = grep { $dsn =~ /^$_$/ } map { $_ =~ s/^=~//; $_ } grep { $_ =~ /^=~/ } keys(%{$self->{config}});
   my $name = $dsn;
   if ($regex_key) { $dsn = "=~".$regex_key; }
-  my $source = Bio::Graphics::Browser2::DataSource->new($path,
-							$name,
-							$self->data_source_description($dsn),
-							$self) or return;
+
+  my $source_class =
+      'Bio::Graphics::Browser2::DataSource'
+     .( $self->setting( $dsn => 'type' ) eq 'synteny' ? '::Synteny' : '' );
+
+  my $source = $source_class->new(
+      $path,
+      $name,
+      $self->data_source_description($dsn),
+      $self) or return;
+
   if (my $adbs = $self->admin_dbs) {
       my $path  = File::Spec->catfile($adbs,$dsn);
       my $expr = "$path/*/*.conf";

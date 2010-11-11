@@ -69,7 +69,6 @@ our $SCONF;
 our $CONF;
 our $MAP;
 our $SYNTENY_IO;
-our @hits;
 
 sub run {
 
@@ -151,12 +150,15 @@ END
     }
 
     if ($segment) {
-
-        @hits = map {$SYNTENY_IO->get_synteny_by_range(-src   => $page_settings->{search_src},
-                                                       -ref   => $segment->abs_ref,
-                                                       -start => $segment->abs_start,
-                                                       -end   => $segment->abs_end,
-                                                       -tgt   => $_) } @requested_species;
+        $self->hits([
+            map {$SYNTENY_IO->get_synteny_by_range(
+                -src   => $page_settings->{search_src},
+                -ref   => $segment->abs_ref,
+                -start => $segment->abs_start,
+                -end   => $segment->abs_end,
+                -tgt   => $_)
+             } @requested_species
+        ]);
     }
 
     my $header = $CONF->setting('header');
@@ -173,20 +175,20 @@ END
 
     if ($segment) {
         # make sure no hits go off-screen
-        remap_coordinates($_) for @hits;
+        remap_coordinates($_) for @{ $self->hits };
 
         segment_info($page_settings,$segment);
 
-        my %species = map {$_->src2 => 1} @hits;  
+        my %species = map {$_->src2 => 1} @{ $self->hits };
         my @species = sort keys %species;
 
         # either display ref species + 2 repeating or 'all in one'
         if ($page_settings->{display} eq 'expanded') {
             while (my @pair = splice @species, 0, 2) {
-                draw_image($page_settings,\@hits,@pair);
+                draw_image($page_settings, $self->hits, @pair);
             }
         } else {
-            draw_image($page_settings,\@hits,@species);
+            draw_image( $page_settings, $self->hits, @species );
         } 
     } 
 
@@ -1729,6 +1731,18 @@ sub hide {
   print hidden( -name     => $name,
                 -value    => $value,
                 -override => 1 ), "\n";
+}
+
+
+########## accessors ###########
+
+sub hits {
+    my $self = shift;
+    if( @_ ) {
+        my $h = $self->{hits} = shift;
+        croak 'hits must be an arrayref' unless ref $h eq 'ARRAY';
+    }
+    return $self->{hits};
 }
 
 

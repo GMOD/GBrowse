@@ -72,11 +72,12 @@ sub run {
     my $self = shift;
 
     # print help and exit if there are no synteny sources defined
-    my $conf_dir  = $self->globals->conf_dir;
+    my $conf_dir  = $self->globals->config_base;
     unless( grep { $self->globals->setting( $_ => 'type' ) eq 'synteny' }
             $self->globals->data_sources
            ) {
-        return $self->print_syn_help;
+        $self->print_syn_help;
+        return;
     }
 
     # redirect to the appropriate URL for the default datasource if we

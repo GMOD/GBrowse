@@ -101,6 +101,7 @@ var GBrowseController = Class.create({
 			create_drag(detail_container_id,'track');
 		}
 		TrackPan.update_draggables();
+		updateRuler();
 	},
   
     register_track:

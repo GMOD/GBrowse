@@ -887,6 +887,7 @@ sub render_panels {
 
     if ( $section->{'detailview'} ) {
         my $scale_bar_html = $self->scale_bar( $seg, 'detail' );
+        my $ruler_html     = $self->render_ruler_div;
         my $panels_html    = $self->get_blank_panels( [$self->detail_tracks],
 						      'detail');
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
@@ -897,6 +898,7 @@ sub render_panels {
 			  'Details',
 			  div({ -id => 'detail_panels', -class => 'track', -style=>'margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px' },
 			      $details_msg,
+			      $ruler_html,
 			      $scale_bar_html, 
 			      $panels_html,
 			  ),
@@ -3996,6 +3998,11 @@ sub share_track {
   my $self     = shift;
   my $track_name    = shift;
   croak "share_track() should not be called in parent class";
+}
+
+sub render_ruler_div {
+  my $self = shift;
+  croak "render_ruler_div() should not be called in parent class";
 }
 
 ########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end

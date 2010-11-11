@@ -44,6 +44,8 @@ var GBrowseTrackPan = Class.create({
 		if ($('overview_marker')) { $('overview_marker').style.left = Math.round(this.overview_segment_start + this.overview_draggable_width * x) + 'px'; }
 		if ($('region_marker'))   { $('region_marker').style.left   = Math.round(this.region_segment_start   + this.region_draggable_width   * x) + 'px'; }
 
+		updateRuler();
+
 		if (this.get_start() > 0 && this.get_stop() > 0) {
 			if (document.searchform) {
 				document.searchform.name.value = this.ref + ':' + addCommas(this.get_start()) + '..' + addCommas(this.get_stop());

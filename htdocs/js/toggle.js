@@ -211,6 +211,7 @@ function collapse(element_name) {
    var direction = closeit ? 'collapse' : 'open';
    var postData  = 'action=open_collapse_track;'+direction+'='+escape(element_name);
    new Ajax.Request(document.URL,{method:'post',postBody:postData});
+   updateRuler();
    return false;
 }
 

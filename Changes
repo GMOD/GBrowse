@@ -16,6 +16,8 @@
       including strings in javascript.
     * Subtrack labels now float on top of the underlying image data so that they show even when
       scrolling around.
+    * Added a ruler option, which shows a draggable vertical ruler floating over the details tracks which helps 
+      users to line things up.
 
 2.17
      * Track configuration dialog now allows for control of autoscaling behavior in quantitative

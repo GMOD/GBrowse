@@ -354,6 +354,7 @@ sub render_html_head {
       tabs.js
       track_configure.js
       track_pan.js
+      ruler.js
       controller.js
     );
 
@@ -2002,6 +2003,12 @@ sub plugin_menu {
             . $self->translate('Go') . '",'
             . '"form"' . ');',
         ),
+        '&nbsp;',
+        checkbox(
+          -name=>'Ruler',
+          -value=>1,
+          -onClick => 'toggleRuler(this.checked)',
+        ),
   );
 }
 
@@ -2265,6 +2272,30 @@ sub zoomBar {
 		    -force   => 1,
 		    -onChange => 'Controller.update_coordinates("set span "+this.value)',
 		   );
+}
+
+sub render_ruler_div {
+	my $self = shift;
+
+	my $ruler_js = <<RULER;
+<script type="text/javascript">
+  // <![CDATA[
+    createRuler();
+  // ]]>
+</script>
+RULER
+
+    my $settings   = $self->state;
+    my $width      = $self->get_image_width($settings);
+    my $button_url = $self->data_source->button_url;
+
+    return div({-id => 'ruler_track',
+                -style => "position:relative; z-index: 100; width:${width}px; height:5px; margin-left:auto; margin-right:auto;"},
+                 div({-id => 'ruler_handle',
+                      -style => "width:51px; cursor:move; z-index: 100; background-image: url(${button_url}/ruler.png); background-size: 100%;"},
+                      div({-id => 'ruler_label',
+                           -style => "background-color: #FFFFFF; text-align:center"},''
+            ))) . $ruler_js;
 }
 
 sub source_menu {

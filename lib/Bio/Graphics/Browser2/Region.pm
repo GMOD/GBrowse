@@ -216,8 +216,6 @@ sub lookup_features {
   my ($name,$start,$stop,$class,$literal_name,$id) = @_;
   my $source = $self->source;
 
-  warn "lookup_features(@_)" if DEBUG;
-
   my $refclass = $source->global_setting('reference class') || 'Sequence';
 
   my $db      = $self->db;
@@ -438,7 +436,7 @@ sub parse_feature_name {
     $stop  =~ s/,//g;
   }
 
-  elsif ($name =~ /^(\w+):(.+)$/) {
+  elsif (0 && $name =~ /^(\w+):([^:]+)$/) {
     $class = $1;
     $ref   = $2;
   }

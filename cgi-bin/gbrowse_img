@@ -43,14 +43,15 @@ if ($fcgi) {
         %ENV = ( %sys_env, %ENV );
 	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
-	GBrowse_img->new($globals)->run();
+        my $render  = Bio::Graphics::Browser2::Render::HTML->new($globals);
+	GBrowse_img->new( $render )->run();
 	$fcgi->Finish();
     }
 }
 
 else {
     my $globals = Bio::Graphics::Browser2->open_globals;
-    GBrowse_img->new($globals)->run();    
+    GBrowse_img->new($globals)->run();
 }
 
 

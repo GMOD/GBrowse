@@ -1,14 +1,16 @@
 package Bio::Graphics::Browser2::Render::ConsolidatedImage;
 use strict;
 use warnings;
+use Carp;
 
 use constant DEBUG => 0;
 
 sub new {
     my $class   = shift;
-    my $globals = shift;
-    my $render  = Bio::Graphics::Browser2::Render::HTML->new($globals);
-    return bless {render => $render},ref $class || $class;
+    my $render  = shift;
+    ref($render) && $render->can('region')
+        or croak 'must pass a renderer object';
+    return bless {render => $render}, ref $class || $class;
 }
 
 sub render  { shift->{render}               }

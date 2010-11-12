@@ -436,7 +436,7 @@ sub parse_feature_name {
     $stop  =~ s/,//g;
   }
 
-  elsif (0 && $name =~ /^(\w+):([^:]+)$/) {
+  elsif ($name =~ /^(\w+):([^:]+)$/) {
     $class = $1;
     $ref   = $2;
   }

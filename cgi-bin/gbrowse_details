@@ -128,11 +128,12 @@ sub run {
 
     # this is the weird part; we create a search name based on the arguments
     # provided to us
-    my $search_term;
+    my ($search_term,$search_class);
     if ($f_id) {
 	$search_term = "id:$f_id";
     } elsif ($class && $name) {
-	$search_term = "$class:$name";
+	$search_term  = $name;
+	$search_class = $class;
     } elsif (defined $ref && defined $start && defined $end) {
 	$search_term = "$ref:$start..$end";
     } else {
@@ -149,7 +150,7 @@ sub run {
 
     warn "search term = $search_term" if DEBUG;
 
-    my $features = eval {$search->search_features({-search_term=>$search_term})} || [];
+    my $features = eval {$search->search_features({-name=>$search_term,-class=>$search_class})} || [];
     warn "search_features(-search_term=>$search_term): $@" if $@;
 
     warn "features = @$features" if DEBUG;

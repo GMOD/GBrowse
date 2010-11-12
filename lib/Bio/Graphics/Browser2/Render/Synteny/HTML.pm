@@ -100,10 +100,17 @@ sub run {
 
     $self->syn_io(  Bio::DB::SyntenyIO->new($CONF->setting('join')) );
 
-    my $segment = $self->landmark2segment($page_settings);
+    # default name from page_settings 
+    my $name;
+    if ($self->state->{"name"}) {
+	$name = $self->state->{"name"};
+    elsif ($CONF->page_settings("ref")) {
+	$name  = $self->state->{"ref"} . ':' . $self->state->{"start"} . '..' . $self->state->{"stop"};
+    }
+    my $segment = $self->landmark2segment($name,$self->state->{'search_src'});
 
     if ($segment) {
-        my $name = format_segment($segment);
+        $name = format_segment($segment);
 
         if (ref $segment ne 'Bio::DB::GFF::RelSegment') {
             redirect(url()."?name=$name");
@@ -409,7 +416,7 @@ sub draw_image {
   if ($only_aligned && @hits) {
     my @coords = map {$_->start, $_->end} @hits;
     my $new_name = $segment->ref .':'.(min @coords).'..'.(max @coords);
-    $segment = $self->landmark2segment($page_settings,$new_name,$CONF->page_settings('search_src'));
+    $segment = $self->landmark2segment($new_name,$self->state->{'search_src'});
   }
 
   for my $h (@hits) {
@@ -485,10 +492,10 @@ sub draw_image {
     my $start            = $span{$key}{start};
     my $bases            = $end - $start;
     my $name             = "$contig:$start..$end";
-    my $segment          = $self->landmark2segment($page_settings,$name,$src);
+    my $segment          = $self->landmark2segment($name,$src);
     my @relevant_hits    = grep {$hit2span->{$_} eq $key} @hits;
 
-    my $rsegment = $self->landmark2segment($page_settings,"$contig:$start..$end",$src);
+    my $rsegment = $self->landmark2segment("$contig:$start..$end",$src);
 
     # width of inset panels scaled by size of target sequence
     $bases or next;
@@ -858,6 +865,8 @@ sub segment2image {
   # cache no panels if some params change
   my $no_cache = [md5_hex(url(-query_string=>1))];
 
+  # need this? seems circular:
+  # returns new segment built from page_settings if the current $segment has same ref, start, end as page_settings... might always be the case in the new code version
   $self->landmark2segment if _isref($segment);
   
   my ($img,$boxes) = $SCONF->render_panels( 
@@ -901,18 +910,7 @@ sub format_segment {
 
 sub landmark2segment {
   my $self = shift;
-  my $settings = shift || $CONF->page_settings;
   my ($name,$source) = @_;
-  if ($name && $source) {
-  }
-  elsif ($CONF->page_settings("name")) {
-    $name   = $CONF->page_settings("name");
-  }
-  elsif ($CONF->page_settings("ref")) {
-    $name  = $CONF->page_settings("ref") . ':';
-    $name .= $CONF->page_settings("start") . ':';
-    $name .= $CONF->page_settings("stop");
-  }
 
   $source ||= $CONF->page_settings("search_src");
 

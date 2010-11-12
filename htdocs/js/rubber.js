@@ -182,8 +182,7 @@ SelectArea.prototype.startRubber = function(self,event) {
     var detailsWrappers = document.getElementsByName('detailWrapper');
     var index = detailsWrappers.length - 1;
     var lastDetailsWrapper = detailsWrappers[index]; 
-    
-    h = self.elementLocation(lastDetailsWrapper,'height') + self.elementLocation(self.scalebar,'height') + 12;
+    h = self.elementLocation(lastDetailsWrapper,'y2') - self.elementLocation(self.scalebar,'y1');
   }
   else {
     h = self.elementLocation(self.selectLayer,'height');
@@ -577,6 +576,7 @@ SelectArea.prototype.submit = function() {
   var self = currentSelectArea;
   if (Controller.gbrowse_syn) {
     Controller.update_coordinates(self.currentSegment);
+    // Fake AJAX page refresh
     self.setOpacity(document.getElementById('details'),0.3);
   }
   else if (self.currentSegment) {

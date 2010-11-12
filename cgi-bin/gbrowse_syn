@@ -6,6 +6,9 @@ eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
 eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
 our $CONF_DIR  = "$ENV{GBROWSE_CONF}/synteny";
 our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
 our $BIOGRAPHICS_VERSION   = 1.8;
@@ -18,7 +21,6 @@ use List::Util qw/min max sum/;
 use Digest::MD5 'md5_hex';
 use Bio::Graphics::Browser2;
 use Bio::Graphics;
-use Data::Dumper;
 
 # Legacy libraries from 1.7 branch
 # will slowly replace these
@@ -28,7 +30,7 @@ use Legacy::Graphics::Browser::Synteny;
 use Legacy::Graphics::Browser::PageSettings;
 use Legacy::DB::SyntenyIO;
 use Legacy::DB::SyntenyBlock;
-use CGI::Pretty 'html3';
+
 
 use constant OVERVIEW_RATIO     => 0.9;
 use constant OVERVIEW_BGCOLOR   => 'gainsboro';

@@ -172,4 +172,9 @@ sub title {
     return shift->filename(shift);
 }
 
+# Get File ID (File) - Returns the ID of a file, which is the filename.
+sub get_file_id {
+    return shift->filename(shift);
+}
+
 1;

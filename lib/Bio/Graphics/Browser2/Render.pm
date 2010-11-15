@@ -2210,12 +2210,12 @@ sub update_coordinates {
 	  $state->{view_stop}  -= $delta;
       }
 
-      # update our "name" state and the CGI parameter
-      $state->{name} = "$state->{ref}:$state->{view_start}..$state->{view_stop}";
-      param(name => $state->{name});
-
       # Take details multiplier into account
       $self->update_state_from_details_mult;
+
+      # update our "name" state and the CGI parameter
+      $state->{name} = $self->region_string;
+      param(name => $state->{name});
 
       warn "name = $state->{name}" if DEBUG;
   }
@@ -2562,7 +2562,7 @@ sub asynchronous_update_coordinates {
 	}
 
 	# update our "name" state and the CGI parameter
-	$state->{name} = "$state->{ref}:$state->{view_start}..$state->{view_stop}";
+	$state->{name} = $self->region_string;
     }
 
     $self->session->flush();
@@ -2618,9 +2618,9 @@ sub region_string {
     my $source  = $self->data_source;
     my $divider = $source->unit_divider;
     $state->{name} = "$state->{ref}:".
-	              $source->commas($state->{start}/$divider).
+	              $source->commas($state->{view_start}/$divider).
 		      '..'.
-		      $source->commas($state->{stop}/$divider);
+		      $source->commas($state->{view_stop}/$divider);
 }
 
 sub zoom_to_span {

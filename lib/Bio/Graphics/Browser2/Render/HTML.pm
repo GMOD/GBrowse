@@ -314,7 +314,7 @@ sub render_html_head {
   $onTabScript .= "};";
   push (@scripts,({type=>"text/javascript"}, $onTabScript));
 
-  my $url = "?action=get_translation_tables;language=" . ($self->language_code)[0]; #Include language as a parameter to prevent browser from using wrong cache if user changes languages
+  my $url = "?action=get_translation_tables" . ( $self->language_code ? ';language='.($self->language_code)[0] : '' ); #Include language as a parameter to prevent browser from using wrong cache if user changes languages
   push (@scripts,({src=>$url}));
   
   # drag-and-drop functions from scriptaculous

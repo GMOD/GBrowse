@@ -98,7 +98,6 @@ sub delete_file {
 							  $self->{config},
 							  $self->{uploadsid});
     $loader->drop_databases($self->track_conf($file));
-    chdir $self->path;
     remove_tree($self->track_path($file));
 }
 

@@ -746,6 +746,7 @@ function edit_details(details) {
     case 'openid-add':
         $('loginTitle').innerHTML = Controller.translate('ADD_OPENID');
         EditDetails = 'openid-add';
+        LoginPage = 'openid-add';
         $('loginDOpenid').show();
         if(UsingOpenID) {$('loginDOpenidUser').show(); $('loginDOUser').focus();}
         else {$('loginDOpenidPass').show(); $('loginDOPass').focus();}
@@ -967,7 +968,6 @@ function process_openid() {
         hash[(2*i)-1] = unescape(element[1]);   //value
     }
 
-    console.log(hash);
     return hash;
 }
 

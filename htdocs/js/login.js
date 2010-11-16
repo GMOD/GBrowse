@@ -955,7 +955,11 @@ function check_openid(openid) {
 function process_openid() {
     var i, element;
     var hash = new Array();
-    var args = String(String(document.location).split('#')[0]).split('&');
+    
+    // For some reason the delimiter has changed, just double-check on the old one.
+    var colon_args = String(String(document.location.href).split('#')[0]).split(';');
+    var ampersand_args = args = String(String(document.location.href).split('#')[0]).split('&');
+    var args = (colon_args.length > ampersand_args.length)? colon_args : ampersand_args;
 
     for(i=1; i<args.length; i++) {
         element = String(args[i]).split('=');
@@ -963,6 +967,7 @@ function process_openid() {
         hash[(2*i)-1] = unescape(element[1]);   //value
     }
 
+    console.log(hash);
     return hash;
 }
 

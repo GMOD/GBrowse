@@ -9,12 +9,11 @@ use Getopt::Long;
 use List::Util;
 
 # First, collect all the flags - or output the correct usage, if none listed.
-my ($dsn, $admin, $pprompt, $which_db, $force);
+my ($dsn, $admin, $pprompt, $which_db);
 GetOptions('dsn=s'         => \$dsn,
            'admin|owner=s' => \$admin,
            'p'             => \$pprompt,
-           'db=s'          => \$which_db,
-           'f'             => \$force) or die <<EOF;
+           'db=s'          => \$which_db) or die <<EOF;
 Usage: $0 [options] <optional path to GBrowse.conf>
 
 Initializes an empty GBrowse user accounts database. Options:
@@ -23,7 +22,6 @@ Initializes an empty GBrowse user accounts database. Options:
    -owner     [SQLite only] Username and primary group for the Web user in the format "user:group"
    -p         Prompt for password
    -db        Specify which database ("users," "uploads" or "both")
-   -f         Force the creation of a new database, regardless of pre-existing database.
 
 Currently mysql and SQLite databases are supported. When creating a
 mysql database you must provide the -admin option to specify a user
@@ -66,17 +64,16 @@ if ($pprompt) {
 my $globals = Bio::Graphics::Browser2->open_globals;
 my $users_credentials  = $globals->user_account_db or die "No users database credentials specified in GBrowse.conf.";
 my $userdb = DBI->connect($users_credentials) or die "Error: Could not open users database, please check your credentials.\n" . DBI->errstr;
-my $uploads_credentials  = $globals->uploads_db or die "No uploads database credentials specified in GBrowse.conf.";
 
 # Check the users DB, if requested.
 my $checked = 0;
-if ($which_db =~ /(user|both|all)/) {
+if ($which_db =~ /(user|both|all)/i) {
     # Database schema. To change the schema, update/add the fields here, and run this script.
     my $users_columns = {
-        userid => "varchar(32) not null UNIQUE key",
+        userid => "varchar(32) not null PRIMARY key",
         uploadsid => "varchar(32)",
-        username => "varchar(32) not null PRIMARY key",
-        email => "varchar(64) not null UNIQUE key",
+        username => "varchar(32) not null UNIQUE",
+        email => "varchar(64) not null UNIQUE",
         pass => "varchar(32) not null",
         remember => "boolean not null",
         openid_only => "boolean not null",
@@ -99,7 +96,8 @@ if ($which_db =~ /(user|both|all)/) {
 }
 
 # Check the uploads DB, if requested.
-if ($which_db =~ /(file|upload|both|all)/) {
+if ($which_db =~ /(file|upload|both|all)/i) {
+    my $uploads_credentials  = $globals->uploads_db or die "No uploads database credentials specified in GBrowse.conf.";
     my $uploadsdb = DBI->connect($uploads_credentials) or die "Could not open uploads database, please check your credentials.\n" . DBI->errstr;
     
     # Database schema. To change the schema, update/add the fields here, and run this script.
@@ -122,6 +120,7 @@ if ($which_db =~ /(file|upload|both|all)/) {
     check_all_files($userdb, $uploadsdb);
     $checked = 1;
     $uploadsdb->disconnect;
+    print STDERR "Please make sure your Gbrowse.conf file includes the following line:\n";
 }
 $userdb->disconnect;
 
@@ -136,8 +135,8 @@ sub check_table {
     my $data_source = shift or die "No database connection found, please check the gbrowse_metadb_config.pl script.\n";
     my $name = shift or die "No database name given, please check the gbrowse_metadb_config.pl script.\n";
     my $columns = shift  or die "No database schema given, please check the gbrowse_metadb_config.pl script.\n";
-    my $type = $data_source->get_info(17); # Returns the database type.
-    my $dsn = $data_source->{Driver}->{Name};
+    my $type = $data_source->{Driver}->{Name};
+    my $dsn ||= $;
 
     # If the database doesn't exist, create it.
     unless ($data_source->do("SELECT * FROM $name LIMIT 1")) {
@@ -146,10 +145,19 @@ sub check_table {
         my $creation_sql = "CREATE TABLE $name (" . (join ", ", @column_descriptors) . ")" . (($type =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
         $data_source->do($creation_sql) or die "Could not create $name database.\n";
         
-        if ($type =~ /mysql/) {
-            my $db_user = $dsn =~ /user=([^;]+)/;
-            my $db_pass = $dsn =~ /password=([^;]+)/;
+        if ($type =~ /mysql/i) {
+            my $db_user = $dsn =~ /user=([^;]+)/i;
+            my $db_pass = $dsn =~ /password=([^;]+)/i;
             $data_source->do("GRANT ALL PRIVILEGES on $name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") or die DBI->errstr;
+        }
+        if ($type =~ /sqlite/i) {
+            my $path = $dsn =~ /dbname=([^;]+)/i;
+            $path ||= $dsn =~ /DBI:SQLite:([^;]+)/i;
+            print STDERR "Using sudo to set ownership to $admin_user:$admin_pass. You may be prompted for your login password now.\n";
+            die "Couldn't figure out location of database index from $dsn" unless $path;
+            system "sudo chown $admin_user $path";
+            system "sudo chgrp $admin_pass $path";
+            print STDERR "Done.\n";
         }
     }
 
@@ -159,8 +167,6 @@ sub check_table {
     if (@{$sth->{NAME_lc}} != keys %$columns) {
         my @columns_to_create;
         my $run = 0;
-        my $path = $dsn =~ /dbname=([^;]+)/;
-        $path ||= $dsn =~ /DBI:SQLite:([^;]+)/;
         
         # SQLite doesn't support altering to add multiple columns or ENUMS, so it gets special treatment.
         if ($type =~ /sqlite/i) {
@@ -173,12 +179,6 @@ sub check_table {
                     my $alter_sql = "ALTER TABLE $name ADD COLUMN $_ " . $$columns{$_} . ";";
                     $data_source->do($alter_sql);
                 }
-                
-                print STDERR "Using sudo to set ownership to $admin_user:$admin_pass. You may be prompted for your login password now.\n";
-                die "Couldn't figure out location of database index from $dsn" unless $path;
-                system "sudo chown $admin_user $path";
-                system "sudo chgrp $admin_pass $path";
-                print STDERR "Done.\n";
             }
         } else {
             # If we don't find a specific column, add its SQL to the columns_to_create array.

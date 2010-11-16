@@ -1045,7 +1045,7 @@ sub make_scale_feature {
     my ($segment,$width) = @_;
     return unless $segment;
 
-    my $length   = $segment->length / $self->render->details_mult;
+    my $length   = $segment->length / $self->details_mult;
 
     my ($guesstimate, $label) = $self->calculate_scale_size($length, $width);
 
@@ -1874,7 +1874,7 @@ sub create_panel_args {
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
 	      -key_color    => $source->global_setting('key bgcolor')      || 'moccasin',
 	      -bgcolor      => $source->global_setting("$section bgcolor") || 'wheat',
-	      -width        => $section eq 'detail'? $settings->{width} * $self->render->details_mult() : $settings->{width},
+	      -width        => $section eq 'detail'? $settings->{width} * $self->details_mult : $settings->{width},
 	      -key_style    => $keystyle,
               -suppress_key => 1,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
@@ -2440,6 +2440,11 @@ sub loaded_segment_fill {
 sub loaded_segment_outline {
     my $self = shift;
     return $self->source->global_setting('loaded segment outline') || 'gray';
+}
+
+sub details_mult {
+    my $self = shift;
+    return $self->settings->{details_mult} || 1;
 }
 
 1;

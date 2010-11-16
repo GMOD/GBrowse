@@ -204,6 +204,9 @@ sub search_db {
       my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
       $features =  $self->lookup_features($ref,$start,$stop,$class,$name,$id);
   }
+  elsif ($args->{-name} && $args->{-name}=~/^id:(.+)/) {
+      $features =  $self->lookup_features(undef,undef,undef,undef,undef,$1);
+  }
   else {
       my @features = $self->db->features(%$args);
       $features    = \@features;

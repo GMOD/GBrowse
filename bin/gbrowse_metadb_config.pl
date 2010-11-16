@@ -136,7 +136,6 @@ sub check_table {
     my $name = shift or die "No database name given, please check the gbrowse_metadb_config.pl script.\n";
     my $columns = shift  or die "No database schema given, please check the gbrowse_metadb_config.pl script.\n";
     my $type = $data_source->{Driver}->{Name};
-    my $dsn ||= $;
 
     # If the database doesn't exist, create it.
     unless ($data_source->do("SELECT * FROM $name LIMIT 1")) {

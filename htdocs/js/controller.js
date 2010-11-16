@@ -292,6 +292,7 @@ var GBrowseController = Class.create({
                 var results      = transport.responseJSON;
                 var section_html = results.section_html;
                 for (var section_name in section_html) {
+                    $(section_name).setOpacity(1.0);
                     html = section_html[section_name];
                     $(section_name).innerHTML = html;
                     if (scroll_there)
@@ -776,6 +777,10 @@ var GBrowseController = Class.create({
                     Controller.update_coordinates("reload segment");
                 }
                 else if (plugin_type == 'trackfilter') {
+                    var e = $(track_listing_id);
+                    e.hide();
+                    e.setOpacity(0.3);
+                    e.show();
                     Controller.update_sections(new Array(track_listing_id),'',1,false);
                 }
             } // end onSuccess

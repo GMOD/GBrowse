@@ -24,6 +24,7 @@
        glyphs.
      * Support for vista_plot glyph added to config dialog.
      * Fixed behavior of GBox balloons so that the scroll bar doesn't overrun the contents.
+     * Improved behavior of TrackFinder plugin to provide more user feedback while running.
 
 2.16
      * Added code to recognize and strip whitespace from search coordinates. This 

@@ -30,14 +30,30 @@ sub sources_dir_name   { 'SOURCES'   }
 
 sub new {
 	my $class = shift;
-	my $globals = Bio::Graphics::Browser2->open_globals;
+    my ($data_source, $globals, $userid, $uploadsid);
+	
+	# Database/Filesystem can be called with the data source and state, or just the render object.
+	if (@_ == 1) {
+        my $render = shift;
+        $data_source = $render->data_source;
+        $globals = $data_source->globals;
+        $uploadsid = $render->session->page_settings->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
+        $userid = $render->session->id
+    } else {
+        $data_source = shift;
+        my $state = shift;
+        $globals = $data_source->globals;
+        $uploadsid = $state->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
+        $userid = $state->{userid}
+    }
+    
 	if ($globals->uploads_db =~ /db/i) {
-		return Bio::Graphics::Browser2::UserTracks::Database->_new(@_);
+		return Bio::Graphics::Browser2::UserTracks::Database->_new($data_source, $globals, $uploadsid, $userid);
 	} elsif ($globals->uploads_db =~ /(filesystem|memory)/i) {
-		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
+		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
 	} else {
-		# Default to filesystem.
-		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new(@_);
+	    warn "Unrecognized uploads metadata backend, defaulting to Filesystem.";
+	    return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
 	}
 }
 

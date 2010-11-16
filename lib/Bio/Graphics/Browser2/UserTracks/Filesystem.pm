@@ -23,19 +23,7 @@ use Carp "cluck";
 sub _new {
 	my $class = shift;
 	my $VERSION = '0.3';
-	
-	my ($data_source, $globals, $uploadsid);
-	if (@_ == 1) {
-		my $render = shift;
-		$data_source = $render->data_source;
-		$globals = $data_source->globals;
-		$uploadsid = $render->session->page_settings->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
-	} else {
-		$data_source = shift;
-		my $state = shift;
-		$globals = $data_source->globals;
-		$uploadsid = $state->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
-	}
+	my ($data_source, $globals, $uploadsid) = @_;
 	
     return bless {
 		config		=> $data_source,

@@ -15,22 +15,7 @@ use List::Util qw(max);
 sub _new {
     my $class = shift;
     my $VERSION = '0.5';
-    
-    # Database/Filesystem can be called with the data source and state, or just the render object.
-    my ($data_source, $globals, $userid, $uploadsid);
-    if (@_ == 1) {
-        my $render = shift;
-        $data_source = $render->data_source;
-        $globals = $data_source->globals;
-        $userid = $render->session->id;
-        $uploadsid = $render->session->page_settings->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
-    } else {
-        $data_source = shift;
-        my $state = shift;
-        $globals = $data_source->globals;
-        $userid = $state->{userid};
-        $uploadsid = $state->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
-    }
+    my ($data_source, $globals, $userid, $uploadsid) = @_;
     
     # Attempt to login to the database or die, and access the necessary tables or create them.
     my $credentials = $globals->uploads_db or warn "No credentials given to uploads DB in GBrowse.conf";

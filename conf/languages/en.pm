@@ -610,7 +610,7 @@ END
    INTERRUPTED_RESUME        => 'Interrupted [Resume]',
    SHARING                   => 'Sharing:',
    TRACK_IS                  => 'Track is',
-   SHARED_WITH_YOU           => '<b>shared</b> with you.',
+   SHARED_WITH_YOU           => '<b>shared</b> with you',
    SHARING_PRIVATE           => 'Private',
    SHARING_CASUAL            => 'Casual',
    SHARING_GROUP             => 'Group',
@@ -620,7 +620,7 @@ END
 							    '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
 							    '<b>Public</b> - Visible to anyone.',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
-   USERS                     => 'users',
+   USERS                     => 'user(s)',
    USED_BY                   => 'used by',
    PUBLIC_TRACKS             => 'Public Tracks',
    COMMUNITY_TRACKS          => 'Community Tracks',

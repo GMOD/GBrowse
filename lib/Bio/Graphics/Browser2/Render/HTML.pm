@@ -1810,7 +1810,7 @@ sub render_track_sharing {
 	if ($userdata->is_mine($fileid) == 0) {
 	    my $count = $userdata->public_users($fileid);
 		$sharing_content .= b(($sharing_policy =~ /(casual|group)/)? lc $self->translate('SHARED_WITH_YOU') :  lc $self->translate('SHARING_PUBLIC'));
-	    $sharing_content .= ", " . $self->translate('USED_BY') . "&nbsp;" .  ($count? b($count) . "&nbsp;" . $self->translate('USERS') . "." : $self->translate('NO_ONE'));
+	    $sharing_content .= ", " . $self->translate('USED_BY') . "&nbsp;" .  ($count? b($count) . "&nbsp;" . $self->translate('USERS') . "." : $self->translate('NO_ONE')) unless $sharing_policy =~ /casual/;
 	} else {
 		my %sharing_type_labels = ( private => $self->translate('SHARING_PRIVATE'),
 									casual  => $self->translate('SHARING_CASUAL') ,

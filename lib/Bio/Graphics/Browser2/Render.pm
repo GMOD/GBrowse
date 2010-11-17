@@ -220,6 +220,10 @@ sub run {
       $self->session->flush;
       return ;
   }
+  
+  if (my $file = param('share_link')) {
+      $self->user_tracks->share($file);
+  }
 
   warn "[$$] init()"         if $debug;
   $self->init();

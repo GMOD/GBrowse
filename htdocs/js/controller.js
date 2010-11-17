@@ -1189,10 +1189,6 @@ function initialize_page() {
 	Details.prototype.initialize();
 	if ($('autocomplete_choices') != null) 
 	   initAutocomplete();
-
-	var share_link = window.location.href.parseQuery().share_link;
-	if (share_link)
-		shareFile(share_link, "");
 }
 
 // set the colors for the rubberband regions

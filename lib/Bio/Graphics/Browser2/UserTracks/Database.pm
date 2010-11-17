@@ -10,12 +10,11 @@ use Digest::MD5 qw(md5_hex);
 use CGI qw(param url);
 use Carp qw(confess cluck);
 use File::Path qw(rmtree);
-use List::Util qw(max);
 
 sub _new {
     my $class = shift;
     my $VERSION = '0.5';
-    my ($data_source, $globals, $userid, $uploadsid) = @_;
+    my ($data_source, $globals, $uploadsid, $userid) = @_;
     
     # Attempt to login to the database or die, and access the necessary tables or create them.
     my $credentials = $globals->uploads_db or warn "No credentials given to uploads DB in GBrowse.conf";

@@ -30,7 +30,7 @@ sub sources_dir_name   { 'SOURCES'   }
 
 sub new {
 	my $class = shift;
-    my ($data_source, $globals, $userid, $uploadsid);
+    my ($data_source, $globals, $uploadsid, $userid);
 	
 	# Database/Filesystem can be called with the data source and state, or just the render object.
 	if (@_ == 1) {
@@ -38,13 +38,13 @@ sub new {
         $data_source = $render->data_source;
         $globals = $data_source->globals;
         $uploadsid = $render->session->page_settings->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
-        $userid = $render->session->id
+        $userid = $render->session->id;
     } else {
         $data_source = shift;
         my $state = shift;
         $globals = $data_source->globals;
         $uploadsid = $state->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
-        $userid = $state->{userid}
+        $userid = $state->{userid};
     }
     
 	if ($globals->uploads_db =~ /db/i) {
@@ -52,7 +52,7 @@ sub new {
 	} elsif ($globals->uploads_db =~ /(filesystem|memory)/i) {
 		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
 	} else {
-	    warn "Unrecognized uploads metadata backend, defaulting to Filesystem.";
+	    warn "Unrecognized uploads metadata backend set in Gbrowse.conf, defaulting to Filesystem.";
 	    return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
 	}
 }

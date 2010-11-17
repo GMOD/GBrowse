@@ -181,9 +181,9 @@ sub share {
     }
     $userid ||= $self->{userid};
 
-    # Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
     my $sharing_policy = $self->permissions($file);
     return if $self->is_mine($file) and $sharing_policy =~ /group/ and $userid eq $self->{userid}; # No sense in adding yourself to a group. Also fixes a bug with nonsense users returning your ID and adding yourself instead of nothing.
+    # Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
     if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /group/))) {
         # Get the current users.
         my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";

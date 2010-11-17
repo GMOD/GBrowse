@@ -1450,7 +1450,7 @@ sub render_community_track_listing {
 	);
 	
 	# Add the results
-	if (@_) {
+	if ($search || $offset) {
 		$html .= @requested_tracks? $self->list_tracks("public", @requested_tracks) : p($self->translate('NO_PUBLIC_RESULTS', $search));
 	} else {
 		$html .= $self->list_tracks("public");

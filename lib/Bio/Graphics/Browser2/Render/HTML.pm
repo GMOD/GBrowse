@@ -2004,12 +2004,6 @@ sub plugin_menu {
             . $self->translate('Go') . '",'
             . '"form"' . ');',
         ),
-        '&nbsp;',
-        checkbox(
-          -name=>'Ruler',
-          -value=>1,
-          -onClick => 'toggleRuler(this.checked)',
-        ),
   );
 }
 
@@ -2291,12 +2285,19 @@ RULER
     my $button_url = $self->data_source->button_url;
 
     return div({-id => 'ruler_track',
-                -style => "position:relative; z-index: 100; width:${width}px; height:5px; margin-left:auto; margin-right:auto;"},
+                -style => "position:relative; z-index: 100; width:${width}px; height:17px; margin-left:auto; margin-right:auto;"},
                  div({-id => 'ruler_handle',
-                      -style => "width:51px; cursor:move; z-index: 100; background-image: url(${button_url}/ruler.png); background-size: 100%;"},
-                      div({-id => 'ruler_label',
-                           -style => "background-color: #FFFFFF; text-align:center"},''
-            ))) . $ruler_js;
+                      -style => "width:51px; z-index: 100;"},
+                        div({-id      => 'ruler_label',
+                             -onClick => 'toggleRuler(false)',
+                             -style   => "height:17px; cursor:pointer; text-align:center; visibility:hidden;"},'') .
+                        div({-id => 'ruler_icon',
+                             -onClick => 'toggleRuler(true)',
+                             -style => "height:17px; cursor:pointer; position:absolute; top:2px; left:3px;"},
+                                img({-src=>"${button_url}/ruler-icon.png",-alt=>'Ruler'}) ) .
+                        div({-id => 'ruler_image',
+                             -style => "background-image: url(${button_url}/ruler.png); cursor:move; background-size: 100%; display:none;"},'')
+            )) . $ruler_js;
 }
 
 sub source_menu {

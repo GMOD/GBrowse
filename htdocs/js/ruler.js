@@ -9,13 +9,12 @@
 var ruler_value = 0;
 
 function createRuler () {
-  $('ruler_handle').style.visibility = 'hidden';
-
   var half_handle_width = Math.round($('ruler_handle').getWidth()/2);
   var track_width  = $('ruler_track').getWidth();
 
   new Control.Slider('ruler_handle','ruler_track',{
     range: $R(half_handle_width, track_width-half_handle_width),
+    sliderValue: 100,
     onSlide: function (value) {
       ruler_value = value;
       updateRuler();
@@ -23,22 +22,31 @@ function createRuler () {
   });
 }
 
-function toggleRuler (is_visible) {
-   handle = $('ruler_handle');
-   if (is_visible == false) {
-      handle.style.visibility = 'hidden';
+function toggleRuler (ruler_visible) {
+   var ruler_label  = $('ruler_label');
+   var ruler_handle = $('ruler_handle');
+   var ruler_image  = $('ruler_image');
+   var ruler_icon   = $('ruler_icon');
+
+   if (ruler_visible == false) {
+      ruler_image.style.display = 'none';
+      ruler_label.style.visibility = 'hidden';
+      ruler_icon.style.visibility  = 'visible';
    } else {
+      ruler_image.setStyle({display: 'block'});
+      ruler_label.style.visibility = 'visible';
+      ruler_icon.style.visibility  = 'hidden';
       updateRuler();
-      handle.style.visibility = 'visible';
    }
 }
 
 function updateRuler() {
-  var height       = $('detail_panels').offsetHeight + 'px';
+  var height       = $('detail_panels').getHeight() - 17 + 'px';
   var ruler_label  = $('ruler_label');
   var ruler_handle = $('ruler_handle');
+  var ruler_image  = $('ruler_image');
 
-  ruler_handle.style.height = height;
+  ruler_image.setStyle({height: height});
 
   var pad_left           = parseInt(Controller.segment_info.image_padding);
   var detail_pixel_ratio = parseFloat(Controller.segment_info.details_pixel_ratio);

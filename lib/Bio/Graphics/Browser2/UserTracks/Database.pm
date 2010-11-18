@@ -414,7 +414,7 @@ sub is_shared_with_me {
     my $self = shift;
     my $file = shift or confess "No file ID given to is_shared_with_me()";
     my $uploadsdb = $self->{uploadsdb};
-    my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE uploadid = " . $uploadsdb->quote($file) . " AND users LIKE " . $uploadsdb->quote("%" . $self->{userid} . "%"));
+    my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE uploadid = " . $uploadsdb->quote($file) . " AND users LIKE " . $uploadsdb->quote("%" . $self->{userid} . "%") . "OR public_users LIKE " . $uploadsdb->quote("%" . $self->{userid} . "%"));
     return (@$results > 0);
 }
 
@@ -439,6 +439,7 @@ sub file_type {
 sub shared_with {
     my $self = shift;
     my $file = shift or confess "No file ID given to shared_with()";
+    return unless $self->permissions($file) =~ /(casual|group)/;
     my $users_string = $self->field("users", $file);
     return split(", ", $users_string);
 }
@@ -447,6 +448,7 @@ sub shared_with {
 sub public_users {
     my $self = shift;
     my $file = shift or confess "No file ID given to public_users()";
+    return unless $self->permissions($file) =~ /public/;
     my $users_string = $self->field("public_users", $file);
     return split(", ", $users_string);
 }

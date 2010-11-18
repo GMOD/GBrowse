@@ -869,9 +869,7 @@ sub segment_info_object {
     );
 
     if ( $settings->{region_size} ) {
-        my ( $rstart, $rend )
-            = $self->get_regionview_start_stop( $settings, $segment->start, $segment->end,
-            $whole_segment->start, $whole_segment->end );
+        my ( $rstart, $rend ) = $self->regionview_bounds;
         my $rlen  = abs( $rend - $rstart );
         my $ratio = $rlen / $width;
         $segment_info_object{'region_start'}       = $rstart;
@@ -2937,29 +2935,8 @@ sub get_max_segment {
 #############################################################################
 sub regionview_bounds {
   my $self  = shift;
-
-  my $state             = $self->state;
-  my $regionview_length = $state->{region_size};
-
-  my ($detail_start,$detail_stop) = (@{$state}{'start','stop'})      or return;
-  my ($whole_start,$whole_stop)   = (@{$state}{'seg_min','seg_max'}) or return;
-
-  if ($detail_stop - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
-    $regionview_length = $detail_stop - $detail_start + 1;
-  }
-  my $midpoint = ($detail_stop + $detail_start) / 2;
-  my $regionview_start = int($midpoint - $regionview_length/2 + 1);
-  my $regionview_end = int($midpoint + $regionview_length/2);
-
-  if ($regionview_start < $whole_start) {
-    $regionview_start = 1;
-    $regionview_end   = $regionview_length;
-  }
-  if ($regionview_end > $whole_stop) {
-    $regionview_start = $whole_stop - $regionview_length + 1;
-    $regionview_end   = $whole_stop;
-  }
-  return ($regionview_start, $regionview_end);
+  my $segment = $self->thin_region_segment;
+  return ($segment->start,$segment->end);
 }
 
 # this version handles labels with embedded hyphens correctly
@@ -3485,23 +3462,7 @@ Description
 
 sub get_regionview_start_stop {
   my $self = shift;
-  my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;
-  my $regionview_length = $settings->{region_size};
-  if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
-    $regionview_length = $detail_end - $detail_start + 1;
-  }
-  my $midpoint = ($detail_end + $detail_start) / 2;
-  my $regionview_start = int($midpoint - $regionview_length/2 + 1);
-  my $regionview_end = int($midpoint + $regionview_length/2);
-  if ($regionview_start < $whole_start) {
-    $regionview_start = 1;
-    $regionview_end   = $regionview_length;
-  }
-  if ($regionview_end > $whole_end) {
-    $regionview_start = $whole_end - $regionview_length + 1;
-    $regionview_end   = $whole_end;
-  }
-  return ($regionview_start, $regionview_end);
+  return $self->regionview_bounds;
 }
 
 ##################### utilities #####################

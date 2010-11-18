@@ -80,6 +80,7 @@ sub ACTION_navigate {
 	= $render->asynchronous_update_detail_scale_bar() if $source->show_section('detail');
 
     my $segment_info_object = $render->segment_info_object();
+#    warn Data::Dumper::Dumper($segment_info_object);
 
     warn "navigate() returning track keys = ",join ' ',%$track_keys if DEBUG;
 

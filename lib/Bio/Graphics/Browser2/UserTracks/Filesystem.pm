@@ -93,8 +93,7 @@ sub delete_file {
 sub created {
     my $self  = shift;
     my $file = shift;
-    my $path = $self->path;
-    my $conf  = File::Spec->catfile($path, $file, "$file.conf");
+    my $conf = $self->track_conf($file);
     return (stat($conf))[10];
 }
 
@@ -109,8 +108,8 @@ sub modified {
 sub description {
     my $self  = shift;
     my $file = shift;
-    my $path = $self->path;
-    my $desc  = File::Spec->catfile($path, $file, "$file.desc");
+    my $filename = $self->escape_url($file);
+    my $desc  = File::Spec->catfile($self->track_path($file), "$filename.desc");
     if (@_) {
         open my $f,">",$desc or return;
         print $f join("\n",@_);

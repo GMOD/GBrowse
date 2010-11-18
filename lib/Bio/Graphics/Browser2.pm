@@ -245,7 +245,7 @@ sub openid_secret {
 sub upload_db_adaptor {
     my $self = shift;
     my $adaptor = $self->setting(general=>'upload_db_adaptor') || $self->setting(general=>'userdb_adaptor');
-    die "Error in upload_db_adaptor syntax in Gbrowse.conf, should be either \"berkeleydb\" or of the form \"DBI::<type>\" (DBI::SQLite, for example)." unless $adaptor =~ /(^DBI::|berkelydb)/;
+    die "Error in upload_db_adaptor syntax in Gbrowse.conf, should be either \"berkeleydb\" or of the form \"DBI::<type>\" (DBI::SQLite, for example)." unless !$adaptor or $adaptor =~ /(^DBI::|berkelydb)/;
     return $adaptor;
 }
 sub upload_db_host {

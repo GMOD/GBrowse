@@ -430,6 +430,7 @@ sub print_matches {
     }
     warn ("sdir = $sdir, $src_x -> $src_y / $tgt_x -> $tgt_y") if DEBUG;
     my ($top,$middle,$bottom) = do_align($src,$sdna,$tdna);
+    ($top,$middle,$bottom)    = clip($top,$middle,$bottom);
 
     my $m = max(length($top_label),length($bot_label));
     my $p = max(length($src_x),length($src_y),length($tgt_x),length($tgt_y));
@@ -456,6 +457,21 @@ sub print_matches {
 	
     }
     return pre($string);
+}
+
+sub clip {
+    my ($src,$align,$tgt) = @_;
+    my @src   = split '',$src;
+    my @align = split '',$align;
+    my @tgt   = split '',$tgt;
+    while ($src[0] eq '-') {
+	shift @src; shift @align; shift @tgt;
+    }
+    while ($src[-1] eq '-') {
+	pop @src; pop @align; pop @tgt;
+    }
+
+    return (join('',@src),join('',@align),join('',@tgt));
 }
 
 sub do_align {

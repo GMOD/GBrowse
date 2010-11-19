@@ -1,3 +1,0 @@
-##gff-version 3
-
-ctgA	.	microarray_oligo	1	50000	.	.	.	Name=example;wigfile=/var/www/gbrowse2/databases/volvox/track001.ctgA.1202327456.wig

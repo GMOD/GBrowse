@@ -1543,7 +1543,7 @@ sub add_features_to_track {
       my (@full_types,@summary_types);
       for my $l (@labels) {
 	  my @types = $source->label2type($l,$length) or next;
-	  if ($source->show_summary($l,$length,$self->settings)) {
+	  if ($source->show_summary($l,$self->vis_length,$self->settings)) {
 	      $is_summary{$l}++;
 	      push @summary_types,@types;
 	  } else {
@@ -1952,7 +1952,7 @@ sub create_track_args {
   my $source          = $self->source;
   my $lang            = $self->language;
 
-  my $is_summary      = $source->show_summary($label,$length,$self->settings);
+  my $is_summary      = $source->show_summary($label,$self->vis_length,$self->settings);
   
   my $state            = $self->settings;
   my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 
@@ -2029,12 +2029,19 @@ sub create_track_args {
   return @args;
 }
 
+sub vis_length {
+    my $self = shift;
+    my $segment = $self->segment;
+    my $length  = $segment->length;
+    return $length/$self->render->details_mult;
+}
+
 sub subtrack_manager {
     my $self = shift;
     my $label = shift;
     return $self->{_stt}{$label} if exists $self->{_stt}{$label};
     return $self->{_stt}{$label} = undef
-	if $self->source->show_summary($label,$self->segment->length,$self->settings);
+	if $self->source->show_summary($label,$self->vis_length,$self->settings);
     return $self->{_stt}{$label} = Bio::Graphics::Browser2::Render->create_subtrack_manager($label,
 											    $self->source,
 											    $self->settings);

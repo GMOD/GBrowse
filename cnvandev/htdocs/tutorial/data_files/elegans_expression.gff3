@@ -1,9 +1,0 @@
-##gff-version 3
-#date Tue Feb 24 06:39:41 2004
-#source gbrowse GFFDumper plugin
-#NOTE: Selected features dumped.
-
-C01F4	Expr_profile	microarray_oligo	7112	8246	.	+	.	Name=ZK783.1
-C01F4	Expr_profile	microarray_oligo	18295	19431	.	+	.	Name=ZK783.2
-C01F4	Expr_profile	microarray_oligo	24473	25600	.	+	.	Name=ZK783.3
-C01F4	Expr_profile	microarray_oligo	30791	31961	.	+	.	Name=ZK783.4

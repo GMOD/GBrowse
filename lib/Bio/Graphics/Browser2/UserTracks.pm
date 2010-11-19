@@ -171,7 +171,7 @@ sub conf_metadata {
     my $self = shift;
     my $file = shift;
     my $filename = $self->filename($file);
-    my $conf = $self->track_conf($filename);
+    my $conf = $self->track_conf($file);
     my $name = basename($conf);
     return ($name, (stat($conf))[9, 7]);
 }

@@ -919,7 +919,7 @@ var GBrowseController = Class.create({
             return true;
         }
         if (event.keyCode == Event.KEY_ESC) {
-            title_element.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: "Working..."}) );
+            title_element.update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING')}) );
             var sections = new Array(custom_tracks_id);
             if (using_database())
                 sections.push(community_tracks_id);
@@ -1046,7 +1046,6 @@ var GBrowseController = Class.create({
     // to the server
     uploadUserTrackSource:
     function (sourceField, fileid, sourceFile, editElement) {
-        //showUploadBusy(fileid, "Uploading a new source...");
         this._modifyUserTrackSource(
             {
                 action: 'modifyUserData',
@@ -1061,7 +1060,6 @@ var GBrowseController = Class.create({
     // mirrorTrackSource() is called to mirror a URL to a track
     mirrorTrackSource:
     function (sourceURL, fileid, statusElement, displayWhenDone) {
-        //showUploadBusy(fileid, "Reloading source...");
         this._modifyUserTrackSource(
             {
                 action: 'upload_file',

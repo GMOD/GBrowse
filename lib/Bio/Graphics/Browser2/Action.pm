@@ -631,7 +631,7 @@ sub ACTION_modifyUserData {
     if ($ftype eq 'conf') {
 	$userdata->merge_conf($file, $text);
     } else {
-	$userdata->upload_data($file, $text, 'text/plain', 1); # overwrite
+	$userdata->upload_data($ftype, $text, 'text/plain', 1); # overwrite
     }
     delete $state->{uploads}{$upload_id};
     my @tracks     = $userdata->labels($file);

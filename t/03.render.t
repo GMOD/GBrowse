@@ -465,12 +465,9 @@ $render->update_state;
 ok(join(' ',sort $render->detail_tracks),"BindingSites Clones Motifs");
 
 ### check user tracks
-# Test if the UserTracks module was called properly (if it got the right one, Database or Filesystem).
 my $usertracks = $render->user_tracks;
 ok($usertracks);
-ok($usertracks =~ /(database|filesystem)/i); #130
-
-# Test if all the required variables – config, uploadsdb, userid, uploadsid and globals – are available.
+ok($usertracks =~ /(database|filesystem)/i);
 ok($usertracks->{config});
 ok($usertracks->{globals});
 
@@ -478,10 +475,9 @@ my $url = 'http://www.foo.bar/this/is/a/remotetrack';
 my $escaped_url = $usertracks->escape_url($url);
 ok($usertracks->path =~ m!/gbrowse_testing/userdata/volvox/[0-9a-h]{32}$!);
 
-# Add a test file to the database, externally save the file ID.
 $usertracks->import_url($url);
 my @tracks = $usertracks->tracks;
-ok(@tracks,1); #135
+ok(@tracks,1);
 ok($tracks[0], $escaped_url);
 ok($usertracks->is_imported($url));
 my $path = $usertracks->track_conf($tracks[0]);
@@ -500,18 +496,16 @@ ok($usertracks->filename($url), $url);
 ok($usertracks->get_file_id($url), $url);
 
 ok($usertracks->title($url), $url);
+ok($usertracks->description($url, "This is a test description")); # This will return 1 if it was successful.
 
-# This will return 1 if it was successful.
-ok($usertracks->description($url, "This is a test description"));
-
-ok($usertracks->file_type($url)); #145
+ok($usertracks->file_type($url));
 
 ok($usertracks->created($url));
 ok($usertracks->modified($url));
 
 $usertracks->delete_file($url);
 ok(!-e $path);
-ok($usertracks->tracks+0,0); #149
+ok($usertracks->tracks+0,0);
 
 exit 0;
 

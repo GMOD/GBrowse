@@ -907,7 +907,7 @@ var GBrowseController = Class.create({
                     title: title
                 },
                 onSuccess: function(transport) {
-                    var sections = new Array(custom_tracks_id);
+                    var sections = new Array(custom_tracks_id, track_listing_id);
                     if (using_database())
                         sections.push(community_tracks_id);
                     Controller.update_sections(sections);

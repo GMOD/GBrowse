@@ -1,0 +1,17 @@
+[% FILTER replace('>\s+<','><') %]
+<input type="hidden" name="start"    value="[% segment.start %]"/>
+<input type="hidden" name="stop"     value="[% segment.end %]"/>
+<input type="hidden" name="ref"      value="[% segment.seq_id %]"/>
+<input type="hidden" name="prevname" value="[% prevname %]"/>
+<input type="image" name="left [% full %]" src="[% config.setting('buttons') %]/green_l2.gif" title="left [% unit_label( full ) %]" />
+<input type="image" name="left [% half %]" src="[% config.setting('buttons') %]/green_l1.gif" title="left [% unit_label( half ) %]" />
+<input type="image" name="zoom out [% finezoom %]" src="[% config.setting('buttons') %]/minus.gif" title="zoom out [% finezoom %]" />
+<select name="span" onchange="document.mainform.submit()" class="searchtitle">
+  [% FOREACH range IN ranges %]
+    <option value="[% range %]" [% IF(range == segment.length) ; 'selected="selected"' ; END %]>[% range_labels.${range} %]</option>
+  [% END %]
+</select>
+<input type="image" name="zoom in [% finezoom %]" src="[% config.setting('buttons') %]/plus.gif"     title="zoom in [% finezoom %]" />
+<input type="image" name="right [% half %]" src="[% config.setting('buttons') %]/green_r1.gif" title="right [%- unit_label(half) -%]" />
+<input type="image" name="right [% full %]" src="[% config.setting('buttons') %]/green_r2.gif" title="right [%- unit_label(full) -%]" />
+[% END %]

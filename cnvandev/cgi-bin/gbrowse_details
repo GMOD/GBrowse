@@ -1,0 +1,761 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::RegionSearch;
+use Bio::Graphics::Browser2::Markup;
+use Bio::Graphics::Browser2::UserTracks;
+use Bio::Graphics::Glyph::generic;
+
+our $VERSION = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
+our ($INDEX,%COLORS,%URLS,%formatterCache);
+
+
+use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
+use constant DEFAULT_MASTER => 'GBrowse.conf';
+
+umask 022;
+
+my $conf_dir  = Bio::Graphics::Browser2->config_base;
+my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
+my $conf      = Bio::Graphics::Browser2->new(File::Spec->catfile($conf_dir,$conf_file))
+    or die "Couldn't read globals";
+
+my $fcgi = Bio::Graphics::Browser2::Render->fcgi_request;
+
+if ($fcgi) {
+
+    my $FCGI_DONE = 0;
+    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+	my $sig  = shift;
+	my $time = localtime;
+	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+	$FCGI_DONE = 1;
+    };
+
+    my %sys_env = %ENV;
+    while (!$FCGI_DONE) {
+	my $status = $fcgi->Accept;
+	next unless $status >= 0;
+        %ENV = ( %sys_env, %ENV );
+	CGI->initialize_globals();
+	DetailRenderer->new($conf)->run();
+	$fcgi->Finish();
+    }
+
+}
+
+else {
+    DetailRenderer->new($conf)->run();
+}
+
+
+exit 0;
+
+package DetailRenderer;
+
+use strict;
+use constant DEBUG   => 0;
+use constant MAX_DNA => 500_000;
+
+use CGI qw(:standard *table *TR escape);
+use Bio::Graphics::Browser2::Realign 'align';
+use Data::Dumper 'Dumper';
+
+sub new {
+    my $package = shift;
+    my $conf    = shift;
+    return bless {
+	index          => 0,
+	colors         => {},
+	urls           => {},
+	formatterCache => {},
+	globals        => $conf,
+    },ref $package || $package;
+}
+
+sub globals {
+    my $self = shift;
+    my $d    = $self->{globals};
+    $self->{globals} = shift if @_;
+    $d;
+}
+
+sub state {
+    my $self = shift;
+    my $d    = $self->{state};
+    $self->{state} = shift if @_;
+    $d;
+}
+
+sub source {
+    my $self = shift;
+    my $d    = $self->{source};
+    $self->{source} = shift if @_;
+    $d;
+}
+
+sub run {
+    my $self = shift;
+    
+    my $conf    = $self->globals;
+    my $session = $conf->session;
+    $conf->update_data_source($session);
+    $self->source($conf->create_data_source($session->source));
+    $self->state($session->page_settings);
+    $self->add_user_tracks($self->source);
+
+    my $name  = param('name');
+    my $class = param('class');
+    my $ref   = param('ref');
+    my $start = param('start');
+    my $end   = param('end');
+    my $f_id  = param('feature_id');
+    my $db_id = param('db_id');
+    my $rmt   = param('remote');
+
+    $self->state->{dbid} = $db_id if $db_id; # to search correct database
+
+    # This populates the $self->{urls} variable with link rules from the config file.
+    $self->get_link_urls();
+
+    my $search = Bio::Graphics::Browser2::RegionSearch->new(
+	{
+	    source => $self->source,
+	    state  => $self->state,
+	});
+    $search->init_databases();
+
+    # this is the weird part; we create a search name based on the arguments
+    # provided to us
+    my ($search_term,$search_class);
+    if ($f_id) {
+	$search_term = "id:$f_id";
+    } elsif ($class && $name) {
+	$search_term  = $name;
+	$search_class = $class;
+    } elsif (defined $ref && defined $start && defined $end) {
+	$search_term = "$ref:$start..$end";
+    } else {
+	$search_term = $name;
+    }
+    unless (defined $search_term) {
+	print header,
+	start_html('gbrowse_details error'),
+	p({-class=>'error'},
+	  'This script must be called with one or more of the parameters name, feature_id or db_id.');
+	end_html;
+	exit 0;
+    }
+
+    warn "search term = $search_term" if DEBUG;
+
+    my $features = eval {$search->search_features({-name=>$search_term,-class=>$search_class})} || [];
+    warn "search_features(-search_term=>$search_term): $@" if $@;
+
+    warn "features = @$features" if DEBUG;
+    warn "segments = ",join ' ',$features->[0]->segments if (DEBUG && @$features);
+
+    # provide customized content for popup balloons
+    if (defined $rmt) {
+	print header,start_html;
+	print $self->remote_content($rmt,$features->[0]);
+	print end_html;
+    }
+
+    else {
+	print header();
+	my $css = $self->source->global_setting('stylesheet');
+	my $stylesheet = $self->globals->resolve_path($css,'url');
+	{
+	    	local $^W = 0; # shut up a warning from CGI.pm
+		print start_html(-title => "GBrowse Details: $search_term",
+				 -style => $stylesheet);
+		print h1("$name Details");
+	}
+
+	if (@$features) {
+	    print $self->print_features($features);
+	} else {
+	    print p({-class=>'error'},'Requested feature not found in database.');
+	}
+	print end_html();
+    }
+
+}
+
+sub add_user_tracks {
+    my $self = shift;
+    my $data_source = shift;
+    my $userdata = Bio::Graphics::Browser2::UserTracks->new($data_source,
+							    $self->state,
+							    undef);
+    my @user_tracks = $userdata->tracks;
+    for my $track (@user_tracks) {
+	my $config_path = $userdata->track_conf($track);
+	eval {$data_source->parse_user_file($config_path)};
+    }
+}
+
+######################
+
+sub print_features {
+    my $self     = shift;
+    my $features = shift;
+    my $subf     = shift || 0;
+
+    my $string;
+
+    my @colors = qw(none lightgrey yellow pink orange brown
+	        tan teal cyan lime green blue gray);
+
+    for my $f (@$features) {
+
+	my $method = $f->primary_tag . $subf;
+	warn "index = $self->{index}, method = $method" if DEBUG;
+	$self->{colors}{$method} ||= $colors[$self->{index}++ % @colors];
+	my $options = {-bgcolor => $self->{colors}{$method}}
+	               unless $self->{colors}{$method} eq 'none';
+
+	$string .= start_table({-cellspacing=>0});
+	unless ($subf) {
+	    $string .= $self->print_multiple($f,
+				     $options,
+				     'Name',
+				     $f->name);
+	    $string .= $self->print_multiple($f,
+				     $options,
+				     'Class',
+				     $f->class) unless $f->class eq 'Sequence';
+	}
+	$string .= $self->print_multiple($f,
+				 $options,
+				 'Type',
+				 $f->primary_tag);
+	$string .= $self->print_multiple($f,
+				 $options,
+				 'Description',
+				 Bio::Graphics::Glyph::generic->get_description($f));
+	$string .= $self->print_multiple($f,
+				 $options,
+				 'Source',
+				 $f->source_tag) if $f->source_tag;
+	$string .= $self->print_multiple($f,
+				 $options,
+				 "Position",
+				 $f);
+	$string .= $self->print_multiple($f,
+				 $options,
+				 "Length",
+				 $f->length);
+	
+	if ($f->can('hit') && (my $hit = $f->hit)) {
+	    # try to correct for common GFF2 error of indicating a -/- alignment
+	    # using a (-) src strand and a hit_start > hit_end
+	    my $bug  = $f->strand < 0 && $f->hit->strand < 0;
+	    $string .= $self->print_multiple($f,
+				     $options,
+				     'Query',
+				     $hit->seq_id);
+	    $string .= $self->print_multiple(
+		                     $f->hit,
+				     $options,
+				     'Matches',
+				     $hit->seq_id.':'.$hit->start.'..'.$hit->end.
+		                     ($hit->strand >= 0 ? ' (+)':' (-)')
+		);
+	    $string .= $self->print_multiple($f,
+				     $options,
+				     '',
+				     $self->print_matches($f,$hit,$bug));# if $subf;
+	    
+	}
+	
+	$string .= $self->print_multiple($f,
+				 $options,
+				 "Score",
+				 $f->score) if $f->can('score') && defined $f->score;
+	
+	my %attributes = $f->attributes if $f->can('attributes');
+
+	for my $a (sort grep {!/Hit/} keys %attributes) {
+	    $string .= $self->print_multiple($f,
+				     $options,
+				     $a,
+				     $f->attributes($a));
+	}
+
+	$string   .= $self->print_multiple($f,
+					   $options,
+					   'primary_id',
+					   $f->primary_id) if $f->can('primary_id');
+	
+	$string   .= $self->print_multiple($f,
+					   $options,
+					   'gbrowse_dbid',
+					   $f->gbrowse_dbid) if $f->can('gbrowse_dbid');
+	
+	$string   .= TR({-valign=>'top',-class=>'databody'},
+			th({-height=>3},''),
+			td({-height=>3},'')
+	    );
+	
+	my @subfeatures;
+	# sort features with hits so that hit is in order
+	if ($f->can('hit') && $f->hit) {
+	    @subfeatures  = sort {$a->hit->start <=> $b->hit->start} $f->get_SeqFeatures;
+	} else {
+	    @subfeatures = sort {$a->start <=> $b->start} $f->get_SeqFeatures;
+	}
+
+ 	my $subtable = $self->print_multiple($f,
+ 				     $options,
+ 				     'Parts',
+ 				     $self->print_features(\@subfeatures,$subf+1)
+ 	    ) if @subfeatures;
+	
+	$string .= $subtable || '';  # prevent uninit variable warning
+	$string .= CGI::end_table();
+	
+	if ($subtable or $subf==0) {
+	   if ($f->length > MAX_DNA) {
+	      $string .= "<b><i>Sequence display limited to ".MAX_DNA." bases</i></b>";
+	   } else {
+	      my $dna = $self->get_seq($f);
+	      $dna    = $dna->seq if ref $dna;  # compensate for API changes
+	      $string .= $self->print_dna($f,
+	  				  $dna,
+					  $f->start,
+					  $f->strand,
+					  \@subfeatures,
+					  $subf+1) if $dna;
+	   }
+        }
+    }
+    return $string;
+}
+
+sub get_seq {
+    my $self = shift;
+    my $f     = shift;
+    my $ref   = $f->seq_id;
+    my $start = $f->start;
+    my $end   = $f->end;
+    my $strand = $f->strand;
+
+    # the sequence must live in the database flagged in the [GENERAL] section
+    my $db    = $self->source->open_database() or return; 
+    my ($seg) = $db->segment($ref,$start,$end) or return;
+    return $seg->seq if eval {$f->target && $f->strand < 0 && $f->target->strand < 0};
+    return $strand >= 0 ? $seg->seq : $seg->seq->revcom;
+}
+
+sub print_dna {
+    my $self = shift;
+    my ($feature,$dna,$start,$strand,$features,$subf) = @_;
+    my %seenit;
+
+    warn "dna=$dna" if DEBUG;
+
+    my $markup = Bio::Graphics::Browser2::Markup->new;
+    for my $f (@$features) {
+	warn "f = $f" if DEBUG;
+	my $method = $f->primary_tag . $subf;
+	warn "$method => $self->{colors}{$method}" if DEBUG;
+	next if $self->{colors}{$method} eq 'none';
+	$markup->add_style($method => "BGCOLOR $self->{colors}{$method}");
+    }
+    # add a newline every 80 positions
+    $markup->add_style('newline',"\n");
+    # add a space every 10 positions
+    $markup->add_style('space'," ");
+
+  my @markup;
+  for my $f (@$features) {
+    my ($s,$e);
+    if ($strand >=0) {
+      $s   = $f->low  - $start;
+      $e   = $f->high - $start;
+    } else {
+      if ($start - $f->high < 0) { #how much of a hack is this!
+                                   #it fixes chado feature differences
+        $s   = $start + length($dna) - $f->low  -1;
+        $e   = $start + length($dna) - $f->high -1;
+      } else {
+        $s   = $start - $f->low;
+        $e   = $start - $f->high;
+      }
+    }
+
+    ($s,$e) = ($e,$s) if $s > $e;
+    my $method = $f->primary_tag . $subf;
+    next if $self->{colors}{$method} eq 'none';
+    push @markup,[$method,$s,$e+1];  # Duelling off-by-one errors....
+  }
+  push @markup,map {['newline',80*$_]} (1..length($dna)/80);
+  push @markup,map {['space',10*$_]}   grep {$_ % 8} (1..length($dna)/10);
+
+  $markup->markup(\$dna,\@markup);
+  my $position = $self->position($feature);
+  my $name     = $feature->name;
+  my $class    = $feature->class;
+  $name      ||= '';
+  return pre(">$name class=$class position=$position\n".$dna);
+}
+
+sub print_matches {
+    my $self            = shift;
+    my ($src,$tgt,$bug) = @_;
+
+    my $sdna = $src->dna or return '';
+    my $tdna = $tgt->dna or return '';
+
+    my $top_label = $src->seq_id;
+    my $bot_label = $tgt->seq_id;
+
+    my $src_x = $src->start;
+    my $src_y = $src->end;
+    my $tgt_x = $tgt->start;
+    my $tgt_y = $tgt->end;
+    my $tdir  = $tgt->strand || +1;
+    my $sdir  = $src->strand || +1;
+
+    ($tgt_x,$tgt_y) = ($tgt_y,$tgt_x) if $tgt->strand < 0;
+
+    if ($bug) { # correct for buggy data files that show -/- alignments; really -/+
+	$tdir = -1;
+	$sdir = 1;
+	$tgt_x = $tgt_y;
+	$tdna = reversec($tdna);
+    }
+    warn ("sdir = $sdir, $src_x -> $src_y / $tgt_x -> $tgt_y") if DEBUG;
+    my ($top,$middle,$bottom) = do_align($src,$sdna,$tdna);
+    ($top,$middle,$bottom)    = clip($top,$middle,$bottom);
+
+    my $m = max(length($top_label),length($bot_label));
+    my $p = max(length($src_x),length($src_y),length($tgt_x),length($tgt_y));
+    my $l  = ' ' x ($m+$p+2);  # adjusting for HTML
+
+    my $string;
+    my @top    = $top    =~ /(.{1,60})/g;
+    my @middle = $middle =~ /(.{1,60})/g;
+    my @bottom = $bottom =~ /(.{1,60})/g;
+
+    $src_x = $src_y if $sdir < 0;
+
+    for (my $i=0; $i<@top; $i++) {
+	my $src_delta = $sdir * (length($top[$i]) - $top[$i]=~tr/-/-/);
+	my $tgt_delta = $tdir * (length($bottom[$i]) - $bottom[$i]=~tr/-/-/);
+	
+	$string .= sprintf("%${m}s %${p}d %s %d\n$l%s\n%${m}s %${p}d %s %d\n\n",
+			   $top_label,$src_x,$top[$i],$src_x + $src_delta - $sdir,
+			   $middle[$i],
+			   $bot_label,$tgt_x,$bottom[$i],$tgt_x + $tgt_delta - $tdir);
+
+	$src_x  += $src_delta;
+	$tgt_x  += $tgt_delta;
+	
+    }
+    return pre($string);
+}
+
+sub clip {
+    my ($src,$align,$tgt) = @_;
+    my @src   = split '',$src;
+    my @align = split '',$align;
+    my @tgt   = split '',$tgt;
+    while ($src[0] eq '-') {
+	shift @src; shift @align; shift @tgt;
+    }
+    while ($src[-1] eq '-') {
+	pop @src; pop @align; pop @tgt;
+    }
+
+    return (join('',@src),join('',@align),join('',@tgt));
+}
+
+sub do_align {
+    my ($src,$sdna,$tdna) = @_;
+    if (my $cigar = eval {$src->cigar_array}) {
+	my ($pad_source,$pad_target,$pad_match);
+	for my $event (@$cigar) {
+	    my ($op,$count) = @$event;
+	    if ($op eq 'I' || $op eq 'S') {
+		$pad_source .= '-' x $count;
+		$pad_target .= substr($tdna,0,$count,'');
+		$pad_match  .= ' ' x $count;
+	    }
+	    elsif ($op eq 'D' || $op eq 'N') {
+		$pad_source .= substr($sdna,0,$count,'');
+		$pad_target .= '-' x $count;
+		$pad_match  .= ' ' x $count;
+	    } elsif ($op eq 'H' || $op eq 'P') {
+		# nothing needs to be done for hard clipping or pads
+	    } else {
+		$pad_match  .= join '',(
+		    map {substr($sdna,$_,1) eq substr($tdna,$_,1) 
+			     ? '|' 
+			     : ' '
+		    } (0..$count-1));
+		$pad_source .= substr($sdna,0,$count,'');
+		$pad_target .= substr($tdna,0,$count,'');
+	    }
+	}
+	return ($pad_source,$pad_match,$pad_target);
+    } else {
+	return align($sdna,$tdna);
+    }
+}
+
+sub max {
+  if (@_ == 2) {
+    return $_[0] > $_[1] ? $_[0] : $_[1];
+  } else {
+    return (sort {$b<=>$a} @_)[0];
+  }
+}
+
+sub print_multiple {
+    my $self = shift;
+
+    local $^W = 0;  # get rid of uninit variable warnings
+
+    my $feature = shift;
+    my $options = shift;
+    my $label   = shift;
+
+    $options ||= {};
+
+    my @a = $self->format_values($feature,$label,@_);
+    return '' unless @a;
+
+    my $LINK = "";
+    my $isFirst=1;
+    my $string = ' ' ;
+
+    for my $obj (@a) {
+	if ($self->{urls}{$label}){
+	    $LINK = $self->{urls}{$label};
+	    if ( ref ($LINK)   eq 'CODE' ){ #Testing subs
+		$LINK= eval { $LINK->($label,$obj)};
+		$LINK = $LINK ? "<a href='$LINK'>$obj</a>" : $obj;
+	    }
+	    else { #end testing subs
+		$LINK =~ s/\$tag/$label/;
+		$LINK=~ s/\$value/$obj/;
+		$LINK = "<a href='$LINK'>$obj</a>";
+	    } # testing subs
+	}
+
+	# for EST alignment features, create a link to get the orignal EST sequence
+	if (($label eq 'Query') 
+	    && ($self->{urls}{'alignment'}) 
+	    && ($obj =~ /alignment/i)){
+	    my $name = shift @a;
+	    $LINK = $self->{urls}{'alignment'};
+	    $LINK=~ s/\$value/$name/;
+	    $LINK = "$obj : (<a href='$LINK'>Aligned Sequence</a>)";
+    }
+
+	# Wrap way long lines, but not those involving HTML tags or
+	# inside <PRE sections.
+	$obj = join "", 
+	map{ s/([^\s\'\"\/;&]{60})/$1 /g 
+		 unless /\</; $_ 
+	} split /(<[^>]*>)/,$obj unless $obj =~ /<pre/i;
+    
+	if ($isFirst) {
+	    $isFirst =0 ;
+	    $string .= join '',TR({-valign=>'top',-class=>'databody'},
+				  th({-align=>'LEFT',
+				      -valign=>'top',
+				      -class=>'datatitle',
+				      -width=>100},length $label>0 ? "$label: " : ''),
+				  td($options, $LINK ? $LINK : $obj)
+		);
+	} else {
+	    
+	    $string .= join '', TR({-class=>'databody'},
+				   th({-align=>'RIGHT',-class=>'datatitle',-width=>100},'&nbsp;'),
+				   td($options,$LINK?$LINK:$obj)
+		);
+	}
+	$LINK='';
+    }
+    $string;
+}
+
+sub position {
+    my $self = shift;
+
+    my $f      = shift;
+    my $simple = shift;
+    my $bug    = shift; # for (-) (-) alignments
+
+    my $ref   = $f->seq_id;
+    my $start = $f->start;
+    my $end   = $f->end;
+    if ($simple) {
+	($start,$end) = ($end,$start) if $f->strand < 0;
+	return "<b>$ref</b> $start..$end";
+    }
+    my $s = $f->strand;
+    if ($bug) {  # data bug
+	($start,$end) = ($end,$start);
+	$s *= -1;
+    }
+    my $strand = $s > 0 ? '+' : $s < 0 ? '-' : '';
+
+    my $src = escape($self->source->name);
+    my $url = "../gbrowse/$src?name=$ref:$start..$end";
+    return a({-href=>$url},$strand ? "$ref:$start..$end ($strand strand)" 
+	                           : "$ref:$start..$end");
+}
+
+sub get_link_urls {
+    my $self = shift;
+
+    my $source = $self->source;
+    my $urls   = $self->{urls};
+
+    my @LINK_CONFIGS = map {$_=~/\:DETAILS$/?$_:undef} 
+        $source->Bio::Graphics::FeatureFile::setting();
+
+    foreach (@LINK_CONFIGS){
+	next unless $_;
+	next unless $_=~/(.*?)\:DETAILS/;
+	next unless $1;
+	my $URL = $source->setting("$_", 'url');
+	next unless $URL;
+	$urls->{$1}=$URL;
+    }
+}
+
+sub format_values {
+    my $self = shift;
+
+    my ($feature,$tag,@values) = @_;
+    my $formatter    = $self->get_formatter($feature,$tag);
+
+    $Data::Dumper::Indent = 3;
+    $Data::Dumper::Terse  = 1;
+    return map {ref($_) ? "<pre>".Dumper($_)."</pre>" 
+		        : $_} @values unless $formatter;
+    if (ref $formatter eq 'CODE') {
+	return map {$formatter->($_,$tag,$feature)} @values;
+    }
+
+    my $name   = $feature->display_name;
+    my $start  = $feature->start || '';
+    my $end    = $feature->end   || '';
+    my $strand = $feature->strand || '';
+    my $method = $feature->primary_tag || '';
+    my $source = $feature->source_tag || '';
+    my $type   = eval {$feature->type} || $method || '';
+    my $class  = eval {$feature->class} || '';
+    my $description = eval { join ' ',$feature->notes } || '';
+    $formatter =~ s/\$tag/$tag/g;
+    $formatter =~ s/\$name/$name/g;
+    $formatter =~ s/\$start/$start/g;
+    $formatter =~ s/\$end/$end/g;
+    $formatter =~ s/\$stop/$end/g;
+    $formatter =~ s/\$strand/$strand/g;
+    $formatter =~ s/\$method/$method/g;
+    $formatter =~ s/\$source/$source/g;
+    $formatter =~ s/\$type/$type/g;
+    $formatter =~ s/\$class/$class/g;
+    $formatter =~ s/\$description/$description/g;
+
+    return map {my $tmp_formatter = $formatter;
+		$tmp_formatter =~ s/\$value/$_/g;      
+		$tmp_formatter} @values;
+}
+
+sub get_formatter {
+    my $self           = shift;
+    my ($feature,$tag) = @_;
+
+    my $method  = $feature->primary_tag;
+    my $source  = $feature->source_tag;
+    my $key     = join ':',$method,$source,$tag;
+
+    return $self->{formatterCache}{$key} 
+      if exists $self->{formatterCache}{$key};
+
+    my $config = $self->source;
+    my $s;
+
+    # implement simple search path for formatters
+  SEARCH:
+    for my $base ("$method:$source",$method,'default') {
+	for my $option ($tag,'default') {
+	    $s ||= $config->setting("$base:details" => lc $option);
+	    $s ||= $config->setting("$base:DETAILS" => lc $option);
+	    last SEARCH if defined $s;
+	}
+    }
+
+    unless (defined $s) {
+	$s = sub {$self->format_position(@_)}   if $tag eq 'Position';
+	# $s = sub {$self->format_position(@_)} if $tag eq 'Matches';
+	$s = sub {$self->format_name(@_)    }   if $tag eq 'Name';
+    }
+    return $self->{formatterCache}{$key} = $s;
+}
+
+sub format_position {
+    my $self = shift;
+    my (undef,undef,$feature) = @_;
+    $self->position($feature);
+}
+
+sub format_matches {
+    my $self = shift;
+    my (undef,undef,$feature) = @_;
+    # try to correct for common GFF2 error of indicating a -/- alignment
+    # using a (-) src strand and a hit_start > hit_end
+    my $bug = $feature->strand < 0 && $feature->hit->strand < 0;
+    $self->position($feature->hit,undef,$bug)
+}
+
+sub format_name {
+    my $self = shift;
+    my $name = shift;
+    b($name)
+}
+
+# do something for popup balloons
+sub remote_content {
+    my $self = shift;
+
+    # the key for the text or code-ref in the gbrowse config file
+    my ($key,$feat) = @_;
+
+    my $contents = $self->source->setting('TOOLTIPS',$key) 
+	or die "$key is empty";
+    my $coderef = (ref $contents||'') eq 'CODE';
+    return $contents unless $coderef;
+
+    # paranoia?
+    die "Error: $key is not a CODE-REF" if ref $contents && !$coderef;
+
+    # pass feature, other args are user-defined
+    my %args = (feature => $feat) if $feat;
+    for my $arg (param()) {
+	my @vals = param($arg);
+	my $val  = @vals > 1 ? \@vals : $vals[0];
+	$args{$arg} = $val;
+    }
+    return $contents->(\%args);
+}
+
+sub reversec {
+    my $dna = shift;
+    $dna =~ tr/gatcGATC/ctagCTAG/;
+    $dna = reverse $dna;
+    return $dna;
+}
+
+__END__
+
+

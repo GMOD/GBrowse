@@ -1,0 +1,30 @@
+/* These css rules are necessary for autocomplete to work */
+
+div.autocomplete {
+  position:absolute;
+  background-color: white;
+  border:2px solid #888;
+  margin:0;
+  padding:0;
+  z-index:20;
+  width:500px;
+/*
+  left:-100px;
+  top:-100px;
+*/
+}
+div.autocomplete ul {
+  list-style-type:none;
+  white-space:nowrap;
+  margin:0;
+  padding:0;
+}
+div.autocomplete ul li.selected { background-color: #ffb;}
+div.autocomplete ul li {
+  list-style-type:none;
+  display:block;
+  margin:0;
+  padding:1px;
+  height:16px;
+  cursor:pointer;
+}

@@ -1,0 +1,39 @@
+[GENERAL]
+description =  BLASTZ alignments for Oryza sativa 
+
+# The synteny database
+join        = dbi:mysql:database=rice_synteny;host=localhost
+
+# This option maps the relationship between the species data sources, names and descriptions
+# The value for "name" (the first column) is the symbolic name that gbrowse_syn users to identify each species.
+# This value is also used in two other places in the gbrowse_syn configuration: 
+# the species name in the "examples" directive and the species name in the .aln file 
+# The value for "conf. file" is the basename of the corresponding gbrowse .conf files. 
+# This value is also used to identify the species configuration stanzas at the bottom of the configuration file. 
+
+#                 name          conf. file            Description
+source_map =      rice          rice_synteny          "Domesic Rice (O. sativa)"
+                  wild_rice     wild_rice_synteny     "Wild Rice"
+
+tmpimages     = /tmp/gbrowse2
+imagewidth    = 800
+stylesheet    = /gbrowse2/css/gbrowse_transparent.css
+cache time    = 1
+
+config_extension = conf
+
+# example searches to display
+examples = rice 3:16050173..16064974
+           wild_rice 3:1..400000
+
+zoom levels = 5000 10000 25000 50000 100000 200000 400000
+
+# species-specific databases
+[rice_synteny]
+tracks    = EG
+color     = blue
+
+[wild_rice_synteny]
+tracks    = EG
+color     = red
+

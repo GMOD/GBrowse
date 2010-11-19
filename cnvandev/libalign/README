@@ -1,0 +1,28 @@
+Bio/Graphics/Browser/CAlign version 1.00
+========================================
+
+This module implements a simple global Smith-Waterman nucleotide
+alignment and is used by the MultipleAlignment plugin to adjust for
+gapped alignments.
+
+It is not intended to be used directly, but as a helper application to
+Bio::Graphics::Browser::Realign.
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make install
+
+COPYRIGHT AND LICENCE
+
+Lincoln Stein <lstein@cshl.orgE>.
+
+Copyright (c) 2003 Cold Spring Harbor Laboratory
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.  See DISCLAIMER.txt for
+disclaimers of warranty.
+

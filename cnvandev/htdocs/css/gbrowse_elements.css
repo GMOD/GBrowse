@@ -1,0 +1,62 @@
+A:link            { text-decoration: none; 
+                    color: #0000FF;
+                  }
+A:visited         { text-decoration: none; 
+                    color: #AA0088;
+                  }
+A:hover           { text-decoration: underline; 
+		    color: black;
+		    background:lightsteelblue;
+                  }
+A.banner          { color  : #FFFFFF;
+                    font-size : small;
+                    text-decoration : none;
+                  }
+A.bblue           { color: #FFFFFF;
+                    background-color: #9999FF;
+                    font-size : small;
+                    text-align: center;
+                  }
+A.bred            { color: #FFFFFF;
+                    background-color: #FF6666;
+                    font-size : small;
+                    text-align: center;
+BODY              { background-color: #F7FBFF;
+                    font-family: sans-serif;
+	            font-size: small;
+                  }
+DIV               { margin: 0 }
+H1                { color: navy;
+                    font-family: sans-serif; 
+                  }
+H2                { color: navy;
+                    font-family: sans-serif; 
+                  }
+H3                { color: navy;
+                    font-family: sans-serif; 
+                  }
+H4                { color: navy;
+                    font-family: sans-serif; 
+                  }
+INPUT             { background-color: white; }
+P                 { font-family: sans-serif; }
+SELECT            { background-color: white; }
+TABLE             { padding: 0;
+                    width: 100%;
+                  }
+TD                { font-family: sans-serif; 
+                    padding: 0; 
+	            font-size: small;
+		  }
+TH                { font-family: sans-serif; 
+                    padding: 0; 
+	            font-size: small;
+                  }
+TH.linkmenu       { 
+                    font-family: sans-serif;
+                    padding: 0;
+                    font-size: 9pt;
+                  }
+.reset_button     {background-color: red;
+	            color: yellow;           
+                  }

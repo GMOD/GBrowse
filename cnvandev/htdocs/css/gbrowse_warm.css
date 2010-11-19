@@ -1,0 +1,81 @@
+@import url('gbrowse.css');
+
+/* These declarations give gbrowse a warm look */
+
+BODY              { background-color: #F7FBFF;
+                    font-family: sans-serif;
+	            font-size: small;
+                  }
+.datatitle        { background-color: khaki; }
+.databody         { background-color: lightgoldenrodyellow; }
+.multiplechoicetitle  { background-color: lightblue;
+		        font-size: small;
+}
+.searchtitle      { background-color: beige;
+	            font-size: small;
+		    margin-left: 1em;
+		    margin-right: 1em;
+}
+.searchbody       { background-color: khaki;
+	            font-size: small;
+		    margin-left: 1em;
+		    margin-bottom: 3px;
+		    margin-right: 1em;
+}
+.settingstitle    { background-color: #E6EBF0;
+	            font-size: small;
+		    margin-left: 1em;
+}
+.settingsbody     { background-color: #F2F6FA;
+	            font-size: small;
+		    margin-left: 1em;
+}
+.uploadtitle      { background-color: #E6EBF0;
+	            font-size: small;
+		    margin-left: 1em;
+}
+.uploadbody       { background-color: #F2F6FA;
+	            font-size: small;
+		    margin-left: 1em;
+}
+.tabmenu_active   { cursor: pointer;
+			color: black;
+			background-color: beige;
+			font-size: 11pt;
+			font-weight: bold;
+                        font-family: sans-serif;
+			padding-top: 5px;
+			padding-left: 5px;
+			padding-right: 5px;
+			border-top:  1px solid;
+			border-left: 1px solid;
+			border-right: 1px solid;
+			border-bottom: 1px solid;
+			border-bottom-color: beige;
+			z-index: 10;
+		      }
+.tabmenu_inactive { cursor: pointer;
+			color: blue;
+			font-size: 11pt;
+			background-color: transparent;
+			font-weight: bold;
+                        font-family: sans-serif;
+			padding-top:   5px;
+			padding-left:  5px;
+			padding-right: 5px;
+		      }
+.tabmenu_inactive:hover {
+     text-decoration: none;
+     background-color: #F5F5BF;
+}
+.tabbed {
+    background-color: transparent;
+}
+.tabmenu {
+    background-color: transparent;
+}
+.tabbody {
+    background-color: beige;
+    padding-top: 5px;
+    border:   1px solid;
+}

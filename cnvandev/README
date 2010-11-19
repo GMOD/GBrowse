@@ -1,0 +1,177 @@
+GBROWSE README
+
+The Generic Genome Browser (GBrowse) is a simple but highly
+configurable web-based genome browser.  It is a component of the
+Generic Model Organism Systems Database project (GMOD).
+
+******* DOWNLOADING ******
+
+The 2.X versions are now considered stable. You may download it from
+CPAN at http://search.cpan.org/~lds/GBrowse/ or get the developer's
+version via SVN:
+
+svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/trunk Generic-Genome-Browser
+
+The older 1.X version is still available for download here:
+
+http://sourceforge.net/projects/gmod/files/Generic%20Genome%20Browser/GBrowse-1.70/Generic-Genome-Browser-1.70.tar.gz/download
+
+or via SVN here:
+
+svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/branches/stable Generic-Genome-Browser
+
+
+**************************
+
+SYNOPSIS:
+
+  perl Build.PL
+  ./Build distmeta
+  ./Build test
+  ./Build config
+  ./Build demo    (optional)
+  ./Build install (will need to become superuser)
+  ./Build apache_conf
+
+TO INSTALL:
+
+Detailed install and configure instructions are available at
+http://gmod.org/wiki/GBrowse_2.0_HOWTO and we suggest you follow
+that. What follows here is a brief synopsis.
+
+1) You will need a bunch of Perl prerequisites:
+
+    Module                  Version
+    ---------------------+----------
+    perl                    5.008   
+    Bio::Perl               1.0069
+    CGI::Session            4.02    
+    Bio::Graphics           2.09
+    GD                      2.07    
+    Digest::MD5             any
+    File::Temp              any       
+    IO::String              any       
+    JSON                    any       
+    LWP                     any       
+    Storable                any
+    Statistics::Descriptive any
+
+    The Build script will tell you if you are missing any
+    prerequisites. All of these are available on CPAN (www.cpan.org),
+    or by using the CPAN shell ("perl -MCPAN -e shell").
+
+- You should install BioPerl from CPAN (currently version 1.6.9) or, to
+  take advantage of additional features and performance boosts, get a
+  snapshot of the current developer version:
+
+  http://github.com/bioperl/bioperl-live/tarball/master
+
+2) Run the command:
+
+     perl Build.PL
+
+   This will create a script named "Build" in the current directory. If you
+   have downloaded and unpacked, but not installed Bioperl, then you should
+   specify its location using the -I option:
+
+     perl -I /home/fred/build/bioperl-live Build.PL
+
+   To install in a custom location, pass the --install_base argument:
+
+     perl Build.PL --install_base=/home/fred/software
+
+3) Run the command:
+
+     ./Build test
+
+   This will run a series of tests on the distribution. If one or more tests
+   fail please inform the author.
+
+4) Run the command:
+
+    ./Build config
+
+   This will ask you a series of questions about where Apache and its support
+   files are located, and will allow you to choose where to install GBrowse's
+   configuration files.
+
+   If you change your mind and want to reconfigure GBrowse, simply run
+   "./Build reconfig".
+
+5) Run the command:
+
+    ./Build demo
+
+    This will launch configure an instance of Apache to run on a local port and 
+    give you the URL for a GBrowse demo database. This allows you to try out the
+    system before you install it.
+
+6) Run the command:
+
+    ./Build install
+
+   You will probably need to be the superuser to do this. If you have "sudo" installed
+   the invocation will be:
+   
+          % sudo ./Build install
+          [sudo] password for jdoe: *****
+
+   Otherwise
+
+          % su
+          Password: *****
+          # ./Build install
+
+7) Run the command:
+
+       ./Build apache_config
+
+   This will print out a fragment of an Apache configuration file that contains
+   all the information needed to run GBrowse. Cut and paste this into your system's
+   Apache configuration file and restart the server. Usually you will find GBrowse
+   running at http://localhost/gbrowse2.
+
+Support is available from the discussion groups and mailing lists at
+www.gmod.org.
+
+Lincoln Stein & the GMOD team
+lincoln.stein@gmail.com
+July 2010
+
+
+--- COPYRIGHT AND LICENSING ---
+
+Copyright (c) 2002 Cold Spring Harbor Laboratory and University of California, Berkeley
+Copyright (c) 2010 Ontario Institute for Cancer Research
+
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text.
+
+--- AUTHORS ---
+
+This project has had many authors.  Some of the most prominent are:
+
+Scott Cain <cain@cshl.edu>
+Ben Faga <benfaga@gmail.com> 
+Vsevolod (Simon) Ilyushchenko <simonf@cshl.edu>
+Marc Logghe <Marc.Logghe@devgen.com>
+Aaron Mackey <amackey@pcbi.upenn.edu>
+Sheldon McKay <mckays@cshl.edu>
+Nathan O. Siemers <Nathan.Siemers@bms.com>
+Ian Davies <i.davies2@rogers.com>
+Lincoln Stein <lincoln.stein@gmail.com>
+Peter Ruzanov <peter.ruzanov@oicr.on.ca>
+Chris Vandevelde <Christopher.Vandevelde@oicr.on.ca>
+
+Special thanks go to the authors of the translations, who include:
+
+Franck Aniere <aniere@genoscope.cns.fr> (French)
+Nansheng Chen <chen@cshl.edu> (Chinese)
+Toshiaki Katayama <k@bioruby.org> (Japanese)
+Marc Logghe <marcl@devgen.com> (Dutch)
+Marco Mangone <mangone@cshl.edu> (Italian)
+Linus Taejoon Kwon <linusben <at> bawi <dot> org> (Korean)
+Marcela Tello-Ruiz <marcela@broad.mit.edu> (Spanish)
+Gudmundur Thorisson <mummi@cshl.edu> (Icelandic)

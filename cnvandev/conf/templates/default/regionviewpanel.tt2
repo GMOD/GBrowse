@@ -1,0 +1,22 @@
+[% IF segment %]
+
+[%- PROCESS 'start_section.tt2' name='regionview_panel' title='region' -%]
+
+  <center>
+    [% ii = config.regionview( region_segment, segment , page_settings.features, feature_files ) ; image = ii.0 ; length = ii.1 %]
+    [% ii = image.getBounds ; width = ii.0 ; length = ii.1 %]
+    [% url = config.generate_image(image) %]
+    <input
+      type="image"
+      name="regionview"
+      width="[% width %]"
+      height="[% height %]"
+      border="0"
+      align="middle"
+      src="[% config.generate_image(image) %]"
+    />
+  </center>
+
+[%- PROCESS 'end_section.tt2' -%]
+
+[% END %]

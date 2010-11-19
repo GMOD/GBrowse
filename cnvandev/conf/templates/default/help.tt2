@@ -1,0 +1,20 @@
+<html>
+<head>
+  <title>GBrowse Help</title>
+  <link rel="stylesheet" type="text/css" href="[% config.setting('stylesheet') %]"/>
+</head>
+<body>
+<div align="right">
+  <form method="POST" enctype="application/x-www-form-urlencoded">
+    <!-- FIXME this button does not close the window when clicked! -->
+    <input type="button" onclick="window.close()" value="[% config.tr('CLOSE_WINDOW') %]"/>
+  </form>
+</div>
+[% help_message %]
+<div align="right">
+  <form method="POST" action="[% referer %]" enctype="application/x-www-form-urlencoded">
+    <input type="button" onclick="window.close()" value="[% config.tr('CLOSE_WINDOW') %]"/>
+  </form>
+</div>
+</body>
+</html>

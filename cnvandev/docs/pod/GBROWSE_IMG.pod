@@ -1,0 +1,273 @@
+=head1 GBROWSE_IMG
+
+The gbrowse_img script is a CGI script to generate genome images via
+the Generic Genome Browser.
+
+=head1 SYNOPSIS
+
+ * <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=400">
+
+     Will generate a picture of the mec-3 region of the "wormbase"
+     data source.
+
+ * <iframe src="http://localhost/cgi-bin/gbrowse_img/wormbase?name=B0001;embed=1"width="100%" height="250">
+     <img src="http://localhost/cgi-bin/gbrowse_img/wormbase?name=B0001"/>
+   </iframe>
+
+ * <a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources">list</a>
+
+     Will return this document: 
+        ## Sources
+        fly
+        yeast
+        wormbase
+
+ * <a href="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?list=types">types</a>
+
+     Will return this document: 
+
+     ## Feature types for source wormbase
+     tRNA	tRNAs 
+     NG		Named Genes		   default 
+     CG		Curated genes		   default 
+     PG		Predicted genes 
+     WABA	Briggsae alignments (WABA) 
+     ESTB	ESTs aligned by BLAT (best) 
+     ESTO	ESTs aligned by BLAT (other) 
+     mRNAB	mRNAs aligned by BLAT (best) 
+     mRNAO	mRNAs aligned by BLAT (other) 
+     RNAi	RNAi experiments 
+     EXPR	Expression chip profiles 
+     WTP	Worm Transcriptome Project genes 
+     SNP	SNPs 
+     TcI	Transposon Insertions
+
+=head1 DESCRIPTION
+
+This CGI script is an interface to the Generic Genome Browser for the
+purpose of retrieving dynamic images of a region of the genome. It can
+be used as the destination of an <img> tag like this:
+
+ <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=III:1..1000">
+
+The script can also be used to superimpose one or more external
+features onto the display, for example for the purpose of displaying
+BLAST hits, an STS or a knockout in the context of the genome.
+
+=head2 CGI arguments
+
+The script recognizes the following CGI arguments, which can be passed
+either as GET or POST argument=value pairs. Argument pairs must be
+separated by semicolons (preferred) or by ampersands. Many of the
+options have one-letter aliases that can be used to reduce URL
+lengths.
+
+   Argument	Alias	Description
+   --------	-----	-----------
+   name		q	genomic landmark or range
+   type		t	tracks to include in image
+   width	w	desired width of image
+   options	o	list of track options (compact, labeled, etc)
+   abs		b	display position in absolute coordinates
+   add		a	added feature(s) to superimpose on the image
+   style	s	stylesheet for additional features
+   keystyle	k	where to place the image key
+   overview		force an overview-style display
+   flip		f	flip image left to right
+   embed		generate full HTML for image and imagemap 
+			for use in an embedded frame
+   format		format for the image (use "SVG" for 
+			scaleable vector graphics)
+   list			get certain types of configuration information
+   source		database name
+
+The arguments are explained in more detail here
+
+=over 4
+
+=item name (Alias: q)
+
+This argument specifies the region of the genome to be
+displayed. Several forms are recognized:
+
+   + name=Landmark 
+
+     Display the landmark named "Landmark". Valid landmark names
+     include chromosomes, contigs, clones, STSs, predicted genes, and
+     any other landmark that the administrator has designated. Be
+     careful when fetching large landmarks such as whole chromosomes!
+
+   + name=Landmark:start..end
+
+     Display the region between start and end relative to "Landmark".
+
+   + name=Class:Landmark
+
+     Display "Landmark", restricting to a particular class, such as
+     "PCR_Product". The list of classes is under the control of the
+     database administrator and is not yet available through this
+     interface.  
+
+   + name=Class:Landmark:start..end 
+
+     As above, but restricted to the designated range.
+
+If you use multiple name options, then this script will generate an
+overview image showing the position of each landmark. The alias "q"
+can be used to shorten the length of the URL.
+
+=item type (Alias: t)
+
+This argument lists the feature types to display. The value of this
+argument is a list of mnemonics separated by spaces ("+" characters
+when URL-escaped). For example:
+
+    <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;
+                 type=tRNA+NG+WABA+CG+ESTB">
+
+Multiple type= arguments will be combined to form a single
+space-delimited list. The alias "t" can be used to shorten the length
+of the URL.
+
+=item width (Alias: w)
+
+Width of the desired image, in pixels.
+
+=item options (Alias: o)
+
+A space-delimited list ("+" characters when URL-escaped) of
+mnemonic/option pairs describing how features should be
+formatted. Options are integers from 0 to 3, where 0=auto, 1=compact,
+2=expanded, 3=expanded and labeled. For example, to specify that the
+tRNA and NG tracks should always be expanded and labeled, but that the
+WABA track should be compact, use:
+
+  options=tRNA+3+NG+3+WABA+1
+      
+
+The alias "o" can be used to shorten the length of the URL.
+
+=item abs
+
+Use absolute (chromosome) coordinates when displaying the image. An
+argument of abs=1 will turn on absolute coordinate addressing. An
+argument of abs=0 will use relative coordinate addressing (this is the
+default).
+
+=item add (Alias: a)
+
+Superimpose one or more additional features on top of the view.
+Features are specified as space ("+") delimited lists in the following
+format:
+
+  add=Landmark+Type+Name+start..end,start..end,start..end
+      
+"Landmark" is the landmark name, "Type" is a descriptive type that
+will be printed in the image caption, "Name" is a name for the feature
+to be printed above it, and start..end is a comma-delimited list of
+ranges for discontinuous feature. Names that contain white space must
+be quoted, for example "BLAST hit". Note that this all has to be
+URL-escaped, so an additional feature named "Your Sequence", type
+"Blast Hit", that is located on chromosome III in a gapped range
+between 20000 and 22000, will be formatted as:
+
+  add=III+%22Blast%20Hit%22+%22Your%20Sequence%22+20000..21000,21550..22000
+
+One or both of the type and name can be omitted. If omitted, type will
+default to "Your Features" and the name will default to "Feature XX"
+where XX is an integer. This allows for a very simple feature line:
+
+  add=III+20000..21000,21550..22000
+      
+Multiple add= arguments are allowed. The alias "a" can be used to
+shorten the length of the URL.
+
+=item style
+
+The style argument can be used to control the rendering of additional
+features added with "add". It is a flattened version of the style
+configuration sections described in this document For example, if you
+have added a "Blast Hit" annotation, then you can tell the renderer to
+use a red arrow for this glyph in this way:
+
+  style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
+
+=item keystyle (Alias: k)
+
+Controls the positioning of the track key. One of "right", "left",
+"between" (default) or "bottom"
+
+=item overview
+
+Ordinarily the image will show the detail panel if the query region
+corresponds to a single region, and the overview panel if multiple
+regions match (or if a region that is too large to show
+matches). Setting overview=1 will force the overview to be shown in
+all cases.
+
+=item flip (Alias: f)
+
+Flip the image left to right. Arguments are 0=don't flip (default),
+and 1=flip.
+
+=item embed
+
+Generate image and a corresponding HTML imagemap in a form suitable
+for embedding into a frame.
+
+=item format
+
+Specify the format for the image file. Either "GD" (the default) or
+"GD::SVG" for scaleable vector graphics.
+
+=item list
+
+If this argument is present, it will cause the script to dump out
+various types of information in plain text form. Currently the two
+values for this argument are sources, to dump out the list of data
+sources, and types, to dump out the list of configured types. For
+list=sources, the script will return a simple text list of the data
+source names. For list=types, the script will return a three-column
+tab-delimited list giving the track names and feature types
+corresponding to the currently-selected data source. The format is as
+follows:
+
+  Mnemonic <tab> Full description of feature <tab> [default]
+
+The third column contains the word "default" if the track will be
+shown by default when no type argument is provided.
+
+=item source
+          This argument specifies the database for the images. The list
+          of sources can be found using list=sources.
+
+=back
+
+Putting it all together, here's a working (very long) URL:
+
+http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1
+
+If you wish to associate the image with an imagemap so that clicking
+on a feature takes the user to the destination configured in the
+gbrowse config file, you may do so by placing the URL in an <iframe>
+section and using the embed=1 flag:
+
+ <iframe src="http://localhost/cgi-bin/gbrowse_img/wormbase?name=B0001;embed=1"width="100%" height="250">
+    <img src="http://localhost/cgi-bin/gbrowse_img/wormbase?name=B0001"/>
+ </iframe>
+
+Placing an <img> tag inside the <iframe> tag arranges for older
+browsers that don't know about iframes to display the static image
+instead. You may need to adjust the width and height attributes in
+order to avoid browsers placing scrollbars around the frame.
+
+=head1 AUTHOR
+
+Lincoln Stein lstein@cshl.org
+
+Copyright (c) 2002-2004 Cold Spring Harbor Laboratory
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+For additional help, see The GMOD Project pages.

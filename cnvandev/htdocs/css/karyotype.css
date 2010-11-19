@@ -1,0 +1,37 @@
+div.hilite {
+    position:     absolute;
+    background:   lightblue;
+    cursor:       pointer;
+    filter:       alpha(opacity=50);
+    opacity:      0.5;
+}
+div.nohilite {
+    position:   absolute;
+    background: transparent;
+}
+span.hilite {
+    position:     absolute;
+    background:   lightblue;
+    filter:       alpha(opacity=50);
+    opacity:      0.5;
+}
+span.nohilite {
+    position:   absolute;
+    background: transparent;
+}
+tr.hilite {
+  background-color: lightblue;
+  cursor:     default;
+  color:      yellow;
+}
+tr.nohilite {
+  background-color: transparent;
+  color: black;
+}
+div#scrolling_table {
+  position:   relative;
+  max-height: 300px;
+  width:      100%;
+  background: transparent;
+  overflow:   auto;
+}

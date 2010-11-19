@@ -1,0 +1,12 @@
+<!-- Place Footer HTML Here -->
+<hr>
+<table width="100%">
+<TR>
+<TD align="LEFT" class="databody">
+For the source code for this browser, see the <a href="http://www.gmod.org">
+Generic Model Organism Database Project.</a>  For other questions, send
+mail to <a href="mailto:lstein@cshl.org">lstein@cshl.org</a>.
+</TD>
+</TR>
+</table>
+<hr>

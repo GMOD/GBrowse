@@ -1,0 +1,34 @@
+[%- SET count = multiple_segment_data.count -%]
+[%- SET max_keyword_results = multiple_segment_data.max_keyword_results -%]
+[%- SET overviews = multiple_segment_data.overviews -%]
+[%- SET ref_data = multiple_segment_data.ref_data -%]
+
+<table>
+<tr class='datatitle'>
+  <th colspan=4>[% config.tr('Hit_count',count) %]</th>
+</tr>
+[%- IF count >= max_keyword_results -%]
+  <tr class='datatitle'>
+    <th colspan=4>[% config.tr('Possible_truncation',max_keyword_results) %]</th>
+  </tr>
+[%- END -%]
+
+[%- FOREACH ref IN ref_data.keys.sort -%]
+  [%- SET id = ref.split().first -%]
+  <tr>
+    <th class='databody' align='center' colspan=4>
+      [%- config.tr('Matches_on_ref',ref) -%]<br>
+      [%- overviews.$ref -%]
+    </th>
+  </tr>
+
+  [%- FOREACH result IN ref_data.$ref -%]
+    <tr class='databody' valign='TOP'>
+      <th align='right'><a href="[% result.objref %]">[% result.name %]</a></th>
+      <td>[% result.description %]</td>
+      <th align='right'><a href="[% result.posref %]">[% result.position_description %]</a></th>
+      <td>[% config.tr('SCORE', result.score) %]</td>
+    <tr>
+  [%- END -%]
+[%- END -%]
+</table>

@@ -1,0 +1,98 @@
+@import url('gbrowse.css');
+
+/* These declarations give gbrowse a funky transparent look */
+
+BODY              { background: url(../images/backgrounds/lrock005.jpg);
+                    font-family: sans-serif;
+	            font-size: small;
+                  }
+.datatitle        { background-color: rgba(224,224,224,0.4);
+		   }
+.databody         { background-color: rgba(240,240,240,0.4);
+		  }
+.multiplechoicetitle  { background-color: lightblue;
+		        font-size: small;
+}
+.searchtitle      { background-color: rgb(240,240,240);
+		    background:       url(/gbrowse2/images/buttons/grey_0.4_pixel.png);
+		    background-color: rgba(240,240,240,0.4);
+	            font-size: small;
+		    margin-left:   1em;
+		    margin-right:  1em;
+}
+.searchbody       { background-color: rgb(224,224,224);
+		    background:       url(/gbrowse2/images/buttons/dark_0.4_pixel.png);
+		    background-color: rgba(224,224,224,0.4);
+		    margin-left:   1em;
+		    margin-right:  1em;
+		    margin-bottom: 3px;
+	            font-size: small;
+}
+.settingstitle    { background-color: rgb(224,224,224);
+		    background:       url(/gbrowse2/images/buttons/dark_0.4_pixel.png);
+		    background-color: rgba(224,224,224,0.4);
+		    margin-left:   1em;
+		    margin-right:  1em;
+	            font-size: small;
+}
+.settingsbody     { background-color: rgb(240,240,240);
+		    background:       url(/gbrowse2/images/buttons/grey_0.4_pixel.png);
+		    background-color: rgba(240,240,240,0.4);
+		    margin-left:  1em;
+		    margin-right: 1em;
+	            font-size: small;
+}
+.uploadtitle      { background-color: rgb(224,224,224);
+		    background:       url(/gbrowse2/images/buttons/dark_0.4_pixel.png);
+		    background-color: rgba(224,224,224,0.4);
+		    margin-left:  1em;
+		    margin-right: 1em;
+	            font-size: small;
+}
+.uploadbody       { background-color: rgb(240,240,240);
+		    background:       url(/gbrowse2/images/buttons/grey_0.4_pixel.png);
+		    background-color: rgba(240,240,240,0.4);
+		    margin-left:   1em;
+		    margin-right:  1em;
+	            font-size: small;
+}
+.tabmenu_active   { cursor: pointer;
+			color: black;
+			background-color: rgba(224,224,224,0.4);
+			font-size: 10pt;
+			font-weight: bold;
+                        font-family: sans-serif;
+			padding-top: 5px;
+			padding-left: 5px;
+			padding-right: 5px;
+			border-top:  thin solid;
+			border-left: thin solid;
+			border-right: thin solid;
+			border-bottom: thin solid;
+			border-bottom-color: beige;
+			z-index: 10;
+		      }
+.tabmenu_inactive { cursor: pointer;
+			color: blue;
+			font-size: 10pt;
+			background-color: transparent;
+			font-weight: bold;
+                        font-family: sans-serif;
+			padding-top:   5px;
+			padding-left:  5px;
+			padding-right: 5px;
+		      }
+.tabmenu_inactive:hover {
+    text-decoration: underline;
+}
+.tabbed {
+    background-color: transparent;
+}
+.tabmenu {
+    background-color: transparent;
+}
+.tabbody {
+    background-color: rgba(224,224,224,0.4);
+    padding-top: 5px;
+    border:   thin solid;
+}

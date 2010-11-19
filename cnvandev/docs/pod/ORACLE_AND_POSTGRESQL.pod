@@ -1,0 +1,139 @@
+=head1 Out of date
+
+This document is quite old and largely out of date.  There is full support
+for PostgreSQL for use with both Bio::DB::GFF and Bio::DB::SeqFeature::Store
+adaptors in BioPerl.  There is an Oracle adaptor for Bio::DB::GFF, but I
+don't know if it is currently functional, as I don't know if anybody is
+using it.  I don't know of any efforts to port the Bio::DB::SeqFeature::Store
+adaptor to Oracle.
+
+=head1 Oracle and PostgreSQL
+
+Support for various databases and database schemas are coming.  Right
+now, there is full support for the Bio::DB::GFF schema running on
+MySQL, preliminary support for the Bio::DB::GFF schema running on top
+of Oracle,  preliminary support for the Bio::DB::GFF schema running
+on top of PostgreSQL, and preliminary support for the BioSQL schema running
+on top of MySQL.  There is also support for the GadFly schema running on
+top of MySQL and PostgreSQL, but this uses an earlier (forked) version
+of GBrowse.  See L<README-berkeley-gadfly> for more details.
+
+=head2 Bio::DB::GFF on Oracle
+
+To run GBrowse on top of Oracle, you will need a recent version of
+BioPerl that contains Shuly Avraham's
+Bio::DB::GFF::Adaptor::dbi::oracleopt adaptor.  Create the database,
+name it, and set access permissions.  Then run the load_gff.pl script
+to initialize and load it with the GFF data:
+
+ load_gff.pl -c -adaptor dbi::oracleopt -user <user> -pass <pass> \
+             -dsn 'dbi:oracle:sid=<service>;host=<host>' yeast_data.gff
+
+Replace <service> with the service definition for your database, as
+well as the username, password and host fields.
+
+If you haven't already, you must configure Apache so that various
+Oracle environment variables are available to CGI scripts.  My
+httpd.conf file contains these declarations:
+
+ <Directory "/var/www/cgi-bin">
+    AllowOverride None
+    Options ExecCGI
+    Order allow,deny
+    Allow from all
+    SetEnv ORACLE_BASE /home/oracle
+    SetEnv ORACLE_HOME /home/oracle/Home
+    SetEnv ORACLE_SID  gbrowse
+    SetEnv NLS_LANG    AMERICAN_AMERICA.US7ASCII
+ </Directory>
+
+You will need to adjust these values to suit your particular Oracle
+installation.
+
+The final step is to tell GBrowse to use the Oracle database.  In the
+[GENERAL] section, enter the following values for db_adaptor and
+db_args:
+
+    db_adaptor = Bio::DB::GFF
+    db_args = -dsn     dbi:Oracle:sid=<service>;host=<host>
+              -adaptor dbi::oracleopt
+              -user    <username>
+              -pass    <password>
+
+Replace <service>, <host>, <username> and <password> with the values
+appropriate for your system.
+
+=head2 PostgreSQL
+
+In order to use Bio::DB::GFF with PostgreSQL (Pg), the Pg adaptor is
+required.  Pg version 7.3 or greater is required to use with this
+adaptor.  The adaptor is part of BioPerl but is not released yet;
+it will be part of the 1.3 release.  Until it is released, you can
+obtain a tarball of bioperl-live using this link: 
+
+   http://cvs.bioperl.org/cgi-bin/viewcvs/viewcvs.cgi/bioperl-live/bioperl-live.tar.gz?tarball=1&cvsroot=bioperl 
+
+   (note that pod2html usually breaks this URL--you will probably have to cut and paste it.)
+
+It is suggested that during the make process for BioPerl that you 
+run `make test` for the Pg adaptor.
+
+After successful installation of BioPerl, there are a few configuration
+items in Pg.  Before loading the data, the database must be created.
+The database can either be created from within psql or from the command 
+line:
+
+   % createdb --owner <username> <dbname>
+
+To load the data, two options are available from the BioPerl installation:
+
+=over
+
+=item bp_load_gff.pl
+
+This will incrementally load a database, optionally initializing
+it if it does not already exist.  This script will work correctly
+even if the PostgreSQL server is located on another host.
+
+=item bp_pg_bulk_load_gff.pl
+
+This Perl script will initialize a new Bio::DB::GFF database with
+a fresh schema, deleting anything that was there before.  It will
+then load the file.  Only suitable for use the very first time
+you create a database, or when you want to start from scratch!
+The bulk loader is as much as 10x faster than bp_load_gff.pl, but
+does not work in the situation in which the PostgreSQL database
+is running on a remote host.
+
+=back
+
+Next, the configuration must be set to work with Pg.  It is fairly
+straight forward.  First, the GBrowse configuration file needs the
+adaptor line changed to 'dbi::pg' (note that case matters):
+
+  [GENERAL]
+  description = C. elegans (via Wormbase Release 60
+  db_adaptor    = Bio::DB::GFF
+  db_args       = -dsn  dbi:Pg:dbname=chado
+                  -adaptor dbi::pg
+                  -user <username>
+                  -pass <password>
+
+Next, the database needs to have SELECT permission for the username
+that will do the querying.  While Postgres usernames and unix usernames
+are different things, it is usually easier to name them the same.  So,
+if your webserver is running as 'nobody' (which is typicall), run the
+following commands in psql as the database owner:
+
+  CREATE USER nobody;
+  GRANT SELECT ON TABLE fmeta                 TO nobody;
+  GRANT SELECT ON TABLE fgroup                TO nobody;
+  GRANT SELECT ON TABLE fdata                 TO nobody;
+  GRANT SELECT ON TABLE fattribute_to_feature TO nobody;
+  GRANT SELECT ON TABLE fdna                  TO nobody;
+  GRANT SELECT ON TABLE fattribute            TO nobody;
+  GRANT SELECT ON TABLE ftype                 TO nobody;
+
+That should be it.  If you encounter problems, please let Scott Cain
+(cain@cshl.org) know.
+

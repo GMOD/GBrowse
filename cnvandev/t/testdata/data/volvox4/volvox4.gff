@@ -1,0 +1,19 @@
+##gff-version 3
+# file: volvox4.gff
+
+ctgA	example	contig	1	50000	.	.	.	Name=ctgA
+ctgA	example	alignment	1659	1984	.	+	.	Name=Heterodox07
+ctgA	example	alignment	3014	6130	.	+	.	Name=Heterodox06
+ctgA	example	alignment	4715	5968	.	-	.	Name=Heterodox05
+ctgA	example	alignment	13280	16394	.	+	.	Name=Heterodox08
+ctgA	example	alignment	15329	15533	.	+	.	Name=Heterodox10
+ctgA	example	alignment	19157	22915	.	-	.	Name=Heterodox13
+ctgA	example	alignment	22132	24633	.	+	.	Name=Heterodox15
+ctgA	example	alignment	23072	23185	.	+	.	Name=Heterodox14
+ctgA	example	alignment	24562	28338	.	+	.	Name=Heterodox02
+ctgA	example	alignment	36034	38167	.	+	.	Name=Heterodox09
+ctgA	example	alignment	36649	40440	.	-	.	Name=Heterodox03
+ctgA	example	alignment	37242	38653	.	+	.	Name=Heterodox04
+ctgA	example	alignment	44705	47713	.	-	.	Name=Heterodox01
+ctgA	example	alignment	46990	48410	.	-	.	Name=Heterodox11
+ctgA	example	alignment	49758	50000	.	-	.	Name=Heterodox12

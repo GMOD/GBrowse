@@ -6,6 +6,7 @@ use Bio::Graphics::Browser2 "open_globals";
 use CGI::Session;
 use Digest::MD5 qw(md5_hex);
 use Getopt::Long;
+use GBrowse::ConfigData;
 use List::Util;
 
 # First, collect all the flags - or output the correct usage, if none listed.
@@ -62,8 +63,11 @@ if ($pprompt) {
 
 # Open the connections.
 my $globals = Bio::Graphics::Browser2->open_globals;
-my $users_credentials  = $globals->user_account_db or die "No users database credentials specified in GBrowse.conf.";
-my $userdb = DBI->connect($users_credentials) or die "Error: Could not open users database, please check your credentials.\n" . DBI->errstr;
+$dsn     ||= $globals->user_account_db or die "No users database credentials specified in GBrowse.conf.";
+
+my ($userdb,$uploadsdb);
+
+$userdb = DBI->connect($dsn) or die "Error: Could not open users database, please check your credentials.\n" . DBI->errstr;
 
 # Check the users DB, if requested.
 my $checked = 0;
@@ -89,7 +93,7 @@ if ($which_db =~ /(user|both|all)/i) {
         openid_url => "varchar(128) not null PRIMARY key"
     };
     
-    check_table($userdb, "users", $users_columns);
+    check_table($userdb, "users",        $users_columns);
     check_table($userdb, "openid_users", $openid_columns);
     check_uploads_ids($userdb);
     $checked = 1;
@@ -98,7 +102,7 @@ if ($which_db =~ /(user|both|all)/i) {
 # Check the uploads DB, if requested.
 if ($which_db =~ /(file|upload|both|all)/i) {
     my $uploads_credentials  = $globals->uploads_db or die "No uploads database credentials specified in GBrowse.conf.";
-    my $uploadsdb = DBI->connect($uploads_credentials) or die "Could not open uploads database, please check your credentials.\n" . DBI->errstr;
+    $uploadsdb           = DBI->connect($uploads_credentials) or die "Could not open uploads database, please check your credentials.\n" . DBI->errstr;
     
     # Database schema. To change the schema, update/add the fields here, and run this script.
     my $uploads_columns = {
@@ -119,10 +123,17 @@ if ($which_db =~ /(file|upload|both|all)/i) {
     check_table($uploadsdb, "uploads", $uploads_columns);
     check_all_files($userdb, $uploadsdb);
     $checked = 1;
-    $uploadsdb->disconnect;
     print STDERR "Please make sure your Gbrowse.conf file includes the following line:\n";
 }
-$userdb->disconnect;
+
+if ($userdb) {
+    fix_permissions($userdb,   'users');
+    $userdb->disconnect;
+}
+if ($uploadsdb) {
+    fix_permissions($uploadsdb,'uploads');
+    $uploadsdb->disconnect;
+}
 
 print STDERR $checked? "Done!" : "Unknown DB - please enter \"Users,\" \"Uploads,\" or \"Both.\"";
 print STDERR "\n\n";
@@ -139,25 +150,11 @@ sub check_table {
 
     # If the database doesn't exist, create it.
     unless ($data_source->do("SELECT * FROM $name LIMIT 1")) {
-        print STDERR ucfirst $name . " table didn't exist, creating...";
+        print STDERR ucfirst $name . " table didn't exist, creating...\n";
         my @column_descriptors = map { "$_ " . escape_enums($$columns{$_}) } keys %$columns; # This simply outputs %columns as "$key $value, ";
         my $creation_sql = "CREATE TABLE $name (" . (join ", ", @column_descriptors) . ")" . (($type =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
         $data_source->do($creation_sql) or die "Could not create $name database.\n";
-        
-        if ($type =~ /mysql/i) {
-            my $db_user = $dsn =~ /user=([^;]+)/i;
-            my $db_pass = $dsn =~ /password=([^;]+)/i;
-            $data_source->do("GRANT ALL PRIVILEGES on $name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") or die DBI->errstr;
-        }
-        if ($type =~ /sqlite/i) {
-            my $path = $dsn =~ /dbname=([^;]+)/i;
-            $path ||= $dsn =~ /DBI:SQLite:([^;]+)/i;
-            print STDERR "Using sudo to set ownership to $admin_user:$admin_pass. You may be prompted for your login password now.\n";
-            die "Couldn't figure out location of database index from $dsn" unless $path;
-            system "sudo chown $admin_user $path";
-            system "sudo chgrp $admin_pass $path";
-            print STDERR "Done.\n";
-        }
+
     }
 
     # If a required column doesn't exist, add it.
@@ -269,6 +266,36 @@ sub check_files {
 	return $all_ok;
 }
 
+sub fix_permissions {
+    my $data_source = shift or die "No database connection found, please check the gbrowse_metadb_config.pl script.\n";
+    my $name = shift        or die "No database name given, please check the gbrowse_metadb_config.pl script.\n";
+    my $type = $data_source->{Driver}->{Name};
+
+    if ($type =~ /mysql/i) {
+	my ($db_user) = $dsn =~ /user=([^;]+)/i;
+	my ($db_pass) = $dsn =~ /password=([^;]+)/i;
+	$data_source->do("GRANT ALL PRIVILEGES on $name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") or die DBI->errstr;
+    }
+    if ($type =~ /sqlite/i) {
+	my ($path) = $dsn =~ /dbname=([^;]+)/i;
+	unless ($path) {
+	    ($path) = $dsn =~ /DBI:SQLite:([^;]+)/i;
+	}
+	my $user  = GBrowse::ConfigData->config('wwwuser');
+	my $group = get_group_from_user($user);
+	unless ($group) {
+	    print STDERR "Unable to look up group for $user. Will not change ownerships on $path.\n";
+	    print STDERR "You should do this manually to give the Apache web server read/write access to $path.\n";
+	} else {
+	    print STDERR "Using sudo to set ownership to $user:$group. You may be prompted for your login password now.\n";
+	    die "Couldn't figure out location of database index from $dsn" unless $path;
+	    system "sudo chown $user $path";
+	    system "sudo chgrp $group $path";
+	    print STDERR "Done.\n";
+	}
+    }
+}
+
 # Add File (Full Path[, Imported, Description, Sharing Policy, Owner's Uploads ID]) - Adds $file to the database under a specified owner.
 # Database.pm's add_file() is dependant too many outside variables, not enough time to re-structure.
 sub add_file {    
@@ -305,4 +332,12 @@ sub escape_enums {
         $string = "varchar($length)" . $suffix[0];
     }
     return $string;
+}
+
+
+sub get_group_from_user {
+    my $user = shift;
+    my (undef,undef,undef,$gid) = getpwnam($user) or return;
+    my $group = getgrgid($gid);
+    return $group;
 }

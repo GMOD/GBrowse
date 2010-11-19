@@ -92,10 +92,8 @@ SelectArea.prototype.recenter = function(event) {
   var coord  = self.flip ? Math.round(self.segmentEnd - deltaSequenceStart)
                          : Math.round(self.segmentStart + deltaSequenceStart);
 
-  var detailsStart = parseInt(self.detailStart);
-  var detailsEnd = parseInt(self.detailEnd);
   var end  = self.segmentEnd;
-  var span = Math.abs(detailsEnd - detailsStart);
+  var span = Math.abs(TrackPan.viewable_segment_length);
   var half = Math.round(span/2);
 
   // don't fall off the ends
@@ -109,12 +107,18 @@ SelectArea.prototype.recenter = function(event) {
     end = start;
     start = tmp;
   }
-    
-  self.currentSegment = self.ref + ':' + start + '..' + end;
-  if (document.searchform) {
-    document.searchform.name.value = self.currentSegment;
+  
+  if (start >= this.detailStart && end <= this.detailEnd) {
+    // The segment is already loaded - just scroll to it
+    var scroll_to = TrackPan.position_from_start(start);
+    TrackPan.update_pan_position(scroll_to); 
+  } else {
+    self.currentSegment = self.ref + ':' + start + '..' + end;
+    if (document.searchform) {
+      document.searchform.name.value = self.currentSegment;
+    }
+    self.submit();
   }
-  self.submit();
 }
 
 // Cross-browser element coordinates
@@ -168,21 +172,13 @@ SelectArea.prototype.startRubber = function(self,event) {
   // deal with drag/select artifacts
   self.disableSelection(self.selectLayer);
 
-  self.selectPixelStart = self.eventLocation(event,'x');
+  self.selectPixelStart = self.eventLocation(event,'x') - self.elementLocation(self.selectLayer,'x1');
 
   YAHOO.util.Dom.setStyle(self.selectBox,'visibility','hidden');
   YAHOO.util.Dom.setStyle(self.selectBox,'left',self.selectPixelStart+'px');
   YAHOO.util.Dom.setStyle(self.selectBox,'width','2px');
   YAHOO.util.Dom.setStyle(self.selectBox,'text-align', 'center');	
   YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
-  
-  // height of select box to match height of detail panel
-  var h = self.elementLocation(self.selectLayer,'height');
-  YAHOO.util.Dom.setStyle(self.selectBox,'height',h+'px');
-  
-  // vertical offset may also need adjusting
-  var t = self.elementLocation(self.selectLayer,'y1');
-  YAHOO.util.Dom.setStyle(self.selectBox,'top',t+'px');
 
   var spanReport = self.spanReport || self.createAndAppend('p',self.selectBox,'spanReport');
   YAHOO.util.Dom.setStyle(spanReport,'color',self.fontColor||'black');
@@ -223,7 +219,7 @@ SelectArea.prototype.moveRubber = function(event) {
 
   var self = currentSelectArea;
   var selectPixelStart = self.selectPixelStart;
-  var selectPixelEnd   = self.eventLocation(event,'x');
+  var selectPixelEnd   = self.eventLocation(event,'x') - self.elementLocation(self.selectLayer,'x1');
   var selectPixelWidth = Math.abs(selectPixelStart - selectPixelEnd);
 
   var rev, left;
@@ -383,7 +379,8 @@ SelectArea.prototype.addSelectBox = function(view) {
 // this was breaking IE for some reason
 //  YAHOO.util.Dom.setStyle(box,'display', 'inline');
   YAHOO.util.Dom.setStyle(box,'visibility', 'hidden');
-  YAHOO.util.Dom.setStyle(box,'top',this.top+'px');
+  YAHOO.util.Dom.setStyle(box,'top','0px');
+  YAHOO.util.Dom.setStyle(box,'height','100%');
   YAHOO.util.Dom.setStyle(box,'left','0px');
   YAHOO.util.Dom.setStyle(box,'z-index',100);
   YAHOO.util.Dom.setStyle(box,'border',this.border||'none');

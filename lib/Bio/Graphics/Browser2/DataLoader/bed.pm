@@ -29,6 +29,7 @@ sub load_line {
 
 sub finish_load {
     my $self = shift;
+
     my $line_count = shift;
 
     $self->set_status('creating database');

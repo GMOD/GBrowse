@@ -793,9 +793,8 @@ sub suppress_title {
 
 sub description {
   my $self = shift;
-  return p("This is the base class for all GBrowse plugins.",
-	   "The fact that you're seeing this means that the author of",
-	   "this plugin hasn't yet entered a real description");
+  my $language = $self->language;
+  return p($self->language->tr('PLUGIN_BASE_CLASS_DESC'));
 }
 
 sub type {
@@ -906,10 +905,9 @@ sub db_search {
 sub dump {
   my $self    = shift;
   my $segment = shift;
+  my $language = $self->language;
   print header('text/plain');
-  print "This is the base class for all GBrowse plugins.\n",
-    "The fact that you're seeing this means that the author of ",
-      "this plugin hasn't yet implemented a real dump() method.\n";
+  print $self->language->tr('PLUGIN_BASE_CLASS_DUMP');
 }
 
 sub find {

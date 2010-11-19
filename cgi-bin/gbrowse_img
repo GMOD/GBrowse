@@ -179,6 +179,8 @@ sub render_image {
     $format = 'GD::SVG' if $format eq 'SVG';
     $format      = 'GD' if $embed;
 
+    $render->state->{details_mult} = 1;
+
     my ($img_data,$map) = $render->region->feature_count > 1 
                                  ? $self->render_multiple($renderer,$format,$flip,$embed)
 	                         : $self->render_tracks  ($renderer,$format,$flip,$embed);
@@ -281,6 +283,7 @@ sub render_tracks {
 						      image_class       => $format,
 						      flip              => $flip,
 						      -key_style        => 'between',
+						      -suppress_key     => 0,
 						      }
 						  );
     

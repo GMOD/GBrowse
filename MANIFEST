@@ -271,6 +271,8 @@ htdocs/images/buttons/red5.gif
 htdocs/images/buttons/red6.gif
 htdocs/images/buttons/red7.gif
 htdocs/images/buttons/red8.gif
+htdocs/images/buttons/ruler.png
+htdocs/images/buttons/ruler-icon.png
 htdocs/images/buttons/share.png
 htdocs/images/buttons/sortable.gif
 htdocs/images/buttons/sorted_down.gif
@@ -306,6 +308,7 @@ htdocs/images/help/worm_telomeric_spec.png
 htdocs/images/help/yeast_I_genes_spec.png
 htdocs/images/openid/aim-logo.png
 htdocs/images/openid/blogspot-logo.png
+htdocs/images/openid/google-logo.gif
 htdocs/images/openid/livejournal-logo.png
 htdocs/images/openid/myopenid-logo.png
 htdocs/images/openid/openid-logo.gif
@@ -335,6 +338,7 @@ htdocs/js/overviewSelect.js
 htdocs/js/prototype.js
 htdocs/js/regionSelect.js
 htdocs/js/rubber.js
+htdocs/js/ruler.js
 htdocs/js/scriptaculous.js
 htdocs/js/scrollfix.js
 htdocs/js/slider.js
@@ -345,6 +349,7 @@ htdocs/js/tabs.js
 htdocs/js/toggle.js
 htdocs/js/track.js
 htdocs/js/track_configure.js
+htdocs/js/track_pan.js
 htdocs/js/unittest.js
 htdocs/js/x_cook.js
 htdocs/js/yahoo-dom-event.js

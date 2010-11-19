@@ -7,10 +7,10 @@ use Carp 'croak';
 use File::Basename 'basename';
 use base 'Bio::Graphics::Browser2::DataLoader';
 
+use constant TOO_SMALL_FOR_SUMMARY_MODE => 10000;  # don't go into summary mode
+
 my @COLORS = qw(blue red orange brown mauve peach green cyan 
                 black yellow cyan papayawhip coral);
-
-use constant TOO_SMALL_FOR_SUMMARY_MODE => 10000;  # don't go into summary mode
 
 my $DUMPING_FIXED;  # flag that we patched Bio::SeqFeature::Lite
 
@@ -41,7 +41,7 @@ sub Loader {
 }
 
 sub finish_load {
-    my $self  = shift;
+    my $self = shift;
     my $line_count = shift;
 
     $self->set_status('creating database');
@@ -226,7 +226,7 @@ sub {
 END
 }
 
-# shamelessly copied from Bio::Graphics:;FeatureFile.
+# shamelessly copied from Bio::Graphics::FeatureFile.
 sub _state_transition {
     my $self = shift;
     my ($current_state,$line) = @_;

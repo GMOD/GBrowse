@@ -3,6 +3,8 @@ package Bio::Graphics::Browser2::RenderPanels;
 use strict;
 use warnings;
 
+use GD 'gdTransparent','gdStyled';
+
 use Bio::Graphics;
 use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
@@ -13,7 +15,6 @@ use Bio::Graphics::Browser2::Render::Slave::Status;
 use IO::File;
 use Time::HiRes 'sleep','time';
 use POSIX 'WNOHANG','setsid';
-
 use CGI qw(:standard param escape unescape);
 
 use constant TRUE  => 1;
@@ -356,6 +357,7 @@ sub drag_and_drop {
   1;
 }
 
+# Returns the full HTML listing of all requested tracks.
 sub render_tracks {
     my $self     = shift;
     my $requests = shift;
@@ -367,6 +369,7 @@ sub render_tracks {
         my $data   = $requests->{$label};
         my $gd     = eval{$data->gd} or next;
         my $map    = $data->map;
+        my $titles = $data->titles;
         my $width  = $data->width;
         my $height = $data->height;
         my $url    = $self->source->generate_image($gd);
@@ -380,6 +383,7 @@ sub render_tracks {
             width    => $width,
             height   => $height,
             url      => $url,
+	    titles   => $titles,
             status   => $status,
 	    section  => $args->{section},
         );
@@ -388,6 +392,7 @@ sub render_tracks {
     return \%result;
 }
 
+# Returns the HMTL to show a track with controls, title, arrows, etc.
 sub wrap_rendered_track {
     my $self   = shift;
     my %args   = @_;
@@ -396,6 +401,7 @@ sub wrap_rendered_track {
     my $width  = $args{'width'};
     my $height = $args{'height'};
     my $url    = $args{'url'};
+    my $titles = $args{'titles'};
 
     # track_type Used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
@@ -486,7 +492,7 @@ sub wrap_rendered_track {
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
     my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
 
-    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label',true)" unless $label =~ /^(http|ftp)/;
+    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
     my $title;
     if ($label =~ /^file:/) {
@@ -589,48 +595,43 @@ sub wrap_rendered_track {
         }
     );
 
+    my $overlay_div = '';
 
-    # Add arrows for pannning to details scalebar panel
+    # Add arrows for panning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
 # works with IE7, but looks awful. IE8 should support standard css opacity.
 #	$style      .= ';filter:alpha(opacity=30);moz-opacity:0.35';
         my $pan_left   =  img({
-	    -style   => $style . ';left:10px',
+	    -style   => $style . ';left:5px',
 	    -class   => 'panleft',
 	    -src     => "$buttons/panleft.png",
 	    -onClick => "Controller.scroll('left',0.5)"
-			      },
-	    );
- 	my $pan_left2  =  img({
-             -style   => $style . ';left:-3px',
-             -class   => 'panleft',
-             -src     => "$buttons/panleft2.png",
-             -onClick => "Controller.scroll('left',1)",
-                               },
-             );
+	});
 
-	my $pan_right  = img({ -style   => $style . ';right:10px',
-			       -class   => 'panright',
-			       -src     => "$buttons/panright.png",
-			       -onClick => "Controller.scroll('right',0.5)",
-			     }
-	    );
-        my $pan_right2  = img({ -style   => $style . ';right:-3px',
-                               -class   => 'panright',
-                               -src     => "$buttons/panright2.png",
-                               -onClick => "Controller.scroll('right',1)",
-                             }
-            );
+	my $pan_right  = img({ 
+	    -style   => $style . ';right:5px',
+	    -class   => 'panright',
+	    -src     => "$buttons/panright.png",
+	    -onClick => "Controller.scroll('right',0.5)",
+	});
+	
+	my $scale_div = div( { -id => "detail_scale_scale", -style => "position:absolute; top:5px", }, "" );
 
-	$img = $pan_left2 . $pan_left . $img . $pan_right . $pan_right2;
+        $overlay_div = div( { -id => "${label}_overlay_div", -style => "position:absolute; top:0px; width:100%; left:0px", }, $pan_left . $pan_right . $scale_div);
     }
-     return div({-class=>'centered_block',
-		 -style=>"width:${width}px;position:relative"
-		},
- 	       ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
-         . ( $map_html || '' );
 
+    my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
+
+    my $subtrack_labels = join '',map {
+	my ($label,$left,$top) = @$_;
+	div({-class=>'subtrack',-style=>"top:${top}px;left:20px"},$label);
+    } @$titles;
+
+    return div({-class=>'centered_block',
+		 -style=>"position:relative;overflow:hidden"
+		},
+                ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 
@@ -668,7 +669,7 @@ sub run_remote_requests {
   my $settings   = $self->settings;
   my $lang       = $self->language;
   my %env        = map {$_=>$ENV{$_}}    grep /^(GBROWSE|HTTP)/,keys %ENV;
-  my %args       = map {$_=>$args->{$_}} grep /^-/,keys %$args;
+  my %args       = map {$_=>$args->{$_}} grep /^-/,keys %$args;									#/
 
   $args{$_}  = $args->{$_} foreach ('section','image_class','cache_extra');
 
@@ -752,10 +753,12 @@ sub run_remote_requests {
 	    my $contents = Storable::thaw($response->content);
 	    for my $label (keys %$contents) {
 		my $map = $contents->{$label}{map}        
-		or die "Expected a map from remote server, but got nothing!";
+		  or die "Expected a map from remote server, but got nothing!";
+		my $titles = $contents->{$label}{titles}        
+		  or die "Expected titles from remote server, but got nothing!";
 		my $gd2 = $contents->{$label}{imagedata}  
-		or die "Expected imagedata from remote server, but got nothing!";
-		$requests->{$label}->put_data($gd2,$map);
+		  or die "Expected imagedata from remote server, but got nothing!";
+		$requests->{$label}->put_data($gd2,$map,$titles);
 	    }
 	    $slave_status->mark_up($url);
 	}
@@ -930,32 +933,13 @@ sub render_scale_bar {
 
     my $panel = Bio::Graphics::Panel->new( @panel_args, );
 
-    # I don't understand why I need to add the pad to the width, since the
-    # other panels don't do it but in order for the scale bar to be the same
-    # size as the other panels, I need to do it.
-    my $image_pad = $self->image_padding;
-    my $padl      = $source->global_setting('pad_left');
-    my $padr      = $source->global_setting('pad_right');
-    $padl = $image_pad unless defined $padl;
-    $padr = $image_pad unless defined $padr;
-    my $width = $state->{'width'} * $self->overview_ratio() + $padl + $padr;
+    my $width = ($section eq 'detail')? $self->render->get_detail_image_width($state) : $self->render->get_image_width($state);
 
     # no cached data, so do it ourselves
     unless ($gd) {
         my $units = $source->global_setting('units') || '';
         my $no_tick_units = $source->global_setting('no tick units');
 
-	if ($args{section} eq 'detail') {
-	    my $scale_feature = $self->make_scale_feature($wide_segment,
-							  $state->{width});
-	    $panel->add_track(
-		$scale_feature,
-		-glyph    => 'span',
-		-label    => 1,
-		-height   => 6,
-		-label_position => 'left'
-		);
-	}
 
         $panel->add_track(
              $wide_segment,
@@ -1009,7 +993,7 @@ sub render_image_pad {
 	my $panel = Bio::Graphics::Panel->new(@panel_args);
 	$cache->lock;
 	my $gd = $panel->gd;
-	$cache->put_data($gd,'');
+	$cache->put_data($gd,'',[]);
     }
 
     my $gd = $cache->gd;
@@ -1032,11 +1016,9 @@ sub label_density {
       || 10;
 }
 
-sub make_scale_feature {
+sub calculate_scale_size {
     my $self      = shift;
-    my ($segment,$width) = @_;
-    return unless $segment;
-    my $length = $segment->length;
+    my ($length,$width) = @_;
 
     # how long is 1/5 of the width?
     my $scale        = $length/$width;
@@ -1050,12 +1032,29 @@ sub make_scale_feature {
     elsif ($base < 5) { $base = 5 }
     else              { $base = 10};
     $guesstimate = $base * $exp;
-
     my $label    = $self->source->unit_label($guesstimate);
+
+    return ($guesstimate, $label);
+}
+
+sub log10 { log(shift)/log(10) }
+
+# Deprecated. This method was used to add the scale to the detail scale track. This is now done in javascript.
+sub make_scale_feature {
+    my $self      = shift;
+    my ($segment,$width) = @_;
+    return unless $segment;
+
+    my $length   = $segment->length / $self->details_mult;
+
+    my ($guesstimate, $label) = $self->calculate_scale_size($length, $width);
+
+    my $scale = $segment->length/$width;
+
     $label       .= ' '; # more attractive
     my $size     = $guesstimate/$scale;
     my $left     = ($width-$size)/2;
-    my $start    = int ($segment->start + $left * $scale);
+    my $start    = int (($segment->start + $segment->end)/2 - $guesstimate/2);
     my $end      = $start + $guesstimate - 1;
 
     return Bio::Graphics::Feature->new(-display_name => $label,
@@ -1063,8 +1062,6 @@ sub make_scale_feature {
 				       -end          => $end,
 				       -seq_id       => $segment->seq_id);
 }
-
-sub log10 { log(shift)/log(10) }
 
 sub make_map {
   my $self = shift;
@@ -1330,7 +1327,8 @@ sub run_local_requests {
 	my $multiple_tracks = $base =~ /^(http|ftp|file|das|plugin):/ 
 	    || $source->code_setting($base=>'remote feature');
 
-        my @keystyle = ( -key_style => 'between' )
+        my @keystyle = ( -key_style    => 'between',
+	    )
             if $multiple_tracks;
 
 	my $key = $source->setting( $base => 'key' ) || '' ;
@@ -1365,11 +1363,12 @@ sub run_local_requests {
 	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" } unless $has_sigset;
 	    alarm($timeout);
 
-	    my ($gd,$map);
+	    my ($gd,$map,$titles);
 
 	    if (my $hide = $source->semantic_setting($label=>'hide',$self->segment_length)) {
-		$gd  = $self->render_hidden_track($hide,$args);
-		$map = [];
+		$gd     = $self->render_hidden_track($hide,$args);
+		$map    = [];
+		$titles = [];
 	    }
 
 	    else {
@@ -1410,7 +1409,9 @@ sub run_local_requests {
 		}
 
 		# == generate the images and maps in background==
-		$gd  = $panel->gd;
+		$gd     = $panel->gd;
+		$titles = $panel->key_boxes;
+		foreach (@$titles) {splice (@$_,-1)}  # don't want to store all track config data to cache!
 		$self->debugging_rectangles($gd,scalar $panel->boxes)
 		    if DEBUGGING_RECTANGLES;
 		$map = $self->make_map( scalar $panel->boxes,
@@ -1418,7 +1419,7 @@ sub run_local_requests {
 					\%trackmap, 0 );
 	    }
 
-	    $requests->{$label}->put_data($gd, $map );
+	    $requests->{$label}->put_data($gd, $map, $titles );
 	    alarm(0);
 	};
 	alarm(0);
@@ -1477,7 +1478,7 @@ sub select_features_menu {
 			   -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
 			   -onClick      => $subtrack_click
 			  },
-			  $self->language->tr('SHOWING_SUBTRACKS',$selected,$total));
+			  $self->language->tr('SHOWING_SUBTRACKS',$selected,$total));						#;
     
 }
 
@@ -1640,7 +1641,8 @@ sub add_features_to_track {
 							       -name       => $stt->id2label($id),
 							       -start      => $segment->start,
 							       -end        => $segment->end,
-							       -seq_id    => $segment->seq_id);
+							       -seq_id     => $segment->seq_id,
+		  );
 	      $has_subtracks{$l}++;
 	      $groups{$l}{$id}->add_segment($feature);
 	      next;
@@ -1853,8 +1855,8 @@ sub create_panel_args {
     $postgrid  = hilite_regions_closure(
 	            [$detail_start,
 		     $detail_stop,
-		     $self->hilite_fill(),
-		     $self->hilite_outline()
+		     $self->loaded_segment_fill(),
+		     $self->loaded_segment_outline()
 		    ]);
   }
   elsif ($section eq 'detail'){
@@ -1872,8 +1874,9 @@ sub create_panel_args {
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
 	      -key_color    => $source->global_setting('key bgcolor')      || 'moccasin',
 	      -bgcolor      => $source->global_setting("$section bgcolor") || 'wheat',
-	      -width        => $settings->{width},
+	      -width        => $section eq 'detail'? $settings->{width} * $self->details_mult : $settings->{width},
 	      -key_style    => $keystyle,
+              -suppress_key => 1,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $image_class->gdMediumBoldFont->height+2,
               -pad_bottom   => 3,
@@ -2053,8 +2056,7 @@ sub get_cache_base {
     return $path;
 }
 
-# Convert the cached image map data
-# into HTML.
+# Returns the HTML image map from the cached image map data.
 sub map_html {
   my $self = shift;
   my $map  = shift;
@@ -2421,22 +2423,28 @@ sub hilite_regions_closure {
             # -- otherwise it looks funny.
             if ( $fgcolor && $fgcolor ne 'none' ) {
                 my $c = $panel->translate_color($fgcolor);
-                $gd->line( $left + $start, 0, $left + $start, $bottom, $c );
-                $gd->line( $left + $end,   0, $left + $end,   $bottom, $c );
+                $gd->setStyle($c,$c,gdTransparent,gdTransparent);#,gdTransparent,gdTransparent,gdTransparent);
+                $gd->line( $left + $start, 0, $left + $start, $bottom, gdStyled );
+                $gd->line( $left + $end,   0, $left + $end,   $bottom, gdStyled );
             }
         }
 
     };
 }
 
-sub hilite_fill {
+sub loaded_segment_fill {
     my $self = shift;
-    return $self->source->global_setting('hilite fill') || 'yellow';
+    return $self->source->global_setting('loaded segment fill') || 'none';
 }
 
-sub hilite_outline {
+sub loaded_segment_outline {
     my $self = shift;
-    return $self->source->global_setting('hilite outline') || 'yellow';
+    return $self->source->global_setting('loaded segment outline') || 'gray';
+}
+
+sub details_mult {
+    my $self = shift;
+    return $self->settings->{details_mult} || 1;
 }
 
 1;

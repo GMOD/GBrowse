@@ -43,6 +43,11 @@ var GBrowseTrack = Class.create({
     return this.last_update_key;
   },
 
+  get_image_div:
+  function () {
+    return $(this.track_id+'_inner_div');
+  },
+
   is_standard_track:
   function () {
     return this.standard_track;

@@ -4,17 +4,18 @@ package Bio::Graphics::Browser2::Action;
 # dispatch
 
 use strict;
-use Carp 'croak';
+use Carp qw(croak confess cluck);
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
 use File::Basename 'basename';
 use JSON;
 use constant DEBUG => 0;
+use Data::Dumper;
 
 sub new {
     my $class  = shift;
     my $render = shift;
-    return bless \$render,ref $class || $class;
+    return bless \$render, ref $class || $class;
 }
 
 sub render {
@@ -60,10 +61,13 @@ sub ACTION_navigate {
     my $source   = $self->data_source;
     my $settings = $self->settings;
 
-    my $action = $q->param('navigate') 
-	or croak "for the navigate action, a CGI argument named \"navigate\" must be present";
+    my $action = $q->param('navigate') or croak "for the navigate action, a CGI argument named \"navigate\" must be present";
+
+    $render->state->{view_start} = ($q->param('view_start') && $q->param('view_start') >= 0)? $q->param('view_start') : $render->state->{view_start},
+    $render->state->{view_stop}  = ($q->param('view_stop')  && $q->param('view_stop')  >= 0)? $q->param('view_stop')  : $render->state->{view_stop},
 
     my $updated = $render->asynchronous_update_coordinates($action);
+
     $render->init_database() if $updated;
 
     my ( $track_keys, $display_details, $details_msg )
@@ -101,11 +105,13 @@ sub ACTION_update_sections {
     my $self    = shift;
     my $q       = shift;
 
-    my $render  = $self->render;
+    my $render = $self->render;
     my @section_names = $q->param('section_names');
-
-    my $section_html
-	= $render->asynchronous_update_sections( \@section_names );
+    my $keyword = $q->param('keyword');
+    my $offset = $q->param('offset');
+    
+    my @args = (\@section_names);
+    my $section_html = $render->asynchronous_update_sections(\@section_names, $keyword, $offset);
 
     my $return_object = { section_html => $section_html, };
     return ( 200, 'application/json', $return_object );
@@ -140,7 +146,9 @@ sub ACTION_download_track_menu {
     my $self = shift;
     my $q    = shift;
     my $track_name = $q->param('track') or croak;
-    my $html       = $self->render->download_track_menu($track_name);
+    my $view_start = $q->param('view_start');
+    my $view_stop  = $q->param('view_stop');
+    my $html       = $self->render->download_track_menu($track_name,$view_start,$view_stop);
     return ( 200, 'text/html', $html );
 }
 
@@ -324,6 +332,9 @@ sub ACTION_set_display_option {
 
 sub ACTION_bookmark {
     my $self = shift;
+    my $q    = shift;
+    $self->state->{start} = $q->param('view_start') || $self->state->{start};
+    $self->state->{stop}  = $q->param('view_stop')  || $self->state->{stop};
     return (302,undef,$self->render->bookmark_link($self->state));
 }
 
@@ -358,7 +369,7 @@ sub ACTION_authorize_login {
     my $openid   = $q->param('openid');   # or croak;
     my $remember = $q->param('remember'); # or croak;
 
-    my ($id,$nonce) = $self->render->authorize_user($username,$session,$remember,$openid);
+    my ($id,$nonce) = $self->render->authorize_user($username, $session, $remember, $openid);
     return (200,'application/json',{id=>$id,authority=>$nonce});
 }
 
@@ -367,9 +378,10 @@ sub ACTION_register_upload {
     my $q    = shift;
     my $id   = $q->param('upload_id');
     my $name = $q->param('upload_name');
+    my $userdata = $self->render->usertracks;
 
     if ($id && $name) {
-	$self->state->{uploads}{$id} = [$name,0];
+		$self->state->{uploads}{$id} = [$userdata->escape_url($name), 0];
     }
 
     return (204,'text/plain',undef);
@@ -379,39 +391,40 @@ sub ACTION_upload_file {
     my $self = shift;
     my $q    = shift;
 
-    my $fh   = $q->param('file');
+    my $fh = $q->param('file');
     my $data = $q->param('data');
-    my $url  = $q->param('mirror_url');
+    my $url = $q->param('mirror_url');
     my $workaround = $q->param('workaround');
+    my $overwrite = $q->param('overwrite') || 0;
 
     ($fh || $data || $url) or 
 	return(200,'text/html',JSON::to_json({success=>0,
 					      error_msg=>'empty file'}
 	       ));
-
-    my $upload_id = $q->param('upload_id');
+	       
+	my $upload_id = $q->param('upload_id');
 
     my $render   = $self->render;
     my $state    = $self->state;
     my $session  = $render->session;
 
     my $usertracks = $render->user_tracks;
-    my $name       = $fh  ? basename($fh) 
-	            :$url ? $url
+    my $name       = $fh ? basename($fh) 
+	           			: $url ? $url
                           : $q->param('name');
     $name  ||= 'Uploaded file';
 
-    my $content_type = $fh ? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain';
+    my $content_type = "text/plain"; #? fh? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain'; - seems to be a problem with UploadInfo().
 
-    my $track_name = $usertracks->trackname_from_url($name);
+    my $track_name = $usertracks->escape_url($name);
 
     $state->{uploads}{$upload_id} = [$track_name,$$];
     $session->flush();
     $session->unlock();
     
-    my ($result,$msg,$tracks,$pid) = $url  ? $usertracks->mirror_url($track_name,  $url, 1)
-                                    :$data ? $usertracks->upload_data($track_name, $data,$content_type, 1)
-                                           : $usertracks->upload_file($track_name, $fh,  $content_type, 1);
+    my ($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1)
+                                       :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1)
+                                              : $usertracks->upload_file($track_name, $fh, $content_type, $overwrite);
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
@@ -423,23 +436,26 @@ sub ACTION_upload_file {
     $msg =~ s/\n.+\Z//s;
     $msg =~ s/[\n"]/ /g;
 
-    my $return_object        = { success   => $result||0,
-				 error_msg => CGI::escapeHTML($msg),
-				 tracks    => $tracks,
-				 uploadName=> $name,
-                               };
-    return (200,'text/html',JSON::to_json($return_object)) if $workaround;
-    return (200,'application/json',$return_object);
+    my $return_object = {
+    	success		=> $result || 0,
+		error_msg	=> CGI::escapeHTML($msg),
+		tracks		=> $tracks,
+		uploadName	=> $name,
+    };
+    
+    return (200, 'text/html', JSON::to_json($return_object));
+    #return (200, 'application/json', $return_object);
 }
 
 sub ACTION_import_track {
     my $self = shift;
-    my $q    = shift;
-
+    my $q    = shift;	
+	
     my $url = $q->param('url') or 
-	return(200,'text/html',JSON::to_json({success=>0,
-					      error_msg=>'no URL provided'}
-	       ));
+	return(200, 'text/html', JSON::to_json({
+						success=>0,
+					    error_msg=>'no URL provided'
+	}));
 
     my $upload_id  = $q->param('upload_id');
     my $workaround = $q->param('workaround');
@@ -450,43 +466,46 @@ sub ACTION_import_track {
 
     my $usertracks = $render->user_tracks;
     (my $track_name = $url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
-    $state->{uploads}{$upload_id} = [$track_name,$$];
-    $session->flush();
-    $session->unlock();
+    $state->{uploads}{$upload_id} = [$track_name, $$];
+    $session->flush;
+    $session->unlock;
     
-    my ($result,$msg,$tracks) = $usertracks->import_url($url);
+    my ($result, $msg, $tracks) = $usertracks->import_url($url);
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
-    $session->flush();
-    $session->unlock();
-
-    my $return_object        = { success   => $result||0,
-				 error_msg => CGI::escapeHTML($msg),
-				 tracks    => $tracks ,
-				 uploadName=> $url,
-                               };
-    return (200,'text/html',JSON::to_json($return_object)) if $workaround;
-    return (200,'application/json',$return_object);
+    $session->flush;
+    $session->unlock;
+    
+    my $return_object = {
+    		success   => $result || 0,
+			error_msg => CGI::escapeHTML($msg),
+			tracks    => $tracks,
+			uploadName=> $url,
+	};
+                                   
+    return (200, 'text/html', JSON::to_json($return_object));
+    #return (200, 'application/json', {tracks => $tracks});
 }
 
 sub ACTION_delete_upload {
     my $self  = shift;
     my $q     = shift;
 
-    my $file   = $q->param('file') or croak;
+    my $file   = $q->param('upload_id') or croak;
     my $render = $self->render;
 
     my $usertracks = $render->user_tracks;
     my @tracks     = $usertracks->labels($file);
     
     foreach (@tracks) {
-	my (undef,@db_args) = $self->data_source->db_settings($_);
-	Bio::Graphics::Browser2::DataBase->delete_database(@db_args);
-	$render->remove_track_from_state($_);
+		my (undef,@db_args) = $self->data_source->db_settings($_);
+		Bio::Graphics::Browser2::DataBase->delete_database(@db_args);
+		$render->remove_track_from_state($_);
     }
     $usertracks->delete_file($file);
-
-    return (200,'application/json',{tracks=>\@tracks});
+    
+    return (200, 'text/html', JSON::to_json({tracks => \@tracks}));
+    #return (200, 'application/json', {tracks => \@tracks});
 }
 
 sub ACTION_upload_status {
@@ -500,13 +519,14 @@ sub ACTION_upload_status {
 
     my $state      = $self->state;
     my $render     = $self->render;
-
+	
     if ($file_name = $state->{uploads}{$upload_id}[0]) {
-	my $usertracks = $render->user_tracks;
-	$status      = $usertracks->status($file_name);
-	return (200,'text/html',"<b>$file_name:</b> <i>$status</i>");
+		my $usertracks = $render->user_tracks;
+		my $file = $usertracks->database? $usertracks->get_file_id($file_name) : $file_name;
+		$status		   = $usertracks->status($file);
+		return (200,'text/html', "<b>$file_name:</b> <i>$status</i>");
     } else {
-	return (500,'text/html',"not found");
+		return (500,'text/html', "not found");
     }
 }
 
@@ -517,17 +537,16 @@ sub ACTION_cancel_upload {
 
     my $state      = $self->state;
     my $render     = $self->render;
-
-    if ($state->{uploads}{$upload_id} && (my ($file_name,$pid) = @{$state->{uploads}{$upload_id}})) {
 	my $usertracks = $render->user_tracks;
+    if ($state->{uploads}{$upload_id} && (my ($file_name, $pid) = @{$state->{uploads}{$upload_id}})) {
 	kill TERM=>$pid;
-	$usertracks->delete_file($file_name);
+	my $file = ($usertracks =~ /database/)? $usertracks->get_file_id($file_name) : $file_name;
+	$usertracks->delete_file($file);
 	delete $state->{uploads}{$upload_id};
-	return (200,'text/html',"<div class='error'><b>$file_name:</b> <i>Cancelling</i></div>");
+	return (200,'text/html',"<b>$file_name:</b> <i>" . $self->render->translate('CANCELLING') . "</i>");
     } else {
-	return (200,'text/html','<div class="error"><i>Not found</i></div>');
+	return (200,'text/html',"<i>" . $self->render->translate('NOT_FOUND') . "</i>");
     }
-    
 }
 
 sub ACTION_set_upload_description {
@@ -536,34 +555,86 @@ sub ACTION_set_upload_description {
 
     my $state       = $self->state;
     my $render      = $self->render;
-    my $upload_name = $q->param('upload_name') or croak;
-    my $upload_desc = $q->param('description') or croak;
+    my $file = $q->param('upload_id') or confess "No file given to set_upload_description.";
+    my $new_description = $q->param('description');
 
     my $usertracks = $render->user_tracks;
-    $usertracks->description($upload_name,$upload_desc);
+    $usertracks->description($file, $new_description);
     return (204,'text/plain',undef);
+}
+
+sub ACTION_set_upload_title {
+    my $self = shift;
+    my $q    = shift;
+
+    my $state       = $self->state;
+    my $render      = $self->render;
+    my $file = $q->param('upload_id') or confess "No file given to set_upload_title.";
+    my $new_title = $q->param('title') or confess "No new title given to set_upload_title.";
+
+    my $usertracks = $render->user_tracks;
+    $usertracks->title($file, $new_title);
+    return (204,'text/plain',undef);
+}
+
+sub ACTION_share_file {
+	my $self = shift;
+	my $q = shift;
+	my $render = $self->render;
+    my $fileid = $q->param('fileid') or confess "No file ID given to share_file.";
+    my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
+
+    my $usertracks = $render->user_tracks;
+    my @tracks     = $usertracks->labels($fileid);
+    $usertracks->share($fileid, $userid);
+    return (200, 'text/plain', JSON::to_json({tracks => \@tracks}));
+}
+
+sub ACTION_unshare_file {
+	my $self = shift;
+	my $q = shift;
+	my $render = $self->render;
+    my $fileid = $q->param('fileid') or confess "No file ID given to unshare_file.";
+    my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
+
+    my $usertracks = $render->user_tracks;
+    my @tracks     = $usertracks->labels($fileid);
+    $usertracks->unshare($fileid, $userid);
+    return (200, 'text/plain', JSON::to_json({tracks => \@tracks}));	
+}
+
+sub ACTION_change_permissions {
+	my $self = shift;
+	my $q = shift;
+	my $render = $self->render;
+    my $fileid = $q->param('fileid') or confess "No file ID given to change_permissions.";
+    my $new_policy = $q->param('sharing_policy') or confess "No new sharing policy given to change_permissions.";
+
+    my $usertracks = $render->user_tracks;
+    $usertracks->permissions($fileid, $new_policy);
+    return (204, 'text/plain', undef);	
 }
 
 sub ACTION_modifyUserData {
     my $self = shift;
     my $q    = shift;
     my $ftype     = $q->param('sourceFile');
-    my $track     = $q->param('track');
+    my $file     = $q->param('file');
     my $text      = $q->param('data');
     my $upload_id = $q->param('upload_id');
 
     my $userdata = $self->render->user_tracks;
     my $state    = $self->state;
 
-    $state->{uploads}{$upload_id} = [$ftype,$$];
+    $state->{uploads}{$upload_id} = [$userdata->escape_url($ftype),$$];
 
     if ($ftype eq 'conf') {
-	$userdata->merge_conf($track,$text);
+	$userdata->merge_conf($file, $text);
     } else {
-	$userdata->upload_data($track,$text,'text/plain',1); # overwrite
+	$userdata->upload_data($ftype, $text, 'text/plain', 1); # overwrite
     }
     delete $state->{uploads}{$upload_id};
-    my @tracks     = $userdata->labels($track);
+    my @tracks     = $userdata->labels($file);
     $self->render->track_config($_,'revert') foreach @tracks;
     return (200,'application/json',{tracks=>\@tracks});
 }
@@ -605,12 +676,12 @@ sub ACTION_chrom_sizes {
     unless ($sizes) {
 	return (200,
 		'text/plain',
-		"The chromosome sizes cannot be determined from this data source. Please contact the site administrator for help");
+                $self->render->translate('CHROM_SIZES_UNKNOWN'));
     }
     my $data;
     open my $f,'<',$sizes or return (200,
 				     'text/plain',
-				     "An error occurred when opening chromosome sizes file: $!");
+				     $self->render->translate('CHROM_SIZE_FILE_ERROR',$!));
     $data.= $_ while <$f>;
     close $f;
     my $build = $self->data_source->build_id || 'build_unknown';
@@ -630,18 +701,7 @@ sub ACTION_about_gbrowse {
 		 -align=>'right',
 		 -width=>'100',
 		}),
-	$q->p(
-	    $q->b(
-		"This is the Generic Genome Browser version $Bio::Graphics::Browser2::VERSION"
-	    )
-	    ),
-	$q->p(
-	    'It is part of the',$q->a({-href=>'http://www.gmod.org'},'Generic Model Organism (GMOD)'),
-	    'suite of genome analysis software tools.'),
-	$q->p(
-	    'The software is copyright 2002-2010 Cold Spring Harbor Laboratory,',
-	    'Ontario Institute for Cancer Research,',
-	    'and the University of California, Berkeley.')
+        $self->render->translate('ABOUT_GBROWSE', $Bio::Graphics::Browser2::VERSION)
 	);
     return (200,'text/html',$html)
 }
@@ -663,40 +723,40 @@ sub ACTION_about_dsn {
 	                 :$build ne '_' ? $q->b($build)
 			 :'';
 
-	$html     = $q->h1($self->render->tr('ABOUT_NAME',$source->description));
+	$html     = $q->h1($self->render->translate('ABOUT_NAME',$source->description));
 	$html    .= $q->p({-style=>'margin-left:1em'},$metadata->{description});
 	my @lines;
 	push @lines,(
-	    $q->dt($q->b('Species:')),
+	    $q->dt($q->b($self->render->translate('SPECIES'))),
 	    $q->dd($q->a({-href=>"http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?name=$taxid"},
 			 $q->i($metadata->{species})))
 	) if $metadata->{species};
 
 	push @lines,(
-	    $q->dt($q->b('Build:')),
+	    $q->dt($q->b($self->render->translate('BUILD'))),
 	    $q->dd($build_link)
 	) if $build_link;
 
-	$html    .= $q->h1('Species and Build Information').
+	$html    .= $q->h1($self->render->translate('SPECIES_AND_BUILD_INFO')).
 	    $q->div({-style=>'margin-left:1em'},$q->dl(@lines)) if @lines;
 
 	my $attribution = '';
 
 	if (my $maintainer = $metadata->{maintainer}) {
             $maintainer    =~ s!<(.+)>!&lt;<a href="mailto:$1">$1</a>&gt;!;
-	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Maintained by $maintainer");
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->translate('MAINTAINED_BY', $maintainer));
 	}
         if (my $created    = $metadata->{created}) {
-	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Created $created");
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->translate('CREATED', $created));
         }
 	
         if (my $modified   = $metadata->{modified}) {
-	    $attribution         .= $q->div({-style=>'margin-left:1em'},"Modified $modified");
+	    $attribution         .= $q->div({-style=>'margin-left:1em'},$self->render->translate('MODIFIED', $modified));
         }
 	$html .= "<hr>$attribution" if $attribution;
 	
     } else {
-	$html = $q->i('No further information on',$q->b($source->name),'is available.');
+	$html = $q->i($self->render->translate('NO_FURTHER_INFO_AVAILABLE',$source->name));
     }
     return (200,'text/html',$html)
 }
@@ -706,12 +766,7 @@ sub ACTION_about_me {
     my $q    = shift;
     my $state = $self->state;
 
-    my $html = $q->div(
-	$q->h2('Session IDs'),
-	$q->p('If you wish to use a script to upload or download browser data from this session',
-	      'you will need the user and/or upload IDs for the currently active session.'),
-	$q->p("Your   userID is",$q->b($state->{userid})),
-	$q->p("Your uploadID is",$q->b($state->{uploadid})));
+    my $html = $q->div($self->render->translate('ABOUT_ME_TEXT',$state->{userid},$state->{uploadid}));
     return (200,'text/html',$html);
 }
 
@@ -744,6 +799,23 @@ sub ACTION_list {
 		       $meta->{coordinates})."\n";
     }
     return (200,'text/plain',$text);
+}
+
+sub ACTION_get_translation_tables {
+    my $self = shift;
+    my $render   = $self->render;
+    
+    my $lang = $render->language;
+
+    my $language_table   = $lang->tr_table($lang->language);
+    my $default_table    = $lang->tr_table('POSIX');
+
+    my $languagesScript = "var language_table = "         . JSON::to_json($language_table) . ";\n";
+    $languagesScript   .= "var default_language_table = " . JSON::to_json($default_table)  . ";\n";
+
+    my %headers = (-cache_control => 'max-age=604800'); #Let the client cache for one week
+
+    return (200, 'text/javascript', $languagesScript, %headers);
 }
 
 1;

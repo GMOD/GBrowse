@@ -31,14 +31,14 @@ function gbCheck (button,state) {
 
   if  (!added_tracks) {
     for (var i=0; i<checkboxes.length; i++) {
-       checkboxes[i].checked=state;
-       gbToggleTrack(checkboxes[i]);
+      checkboxes[i].checked = state;
+      gbToggleTrack(checkboxes[i]);
     }
   }
   gbTurnOff(a);
   button.checked = true;
-  list(a.substring(0, (a.length - "_section".length))); //The substring trims "_section" from the end of a list.
-  return false;
+  updateList($(a));
+  return true;
 }
 
 function gbToggleTrack (button) {

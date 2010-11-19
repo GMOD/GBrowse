@@ -15,7 +15,7 @@ Usage: $0 [options] <optional path to GBrowse.conf>
 Initializes an empty GBrowse user accounts database. Options:
 
    -dsn       DBI-style database source identifier
-                 [default "DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse"]
+                 [defaults to what is set in GBrowse.conf]
    -admin     [Mysql only] DB admin user and password in format "user:password" [default "root:<empty>"]
    -owner     [SQLite only] Username and primary group for the Web user in the format "user:group"
    -p         Prompt for password
@@ -179,4 +179,3 @@ CREATE TABLE openid_users (
     username      varchar(32) not null,
     openid_url   varchar(128) not null PRIMARY key
 );
-

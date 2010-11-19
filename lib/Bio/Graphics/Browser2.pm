@@ -2,7 +2,7 @@ package Bio::Graphics::Browser2;
 # $Id$
 # Globals and utilities for GBrowse and friends
 
-our $VERSION = '2.17';
+our $VERSION = '2.20';
 
 use strict;
 use warnings;
@@ -16,12 +16,13 @@ use File::Path 'mkpath';
 use Bio::Graphics::Browser2::DataSource;
 use Bio::Graphics::Browser2::Session;
 use GBrowse::ConfigData;
-use Carp 'croak','carp','confess';
+use Carp qw(croak carp confess cluck);
 
 use constant DEFAULT_MASTER => 'GBrowse.conf';
 
 my (%CONFIG_CACHE,$HAS_DBFILE,$HAS_STORABLE);
 
+# Open a globals object with a config file in the standard location.
 sub open_globals {
     my $self = shift;
     my $conf_dir  = $self->config_base;
@@ -34,8 +35,7 @@ sub new {
   my $class            = shift;
   my $config_file_path = shift;
 
-  # this code caches the config info so that we don't need to 
-  # reparse in persistent (e.g. modperl) environment
+  # Cache the config info so we don't need to reparse in a persistent (e.g. modperl) environment
   my $mtime            = (stat($config_file_path))[9] || 0;
   if (exists $CONFIG_CACHE{$config_file_path}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {
@@ -231,10 +231,12 @@ sub application_name       { shift->setting(general=>'application_name')      ||
 sub application_name_long  { shift->setting(general=>'application_name_long') || 'The Generic Genome Browser' }
 sub email_address          { shift->setting(general=>'email_address')         || 'noreply@gbrowse.com'        }
 sub smtp                   { shift->setting(general=>'smtp_gateway')          || 'smtp.res.oicr.on.ca'        }
-sub user_account_db        { shift->setting(general=>'user_account_db')       
-				   || 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse'  }
-sub admin_account          { shift->setting(general=>'admin_account') }
-sub admin_dbs              { shift->setting(general=>'admin_dbs')     }
+sub user_account_db        { shift->setting(general=>'user_account_db')       || 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse'  }
+sub user_accounts		   { shift->setting(general=>'user accounts')		  || 0                            }
+sub uploads_db             { shift->setting(general=>'uploads_db')            || 'filesystem'                 }
+sub public_files           { shift->setting(general=>'public_files')          || 10                           }
+sub admin_account          { shift->setting(general=>'admin_account')                                         }
+sub admin_dbs              { shift->setting(general=>'admin_dbs')                                             }
 sub openid_secret {
     return GBrowse::ConfigData->config('OpenIDConsumerSecret')
 }
@@ -242,7 +244,9 @@ sub openid_secret {
 # uploads
 sub upload_db_adaptor {
     my $self = shift;
-    return $self->setting(general=>'upload_db_adaptor') || $self->setting(general=>'userdb_adaptor');
+    my $adaptor = $self->setting(general=>'upload_db_adaptor') || $self->setting(general=>'userdb_adaptor');
+    warn "The upload_db_adaptor in your Gbrowse.conf file isn't in the DBI::<module> format: remember, it's not a connection string." if $adaptor =~ /^DBI/ && $adaptor !~ /(^DBI::+)/i;
+    return $adaptor;
 }
 sub upload_db_host {
     my $self = shift;
@@ -439,7 +443,7 @@ sub authorized_session {
   if ($session->match_nonce($authority,CGI::remote_addr())) {
       return $session;
   } else {
-      warn "UNAUTHORIZED ATTEMPT";
+      cluck "UNAUTHORIZED ATTEMPT";
       return $self->session('xyzzy');
   }
 }

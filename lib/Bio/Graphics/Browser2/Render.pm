@@ -3403,7 +3403,7 @@ sub render_deferred_track {
     }
     elsif ($cache->status eq 'ERROR') {
 	warn "[$$] rendering error track" if DEBUG;
-        my $image_width = $self->get_image_width($self->state);
+        my $image_width = $self->get_detail_image_width($self->state);
         $result_html   .= $self->render_error_track(
 						  track_id       => $track_id,
 						  image_width      => $image_width,
@@ -3411,7 +3411,7 @@ sub render_deferred_track {
 						  image_element_id => $track_id . "_image",
 						  error_message    => 'Track rendering error: '.$cache->errstr)
      } else {
-        my $image_width = $self->get_image_width($self->state);
+        my $image_width = $self->get_detail_image_width($self->state);
         $result_html .= $self->render_grey_track(
 						 track_id         => $track_id,
 						 image_width      => $image_width,

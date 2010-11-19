@@ -1,0 +1,29 @@
+[% autocomplete=config.setting('autocomplete') %]
+<b>[% config.tr('landmark') %]</b><br/>
+<div id="autoComplete">
+ <input id="autoCompleteInput1" type="text" name="name" value="[% page_settings.name %]" size="25" 
+   [% IF autocomplete %] autocomplete="off" [% END %]/>
+ <input type="submit" name="search" value="[% config.tr('search') %]"/>
+ <input type="submit" name="reset" value="[% config.tr('reset') %]" class="reset_button"/>
+ <div id="autoCompleteContainer1"></div>
+</div>
+
+[% IF config.setting('autocomplete') %]
+<script type="text/javascript">
+// var testData = ["ctgA","ctgB",'Chromosome 3'];
+// var autoCompleteData1 = new YAHOO.widget.DS_JSArray(testData);
+
+ var autoCompleteServer  = "[%- config.setting('autocomplete') -%]";
+ var autoCompleteSchema  = ["\n"];
+ var autoCompleteData1 = new YAHOO.widget.DS_XHR(autoCompleteServer, autoCompleteSchema); 
+ autoCompleteData1.responseType = autoCompleteData1.TYPE_FLAT;
+
+ var autoComplete1 = new YAHOO.widget.AutoComplete("autoCompleteInput1","autoCompleteContainer1",autoCompleteData1);
+ autoComplete1.allowBrowserAutocomplete = false;
+ autoComplete1.typeAhead = true;
+ autoComplete1.useShadow = true;
+ autoComplete1.queryDelay = 0;
+ autoComplete1.minQueryLength = 2;
+</script>
+[% END %]
+

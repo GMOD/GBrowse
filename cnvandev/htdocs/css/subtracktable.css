@@ -1,0 +1,92 @@
+div.subtrack_table {
+    overflow:auto;
+    width: auto;
+}
+
+tbody.sortable tr {
+    cursor: move;
+}
+
+table.subtrack-table {
+	border: 1px solid black;
+	font-size: 10pt;
+}
+table.subtrack-table thead th {
+	background-color:lightgoldenrodyellow;
+}
+table.subtrack-table tfoot td {
+	background-color:khaki;
+}
+
+table.subtrack-table tr.tbody_header {
+	font-weight:bold;
+	text-align:center;
+	background-color:khaki;
+}
+
+table.subtrack-table tbody {
+	border: 1px solid black;
+}
+
+table.subtrack-table tbody tr:hover {
+	background:lightsteelblue; 
+}
+
+table.subtrack-table tbody th {
+	border: 1px solid black;
+}
+table.subtrack-table tbody td {
+	border: 1px solid black;
+}
+
+table.subtrack-table a.pagelink {
+	padding-left:5px;
+	padding-right:5px;
+	margin:0px 5px 0px 5px;
+}
+table.subtrack-table a.currentpage {
+	background-color:yellow;
+}
+
+/* Striping */
+tr.alternate {
+	background-color:#ffffcc;
+}
+tr.unselected {
+        color: gray;
+}
+tr.selected {
+         color: black;
+}
+.dragging {
+     background-color: orange;
+}
+
+/* Sorting */
+th.table-sortable {
+	cursor:pointer;
+	background-image:url("../images/buttons/sortable.gif");
+	background-repeat:no-repeat;
+	padding-left:12px;
+}
+th.table-sorted-asc {
+	background-image:url("../images/buttons/sorted_up.gif");
+	background-repeat:no-repeat;
+}
+th.table-sorted-desc {
+	background-image:url("../images/buttons/sorted_down.gif");
+	background-repeat:no-repeat;
+}
+th.table-filtered {
+	background-image:url("../images/buttons/filter.gif");
+	background-repeat:no-repeat;
+}
+select.table-autofilter {
+	font-size:smaller;
+}
+
+/* Examples which stray from the default */
+table.altstripe tr.alternate2 {
+	background-color:#ccffff;
+}
+

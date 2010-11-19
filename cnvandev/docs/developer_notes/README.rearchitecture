@@ -1,0 +1,269 @@
+This document describes the desired architecture for GBrowse version 2.0.
+
+1) CGI Scripts:
+
+gbrowse            -- interactive search and browsing of genomic regions
+gbrowse_img        -- static images of genomic regions
+gbrowse_details    -- default details page
+gbrowse_karyotype  -- karyotype view for displaying multiple hits, genome-wide trends, etc
+
+Typical flow for CGI scripts
+
+ use Bio::Graphics::Browser;                # globals and utilities
+ use Bio::Graphics::Browser::Render::HTML;  # UI driver
+
+ my $globals     = Bio::Graphics::Browser->new('/path/to/globals.txt');  # new globals object
+ my $session     = $globals->new_session;
+ my $dsn         = $globals->update_data_source($session);
+ my $data_source = $globals->create_data_source($dsn);
+ my $render      = Bio::Graphics::Browser::Render::HTML->new($data_source,$session);
+ $render->run;
+
+ exit 0;
+
+There is also a shortcut that lets Render do the session management
+
+ my $globals     = Bio::Graphics::Browser->new('/path/to/globals.txt');  # new globals object
+ my $render      = Bio::Graphics::Browser::Render::HTML->new($globals);
+ $render->run;
+
+=================================================================
+
+2) Bio::Graphics::Browser
+
+This object is used to obtain all global settings. It is also
+responsible for creating/restore the user session and selecting the
+data source name.
+
+Create a new globals object:
+
+$globals = Bio::Graphics::Browser->new('/path/to/globals.txt');
+
+Get the IDs of all valid data sources:
+@data_sources = $globals->data_sources;
+
+Create or retrieve the persistent settings (optionally forcing the ID):
+
+$session      = $globals->session ([$id]);
+
+Create the data source-specific configuration, a
+Bio::Graphics::Browser::DataSource object:
+
+$data_source  = $globals->create_data_source($dsn);
+
+Get the value of an option in a section name ('general' by default):
+
+$setting = $globals->setting('section name' => 'value');
+
+Examples of using setting():
+
+$label = $globals->setting($data_sources[0] => 'description');
+$path  = $globals->setting($data_sources[0] => 'path');
+
+Find the new data source based on CGI path information and/our the
+'source' parameter. This will return the current source if the
+requested new source is invalid.
+
+ $dsn = $globals->update_data_source($session);
+
+The globals file lists all the data sources as well as browser-wide
+globals. Some of the globals, such as the stylesheet path, can be
+overridden by specific data sources. Others can't. This needs to be
+determined on a case-by-case basis and the logic for this should be
+embedded in Bio::Graphics::Browser::Render.
+
+To simplify organization, there will be two top-level paths, one for
+config files, and one for htdocs files. If any path configs are given
+as relative paths, then these top-level paths are used to make them
+absolute.
+
+Note that for efficiency's sake, the Bio::Graphics::Browser object may
+be cached and reused, provided that its config file hasn't been
+updated.
+
+[GENERAL]
+# path globals
+config base   = /etc/gbrowse
+htdocs base   = /var/www/htdocs/gbrowse
+stylesheet    = /absolute/path or ./relative/to/docs_base
+icons         = /absolute/path or ./relative/to/docs_base
+plugins       = /absolute/path or ./relative/to/config_base
+languages     = /absolute/path or ./relative/to/config_base
+
+# the default DSN
+default source = HUM77
+
+# session globals
+session settings = settings
+
+# other globals
+max_segment = 5000000
+global1 = setting1
+global2 = setting2
+
+# subsequent stanzas are data sources
+[HUM77]
+description  = Human Build 77
+path         = /etc/gbrowse/hum77.conf
+
+[MouseV3]
+description  = Mouse Test database
+path         = /var/htdocs/gbrowse/conf/mouse_test.conf
+hide         = 1   # hide from popup menu
+restrict     =     ## additional authentication options?
+
+=================================================================
+
+3) Bio::Graphics::Browser::Session
+
+This object is responsible for persistent per-user settings. It is
+created by the Bio::Graphics::Browser object based on the session
+configuration globals. It has the following methods, all of which are
+in the current Bio::Graphics::Browser::PageSettings object:
+
+Create new session from provided arguments:
+
+ $session = Bio::Graphics::Browser::Session->new(@args);
+
+Flush to disk or database:
+
+ $session->flush;
+
+Return per-session ID:
+
+ $id = $session->id;
+
+Retrieve a hash of persistent page settings:
+
+ $session->page_settings;
+
+Get or set the data source DSN:
+
+ $dsn =  $session->source([$new_dsn]);
+
+=================================================================
+
+4) Bio::Graphics::Browser::DataSource
+
+This is the data-source specific configuration. It is identical to the
+Bio::Graphics::BrowserConfig package that is currently defined inside
+Bio/Graphics/Browser.pm.
+
+It supports the methods:
+
+ labels()
+ overview_tracks()
+ regionview_tracks()
+ karyotype_tracks()
+ authorized()
+ label2type()
+ type2label()
+ style()
+ semantic_setting()
+ semantic_label()
+ etc.
+
+Note that for efficiency's sake, the
+Bio::Graphics::Browser::DataSource objects may be cached and reused,
+provided that their corresponding config files have not been updated.
+
+ADDED 5/4/07 -- I think that the DataSource should be able to manage a
+cache of database objects. The syntax is:
+
+ my $biodas_style_handle = $datasource->database('track_label')
+
+If track_label is null or not found, the default database is opened.
+
+=================================================================
+
+5) Bio::Graphics::Browser::Render
+
+This is the base class for driving the browser. It contains all
+methods common to the template, HTML and Ajax versions.
+
+ $render = Bio::Graphics::Browser::Render->new($data_source,$session)
+
+The global configuration, the data source configuration, and the
+session are passed in as separate objects and stored as instance
+variables.
+
+
+=================================================================
+
+6) Bio::Graphics::Browser::RenderTracks
+
+This class provides methods for generating the images and imagemaps
+themselves (the core of the application!).
+
+ $view = Bio::Graphics::Browser::RenderTracks->new($datasource,$page_settings);
+
+Create a new view object using information from the provided data
+source and settings.
+
+ @requests = $view->request_panels({labels=>[list,of,labels],
+                                    featurefiles => [list,of,3d party
+                                                     features],
+                                    deferred => 1
+				    });
+
+This returns a series of CachedTrack objects, which can be
+interrogated for the GD object, the imagemap, the width and height of
+the object. If "deferred" is true, then the CachedTrack objects will
+not contain the data until some time has passed (processing is
+occurring in the background). Check the CachedTrack's status() method
+to find out whether the data is ready.
+
+Each CachedTrack has a unique request ID associated with it, which you can
+get by calling its key() method. If a CachedTrack is pending, you can
+later use this key to generate an equivalent CachedTrack:
+
+  my $cache = 
+   Bio::Graphics::Browser::CachedTrack->new(-base => $directory,
+   				            -key  => $key);
+
+  if ($cache->status eq 'AVAILABLE') {
+        my $gd = $cache->gd;
+  }
+
+The -base is a directory where the cached track stores its state. The
+server knows how to find the base.
+
+THE CLIENT SIDE
+
+The client should maintain a series of <div> sections corresponding to
+each of the tracks in the overview, region and detail panels. These
+sections dynamically open and close, and use the Scriptaculous system
+of drag-and-drop to reorder themselves.
+
+TRANSACTION NOTES
+
+Step 1: The client-side controller for the page detects when user
+actions have changed the current view, and sends a request to the
+server informing it of this fact.
+
+*Note* need to figure out the format of this request -- the
+ information on coordinates is contained in the slider table form and
+ probably easist just to pack this up in serialized form (using
+ prototype's form.serialize()) and send it in.
+
+Step 2: The server updates its state and calls
+RenderPanels->request_panels() to create a series of CachedTrack
+requests. It sends back to the controller a response that associates
+the requested track labels with a series of CachedTrack keys.
+
+Step 3: The controller now tells various page elements that their data
+has changed and they need to update themselves. In particular, it
+should tell each of the track <div>s to update themselves using the
+corresponding CachedTrack key. The track <div>s should use an
+asynchronous request to poll the server until the image and map data
+are ready.
+
+HOW ASYNCHRONOUS CALLS ARE MADE
+
+Asynchronous calls need to be consolidated in the server. Currently
+they are handled in an ad-hoc manner. I suggest that asynchronous
+calls standardize on a URL like this: /gbrowse/source/async, and that
+the POSTed requests and responses use JSON format. This provides
+support for nested hashes, lists of lists, etc, and has nice Perl and
+Prototype support.
+

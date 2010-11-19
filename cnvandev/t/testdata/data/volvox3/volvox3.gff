@@ -1,0 +1,21 @@
+##gff-version 3
+# file: volvox3.gff
+
+# deliberate: no reference here
+# ctgA	example	contig	1	50000	.	.	.	Name=ctgA
+ctgA	example	cleavage_site	1659	1984	.	+	.	Name=Cleavage07
+ctgA	example	cleavage_site	3014	6130	.	+	.	Name=Cleavage06
+ctgA	example	cleavage_site	4715	5968	.	-	.	Name=Cleavage05
+ctgA	example	cleavage_site	13280	16394	.	+	.	Name=Cleavage08
+ctgA	example	cleavage_site	15329	15533	.	+	.	Name=Cleavage10
+ctgA	example	cleavage_site	19157	22915	.	-	.	Name=Cleavage13
+ctgA	example	cleavage_site	22132	24633	.	+	.	Name=Cleavage15
+ctgA	example	cleavage_site	23072	23185	.	+	.	Name=Cleavage14
+ctgA	example	cleavage_site	24562	28338	.	+	.	Name=Cleavage02
+ctgA	example	cleavage_site	36034	38167	.	+	.	Name=Cleavage09
+ctgA	example	cleavage_site	36649	40440	.	-	.	Name=Cleavage03
+ctgA	example	cleavage_site	37242	38653	.	+	.	Name=Cleavage04
+ctgA	example	cleavage_site	44705	47713	.	-	.	Name=Cleavage01
+ctgA	example	cleavage_site	46990	48410	.	-	.	Name=Cleavage11
+ctgA	example	cleavage_site	49758	50000	.	-	.	Name=Cleavage12
+ctgB	example	my_feature	5	6	.	.	.	Name=f12

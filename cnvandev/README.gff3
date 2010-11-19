@@ -1,0 +1,126 @@
+GFF3 is the successor to the GFF2 feature file format. Its main
+advantage is that it uses the Sequence Ontology to describe features
+on the genome in a standard and predictable way. For details, see
+http://song.sourceforge.net/ and http://song.sourceforge.net/gff3.shtml
+
+The GBrowse Bio::DB::GFF adaptor was developed for GFF2 and its
+support for GFF3 is poor. The main issue is that Bio::DB::GFF is only
+able to support features that have two levels, for example an mRNA
+transcript and its exons, while GFF3 allows features to contain
+unlimited levels of features and subfeatures. This feature is most
+commonly used to describe genes:
+
+	gene A
+	   mRNA A.1
+              CDS A.1.1
+              CDS A.1.2
+              CDS A.1.3
+	   mRNA A.2
+              CDS A.2.1
+              CDS A.2.2
+              CDS A.2.3
+
+This data model is encouraged by GFF3 and is used by FlyBase;
+unfortunately Bio::DB::GFF cannot store such gene features without
+hacking the FlyBase GFF3 files.
+
+The most recent (1.6.x) series of Bioperl releases have support for
+the GFF3 format via the Bio::DB::SeqFeature::Store.
+
+Here are instructions for bringing up the Fly GFF3 annotations.
+
+1) Get the most recent version of Bioperl from CPAN:
+
+   cpan Bio::DB::SeqFeature::Store
+     or
+   sudo cpan Bio::DB::SeqFeature::Store
+
+2) perl Makefile.PL, make and make install in the bioperl-live
+directory.
+
+3) Download the GFF3 files and FASTA files to load and put them in a
+directory somewhere.
+
+4) Create a mysql database to hold the data, and set up the
+appropriate privileges:
+
+ mysqladmin -uroot -p<passwd> create database flygff3
+ mysql -uroot -p<passwd> -e 'grant all privileges on flygff3.* to <mylogin>@localhost'
+ mysql -uroot -p<passwd> -e 'grant select on flygff3.* to nobody@localhost'
+
+
+5) Use the bp_seqfeature_load.pl script to load the GFF3 and FASTA
+data:
+
+ cd <directory_containing_the_files>
+ bp_seqfeature_load.pl -d flygff3 -c -f *.gff.gz *.fasta
+
+The -d option gives the name of the database to load ("flygff3").
+The -c flag tells the script to initialize the database.
+The -f flag tells the script to use "fast" loading.
+
+You may see a small number of warnings about features with the same
+IDs not occurring in contiguous order. You can safely ignore these
+warnings.
+
+6) Copy the 09.fly.gff3.conf config file into your gbrowse.conf
+directory. This file can be found in the Generic-Genome-Browser
+distribution directory under contrib/conf_files/.
+
+The distributed conf file expects the database to be named "flygff3"
+and to require no password to be readable by the "nobody" user. Please
+modify it if necessary. For example, to add a username and password:
+
+ db_adaptor    = Bio::DB::SeqFeature::Store
+ db_args       = -adaptor DBI::mysql
+	         -dsn     dbi:mysql:database=flygff3
+                 -user    fred
+                 -pass    secretpassword
+
+You should be able to browse the database now!
+
+7) To use the IN-MEMORY GFF3 database adaptor (very preliminary!) do
+the following:
+
+    mkdir /var/www/htdocs/gbrowse/databases/volvox_gff3
+    cp docs/tutorial/data_files/volvox.gff3 /var/www/htdocs/gbrowse/databases/volvox_gff3
+
+and edit the volvox.gff3.conf file to read:
+
+ db_adaptor    = Bio::DB::SeqFeature::Store
+ db_args       = -adaptor memory
+	         -dsn     /var/www/htdocs/gbrowse/databaess/volvox_gffe
+
+Be sure to change the database path to be appropriate for the location
+of the gbrowse document directory on your system.
+
+If you use the memory adaptor for large sequences, you will see better
+performance if you separate out the DNA part of the GFF3 file from the
+annotation part (the volvox.gff3 file has both annotations and
+DNA). Put the DNA into one or more .fasta files in the same directory
+as the .gff3 file(s). This is the same as the traditional way of
+creating a GFF2 in-memory database.
+
+
+8) For more information:
+
+The 09.fly.gff3.conf file contains brief comments describing the
+changes needed to make GBrowse work well with
+Bio::DB::SeqFeature::Store, the most important of which is the lack of
+aggregators in the latter.
+
+A version of the tutorial files adapted for GFF3 use can be found in
+docs/tutorial/data_files/volvox.gff3 and
+docs/tutorial/conf_files/volvox.gff3.conf. To load the data, simply:
+
+ bp_seqfeature_load.pl -d volvoxgff3 -c -f docs/tutorial/data_files/volvox.gff3
+
+and install the volvox.gff3.conf file. This file is heavily annotated
+with instructions on how to use the GFF3 database with GBrowse.
+
+Please report all problems to gmod-gbrowse@lists.sourceforge.net.
+
+Good luck!
+
+Lincoln Stein
+19 June 2006

@@ -1,0 +1,50 @@
+[%- MACRO label2key(label) BLOCK -%]
+  [% ###FIXME redo this as one block rather than several %]
+  [% key %]
+  [% FOREACH language = config.language.language %]
+    [% key = config.setting(label,"key:${language}") %]
+    [% LAST IF key %]
+  [% END %]
+
+  [% IF !key ; key = config.setting(label,'key') ; END %]
+  [% IF !key ; key = config.setting(label,'key') ; END %]
+  [% #FIXME this is supposed to rely on get_external_presets()# IF !key ; key = label ; END %]
+  [% IF label.match(':overview$') ; key = "${key}*" ; END %]
+
+  [% key %]
+[%- END -%]
+
+[%- MACRO unit_label(value) BLOCK -%]
+  [%-
+  unit    = config.setting('units') || 'bp';
+  divider = config.setting('unit_divider') || 1;
+  IF (value != 1 || divider <= 1) ;
+    value = value / divider;
+
+    IF value >= 1000000000 ; 
+      label = value / 1000000000    FILTER format("%.4g G") ;
+    ELSIF value >= 1000000 ;
+      label = value / 1000000       FILTER format("%.4g M") ;
+    ELSIF value >= 1000 ;
+      label = value / 1000          FILTER format("%.4g K") ;
+    ELSIF value >= 1 ;
+      label = value / 1             FILTER format("%.4g") ;
+    ELSIF value >= 0.01 ;
+      label = value * 100           FILTER format("%.4g c") ;
+    ELSIF value >= 0.001 ;
+      label = value * 1000          FILTER format("%.4g m") ;
+    ELSIF value >= 0.000001 ;
+      label = value * 1000000       FILTER format("%.4g u") ;
+    ELSIF value >= 0.000000001 ;
+      label = value * 1000000000    FILTER format("%.4g n") ;
+    ELSIF value >= 0.000000000001 ;
+      label = value * 1000000000000 FILTER format("%.4g p") ;
+    END ;
+
+    label = label _ unit ;
+  ELSE ; 
+    label = 0 ;
+  END ;
+  label ;
+  -%]
+[%- END -%]

@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+if [ "$1" != "configure" ]; then
+        exit 0
+fi
+
+if [ -x "/etc/init.d/gbrowse-slave" ]; then
+   ln -sf /etc/init.d/gbrowse-slave /etc/rc2.d/S21gbrowse-slave
+   ln -sf /etc/init.d/gbrowse-slave /etc/rc2.d/K21gbrowse-slave
+    /etc/init.d/gbrowse-slave start ||true
+fi
+
+if [ -d "/var/www/gbrowse2" ]; then
+   mkdir /var/www/gbrowse2/tmp
+   chown www-data.www-data /var/www/gbrowse2/tmp
+fi
+
+
+exit 0

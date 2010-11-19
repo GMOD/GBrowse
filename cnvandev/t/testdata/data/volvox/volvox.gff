@@ -1,0 +1,132 @@
+# file: volvox1.gff
+ctgA	example	contig	1	50000	.	.	.	Contig ctgA
+ctgA	example	chromosome_band	1	1000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	1001	5000	.	.	.	Contig ctgA; stain gpos50
+ctgA	example	chromosome_band	5001	8000	.	.	.	Contig ctgA; stain gpos25
+ctgA	example	chromosome_band	8001	10000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	10001	20000	.	.	.	Contig ctgA; stain gpos75
+ctgA	example	centromere	20001	24000	.	.	.	Contig ctgA
+ctgA	example	chromosome_band	24001	25000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	25001	28000	.	.	.	Contig ctgA; stain gpos25
+ctgA	example	chromosome_band	28001	30000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	30001	38000	.	.	.	Contig ctgA; stain gpos50
+ctgA	example	chromosome_band	38001	45000	.	.	.	Contig ctgA; stain gpos100
+ctgA	example	chromosome_band	45001	49000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	45001	50000	.	.	.	Contig ctgA; stain gpos100
+
+ctgB	example	contig	1	40000	.	.	.	Contig ctgB
+ctgB	example	chromosome_band	1	5000	.	.	.	Contig ctgB; stain pos25
+ctgB	example	centromere	10001	19000	.	.	.	Contig ctgB
+
+ctgC	example	contig	1	40000	.	.	.	Contig ctgC
+ctgC	example	chromosome_band	5000	10000	.	.	.	Contig ctgC; stain stalk
+
+ctgD	example	contig	1	38000	.	.	.	Contig ctgD
+ctgD	example	centromere	20001	22000	.	.	.	Contig ctgD
+ctgD	example	chromosome_band	10001	19000	.	.	.	Contig ctgD; stain stalk
+
+ctgE	example	contig	1	35000	.	.	.	Contig ctgE
+ctgE	example	centromere	10001	12000	.	.	.	Contig ctgE
+
+ctgF	example	contig	1	32000	.	.	.	Contig ctgF
+ctgF	example	centromere	10001	18000	.	.	.	Contig ctgF
+
+ctgG	example	contig	1	30000	.	.	.	Contig ctgG
+ctgG	example	centromere	10001	15000	.	.	.	Contig ctgG
+
+ctgH	example	contig	1	29000	.	.	.	Contig ctgH
+ctgH	example	centromere	20001	22000	.	.	.	Contig ctgH
+
+ctgI	example	contig	1	28000	.	.	.	Contig ctgI
+ctgI	example	centromere	20001	22000	.	.	.	Contig ctgI
+
+ctgJ	example	contig	1	27000	.	.	.	Contig ctgJ
+ctgJ	example	centromere	20001	22000	.	.	.	Contig ctgJ
+
+ctgK	example	contig	1	26000	.	.	.	Contig ctgK
+ctgK	example	centromere	20001	22000	.	.	.	Contig ctgK
+
+ctgL	example	contig	1	20000	.	.	.	Contig ctgL
+ctgL	example	centromere	18001	19000	.	.	.	Contig ctgL
+
+ctgM	example	contig	1	18000	.	.	.	Contig ctgM
+ctgN	example	contig	1	12000	.	.	.	Contig ctgN
+ctgO	example	contig	1	12000	.	.	.	Contig ctgO
+ctgP	example	contig	1	10000	.	.	.	Contig ctgP
+ctgQ	example	contig	1	5000	.	.	.	Contig ctgQ
+ctgA	example	my_feature	1659	1984	.	+	.	My_feature f07
+ctgA	example	my_feature	3014	6130	.	+	.	My_feature f06
+ctgA	example	my_feature	4715	5968	.	-	.	My_feature f05
+ctgA	example	my_feature	13280	16394	.	+	.	My_feature f08
+ctgA	example	my_feature	15329	15533	.	+	.	My_feature f10
+ctgA	example	my_feature	19157	22915	.	-	.	My_feature f13
+ctgA	example	my_feature	22132	24633	.	+	.	My_feature f15
+ctgA	example	my_feature	23072	23185	.	+	.	My_feature f14
+ctgA	example	my_feature	24562	28338	.	+	.	My_feature f02
+ctgA	example	my_feature	36034	38167	.	+	.	My_feature f09
+ctgA	example	my_feature	36649	40440	.	-	.	My_feature f03
+ctgA	example	my_feature	37242	38653	.	+	.	My_feature f04
+ctgA	example	my_feature	44705	47713	.	-	.	My_feature f01
+ctgA	example	my_feature	46990	48410	.	-	.	My_feature f11
+ctgA	example	my_feature	49758	50000	.	-	.	My_feature f12
+ctgA	example	motif	11911	15561	.	+	.	Motif m11 ; Note "kinase"
+ctgA	example	motif	13801	14007	.	-	.	Motif m05 ; Note "helix loop helix"
+ctgA	example	motif	14731	17239	.	-	.	Motif m14 ; Note "kinase"
+ctgA	example	motif	15396	16159	.	+	.	Motif m03 ; Note "zinc finger"
+ctgA	example	motif	17023	17675	.	+	.	Motif m08 ; Note "7-transmembrane"
+ctgA	example	motif	17667	17690	.	+	.	Motif m13 ; Note "DEAD box"
+ctgA	example	motif	18048	18552	.	-	.	Motif m07 ; Note "7-transmembrane"
+ctgA	example	motif	21748	25612	.	+	.	Motif m12 ; Note "kinase"
+ctgA	example	motif	28332	30033	.	-	.	Motif m02 ; Note "HOX"
+ctgA	example	motif	28332	30033	.	-	.	Motif m02 ; Note "HOX"
+ctgA	example	motif	28338	30038	.	-	.	Motif m02 ; Note "HOX paralog"
+ctgB	example	motif	28338	30038	.	-	.	Motif m02 ; Note "HOX duplicate"
+ctgA	example	match	31785	32359	.	+	.	Match seg01
+ctgA	example	HSP	31785	31939	.	+	.	Match seg01
+ctgA	example	HSP	32329	32359	.	+	.	Match seg01
+ctgA	example	match	26122	34466	.	+	.	Match seg02
+ctgA	example	HSP	26122	26126	.	+	.	Match seg02
+ctgA	example	HSP	26497	26869	.	+	.	Match seg02
+ctgA	example	HSP	27201	27325	.	+	.	Match seg02
+ctgA	example	HSP	27372	27433	.	+	.	Match seg02
+ctgA	example	HSP	27565	27565	.	+	.	Match seg02
+ctgA	example	HSP	27813	28091	.	+	.	Match seg02
+ctgA	example	HSP	28093	28201	.	+	.	Match seg02
+ctgA	example	HSP	28329	28377	.	+	.	Match seg02
+ctgA	example	HSP	28829	29194	.	+	.	Match seg02
+ctgA	example	HSP	29517	29702	.	+	.	Match seg02
+ctgA	example	HSP	29713	30061	.	+	.	Match seg02
+ctgA	example	HSP	30329	30774	.	+	.	Match seg02
+ctgA	example	HSP	30808	31306	.	+	.	Match seg02
+ctgA	example	HSP	31516	31729	.	+	.	Match seg02
+ctgA	example	HSP	31753	32154	.	+	.	Match seg02
+ctgA	example	HSP	32595	32696	.	+	.	Match seg02
+ctgA	example	HSP	32892	32901	.	+	.	Match seg02
+ctgA	example	HSP	33127	33388	.	+	.	Match seg02
+ctgA	example	HSP	33439	33443	.	+	.	Match seg02
+ctgA	example	HSP	33759	34209	.	+	.	Match seg02
+ctgA	example	HSP	34401	34466	.	+	.	Match seg02
+ctgA	example	gene	1050	9000	.	+	.	Gene EDEN ; Note "protein kinase"
+
+ctgA	example	mRNA	1050	9000	.	+	.	mRNA EDEN.1 ; Gene EDEN
+ctgA	example	5'-UTR	1050	1200	.	+	.	mRNA EDEN.1
+ctgA	example	CDS	1201	1500	.	+	0	mRNA EDEN.1
+ctgA	example	CDS	3000	3902	.	+	0	mRNA EDEN.1
+ctgA	example	CDS	5000	5500	.	+	0	mRNA EDEN.1
+ctgA	example	CDS	7000	7608	.	+	0	mRNA EDEN.1
+ctgA	example	3'-UTR	7609	9000	.	+	.	mRNA EDEN.1
+
+ctgA	example	mRNA	1050	9000	.	+	.	mRNA EDEN.2 ; Gene EDEN
+ctgA	example	5'-UTR	1050	1200	.	+	.	mRNA EDEN.2
+ctgA	example	CDS	1201	1500	.	+	0	mRNA EDEN.2
+ctgA	example	CDS	5000	5500	.	+	0	mRNA EDEN.2
+ctgA	example	CDS	7000	7608	.	+	0	mRNA EDEN.2
+ctgA	example	3'-UTR	7609	9000	.	+	.	mRNA EDEN.2
+
+ctgA	example	mRNA	1300	9000	.	+	.	mRNA EDEN.3 ; Gene EDEN
+ctgA	example	5'-UTR	1300	1500	.	+	.	mRNA EDEN.3
+ctgA	example	5'-UTR	3000	3300	.	+	.	mRNA EDEN.3
+ctgA	example	CDS	3301	3902	.	+	0	mRNA EDEN.3
+ctgA	example	CDS	5000	5500	.	+	1	mRNA EDEN.3
+ctgA	example	CDS	7000	7600	.	+	1	mRNA EDEN.3
+ctgA	example	3'-UTR	7601	9000	.	+	.	mRNA EDEN.3

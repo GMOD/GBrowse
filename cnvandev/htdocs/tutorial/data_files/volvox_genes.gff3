@@ -1,0 +1,35 @@
+##gff-version 3
+
+# In GFF3 genes are three-tiered structures descending from gene->mRNA->CDS+UTR
+# Each level has an ID tag that gives the object a name and a Parent tag that gives the ID of the
+# feature that contains it. Since the ID tag only has meaning within the GFF3, you must explicitly give
+# Name attributes to those features that you wish to have display names
+
+# By default subfeatures (such as the mRNAs) will not be indexed, meaning that they are not separately
+# retrievable from the database. However, we want to get at the mRNAs in order to show frame usage, so
+# we set the "Index" attribute to 1. This is not part of the GFF3 spec, but is a bioperl extension. See
+# Bio::DB::SeqFeature::Store::GFF3Loader
+
+ctgA	example	gene	1050	9000	.	+	.	ID=EDEN;Name=EDEN;Note=protein kinase
+ctgA	example	mRNA	1050	9000	.	+	.	ID=EDEN.1;Parent=EDEN;Name=EDEN.1;Note=Eden splice form 1;Index=1
+ctgA	example	five_prime_UTR	1050	1200	.	+	.	Parent=EDEN.1
+ctgA	example	CDS	1201	1500	.	+	0	Parent=EDEN.1
+ctgA	example	CDS	3000	3902	.	+	0	Parent=EDEN.1
+ctgA	example	CDS	5000	5500	.	+	0	Parent=EDEN.1
+ctgA	example	CDS	7000	7608	.	+	0	Parent=EDEN.1
+ctgA	example	three_prime_UTR	7609	9000	.	+	.	Parent=EDEN.1
+
+ctgA	example	mRNA	1050	9000	.	+	.	ID=EDEN.2;Parent=EDEN;Name=EDEN.2;Note=Eden splice form 2;Index=1
+ctgA	example	five_prime_UTR	1050	1200	.	+	.	Parent=EDEN.2
+ctgA	example	CDS	1201	1500	.	+	0	Parent=EDEN.2
+ctgA	example	CDS	5000	5500	.	+	0	Parent=EDEN.2
+ctgA	example	CDS	7000	7608	.	+	0	Parent=EDEN.2
+ctgA	example	three_prime_UTR	7609	9000	.	+	.	Parent=EDEN.2
+
+ctgA	example	mRNA	1300	9000	.	+	.	ID=EDEN.3;Parent=EDEN;Name=EDEN.3;Note=Eden splice form 3;Index=1
+ctgA	example	five_prime_UTR	1300	1500	.	+	.	Parent=EDEN.3
+ctgA	example	five_prime_UTR	3000	3300	.	+	.	Parent=EDEN.3
+ctgA	example	CDS	3301	3902	.	+	0	Parent=EDEN.3
+ctgA	example	CDS	5000	5500	.	+	1	Parent=EDEN.3
+ctgA	example	CDS	7000	7600	.	+	1	Parent=EDEN.3
+ctgA	example	three_prime_UTR	7601	9000	.	+	.	Parent=EDEN.3

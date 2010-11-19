@@ -1,0 +1,62 @@
+<div class="searchtitle">
+  <!-- Instructions -->
+  [%- PROCESS 'start_section.tt2' name='instruction_panel' title='instructions' -%]
+  [% config.tr('search_instructions','') %]
+  [% config.tr('navigation_instructions') %]<br />
+  <b>[% config.tr('examples') %]</b>
+    [% FOREACH example = examples %]
+      <a href="?name=[% example | uri %]">[% example %]</a>[% UNLESS loop.last ; ', ' ; END %]
+    [% END %]<br />
+  [%- PROCESS 'end_section.tt2' -%]
+
+  <!-- menu -->
+   [%- IF page_settings.name OR page_settings.ref -%]
+	[% IF page_settings.head  %]
+           [% label='hide_header' %]
+        [% ELSE %]
+	   [% label='show_header' %]
+        [% END %]
+        <div style="font-size: 10pt">
+        <a href="[% link_header   %]">[<b>[% config.tr(label) %]</b>]</a>
+	<a href="[% link_bookmark %]">[<b>[% config.tr('bookmark') %]</b>]</a>
+        <a href="[% link_image    %]" target="_blank">[<b>[% config.tr('image_link') %]</b>]</a>
+	<a href="[% link_svg      %]" target="_blank">[<b>[% config.tr('svg_link')   %]</b>]</a>
+        <b>[% link_plugins %]</b>
+	<a href="[% link_help     %]" target="help">[<b>[% config.tr('help') %]</b>]</a>
+	<a href="?reset=1" class="reset_button">    [<b>[% config.tr('reset') %]</b>]</a>
+        </div>
+   [% END %]
+</div>
+
+
+  <div class="searchbody">
+    [% htmlfrag1 %]
+  </div>
+
+  <!-- Search -->
+  [%- PROCESS 'start_section.tt2' name='search_panel' title='search' -%]
+
+
+  <div class="searchbody" style="height: 4em;">
+
+    <!-- search box -->
+    <div style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
+
+    <!-- plugins_table -->
+    <div style="float: right; width:50%">[% PROCESS "pluginmenu.tt2" %]</div>
+    <br />
+
+    <!-- source menu -->
+    <div class="searchbody" style="float: left; width: 50%; height: 75%">[% PROCESS "sourcemenu.tt2" %]</div>
+
+     <div class="searchbody" style="float: right; width: 50%; height: 75%">
+     [% IF segment %]
+        <b>[% config.tr('scroll') %]</b><br />[% PROCESS "slider.tt2" %]
+        <input type="checkbox" name="flip" value="1" [% IF page_settings.flip ; "checked" ; END %]/><b>[% config.tr('flip') %]</b>
+     [% END %]
+     </div>
+  </div>
+
+  [%- PROCESS 'end_section.tt2' -%]
+
+<br />

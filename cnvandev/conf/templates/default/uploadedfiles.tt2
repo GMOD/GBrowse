@@ -1,0 +1,33 @@
+[%- UNLESS display_file and feature_file and feature_file.name -%]
+  <i>[%- config.tr("Display_off") -%]</i>
+  [%- RETURN -%]
+[%- END -%]
+
+
+
+[%- SET refs = [] -%]
+[%- UNLESS feature_file.name.match('/das/') ;
+  SET refs = feature_file.features.sort;
+  END 
+-%]
+
+[% USE date() %]
+<i>[% config.tr("File_info", date.format(feature_file.mtime()),'') %] 
+  [%- IF refs and refs.size>too_many_refs -%]
+    <b>[% config.tr("Too_many_landmarks",refs.size) %]</b>
+  [%- ELSE -%]
+    <table border="0">
+      <tr>
+      [%- SET ref_count = 0 %]
+      [%- FOREACH ref = refs -%]
+        [% IF ref_count > 4 %]
+           </tr><tr>
+        [%- END -%]
+        <td>
+          [%- segment2link(ref,ref.display_name) -%]
+        </td>
+      [%- END -%]
+      </tr>
+    </table>
+  [%- END -%]
+</i>

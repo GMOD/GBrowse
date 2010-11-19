@@ -1,0 +1,68 @@
+[%- PROCESS 'start_section.tt2' name='options_panel' title='display_settings' -%]
+
+  <table class="searchbody" border="0">
+    <tr>
+    <td>
+    <!-- IMAGE WIDTH -->
+      <b>[% config.tr('image_width') %]</b><br/>
+      [% FOREACH width = config.setting('image widths').split('\s+') %]
+      <input type="radio" name="width" value="[% width %]" [% IF(width == page_settings.width) ; 'checked="checked"' ; END %]/>[% width %]
+      [% END %]
+    </td>
+    <td>
+    <!-- KEY POSITION -->
+      <b>[% config.tr('key_position') %]</b><br/>
+      <!-- need to check if Bio::Graphics::Panel->can('auto_pad') allows left and right -->
+      [% FOREACH key_style IN ['between','bottom','left','right',] %]
+        [% IF key_style=='bottom' %] 
+          <input type="radio" name="ks" value="[% key_style %]" [% IF(key_style == page_settings.ks) ; 'checked="checked"' ; END %]/>[% config.tr('beneath') %]
+        [% ELSE %]
+          <input type="radio" name="ks" value="[% key_style %]" [% IF(key_style == page_settings.ks) ; 'checked="checked"' ; END %]/>[% config.tr(key_style) %]
+        [% END %]
+      [% END %]
+    </td>
+    <td>
+
+    <!-- TRACK NAMES -->
+        <b>[% config.tr('track_names') %]</b><br/>
+        <input type="radio" name="sk" value="sorted"   [% IF('sorted' == page_settings.sk)   ; 'checked="checked"' ; END %]>[% config.tr('alphabetic') %]</input>
+        <input type="radio" name="sk" value="unsorted" [% IF('unsorted' == page_settings.sk) ; 'checked="checked"' ; END %]>[% config.tr('varying')    %]</input>
+    </td>
+    </tr>
+    <tr>
+    <td><span title="[% config.tr('features_to_highlight_hint') %]">
+	<b>[% config.tr('features_to_highlight') %]</b><br />
+	<input type="text" name="h_feat"   value="[% feature_highlights %]" size=30 />
+        </span>
+    </td>
+    <td><span title="[% config.tr('regions_to_highlight_hint') %]">
+         <b>[% config.tr('regions_to_highlight') %]</b><br />
+	<input type="text" name="h_region" value="[% region_highlights %]" size=30 />
+         </span>
+    </td>
+    <td><b>[% config.tr('show_grid') %]</b><input type="checkbox" name="grid" checked="[% show_grid %]" />
+    </td>
+    </tr>
+    <tr>
+    <td colspan="3"><b>[% config.tr('region_size') %]</b>
+    <select name="region_size">
+    [% FOREACH size=regionsizes %]
+      <option value="[% size %]" [% IF (size == page_settings.region_size) ; 'selected="selected"' ; END %]>[% size %]</option>
+    [% END %]
+    </select>
+    </td>
+    </tr>
+    <!-- BUTTONS -->
+    <tr>
+    <td align="right" colspan="3">
+
+        <!-- FIXME do these button names need to be translated? -->
+        <input type="submit" name="Set Track Options..." value="[% config.tr('set_options') %]"/>
+        <input type="submit" name="Update Image"         value="[% config.tr('update') %]"     />
+    </td>
+    </tr>
+  </table>
+    
+[%- PROCESS 'end_section.tt2' -%]
+
+

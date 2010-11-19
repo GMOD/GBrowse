@@ -1,0 +1,15 @@
+=head1 Using gbrowse with GadFly
+
+In order to get gbrowse to work with the GadFly database and API we
+hacked the gbrowse script considerably, making it use GadFly objects
+and gadFly API calls. We have committed the code in a seperate branch,
+called "berkeley-gadfly". To use this version of gbrowse with GadFly,
+check out this branch, and get the GadFly database and perl modules -
+see http://www.fruitfly.org/developers/
+
+We hope to eventually merge the branches, and use an adapter bridge to
+transparently connect to GadFly.  The gadfly adaptor located in the
+lib directory is incomplete and nonfunctional.
+
+Questions -
+Chris Mungall <cjm@fruitfly.org>

@@ -1,0 +1,22 @@
+[% IF segment %]
+
+[%- PROCESS 'start_section.tt2' name='detail_panel' title='details' -%]
+<center>
+[% detailpanel %]
+</center>
+    <table width="100%">
+      <tr>
+       <td align="left"><a href="?name=[% page_settings.name %];h_feat=_clear_;h_region=_clear_">
+	<font size="-2">[% config.tr('clear_highlighting') %]</font></a>
+       </td>
+       <td align="right">
+         <b><input type="submit" name="Update Image" value="[% config.tr('update') %]"/></b>
+       </td>
+      </tr>
+    </table>
+
+[%- PROCESS 'end_section.tt2' -%]
+
+[% ELSE %]
+<br />
+[% END %]

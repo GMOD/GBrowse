@@ -1,0 +1,5 @@
+They are in the templates subdirectory, and are created in this directory as needed
+by the test scripts with the local INET ports of the rendering slaves filled in.
+
+This is needed because there is no knowing on an arbitrary system what ports
+are available.

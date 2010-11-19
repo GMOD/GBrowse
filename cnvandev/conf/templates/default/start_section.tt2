@@ -1,0 +1,15 @@
+<div class="ctl_hidden" id="[% name %]_show" onclick="visibility('[% name %]',1)"
+    [%- PROCESS 'div_inline.tt2' vis_value=page_settings.section_visible.$name vis_default=1 opposite_of_value=1 -%]
+  ><img src="/gbrowse/images/buttons/plus.png" alt="+" />&nbsp;
+  <span class="tctl"><b>[% config.tr(title) || title %] </b></span>
+</div>
+                                                                                                                             
+<div class="ctl_visible" id="[% name %]_hide" onclick="visibility('[% name %]',0)"
+    [%- PROCESS 'div_inline.tt2' vis_value=page_settings.section_visible.$name vis_default=1 opposite_of_value=0 -%]
+  ><img src="/gbrowse/images/buttons/minus.png" alt="-" />&nbsp;
+  <span class="tctl"><b>[% config.tr(title) || title %] </b></span>
+</div>[%- inline_content -%]
+<br />
+<div class="el_visible" id="[% name %]"
+    [%- PROCESS 'div_inline.tt2' vis_value=page_settings.section_visible.$name vis_default=1 opposite_of_value=0 -%]
+  >

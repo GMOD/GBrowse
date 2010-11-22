@@ -42,24 +42,12 @@ are both provided, then the latter overrides the former.
 EOF
     ;
 
-print STDERR "\n";
-
 # Get any additional information needed.
-until ($which_db) {
-    print STDERR "Check which database - Users, Uploads or Both? ";
-    chop ($which_db = <STDIN>);
-}
-
+$which_db ||= prompt("Check which database - users, uploads or both?", "both");
 my ($admin_user, $admin_pass) = split ':', $admin if $admin;
+$admin_pass = prompt("DB Admin password") if ($pprompt);
 $admin_user ||= 'root';
 $admin_pass ||= '';
-
-if ($pprompt) {
-    print STDERR "DB Admin password: ";
-    $admin_pass = <STDIN>;
-    chomp($admin_pass);
-    print STDERR "\n";
-}
 
 # Open the connections.
 my $globals = Bio::Graphics::Browser2->open_globals;
@@ -102,7 +90,7 @@ if ($which_db =~ /(user|both|all)/i) {
 # Check the uploads DB, if requested.
 if ($which_db =~ /(file|upload|both|all)/i) {
     my $uploads_credentials  = $globals->uploads_db or die "No uploads database credentials specified in GBrowse.conf.";
-    $uploadsdb           = DBI->connect($uploads_credentials) or die "Could not open uploads database, please check your credentials.\n" . DBI->errstr;
+    $uploadsdb           = DBI->connect($uploads_credentials) or die "Could not open uploads database, pease check your credentials.\n" . DBI->errstr;
     
     # Database schema. To change the schema, update/add the fields here, and run this script.
     my $uploads_columns = {
@@ -123,7 +111,6 @@ if ($which_db =~ /(file|upload|both|all)/i) {
     check_table($uploadsdb, "uploads", $uploads_columns);
     check_all_files($userdb, $uploadsdb);
     $checked = 1;
-    print STDERR "Please make sure your Gbrowse.conf file includes the following line:\n";
 }
 
 if ($userdb) {
@@ -136,7 +123,7 @@ if ($uploadsdb) {
 }
 
 print STDERR $checked? "Done!" : "Unknown DB - please enter \"Users,\" \"Uploads,\" or \"Both.\"";
-print STDERR "\n\n";
+print STDERR "\n";
 
 exit 0;
 
@@ -272,27 +259,27 @@ sub fix_permissions {
     my $type = $data_source->{Driver}->{Name};
 
     if ($type =~ /mysql/i) {
-	my ($db_user) = $dsn =~ /user=([^;]+)/i;
-	my ($db_pass) = $dsn =~ /password=([^;]+)/i;
-	$data_source->do("GRANT ALL PRIVILEGES on $name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") or die DBI->errstr;
+	    my ($db_user) = $dsn =~ /user=([^;]+)/i;
+	    my ($db_pass) = $dsn =~ /password=([^;]+)/i || ("");
+	    $data_source->do("GRANT ALL PRIVILEGES on $name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") or die DBI->errstr;
     }
     if ($type =~ /sqlite/i) {
-	my ($path) = $dsn =~ /dbname=([^;]+)/i;
-	unless ($path) {
-	    ($path) = $dsn =~ /DBI:SQLite:([^;]+)/i;
-	}
-	my $user  = GBrowse::ConfigData->config('wwwuser');
-	my $group = get_group_from_user($user);
-	unless ($group) {
-	    print STDERR "Unable to look up group for $user. Will not change ownerships on $path.\n";
-	    print STDERR "You should do this manually to give the Apache web server read/write access to $path.\n";
-	} else {
-	    print STDERR "Using sudo to set ownership to $user:$group. You may be prompted for your login password now.\n";
-	    die "Couldn't figure out location of database index from $dsn" unless $path;
-	    system "sudo chown $user $path";
-	    system "sudo chgrp $group $path";
-	    print STDERR "Done.\n";
-	}
+	    my ($path) = $dsn =~ /dbname=([^;]+)/i;
+	    unless ($path) {
+	        ($path) = $dsn =~ /DBI:SQLite:([^;]+)/i;
+	    }
+	    my $user  = GBrowse::ConfigData->config('wwwuser');
+	    my $group = get_group_from_user($user);
+	    unless ($group) {
+	        print STDERR "Unable to look up group for $user. Will not change ownerships on $path.\n";
+	        print STDERR "You should do this manually to give the Apache web server read/write access to $path.\n";
+	    } else {
+	        print STDERR "Using sudo to set ownership to $user:$group. You may be prompted for your login password now.\n";
+	        die "Couldn't figure out location of database index from $dsn" unless $path;
+	        system "sudo chown $user $path";
+	        system "sudo chgrp $group $path";
+	        print STDERR "Done.\n";
+	    }
     }
 }
 
@@ -334,6 +321,32 @@ sub escape_enums {
     return $string;
 }
 
+# Asks q question and sets a default - blatantly stolen (& modified) from Module::Build.
+sub prompt {
+  my $mess = shift
+    or die "prompt() called without a prompt message";
+
+  # use a list to distinguish a default of undef() from no default
+  my @def;
+  @def = (shift) if @_;
+  # use dispdef for output
+  my @dispdef = scalar(@def) ?
+    ('[', (defined($def[0]) ? $def[0] : ''), '] ') :
+    (' ', '');
+    
+  print STDERR "$mess ", @dispdef;
+
+  my $ans = <STDIN>;
+  chomp $ans if defined $ans;
+
+  if ( !defined($ans)        # Ctrl-D or unattended
+       or !length($ans) ) {  # User hit return
+    print STDERR "$dispdef[1]\n";
+    $ans = scalar(@def) ? $def[0] : '';
+  }
+
+  return $ans;
+}
 
 sub get_group_from_user {
     my $user = shift;

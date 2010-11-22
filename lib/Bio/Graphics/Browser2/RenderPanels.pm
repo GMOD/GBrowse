@@ -2033,7 +2033,7 @@ sub vis_length {
     my $self = shift;
     my $segment = $self->segment;
     my $length  = $segment->length;
-    return $length/$self->render->details_mult;
+    return $length/$self->details_mult;
 }
 
 sub subtrack_manager {

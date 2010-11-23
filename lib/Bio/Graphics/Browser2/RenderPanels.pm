@@ -1003,17 +1003,19 @@ sub render_image_pad {
 sub bump_density {
   my $self     = shift;
   my $conf = $self->source;
-  return $conf->global_setting('bump density')
+  my $bd = $conf->global_setting('bump density')
       || $conf->setting('TRACK DEFAULTS' =>'bump density')
       || 50;
+  return int($bd * $self->details_mult);
 }
 
 sub label_density {
   my $self = shift;
   my $conf = $self->source;
-  return $conf->global_setting('label density')
+  my $ld = $conf->global_setting('label density')
       || $conf->setting('TRACK DEFAULTS' =>'label density')
       || 10;
+  return int($ld * $self->details_mult);
 }
 
 sub calculate_scale_size {

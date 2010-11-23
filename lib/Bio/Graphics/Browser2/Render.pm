@@ -3242,14 +3242,14 @@ sub get_image_width {
     my $self = shift;
     my $state = shift;
     my $image_width = $state->{'width'} + $self->get_total_pad_width;
-    return $image_width;
+    return int($image_width);
 }
 
 sub get_detail_image_width {
     my $self = shift;
     my $state = shift;
     my $image_width = $state->{'width'} * $self->details_mult + $self->get_total_pad_width;
-    return $image_width;
+    return int($image_width);
 }
 
 sub get_total_pad_width {

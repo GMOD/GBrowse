@@ -1774,7 +1774,7 @@ sub get_summary_iterator {
 	      -seq_id => $segment->seq_id,
 	      -start  => $segment->start,
 	      -end    => $segment->end,
-	      -bins   => $self->settings->{width},
+	      -bins   => $self->get_detail_width_no_pad,
 	      -iterator=>1,
       );
   return $db->feature_summary(@args);
@@ -1874,7 +1874,7 @@ sub create_panel_args {
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
 	      -key_color    => $source->global_setting('key bgcolor')      || 'moccasin',
 	      -bgcolor      => $source->global_setting("$section bgcolor") || 'wheat',
-	      -width        => $section eq 'detail'? $settings->{width} * $self->details_mult : $settings->{width},
+	      -width        => $section eq 'detail'? $self->get_detail_width_no_pad : $settings->{width},
 	      -key_style    => $keystyle,
               -suppress_key => 1,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
@@ -2452,6 +2452,12 @@ sub loaded_segment_outline {
 sub details_mult {
     my $self = shift;
     return $self->settings->{details_mult} || 1;
+}
+
+sub get_detail_width_no_pad {
+    my $self = shift;
+    my $settings = $self->settings;
+    return int($settings->{width} * $self->details_mult);
 }
 
 1;

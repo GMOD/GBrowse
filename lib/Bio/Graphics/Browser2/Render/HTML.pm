@@ -2289,10 +2289,10 @@ RULER
                  div({-id => 'ruler_handle',
                       -style => "width:51px; z-index: 100;"},
                         div({-id      => 'ruler_label',
-                             -onClick => 'toggleRuler(false)',
+                             -onMouseUp => 'toggleRuler(false)',
                              -style   => "height:17px; cursor:pointer; text-align:center; visibility:hidden;"},'') .
                         div({-id => 'ruler_icon',
-                             -onClick => 'toggleRuler(true)',
+                             -onMouseUp => 'toggleRuler(true)',
                              -style => "height:17px; cursor:pointer; position:absolute; top:2px; left:3px;"},
                                 img({-src=>"${button_url}/ruler-icon.png",-alt=>'Ruler'}) ) .
                         div({-id => 'ruler_image',

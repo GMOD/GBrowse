@@ -7,6 +7,7 @@
 */
 
 var ruler_value = 100;
+var ruler_can_toggle = true;
 
 function createRuler () {
   var half_handle_width = Math.round($('ruler_handle').getWidth()/2);
@@ -16,13 +17,20 @@ function createRuler () {
     range: $R(half_handle_width, track_width-half_handle_width),
     sliderValue: ruler_value,
     onSlide: function (value) {
-      ruler_value = value;
-      updateRuler();
+      if (value != ruler_value) {
+        ruler_value = value;
+        updateRuler();
+        ruler_can_toggle = false; // If the user is dragging the ruler, then don't let it toggle when the mouse is released
+      }  
     }
   });
 }
 
 function toggleRuler (ruler_visible) {
+   if (!ruler_can_toggle) {
+       ruler_can_toggle = true;
+       return;
+   }
    var ruler_label  = $('ruler_label');
    var ruler_handle = $('ruler_handle');
    var ruler_image  = $('ruler_image');

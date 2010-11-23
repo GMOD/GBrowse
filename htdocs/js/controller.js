@@ -413,7 +413,7 @@ var GBrowseController = Class.create({
                     if (scale_div) {
                         scale_div.innerHTML = detail_scale_bar_hash.scale_label + 
                             "<span style='display: inline-block; margin-left:5px; margin-bottom:4px; border-left: 1px solid black; border-right: 1px solid black; height:8px'>" +
-                            "<span style='display: inline-block; border-bottom: 1px solid black; height: 4px; width:" + scale_width + "px'</div></div>";
+                            "<span style='display: inline-block; border-bottom: 1px solid black; height: 4px; width:" + scale_width + "px'</span></span>";
 
                         scale_div.setStyle({ left: scale_left+'px' });
                     }

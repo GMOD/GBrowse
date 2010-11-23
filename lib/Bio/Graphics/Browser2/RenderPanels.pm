@@ -616,7 +616,7 @@ sub wrap_rendered_track {
 	    -onClick => "Controller.scroll('right',0.5)",
 	});
 	
-	my $scale_div = div( { -id => "detail_scale_scale", -style => "position:absolute; top:5px", }, "" );
+	my $scale_div = div( { -id => "detail_scale_scale", -style => "position:absolute; top:12px", }, "" );
 
         $overlay_div = div( { -id => "${label}_overlay_div", -style => "position:absolute; top:0px; width:100%; left:0px", }, $pan_left . $pan_right . $scale_div);
     }
@@ -910,7 +910,8 @@ sub render_scale_bar {
     else {
         $wide_segment         = $segment;
         %add_track_extra_args = (
-            -bgcolor => $source->global_setting('detail bgcolor') || 'wheat',
+            -bgcolor    => $source->global_setting('detail bgcolor') || 'wheat',
+            -pad_top    => 18,
             -pad_bottom => 0,
             -label_font => $image_class->gdMediumBoldFont,
 	    -label      => eval{$segment->seq_id.

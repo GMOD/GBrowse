@@ -6,7 +6,7 @@
 
 */
 
-var ruler_value = 0;
+var ruler_value = 100;
 
 function createRuler () {
   var half_handle_width = Math.round($('ruler_handle').getWidth()/2);
@@ -14,7 +14,7 @@ function createRuler () {
 
   new Control.Slider('ruler_handle','ruler_track',{
     range: $R(half_handle_width, track_width-half_handle_width),
-    sliderValue: 100,
+    sliderValue: ruler_value,
     onSlide: function (value) {
       ruler_value = value;
       updateRuler();

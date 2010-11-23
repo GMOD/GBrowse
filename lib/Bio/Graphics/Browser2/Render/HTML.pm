@@ -2285,7 +2285,7 @@ RULER
     my $button_url = $self->data_source->button_url;
 
     return div({-id => 'ruler_track',
-                -style => "position:relative; z-index: 100; width:${width}px; height:17px; margin-left:auto; margin-right:auto;"},
+                -style => "position:relative; z-index: 100; width:${width}px; height:0px; margin-left:auto; margin-right:auto;"},
                  div({-id => 'ruler_handle',
                       -style => "width:51px; z-index: 100;"},
                         div({-id      => 'ruler_label',

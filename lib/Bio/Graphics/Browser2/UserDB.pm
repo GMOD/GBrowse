@@ -833,7 +833,7 @@ sub do_add_openid_to_account {
     
     my ($error,@results);
 
-    my $insert = $userdb->prepare("INSERT INTO openid_users VALUES (?,?,?)");
+    my $insert = $userdb->prepare("INSERT INTO openid_users (userid,username,openid_url) VALUES (?,?,?)");
     if($insert->execute($userid, $user, $openid)) {
         $error = "Success";
     } else {

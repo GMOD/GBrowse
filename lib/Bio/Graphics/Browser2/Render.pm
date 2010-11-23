@@ -54,7 +54,6 @@ my $STATE;         # stash state for use by callbacks
 
 sub new {
   my $class = shift;
-  warn "[$$] Render->new()";
 
   my ($data_source, $session);
 
@@ -75,7 +74,7 @@ sub new {
 
   $self->data_source($data_source);
   $self->session($session);
-  $self->data_source->{session} = $session;
+#  $self->data_source->{session} = $session;
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
@@ -183,7 +182,7 @@ sub debug {
 
 sub DESTROY {
     my $self = shift;
-    undef $self->data_source->{session};
+#    undef $self->data_source->{session} if $self->data_source;
     warn "[$$] $self: destroy she said" if DEBUG;
 }
 

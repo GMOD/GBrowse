@@ -54,6 +54,7 @@ my $STATE;         # stash state for use by callbacks
 
 sub new {
   my $class = shift;
+  warn "[$$] Render->new()";
 
   my ($data_source, $session);
 
@@ -71,18 +72,13 @@ sub new {
   }
 
   my $self = bless {},ref $class || $class;
+
   $self->data_source($data_source);
   $self->session($session);
   $self->data_source->{session} = $session;
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
-  if ($self->data_source->globals->user_accounts) {
-      $self->{userdb} = Bio::Graphics::Browser2::UserDB->new($self);
-      $self->{userdb}->check_uploads_id($session->id, $session->page_settings->{uploadid}) unless $session->page_settings->{uploads_id_checked};
-      $session->page_settings->{uploads_id_checked} = ($self->{userdb}->get_uploads_id($session->id))? 1 : 0;
-  }
-  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self);
   $self;
 }
 
@@ -187,7 +183,7 @@ sub debug {
 
 sub DESTROY {
     my $self = shift;
-    warn "$self: destroy she said" if DEBUG;
+    warn "[$$] $self: destroy she said" if DEBUG;
 }
 
 
@@ -210,6 +206,14 @@ sub run {
 
   $self->set_source() && return;
   my $state = $self->state;
+
+  if ($self->data_source->globals->user_accounts) {
+      my $session = $self->session;
+      $self->{userdb} = Bio::Graphics::Browser2::UserDB->new($self);
+      $self->{userdb}->check_uploads_id($session->id, $session->page_settings->{uploadid}) unless $session->page_settings->{uploads_id_checked};
+      $session->page_settings->{uploads_id_checked} = ($self->{userdb}->get_uploads_id($session->id))? 1 : 0;
+  }
+  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self);
 
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
@@ -260,7 +264,8 @@ sub set_source {
 	my $url  = CGI::url(-absolute=>1,-path_info=>0);
 	$url     =~ s!(gbrowse[^/]*)(?\!.*gbrowse)/.+$!$1!;  # fix CGI/Apache bug
 	$url    .= "/$source/";
-	$url .= "?$args" if $args;
+	$url .= "?$args" if $args && $args !~ /^source=/;
+	warn "[$$] redirecting to $url";
 	print CGI::redirect($url);
 	return 1;
     }

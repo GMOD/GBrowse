@@ -34,6 +34,7 @@ sub open_globals {
 sub new {
   my $class            = shift;
   my $config_file_path = shift;
+  warn "[$$] Browser2->new()";
 
   # Cache the config info so we don't need to reparse in a persistent (e.g. modperl) environment
   my $mtime            = (stat($config_file_path))[9] || 0;

@@ -21,7 +21,9 @@ if ($fcgi) {
 
     my %sys_env = %ENV;
     while (!$FCGI_DONE) {
+	warn "[$$] waiting....";
 	my $status = $fcgi->Accept;
+	warn "[$$] accepted, status = $status";
 	next unless $status >= 0;
         %ENV = (%sys_env, %ENV);
 	my $globals = Bio::Graphics::Browser2->open_globals;

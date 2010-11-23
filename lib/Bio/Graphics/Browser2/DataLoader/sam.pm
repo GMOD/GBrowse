@@ -31,6 +31,7 @@ sub finish_load {
     # turn SAM file into a BAM file
     $self->set_status('converting SAM to BAM');
     $self->do_strip_prefix($source_file);
+
     $self->sam2bam($source_file,$bam);
 
     # sort it
@@ -44,8 +45,15 @@ sub finish_load {
 
     Bio::DB::Bam->index_build($bam);
 
+    my $bigwig_exists = 0;
+
+    if ($self->has_bigwig) {
+	$self->set_status('creating BigWig coverage file');
+	$bigwig_exists = $self->create_big_wig();
+    }
+
     $self->set_status('creating conf file');
-    $self->create_conf_file($bam);
+    $self->create_conf_file($bam,$bigwig_exists);
 }
 
 sub do_strip_prefix {

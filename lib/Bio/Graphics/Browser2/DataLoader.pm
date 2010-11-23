@@ -113,8 +113,7 @@ sub get_fasta_files {
 	next unless -e $fasta;
 	if (-d _) {
 	    push @fastai, glob("$fasta/*.fai");
-	    push @fasta, $fasta
-		if glob("$fasta/*.{fa,FA,fasta,FASTA}");
+	    push @fasta,  glob("$fasta/*.{fa,FA,fasta,FASTA}");
 	} else {
 	    push @fastai,$fasta if -e "$fasta.fai";     # points at an indexed fasta file
 	    push @fasta, $fasta if $fasta =~ /\.(fa|fasta)$/i;
@@ -352,8 +351,8 @@ sub backend {
     my $backend = $self->globals->upload_db_adaptor;
     $backend = $self->guess_backend if $backend && $backend eq 'auto';
     unless ($backend) {
-		$backend = $self->guess_backend;
-		warn "No upload_db_adaptor option set in GBrowse.conf. Will try to use $backend.";
+	$backend = $self->guess_backend;
+	warn "No upload_db_adaptor option set in GBrowse.conf. Will try to use $backend.";
     }
     return $backend;
 }

@@ -91,17 +91,17 @@ sub set_signal_handlers {
 }
 
 sub data_source {
-	my $self = shift;
-	my $d = $self->{data_source};
-	$self->{data_source} = shift if @_;
-	$d;
+    my $self = shift;
+    my $d = $self->{data_source};
+    $self->{data_source} = shift if @_;
+    $d;
 }
 
 sub session {
-	my $self = shift;
-	my $d = $self->{session};
-	$self->{session} = shift if @_;
-	$d;
+    my $self = shift;
+    my $d = $self->{session};
+    $self->{session} = shift if @_;
+    $d;
 }
 
 sub state {
@@ -183,6 +183,7 @@ sub debug {
 
 sub DESTROY {
     my $self = shift;
+    undef $self->data_source->{session};
     warn "[$$] $self: destroy she said" if DEBUG;
 }
 

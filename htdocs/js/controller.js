@@ -365,6 +365,8 @@ var GBrowseController = Class.create({
         this.busy();
 
         TrackPan.grey_out_markers();
+        $('ruler_handle').setOpacity(0.3);
+        $('detail_scale_scale').setOpacity(0.3);
 
         //Grey out image
         this.each_track(function(gbtrack) {
@@ -414,7 +416,8 @@ var GBrowseController = Class.create({
                         scale_div.innerHTML = detail_scale_bar_hash.scale_label + 
                             "<span style='display: inline-block; margin-left:5px; margin-bottom:4px; border-left: 1px solid black; border-right: 1px solid black; height:8px'>" +
                             "<span style='display: inline-block; border-bottom: 1px solid black; height: 4px; width:" + scale_width + "px'</span></span>";
-
+                        $('ruler_handle').setOpacity(1);
+                        scale_div.setOpacity(1);
                         scale_div.setStyle({ left: scale_left+'px' });
                     }
                 }

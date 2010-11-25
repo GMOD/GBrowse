@@ -88,11 +88,11 @@ my $uploads_columns = {
     data_source => "text",
 };
 
-fix_permissions();
-
 check_table("users", $users_columns);
 check_table("openid_users", $openid_columns);
 check_table("uploads", $uploads_columns);
+
+fix_permissions();
 
 check_uploads_ids();
 check_all_files();

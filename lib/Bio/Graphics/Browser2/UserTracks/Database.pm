@@ -27,12 +27,13 @@ sub _new {
     
     my $self = bless {
         config      => $data_source,
-        uploadsdb => $uploadsdb,
+        uploadsdb   => $uploadsdb,
         userid      => $userid,
-        uploadsid => $uploadsid,
-        globals      => $globals,
+        uploadsid   => $uploadsid,
+        globals     => $globals,
+        data_source => $data_source->name,
     }, ref $class || $class;
-    
+     
     # Check to see if user accounts are enabled, set some globals just in case.
     if ($globals->user_accounts) {
         $self->{userdb} = Bio::Graphics::Browser2::UserDB->new;
@@ -46,19 +47,21 @@ sub get_file_id {
     my $self = shift;
     my $filename = shift;
     my $uploadsdb = $self->{uploadsdb};
+    
+    my $data_source = $self->{data_source};
     my $uploadsid = shift || $self->{uploadsid};
     
     # First, check my files.
-    my $uploads = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = " . $uploadsdb->quote($filename) . " AND userid = " . $uploadsdb->quote($uploadsid));
+    my $uploads = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = ? AND userid = ? AND data_source = ?", undef, $filename, $uploadsid, $data_source);
     return $uploads if $uploads;
     
     # Then, check files shared with me.
     my $userid = $self->{userid};
-    my $shared = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = " . $uploadsdb->quote($filename) . " AND users LIKE " . $uploadsdb->quote("%" . $userid . "%"));
+    my $shared = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = ? AND users LIKE ? AND data_source = ?", undef, $filename, "%".$userid."%", $data_source);
     return $shared if $shared;
     
     # Lastly, check public files.
-    my $public = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = " . $uploadsdb->quote($filename) . " AND sharing_policy = 'public'");
+    my $public = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = ? AND sharing_policy = ? AND data_source = ?", undef, $filename, "public", $data_source);
     return $public if $public;
 }
 
@@ -73,7 +76,7 @@ sub filename {
 sub nowfun {
     my $self = shift;
     my $globals = $self->{globals};
-    return $globals->uploads_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
+    return $globals->user_account_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
 }
 
 # Get Uploaded Files () - Returns an array of the paths of files owned by the currently logged-in user. Can be publicly accessed.
@@ -81,7 +84,8 @@ sub get_uploaded_files {
     my $self = shift;
     my $uploadsid = $self->{uploadsid};# or confess "Need uploads ID for get_uploaded_files";
     my $uploadsdb = $self->{uploadsdb};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE userid = " . $uploadsdb->quote($uploadsid) . " AND sharing_policy <> 'public' AND imported <> 1 ORDER BY uploadid");
+    my $data_source = $self->{data_source};
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE userid = ? AND sharing_policy <> ? AND imported <> 1 AND data_source = ? ORDER BY uploadid", undef, $uploadsid, "public", $data_source);
     return @$rows;
 }
 
@@ -93,6 +97,7 @@ sub get_public_files {
     my $uploadsid = $self->{uploadsid} or return;
     my $globals = $self->{globals};
     my $count = $globals->public_files;
+    my $data_source = $self->{data_source};
     
     my $search_id;
     if ($self->{globals}->user_accounts) {
@@ -107,7 +112,7 @@ sub get_public_files {
     
     my $uploadsdb = $self->{uploadsdb};
     my $userid = $self->{userid};
-    my $sql = "SELECT uploadid FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public");
+    my $sql = "SELECT uploadid FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public") . " AND data_source = " . $uploadsdb->quote($data_source);
     $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
     $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
     $sql .= " ORDER BY public_count DESC LIMIT $count";
@@ -122,6 +127,7 @@ sub public_count {
     my $searchterm = shift;
     my $uploadsid = $self->{uploadsid} or return;
     my $uploadsdb = $self->{uploadsdb};
+    my $data_source = $self->{data_source};
     
     my $search_id;
     if ($self->{globals}->user_accounts) {
@@ -131,7 +137,7 @@ sub public_count {
     }
     
     my $userid = $self->{userid};
-    my $sql = "SELECT count(*) FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public");
+    my $sql = "SELECT count(*) FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public") . " AND data_source = " . $uploadsdb->quote($data_source);
     $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
     $sql .= $search_id? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
     return $uploadsdb->selectrow_array($sql);
@@ -142,7 +148,8 @@ sub get_imported_files {
     my $self = shift;
     my $uploadsid = $self->{uploadsid} or return;
     my $uploadsdb = $self->{uploadsdb};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE userid = " . $uploadsdb->quote($uploadsid) . " AND sharing_policy <> 'public' AND imported = 1 ORDER BY uploadid");
+    my $data_source = $self->{data_source};
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE userid = ? AND sharing_policy <> 'public' AND imported = 1 AND data_source = ? ORDER BY uploadid", undef, $uploadsid, $data_source);
     return @$rows;
 }
 
@@ -151,7 +158,8 @@ sub get_added_public_files {
     my $self = shift;
     my $userid = $self->{userid} or return;
     my $uploadsdb = $self->{uploadsdb};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE sharing_policy = 'public' AND public_users LIKE " . $uploadsdb->quote('%' . $userid . '%') . " ORDER BY uploadid");
+    my $data_source = $self->{data_source};
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE sharing_policy = ? AND public_users LIKE ? AND data_source = ? ORDER BY uploadid", undef, "public", "%".$userid."%", $data_source);
     return @$rows;
 }
 
@@ -161,8 +169,9 @@ sub get_shared_files {
     my $userid = $self->{userid} or return;
     my $uploadsid = $self->{uploadsid};
     my $uploadsdb = $self->{uploadsdb};
+    my $data_source = $self->{data_source};
     #Since upload IDs are all the same size, we don't have to worry about one ID repeated inside another so this next line is OK. Still, might be a good idea to secure this somehow?
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE (sharing_policy = 'group' OR sharing_policy = 'casual') AND users LIKE " . $uploadsdb->quote('%' . $userid . '%') . " AND userid <> " . $uploadsdb->quote($uploadsid) . " ORDER BY uploadid");
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE (sharing_policy = ? OR sharing_policy = ?) AND users LIKE ? AND userid <> ? AND data_source = ? ORDER BY uploadid", undef, "group", "casual", $userid, $uploadsid, $data_source);
     return @$rows;
 }
 
@@ -252,12 +261,11 @@ sub field {
         #Clean up the string
         $value =~ s/^\s+//;
         $value =~ s/\s+$//; 
-        my $now = $self->nowfun;
-        my $result = $uploadsdb->do("UPDATE uploads SET $field = " . $uploadsdb->quote($value) . " WHERE uploadid = " . $uploadsdb->quote($file));
+        my $result = $uploadsdb->do("UPDATE uploads SET $field = ? WHERE uploadid = ?", undef, $value, $file);
         $self->update_modified($file);
         return $result;
     } else {
-        return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
+        return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = ?", undef, $file);
     }
 }
 
@@ -323,15 +331,14 @@ sub add_file {
     my $uploadsdb = $self->{uploadsdb};
     my $filename = shift;
     my $imported = shift || 0;
-    my $description = $uploadsdb->quote(shift);
+    my $description = shift;
     my $uploadsid = shift || $self->{uploadsid};
-    my $shared = $uploadsdb->quote(shift || ($self =~ /admin/)? "public" : "private");
+    my $shared = shift || ($self =~ /admin/)? "public" : "private";
+    my $data_source = $self->{data_source};
     
     my $fileid = md5_hex($uploadsid.$filename);
     my $now = $self->nowfun;
-    $filename = $uploadsdb->quote($filename);
-    $uploadsid = $uploadsdb->quote($uploadsid);
-    $uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy) VALUES (" . $uploadsdb->quote($fileid) . ", $uploadsid, $filename, $description, $imported, $now, $now, $shared)");
+    $uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy, data_source ) VALUES (?, ?, ?, ?, ?, $now, $now, ?, ?)", undef, $fileid, $uploadsid, $filename, $description, $imported, $shared, $data_source);
     return $fileid;
 }
 
@@ -349,7 +356,7 @@ sub delete_file {
         if ($filename) {
             # First delete from the database - better to have a dangling file then a dangling reference to nothing.
             my $uploadsdb = $self->{uploadsdb};
-            $uploadsdb->do("DELETE FROM uploads WHERE uploadid = " . $uploadsdb->quote($file));
+            $uploadsdb->do("DELETE FROM uploads WHERE uploadid = ?", undef, $file);
         }
         
         # Now remove the backend database.
@@ -413,8 +420,9 @@ sub owner {
 sub is_shared_with_me {
     my $self = shift;
     my $file = shift or confess "No file ID given to is_shared_with_me()";
+    my $userid = $self->{userid};
     my $uploadsdb = $self->{uploadsdb};
-    my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE uploadid = " . $uploadsdb->quote($file) . " AND users LIKE " . $uploadsdb->quote("%" . $self->{userid} . "%") . "OR public_users LIKE " . $uploadsdb->quote("%" . $self->{userid} . "%"));
+    my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE uploadid = ? AND users LIKE ? OR public_users LIKE ?", undef, $file, "%".$userid."%", "%".$userid."%");
     return (@$results > 0);
 }
 

@@ -454,10 +454,14 @@ sub ACTION_install {
 	)) {
 	system "sudo /etc/init.d/apache2 restart";
     }
+    
+    # Configure the databases, if needed.
+    my $metadb_script = File::Spec->catfile("bin", "gbrowse_metadb_config.pl");
+    system "perl $metadb_script";
 
     print STDERR "\n***INSTALLATION COMPLETE***\n";
     print STDERR "Load http://localhost/$base for demo and documentation.\n";
-    print STDERR "Visit the http://gmod.org for information on setting up databases for users and custom tracks.\n"
+    print STDERR "Visit the http://gmod.org for more information on setting up databases for users and custom tracks.\n";
 }
 
 sub ACTION_install_slave {

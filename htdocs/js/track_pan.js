@@ -72,7 +72,7 @@ var GBrowseTrackPan = Class.create({
 				top:             '0px',
 				borderLeft:      '1px solid ' + this.marker_outline,
 				borderRight:     '1px solid ' + this.marker_outline,
-				height:          '200px',
+				height:          '400px',
 				cursor:          'text',
 				zIndex:          5
 			});
@@ -131,7 +131,7 @@ var GBrowseTrackPan = Class.create({
 				top:             '0px',
 				borderLeft:      '1px solid ' + this.marker_outline,
 				borderRight:     '1px solid ' + this.marker_outline,
-				height:          '200px',
+				height:          '400px',
 				cursor:          'text',
 				zIndex:          5
 			});

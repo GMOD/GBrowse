@@ -22,13 +22,15 @@ function createRuler () {
         updateRuler();
         ruler_can_toggle = false; // If the user is dragging the ruler, then don't let it toggle when the mouse is released
       }  
+    },
+    onChange: function () {
+      ruler_can_toggle = true; // Re-enable toggling after the mouse has been released after dragging
     }
   });
 }
 
 function toggleRuler (ruler_visible) {
    if (!ruler_can_toggle) {
-       ruler_can_toggle = true;
        return;
    }
    var ruler_label  = $('ruler_label');

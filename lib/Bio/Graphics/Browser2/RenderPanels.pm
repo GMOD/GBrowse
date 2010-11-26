@@ -625,7 +625,7 @@ sub wrap_rendered_track {
 
     my $subtrack_labels = join '',map {
 	my ($label,$left,$top) = @$_;
-	div({-class=>'subtrack',-style=>"top:${top}px;left:20px"},$label);
+	div({-class=>'subtrack',-style=>"top:${top}px;left:20px;background-color:white"},$label);
     } @$titles;
 
     return div({-class=>'centered_block',

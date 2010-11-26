@@ -35,7 +35,7 @@ Overview.prototype.initialize = function() {
   //var dnd = document.mainform.drag_and_drop;
   //if (!dnd || !dnd.checked) return false;
 
-  var i = document.getElementById(self.imageId);
+  var i = $(self.imageId);
   if (!i) return false;
 
   var img = document.getElementsByName('overview');
@@ -104,8 +104,8 @@ Overview.prototype.getSegment = function(i) {
 
 Overview.prototype.loadSegmentInfo = function() {
   // get the segment info from gbrowse CGI parameters
-  
-  var i = document.getElementById(self.imageId);
+  var self = overviewObject;
+  var i = $(self.imageId);
 
   // Uh oh! We must be in GBrowse_syn!
   if (Controller.gbrowse_syn) {

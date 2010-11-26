@@ -40,11 +40,12 @@ SelectArea.prototype.replaceImage = function(image) {
   // escape backslashes that may appear in the src attribute
   src = escape(src.replace(/\\/g,"\\\\"));
 
-  YAHOO.util.Dom.setStyle(image,'background', 'url('+src+') top left no-repeat');
-  YAHOO.util.Dom.setStyle(image,'width', width+'px');
-  YAHOO.util.Dom.setStyle(image,'height', height+'px');
-  YAHOO.util.Dom.setStyle(image,'display','block');
-  YAHOO.util.Dom.setStyle(image,'cursor','text');
+  image.setStyle({ background: 'url('+src+') top left no-repeat',
+                   width: width+'px',
+                   height: height+'px',
+                   display: 'block',
+                   cursor: 'text' 
+  });
 
 
   if (   !document.searchform 
@@ -74,8 +75,9 @@ SelectArea.prototype.replaceImage = function(image) {
       for (var n=0;n<map.length;n++) {
         var newTop   = this.elementLocation(map[n],'y1') + top;
         var newLeft  = this.elementLocation(map[n],'x1') + left;
-        YAHOO.util.Dom.setStyle(map[n],'top',newTop+'px');
-        YAHOO.util.Dom.setStyle(map[n],'left',newLeft+'px');
+        map[n].setStyle({ top: newTop+'px',
+                          left: newLeft+'px'
+        });
       }
     }
   }
@@ -123,14 +125,15 @@ SelectArea.prototype.recenter = function(event) {
 
 // Cross-browser element coordinates
 SelectArea.prototype.elementLocation = function(el,request) {
-  var region = YAHOO.util.Dom.getRegion(el);
+  var offset = el.cumulativeOffset();
+  var dimensions = el.getDimensions();
   switch(request) {
-    case ('y1') : return region.top;
-    case ('y2') : return region.bottom;
-    case ('x1') : return region.left;
-    case ('x2') : return region.right;
-    case ('width')  : return (region.right - region.left);
-    case ('height') : return (region.bottom - region.top);
+    case ('y1') : return offset.top;
+    case ('y2') : return offset.top + dimensions.height;
+    case ('x1') : return offset.left;
+    case ('x2') : return offset.left + dimensions.width;
+    case ('width')  : return dimensions.width;
+    case ('height') : return dimensions.height;
  }
 }
 
@@ -174,17 +177,19 @@ SelectArea.prototype.startRubber = function(self,event) {
 
   self.selectPixelStart = self.eventLocation(event,'x') - self.elementLocation(self.selectLayer,'x1');
 
-  YAHOO.util.Dom.setStyle(self.selectBox,'visibility','hidden');
-  YAHOO.util.Dom.setStyle(self.selectBox,'left',self.selectPixelStart+'px');
-  YAHOO.util.Dom.setStyle(self.selectBox,'width','2px');
-  YAHOO.util.Dom.setStyle(self.selectBox,'text-align', 'center');	
-  YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
+  self.selectBox.setStyle({ visibility: 'hidden',
+                            left: self.selectPixelStart+'px',
+                            width: '2px',
+                            textAlign: 'center',
+                            visibility: 'hidden' 
+  });
 
   var spanReport = self.spanReport || self.createAndAppend('p',self.selectBox,'spanReport');
-  YAHOO.util.Dom.setStyle(spanReport,'color',self.fontColor||'black');
-  YAHOO.util.Dom.setStyle(spanReport,'margin-top',self.marginTop||'0px');
-  YAHOO.util.Dom.setStyle(spanReport,'background','transparent');
-  YAHOO.util.Dom.setStyle(spanReport,'font','normal bold 14px sans-serif');
+  spanReport.setStyle({ color: self.fontColor||'black',
+                        marginTop: self.marginTop||'0px',
+                        background: 'transparent',
+                        font: 'normal bold 14px sans-serif'
+  });
 
   spanReport.innerHTML = ' ';
   self.spanReport = spanReport;
@@ -197,8 +202,8 @@ SelectArea.prototype.cancelRubber = function() {
 
   if (!self.selectBox) return false;
   
-  YAHOO.util.Dom.setStyle(self.selectBox,'visibility','hidden');
-  YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
+  self.selectBox.setStyle({visibility:'hidden'});
+  self.selectMenu.setStyle({visibility:'hidden'});
   selectAreaIsActive = false;
 
   if (self.originalLandmark) {
@@ -277,10 +282,10 @@ SelectArea.prototype.moveRubber = function(event) {
   } 
 
   // size and appearance of the "rubber band" select box
-  YAHOO.util.Dom.setStyle(self.selectBox,'width','1px');
-  YAHOO.util.Dom.setStyle(self.selectBox,'left',left+'px');
-  YAHOO.util.Dom.setStyle(self.selectBox,'width',selectPixelWidth+'px');
-  YAHOO.util.Dom.setStyle(self.selectBox,'visibility','visible');
+  self.selectBox.setStyle({left: left+'px',
+                           width: selectPixelWidth+'px',
+                           visibility: 'visible'
+  });
 
   // warning if max segment size exceeded
   var tooBig;
@@ -341,7 +346,7 @@ SelectArea.prototype.disableSelection = function(el) {
 // Builds the popup menu that appears when selection is complete
 SelectArea.prototype.addSelectMenu = function(view) {
 
-  var menu =  document.getElementById(view+'SelectMenu'); 
+  var menu =  $(view+'SelectMenu'); 
   if (menu) {
     this.autoSubmit = false;
   }
@@ -350,18 +355,19 @@ SelectArea.prototype.addSelectMenu = function(view) {
   }
 
   // required style 
-  YAHOO.util.Dom.setStyle(menu,'position','absolute');
-  YAHOO.util.Dom.setStyle(menu,'display','block');
-  YAHOO.util.Dom.setStyle(menu,'z-index','101');
-  YAHOO.util.Dom.setStyle(menu,'visibility','hidden');
+  menu.setStyle({ position: 'absolute',
+                  display: 'block',
+                  zIndex: '101',
+                  visibility: 'hidden'
+  });
 
   // optional style -- check if a custom menu has styles set already
   var existingStyle = new String(menu.getAttribute('style'));
   if (existingStyle) {
-    if (!existingStyle.match(/width/i))      YAHOO.util.Dom.setStyle(menu,'width',this.menuWidth||'200px');
-    if (!existingStyle.match(/font/i))       YAHOO.util.Dom.setStyle(menu,'font','12px sans-serif');
-    if (!existingStyle.match(/background/i)) YAHOO.util.Dom.setStyle(menu,'background','lightyellow');
-    if (!existingStyle.match(/border/i))     YAHOO.util.Dom.setStyle(menu,'border','1px solid #003366');
+    if (!existingStyle.match(/width/i))      menu.setStyle({ width: this.menuWidth||'200px'});
+    if (!existingStyle.match(/font/i))       menu.setStyle({ font: '12px sans-serif'});
+    if (!existingStyle.match(/background/i)) menu.setStyle({ background: 'lightyellow'});
+    if (!existingStyle.match(/border/i))     menu.setStyle({ border: '1px solid #003366'});
   }
 
   this.selectMenu = menu;
@@ -375,15 +381,13 @@ SelectArea.prototype.addSelectBox = function(view) {
  
   var box = this.createAndAppend('div',this.selectLayer,view+'selectBox');
 
-  YAHOO.util.Dom.setStyle(box,'position','absolute');
-// this was breaking IE for some reason
-//  YAHOO.util.Dom.setStyle(box,'display', 'inline');
-  YAHOO.util.Dom.setStyle(box,'visibility', 'hidden');
-  YAHOO.util.Dom.setStyle(box,'top','0px');
-  YAHOO.util.Dom.setStyle(box,'height','100%');
-  YAHOO.util.Dom.setStyle(box,'left','0px');
-  YAHOO.util.Dom.setStyle(box,'z-index',100);
-  YAHOO.util.Dom.setStyle(box,'border',this.border||'none');
+  box.setStyle({ position: 'absolute',
+                 visibility: 'hidden',
+                 top: '0px',
+                 height: '100%',
+                 left: '0px',
+                 zIndex: 100,
+                 border: this.border||'none' });
 
   // click on scalebar initializes selection
   this.scalebar.onmousedown = this.startSelection;
@@ -459,7 +463,7 @@ SelectArea.prototype.showMenu = function(event) {
   var menu = self.selectMenu;
   menu.innerHTML = self.menuHTML.replace(/SELECTION/g,self.currentSegment);
 
-  var pageWidth  = YAHOO.util.Dom.getViewportWidth();
+  var pageWidth  = document.viewport.getWidth();
   var menuWidth  = self.elementLocation(menu,'width');
   var menuHeight = self.elementLocation(menu,'height');
   var menuYHalf  = Math.round(menuHeight/2); 
@@ -468,25 +472,26 @@ SelectArea.prototype.showMenu = function(event) {
   if ((left+menuWidth) > pageWidth) left -= menuWidth + 10;
   var top  = self.eventLocation(event,'y') - menuYHalf;
 
-  YAHOO.util.Dom.setStyle(menu,'top',  top+'px'); 
-  YAHOO.util.Dom.setStyle(menu,'left', left+'px');
+  menu.setStyle({ top:  top+'px' }); 
+  menu.setStyle({ left: left+'px' });
 
   // Abort if there is no selection
-  if (YAHOO.util.Dom.getStyle(self.selectBox,'visibility') == 'hidden') {
+  if (self.selectBox.getStyle('visibility') == 'hidden') {
     self.cancelRubber;
     return false;
   }
 
-  YAHOO.util.Dom.setStyle(menu,'visibility','visible');
+  menu.setStyle({ visibility: 'visible' });
 
 }
 
 SelectArea.prototype.hideMenu = function() {
   var self = currentSelectArea;
 
-  YAHOO.util.Dom.setStyle(self.selectBox,'width',1);  
-  YAHOO.util.Dom.setStyle(self.selectBox,'visibility','hidden');
-  YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
+  self.selectBox.setStyle({ width: 1,
+                            visibility: 'hidden'
+  });
+  selectMenu.setStyle({visibility: 'hidden'});
 }
 
 SelectArea.prototype.clearAndSubmit = function(plugin,action) {
@@ -527,18 +532,10 @@ SelectArea.prototype.setOpacity = function(el,opc,bgColor) {
   
   if (!(el && opc)) return false;
 
-  // Just an outline for Konqueror
-  //  if (navigator.userAgent.indexOf( 'Konqueror' ) != -1) {
-  //     YAHOO.util.Dom.setStyle(el,'border','1px solid black');
-  //    return false;
-  //  }
-
   opc = parseFloat(opc);
-  YAHOO.util.Dom.setStyle(el,'background',bgColor||'#BABABA');
-  YAHOO.util.Dom.setStyle(el,'opacity',opc);
-  YAHOO.util.Dom.setStyle(el,'filter','alpha(opacity= '+(100*opc)+')');
-  YAHOO.util.Dom.setStyle(el,'MozOpacity',opc);
-  YAHOO.util.Dom.setStyle(el,'KhtmlOpacity',opc);
+  el.setStyle({ background: bgColor||'#BABABA',
+                opacity: opc 
+             });
 }
 
 

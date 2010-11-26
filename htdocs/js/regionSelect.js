@@ -36,7 +36,7 @@ Region.prototype.initialize = function() {
   //if (!dnd || !dnd.checked) return false;
 
 
-  var i = document.getElementById(self.imageId);;
+  var i = $(self.imageId);;
   if (!i) return false;
 
 
@@ -67,8 +67,8 @@ Region.prototype.startSelection = function(event) {
 
 Region.prototype.loadSegmentInfo = function() {
   // get the segment info from gbrowse CGI parameters
-  
-  var i = document.getElementById(self.imageId);
+  var self = regionObject;
+  var i = $(self.imageId);
   
   var segment_info = Controller.segment_info;
   

@@ -29,13 +29,13 @@ Details.prototype = new SelectArea();
 Details.prototype.initialize = function() {
   var self = new Details;
   
-  var i = document.getElementById(self.imageId);
+  var i = $(self.imageId);
   if (!i) return false;
 
   i = self.replaceImage(i);
   
 
-  //var p = document.getElementById('panels');
+  //var p = $('panels');
   var p = i.parentNode.parentNode;
   self.height      = self.elementLocation(i,'height');
   self.panelHeight = self.elementLocation(p,'height');
@@ -73,8 +73,8 @@ Details.prototype.startSelection = function(event) {
 
 Details.prototype.loadSegmentInfo = function() {
   // get the segment info from gbrowse CGI parameters
-  
-  var i = document.getElementById(self.imageId);
+  var self = detailsObject;
+  var i = $(self.imageId);
   
   var segment_info = Controller.segment_info;
 
@@ -97,7 +97,7 @@ Details.prototype.loadSegmentInfo = function() {
 
   // We fetch the left margin again because the controller can change 
   // the size & position of the section after it is created.
-  this.left       = this.elementLocation(document.getElementById(this.imageId),'x1') - this.elementLocation(this.selectLayer,'x1');
+  this.left       = this.elementLocation($(this.imageId),'x1') - this.elementLocation(this.selectLayer,'x1');
 
   this.pixelStart   = this.left  + this.padLeft;
 }

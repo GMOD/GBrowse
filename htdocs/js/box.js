@@ -39,7 +39,7 @@ Box.prototype.makeBalloon = function() {
   var self = currentBalloonClass;
   
   // use ID 'balloon' for consistency with parent class
-  var box = document.getElementById('balloon');
+  var box = $('balloon');
   if (box) self.parent.removeChild(box);
   box = document.createElement('div');
   box.setAttribute('id','balloon');
@@ -52,10 +52,10 @@ Box.prototype.makeBalloon = function() {
   self.contents = contents;
   self.parts = new Array(box);
 
-  self.setStyle(contents,'z-index',2);
+  self.setStyle(contents,'zIndex',2);
   self.setStyle(contents,'color',self.fontColor);
-  self.setStyle(contents,'font-family',self.fontFamily);
-  self.setStyle(contents,'font-size',self.fontSize);
+  self.setStyle(contents,'fontFamily',self.fontFamily);
+  self.setStyle(contents,'fontSize',self.fontSize);
 
   if (balloonIsSticky) {
     self.setStyle(contents,'margin-right',10); 
@@ -81,7 +81,7 @@ Box.prototype.setBalloonStyle = function(vOrient,hOrient) {
   self.setStyle(box,'position','absolute');
   self.setStyle(box,'padding',self.padding);
   self.setStyle(box,'top',-9999);
-  self.setStyle(box,'z-index',1000000);
+  self.setStyle(box,'zIndex',1000000);
 
   // If width and/or height are specified, harden the
   // box at those dimensions, but not if the space needed
@@ -92,7 +92,7 @@ Box.prototype.setBalloonStyle = function(vOrient,hOrient) {
     self.setStyle('contents','width',newWidth);
   }
   if (self.height) {
-    var heightUsed = YAHOO.util.Dom.getStyle('contents','height') + 20;
+    var heightUsed = $('contents').getStyle('height') + 20;
     var newHeight = heightUsed > self.height ? self.height : heightUsed;
     self.setStyle('contents','height',newHeight+(2*self.padding));
   }
@@ -191,7 +191,7 @@ Box.prototype.addCloseButton = function () {
   var closeWidth = self.closeButtonWidth || 16;
   var balloonTop   = self.getLoc('balloon','y1') + margin;
   var balloonRight = self.getLoc('balloon','x2') - margin - self.closeButtonWidth;
-  var closeButton = document.getElementById('closeButton');
+  var closeButton = $('closeButton');
 
 
   if (!closeButton) {
@@ -213,5 +213,5 @@ Box.prototype.addCloseButton = function () {
   self.setStyle(closeButton,'left',balloonRight);
   self.setStyle(closeButton,'display','inline');
   self.setStyle(closeButton,'cursor','pointer');
-  self.setStyle(closeButton,'z-index',999999999);
+  self.setStyle(closeButton,'zIndex',999999999);
 }

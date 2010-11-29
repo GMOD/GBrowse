@@ -125,8 +125,8 @@ SelectArea.prototype.recenter = function(event) {
 
 // Cross-browser element coordinates
 SelectArea.prototype.elementLocation = function(el,request) {
-  var offset = el.cumulativeOffset();
-  var dimensions = el.getDimensions();
+  var offset = $(el).cumulativeOffset();
+  var dimensions = $(el).getDimensions();
   switch(request) {
     case ('y1') : return offset.top;
     case ('y2') : return offset.top + dimensions.height;

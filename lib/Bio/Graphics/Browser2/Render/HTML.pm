@@ -322,7 +322,6 @@ sub render_html_head {
     foreach qw(
       prototype.js 
       scriptaculous.js 
-      yahoo-dom-event.js 
       subtracktable.js
     );
 

@@ -456,8 +456,8 @@ sub ACTION_install {
     }
     
     # Configure the databases, if needed.
-    my $metadb_script = File::Spec->catfile("bin", "gbrowse_metadb_config.pl");
-    system "perl $metadb_script";
+    #my $metadb_script = File::Spec->catfile("bin", "gbrowse_metadb_config.pl");
+    #system "perl $metadb_script";
 
     print STDERR "\n***INSTALLATION COMPLETE***\n";
     print STDERR "Load http://localhost/$base for demo and documentation.\n";

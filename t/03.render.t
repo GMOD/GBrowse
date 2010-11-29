@@ -16,7 +16,7 @@ use POSIX ":sys_wait_h";
 use lib "$Bin/testdata";
 use TemplateCopy; # for the template_copy() function
 
-use constant TEST_COUNT => 149;
+use constant TEST_COUNT => 150;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -475,36 +475,34 @@ my $url = 'http://www.foo.bar/this/is/a/remotetrack';
 my $escaped_url = $usertracks->escape_url($url);
 ok($usertracks->path =~ m!/gbrowse_testing/userdata/volvox/[0-9a-h]{32}$!);
 
-$usertracks->import_url($url);
+my $file = $usertracks->import_url($url);
 my @tracks = $usertracks->tracks;
 ok(@tracks,1);
-ok($tracks[0], $escaped_url);
-ok($usertracks->is_imported($url));
-my $path = $usertracks->track_conf($tracks[0]);
-ok(-e $path);
+ok($tracks[0], $file);
+ok($usertracks->is_imported($file));
+my $conf = $usertracks->track_conf($tracks[0]);
+ok(-e $conf);
 
 {
     local $^W = 0; # kill annoying warning from bioperl
-    $f = Bio::Graphics::FeatureFile->new(-file=>$path);
+    $f = Bio::Graphics::FeatureFile->new(-file=>$conf);
     my $configured_types = ($f->configured_types)[0];
     ok ($configured_types, $escaped_url);
     ok ($f->setting($escaped_url=>'remote feature'), $url);
     ok ($f->setting($escaped_url=>'category'), 'My Tracks:Remote Tracks');
 }
 
-ok($usertracks->filename($url), $url);
-ok($usertracks->get_file_id($url), $url);
+ok($usertracks->filename($file), $escaped_url);
+ok($usertracks->get_file_id($escaped_url), $file);
+ok($usertracks->title($file), $escaped_url);
+ok($usertracks->description($file, "This is a test description"));
+ok($usertracks->description($file), "This is a test description");
+ok($usertracks->file_type($file), "imported");
+ok($usertracks->created($file));
+ok($usertracks->modified($file));
 
-ok($usertracks->title($url), $url);
-ok($usertracks->description($url, "This is a test description")); # This will return 1 if it was successful.
-
-ok($usertracks->file_type($url));
-
-ok($usertracks->created($url));
-ok($usertracks->modified($url));
-
-$usertracks->delete_file($url);
-ok(!-e $path);
+$usertracks->delete_file($file);
+ok(!-e $conf);
 ok($usertracks->tracks+0,0);
 
 exit 0;

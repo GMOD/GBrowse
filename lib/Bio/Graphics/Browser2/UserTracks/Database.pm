@@ -17,7 +17,7 @@ sub _new {
     my ($data_source, $globals, $uploadsid, $userid) = @_;
     
     # Attempt to login to the database or die, and access the necessary tables or create them.
-    my $credentials = $globals->uploads_db or warn "No credentials given to uploads DB in GBrowse.conf";
+    my $credentials = $globals->user_account_db or warn "No credentials given to uploads DB in GBrowse.conf";
     my $uploadsdb = DBI->connect($credentials);
     unless ($uploadsdb) {
         print header();
@@ -68,7 +68,7 @@ sub get_file_id {
 # Filename (File ID) - Returns the filename of any given ID.
 sub filename {
     my $self = shift;
-    my $file = shift or confess "No file ID given to filename().";
+    my $file = shift or return;
     return $self->field("path", $file);
 }
 
@@ -251,8 +251,8 @@ sub unshare {
 # Make sure you set your permissions at the function level, and never put this into Action.pm or you'll be able to corrupt your database from a URL request!
 sub field {
     my $self = shift;
-    my $field = shift or confess "No field specified.";
-    my $file = shift or confess "No input input given to field()";
+    my $field = shift or return;
+    my $file = shift or return;
     my $value = shift;
     my $uploadsid = $self->{uploadsid};
     my $uploadsdb = $self->{uploadsdb};
@@ -273,7 +273,7 @@ sub field {
 sub update_modified {
     my $self = shift;
     my $uploadsdb = $self->{uploadsdb};
-    my $file = shift or confess "No input or invalid input given to update_modified()";
+    my $file = shift or return;
     my $now = $self->nowfun;
     # Do not swap out this line for a field() call, since it's used inside field().
     return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = " . $uploadsdb->quote($file));
@@ -282,21 +282,21 @@ sub update_modified {
 # Created (File ID) - Returns creation date of $file, cannot be set.
 sub created {
     my $self  = shift;
-    my $file = shift or confess "No input or invalid input given to created()";
+    my $file = shift or return;
     return $self->field("creation_date", $file);
 }
 
 # Modified (File ID) - Returns date modified of $file, cannot be set (except by update_modified()).
 sub modified {
     my $self  = shift;
-    my $file = shift or confess "No input or invalid input given to modified()";
+    my $file = shift or return;
        return $self->field("modification_date", $file);
 }
 
 # Description (File ID[, Value]) - Returns a file's description, or changes the current description if defined.
 sub description {
     my $self  = shift;
-    my $file = shift or confess "No input or invalid input given to description()";
+    my $file = shift or return;
     my $value = shift;
     if ($value) {
         if ($self->is_mine($file)) {
@@ -312,7 +312,7 @@ sub description {
 # Title (File ID[, Value]) - Returns a file's title, or changes the current title if defined.
 sub title {
     my $self  = shift;
-    my $file = shift or confess "No input or invalid input given to title()";
+    my $file = shift or return;
     my $value = shift;
     if ($value) {
         if ($self->is_mine($file)) {
@@ -336,7 +336,7 @@ sub add_file {
     my $shared = shift || ($self =~ /admin/)? "public" : "private";
     my $data_source = $self->{data_source};
     
-    my $fileid = md5_hex($uploadsid.$filename);
+    my $fileid = md5_hex($uploadsid.$filename.$data_source);
     my $now = $self->nowfun;
     $uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy, data_source ) VALUES (?, ?, ?, ?, ?, $now, $now, ?, ?)", undef, $fileid, $uploadsid, $filename, $description, $imported, $shared, $data_source);
     return $fileid;
@@ -345,30 +345,32 @@ sub add_file {
 # Delete File (File ID) - Deletes $file_id from the database.
 sub delete_file {
     my $self = shift;
-    my $file = shift or confess "No file ID given to delete()";
+    my $file = shift or return;
     my $userid = $self->{userid};
     my $uploadsid = $self->{uploadsid};
     my $filename = $self->filename($file);
-    
+                                 # If the file doesn't exist, don't throw an error, just 
     if ($self->is_mine($file) || !$filename) {
-        my $path = $self->track_path($file);
-        
         if ($filename) {
+            # Get this information before the record is deleted from the database.
+            my $path = $self->track_path($file);
+            my $conf = $self->track_conf($file);
+        
             # First delete from the database - better to have a dangling file then a dangling reference to nothing.
             my $uploadsdb = $self->{uploadsdb};
             $uploadsdb->do("DELETE FROM uploads WHERE uploadid = ?", undef, $file);
+        
+            # Now remove the backend database.
+            my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
+                                      $path,
+                                      $conf,
+                                      $self->{config},
+                                      $userid);
+            $loader->drop_databases($conf);
+            
+            # Then remove the file if it exists.
+            rmtree($path) or warn "Could not delete $path: $!" if -e $path;
         }
-        
-        # Now remove the backend database.
-        my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
-                                  $path,
-                                  $self->track_conf($file),
-                                  $self->{config},
-                                  $userid);
-        $loader->drop_databases($self->track_conf($file));
-        
-        # Then remove the file if it exists.
-        rmtree($path) or warn "Could not delete $path: $!" if -e $path;
     } else {
         warn "Delete of " . $filename . " requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . ", a non-owner.";
     }
@@ -377,7 +379,7 @@ sub delete_file {
 # Is Imported (File) - Returns 1 if an already-added track is imported, 0 if not.
 sub is_imported {
     my $self = shift;
-    my $file = shift or confess "No file ID given to is_imported()";
+    my $file = shift or return;
     my $uploadsdb = $self->{uploadsdb};
     return $self->field("imported", $file) || 0;
 }
@@ -385,7 +387,7 @@ sub is_imported {
 # Permissions (File[, New Permissions]) - Return or change the permissions.
 sub permissions {
     my $self = shift;
-    my $file = shift or confess "No file ID given to permissions()";
+    my $file = shift or return;
     my $new_permissions = shift;
     if ($new_permissions) {
         if ($self->is_mine($file)) {
@@ -403,7 +405,7 @@ sub permissions {
 # Is Mine (Filename) - Returns 1 if a track is owned by the logged-in (or specified) user, 0 if not.
 sub is_mine {
     my $self = shift;
-    my $file = shift or confess "No file ID given to is_mine()";
+    my $file = shift or return;
     my $owner = $self->owner($file);
     return ($owner eq $self->{uploadsid})? 1 : 0;
 }
@@ -419,7 +421,7 @@ sub owner {
 # Is Shared With Me (Filename) - Returns 1 if a track is shared with the logged-in (or specified) user, 0 if not.
 sub is_shared_with_me {
     my $self = shift;
-    my $file = shift or confess "No file ID given to is_shared_with_me()";
+    my $file = shift or return 0;
     my $userid = $self->{userid};
     my $uploadsdb = $self->{uploadsdb};
     my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE uploadid = ? AND users LIKE ? OR public_users LIKE ?", undef, $file, "%".$userid."%", "%".$userid."%");
@@ -429,14 +431,14 @@ sub is_shared_with_me {
 # Sharing Link (File ID) - Generates the sharing link for a specific file.
 sub sharing_link {
     my $self = shift;
-    my $file = shift or confess "No file ID given to sharing_link()";
+    my $file = shift or return;
     return url(-full => 1, -path_info => 1) . "?share_link=" . $file;
 }
 
 # File Type (File ID) - Returns the type of a specified track, in relation to the user.
 sub file_type {
     my $self = shift;
-    my $file = shift or confess "No file ID given to file_type()";
+    my $file = shift or return;
     return "public" if ($self->permissions($file) =~ /public/);
     if ($self->is_mine($file)) {
         return $self->is_imported($file)? "imported" : "uploaded";
@@ -446,7 +448,7 @@ sub file_type {
 # Shared With (File ID) - Returns an array of users a track is shared with.
 sub shared_with {
     my $self = shift;
-    my $file = shift or confess "No file ID given to shared_with()";
+    my $file = shift or return;
     return unless $self->permissions($file) =~ /(casual|group)/;
     my $users_string = $self->field("users", $file);
     return split(", ", $users_string);
@@ -455,7 +457,7 @@ sub shared_with {
 # Public Users (File ID) - Returns an array of users of a public track.
 sub public_users {
     my $self = shift;
-    my $file = shift or confess "No file ID given to public_users()";
+    my $file = shift or return;
     return unless $self->permissions($file) =~ /public/;
     my $users_string = $self->field("public_users", $file);
     return split(", ", $users_string);

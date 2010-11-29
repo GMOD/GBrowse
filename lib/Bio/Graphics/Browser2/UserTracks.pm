@@ -47,12 +47,13 @@ sub new {
         $userid = $state->{userid};
     }
     
-	if ($globals->uploads_db =~ /db/i) {
+    my $backend = $globals->user_account_db;
+    
+	if ($backend && $backend =~ /db/i) {
 		return Bio::Graphics::Browser2::UserTracks::Database->_new($data_source, $globals, $uploadsid, $userid);
-	} elsif ($globals->uploads_db =~ /(filesystem|memory)/i) {
+	} elsif ($backend && $backend =~ /(filesystem|memory)/i) {
 		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
 	} else {
-	    warn "Unrecognized uploads metadata backend set in Gbrowse.conf, defaulting to Filesystem.";
 	    return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
 	}
 }
@@ -111,7 +112,7 @@ sub conf_files {
 # Track Path (File) - Returns a verified path to the folder holding a track.
 sub track_path {
     my $self  = shift;
-    my $file = shift;
+    my $file = shift or return;
     my $filename = $self->filename($file);
     my $folder_name = $self->escape_url($filename);
     return File::Spec->catfile($self->path($file), $folder_name);

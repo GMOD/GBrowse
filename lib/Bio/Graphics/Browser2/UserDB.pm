@@ -19,12 +19,12 @@ sub new {
   my $class = shift;
   my $VERSION = '0.5';
   my $globals = Bio::Graphics::Browser2->open_globals;
-  my $credentials  = $globals->user_account_db or die "No credentials specified in GBrowse.conf.";
+  my $credentials  = $globals->user_account_db || "DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse";
   
   my $login = DBI->connect($credentials);
   unless ($login) {
     print header();
-    print "Error: Could not open login database.";
+    print "Error: Could not open login database. Please ensure your credentials are present and working in the GBrowse.conf file.";
     confess "Could not open login database $credentials";
   }
   

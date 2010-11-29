@@ -1456,8 +1456,8 @@ sub delete_uploads {
     my $userdata = $self->user_tracks;
     my @files  = $userdata->tracks;
     for my $file (@files) {
-		my @tracks = $userdata->labels($userdata->get_file_id($file));
-		$userdata->delete_file($userdata->get_file_id($file));
+		my @tracks = $userdata->labels($file);
+		$userdata->delete_file($file);
 		$self->remove_track_from_state($_) foreach @tracks;
     }
     $self->data_source->clear_usertracks();

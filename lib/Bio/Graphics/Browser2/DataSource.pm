@@ -410,12 +410,13 @@ sub show_summary {
     my $self = shift;
     my ($label,$length,$settings) = @_;
     $settings ||= {};
+    return 0 if defined $settings->{features}{$label}{summary_mode_len} &&
+	!$settings->{features}{$label}{summary_mode_len};
     my $c  = $settings->{features}{$label}{summary_mode_len}
           || $self->semantic_fallback_setting($label=>'show summary',$length);
     my $g  = $self->semantic_fallback_setting($label=>'glyph',$length);
     my $class = 'Bio::Graphics::Glyph::'.$g;
     eval "require $class" unless $class->can('new');
-
     return 0 if    $class->isa('Bio::Graphics::Glyph::xyplot')
 	        or $class->isa('Bio::Graphics::Glyph::minmax');
     return 0 if $self->semantic_fallback_setting($label=>'global feature',$length);

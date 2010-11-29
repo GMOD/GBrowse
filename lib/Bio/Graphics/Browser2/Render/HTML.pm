@@ -598,6 +598,8 @@ sub render_login {
     my $style    = 'font-weight:bold;color:blue;cursor:pointer;font-size:9pt;';
     my $login_controls  = '';
 
+    warn "login session id = ",$session->id," user = ",$session->username if DEBUG;
+
 	# Draw the visible HTML elements.
     if ($session->private) {
     	$login_controls .= span({-style => 'font-weight:bold;color:black;'}, $self->translate('WELCOME', $session->username));
@@ -1732,9 +1734,9 @@ sub render_track_details {
 
 # Render Track Source Files (Track) - Renders the HTML listing of a track's source files.
 sub render_track_source_files {
-	my $self = shift;
+	my $self   = shift;
 	my $fileid = shift;
-	my $userdata = $self->user_tracks();
+	my $userdata     = $self->user_tracks();
 	my @source_files = $userdata->source_files($fileid);
 	my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($fileid);
 	my $mirror_url = $userdata->is_mirrored($fileid);
@@ -2404,6 +2406,7 @@ sub track_config {
     $min_score = -1 unless defined $min_score;
     $max_score = +1 unless defined $max_score;
     my $autoscale = $data_source->semantic_fallback_setting( $label => 'autoscale' ,     $length);
+    $autoscale    = 'local' if $summary_mode;
 
     my $bicolor_pivot= $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,     $length);
     my $graph_type = $data_source->semantic_fallback_setting( $label => 'graph_type' ,     $length);
@@ -2506,23 +2509,27 @@ END
 			    -id    => "conf_${glyph}_subtype"},
 			th({-align => 'right'}, $glyph,$self->tr('Subtype')),
 			td($picker->popup_menu(
-			       -name     => "conf_${glyph}_subtype",
 			       -values   => $options,
+			       -name     => "conf_${glyph}_subtype",
 			       -override => 1,
 			       -default => ref $glyph_subtype eq 'CODE' ? $dynamic : $glyph_subtype,
+			       -scripts => { -id => "conf_${glyph}_subtype_id",
+					     -onChange => 'track_configure.glyph_select($(\'config_table\'),$(\'glyph_picker_id\'))'},
 			       -current  => $override->{'glyph_subtype'})));
 	}
 	if (my $subgraphs = eval{$class->options->{graph_type}}) {
 	    my $options  = $subgraphs->[0];
 	    next unless ref $options eq 'ARRAY';
-	    push @rows,(TR {-class => $glyph,
-			    -id    => "conf_graph_type"},
+	    push @rows,(TR {-class => "$glyph graphtype",
+			    -id    => "conf_${glyph}_graphtype"},
 			th({-align => 'right'}, $self->tr('XYplot_type')),
 			td($picker->popup_menu(
-			       -name     => "conf_graph_type",
+			       -name     => "conf_${glyph}_graphtype",
 			       -values   => $options,
 			       -override => 1,
 			       -default => ref $graph_type eq 'CODE' ? $dynamic : $graph_type,
+			       -scripts => { -id => "conf_${glyph}_graphtype_id",
+					     -onChange => 'track_configure.glyph_select($(\'config_table\'),$(\'glyph_picker_id\'))'},
 			       -current  => $override->{'graph_type'})));
 	}
 	
@@ -2542,16 +2549,6 @@ END
 			       2 => $self->translate('Expand'),
 			       3 => $self->translate('Expand_Label'),
 			   }
-		       )
-		   )
-        );
-
-    push @rows,TR( {-class=>'xyplot features'},
-		   th( { -align => 'right' }, $self->translate('FG_COLOR') ),
-		   td( $picker->color_pick(
-			   'conf_fgcolor',
-			   $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
-			   $override->{'fgcolor'}
 		       )
 		   )
         );
@@ -2606,7 +2603,7 @@ END
         );
 
     push @rows,TR( { -id    => 'bgcolor_picker',
-		     -class => 'xyplot density features',
+		     -class => 'xyplot density features peaks',
 		   },
 		   th( { -align => 'right' }, $self->translate('BACKGROUND_COLOR') ),
 		   td( $picker->color_pick(
@@ -2618,7 +2615,37 @@ END
 		       )
 		   )
         );
-
+    push @rows,TR( { -id    => 'startcolor_picker',
+		     -class => 'peaks',
+		   },
+		   th( { -align => 'right' }, 'Peak gradient start'),
+		   td( $picker->color_pick(
+			   'conf_start_color',
+			    $data_source->semantic_fallback_setting( $label => 'start_color', $length ),
+			   $override->{'start_color'}
+		       )
+		   )
+        );
+    push @rows,TR( { -id    => 'endcolor_picker',
+		     -class => 'peaks',
+		   },
+		   th( { -align => 'right' }, 'Peak gradient end'),
+		   td( $picker->color_pick(
+			   'conf_end_color',
+			    $data_source->semantic_fallback_setting( $label => 'end_color', $length ),
+			   $override->{'end_color'}
+		       )
+		   )
+        );
+    push @rows,TR( {-class=>'xyplot features peaks'},
+		   th( { -align => 'right' }, $self->translate('FG_COLOR') ),
+		   td( $picker->color_pick(
+			   'conf_fgcolor',
+			   $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
+			   $override->{'fgcolor'}
+		       )
+		   )
+        );
 
 
     #######################
@@ -2673,7 +2700,7 @@ END
 		    th( { -align => 'right' },$self->translate('AUTOSCALING')),
 		    td( $picker->popup_menu(
 			    -name    => "conf_wiggle_autoscale",
-			    -values  => [qw(none local chromosome global)],
+			    -values  => $summary_mode ? [qw(none local)] : [qw(none local chromosome global)],
 			    -labels  => {none=>'fixed',
 					 local=>'scale to local min/max',
 					 chromosome=>'scale to chromosome min/max',
@@ -2685,7 +2712,7 @@ END
 			    }
 		       )));
 
-    push @rows,TR( {-class=> 'xyplot density whiskers vista_plot',
+    push @rows,TR( {-class=> 'xyplot density whiskers vista_plot autoscale',
 		    -id   => 'fixed_minmax'
 		   },
 		   th( { -align => 'right' },$self->translate('SCALING')),
@@ -2699,7 +2726,7 @@ END
 			     -class => 'score_bounds',
 			     -size  => 5,
 			     -value => defined $override->{max_score} ? $override->{max_score}
-			                                              : $max_score)))
+			                                              : $summary_mode ? 10 : $max_score)))
 	if $quantitative;
 
     push @rows,TR({-class=>'xyplot'},
@@ -2783,14 +2810,16 @@ END
 		  ),
 		   ) unless $summary_mode;
 
+    my $summ = defined $state->{features}{$label}{summary_mode_len}
+                         ?$state->{features}{$label}{summary_mode_len}
+                         :$summary_length;
     push @rows,TR({-class=>'general'},
 		  th( { -align => 'right' }, $self->translate('SHOW_SUMMARY')),
 		  td(textfield(
 			 -name    => 'summary_mode',
 			 -override=> 1,
 			 -size    => 7,
-			 -value   => $state->{features}{$label}{summary_mode_len}
-			 || $summary_length),' bp'
+			 -value   => $summ),' bp'
 		  )
 		   ) if $can_summarize && $summary_length;
 

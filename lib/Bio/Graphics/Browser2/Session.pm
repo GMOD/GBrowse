@@ -36,17 +36,19 @@ sub new {
 	$CGI::Session::Driver::file::NoFlock = 1; # flocking unnecessary because we roll our own
 
 	unless ($id) {
-		my $cookie = CGI::Cookie->fetch();
-		$id        = $cookie->{$CGI::Session::NAME}->value 
+	    my $cookie = CGI::Cookie->fetch();
+	    $id        = $cookie->{$CGI::Session::NAME}->value 
 		if $cookie && $cookie->{$CGI::Session::NAME};
 	}
 	my $self            = bless {
-		lockdir  => $lockdir,
-		locktype => $locktype,
+	    lockdir  => $lockdir,
+	    locktype => $locktype,
 	},$class;
 	$self->lock_ex($id) if $id;
 
 	$self->{session}    = CGI::Session->new($driver,$id,$session_args);
+
+	warn "CGI::Session->new($driver,$id,$session_args)=>",$self->{session}->id if DEBUG;
 
 	# never expire private (authenticated) sessions
 	$expire_time = 0 if $self->private;

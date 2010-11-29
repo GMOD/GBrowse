@@ -1966,6 +1966,7 @@ sub create_track_args {
 
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
+  push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
 
   if ($is_summary) {
       unshift @override,(-glyph     => 'wiggle_density',
@@ -1993,7 +1994,9 @@ sub create_track_args {
 
       push @default_args,(
 	  -group_label          => $group_label||0,
-	  -group_label_position => $left_label ? 'top' : 'left');
+	  -group_label_position => $left_label ? 'top' : 'left',
+	  -group_subtracks      => 1,
+      );
   }
 
   if (my $stt = $self->subtrack_manager($label)) {

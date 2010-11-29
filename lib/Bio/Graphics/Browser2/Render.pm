@@ -391,7 +391,7 @@ sub authorize_user {
 
     $session->using_openid($using_openid);
 
-    # warn "id=$id, username =",$session->username;
+    warn "id=$id, username =",$session->username;
 
     $session->flush();
     return ($id,$nonce);
@@ -1982,9 +1982,9 @@ sub reconfigure_track {
     my $length          = param('segment_length')  || 0;
     my $semantic_len    = param('apply_semantic')  || 0;
     my $delete_semantic = param('delete_semantic');
+    my $summary         = param('summary_mode');
 
-    $state->{features}{$label}{summary_mode_len} = param('summary_mode') 
-	if param('summary_mode');
+    $state->{features}{$label}{summary_mode_len} = $summary if defined $summary;
 
     delete $state->{features}{$label}{semantic_override}{$delete_semantic} if $delete_semantic;
 
@@ -2002,6 +2002,10 @@ sub reconfigure_track {
 	if ($s =~ /(\w+)_subtype/) {
 	    next unless $1 eq $glyph;
 	    $s = 'glyph_subtype';
+	}
+	elsif ($s =~ /(\w+)_graphtype/) {
+	    next unless $1 eq $glyph;
+	    $s = 'graph_type';
 	} elsif ($s =~ /(\w+)_autoscale/) {
 	    my $g = $1;
 	    next if $g eq 'wiggle' && $glyph !~ /wiggle|vista/;
@@ -2025,10 +2029,10 @@ sub reconfigure_track {
 	}
     }
     if (defined $o->{autoscale} && $o->{autoscale} ne 'none') { undef $o->{min_score}; undef $o->{max_score} }
-#    {
-#	local $Data::Dumper::Sortkeys=1;
-#	warn Data::Dumper::Dumper($o);
-#    }
+    # {
+    # 	local $Data::Dumper::Sortkeys=1;
+    # 	warn Data::Dumper::Dumper($o);
+    # }
 }
 
 sub update_options {

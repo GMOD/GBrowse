@@ -6,6 +6,9 @@ var TrackConfigure = Class.create({
 
     if (glyph_element == null) return;
 
+    var graphtype = $('conf_'+glyph_element.value+'_graphtype_id');
+    var subtype   = $('conf_'+glyph_element.value+'_subtype_id');
+
     var all = config_container.select('tr').findAll(function(a){return !a.hasClassName('general')});
     all.each(function(a){a.hide()});
     var specific = false;
@@ -15,15 +18,27 @@ var TrackConfigure = Class.create({
        specific = true;
     }
     if (glyph_element.value.match(/whiskers/)){
-       config_container.select('tr.whiskers').each(function(a){a.show()});
-       specific = true;
+	config_container.select('tr.whiskers').each(function(a){a.show()});
+	specific = true;
     }
     if (glyph_element.value.match(/vista/)) {
        config_container.select('tr.vista_plot').each(function(a){a.show()});
-       config_container.select('tr.xyplot').each(function(a){a.show()});
-       config_container.select('tr.wiggle').each(function(a){a.show()});
-       var x = $('conf_xyplot_subtype');
-       if (x != null) x.hide();
+       if (subtype.value.match(/signal/)) {
+	   if (graphtype.value.match(/whiskers/))
+	       config_container.select('tr.whiskers').each(function(a){a.show()});
+	   else {
+	      config_container.select('tr.xyplot').each(function(a){a.show()});
+	      config_container.select('tr.wiggle').each(function(a){a.show()});
+	   }
+	   if (subtype.value.match(/peaks/))
+	       config_container.select('tr.peaks').each(function(a){a.show()});
+       } else if (subtype.value.match(/density/)) {
+	   config_container.select('tr.density').each(function(a){a.show()});
+       } else if (subtype.value.match(/peaks/)) {
+	   config_container.select('tr.peaks').each(function(a){a.show()});
+       } else {
+	   config_container.select('tr.graphtype').each(function(a){a.hide()});
+       }
        specific = true;
     }
     if (glyph_element.value.match(/density/)){
@@ -43,13 +58,22 @@ var TrackConfigure = Class.create({
 
     config_container.select('tr.'+glyph_element.value).each(function(a){a.show()});
 
-    if (glyph_element.value.match(/xyplot|vista|density|wiggle/)) {
-       this.pivot_select($('conf_bicolor_pivot'));
+    var signal = glyph_element.value.match(/xyplot|density|wiggle/)
+                 || (glyph_element.value.match(/vista/) && subtype.value.match(/signal/));
+    var can_pivot = !(glyph_element.value.match(/whiskers/) || (graphtype !=null && graphtype.value.match(/whiskers/)));
+    can_pivot     = can_pivot || (glyph_element.value.match(/vista/) && subtype.value.match(/density/));
+    if (can_pivot) {
+	this.pivot_select($('conf_bicolor_pivot'));
+    }
+    if (signal) {
        if (glyph_element.value.match(/wiggle|vista/))
 	   this.autoscale_select($('conf_wiggle_autoscale'),glyph_element);
        else      
 	   this.autoscale_select($('conf_xyplot_autoscale'),glyph_element);
-   }
+    } else {
+	config_container.select('tr.graphtype').each(function(a){a.hide()});
+	config_container.select('tr.autoscale').each(function(a){a.hide()});
+    }
  },
 
  set_autoscale: function(el) {
@@ -79,7 +103,6 @@ var TrackConfigure = Class.create({
  },
 
  pivot_select: function(pivot_element) {
-
    var e=$('switch_point_other');
    var f=$$('tr.switch_point_color');
    if (pivot_element.value=='value'){

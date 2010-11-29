@@ -249,6 +249,7 @@ END
 
    NAME           => 'Name',
    TYPE           => 'Type',
+   SUBTYPE         => 'subtype',
    DESCRIPTION    => 'Description',
    POSITION       => 'Position',
    SCORE          => 'Match Score',
@@ -384,7 +385,7 @@ END
 
  GLYPH            => 'Shape',
 
- XYPLOT_TYPE      => 'xyplot subtype',
+ XYPLOT_TYPE      => 'plot style',
 
  WHISKERS_TYPE      => 'whiskers subtype',
 
@@ -401,6 +402,10 @@ END
  WHISKER_STDEV_COLOR    => 'Color from mean to stdev value',
 
  WHISKER_MAX_COLOR    => 'Color from stdev to min/max value',
+
+ AUTOSCALING      => 'Y-axis scaling',
+
+ SCALING          => 'Fixed Y-axis range',
 
  SCALE_MIN        => 'Minimum scale value',
 
@@ -486,10 +491,10 @@ other browser and enter it as a new DAS source. <i>Quantitative tracks
 ("wiggle" files) and uploaded files can not be shared using DAS.</i>
 END
 
-    MAIN_PAGE          => 'Browser',
-    CUSTOM_TRACKS_PAGE => 'Custom Tracks',
-    PUBLIC_TRACKS_PAGE => 'Community Tracks',
-    SETTINGS_PAGE      => 'Preferences',
+    MAIN_PAGE             => 'Browser',
+    CUSTOM_TRACKS_PAGE    => 'Custom Tracks',
+    COMMUNITY_TRACKS_PAGE => 'Community Tracks',
+    SETTINGS_PAGE         => 'Preferences',
 
     DOWNLOAD_TRACK_DATA_REGION => 'Download track data across region %s',
     DOWNLOAD_TRACK_DATA_CHROM => 'Download track data across ENTIRE chromosome %s',
@@ -599,8 +604,8 @@ END
    UPLOAD_ERROR              => 'The server returned an error during upload',
    REMOVE_MESSAGE            => '[Remove Message]',
    EDITING_FILE              => 'Editing %s',
-   FETCHING                  => 'Fetching...',
-   CANCELLING                => 'Cancelling...',
+   FETCHING                  => 'fetching...',
+   CANCELLING                => 'Cancelling',
    NOT_FOUND                 => 'Not Found',
    ADMIN_MODE_WARNING        => 'Admin mode: Uploaded tracks are public',
    SOURCE_FILES              => 'Source files:',
@@ -616,9 +621,9 @@ END
    SHARING_GROUP             => 'Group',
    SHARING_PUBLIC            => 'Public',
    SHARING_HELP              => '<b>Private</b> - Visible only to me.<br>'.
-							    '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
-							    '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
-							    '<b>Public</b> - Visible to anyone.',
+		                        '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
+		                        '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
+		                        '<b>Public</b> - Visible to anyone.',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
    USERS                     => 'user(s)',
    USED_BY                   => 'used by',
@@ -638,13 +643,12 @@ END
    CHANGING_PERMISSIONS		 => 'Changing sharing permissions...',
    ADDING                    => 'Adding...',
    REMOVING                  => 'Removing...',
-   ERROR                     => 'The server returned an error.',
    ENTER_KEYWORD             => 'Enter a keyword',
    OR_USER                   => 'or user',
    SHOWING                   => 'showing',
    N_TO_N_OUT_OF             => '%s to %s out of',
-   N_FILES                   => '%s file(s)',
-   FOUND_N_FILES             => 'found %s file(s)',
+   N_FILES                   => '%s files',
+   FOUND_N_FILES             => 'Found %s file(s)',
    NEXT_N                    => 'Next %s',
    PREVIOUS_N                => 'Previous %s',
    UPLOADED_BY               => 'uploaded by',
@@ -699,6 +703,8 @@ END
    CHROM_NOT_FOUND_DETAILS   => 'Cannot display %s because the chromosome/contig named %s is not defined in the database.',
    NOT_RECOGNIZED_PLUGIN     => '%s is not a recognized plugin',
    NO_PLUGIN_SPECIFIED       => 'No plugin was specified.',
+
+   RULER_TOGGLE_TOOLTIP      => 'Click to enable the ruler. Or, click and drag to reposition.',
    
 
 

@@ -703,6 +703,8 @@ END
    CHROM_NOT_FOUND_DETAILS   => 'Cannot display %s because the chromosome/contig named %s is not defined in the database.',
    NOT_RECOGNIZED_PLUGIN     => '%s is not a recognized plugin',
    NO_PLUGIN_SPECIFIED       => 'No plugin was specified.',
+
+   RULER_TOGGLE_TOOLTIP      => 'Click to enable the ruler. Or, click and drag to reposition.',
    
 
 

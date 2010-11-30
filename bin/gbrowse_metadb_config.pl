@@ -11,31 +11,25 @@ use List::Util;
 use File::Spec;
 
 # First, collect all the flags - or output the correct usage, if none listed.
-my ($dsn, $admin, $pprompt, $which_db);
-GetOptions('dsn=s'         => \$dsn) or die <<EOF;
+my ($dsn, $admin);
+GetOptions('dsn=s'         => \$dsn,
+           'admin=s'       => \$admin) or die <<EOF;
 Usage: $0 [options] <optional path to GBrowse.conf>
 
 Initializes an empty GBrowse user accounts and uploads metadata database.
 Options:
 
    -dsn       Provide a custom DBI connection string, overriding what is
-              set in Gbrowse.conf
+              set in Gbrowse.conf. Note that if there are semicolons in the
+              string (like most MySQL connection DSNs will), you WILL have
+              to escape it with quotes.
+   -admin     Provide an administrator username and password (in the form
+              'user:pass') to skip the prompts if the database does not
+              exist.
 
 Currently mysql and SQLite databases are supported. When creating a
 mysql database you must provide the -admin option to specify a user
 and password that has database create privileges on the server.
-
-When creating a SQLite database, the script will use the -admin option
-to set the user and group ID ownership of the created database in the
-format "uid:gid". The web user must have read/write privileges to this
-database. The user running this script must have "sudo" privileges for
-this to work. Otherwise, you may set the ownership of the SQLite
-database file manually after the fact.
-
-Instead of providing the -dsn option, you may provide an optional path
-to your installed GBrowse.conf file, in which case the value of
-"user_account_db" will be used. If the config path and -dsn options
-are both provided, then the latter overrides the former.
 EOF
     ;
 
@@ -46,6 +40,8 @@ if (!$dsn || ($dsn =~ /filesystem|memory/i) || !$globals->user_accounts) {
     print "No need to run database metadata configuration script, filesystem-backend will be used.";
     exit 0;
 }
+
+create_database();
 
 my $database = DBI->connect($dsn) or die "Error: Could not open users database, please check your credentials.\n" . DBI->errstr;
 my $type = $database->{Driver}->{Name};
@@ -71,7 +67,6 @@ my $openid_columns = {
     openid_url => "varchar(128) not null PRIMARY key"
 };
 
-# Database schema. To change the schema, update/add tdatabasehe fields here, and run this script.
 my $uploads_columns = {
     uploadid => "varchar(32) not null PRIMARY key",
     userid => "varchar(32) not null",
@@ -88,15 +83,17 @@ my $uploads_columns = {
     data_source => "text",
 };
 
+fix_permissions() if $type !~ /sqlite/i;
+
 check_table("users", $users_columns);
 check_table("openid_users", $openid_columns);
 check_table("uploads", $uploads_columns);
 
-fix_permissions();
-
 check_uploads_ids();
 check_all_files();
 check_data_sources();
+
+fix_permissions() if $type =~ /sqlite/i;
 
 $database->disconnect;
 
@@ -111,7 +108,9 @@ sub check_table {
     my $columns = shift  or die "No table schema given, please check the gbrowse_metadb_config.pl script.\n";
     
     # If the database doesn't exist, create it.
+    $database->{PrintError} = 0;
     unless ($database->do("SELECT * FROM $name LIMIT 1")) {
+        $database->{PrintError} = 1;
         print STDERR ucfirst $name . " table didn't exist, creating...\n";
         my @column_descriptors = map { "$_ " . escape_enums($$columns{$_}) } keys %$columns; # This simply outputs %columns as "$key $value, ";
         my $creation_sql = "CREATE TABLE $name (" . (join ", ", @column_descriptors) . ")" . (($type =~ /mysql/i)? " ENGINE=InnoDB;" : ";");
@@ -192,6 +191,7 @@ sub check_data_sources {
 	opendir U, $userdata_folder;
 	while (my $dir = readdir(U)) {
 		next if $dir =~ /^\.+$/;
+		next unless -d $dir;
 		push @data_sources, $dir;
 	}
 	closedir(U);
@@ -203,6 +203,7 @@ sub check_data_sources {
 	    opendir DS, $source_path;
 	    while (my $folder = readdir(DS)) {
 		    next if $folder =~ /^\.+$/;
+		    next unless -d $folder;
 		    my $user_path = File::Spec->catfile($userdata_folder, $data_source, $folder);
 		    opendir USER, $user_path;
 		    next unless readdir(USER);
@@ -218,6 +219,7 @@ sub check_data_sources {
 	        opendir FILE, $user_path;
 	        while (my $file = readdir(FILE)) {
 		        next if $file =~ /^\.+$/;
+		        next unless -d $file;
 		        push @files, $file;
 	        }
 	        closedir(FILE);
@@ -316,8 +318,7 @@ sub fix_permissions {
 	    my ($db_user) = $dsn =~ /user=([^;]+)/i;
 	    my ($db_pass) = $dsn =~ /password=([^;]+)/i || ("");
 	    $database->do("GRANT ALL PRIVILEGES on $db_name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") or die DBI->errstr;
-    }
-    if ($type =~ /sqlite/i) {
+    } elsif ($type =~ /sqlite/i) {
 	    my ($path) = $dsn =~ /dbname=([^;]+)/i;
 	    unless ($path) {
 	        ($path) = $dsn =~ /DBI:SQLite:([^;]+)/i;
@@ -332,9 +333,34 @@ sub fix_permissions {
 	        die "Couldn't figure out location of database index from $dsn" unless $path;
 	        system "sudo chown $user $path";
 	        system "sudo chgrp $group $path";
-	        print STDERR "Done.\n";
+	        system "sudo chmod a+x $path";
 	    }
     }
+}
+
+# Create Database() - Creates the database specified (or the default gbrowse_login database).
+sub create_database {
+    my (undef, $db_name) = $dsn =~ /.*:(database=)?([^;]+)/;
+    $db_name ||= "gbrowse_login";
+    unless (DBI->connect($dsn)) {
+        if ($dsn =~ /mysql/i) {
+            print STDERR "Could not find $db_name database, creating...\n";
+            
+            my ($admin_user, $admin_pass);
+            if ($admin) {
+                ($admin_user) = $admin =~ /^(.*):/;
+                ($admin_pass) = $admin =~ /:(.*)$/;
+            }
+            
+            $admin_user ||= prompt("Please enter the MySQL administrator user", "root");
+            $admin_pass ||= prompt("Please enter the MySQL administrator password", "");
+            my $test_dbi = DBI->connect("DBI:mysql:database=mysql;user=$admin_user;password=$admin_pass;");
+            $test_dbi->do("CREATE DATABASE IF NOT EXISTS $db_name");
+            
+            print STDERR "Database has been created!\n" unless DBI->errstr;
+        }
+    }
+    # SQLite will create the file/database upon first connection.
 }
 
 # Add File (Full Path, Owner's Uploads ID, Data Source) - Adds $file to the database under a specified owner.
@@ -346,8 +372,6 @@ sub add_file {
     my $uploadsid = shift;
     my $shared = "private";
     my $data_source = shift;
-    
-    warn $data_source;
     
     my $fileid = md5_hex($uploadsid.$filename.$data_source);
     my $now = nowfun();

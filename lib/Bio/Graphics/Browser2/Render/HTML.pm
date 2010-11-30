@@ -85,7 +85,7 @@ sub render_tabbed_pages {
     
     my $main_title             = $self->translate('MAIN_PAGE');
     my $tracks_title           = $self->translate('SELECT_TRACKS');
-    my $community_tracks_title = $self->translate('PUBLIC_TRACKS_PAGE') if $uses_database;
+    my $community_tracks_title = $self->translate('COMMUNITY_TRACKS_PAGE') if $uses_database;
     my $custom_tracks_title    = $self->translate('CUSTOM_TRACKS_PAGE');
     my $settings_title         = $self->translate('SETTINGS_PAGE');
 

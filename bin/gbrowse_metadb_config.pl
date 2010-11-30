@@ -325,15 +325,19 @@ sub fix_permissions {
 	    }
 	    my $user  = GBrowse::ConfigData->config('wwwuser');
 	    my $group = get_group_from_user($user);
-	    unless ($group) {
-	        print STDERR "Unable to look up group for $user. Will not change ownerships on $path.\n";
-	        print STDERR "You should do this manually to give the Apache web server read/write access to $path.\n";
-	    } else {
-	        print STDERR "Using sudo to set ownership to $user:$group. You may be prompted for your login password now.\n";
-	        die "Couldn't figure out location of database index from $dsn" unless $path;
-	        system "sudo chown $user $path";
-	        system "sudo chgrp $group $path";
-	        system "sudo chmod a+x $path";
+	    
+	    # Check if we need to, to avoid unnecessary printing/sudos.
+	    unless ($user eq getpwuid((stat($path))[4])) {
+	        unless ($group) {
+	            print STDERR "Unable to look up group for $user. Will not change ownerships on $path.\n";
+	            print STDERR "You should do this manually to give the Apache web server read/write access to $path.\n";
+	        } else {
+	            print STDERR "Using sudo to set ownership to $user:$group. You may be prompted for your login password now.\n";
+	            die "Couldn't figure out location of database index from $dsn" unless $path;
+	            system "sudo chown $user $path";
+	            system "sudo chgrp $group $path";
+	            system "sudo chmod a+x $path";
+	        }
 	    }
     }
 }

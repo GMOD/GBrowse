@@ -491,7 +491,7 @@ SelectArea.prototype.hideMenu = function() {
   self.selectBox.setStyle({ width: 1,
                             visibility: 'hidden'
   });
-  selectMenu.setStyle({visibility: 'hidden'});
+  self.selectMenu.setStyle({visibility: 'hidden'});
 }
 
 SelectArea.prototype.clearAndSubmit = function(plugin,action) {

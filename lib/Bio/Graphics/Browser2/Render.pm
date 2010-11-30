@@ -372,7 +372,7 @@ sub authorize_user {
     
     warn "Checking current session" if DEBUG;
     my $current = $self->session->id;
-    if($current eq $id) {
+    if ($current eq $id) {
         warn "Using current session" if DEBUG;
         $session = $self->session;
     } elsif($self->session->private) {
@@ -380,7 +380,7 @@ sub authorize_user {
         return ("error");
     } else {
         warn "Retrieving old session" if DEBUG;
-		$session = $self->globals->session($id);  # create/retrieve session
+	$session = $self->globals->session($id);  # create/retrieve session
     }
     
     my $nonce = Bio::Graphics::Browser2::Util->generate_id;
@@ -391,7 +391,7 @@ sub authorize_user {
 
     $session->using_openid($using_openid);
 
-    warn "id=$id, username =",$session->username;
+    warn "id=$id, username =",$session->username if DEBUG;
 
     $session->flush();
     return ($id,$nonce);
@@ -671,11 +671,11 @@ sub state_cookie {
   $path       =~ s!gbrowse/?$!!;
   my $globals = $self->globals;
   my $cookie = CGI::Cookie->new(
-    -name    => $CGI::Session::NAME,
-    -value   => $session->id,
-    -path    => $path,
-    -expires => '+'.$globals->time2sec($globals->remember_settings_time).'s',
-  );
+      -name    => $CGI::Session::NAME,
+      -value   => $session->id,
+      -path    => $path,
+      -expires => '+'.$globals->time2sec($globals->remember_settings_time).'s',
+      );
   return $cookie;
 }
 
@@ -683,11 +683,17 @@ sub auth_cookie {
     my $self = shift;
     my $path = url(-absolute => 1);
     $path    =~ s!gbrowse/?$!!;
-    my $auth = param('authority') or return;
-    return CGI::Cookie->new(
-    -name => 'authority',
-    -value=> $auth,
-    -path => $path);
+    my $auth     = param('authority') or return;
+    my $globals  = $self->globals;
+    my $remember = $self->session->remember_auth;
+    my @args = (-name => 'authority',
+		-value=> $auth,
+		-path => $path);
+    if ($remember) {
+	warn "I REMEMBER";
+	push @args,(-expires => '+'.$globals->time2sec($globals->remember_settings_time).'s');
+    }
+    return CGI::Cookie->new(@args);
 }
 
 # for backward compatibility

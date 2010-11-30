@@ -245,6 +245,13 @@ sub private {
     return $private;
 }
 
+sub remember_auth {
+    my $self = shift;
+    my $ra = $self->{session}->param('.remember_auth');
+    $self->{session}->param('.remember_auth' => shift()) if @_;
+    return $ra;
+}
+
 sub username {
     my $self = shift;
     my $user = $self->{session}->param('.username');
@@ -265,11 +272,13 @@ sub set_nonce {
     warn "id=",$self->id," writing nonce = ",md5_hex($nonce,$salt) if DEBUG;
     $self->{session}->param('.nonce' => md5_hex($nonce,$salt));
 
-    # BUG: must handle session expiration
-    if($remember) {
+    # handle session expiration
+    if ($remember) {
         $self->{session}->expire('.nonce' => '30d');
+	$self->remember_auth(1);
     } else {
         $self->{session}->expire('.nonce' => '10m');
+	$self->remember_auth(0);
     }
     $self->private(1);
 }

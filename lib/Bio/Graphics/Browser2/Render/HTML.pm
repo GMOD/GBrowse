@@ -435,6 +435,7 @@ sub render_html_head {
 # Render JS Controller Settings - Renders a block of javascript that loads some of our global config settings into the main controller object for use in client-side code.
 sub render_js_controller_settings {
     my ( $self ) = @_;
+    my $globals = $self->globals;
 
     my @export_keys = qw(
                          buttons
@@ -442,20 +443,21 @@ sub render_js_controller_settings {
                          openid
                          js
                          gbrowse_help
-                         stylesheet
+                         styleusheet
                         );
 
     my $controller_globals = JSON::to_json({
         map { $_ => ( $self->globals->url_path($_) || undef ) } @export_keys
        });
     
-    my $openid = $self->{userdb}->openid;
+    my $scripts = "Controller.set_globals( $controller_globals );";
     
-    return script({-type=>'text/javascript'}, <<EOS );
-  Controller.set_globals( $controller_globals );
-  Controller.can_openid = $openid;
-EOS
-
+    if ($globals->user_accounts) {
+        my $openid = $self->{userdb}->openid;
+        $scripts .= "Controller.can_openid = $openid;";
+    }
+    
+    return script({-type=>'text/javascript'}, $scripts);
 }
 
 # Renders the settings which control the balloon styles on the page.

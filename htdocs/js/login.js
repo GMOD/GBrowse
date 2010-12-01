@@ -54,10 +54,12 @@ function load_login_balloon(event,session,username,openid) {
                              Controller.translate('CHANGE_MY_EMAIL') + '</a></li>' +
                          '<li id=loginChgPass><a href=#pass onClick=edit_details(\'password\')>' +
                              Controller.translate('CHANGE_MY_PASSWORD') + '</a></li>' +
+                         (Controller.can_openid?
                          '<li><a href=#add onClick=edit_details(\'openid-add\')>' +
-                             Controller.translate('ADD_OPENID') + '</a></li>' +
+                             Controller.translate('ADD_OPENID') + '</a></li>' + 
                          '<li><a href=#remove onClick=edit_details(\'openid-remove\')>' +
-                             Controller.translate('LIST_REMOVE_OPENIDS') + '</a></li>' +
+                             Controller.translate('LIST_REMOVE_OPENIDS') + '</a></li>' : ""
+                         ) +
                          '<li><a href=#delete onClick=edit_details(\'delete\')>' +
                              Controller.translate('DELETE_MY_ACCOUNT') + '</a></li>' +
                    '</ul></td></tr>' +
@@ -111,15 +113,19 @@ function load_login_balloon(event,session,username,openid) {
                        'login_loading(true);edit_details_verify();} id=loginDOPass type=password maxlength=32 ' +
                        'style=font-size:9pt size=24></td></tr>' +
                  '</tbody>' +
-                  //Username textbox for adding a new openid to an openid only account
+                 
+                 //Username textbox for adding a new openid to an openid only account
+                 (Controller.can_openid?
                  '<tbody id=loginDOpenidUser align=center style=display:none;>' +
                    '<tr><td colspan=2>' + Controller.translate('CURRENT_APP_USERNAME',AppName) + '</td></tr>' +
                      '<tr><td colspan=2 style=padding-bottom:6px;><input onKeyPress=if(event.keyCode==13){' +
                        'login_loading(true);edit_details_verify();} id=loginDOUser type=text maxlength=32 ' +
                        'style=font-size:9pt size=24></td></tr>' +
-                 '</tbody>' +
+                 '</tbody>' : ""
+                 ) +
 
                   //OpenID textbox and images
+                 (Controller.can_openid?
                  '<tbody id=loginDOpenid align=center style=display:none;>' +
                    '<tr><td colspan=2 style=padding-top:6px;>' +
                      '<input onKeyPress=if(event.keyCode==13){login_loading(true);if(LoginPage==\'details\'){' +
@@ -141,7 +147,8 @@ function load_login_balloon(event,session,username,openid) {
                        '<image style="cursor:pointer" onClick=login_openid_html(\'http://username.myopenid.com/\',7,8); ' +
                          'src='+ImgLocation+'/myopenid-logo.png alt=\'myOpenID\' height=20px width=20px>' +
                    '</td></tr>' +
-                 '</tbody>' +
+                 '</tbody>' : ""
+                 ) +
 
                   //Initially empty section used for populating with a list of openids associated with an account
                  '<tbody id=loginDList style=display:none;></tbody>' +
@@ -182,6 +189,7 @@ function load_login_balloon(event,session,username,openid) {
                  '</tbody>' +
 
                   //Switch between regular and openid login pages
+                 (Controller.can_openid?
                  '<tbody id=loginOpenID>' +
                    '<tr><td id=loginOpenIDY colspan=2 align=center style=padding-top:12px>' +
                        Controller.translate('HAVE_OPENID') + ' <a href=#openid onClick=login_page_openid(true)>' +
@@ -189,7 +197,8 @@ function load_login_balloon(event,session,username,openid) {
                    '<tr><td id=loginOpenIDN colspan=2 align=center style=display:none;padding-top:12px>' +
                        Controller.translate('DONT_HAVE_OPENID') + ' <a href=#noopenid onClick=login_page_openid(false)>' +
                        Controller.translate('GO_BACK') + '</a></td></tr>' +
-                 '</tbody>' +
+                 '</tbody>' : ""
+                 ) + 
                '</table></font>'+
                '<img id="loginBusy" src="'+Controller.button_url('spinner.gif')+'" style="display:none;float:left" />' +
 	       '&nbsp;<a style="float:right;font-size:90%" href="javascript:void(0)" '+
@@ -220,7 +229,9 @@ function login_page_change(page) {
     login_loading(false);
     $('loginPass').value = '';
     $('loginPass2').value = '';
-    $('loginWarning').hide(); $('loginOpenID').hide();
+    $('loginWarning').hide();
+    if (Controller.can_openid)
+        $('loginOpenID').hide();
 
     switch(page) {
     case 'main':
@@ -228,9 +239,11 @@ function login_page_change(page) {
         $('loginTitle').innerHTML     = Controller.translate('LOG_IN');
         $('loginSubmit').value        = Controller.translate('LOG_IN');
         $('loginCancel').value        = Controller.translate('CANCEL');
-        $('loginOpenID').blur();
+        if (Controller.can_openid)
+            $('loginOpenID').blur();
         $('loginOpts').blur();
-        $('loginOpenID').show();
+        if (Controller.can_openid)
+            $('loginOpenID').show();
         $('loginERow').hide();  $('loginSubmit').show();
         $('loginP2Row').hide(); $('loginDSelect').hide();
         break;
@@ -248,7 +261,8 @@ function login_page_change(page) {
     case 'edit':
         $('loginTitle').innerHTML = Controller.translate('EDIT_ACCOUNT_DETAILS');
         $('loginSubmit').value    = Controller.translate('CONTINUE');
-        $('loginOpenID').show();
+        if (Controller.can_openid)
+            $('loginOpenID').show();
         break;
     default:
         return;
@@ -278,13 +292,15 @@ function login_page_change(page) {
         $('loginTable').style.paddingTop = '3px';
         $('loginButtons').style.paddingTop = '3px';
     }
-
-    if(OpenIDMenu && ((page == 'main') || (page == 'edit'))) {
-        $('loginDOpenid').show(); $('loginNorm').hide(); $('loginDONew').focus(); 
-    } else {
-        $('loginDOpenid').hide(); $('loginNorm').show();
-        if(page == 'forgot') {$('loginEmail').focus();}
-        else {$('loginUser').focus();}
+    
+    if (Controller.can_openid) {
+        if(OpenIDMenu && ((page == 'main') || (page == 'edit'))) {
+            $('loginDOpenid').show(); $('loginNorm').hide(); $('loginDONew').focus(); 
+        } else {
+            $('loginDOpenid').hide(); $('loginNorm').show();
+            if(page == 'forgot') {$('loginEmail').focus();}
+            else {$('loginUser').focus();}
+        }
     }
 
     return;
@@ -312,18 +328,22 @@ function login_loading(toggle) {
         $('loginSubmit').disabled  = true;   $('loginCancel').disabled  = true;
         $('loginDSubmit').disabled = true;   $('loginDCancel').disabled = true;
         $('loginOptsContent1').hide();       $('loginOptsContent2').show();
-
-        $('loginOpenIDY').innerHTML = Controller.translate('HAVE_OPENID')      + ' ' + Controller.translate('SIGN_IN');
-        $('loginOpenIDN').innerHTML = Controller.translate('DONT_HAVE_OPENID') + ' ' + Controller.translate('GO_BACK');
+        
+        if (Controller.can_openid) {
+            $('loginOpenIDY').innerHTML = Controller.translate('HAVE_OPENID')      + ' ' + Controller.translate('SIGN_IN');
+            $('loginOpenIDN').innerHTML = Controller.translate('DONT_HAVE_OPENID') + ' ' + Controller.translate('GO_BACK');
+        }
     } else {
         $('loginSubmit').disabled  = false;  $('loginCancel').disabled  = false;
         $('loginDSubmit').disabled = false;  $('loginDCancel').disabled = false;
         $('loginOptsContent1').show();       $('loginOptsContent2').hide();
 
-        $('loginOpenIDY').innerHTML = Controller.translate('HAVE_OPENID') + ' <a href=#openid onClick=' +
+        if (Controller.can_openid) {
+            $('loginOpenIDY').innerHTML = Controller.translate('HAVE_OPENID') + ' <a href=#openid onClick=' +
                                       'login_page_openid(true)>' + Controller.translate('SIGN_IN') + '</a>';
-        $('loginOpenIDN').innerHTML = Controller.translate('DONT_HAVE_OPENID') + ' <a href=#noopenid onClick=' +
+            $('loginOpenIDN').innerHTML = Controller.translate('DONT_HAVE_OPENID') + ' <a href=#noopenid onClick=' +
                                       'login_page_openid(false)>' + Controller.translate('GO_BACK') + '</a>.';
+        }
     }
 }
 
@@ -333,7 +353,8 @@ function validate_info() {
     var email  = $('loginEmail').getValue().length;
     var pass   = $('loginPass').getValue();
     var pass2  = $('loginPass2').getValue();
-    var openid = $('loginDONew').getValue();
+    if (Controller.can_openid)
+        var openid = $('loginDONew').getValue();
     var html   = '<' + String($('loginWarning').innerHTML).split('<')[2] + '</font>';
 
     switch(LoginPage) {
@@ -693,7 +714,7 @@ function email_user_info() {
 // Change Account E-mail/Password Functions:
 //******************************************************************
 
-//Shows, hides, and changes the titles of elements for a given page in the account details menu
+//Shows the corresponding login menu "page" for a given edit details action.
 function edit_details(details) {
     LoginPage = 'details';
     $('loginWarning').hide();
@@ -705,12 +726,20 @@ function edit_details(details) {
         $('loginTable').style.paddingTop = '18px';
         login_loading(false);
 
-        $('loginDSelect').show(); $('loginDOpenidPass').hide();
-        $('loginSubmit').hide();  $('loginDOpenidUser').hide();
-        $('loginOpenID').hide();  $('loginDButtons').hide();
-        $('loginDPass').hide();   $('loginDOpenid').hide();
-        $('loginDList').hide();   $('loginDEmail').hide();
-        $('loginNorm').hide();    $('loginBreak').hide();
+        $('loginDSelect').show();
+        if (Controller.can_openid) {
+            $('loginDOpenidPass').hide();
+            $('loginOpenID').hide();
+            $('loginDOpenidUser').hide();
+            $('loginDOpenid').hide();
+        }
+        $('loginSubmit').hide();  
+        $('loginDButtons').hide();
+        $('loginDPass').hide();   
+        $('loginDList').hide();
+        $('loginDEmail').hide();
+        $('loginNorm').hide();
+        $('loginBreak').hide();
 
         if(UsingOpenID) {$('loginChgEmail').hide(); $('loginChgPass').hide();}
         else {$('loginChgEmail').show(); $('loginChgPass').show();}
@@ -787,8 +816,13 @@ function edit_details(details) {
         $('loginTitle').innerHTML   = Controller.translate('CONFIRM_ACCOUNT_DELETE');
         $('loginWarning').innerHTML = Controller.translate('WARNING_IRREVERSIBLE');
         $('loginWarning').show();
-        if(UsingOpenID) {$('loginDOpenidUser').show(); $('loginDOUser').focus();}
-        else {$('loginDOpenidPass').show(); $('loginDOPass').focus();}
+        if (UsingOpenID) {
+            $('loginDOpenidUser').show();
+            $('loginDOUser').focus();
+        } else {
+            $('loginDOpenidPass').show();
+            $('loginDOPass').focus();
+        }
         EditDetails = 'delete-confirm';
         return;
     default:
@@ -796,8 +830,7 @@ function edit_details(details) {
     }
 }
 
-//Checks to make sure that all the information required by a
-//given page is there when "Submit" is clicked in account details
+//Checks to make sure that all the information required by a given page is there when "Submit" is clicked in editing details.
 function edit_details_verify() {
     var old_email  = $('loginDEOrig').getValue();
     var new_email  = $('loginDENew').getValue();
@@ -806,9 +839,13 @@ function edit_details_verify() {
     var old_pass  = $('loginDPOrig').getValue();
     var new_pass  = $('loginDPNew').getValue();
     var new_pass2 = $('loginDPNew2').getValue();
-
-    var openid = $('loginDONew').getValue();
-    var ouser  = $('loginDOUser').getValue();
+    
+    var openid = "";
+    var ouser  = "";
+    if (Controller.can_openid) {
+        openid = $('loginDONew').getValue();
+        ouser  = $('loginDOUser').getValue();
+    }
     var opass  = $('loginDOPass').getValue();
 
     switch(EditDetails) {

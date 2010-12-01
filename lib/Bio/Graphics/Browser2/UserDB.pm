@@ -10,10 +10,11 @@ use JSON;
 use LWP::UserAgent;
 #use LWPx::ParanoidAgent; (Better, but currently broken)
 use Net::SMTP;
-use Net::OpenID::Consumer;
 use Text::ParseWords 'quotewords';
 use Digest::MD5 qw(md5_hex);
 use Carp qw(confess cluck);
+
+use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; 1" || 0;
 
 sub new {
   my $class = shift;
@@ -31,7 +32,8 @@ sub new {
   my $self = bless {
     dbi => $login,
     globals => $globals,
-  }, ref $class || $class;  
+    openid => HAVE_OPENID,
+  }, ref $class || $class;
 
   return $self;
 }
@@ -916,6 +918,10 @@ sub do_list_openid {
 
     my @results = sort {$a->{name} cmp $b->{name}} @openids;
     print JSON::to_json(\@results);
+}
+
+sub openid {
+    return shift->{openid};
 }
 
 1;

@@ -448,9 +448,12 @@ sub render_js_controller_settings {
     my $controller_globals = JSON::to_json({
         map { $_ => ( $self->globals->url_path($_) || undef ) } @export_keys
        });
-
+    
+    my $openid = $self->{userdb}->openid;
+    
     return script({-type=>'text/javascript'}, <<EOS );
   Controller.set_globals( $controller_globals );
+  Controller.can_openid = $openid;
 EOS
 
 }

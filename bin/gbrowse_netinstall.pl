@@ -485,5 +485,5 @@ sub find_gbrowse_latest {
   my @versions      = sort {$b<=>$a} keys %versions;
   my $version = $versions[0] || GBROWSE_DEFAULT ;
 #  print STDERR $version,"\n";
-  return $versions{$version};
+  return $version;
 }

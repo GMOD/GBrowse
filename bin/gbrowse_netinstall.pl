@@ -184,7 +184,7 @@ $install_param_string ||="";
 use constant BIOPERL_VERSION      => 'BioPerl-1.6.1';
 use constant BIOPERL_REQUIRES     => '1.006001';  # sorry for the redundancy
 use constant BIOPERL_LIVE_URL     => 'http://github.com/bioperl/bioperl-live/tarball/master';
-use constant GBROWSE_DEFAULT      => '1.70';
+use constant GBROWSE_DEFAULT      => 'Generic-Genome-Browser-1.70';
 use constant SOURCEFORGE_MIRROR2  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_MIRROR1  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_GBROWSE  => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';
@@ -488,5 +488,5 @@ sub find_gbrowse_latest {
   my @versions      = sort {$b<=>$a} keys %versions;
   my $version = $versions[0] || GBROWSE_DEFAULT ;
 #  print STDERR $version,"\n";
-  return $versions{$version};
+  return $version;
 }

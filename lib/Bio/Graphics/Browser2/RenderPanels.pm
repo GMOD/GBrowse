@@ -1853,7 +1853,7 @@ sub create_panel_args {
   my $detail_start = $settings->{start};
   my $detail_stop  = $settings->{stop};
   my $h_region_str     = '';
-#  warn "disabling highlighted regions";
+
   if (1 && ($section eq 'overview' or $section eq 'region')){
     $postgrid  = hilite_regions_closure(
 	            [$detail_start,
@@ -1877,7 +1877,7 @@ sub create_panel_args {
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
 	      -key_color    => $source->global_setting('key bgcolor')      || 'moccasin',
 	      -bgcolor      => $source->global_setting("$section bgcolor") || 'wheat',
-	      -width        => $section eq 'detail'? $self->get_detail_width_no_pad : $settings->{width},
+              -width        => $section eq 'detail'? $self->get_detail_width_no_pad : $settings->{width},
 	      -key_style    => $keystyle,
               -suppress_key => 1,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
@@ -2457,7 +2457,7 @@ sub loaded_segment_outline {
 
 sub details_mult {
     my $self = shift;
-    return $self->settings->{details_mult} || 1;
+    return $self->render->details_mult;
 }
 
 sub get_detail_width_no_pad {

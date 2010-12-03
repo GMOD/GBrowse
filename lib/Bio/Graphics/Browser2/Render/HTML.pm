@@ -467,54 +467,13 @@ sub render_balloon_settings {
 
     my $default_style   = $source->setting('balloon style') || 'GBubble';;
     my $custom_balloons = $source->setting('custom balloons') || "";
-    my $balloon_images  = $self->globals->balloon_url() || '/gbrowse2/images/balloons';
     my %config_values   = $custom_balloons =~ /\[([^\]]+)\]([^\[]+)/g;
 
     # default image path is for the default balloon set
+    my $balloon_images  = $self->globals->balloon_url() || '/gbrowse2/images/balloons';
     my $default_images = "$balloon_images/$default_style";
+    my $balloon_settings = $self->default_balloon_settings($balloon_images);
 
-    # These are the four configured popup tooltip styles
-    # GBubble is the global default
-    # each type can be called using the [name] syntax
-    my $balloon_settings .= <<END;
-// Original GBrowse popup balloon style
-var GBubble = new Balloon;
-BalloonConfig(GBubble,'GBubble');
-GBubble.images = "$balloon_images/GBubble";
-GBubble.allowEventHandlers = true;
-GBubble.opacity = 1;
-GBubble.fontFamily = 'sans-serif';
-
-// A simpler popup balloon style
-var GPlain = new Balloon;
-BalloonConfig(GPlain,'GPlain');
-GPlain.images = "$balloon_images/GPlain";
-GPlain.allowEventHandlers = true;
-GPlain.opacity = 1;
-GPlain.fontFamily = 'sans-serif';
-
-// Like GBubble but fades in
-var GFade = new Balloon;
-BalloonConfig(GFade,'GFade');
-GFade.images = "$balloon_images/GBubble";
-GFade.opacity = 1;
-GFade.allowEventHandlers = true;
-GFade.fontFamily = 'sans-serif';
-
-// A formatted box
-// Note: Box is a subclass of Balloon
-var GBox = new Box;
-BalloonConfig(GBox,'GBox');
-GBox.images = "$balloon_images/GBubble";
-GBox.allowEventHandlers = true;
-GBox.evalScripts        = true;
-GBox.opacity = 1;
-GBox.fontFamily = 'sans-serif';
-GBox.maxWidth   = 1280;
-GBox.stemHeight = 0;
-END
-;
-    							   
     # handle any custom balloons/config sets
     # two args that are interpreted here and not passed
     # to the JavaScript:
@@ -552,6 +511,52 @@ END
     return "\n<script type=\"text/javascript\">\n$balloon_settings\n</script>\n";
 }
 
+sub default_balloon_settings {
+    my $self = shift;
+    my $balloon_images = shift;
+
+    # These are the four configured popup tooltip styles
+    # GBubble is the global default
+    # each type can be called using the [name] syntax
+    return <<END;
+// Original GBrowse popup balloon style
+var GBubble = new Balloon;
+BalloonConfig(GBubble,'GBubble');
+GBubble.images = "$balloon_images/GBubble";
+GBubble.allowEventHandlers = true;
+GBubble.opacity = 1;
+GBubble.fontFamily = 'sans-serif';
+
+// A simpler popup balloon style
+var GPlain = new Balloon;
+BalloonConfig(GPlain,'GPlain');
+GPlain.images = "$balloon_images/GPlain";
+GPlain.allowEventHandlers = true;
+GPlain.opacity = 1;
+GPlain.fontFamily = 'sans-serif';
+
+// Like GBubble but fades in
+var GFade = new Balloon;
+BalloonConfig(GFade,'GFade');
+GFade.images = "$balloon_images/GBubble";
+GFade.opacity = 1;
+GFade.allowEventHandlers = true;
+GFade.fontFamily = 'sans-serif';
+
+// A formatted box
+// Note: Box is a subclass of Balloon
+var GBox = new Box;
+BalloonConfig(GBox,'GBox');
+GBox.images = "$balloon_images/GBubble";
+GBox.allowEventHandlers = true;
+GBox.evalScripts        = true;
+GBox.opacity = 1;
+GBox.fontFamily = 'sans-serif';
+GBox.maxWidth   = 1280;
+GBox.stemHeight = 0;
+END
+}
+
 sub render_select_menus {  # for popup balloons
     my $self = shift;
     my $html = '';
@@ -587,87 +592,6 @@ sub _render_select_menu {
     return div( { -style => $style, 
 		  -id    => lc($view).'SelectMenu' }, 
 		$menu_html );
-}
-
-# Render Login - Returns the HTML for the login links on the top-right corner of the screen.
-sub render_login {
-    my $self     = shift;
-    my $settings = $self->state;
-    return unless $settings->{head};
-    
-    my $images   = $self->globals->openid_url;
-    my $appname  = $self->globals->application_name;
-    my $appnamel = $self->globals->application_name_long;
-    my $session  = $self->session;
-    my $style    = 'font-weight:bold;color:blue;cursor:pointer;font-size:9pt;';
-    my $login_controls  = '';
-
-    warn "login session id = ",$session->id," user = ",$session->username if DEBUG;
-
-	# Draw the visible HTML elements.
-    if ($session->private) {
-    	$login_controls .= span({-style => 'font-weight:bold;color:black;'}, $self->translate('WELCOME', $session->username));
-    	$login_controls .= '&nbsp; &nbsp;';
-        $login_controls .= span({
-        		  -style 	   => $style,
-        		  -title 	   => $self->translate('LOG_OUT_DESC', $session->username).'',
-        		  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',\''.$session->username.'\','.$session->using_openid.');',
-                  -onMouseOver => 'this.style.textDecoration=\'underline\'',
-                  -onMouseOut  => 'this.style.textDecoration=\'none\''}, $self->translate('MY_ACCOUNT'));
-		$login_controls .= '&nbsp; &nbsp;';
-        $login_controls .= span({
-        		  -style       => $style,
-				  -title       => $self->translate('CHANGE_SETTINGS_DESC'),
-				  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); location.href=\'?id=logout\';',
-				  -onMouseOver => 'this.style.textDecoration=\'underline\'',
-				  -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out');
-    } else {
-        $login_controls .= span({
-        		  -style	   => $style,
-        		  -title 	   => $self->translate('LOGIN_CREATE_DESC'),
-        		  -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',false,false);',
-                  -onMouseOver => 'this.style.textDecoration=\'underline\'',
-                  -onMouseOut  => 'this.style.textDecoration=\'none\''},
-                  $self->translate('LOGIN_CREATE'));
-    }
-    my $container = span({-style => 'float:right;'}, $login_controls);
-    return $container;
-}
-
-# Renders the account confirmation screen.
-sub render_login_account_confirm {
-    my $self     = shift;
-    my $confirm  = shift;
-    my $images   = $self->globals->openid_url;
-    my $appname  = $self->globals->application_name;
-    my $appnamel = $self->globals->application_name_long;
-    my $settings = $self->state;
-
-    return $settings->{head} ?
-        iframe({-style  => 'display:none;',
-                -onLoad => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');
-                 confirm_screen(\''.$confirm.'\')'})
-        : "";
-}
-
-# Renders the "Confirm OpenID" popup.
-sub render_login_openid_confirm {
-    my $self            = shift;
-    my $images          = $self->globals->openid_url;
-    my $appname         = $self->globals->application_name;
-    my $appnamel        = $self->globals->application_name_long;
-    my $settings        = $self->state;
-    my $this_session    = $self->session;
-    my ($page,$session) = @_;
-
-    my $logged_in = 'false';
-       $logged_in = 'true'  if $this_session->private;
-
-    return $settings->{head} ?
-        iframe({-style  => 'display:none;',
-                -onLoad => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');
-                 login_blackout(true,\'\');confirm_openid(\''.$session.'\',\''.$page.'\','.$logged_in.');'})
-        : "";
 }
 
 # Returns the HTML for the page's title, as displayed at the top.
@@ -782,7 +706,51 @@ sub render_actionmenu {
 			     li($about_me_link),
 			  )),
 	);
-    return div({-class=>'datatitle'},$file_menu.$login.br({-clear=>'all'}));
+    return div({-class=>'datatitle'},$file_menu,$login,br({-clear=>'all'}));
+}
+
+# Render Login - Returns the HTML for the login links on the top-right corner of the screen.
+sub render_login {
+    my $self     = shift;
+    my $settings = $self->state;
+    return unless $settings->{head};
+    return $self->login_manager->render_login;
+}
+
+# this is the contents of the plugin-generated login form
+sub wrap_login_form {
+    my $self = shift;
+    my $plugin = shift;
+
+    my $plugin_type  = $plugin->type;
+    my $plugin_name  = $plugin->name;
+
+    my $form = $plugin->configure_form;
+    my $html = div(
+	div({-id=>'login_message'},''),
+	start_form({-name     => 'configure_plugin',
+		   -id        => 'plugin_configure_form',
+		   -onSubmit => 'return false'}
+	),
+	$form,
+	hidden(-name=>'plugin',-value=>$plugin_name),
+	button(
+	    -name    => $self->translate('Cancel'),
+	    -onClick => 'Balloon.prototype.hideTooltip(1)'
+	),
+	button(
+	    -name    => 'plugin_button',
+	    -value   => $self->translate('LOGIN'),
+	    -onClick => "Controller.plugin_authenticate(\$('plugin_configure_form'),\$('login_message'))",
+	),
+	end_form(),
+	script({-type=>'text/javascript'},<<EOS)
+Event.observe(\$('plugin_configure_form'),'keydown',
+      function(e){ if (e.keyCode==Event.KEY_RETURN)
+	      Controller.plugin_authenticate(\$('plugin_configure_form'),\$('login_message'))})
+EOS
+    );
+    return $html;
 }
 
 # For the subset of plugins that are named in the 'quicklink plugins' option, create quick links for them.
@@ -2345,6 +2313,8 @@ sub source_menu {
 # This is currently somewhat hacky, hard to extend and needs to be generalized.
 # NOTE: to add new configuration rows, the name of the form element must begin with "conf_" and
 # the rest must correspond to a valid glyph option.
+
+# BUG: MOVE THIS INTO ITS OWN MODULE!
 sub track_config {
     my $self        = shift;
     my $label       = shift;

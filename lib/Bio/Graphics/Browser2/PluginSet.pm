@@ -17,6 +17,10 @@ sub new {
 
   warn "initializing plugins with $config..." if DEBUG;
   my @plugins = shellwords($config->plugins);
+  # only one authorization plugin allowed, from globals
+  if (my $auth = $config->globals->auth_plugin) {
+      push @plugins,$auth;
+  }
   warn "PLUGINS = @plugins" if DEBUG;
 
  PLUGIN:
@@ -64,6 +68,13 @@ sub language {
   my $d = $self->{language};
   $self->{language} = shift if @_;
   $d;
+}
+
+sub auth_plugin {
+    my $self = shift;
+    my @a    = grep {$_->type eq 'authorizer'} values %{$self->{plugins}};
+    return unless @a;
+    return $a[0];
 }
 
 sub configure {

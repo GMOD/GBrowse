@@ -239,6 +239,7 @@ sub admin_dbs              { shift->setting(general=>'admin_dbs')               
 sub openid_secret {
     return GBrowse::ConfigData->config('OpenIDConsumerSecret')
 }
+sub auth_plugin    { shift->setting(general=>'authorization plugin') }
 
 # uploads
 sub upload_db_adaptor {

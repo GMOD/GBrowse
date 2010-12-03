@@ -281,7 +281,9 @@ var GBrowseController = Class.create({
         var request_str = "action=update_sections" + param_str;
         for (var i = 0; i < section_names.length; i++) {
             if (spin)
-                $(section_names[i]).update(new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING')}) );
+                $(section_names[i]).update(new Element("img", 
+						       {src: Controller.button_url('spinner.gif'), 
+							alt: Controller.translate('WORKING')}) );
             request_str += "&section_names="+section_names[i];
         }
 
@@ -786,8 +788,27 @@ var GBrowseController = Class.create({
                     e.show();
                     Controller.update_sections(new Array(track_listing_id),'',1,false);
                 }
-            } // end onSuccess
+	     } // end onSuccess
         });
+    },
+
+    plugin_authenticate:
+    function(configuration_form,message_area) {
+	message_area.innerHTML='<img src="'+this.button_url('spinner.gif')+'" />'+Controller.translate('WORKING');
+	this.reconfigure_plugin('Configure',null,null,'authorizer',configuration_form);
+	new Ajax.Request(Controller.url, {
+                method:     'post',
+	        parameters: {
+		    action:  'plugin_authenticate'
+		},
+		onSuccess: function (t) {
+		    var results    = t.responseJSON;
+		    if (results.userOK)
+			Balloon.prototype.hideTooltip(1);
+		    else
+			message_area.innerHTML='<div style="color:red">'+results.message+'</div>';
+		}
+	});
     },
 
     plugin_go:

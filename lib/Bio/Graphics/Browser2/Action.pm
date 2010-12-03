@@ -247,6 +247,7 @@ sub ACTION_reconfigure_plugin {
     my $self   = shift;
     my $q      = shift;
     my $plugin = $q->param('plugin');
+    warn "reconfigure_plugin($plugin)";
     # currently we reinit all plugins, not just the one involved
     $self->render->init_plugins();
     return (204,'text/plain',undef);
@@ -816,6 +817,31 @@ sub ACTION_get_translation_tables {
     my %headers = (-cache_control => 'max-age=604800'); #Let the client cache for one week
 
     return (200, 'text/javascript', $languagesScript, %headers);
+}
+
+sub ACTION_plugin_login {
+    my $self = shift;
+    my $q    = shift;
+    my $render = $self->render;
+    $render->init_plugins();
+    my $plugin = eval{$render->plugins->auth_plugin} or return (204,'text/plain','no authorizer defined');
+    my $html = $render->wrap_login_form($plugin);
+    return (200,'text/html',$html);
+}
+
+sub ACTION_plugin_authenticate {
+    my $self = shift;
+    my $q    = shift;
+    my $render = $self->render;
+    $render->init_plugins();
+    warn "plugin_authenticate";
+    my $plugin = eval{$render->plugins->auth_plugin} or return (204,'text/plain','no authorizer defined');
+    my $ok     = $plugin->authenticate;
+    my $result = $ok ? { userOK  => 1,
+			 message => 'login ok'}
+                     : { userOK   => undef,
+			 message  => "Invalid name/password"};
+    return (200,'application/json',$result);
 }
 
 1;

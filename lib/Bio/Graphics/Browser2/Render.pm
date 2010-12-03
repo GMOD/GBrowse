@@ -89,6 +89,12 @@ sub set_signal_handlers {
     };
 }
 
+sub set_details_multiplier {
+    my $self = shift;
+    my $m    = shift;
+    $self->{details_multiplier} = $m;
+}
+
 sub data_source {
     my $self = shift;
     my $d = $self->{data_source};
@@ -182,8 +188,17 @@ sub debug {
 
 sub DESTROY {
     my $self = shift;
-#    undef $self->data_source->{session} if $self->data_source;
     warn "[$$] $self: destroy she said" if DEBUG;
+}
+
+sub destroy {
+    my $self = shift;
+    # because the login manager maintains a copy of the render object,
+    # we need to explicitly destroy it to avoid memory leaks.
+    if (my $lm = $self->{login_manager}) {
+	$lm->destroy;
+	delete $self->{login_manager};
+    }
 }
 
 
@@ -763,22 +778,10 @@ sub render_body {
   my $global_config = $self->render_global_config;
 
   $output .= $self->render_tabbed_pages($main_page,$tracks,$community,$custom,$global_config);
-  $output .= $self->render_login_section;
+  $output .= $self->login_manager->render_confirm;
   $output .= $self->render_bottom($features);
 
   print $output;
-}
-
-sub render_login_section {
-    my $self = shift;
-    my $output = '';
-
-    if (param('confirm') && param('code') && param('id')) {
-	$output .= $self->render_login_account_confirm(param('code'));
-    } elsif (param('openid_confirm') && param('page') && param('s')) {
-	$output .= $self->render_login_openid_confirm(param('page'),param('s'));
-    }
-    return $output;
 }
 
 sub render_tracks_section {
@@ -3287,7 +3290,9 @@ sub details_mult_from_setting {
 
 sub details_mult {
     my $self = shift;
-    return $self->state->{details_mult} || $self->details_mult_from_setting;
+    # take setting from renderer, else the state, else the configuration setting
+    my $multiplier = $self->{details_multiplier} || $self->state->{details_mult} || $self->details_mult_from_setting;
+    return $multiplier;
 }
 
 sub render_deferred {
@@ -3685,8 +3690,8 @@ sub image_link {
     my $url      = "$base/gbrowse_img/$s";
     my $tracks   = $settings->{tracks};
     my $width    = param('view_width') || $settings->{width};
-    my $start    = param('view_start') || $settings->{start};
-    my $stop     = param('view_stop')  || $settings->{stop};
+    my $start    = param('view_start') || $settings->{view_start};
+    my $stop     = param('view_stop')  || $settings->{view_stop};
     my $name     = "$settings->{ref}:$start..$stop";
     my $selected = $self->join_selected_tracks;
     my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}
@@ -4010,6 +4015,14 @@ sub translate {
 	my $self = shift;
 	my $lang = $self->language or return @_;
 	$lang->translate(@_);
+}
+
+sub login_manager {
+    my $self = shift;
+    return $self->{login_manager} if exists $self->{login_manager};
+    eval "require Bio::Graphics::Browser2::Render::Login" unless
+	Bio::Graphics::Browser2::Render::Login->can('new');
+    return $self->{login_manager} = Bio::Graphics::Browser2::Render::Login->new($self);
 }
 
 sub tr {

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser2::Render::Synteny::HTML;
 
-our $CONF_DIR  = "$ENV{GBROWSE_CONF}/synteny";
+our $CONF_DIR;
 our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
 our $BIOGRAPHICS_VERSION   = 1.8;
 
@@ -71,8 +71,7 @@ sub run {
     my $self = shift;
 
     # initialization
-    $CONF_DIR   = conf_dir($CONF_DIR);
-
+    $CONF_DIR = conf_dir("$ENV{GBROWSE_CONF}/synteny");
 
     # error if no data sources configured
     my $go;

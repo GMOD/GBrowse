@@ -1,10 +1,10 @@
-package Legacy::DB::SyntenyIO;
+package Bio::DB::SyntenyIO;
 
 use strict;
 use DBI;
 use Bio::DB::GFF::Util::Binning qw(bin bin_bot bin_top);
 use Bio::DB::GFF::Util::Rearrange qw(rearrange);
-use Legacy::DB::SyntenyBlock;
+use Bio::DB::SyntenyBlock;
 
 use constant MINBIN => 1000;
 use constant MAXBIN => 1_000_000_000;
@@ -128,7 +128,7 @@ sub get_synteny_by_range {
   while (my($hit,
 	    $src,$ref1,$start1,$end1,$strand1,$seq1,
 	    $tgt,$ref2,$start2,$end2,$strand2,$seq2) = $sth->fetchrow_array) {
-    $HITS{$hit} ||= Legacy::DB::SyntenyBlock->new($hit);
+    $HITS{$hit} ||= Bio::DB::SyntenyBlock->new($hit);
     $HITS{$hit}->add_part([$src,$ref1,$start1,$end1,$strand1,$seq1],
 			  [$tgt,$ref2,$start2,$end2,$strand2,$seq2]
 			 );

@@ -19,8 +19,8 @@ use Legacy::Graphics::Browser;
 use Legacy::Graphics::Browser::Util;
 use Legacy::Graphics::Browser::Synteny;
 use Legacy::Graphics::Browser::PageSettings;
-use Legacy::DB::SyntenyIO;
-use Legacy::DB::SyntenyBlock;
+use Bio::DB::SyntenyIO;
+use Bio::DB::SyntenyBlock;
 
 
 use constant OVERVIEW_RATIO     => 0.9;
@@ -28,11 +28,11 @@ use constant OVERVIEW_BGCOLOR   => 'gainsboro';
 use constant IMAGE_WIDTH        => 800;
 use constant INTERIMAGE_PAD     => 5;
 use constant VERTICAL_PAD       => 40;
-use constant ALIGN_HEIGHT       => 6;  
+use constant ALIGN_HEIGHT       => 6;
 use constant MAX_SPAN           => 0.3;     # largest gap allowed for merging inset panels
 use constant TOO_SMALL          => 0.02;    # minimum span for displayed alignments
 use constant MAX_GAP            => 50_001;  # maximum gap for chaining
-use constant MAX_SEGMENT        => 2_000_001; 
+use constant MAX_SEGMENT        => 2_000_001;
 use constant EXTENSION          => 'syn';   # extension for species conf files
 use constant DEBUG              => 0;
 use constant HELP               => 'http://gmod.org/wiki/GBrowse_syn_Help';
@@ -40,8 +40,8 @@ use constant HELP               => 'http://gmod.org/wiki/GBrowse_syn_Help';
 # Display options -- using a hash here so that
 # $page_settings can be updated without using hard-coded
 # keys (not counting this constant!).
-use constant SETTINGS => 
-    ( 
+use constant SETTINGS =>
+    (
       aggregate  => 0 , # chain alignments
       pgrid      => 1,  # gridlines
       shading    => 1,  # shaded polygons
@@ -74,14 +74,14 @@ sub run {
     $CONF_DIR   = conf_dir($CONF_DIR);
 
 
-    # error if no data sources configured 
+    # error if no data sources configured
     my $go;
     while (<$CONF_DIR/*.synconf>) {
       $go++;
     }
     unless ($go) {
       print header,  start_html('No data source');
-      print warning("No data source configured for GBrowse_syn\n"); 
+      print warning("No data source configured for GBrowse_syn\n");
       print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
 
       print <<END;
@@ -109,13 +109,13 @@ END
     $CONF->source($page_settings->{source});
     $MAP = db_map();
 
-    $SYNTENY_IO = Legacy::DB::SyntenyIO->new($CONF->setting('join'));
+    $SYNTENY_IO = Bio::DB::SyntenyIO->new($CONF->setting('join'));
 
     my $segment = landmark2segment($page_settings);
 
     if ($segment) {
       my $name = format_segment($segment);
-      
+
       if (ref $segment ne 'Bio::DB::GFF::RelSegment') {
         redirect(url()."?name=$name");
       }
@@ -170,10 +170,10 @@ END
     if ($segment) {
       # make sure no hits go off-screen
       remap_coordinates($_) for @hits;
-      
+
       segment_info($page_settings,$segment);
 
-      my %species = map {$_->src2 => 1} @hits;  
+      my %species = map {$_->src2 => 1} @hits;
       my @species = sort keys %species;
 
       # either display ref species + 2 repeating or 'all in one'
@@ -184,8 +184,8 @@ END
       }
       else {
         draw_image($page_settings,\@hits,@species);
-      } 
-    } 
+      }
+    }
 
     options_table();
     print end_form();
@@ -208,7 +208,7 @@ sub species_chooser {
   if (!param('species')) {
     $default = [keys %$MAP];
   }
- 
+
   b(wiki_help('Aligned_Species',,$CONF->tr('Aligned Species'))) . ':' . br .
   checkbox_group(
 		 -id        => 'speciesChooser',
@@ -226,14 +226,14 @@ sub expand_notice {
   # pointless if < 4 species
   return '' if keys %$MAP < 4;
   my $state = param('display') || $CONF->page_settings->{display};
-  my $ref = $CONF->search_src; 
+  my $ref = $CONF->search_src;
   my $title = b(wiki_help("Display_Mode",$CONF->tr("Display Mode")), ':');
 
   my $url = url . "/" . $CONF->source;
   if ($state eq 'expanded') {
     return br, $title, br,  "Three species/panel ",
 	a( {-href => $url.'?display=compact'}, 'Click to show all species in one panel');
-  } 
+  }
   else {
     return br, $title, br, 'All species in one panel ',
     a( {-href => $url.'?display=expanded'}, 'Click to show reference plus two species/panel');
@@ -250,7 +250,7 @@ sub landmark_search {
 
 sub species_search {
   my $default = $CONF->page_settings("search_src");
-  my %labels = map {$_=>$MAP->{$_}{desc}} keys %$MAP; 
+  my %labels = map {$_=>$MAP->{$_}{desc}} keys %$MAP;
   my $values  = [sort {$MAP->{$a}{desc} cmp $MAP->{$b}{desc}} grep {$MAP->{$_}{desc}} keys %labels];
   unshift @$values, '';
 
@@ -296,7 +296,7 @@ sub draw_image {
   for my $species (@species) {
     push @hits, grep {$_->src2 eq $species} @$hits;
   }
-  
+
   my $src     = $CONF->page_settings("search_src");
   my $segment = $CONF->current_segment or return;
   my $max_segment = $CONF->setting('max_segment') || MAX_SEGMENT;
@@ -311,12 +311,12 @@ sub draw_image {
 
   # dynamically create synteny blocks
   @hits = aggregate(\@hits) if $CONF->page_settings("aggregate");
-  
+
   # save the hits by name so we can access them from the name alone
   for (@hits) {
     $CONF->name2hit( $_->name => $_ );
   }
- 
+
 
   # relate hits into "span" sorted by target contig/chromosomes
   # %span = ( target_database,target_contig => { target, contig, start, end } } )
@@ -327,7 +327,7 @@ sub draw_image {
     $instance{$src,$contig} ||= 0;
     my $key = join $;,$src,$contig,$instance{$src,$contig};
 
-    # start a new span if the gap is too large 
+    # start a new span if the gap is too large
     if ($span{$key} && ($h->tstart >= $span{$key}{end}+$max_gap)) {
       $key = join $;,$src,$contig,++$instance{$src,$contig};
     }
@@ -400,10 +400,10 @@ sub draw_image {
     $span{$span_key}{position} = $position{$src};
     $hit_positions{$h} ||= $span{$span_key}{position};
   }
-  
+
   # Create the middle (reference) panel
   my ($upper_ff,$lower_ff,%is_upper);
-  
+
   # restrict segment to aligned sequence
   my $only_aligned = 0;
   if ($only_aligned && @hits) {
@@ -441,19 +441,19 @@ sub draw_image {
 
   my ($ref_img,$ref_boxes) = segment2image($segment,
 					   $src,
-					   { 
+					   {
 					     width           => $width - $padding,
 					     features_top    => $upper_ff,
 					     features_bottom => $lower_ff,
 					     background      => 'white',
 					   }
 					   ) or die("no image");
-  
+
   $width = $ref_img->width;
 
   my $ref_title = $MAP->{$src}{desc} . ' ' . format_segment($segment);
 
-  # pad all of the span coordinates for a bit of regional context 
+  # pad all of the span coordinates for a bit of regional context
   for my $key (keys %span) {
     my $width = $span{$key}{end} - $span{$key}{start};
     $span{$key}{start} -= int $width/20;
@@ -558,7 +558,7 @@ END
   my @map_items;
   my %x = ( above => $im_pad, below => $im_pad);
 
-  # order the panels by hit order 
+  # order the panels by hit order
   my (@sorted_spans,%seen_span);
   for my $h (sort {$a->start <=> $b->start} @hits) {
     my $span = $hit2span->{$h};
@@ -573,7 +573,7 @@ END
     my $img = $span{$key}{image} or next;
     my $xi = $is_above ? 'above' : 'below';
     my $max_height = $is_above ? $max_height_above : $max_height_below;
-    
+
     my $img_y = $is_above ? $ref_top-$vertical_pad-$img->height : $ref_bottom+$vertical_pad ;
     my $msk_y  = $is_above ? $ref_top-$vertical_pad-$max_height : $img_y;
     $span{$key}{offsets} = [$x{$xi},$img_y];
@@ -615,7 +615,7 @@ END
     my ($feature,$fname) = _type_from_box($box);
     my @rect = ($im_pad+$box->[1],$ref_top+$box->[2],$im_pad+$box->[3],$ref_top+$box->[4]);
     if ($feature =~ /^match(_part)?$/) {
-      $ref_boxes{$fname} = \@rect;		
+      $ref_boxes{$fname} = \@rect;
     }
     else {
       my %atts = %{$box->[5]};
@@ -623,7 +623,7 @@ END
       $url =~ s/gbrowse_syn.*$//;
       $atts{href} =~ s/\.\.\/\.\.\//$url/ if $atts{href};
       push @map_items,Area({shape=>'rect',coords=>join(',',@rect),%atts});
-    }	
+    }
     $gd->rectangle(@rect,$black) if DEBUG;
   }
 
@@ -652,7 +652,7 @@ END
       $gd->rectangle(@rect,$black) if DEBUG;
     }
   }
-  
+
   my %grid_line;
   my %gc;
   $gc{1} = $CONF->page_settings("pgrid") ? $gd->colorResolveAlpha(10,10,10,100) : $gd->colorResolveAlpha(10,10,10,70);
@@ -660,7 +660,7 @@ END
   my $thickness = 3;
 
   my $grid_upper;
-  for my $feature (keys %ref_boxes) { 
+  for my $feature (keys %ref_boxes) {
     next unless defined $ref_boxes{$feature} && defined $panel_boxes{$feature};
     my $hit = $CONF->name2hit($feature);
     next unless defined $hit;
@@ -670,7 +670,7 @@ END
 
     my ($rx1,$ry1,$rx2,$ry2) = @{$ref_boxes{$feature}};
     my ($px1,$py1,$px2,$py2) = @{$panel_boxes{$feature}};
-    my $upper = $py2 < $ry1;    
+    my $upper = $py2 < $ry1;
 
     if ($CONF->page_settings("shading")) {
       my $poly = GD::Polygon->new();
@@ -683,14 +683,14 @@ END
 	$poly->addPt($px2,$py2);
 	$poly->addPt($rx2,$ry1);
 	$poly->addPt($rx1,$ry1);
-      } 
+      }
       else {
 	$poly->addPt($px1,$py1);
 	$poly->addPt($px2,$py1);
 	$poly->addPt($rx2,$ry2);
 	$poly->addPt($rx1,$ry2);
       }
-      
+
       $gd->filledPolygon($poly,$tcolors{$feature});
     }
   }
@@ -701,7 +701,7 @@ END
   for my $feature (keys %ref_boxes) {
     next unless defined $ref_boxes{$feature} && defined $panel_boxes{$feature};
     next if $feature =~ /aggregate/;
-    my $exact = $CONF->setting('grid coordinates');    
+    my $exact = $CONF->setting('grid coordinates');
     $exact = $exact && $exact eq 'exact';
 
     next unless my $hit = $CONF->name2hit($feature);
@@ -714,7 +714,7 @@ END
     my ($px1,$py1,$px2,$py2) = @{$panel_boxes{$feature}};
     my $upper = $py2 < $ry1;
 
-    my @grid_coords = $CONF->page_settings("pgrid") 
+    my @grid_coords = $CONF->page_settings("pgrid")
 	? grid_coords( $hit,
 		       $ref_boxes{$feature},
 		       $panel_boxes{$feature},
@@ -753,8 +753,8 @@ END
       $grid_line{$x1}{thickness} ||= $thickness;
     }
   }
-  
-  
+
+
   for my $g (keys %grid_line) {
     # skip the line if there is one already drawn
     # a pixel to the left or right;
@@ -766,9 +766,9 @@ END
     $grid_line{$g}{bottom} ||= $ref_bottom;
     $gd->line($g,$grid_line{$g}{top},$g,$grid_line{$g}{bottom},$gc{$thickness});
   }
-  
+
   my $url = $SCONF->generate_image($gd);
-  
+
   my $label = $CONF->page_settings->{display} eq 'compact' ? # all
               'Details'                                    : # or a sub-set
                join(', ',@species);
@@ -779,7 +779,7 @@ END
 			       img({-src=>$url,-border=>0,-usemap=>'#'.$map_name} )))
 		       ),
 		);
-  
+
   my $map = Map({-name=>$map_name},reverse @map_items);
   $map =~ s/\</\n\</g;
   print $map;
@@ -797,12 +797,12 @@ sub segment2image {
 
   my $dsn = $MAP->{$src}{db} or return;
   $SCONF->source($dsn);
-  # make sure balloon tooltips are turned on 
+  # make sure balloon tooltips are turned on
   $SCONF->setting('GENERAL','balloon tips',1);
 
   my @tracks    = shellwords($CONF->setting($dsn => 'tracks'));
   my $ff_scale  = Bio::Graphics::FeatureFile->new;
-  $ff_scale->add_type( SCALE => { fgcolor => 'black', 
+  $ff_scale->add_type( SCALE => { fgcolor => 'black',
 				  glyph   => 'arrow',
 				  tick    => 2,
 				  double  => 0,
@@ -810,7 +810,7 @@ sub segment2image {
 
 
   $ff_scale->add_feature(segment2feature($segment,$ff_scale));
-  
+
   my @labels;
   if ($hits_top && $hits_bottom) {
     @labels = ('ff_top','ff_scale',@tracks,'ff_bottom');
@@ -834,7 +834,7 @@ sub segment2image {
   $ff_hash{$scale_label}  = $ff_scale;
 
   $SCONF->width($width);
-  
+
   my $im_pad = $CONF->setting('interimage_pad') || INTERIMAGE_PAD;
 
   # padding must be temporarily overridden for inset panels
@@ -854,9 +854,9 @@ sub segment2image {
   my $no_cache = [md5_hex(url(-query_string=>1))];
 
   landmark2segment() if _isref($segment);
-  
-  my ($img,$boxes) = $SCONF->render_panels( 
-					    { 
+
+  my ($img,$boxes) = $SCONF->render_panels(
+					    {
 					      drag_n_drop => 0,
 					      image_and_map => 1,
 					      keystyle  => 'none',
@@ -868,10 +868,10 @@ sub segment2image {
 					      noscale   => 1,
 					      feature_files=>\%ff_hash,
 					      -flip     => $flip,
-					      cache_extra => $no_cache, 
+					      cache_extra => $no_cache,
 					    }
 					    );
-  
+
 
   # restore original padding
   unless ($src eq $CONF->search_src()) {
@@ -886,7 +886,7 @@ sub _isref {
   my $segment = shift;
   return $segment->ref eq $CONF->page_settings('ref') &&
       $segment->start == $CONF->page_settings('start') &&
-      $segment->stop  == $CONF->page_settings('stop'); 
+      $segment->stop  == $CONF->page_settings('stop');
 }
 
 sub format_segment {
@@ -932,7 +932,7 @@ sub landmark2segment {
     $settings->{"stop"}  = $segment->end;
     $settings->{"name"}  = format_segment($segment);
   }
- 
+
   return $segment;
 }
 
@@ -1050,12 +1050,12 @@ sub navigation_table {
   $CONF->section_setting(Instructions => 'open');
   $CONF->section_setting(Search => 'open');
 
- 		   
+
   $table .= toggle( $CONF->tr('Instructions'),
 			   div({-class=>'searchtitle'},
 			       br.'Select a Region to Browse and a Reference species:',
 			       p($CONF->show_examples())));
-  
+
   my $html_frag = $INVALID_SRC ? '' : html_frag($segment,$CONF->page_settings);
   $table .= toggle( $CONF->tr('Search'),
                     table({-border=>0, -width => '100%', -cellspacing=>0},
@@ -1165,7 +1165,7 @@ sub source_menu {
 		 -name   => 'source',
 		 -values => \@sources,
 		 -labels => { map {$_ => $CONF->description($_)} $CONF->sources},
-		 -default => $source,		 
+		 -default => $source,
 		 ) : $CONF->description($sources[0]);
 }
 
@@ -1196,7 +1196,7 @@ sub aggregate {
     if (@$grp > 1) {
       my @coords  = sort {$a<=>$b} map {$_->start,$_->end}   @$grp;
       my @tcoords = sort {$a<=>$b} map {$_->tstart,$_->tend} @$grp;
-      my $hit = Legacy::DB::SyntenyBlock->new($grp->[0]->name."_aggregate");
+      my $hit = Bio::DB::SyntenyBlock->new($grp->[0]->name."_aggregate");
       $hit->add_part($grp->[0]->src,$grp->[0]->tgt);
       $hit->start(shift @coords);
       $hit->end(pop @coords);
@@ -1213,16 +1213,16 @@ sub aggregate {
   return @$hits;
 }
 
-sub belong_together { 
+sub belong_together {
   my ($feat1,$feat2) = @_;
   my $max_gap = $CONF->setting('max_gap') || MAX_GAP;
   return unless $feat1->target  eq $feat2->target;  # same chromosome
   return unless $feat1->seqid   eq $feat2->seqid;   # same reference sequence
-  return unless $feat1->tstrand eq $feat2->tstrand; # same strand                                                                                            
+  return unless $feat1->tstrand eq $feat2->tstrand; # same strand
   if ($feat1->tstrand eq '+') {
-    return unless $feat1->end < $feat2->end;   # '+' strand monotonically increasing                                                                            
+    return unless $feat1->end < $feat2->end;   # '+' strand monotonically increasing
   } else {
-    return unless $feat1->end > $feat2->end;   # '-' strand monotonically decreasing                                                                            
+    return unless $feat1->end > $feat2->end;   # '-' strand monotonically decreasing
   }
   my $dist1 = abs($feat2->end - $feat1->start);
   my $dist2 = abs($feat2->tend - $feat1->tstart);
@@ -1252,7 +1252,7 @@ sub overview {
   my $width = $CONF->page_settings('imagewidth')   || IMAGE_WIDTH;
   $width *= $CONF->setting('overview_ratio') || OVERVIEW_RATIO;
   $CONF->width($width);
-  
+
   # the postgrid will be invoked to hilite the currently selected region
   my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
 
@@ -1406,7 +1406,7 @@ sub remap_coordinates {
 
 # If we can't get a mapped coordinate, interpolate based
 # on relative hit lengths
-sub guess_nearest_position_match { 
+sub guess_nearest_position_match {
   my $hit   = shift;
   my $coord = shift;
   my $flip  = shift;
@@ -1421,7 +1421,7 @@ sub guess_nearest_position_match {
 
 
 # take a vote to flip the panel: the majority strand wins
-sub panel_is_flipped { 
+sub panel_is_flipped {
   my $key = shift;
   return 0 unless $CONF->page_settings('pflip');
   my $panel_flip = $CONF->panel_flip($key);
@@ -1471,7 +1471,7 @@ sub locations2pixels {
 
 sub grid_coords {
   my ($hit,$refbox,$hitbox,$flip,$segment) = @_;
-  
+
   # don't bother if there are no coords in the database
   return () if $SYNTENY_IO->nomap;
 
@@ -1479,7 +1479,7 @@ sub grid_coords {
   my $gcoords = $CONF->setting('grid coordinates') || 'AUTO';
   if ($gcoords eq 'exact') {
     return exact_grid_coords(@_);
-  } 
+  }
 
   my $step = grid_step($segment) or return;
   my $start = nearest(100,$hit->start);
@@ -1517,7 +1517,7 @@ sub reorder_pairs {
   my $flip  = shift;
   my $pairs = shift;
   my $force_even = shift;
-  
+
   return $pairs if @$pairs > 1 && @$pairs % 2 && !$force_even;
   return [] if @$pairs == 1;
   return $pairs if !$flip;
@@ -1583,7 +1583,7 @@ sub default_settings {
 
   my %default = SETTINGS;
   foreach (keys %default) {
-    $settings->{$_} ||= $default{$_};  
+    $settings->{$_} ||= $default{$_};
   }
   set_default_tracks($settings);
 }
@@ -1661,7 +1661,7 @@ sub adjust_settings {
 
   $settings->{name} =~ s/^\s+//; # strip leading
   $settings->{name} =~ s/\s+$//; # and trailing whitespace
-  
+
   return 1;
 }
 
@@ -1670,7 +1670,7 @@ sub _unique {
   my %seen;
   my $src = $CONF->search_src || '';
   my @list = grep {!$seen{$_}++} grep {$_} @_;
-  return grep {$_ ne $src} @list;  
+  return grep {$_ ne $src} @list;
 }
 
 
@@ -1694,9 +1694,9 @@ sub wiki_help {
   my $url   = HELP;
   (my $blabel = $label) =~ s/_/ /g;
   $label =~ s/\s+/_/g;
-  
-  return a({ 
-	-href => "${url}#${label}", 
+
+  return a({
+	-href => "${url}#${label}",
 	-target => '_wiki_help',
 	-onmouseover => "balloon.showTooltip(event,'Click for more information about <b><i>$blabel</i></b>')"},
 	@body);

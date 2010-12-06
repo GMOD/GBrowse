@@ -163,4 +163,17 @@ sub get_file_id {
     return shift->filename(shift);
 }
 
+# Change User ID (Old User ID, New User ID) - Changes the current user's user ID stored in the database to something new, in case the session expires.
+sub change_userid {
+    # Nothing to change with this backend. Shouldn't ever be called, anyways.
+}
+
+# Change Uploads ID (Old Uploads ID, New Uploads ID) - Changes the current user's stored uploads ID to something new, in case the session expires.
+sub change_uploadsid {
+    my $self = shift;
+    my $old_uploadsid = shift;
+    my $new_uploadsid = shift;
+    $self->switch_uploads_folder($old_uploadsid, $new_uploadsid);
+}
+
 1;

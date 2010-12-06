@@ -235,6 +235,37 @@ sub check_uploads_id {
     return $uploadsid;
 }
 
+# Change IDs (New User ID, New Uploads ID) - Changes the current user's user ID stored in the database to something new, in case the session expires.
+sub change_ids {
+    my $self = shift;
+    my $old_uploadsid = shift;
+    my $new_uploadsid = shift;
+    my $old_userid = shift;
+    my $new_userid = shift;
+    $self->change_userid($old_userid, $new_userid);
+    $self->change_uploadsid($old_uploadsid, $new_uploadsid);
+}
+
+# Change User ID (Old User ID, New User ID) - Changes the current user's user ID stored in the database to something new, in case the session expires.
+sub change_userid {
+    my $self = shift;
+    my $old_userid = shift;
+    my $new_userid = shift;
+    my $userdb = $self->{dbi};
+    $userdb->do("UPDATE users SET userid = ? WHERE userid = ?", undef, $new_userid, $old_userid);
+    $userdb->do("UPDATE openid_users SET userid = ? WHERE userid = ?", undef, $new_userid, $old_userid);
+}
+
+# Change Uploads ID (Old Uploads ID, New Uploads ID) - Changes the current user's stored uploads ID to something new, in case the session expires.
+sub change_uploadsid {
+    my $self = shift;
+    my $old_uploadsid = shift;
+    my $new_uploadsid = shift;
+    my $userdb = $self->{dbi};
+    my $uploadsid_indb = $userdb->selectrow_array("SELECT uploadsid FROM users WHERE userid = ? LIMIT 1");
+    $userdb->do("UPDATE users SET uploadsid = ? WHERE uploadsid = ?", undef, $new_uploadsid, $old_uploadsid);
+}
+
 # Validate - Ensures that a non-openid user's credentials are correct.
 sub do_validate {
   my $self = shift;

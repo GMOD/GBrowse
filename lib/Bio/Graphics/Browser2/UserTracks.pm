@@ -9,6 +9,7 @@ use Bio::Graphics::Browser2::UserTracks::Database;
 use File::Spec;
 use File::Basename 'basename';
 use File::Path 'mkpath','rmtree';
+use File::Copy 'move';
 use IO::File;
 use IO::String;
 use File::Temp 'tempdir';
@@ -177,6 +178,32 @@ sub conf_metadata {
     return ($name, (stat($conf))[9, 7]);
 }
 
+# Change IDs (Old Uploads ID, New Uploads ID, Old User ID, New User ID) - Changes the current user's user ID stored in the database to something new, in case the session expires.
+sub change_ids {
+    my $self = shift;
+    my $old_uploadsid = shift;
+    my $new_uploadsid = shift;
+    my $old_userid = shift;
+    my $new_userid = shift;
+    $self->change_userid($old_userid, $new_userid);
+    $self->change_uploadsid($old_uploadsid, $new_uploadsid);
+}
+
+# Switch Uploads Folder (Old Uploads ID, New Uploads ID) - Renames a user's uploads folder to a new ID.
+sub switch_uploads_folder {
+    my $self = shift;
+    my $old_uploadsid = shift;
+    my $new_uploadsid = shift;
+    
+    my $globals = $self->{globals};
+    my @data_sources = $globals->data_sources;
+    foreach my $data_source (@data_sources) {
+        my $old_path = $globals->user_dir($data_source, $old_uploadsid);
+        my $new_path = $globals->user_dir($data_source, $new_uploadsid);
+        move($old_path, $new_path) if -d $old_path;
+    }
+}
+
 # Source Files (File) - Returns an array of source files (with details) associated with a specified track.
 sub source_files {
     my $self = shift;
@@ -285,7 +312,7 @@ sub import_url {
 		print $f $self->remote_bigwig_conf($file, $url, $key);
     }
     else {
-		print $f $self->remote_mirror_conf($file, $url, $key);
+		print $f $self->remote_mirror_conf($file, $url, $key);# Conf Metadata (File) - Returns the modified time and size of a track's configuration file.
     }
 
     close $f;
@@ -806,6 +833,8 @@ sub sharing_link { warn "sharing_link() has been called, without properly inheri
 sub file_type { warn "file_type() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
 sub shared_with { warn "shared_with() has been called, without properly inheriting subclass Datbase.pm"; }
 sub file_exists { warn "file_exists() has been called, without properly inheriting subclass Filesystem.pm"; }
+sub change_userid { warn "change_userid() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub change_uploadsid { warn "change_uploadsid() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
 
 package Bio::Graphics::Browser2::UserConf;
 

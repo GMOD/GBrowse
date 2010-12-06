@@ -463,4 +463,37 @@ sub public_users {
     return split(", ", $users_string);
 }
 
+# Change User ID (Old User ID, New User ID) - Changes the current user's user ID stored in the database to something new, in case the session expires.
+sub change_userid {
+    my $self = shift;
+    my $old_userid = shift;
+    my $new_userid = shift;
+    my $uploadsdb = $self->{uploadsdb};
+    
+    #The User ID is only really stored in the database and in $self->{userid}.
+    my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE users LIKE ? OR public_users LIKE ?", undef, "%".$old_userid."%", "%".$old_userid."%");
+    foreach my $uploadsid (@$results) {
+        #One-by-one because share() and unshare() can't do both public and group/casual users without changing permissions (more DB reads) in between.
+        my $users = $self->field("users", $uploadsid);
+        my $public_users = $self->field("public_users", $uploadsid);
+        $users =~ s/$old_userid/$new_userid/;
+        $public_users =~ s/$old_userid/$new_userid/;
+        $self->field("users", $uploadsid, $users);
+        $self->field("public_users", $uploadsid, $public_users);
+    }
+    $self->{userid} = $new_userid;
+}
+
+# Change Uploads ID (Old Uploads ID, New Uploads ID) - Changes the current user's stored uploads ID to something new, in case the session expires.
+sub change_uploadsid {
+    my $self = shift;
+    my $old_uploadsid = shift;
+    my $new_uploadsid = shift;
+    my $uploadsdb = $self->{uploadsdb};
+    $uploadsdb->do("UPDATE uploads SET userid = ? WHERE userid = ?", undef, $new_uploadsid, $old_uploadsid);
+    
+    $self->switch_uploads_folder($old_uploadsid, $new_uploadsid);
+    $self->{uploadsid} = $new_uploadsid;
+}
+
 1;

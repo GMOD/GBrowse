@@ -55,14 +55,14 @@ my $STATE;         # stash state for use by callbacks
 sub new {
   my $class = shift;
 
-  my ($data_source, $session);
+  my ($data_source, $session, $requested_id, $authority);
 
   if (@_ == 2) {
     ($data_source, $session) = @_;
   } elsif (@_ == 1) {
     my $globals = shift;
-    my $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
-    my $authority    = param('authority') || CGI::cookie('authority');
+    $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
+    $authority    = param('authority') || CGI::cookie('authority');
     $session = $globals->authorized_session($requested_id, $authority);
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
@@ -78,6 +78,15 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
+
+  if ($self->data_source->globals->user_accounts) {
+    my $userdb = Bio::Graphics::Browser2::UserDB->new($self);
+    $self->{userdb} = $userdb;
+    my $new_uploadsid = $session->page_settings->{uploadid};
+    $userdb->check_uploads_id($session->id, $new_uploadsid) unless $session->page_settings->{uploads_id_checked};
+    $session->page_settings->{uploads_id_checked} = ($userdb->get_uploads_id($session->id))? 1 : 0;
+  }
+  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self);
   $self;
 }
 
@@ -222,14 +231,6 @@ sub run {
   $self->set_source() && return;
   my $state = $self->state;
 
-  if ($self->data_source->globals->user_accounts) {
-      my $session = $self->session;
-      $self->{userdb} = Bio::Graphics::Browser2::UserDB->new($self);
-      $self->{userdb}->check_uploads_id($session->id, $session->page_settings->{uploadid}) unless $session->page_settings->{uploads_id_checked};
-      $session->page_settings->{uploads_id_checked} = ($self->{userdb}->get_uploads_id($session->id))? 1 : 0;
-  }
-  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self);
-
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
 
@@ -299,6 +300,18 @@ sub init {
     warn "set_default_state()" if DEBUG;
     $self->set_default_state();
     warn "init done" if DEBUG;
+    
+    # This fixes a bug with expired/deleted session - instead of just not logging in, we create a new session and update the IDs.
+    if ($self->globals->user_accounts) {
+        my $session = $self->session;
+        my $userdb = $self->{userdb};
+        my $requested_id = param('id');
+        my $new_uploadsid = $session->page_settings->{uploadid};
+        my $old_uploadsid = $userdb->get_uploads_id($requested_id);
+        if (($session->id ne $requested_id) && $new_uploadsid && $old_uploadsid) {
+            $self->change_ids($old_uploadsid, $new_uploadsid, $requested_id, $session->id);
+        }
+    }
 }
 
 # this prints out the HTTP data from an asynchronous event
@@ -3884,6 +3897,19 @@ sub generate_chrom_sizes {
 
     close $s;
     return 1;
+}
+
+# Change IDs (Old Uploads ID, New Uploads ID, Old UserID, New User ID) - Sometimes the user's session (as stored by the ID) is unretrievable - this changes the session to a new one so that a user's login is still valid.
+sub change_ids {
+    my $self = shift;
+    my $old_uploadsid = shift;
+    my $new_uploadsid = shift;
+    my $old_userid = shift;
+    my $new_userid = shift;
+    my $usertracks = $self->user_tracks;
+    $usertracks->change_ids($old_uploadsid, $new_uploadsid, $old_userid, $new_userid);
+    my $userdb = $self->{userdb};
+    $userdb->change_ids($old_uploadsid, $new_uploadsid, $old_userid, $new_userid);
 }
 
 # The following functions are implemented in HTML.pm (or any other Render subclass), are never called, and are here for debugging.

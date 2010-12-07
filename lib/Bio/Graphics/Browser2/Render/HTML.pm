@@ -453,11 +453,8 @@ sub render_js_controller_settings {
     my $scripts = "Controller.set_globals( $controller_globals );";
     
     if ($globals->user_accounts) {
-	warn "calling userdb";
 	my $userdb = $self->userdb;
-	warn "here I am";
         my $openid = $userdb->openid;
-	warn "got it";
         $scripts .= "Controller.can_openid = $openid;";
     }
     

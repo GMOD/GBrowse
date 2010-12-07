@@ -732,7 +732,6 @@ sub auth_cookie {
 		-value=> $auth,
 		-path => $path);
     if ($remember) {
-	warn "I REMEMBER";
 	push @args,(-expires => '+'.$globals->time2sec($globals->remember_settings_time).'s');
     }
     return CGI::Cookie->new(@args);

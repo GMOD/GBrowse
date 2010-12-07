@@ -88,7 +88,7 @@ my $openid_columns = {
 
 my $uploads_columns = {
     trackid           => "varchar(32) not null PRIMARY key",
-    userid            => "integer not null UNIQUE",
+    userid            => "integer not null",
     path              => "text",
     title             => "text",
     description       => "text",
@@ -257,9 +257,7 @@ sub check_sessions {
 	my $sql         = "SELECT count(*) FROM session WHERE sessionid=? AND uploadsid=?";
 	my $rows        = $database->selectrow_array($sql,undef,$session_id,$uploadsid);
 	return if $rows > 0;
-	warn "set sessionid=$session_id, uploadsid=$uploadsid. Rows = $rows";
-
-	$sql       = 'UPDATE session SET uploadsid=? WHERE sessionid=?';
+	$sql       = "UPDATE session SET uploadsid=? WHERE sessionid=?";
 	$rows      = $database->do($sql,undef,$uploadsid,$session_id);
 	return if $rows > 0;
 	$database->do('insert INTO session (sessionid,uploadsid) VALUES(?,?)',
@@ -515,6 +513,7 @@ sub add_file {
 
     my $trackid = md5_hex($uploadsid.$filename.$data_source);
     my $now = nowfun();
+    warn "userid = $userid";
     $database->do("INSERT INTO uploads (trackid, userid, path, description, imported, creation_date, modification_date, sharing_policy, data_source) VALUES (?, ?, ?, ?, ?, $now, $now, ?, ?)", undef, $trackid, $userid, $filename, $description, $imported, $shared, $data_source);
     return $trackid;
 }

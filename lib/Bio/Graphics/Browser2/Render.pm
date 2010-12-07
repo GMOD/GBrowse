@@ -80,13 +80,12 @@ sub new {
   $self->set_signal_handlers();
 
   if ($self->data_source->globals->user_accounts) {
-    my $userdb = Bio::Graphics::Browser2::UserDB->new($self);
+    my $userdb = Bio::Graphics::Browser2::UserDB->new($self->globals);
     $self->{userdb} = $userdb;
     my $new_uploadsid = $session->page_settings->{uploadid};
-    $userdb->check_uploads_id($session->id, $new_uploadsid) unless $session->page_settings->{uploads_id_checked};
     $session->page_settings->{uploads_id_checked} = ($userdb->get_uploads_id($session->id))? 1 : 0;
   }
-  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($self);
+  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($data_source,$session);
   $self;
 }
 

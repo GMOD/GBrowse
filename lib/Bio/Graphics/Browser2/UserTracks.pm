@@ -39,7 +39,7 @@ sub new {
     
     my $globals   = $data_source->globals;
     my $uploadsid = $session->uploadsid;
-    my $sessionid    = $session->id;
+    my $sessionid = $session->id;
 
     my $backend = $globals->user_account_db;
     

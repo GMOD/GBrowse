@@ -22,7 +22,7 @@ use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; 1" || 0;
 # "uploadsid"  -- GBrowse's upload ID, a long hexadecimal
 
 sub new {
-  my $class = shift;
+  my $class   = shift;
   my $globals = shift;
   my $VERSION = '0.5';
   my $credentials  = $globals->user_account_db 
@@ -303,7 +303,7 @@ END
 # Check Uploads ID (User ID, Uploads ID) - Makes sure a user's ID is in the database.
 sub check_uploads_id {
     my $self = shift;
-    die "check_uploads_id() should no longer be necessary";
+    croak "check_uploads_id() should no longer be necessary";
     my ($sessionid,$uploadsid) = @_;
     my $userdb = $self->{dbi};
 

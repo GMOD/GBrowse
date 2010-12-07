@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser2::Session;
+ package Bio::Graphics::Browser2::Session;
 
 # $Id$
 
@@ -236,6 +236,19 @@ sub source {
   my $source = $self->{session}->param('.source');
   $self->{session}->param('.source' => shift()) if @_;
   return $source;
+}
+
+sub uploadsid {
+  my $self = shift;
+  $self->{session}->param('.uploadsid' => shift() ) if @_;
+  my $id = $self->{session}->param('.uploadsid');
+  unless ($id) {
+      # uploadsid used to be stored in the settings, which was wrong
+      $id = $self->page_settings->{uploadid} ||
+	  Bio::Graphics::Browser2::Util->generate_id;
+      $self->{session}->param('.uploadsid' => $id);
+  }
+  return $id;
 }
 
 sub private {

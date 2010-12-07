@@ -64,6 +64,7 @@ sub new {
     $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     $authority    = param('authority') || CGI::cookie('authority');
     $session = $globals->authorized_session($requested_id, $authority);
+    warn "requested $requested_id, but got ",$session->id;
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
   } else {
@@ -74,7 +75,6 @@ sub new {
 
   $self->data_source($data_source);
   $self->session($session);
-#  $self->data_source->{session} = $session;
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
@@ -145,6 +145,14 @@ sub is_admin {
     return $login eq $admin;
 }
 
+sub userdb {
+    my $self = shift;
+    warn "Calling Bio::Graphics::Browser2::UserDB->new($self->globals)";
+    my $userdb = $self->{userdb} ||= Bio::Graphics::Browser2::UserDB->new($self->globals);
+    warn "got $userdb";
+    return $userdb;
+}
+
 # User Tracks - Returns a list of a user's tracks.
 sub user_tracks {
     my $self  = shift;
@@ -155,10 +163,8 @@ sub user_tracks {
     my $class = $self->is_admin ? 'Bio::Graphics::Browser2::AdminTracks'
                                 : 'Bio::Graphics::Browser2::UserTracks';
     
-    $uuid ||= $self->state->{uploadid} || '';
-    warn "[$$] uuid  = $uuid" if DEBUG;
-    $self->{usertracks}{$uuid} ||= $class->new($self);
-    return $self->{usertracks}{$uuid};
+    $self->{usertracks} ||= $class->new($self->data_source,$self->session);
+    return $self->{usertracks};
 }
 
 sub remote_sources {
@@ -230,6 +236,17 @@ sub run {
 
   $self->set_source() && return;
   my $state = $self->state;
+
+  # this should no longer be necessary
+  # if ($self->data_source->globals->user_accounts) {
+  #     my $session = $self->session;
+  #     $self->{userdb} = Bio::Graphics::Browser2::UserDB->new($self);
+  #     $self->{userdb}->check_uploads_id($session->id, 
+  # 					$session->uploadsid);
+  # 	  unless $session->page_settings->{uploads_id_checked};
+  #     $session->page_settings->{uploads_id_checked} = 
+  # 	  ($self->{userdb}->get_uploads_id($session->id))? 1 : 0;
+  # }
 
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
@@ -784,6 +801,7 @@ sub render_body {
   }
 
   $main_page .= $self->render_select_track_link;
+  warn "got here";
 
   my $tracks        = $self->render_tracks_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
@@ -1455,7 +1473,9 @@ sub init_remote_sources {
   warn "init_remote_sources()" if DEBUG;
   my $remote_sources   = Bio::Graphics::Browser2::RemoteSet->new($self->data_source,
 								 $self->state,
-								 $self->language);
+								 $self->language,
+								 $self->session->uploadsid,
+      );
   $remote_sources->add_files_from_state;
   $self->remote_sources($remote_sources);
   return $remote_sources;
@@ -1803,7 +1823,6 @@ sub default_state {
   $state->{ks}           = 'between';
   $state->{grid}         = 1;
   $state->{sk}           = $self->setting("default varying") ? "unsorted" : "sorted";
-  $state->{uploadid}     = Bio::Graphics::Browser2::Util->generate_id;
 
   # if no name is specified but there is a "initial landmark" defined in the
   # config file, then we default to that.
@@ -3559,13 +3578,12 @@ sub external_data {
 sub add_user_tracks {
     my $self        = shift;
     my ($data_source,$uuid) = @_;
-    my $files = $self->{usertracks};
-    my $userdb = $self->{userdb};
-    my $session = $self->{session};
+    my $files   = $self->user_tracks;
+    my $userdb  = $self->userdb;
+    my $session = $self->session;
 
     return if $self->is_admin;  # admin user's tracks are already in main config file.
-
-    $self->state->{uploadid} ||= Bio::Graphics::Browser2::Util->generate_id;
+    $self->session->uploadsid;
 
     my $userdata    = $self->user_tracks($self);
     my @user_tracks = $userdata->tracks;
@@ -3640,7 +3658,7 @@ sub gff_dump_link {
   my $fasta    = shift;
 
   my $state     = $self->state;
-  my $upload_id = $state->{uploadid} || $state->{userid};
+  my $upload_id = $self->session->uploadsid;
   my $segment   = $self->thin_segment or return '';
 
   my $q = new CGI('');

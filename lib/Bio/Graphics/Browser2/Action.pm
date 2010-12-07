@@ -766,8 +766,9 @@ sub ACTION_about_me {
     my $self = shift;
     my $q    = shift;
     my $state = $self->state;
+    my $session=$self->render->session;
 
-    my $html = $q->div($self->render->translate('ABOUT_ME_TEXT',$state->{userid},$state->{uploadid}));
+    my $html = $q->div($self->render->translate('ABOUT_ME_TEXT',$session->id,$session->uploadsid));
     return (200,'text/html',$html);
 }
 

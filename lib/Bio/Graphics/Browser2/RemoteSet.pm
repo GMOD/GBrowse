@@ -17,17 +17,21 @@ use constant DEBUG=>0;
 
 sub new {
   my $package = shift;
-  my $config  = shift;
-  my $state   = shift;
-  my $lang    = shift;
+  my $config   = shift;
+  my $state    = shift;
+  my $lang     = shift;
+  my $uploadid = shift;
   my $self = bless {
-		    config        => $config,
-		    language      => $lang,
-		    state         => $state,
-		    sources       => {},
-		   },ref $package || $package;
+      config        => $config,
+      language      => $lang,
+      state         => $state,
+      uploadid      => $uploadid,
+      sources       => {},
+  },ref $package || $package;
   $self;
 }
+
+sub uploadid { shift->{uploadid} }
 
 sub add_files_from_state {
     my $self  = shift;

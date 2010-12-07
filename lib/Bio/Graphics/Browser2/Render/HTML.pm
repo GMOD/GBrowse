@@ -443,17 +443,21 @@ sub render_js_controller_settings {
                          openid
                          js
                          gbrowse_help
-                         styleusheet
+                         stylesheet
                         );
 
     my $controller_globals = JSON::to_json({
         map { $_ => ( $self->globals->url_path($_) || undef ) } @export_keys
-       });
+					   });
     
     my $scripts = "Controller.set_globals( $controller_globals );";
     
     if ($globals->user_accounts) {
-        my $openid = $self->{userdb}->openid;
+	warn "calling userdb";
+	my $userdb = $self->userdb;
+	warn "here I am";
+        my $openid = $userdb->openid;
+	warn "got it";
         $scripts .= "Controller.can_openid = $openid;";
     }
     
@@ -1527,7 +1531,7 @@ sub render_track_list_title {
 	my $accent_color = shift;
 	my $userdata = $self->user_tracks;
 	my $globals = $self->globals;
-	my $userdb = $self->{userdb} if $globals->user_accounts;
+	my $userdb  = $self->userdb if $globals->user_accounts;
 	
 	my $short_name = $userdata->title($fileid);
 	if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
@@ -1571,7 +1575,7 @@ sub render_track_list_title {
 	    $short_name
 	);
 	my $owner_id = $userdata->owner($fileid);
-	my $owner_name = ($owner_id eq $self->state->{uploadid})? "you" : $userdb->get_username($userdb->get_user_id($owner_id));
+	my $owner_name = ($owner_id eq $self->session->uploadid)? "you" : $userdb->get_username($userdb->get_user_id($owner_id));
 	my $owner = ($globals->user_accounts && $type =~ "public")? $self->translate("UPLOADED_BY") . " " . b($owner_name) : "";
 	
 	return span(
@@ -1771,7 +1775,7 @@ sub render_track_sharing {
 	my $self = shift;
 	my $fileid = shift;
 	my $globals = $self->globals;
-	my $userdb = $self->{userdb} if $globals->user_accounts;
+	my $userdb = $self->userdb if $globals->user_accounts;
 	my $userdata = $self->user_tracks;
 	
 	#Building the users list.
@@ -2966,7 +2970,8 @@ sub share_track {
     my $segment = $label =~  /:region$/   ? '$region'
                  :$label =~  /:overview$/ ? '$overview'
                  :'$segment';
-    my $upload_id = $state->{uploadid} || $state->{userid};
+    my $session = $self->session;
+    my $upload_id = $session->uploadid;
     if ( $label =~ /^(http|ftp)/ ) {    # reexporting an imported track!
         $gbgff   = $source->setting($label=>'remote feature');
         $gbgff ||= $source->setting($lbase=>'remote feature');

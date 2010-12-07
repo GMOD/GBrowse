@@ -14,7 +14,7 @@ use File::Path qw(rmtree);
 sub _new {
     my $class = shift;
     my $VERSION = '0.5';
-    my ($data_source, $globals, $uploadsid, $userid) = @_;
+    my ($data_source, $globals, $uploadsid, $sessionid) = @_;
     
     # Attempt to login to the database or die, and access the necessary tables or create them.
     my $credentials = $globals->user_account_db or warn "No credentials given to uploads DB in GBrowse.conf";
@@ -28,7 +28,7 @@ sub _new {
     my $self = bless {
         config      => $data_source,
         uploadsdb   => $uploadsdb,
-        userid      => $userid,
+        sessionid      => $sessionid,
         uploadsid   => $uploadsid,
         globals     => $globals,
         data_source => $data_source->name,
@@ -36,8 +36,9 @@ sub _new {
      
     # Check to see if user accounts are enabled, set some globals just in case.
     if ($globals->user_accounts) {
-        $self->{userdb} = Bio::Graphics::Browser2::UserDB->new;
-        $self->{username} = $self->{userdb}->get_username($self->{userid});
+	#BUG: Two copies of UserDB; one here and one in the Render object
+        $self->{userdb}   = Bio::Graphics::Browser2::UserDB->new($globals); 
+        $self->{username} = $self->{userdb}->username_from_sessionid($self->{sessionid});
     }
     return $self;
 }
@@ -52,16 +53,16 @@ sub get_file_id {
     my $uploadsid = shift || $self->{uploadsid};
     
     # First, check my files.
-    my $uploads = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = ? AND userid = ? AND data_source = ?", undef, $filename, $uploadsid, $data_source);
+    my $uploads = $uploadsdb->selectrow_array("SELECT trackid FROM uploads WHERE path = ? AND userid = ? AND data_source = ?", undef, $filename, $uploadsid, $data_source);
     return $uploads if $uploads;
     
     # Then, check files shared with me.
-    my $userid = $self->{userid};
-    my $shared = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = ? AND users LIKE ? AND data_source = ?", undef, $filename, "%".$userid."%", $data_source);
+    my $sessionid = $self->{sessionid};
+    my $shared = $uploadsdb->selectrow_array("SELECT trackid FROM uploads WHERE path = ? AND users LIKE ? AND data_source = ?", undef, $filename, "%".$sessionid."%", $data_source);
     return $shared if $shared;
     
     # Lastly, check public files.
-    my $public = $uploadsdb->selectrow_array("SELECT uploadid FROM uploads WHERE path = ? AND sharing_policy = ? AND data_source = ?", undef, $filename, "public", $data_source);
+    my $public = $uploadsdb->selectrow_array("SELECT trackid FROM uploads WHERE path = ? AND sharing_policy = ? AND data_source = ?", undef, $filename, "public", $data_source);
     return $public if $public;
 }
 
@@ -82,10 +83,10 @@ sub nowfun {
 # Get Uploaded Files () - Returns an array of the paths of files owned by the currently logged-in user. Can be publicly accessed.
 sub get_uploaded_files {
     my $self = shift;
-    my $uploadsid = $self->{uploadsid};# or confess "Need uploads ID for get_uploaded_files";
-    my $uploadsdb = $self->{uploadsdb};
+    my $uploadsid   = $self->{uploadsid};# or confess "Need uploads ID for get_uploaded_files";
+    my $uploadsdb   = $self->{uploadsdb};
     my $data_source = $self->{data_source};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE userid = ? AND sharing_policy <> ? AND imported <> 1 AND data_source = ? ORDER BY uploadid", undef, $uploadsid, "public", $data_source);
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads as a,session as b WHERE b.uploadsid=? AND sharing_policy<>? AND imported<>1 AND data_source=? AND a.userid=b.userid ORDER BY trackid", undef, $uploadsid, "public", $data_source);
     return @$rows;
 }
 
@@ -111,10 +112,10 @@ sub get_public_files {
     $offset = ($offset > $public_count)? $public_count : $offset;
     
     my $uploadsdb = $self->{uploadsdb};
-    my $userid = $self->{userid};
-    my $sql = "SELECT uploadid FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public") . " AND data_source = " . $uploadsdb->quote($data_source);
-    $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
-    $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
+    my $sessionid = $self->{sessionid};
+    my $sql = "SELECT trackid FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public") . " AND data_source = " . $uploadsdb->quote($data_source);
+    $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $sessionid . "%") . ")" if $sessionid;
+    $sql .= ($search_id)? " AND (sessionid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
     $sql .= " ORDER BY public_count DESC LIMIT $count";
     $sql .= " OFFSET $offset" if $offset;
     my $rows = $uploadsdb->selectcol_arrayref($sql);
@@ -136,10 +137,10 @@ sub public_count {
         $search_id = $userdb->get_uploads_id($userdb->get_user_id($searchterm));
     }
     
-    my $userid = $self->{userid};
+    my $sessionid = $self->{sessionid};
     my $sql = "SELECT count(*) FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public") . " AND data_source = " . $uploadsdb->quote($data_source);
-    $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $userid . "%") . ")" if $userid;
-    $sql .= $search_id? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
+    $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%" . $sessionid . "%") . ")" if $sessionid;
+    $sql .= $search_id? " AND (sessionid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . " OR path LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . "OR title LIKE " . $uploadsdb->quote("%" . $searchterm . "%") . ")" if $searchterm;
     return $uploadsdb->selectrow_array($sql);
 }
 
@@ -149,29 +150,29 @@ sub get_imported_files {
     my $uploadsid = $self->{uploadsid} or return;
     my $uploadsdb = $self->{uploadsdb};
     my $data_source = $self->{data_source};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE userid = ? AND sharing_policy <> 'public' AND imported = 1 AND data_source = ? ORDER BY uploadid", undef, $uploadsid, $data_source);
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads as a,session as b WHERE b.uploadsid=? AND sharing_policy <> 'public' AND imported = 1 AND data_source = ? and a.userid=b.userid ORDER BY trackid", undef, $uploadsid, $data_source);
     return @$rows;
 }
 
 # Get Added Public Files () - Returns an array of public files added to a user's tracks.
 sub get_added_public_files {
     my $self = shift;
-    my $userid = $self->{userid} or return;
+    my $sessionid = $self->{sessionid} or return;
     my $uploadsdb = $self->{uploadsdb};
     my $data_source = $self->{data_source};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE sharing_policy = ? AND public_users LIKE ? AND data_source = ? ORDER BY uploadid", undef, "public", "%".$userid."%", $data_source);
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads WHERE sharing_policy = ? AND public_users LIKE ? AND data_source = ? ORDER BY trackid", undef, "public", "%".$sessionid."%", $data_source);
     return @$rows;
 }
 
 # Get Shared Files () - Returns an array of files shared specifically to a user.
 sub get_shared_files {
     my $self = shift;
-    my $userid = $self->{userid} or return;
+    my $sessionid = $self->{sessionid} or return;
     my $uploadsid = $self->{uploadsid};
     my $uploadsdb = $self->{uploadsdb};
     my $data_source = $self->{data_source};
     #Since upload IDs are all the same size, we don't have to worry about one ID repeated inside another so this next line is OK. Still, might be a good idea to secure this somehow?
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE (sharing_policy = ? OR sharing_policy = ?) AND users LIKE ? AND userid <> ? AND data_source = ? ORDER BY uploadid", undef, "group", "casual", $userid, $uploadsid, $data_source);
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads as a,session as b WHERE (sharing_policy = ? OR sharing_policy = ?) AND users LIKE ? AND b.uploadsid <> ? AND data_source = ? AND a.userid=b.userid ORDER BY trackid", undef, "group", "casual", $sessionid, $uploadsid, $data_source);
     return @$rows;
 }
 
@@ -181,27 +182,27 @@ sub share {
     my $file = shift or confess "No input or invalid input given to share()";
     
     # If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
-    my $userid;
+    my $sessionid;
     if ($self->{globals}->user_accounts) {
         my $userdb = $self->{userdb};
-        $userid = $userdb->get_user_id(shift);
+        $sessionid = $userdb->get_user_id(shift);
     } else {
-        $userid = shift;
+        $sessionid = shift;
     }
-    $userid ||= $self->{userid};
+    $sessionid ||= $self->{sessionid};
 
     my $sharing_policy = $self->permissions($file);
-    return if $self->is_mine($file) and $sharing_policy =~ /group/ and $userid eq $self->{userid}; # No sense in adding yourself to a group. Also fixes a bug with nonsense users returning your ID and adding yourself instead of nothing.
+    return if $self->is_mine($file) and $sharing_policy =~ /group/ and $sessionid eq $self->{sessionid}; # No sense in adding yourself to a group. Also fixes a bug with nonsense users returning your ID and adding yourself instead of nothing.
     # Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
-    if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /group/))) {
+    if ((($sharing_policy =~ /(casual|public)/) && ($sessionid eq $self->{sessionid})) || ($self->is_mine($file) && ($sharing_policy =~ /group/))) {
         # Get the current users.
         my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
         my $uploadsdb = $self->{uploadsdb};
         my @users = split ", ", $self->field($users_field, $file);
 
         #If we find the user's ID, it's already been added, just return that it worked.
-        return 1 if grep { $_ eq $userid } @users;
-        push @users, $userid;
+        return 1 if grep { $_ eq $sessionid } @users;
+        push @users, $sessionid;
         
         # Update the public count if needed.
         if ($sharing_policy =~ /public/) {
@@ -211,7 +212,7 @@ sub share {
         
         return $self->field($users_field, $file, join ", ", @users);
     } else {
-        warn "Share() attempted in an illegal situation on a $sharing_policy file ($file) by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
+        warn "Share() attempted in an illegal situation on a $sharing_policy file ($file) by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($sessionid) : $sessionid ) . ", a non-owner.";
     }
 }
 
@@ -219,19 +220,19 @@ sub share {
 sub unshare {
     my $self = shift;
     my $file = shift or confess "No input or invalid input given to unshare()";
-    my $userid = shift || $self->{userid};
+    my $sessionid = shift || $self->{sessionid};
     
     # Users can remove themselves from the sharing lists of casual or public files; owners can remove people from casual or group items.
     my $sharing_policy = $self->permissions($file);
-    if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /(casual|group)/))) {
+    if ((($sharing_policy =~ /(casual|public)/) && ($sessionid eq $self->{sessionid})) || ($self->is_mine($file) && ($sharing_policy =~ /(casual|group)/))) {
         # Get the current users.
         my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
         my $uploadsdb = $self->{uploadsdb};
         my @users = split ", ", $self->field($users_field, $file);
     
         #If we find the user's ID, it's already been removed, just return that it worked.
-        return 1 unless grep { $_ eq $userid } @users;
-        my ($index) = grep { $users[$_] eq $userid } 0 .. $#users;
+        return 1 unless grep { $_ eq $sessionid } @users;
+        my ($index) = grep { $users[$_] eq $sessionid } 0 .. $#users;
         splice @users, $index;
         
         # Update the public count if needed.
@@ -242,7 +243,7 @@ sub unshare {
         
         return $self->field($users_field, $file, join ", ", @users);
     } else {
-        warn "Unshare() attempted in an illegal situation on a $sharing_policy file ($file) by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($userid) : $userid ) . ", a non-owner.";
+        warn "Unshare() attempted in an illegal situation on a $sharing_policy file ($file) by " . ($self->{globals}->user_accounts? $self->{userdb}->get_username($sessionid) : $sessionid ) . ", a non-owner.";
     }
 }
 
@@ -261,11 +262,11 @@ sub field {
         #Clean up the string
         $value =~ s/^\s+//;
         $value =~ s/\s+$//; 
-        my $result = $uploadsdb->do("UPDATE uploads SET $field = ? WHERE uploadid = ?", undef, $value, $file);
+        my $result = $uploadsdb->do("UPDATE uploads SET $field = ? WHERE trackid = ?", undef, $value, $file);
         $self->update_modified($file);
         return $result;
     } else {
-        return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE uploadid = ?", undef, $file);
+        return $uploadsdb->selectrow_array("SELECT $field FROM uploads WHERE trackid = ?", undef, $file);
     }
 }
 
@@ -276,7 +277,7 @@ sub update_modified {
     my $file = shift or return;
     my $now = $self->nowfun;
     # Do not swap out this line for a field() call, since it's used inside field().
-    return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE uploadid = " . $uploadsdb->quote($file));
+    return $uploadsdb->do("UPDATE uploads SET modification_date = $now WHERE trackid = " . $uploadsdb->quote($file));
 }
 
 # Created (File ID) - Returns creation date of $file, cannot be set.
@@ -302,7 +303,7 @@ sub description {
         if ($self->is_mine($file)) {
             return $self->field("description", $file, $value)
         } else {
-            warn "Change Description requested on $file by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . ", a non-owner.";
+            warn "Change Description requested on $file by " . ($self->{globals}->user_accounts? $self->{username} : $self->{sessionid}) . ", a non-owner.";
         }
     } else {
         return $self->field("description", $file)
@@ -318,7 +319,7 @@ sub title {
         if ($self->is_mine($file)) {
             return $self->field("title", $file, $value)
         } else {
-            warn "Change title requested on $file by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . ", a non-owner.";
+            warn "Change title requested on $file by " . ($self->{globals}->user_accounts? $self->{username} : $self->{sessionid}) . ", a non-owner.";
         }
     } else {
         return $self->field("title", $file) || $self->field("path", $file);
@@ -338,7 +339,7 @@ sub add_file {
     
     my $fileid = md5_hex($uploadsid.$filename.$data_source);
     my $now = $self->nowfun;
-    $uploadsdb->do("INSERT INTO uploads (uploadid, userid, path, description, imported, creation_date, modification_date, sharing_policy, data_source ) VALUES (?, ?, ?, ?, ?, $now, $now, ?, ?)", undef, $fileid, $uploadsid, $filename, $description, $imported, $shared, $data_source);
+    $uploadsdb->do("INSERT INTO uploads (trackid, sessionid, path, description, imported, creation_date, modification_date, sharing_policy, data_source ) VALUES (?, ?, ?, ?, ?, $now, $now, ?, ?)", undef, $fileid, $uploadsid, $filename, $description, $imported, $shared, $data_source);
     return $fileid;
 }
 
@@ -346,7 +347,7 @@ sub add_file {
 sub delete_file {
     my $self = shift;
     my $file = shift or return;
-    my $userid = $self->{userid};
+    my $sessionid = $self->{sessionid};
     my $uploadsid = $self->{uploadsid};
     my $filename = $self->filename($file);
                                  # If the file doesn't exist, don't throw an error, just 
@@ -358,21 +359,21 @@ sub delete_file {
         
             # First delete from the database - better to have a dangling file then a dangling reference to nothing.
             my $uploadsdb = $self->{uploadsdb};
-            $uploadsdb->do("DELETE FROM uploads WHERE uploadid = ?", undef, $file);
+            $uploadsdb->do("DELETE FROM uploads WHERE trackid = ?", undef, $file);
         
             # Now remove the backend database.
             my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
                                       $path,
                                       $conf,
                                       $self->{config},
-                                      $userid);
+                                      $sessionid);
             $loader->drop_databases($conf);
             
             # Then remove the file if it exists.
             rmtree($path) or warn "Could not delete $path: $!" if -e $path;
         }
     } else {
-        warn "Delete of " . $filename . " requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . ", a non-owner.";
+        warn "Delete of " . $filename . " requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{sessionid}) . ", a non-owner.";
     }
 }
 
@@ -392,10 +393,10 @@ sub permissions {
     if ($new_permissions) {
         if ($self->is_mine($file)) {
             my $result = $self->field("sharing_policy", $file, $new_permissions);
-            $self->share($file, $self->{userid}) if $new_permissions =~ /public/; # If we're switching to public permissions, share with the user so it doesn't disappear.
+            $self->share($file, $self->{sessionid}) if $new_permissions =~ /public/; # If we're switching to public permissions, share with the user so it doesn't disappear.
             return $result;
         } else {
-            warn "Permissions change on " . $file . "requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{userid}) . " a non-owner.";
+            warn "Permissions change on " . $file . "requested by " . ($self->{globals}->user_accounts? $self->{username} : $self->{sessionid}) . " a non-owner.";
         }
     } else {
         return $self->field("sharing_policy", $file);
@@ -415,16 +416,16 @@ sub owner {
     my $self = shift;
     my $file = shift or return;
     my $uploadsdb = $self->{uploadsdb};
-    return $self->field("userid", $file);
+    return $self->field("sessionid", $file);
 }
 
 # Is Shared With Me (Filename) - Returns 1 if a track is shared with the logged-in (or specified) user, 0 if not.
 sub is_shared_with_me {
     my $self = shift;
     my $file = shift or return 0;
-    my $userid = $self->{userid};
+    my $sessionid = $self->{sessionid};
     my $uploadsdb = $self->{uploadsdb};
-    my $results = $uploadsdb->selectcol_arrayref("SELECT uploadid FROM uploads WHERE uploadid = ? AND users LIKE ? OR public_users LIKE ?", undef, $file, "%".$userid."%", "%".$userid."%");
+    my $results = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads WHERE trackid = ? AND users LIKE ? OR public_users LIKE ?", undef, $file, "%".$sessionid."%", "%".$sessionid."%");
     return (@$results > 0);
 }
 

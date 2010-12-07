@@ -20,7 +20,11 @@ use CGI 'param';
 use constant DEBUG => 0;
 my $HASBIGWIG;
 
-# The intent of this is to provide a single unified interface for managing a user's uploaded and shared tracks.
+# The intent of this is to provide a single unified interface for 
+# managing a user's uploaded and shared tracks.
+
+# BUG: It's still kind of screwy: there seem to be filesystem
+# traversal methods in the parent class which should not be here.
 
 # class methods
 sub busy_file_name     { 'BUSY'      }
@@ -30,34 +34,25 @@ sub mirrored_file_name { 'MIRRORED'  }
 sub sources_dir_name   { 'SOURCES'   }
 
 sub new {
-	my $class = shift;
-    my ($data_source, $globals, $uploadsid, $userid);
-	
-	# Database/Filesystem can be called with the data source and state, or just the render object.
-	if (@_ == 1) {
-        my $render = shift;
-        $data_source = $render->data_source;
-        $globals = $data_source->globals;
-        $uploadsid = $render->session->page_settings->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
-        $userid = $render->session->id;
-    } else {
-        $data_source = shift;
-        my $state = shift;
-        $globals = $data_source->globals;
-        $uploadsid = $state->{uploadid}; #Renamed to avoid confusion with the ID of an upload.
-        $userid = $state->{userid};
-    }
+    my $class = shift;
+    my ($data_source,$session) = @_;
     
+    my $globals   = $data_source->globals;
+    my $uploadsid = $session->uploadsid;
+    my $sessionid    = $session->id;
+
     my $backend = $globals->user_account_db;
     
-	if ($backend && $backend =~ /db/i) {
-		return Bio::Graphics::Browser2::UserTracks::Database->_new($data_source, $globals, $uploadsid, $userid);
-	} elsif ($backend && $backend =~ /(filesystem|memory)/i) {
-		return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
-	} else {
-	    return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
-	}
+    if ($backend && $backend =~ /db/i) {
+	return Bio::Graphics::Browser2::UserTracks::Database->_new($data_source, $globals, $uploadsid, $sessionid);
+    } elsif ($backend && $backend =~ /(filesystem|memory)/i) {
+	return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
+    } else {
+	return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
+    }
 }
+
+sub uploadsid {shift->{uploadsid}}
 
 sub database { return (shift =~ /database/i) } # If this changes, also change the constructor.
 
@@ -65,17 +60,17 @@ sub database { return (shift =~ /database/i) } # If this changes, also change th
 sub path {
     my $self = shift;
     my $file = shift;
-    my $uploadsid = ($file)? $self->owner($file) : $self->{uploadsid};
-	return $self->{config}->userdata($uploadsid);
+    my $uploadsid = ($file)? $self->owner($file) : $self->uploadsid;
+    return $self->{config}->userdata($uploadsid);
 }
 
 # Tracks - Returns an array of paths to a user's tracks.
 sub tracks {
     my $self = shift;	
-	my @tracks;
-	push @tracks, $self->get_uploaded_files, $self->get_imported_files;
-	push @tracks, $self->get_added_public_files, $self->get_shared_files if $self->database;
-	return @tracks;
+    my @tracks;
+    push @tracks, $self->get_uploaded_files, $self->get_imported_files;
+    push @tracks, $self->get_added_public_files, $self->get_shared_files if $self->database;
+    return @tracks;
 }
 
 # Is Mirrored - Returns the URL if a specific file is mirrored.
@@ -121,15 +116,15 @@ sub track_path {
 
 # Blind Track Path (Filename) - Blindly attaches the userdata path to whatever filename you give it.
 sub blind_track_path {
-	my $self = shift;
-	my $filename = shift;
-	return File::Spec->catfile($self->path, $filename);
+    my $self = shift;
+    my $filename = shift;
+    return File::Spec->catfile($self->path, $filename);
 }
 
 # Data Path (File, Data File) - Returns the full path to a track's original data file.
 sub data_path {
     my $self = shift;
-	my $file = shift;
+    my $file = shift;
     my $filename = $self->filename($file);
     my $datafile = shift;
     return File::Spec->catfile($self->track_path($file), $self->sources_dir_name, $datafile);
@@ -297,7 +292,7 @@ sub import_url {
 							  $self->track_path($file),
 							  $self->track_conf($file),
 							  $self->{config},
-							  $self->{uploadsid});
+							  $self->uploadsid);
     $loader->strip_prefix($self->{config}->seqid_prefix);
     $loader->set_status('starting import');
 
@@ -570,7 +565,7 @@ sub status {
 			      $self->track_path($file),
 			      $self->track_conf($file),
 			      $self->{config},
-			      $self->{uploadsid},
+			      $self->uploadsid,
 	);
     return $load->get_status();
 }
@@ -590,7 +585,7 @@ sub get_loader {
 			      $self->track_path($file),
 			      $self->track_conf($file),
 			      $self->{config},
-			      $self->{uploadsid},
+			      $self->uploadsid,
 	);
     $loader->strip_prefix($self->{config}->seqid_prefix);
     return $loader;
@@ -729,7 +724,7 @@ sub remote_bam_conf {
 	$self->track_path($file),
 	$self->track_conf($file),
 	$self->{config},
-	$self->{uploadsid});
+	$self->uploadsid);
     my $fasta  = $loader->get_fasta_file;
 
     return <<END;

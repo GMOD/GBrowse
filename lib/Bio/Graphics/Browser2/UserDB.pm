@@ -12,15 +12,21 @@ use LWP::UserAgent;
 use Net::SMTP;
 use Text::ParseWords 'quotewords';
 use Digest::MD5 qw(md5_hex);
-use Carp qw(confess cluck);
+use Carp qw(confess cluck croak);
 
 use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; 1" || 0;
 
+# SOME CLARIFICATION ON TERMINOLOGY
+# "userid"    -- internal dbm ID for a user; a short integer
+# "sessionid" -- GBrowse's session ID, a long hexadecimal
+# "uploadsid"  -- GBrowse's upload ID, a long hexadecimal
+
 sub new {
   my $class = shift;
+  my $globals = shift;
   my $VERSION = '0.5';
-  my $globals = Bio::Graphics::Browser2->open_globals;
-  my $credentials  = $globals->user_account_db || "DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse";
+  my $credentials  = $globals->user_account_db 
+      || "DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse";
   
   my $login = DBI->connect($credentials);
   unless ($login) {
@@ -30,22 +36,29 @@ sub new {
   }
   
   my $self = bless {
-    dbi => $login,
-    globals => $globals,
-    openid => HAVE_OPENID,
+      dbi => $login,
+      globals => $globals,
+      openid => HAVE_OPENID,
   }, ref $class || $class;
 
   return $self;
 }
 
+sub globals {shift->{globals} };
+sub dbi     {shift->{dbi}     };
+sub openid  {shift->{openid}  };
+
 # Get Header - Returns the message found at the top of all confirmation e-mails.
 sub get_header {
   my $self = shift;
   my $globals = $self->{globals};
-  my $message  = "\nThank you for creating an account with " . $globals->application_name . ": " . $globals->application_name_long . "\n\n";
-     $message .= "The account information found below is for your reference only. ";
-     $message .= "Please keep all account names and passwords in a safe location ";
-     $message .= "and do not share your password with others.";
+  my $message  = "\nThank you for creating an account with " 
+      . $globals->application_name 
+      . ": " 
+      . $globals->application_name_long . "\n\n";
+  $message .= "The account information found below is for your reference only. ";
+  $message .= "Please keep all account names and passwords in a safe location ";
+  $message .= "and do not share your password with others.";
   return $message;
 }
 
@@ -190,47 +203,120 @@ sub do_sendmail {
 }
 
 #################### N O N - O P E N I D   F U N C T I O N S #####################
-# Get User ID (User) - Returns a confirmed user's ID.
+# Get User ID (User) - Returns a confirmed user's ID
 sub get_user_id {
     my $self = shift;
-	my $userdb = $self->{dbi};
-    my $potential_userid = shift;
-    my $name_lookup = $userdb->selectrow_array("SELECT userid FROM users WHERE username = " . $userdb->quote($potential_userid) . " LIMIT 1");
-    $potential_userid = $name_lookup if $name_lookup;
-    my $uploads_lookup = $userdb->selectrow_array("SELECT userid FROM users WHERE uploadsid = " . $userdb->quote($potential_userid) . " LIMIT 1");
-    my $user_id = ($uploads_lookup? $uploads_lookup : $potential_userid);
-    my $confirmed_user = $userdb->selectcol_arrayref("SELECT userid FROM users");
-    return $user_id if join(" ", @$confirmed_user) =~ $user_id;
+    my $search = shift;
+    return $self->userid_from_username($search) || $self->userid_from_email($search);
+}
+
+
+sub userid_from_username {
+    my $self     = shift;
+    my $username = shift;
+
+    my $userdb = $self->{dbi};
+    my $user_id = 
+	$userdb->selectrow_array(<<END,undef,$username);
+SELECT userid
+  FROM session as a
+  WHERE a.username=?
+  LIMIT 1
+END
+}
+
+sub userid_from_email {
+    my $self     = shift;
+    my $email = shift;
+
+    my $userdb = $self->{dbi};
+    my $user_id = 
+	$userdb->selectrow_array(<<END,undef,$email);
+SELECT userid
+  FROM users as a
+  WHERE a.email=?
+  LIMIT 1
+END
+}
+
+sub userid_from_sessionid {
+    my $self      = shift;
+    my $sessionid = shift;
+
+    my $userdb = $self->{dbi};
+    my $user_id = 
+	$userdb->selectrow_array(<<END,undef,$sessionid);
+SELECT userid
+  FROM session as a
+  WHERE a.sessionid=?
+  LIMIT 1
+END
+}
+
+sub userid_from_uploadsid {
+    my $self      = shift;
+    my $uploadsid = shift;
+
+    my $userdb = $self->{dbi};
+    my $user_id = 
+	$userdb->selectrow_array(<<END,undef,$uploadsid);
+SELECT userid
+  FROM session as a
+  WHERE a.uploadsid=?
+  LIMIT 1
+END
 }
 
 # Get Uploads ID (User ID) - Returns a user's Uploads ID.
 sub get_uploads_id {
     my $self = shift;
-	my $userdb = $self->{dbi};
-    my $userid = $userdb->quote(shift);
-    return $userdb->selectrow_array("SELECT uploadsid FROM users WHERE userid = $userid LIMIT 1");
+    my $userid = shift;
+    my $userdb = $self->{dbi};
+    return $userdb->selectrow_array("SELECT uploadsid FROM session WHERE userid=?",
+				    undef,$userid);
+}
+
+sub get_sessionid {
+    my $self = shift;
+    my $userid = shift;
+    my $userdb = $self->{dbi};
+    return $userdb->selectrow_array("SELECT sessionid FROM session WHERE userid=?",
+				    undef,$userid);
 }
 
 # Get Username (User ID) - Returns a user's username, given their ID.
 sub get_username {
-	my $self = shift;
-	my $userdb = $self->{dbi};
-    my $userid = $userdb->quote(shift);
-    return $userdb->selectrow_array("SELECT username FROM users WHERE userid = $userid") || "an anonymous user";
+    croak "you probably want to call username_from_sessionid";
+}
+
+sub username_from_sessionid {
+    my $self = shift;
+    my $sessionid = shift;
+    my $userdb = $self->{dbi};
+
+    return $userdb->selectrow_array(<<END,undef,$sessionid)||'an anonymous user';
+SELECT username FROM session
+ WHERE sessionid=?
+END
 }
 
 # Check Uploads ID (User ID, Uploads ID) - Makes sure a user's ID is in the database.
 sub check_uploads_id {
     my $self = shift;
+    die "check_uploads_id() should no longer be necessary";
+    my ($sessionid,$uploadsid) = @_;
     my $userdb = $self->{dbi};
-    my $userid = shift;
-    my $uploadsid = shift;
-    my $get_handle = $userdb->prepare("SELECT uploadsid FROM users WHERE userid = ? LIMIT 1");
-    $get_handle->execute($userid);
-    my $id_from_db = $get_handle->fetchrow_array;
-    unless ($id_from_db) {
-        my $update_handle = $userdb->prepare("UPDATE users SET uploadsid = ? WHERE userid = ?");
-        $update_handle->execute($uploadsid, $userid);
+
+    my $rows = $userdb->selectrow_array(<<END,undef,$sessionid,$uploadsid);
+SELECT count(*) FROM session
+   WHERE sessionid=? and uploadsid=?
+END
+    unless ($rows) {
+        $userdb->do(<<END,undef,$sessionid,$uploadsid);
+INSERT INTO session (sessionid,uploadsid)
+     VALUES (?,?)
+END
+;
     }
     return $uploadsid;
 }
@@ -279,18 +365,19 @@ sub do_validate {
     return;
   }
 
+  my $userid = $self->userid_from_username($user);
   my $nowfun = $self->nowfun();
   if($remember != 2) {
     $update = $userdb->prepare(
-      "UPDATE users SET last_login=$nowfun,remember=$remember WHERE username=? AND pass=? AND confirmed=1");
+      "UPDATE users SET last_login=$nowfun,remember=$remember WHERE userid=? AND pass=? AND confirmed=1");
   } else {
     $update = $userdb->prepare(
-      "UPDATE users SET last_login=$nowfun WHERE username=? AND pass=? AND confirmed=1");
+      "UPDATE users SET last_login=$nowfun WHERE userid=? AND pass=? AND confirmed=1");
   }
 
   # BUG: we should salt the password
   $pass = sha1($pass);
-  $update->execute($user,$pass)
+  $update->execute($userid,$pass)
     or (print "Error: ", DBI->errstr, "." and die "Error: ", DBI->errstr);
 
   my $rows = $update->rows;
@@ -298,10 +385,13 @@ sub do_validate {
     $self->check_old_confirmations();
     if($remember != 2) {
       my $select = $userdb->prepare(
-        "SELECT userid FROM users WHERE username=? AND pass=? AND confirmed=1");
-      $select->execute($user,$pass)
+        "SELECT sessionid FROM users as a,session as b WHERE a.userid=b.userid and a.userid=? AND pass=? AND confirmed=1");
+      $select->execute($userid,$pass)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-      print "session",$select->fetchrow_array;
+      # BUG: this is truly nasty -- the session id is found by string searching
+      # in login.js!!!!
+      my $result = "session".$select->fetchrow_array;
+      print $result;
     } else {
       print "Success";
     }
@@ -344,7 +434,7 @@ sub do_add_user_check {
 # Add User - Adds a new non-openid user to the user database.
 sub do_add_user {
   my $self = shift;
-  my ($user,$email,$pass,$userid) = @_;
+  my ($user,$email,$pass,$sessionid) = @_;
   
   my $userdb = $self->{dbi};
   
@@ -358,33 +448,45 @@ sub do_add_user {
     return;
   }
 
-  my $confirm = $self->create_key('32');
-  my ($rows) = $userdb->selectrow_array(
-    "SELECT count(*) FROM users WHERE userid=? OR username=? OR email=?",
-    undef,
-    $userid,$user,$email);
-  
-  # This should probably be after the user's insert statement, so the user doesn't receive an email saying they have an account, when they don't.
-  if ($rows == 0) {
-    $self->do_send_confirmation($email,$confirm,$user,$pass);
+  # see if this username is already taken
+  if ($self->userid_from_username($user)) {
+      	print "Username already in use, please try another.";
+	return;
   }
 
+  my $confirm = $self->create_key('32');
   my $nowfun = $self->nowfun();
-  my $insert = $userdb->prepare ("INSERT INTO users (userid, username, email, pass, remember, openid_only, confirmed, cnfrm_code, last_login, created) VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)");
-
-  # BUG: we should salt the password
-  $pass = sha1($pass);
-  if($insert->execute($userid,$user,$email,$pass,$confirm)) {
-    print "Success";
+  my $insert_session  = $userdb->prepare(<<END);
+INSERT INTO session (username,sessionid,uploadsid)
+     VALUES (?,?,?)
+END
+    ;
+  my $insert_userinfo = $userdb->prepare (<<END);
+INSERT INTO users (userid, email, pass, remember, openid_only, 
+		   confirmed, cnfrm_code, last_login, created)
+     VALUES (?,?,0,0,0,?,$nowfun,$nowfun)
+END
+;
+  my $session = $self->globals->session($sessionid);
+  $session->id eq $sessionid or die "Current session doesn't match passed sessionid";
+  my $uploadsid = $session->uploadsid;
+  if ($insert_session->execute($user,$sessionid,$uploadsid)) {
+      my $userid  = $userdb->last_insert_id('','','','') or die "no id?";
+      # BUG: we should salt the password
+      $pass = sha1($pass);
+      if ($insert_userinfo->execute($userid,$email,$pass,$confirm)) {
+	  $self->do_send_confirmation($email,$confirm,$user,$pass);
+	  print "Success";
+      }
   } else {
     if(DBI->errstr =~ m/for key 1$/      || DBI->errstr =~ m/username is not unique/) {
-      print "Username already in use, please try another.";
-    } elsif(DBI->errstr =~ m/for key 3$/ || DBI->errstr =~ m/email is not unique/) {
-      print "E-mail address already in use, please provide another.";
-    } elsif(DBI->errstr =~ m/for key 2$/ || DBI->errstr =~ m/userid is not unique/) {
-      print "Session Error";
+	print "Username already in use, please try another.";
+    } elsif(DBI->errstr =~ m/for key 2$/ || DBI->errstr =~ m/email is not unique/) {
+	print "E-mail address already in use, please provide another.";
+    } elsif(DBI->errstr =~ m/for key 3$/ || DBI->errstr =~ m/userid is not unique/) {
+	print "Session Error";
     } else {
-      print "Error: ", DBI->errstr, ".";
+	print "Error: ", DBI->errstr, ".";
     }
   }
   return;
@@ -424,24 +526,27 @@ sub do_edit_confirmation {
   
   my $userdb = $self->{dbi};
 
-  my $select = $userdb->prepare(
-    "SELECT username, userid FROM users WHERE email=?");
+  my $select = $userdb->prepare(<<END);
+SELECT b.username, a.userid,b.sessionid 
+    FROM users as a,session as b 
+    WHERE a.email=? AND a.userid=b.userid
+END
   $select->execute($email)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-  my ($user,$userid) = $select->fetchrow_array();
+  my ($user,$userid,$sessionid) = $select->fetchrow_array();
 
   my $delete = $userdb->prepare(
-    "DELETE FROM users WHERE username=? AND userid=?");
-  $delete->execute($user,$userid)
+    "DELETE FROM users WHERE userid=?");
+  $delete->execute($userid)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
   my $delete2 = $userdb->prepare(
-    "DELETE FROM openid_users WHERE username=? AND userid=?");
-  $delete2->execute($user,$userid)
+    "DELETE FROM openid_users WHERE userid=?");
+  $delete2->execute($userid)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
-  if($option == 1) {
+  if ($option == 1) {
     my $pass = $self->create_key('23');
-    $self->do_add_user($user,$email,$pass,$userid);
+    $self->do_add_user($user,$email,$pass,$sessionid);
   } else {
     print "Your account has been successfully removed.";
   }
@@ -463,17 +568,18 @@ sub do_confirm_account {
     $confirm);
   if($rows != 1) {print "Already Active"; return;}
 
+  my $userid = $self->userid_from_username($user);
+
   my $update = $userdb->prepare(
-    "UPDATE users SET confirmed=1,cnfrm_code=? WHERE username=? AND cnfrm_code=? AND confirmed=0");
-  $update->execute($new_confirm,$user,$confirm)
+    "UPDATE users SET confirmed=1,cnfrm_code=? WHERE userid=? AND cnfrm_code=? AND confirmed=0");
+  $update->execute($new_confirm,$userid,$confirm)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
   $rows = $update->rows;
   if($rows == 1) {
     my $query = $userdb->prepare(
-      "SELECT userid FROM users WHERE username=? AND cnfrm_code=? AND confirmed=1");
+      "SELECT a.userid FROM users as a,session as b WHERE b.username=? AND a.userid=b.userid AND cnfrm_code=? AND confirmed=1");
     $query->execute($user,$new_confirm)
       or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-
     print $query->fetchrow_array();
   } elsif($rows == 0) {
     print "Error: Incorrect username provided, please check your spelling and try again.";
@@ -500,11 +606,12 @@ sub do_edit_details {
 
   my $querystring  = "UPDATE users       ";
      $querystring .= "   SET $column  = ?";
-     $querystring .= " WHERE username = ?";
+     $querystring .= " WHERE userid   = ?";
      $querystring .= "   AND $column  = ?";
 
   my $update = $userdb->prepare($querystring);
-  unless($update->execute($new,$user,$old)) {
+  my $userid = $self->userid_from_username($user);
+  unless($update->execute($new,$userid,$old)) {
     if($column eq 'email') {
       print "New e-mail already in use, please try another.";
       die "Error: ",DBI->errstr;
@@ -574,8 +681,9 @@ sub do_email_info {
   # BUG: we should salt the password
   my $secret = sha1($pass);
   my $update = $userdb->prepare(
-    "UPDATE users SET pass=? WHERE username=? AND email=? AND confirmed=1");
-  $update->execute($secret,$user,$email)
+    "UPDATE users SET pass=? WHERE userid=? AND email=? AND confirmed=1");
+  my $userid = $self->userid_from_username($user);
+  $update->execute($secret,$userid,$email)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
   print "Success";
@@ -592,7 +700,7 @@ sub do_retrieve_user {
   my @openids;
 
   my $users = $userdb->selectcol_arrayref(
-    "SELECT username FROM users WHERE email=? AND confirmed=1",
+    "SELECT username FROM users,session WHERE user.userid=session.userid AND email=? AND confirmed=1",
   	undef,
   	$email)
   or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
@@ -627,33 +735,23 @@ sub do_delete_user {
 
   # BUG we should salt the password
   $pass = sha1($pass);
-
-  my ($sql,@bind);
-  if($unseqpass eq "") {
-    $sql  = "DELETE FROM users WHERE username=?";
-    @bind = $user;
-  } else {
-    $sql  = "DELETE FROM users WHERE username=? AND pass=?";
-    @bind = ($user,$pass);
+  my $userid = $self->userid_from_username($user);
+  unless ($userid) {
+      print "Error: unknown user $user";
+      return;
   }
 
-  my $delete = $userdb->prepare($sql);
-  $delete->execute(@bind)
-    or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+  my $sessionid = $self->get_sessionid($userid);
+  $userdb->do('DELETE FROM session where userid=?',undef,$userid);
+  my $session = $self->globals->session($sessionid);
+  $session->delete;
+  $session->flush;
 
-  my $rows = $delete->rows;
-  if($rows != 1) {
-    if($rows != 0) {
-      print "Error: $rows rows returned, please consult your service host.";
-    } else {
-      print "Incorrect password provided, please check your spelling and try again.";
-    }
-    return;
-  }
+  $userdb->do('DELETE FROM users WHERE userid=?',undef,$userid);
 
   my $query = $userdb->prepare(
     "DELETE FROM openid_users WHERE username=?");
-  if($query->execute($user)) {
+  if ($query->execute($user)) {
     print "Success";
   } else {
     print "Error: ",DBI->errstr,".";
@@ -663,6 +761,8 @@ sub do_delete_user {
 
 ######################## O P E N I D   F U N C T I O N S #########################
 # Check OpenID - Sends a user to their openid host for confirmation.
+
+# BUG: ALL THE OPENID FUNCTIONS NEED TO BE REVISED
 sub do_check_openid {
     my $self = shift;
     my $globals = $self->{globals};
@@ -951,8 +1051,53 @@ sub do_list_openid {
     print JSON::to_json(\@results);
 }
 
-sub openid {
-    return shift->{openid};
-}
-
 1;
+
+__END__
+CREATE TABLE dbinfo (
+    schema_version int(10) not null UNIQUE
+);
+
+CREATE TABLE session (
+    userid integer PRIMARY KEY autoincrement, 
+    username varchar(32),
+    sessionid char(32) not null UNIQUE
+    uploadsid char(32) not null UNIQUE, 
+);
+CREATE INDEX index_session on session(username);
+
+CREATE TABLE "users" (
+    userid integer PRIMARY KEY autoincrement, 
+    username varchar(32) not null UNIQUE, 
+    pass varchar(32) not null, 
+    last_login timestamp not null, 
+    remember boolean not null, 
+    created datetime not null, 
+    email varchar(64) not null UNIQUE, 
+    openid_only boolean not null, 
+    confirmed boolean not null, 
+    cnfrm_code varchar(32) not null
+);
+
+CREATE TABLE openid_users (
+    openid_url varchar(128) not null PRIMARY key, 
+    userid varchar(32) not null, 
+    username varchar(32) not null
+);
+
+CREATE TABLE "uploads" (
+    trackid varchar(32) not null PRIMARY key, 
+    userid integer not null UNIQUE, 
+    public_users text, 
+    sharing_policy varchar(36) not null, 
+    users text, 
+    path text, 
+    description text, 
+    data_source text, 
+    modification_date datetime, 
+    creation_date datetime not null, 
+    public_count int, 
+    title text, 
+    imported boolean not null
+);
+

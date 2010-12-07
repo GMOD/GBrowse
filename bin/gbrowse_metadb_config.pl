@@ -246,10 +246,6 @@ sub check_sessions {
 	my $session_id  = $session->id;
 	my $source      = $session->param('.source') or return;
 	my $config_hash = $session->param($source)   or return;
-	if ($session_id eq 'c2f45ca6c2750c48cd2fd70b86ae43fb') {
-	    warn "param gives ",$session->param('.uploadsid');
-	    warn "page settings gives ",$config_hash->{page_settings}{uploadid};
-	}
 	my $uploadsid   = $session->param('.uploadsid') ||
 	                  $config_hash->{page_settings}{uploadid};
 	$uploadsid or return;

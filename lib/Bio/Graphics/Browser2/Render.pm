@@ -64,7 +64,7 @@ sub new {
     $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     $authority    = param('authority') || CGI::cookie('authority');
     $session = $globals->authorized_session($requested_id, $authority);
-    warn "requested $requested_id, but got ",$session->id;
+    warn "requested $requested_id, but got ",$session->id unless $requested_id eq $session->id;
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
   } else {
@@ -146,9 +146,7 @@ sub is_admin {
 
 sub userdb {
     my $self = shift;
-    warn "Calling Bio::Graphics::Browser2::UserDB->new($self->globals)";
     my $userdb = $self->{userdb} ||= Bio::Graphics::Browser2::UserDB->new($self->globals);
-    warn "got $userdb";
     return $userdb;
 }
 

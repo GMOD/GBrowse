@@ -1,7 +1,6 @@
 package Bio::Graphics::Browser2::Render::Synteny::HTML;
 
 our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
-our $BIOGRAPHICS_VERSION   = 1.8;
 
 use strict;
 use CGI qw/:standard Map Area delete_all/;
@@ -57,7 +56,7 @@ use constant SETTINGS =>
       species    => undef
       );
 
-use vars qw($INVALID_SRC $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSION $SYNTENY_IO @hits);
+use vars qw($INVALID_SRC $SCONF $CONF $VERSION $MAP $SYNTENY_IO @hits);
 
 sub new {
     my $class   = shift;

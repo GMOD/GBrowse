@@ -56,7 +56,6 @@ use constant SETTINGS =>
       species    => undef
       );
 
-our $INVALID_SRC;
 our $SCONF;
 our $CONF;
 
@@ -134,7 +133,7 @@ END
     if (!@requested_species) {
         my $search_src = $page_settings->{search_src} || '';
         unless ($search_src && $search_src ne 'nosrc' && $self->db_map->{$search_src}->{db}) {
-            $INVALID_SRC = $search_src;
+            $self->invalid_src = $search_src;
         }
         @requested_species  = grep {$_ ne $search_src} grep {$self->db_map->{$_}->{db}} keys %{$self->db_map};
     }
@@ -155,8 +154,8 @@ END
     $header = &$header if ref $header;
     print $header || h1($CONF->setting('description'));
 
-    if ($INVALID_SRC) {
-      print warning("Species '$INVALID_SRC' is not configured for this database");
+    if (my $src = $self->invalid_src) {
+        print warning("Species '$src' is not configured for this database");
     }
 
     $self->search_form($segment);
@@ -1068,7 +1067,8 @@ sub navigation_table {
 			       br.'Select a Region to Browse and a Reference species:',
 			       p($CONF->show_examples())));
 
-  my $html_frag = $INVALID_SRC ? '' : html_frag($segment,$CONF->page_settings);
+  my $html_frag = $self->invalid_src ? '' : html_frag($segment,$CONF->page_settings);
+
   $table .= toggle( $CONF->tr('Search'),
                     table({-border=>0, -width => '100%', -cellspacing=>0},
                           TR({-class=>'searchtitle'},
@@ -1765,14 +1765,13 @@ sub syn_io {
     return $self->{syn_io};
 }
 
-sub map {
+sub invalid_src {
     my $self = shift;
     if( @_ ) {
-        $self->{map} = shift;
+        $self->{invalid_src} = shift;
     }
-    return $self->{map};
+    return $self->{invalid_src};
 }
-
 
 
 1;

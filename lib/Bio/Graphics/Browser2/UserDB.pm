@@ -782,7 +782,7 @@ sub do_delete_user {
   $userdb->do('DELETE FROM users WHERE userid=?',undef,$userid);
 
   my $query = $userdb->prepare(
-    "DELETE FROM openid_users WHERE username=?");
+    "DELETE FROM openid_users WHERE userid IN (select userid from session where username=?)");
   if ($query->execute($user)) {
     print "Success";
   } else {

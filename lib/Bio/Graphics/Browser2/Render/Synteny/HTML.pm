@@ -76,11 +76,7 @@ sub run {
     my $conf_dir = conf_dir("$ENV{GBROWSE_CONF}/synteny");
 
     # error if no data sources configured
-    my $go;
-    while (<$conf_dir/*.synconf>) {
-      $go++;
-    }
-    unless ($go) {
+    unless( <$conf_dir/*.synconf> ){
       print header,  start_html('No data source');
       print warning("No data source configured for GBrowse_syn\n");
       print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));

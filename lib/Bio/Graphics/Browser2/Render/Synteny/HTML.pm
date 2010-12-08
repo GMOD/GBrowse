@@ -72,19 +72,8 @@ sub run {
 
     # error if no data sources configured
     unless( glob "$conf_dir/*.synconf" ){
-      print header,  start_html('No data source');
-      print warning("No data source configured for GBrowse_syn\n");
-      print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
-
-      print <<END;
-    <iframe style="frameborder:0;width:800px;height:2000px" src="/gbrowse2/gbrowse_syn_help.html">
-    </iframe>
-END
-    ;
-      print end_html;
-      return;
+      return $self->print_syn_help;
     }
-
 
     # search soure (general) configuration
     $self->syn_conf( Legacy::Graphics::Browser::Synteny->new );
@@ -1748,6 +1737,18 @@ sub hide {
                 -override => 1 ), "\n";
 }
 
+sub print_syn_help {
+    my $self = shift;
+    print header,  start_html('No data source');
+    print warning("No data source configured for GBrowse_syn\n"); 
+    print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));
+
+    print <<END;
+<iframe style="frameborder:0;width:800px;height:2000px" src="/gbrowse2/gbrowse_syn_help.html">
+</iframe>
+END
+    print end_html;
+}
 
 ########## accessors ###########
 
@@ -1791,6 +1792,7 @@ sub syn_conf {
     }
     return $self->{legacy_bgb_syn};
 }
+
 
 
 1;

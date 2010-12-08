@@ -59,7 +59,6 @@ use constant SETTINGS =>
 our $INVALID_SRC;
 our $SCONF;
 our $CONF;
-our $MAP;
 
 sub new {
     my $class   = shift;
@@ -97,16 +96,15 @@ END
     my $extension = $CONF->setting('config_extension') || EXTENSION;
     $SCONF      = open_config($conf_dir,$extension);
 
-    my ($page_settings,$session) = page_settings();
+    my ($page_settings,$session) = $self->page_settings();
     my $source = $page_settings->{source};
     $CONF->page_settings($page_settings);
     $CONF->search_src($page_settings->{search_src});
     $CONF->source($page_settings->{source});
-    $MAP = db_map();
 
     $self->syn_io(  Bio::DB::SyntenyIO->new($CONF->setting('join')) );
 
-    my $segment = landmark2segment($page_settings);
+    my $segment = $self->landmark2segment($page_settings);
 
     if ($segment) {
       my $name = format_segment($segment);
@@ -134,11 +132,11 @@ END
     # Which aligned species have been asked for
     my @requested_species  = _unique(@{$page_settings->{species}});
     if (!@requested_species) {
-      my $search_src = $page_settings->{search_src} || '';
-      unless ($search_src && $search_src ne 'nosrc' && $MAP->{$search_src}->{db}) {
-        $INVALID_SRC = $search_src;
-      }
-      @requested_species  = grep {$_ ne $search_src} grep {$MAP->{$_}->{db}} keys %$MAP;
+        my $search_src = $page_settings->{search_src} || '';
+        unless ($search_src && $search_src ne 'nosrc' && $self->db_map->{$search_src}->{db}) {
+            $INVALID_SRC = $search_src;
+        }
+        @requested_species  = grep {$_ ne $search_src} grep {$self->db_map->{$_}->{db}} keys %{$self->db_map};
     }
 
     if ($segment) {
@@ -161,9 +159,9 @@ END
       print warning("Species '$INVALID_SRC' is not configured for this database");
     }
 
-    search_form($segment);
+    $self->search_form($segment);
 
-    print overview_panel($CONF->whole_segment($segment),$segment) if $segment;
+    print $self->overview_panel($CONF->whole_segment($segment),$segment) if $segment;
 
     if ($segment) {
         # make sure no hits go off-screen
@@ -194,17 +192,18 @@ END
 
 }
 
-
 sub species_chooser {
+  my $self = shift;
+
   # pointless if < 3 species
-  return '' if keys %$MAP < 3;
+  return '' if keys %{$self->db_map} < 3;
   my $src = $CONF->search_src();
-  my @species = grep {$_ ne $src} grep {$MAP->{$_}->{db}} keys %$MAP;
+  my @species = grep {$_ ne $src} grep {$self->db_map->{$_}->{db}} keys %{$self->db_map};
   my $default = $CONF->page_settings->{species} || \@species;
   push @$default, $CONF->page_settings('old_src');
 
   if (!param('species')) {
-    $default = [keys %$MAP];
+    $default = [keys %{$self->db_map}];
   }
 
   b(wiki_help('Aligned_Species',,$CONF->tr('Aligned Species'))) . ':' . br .
@@ -212,7 +211,7 @@ sub species_chooser {
 		 -id        => 'speciesChooser',
 		 -name      => 'species',
 		 -values    => \@species,
-		 -labels    => { map {$_ => $MAP->{$_}->{desc} } @species },
+		 -labels    => { map {$_ => $self->db_map->{$_}->{desc} } @species },
 		 -default   => $default,
 		 -multiple  => 1,
 		 -size      => 8,
@@ -221,8 +220,10 @@ sub species_chooser {
 }
 
 sub expand_notice {
+  my $self = shift;
+
   # pointless if < 4 species
-  return '' if keys %$MAP < 4;
+  return '' if keys %{$self->db_map} < 4;
   my $state = param('display') || $CONF->page_settings->{display};
   my $ref = $CONF->search_src;
   my $title = b(wiki_help("Display_Mode",$CONF->tr("Display Mode")), ':');
@@ -247,9 +248,10 @@ sub landmark_search {
 }
 
 sub species_search {
+  my $self = shift;
   my $default = $CONF->page_settings("search_src");
-  my %labels = map {$_=>$MAP->{$_}{desc}} keys %$MAP;
-  my $values  = [sort {$MAP->{$a}{desc} cmp $MAP->{$b}{desc}} grep {$MAP->{$_}{desc}} keys %labels];
+  my %labels = map {$_=>$self->db_map->{$_}{desc}} keys %{$self->db_map};
+  my $values  = [sort {$self->db_map->{$a}{desc} cmp $self->db_map->{$b}{desc}} grep {$self->db_map->{$_}{desc}} keys %labels];
   unshift @$values, '';
 
   my $onchange = "document.mainform.submit()";
@@ -265,19 +267,24 @@ sub species_search {
 }
 
 sub search_form {
+  my $self = shift;
   my $segment = shift;
   print start_form(-name=>'mainform',-method => 'post');
-  navigation_table($segment);
+  $self->navigation_table($segment);
 }
 
 sub db_map {
-  my %map;
-  my @map = shellwords($CONF->setting('source_map'));
-  while (my($symbol,$db,$desc) = splice(@map,0,3)) {
-    $map{$symbol}{db}   = $db;
-    $map{$symbol}{desc} = $desc;
-  }
-  \%map;
+    my $self = shift;
+
+    $self->{db_map} ||= do {
+        my %map;
+        my @map = shellwords($CONF->setting('source_map'));
+        while (my($symbol,$db,$desc) = splice(@map,0,3)) {
+            $map{$symbol}{db}   = $db;
+            $map{$symbol}{desc} = $desc;
+        }
+        \%map;
+    };
 }
 
 sub _type_from_box {
@@ -407,7 +414,7 @@ sub draw_image {
   if ($only_aligned && @hits) {
     my @coords = map {$_->start, $_->end} @hits;
     my $new_name = $segment->ref .':'.(min @coords).'..'.(max @coords);
-    $segment = landmark2segment($page_settings,$new_name,$CONF->page_settings('search_src'));
+    $segment = $self->landmark2segment($page_settings,$new_name,$CONF->page_settings('search_src'));
   }
 
   for my $h (@hits) {
@@ -416,7 +423,7 @@ sub draw_image {
     $is_upper{$src} ||= $hit_positions{$h} % 2;
     my $ff       = $is_upper{$src} ? \$upper_ff : \$lower_ff;
     $$ff ||= Bio::Graphics::FeatureFile->new;
-    add_hit_to_ff($segment,$$ff,$h,$hit2span);
+    $self->add_hit_to_ff($segment,$$ff,$h,$hit2span);
   }
 
   my $orphan_hit = 0;
@@ -425,7 +432,7 @@ sub draw_image {
     my $is_upper = ++$orphan_hit % 2;
     my $ff       = $is_upper ? \$upper_ff : \$lower_ff;
     $$ff ||= Bio::Graphics::FeatureFile->new;
-    add_hit_to_ff($segment,$$ff,$h,$hit2span);
+    $self->add_hit_to_ff($segment,$$ff,$h,$hit2span);
   }
 
   # base image width
@@ -437,19 +444,20 @@ sub draw_image {
   my $pr = $SCONF->setting('pad_right') || 0;
   my $padding = ($pl || $ip) + ($pr || $ip);
 
-  my ($ref_img,$ref_boxes) = segment2image($segment,
-					   $src,
-					   {
-					     width           => $width - $padding,
-					     features_top    => $upper_ff,
-					     features_bottom => $lower_ff,
-					     background      => 'white',
-					   }
-					   ) or die("no image");
+  my ($ref_img,$ref_boxes) = $self->segment2image(
+      $segment,
+      $src,
+      {
+          width           => $width - $padding,
+          features_top    => $upper_ff,
+          features_bottom => $lower_ff,
+          background      => 'white',
+      }
+     ) or die("no image");
 
   $width = $ref_img->width;
 
-  my $ref_title = $MAP->{$src}{desc} . ' ' . format_segment($segment);
+  my $ref_title = $self->db_map->{$src}{desc} . ' ' . format_segment($segment);
 
   # pad all of the span coordinates for a bit of regional context
   for my $key (keys %span) {
@@ -482,10 +490,10 @@ sub draw_image {
     my $start            = $span{$key}{start};
     my $bases            = $end - $start;
     my $name             = "$contig:$start..$end";
-    my $segment          = landmark2segment($page_settings,$name,$src);
+    my $segment          = $self->landmark2segment($page_settings,$name,$src);
     my @relevant_hits    = grep {$hit2span->{$_} eq $key} @hits;
 
-    my $rsegment = landmark2segment($page_settings,"$contig:$start..$end",$src);
+    my $rsegment = $self->landmark2segment($page_settings,"$contig:$start..$end",$src);
 
     # width of inset panels scaled by size of target sequence
     $bases or next;
@@ -493,7 +501,7 @@ sub draw_image {
     my $width = $total_width*$scale;
 
     my $ff    = Bio::Graphics::FeatureFile->new;
-    add_hit_to_ff($rsegment,$ff,$_,$hit2span,'invert') foreach @relevant_hits;
+    $self->add_hit_to_ff($rsegment,$ff,$_,$hit2span,'invert') foreach @relevant_hits;
 
     my $segment_args = {width => $width};
     if ($is_above) {
@@ -506,12 +514,12 @@ sub draw_image {
 
     $segment_args->{flip}++ if panel_is_flipped($key,1);
 
-    ($img,$boxes)     = segment2image($segment, $src, $segment_args);
+    ($img,$boxes)     = $self->segment2image($segment, $src, $segment_args);
 
     $img or next;
     $span{$key}{image} = $img;
     $span{$key}{boxes} = $boxes;
-    $span{$key}{title} = $MAP->{$src}{desc};
+    $span{$key}{title} = $self->db_map->{$src}{desc};
     $span{$key}{title} .= ' (reverse)' if panel_is_flipped($key);
 
     $pad_top    = $img->height if $is_above  && $pad_top < $img->height;
@@ -536,13 +544,14 @@ sub draw_image {
   my $translucent = $gd->colorAllocateAlpha(0,0,255,90);
 
   for my $key (keys %span) {
-    my $color            = $CONF->setting($MAP->{$span{$key}{src}}{db}=>'color');
+    my $color            = $CONF->setting($self->db_map->{$span{$key}{src}}{db}=>'color');
     # report missing config for the species if no color is found
-    $color || die  <<END;
-    No color configured for $MAP->{$span{$key}{src}}{db}.
-    Check the \[$MAP->{$span{$key}{src}}{db}\] stanza in your main configuration file;
+    my $db = $self->db_map->{$span{$key}{src}}{db};
+    $color || die <<END;
+    No color configured for $db.
+    Check the \[$db\] stanza in your main configuration file;
 END
-;
+
     my @colrgb = Bio::Graphics::Panel->color_name_to_rgb($color);
     $span{$key}{tcolor}  = $gd->colorAllocateAlpha(@colrgb,110);
     $span{$key}{bgcolor} = $gd->colorAllocateAlpha(@colrgb,115);
@@ -593,13 +602,13 @@ END
   # middle row (reference)
   my @rect = ($im_pad,$ref_top,$im_pad+$ref_img->width,$ref_top+$ref_img->height);
   $gd->copy($ref_img,$im_pad,$ref_top,0,0,$ref_img->width,$ref_img->height);
-  my $color   = $CONF->setting($MAP->{$src}{db}=>'color');
+  my $color   = $CONF->setting($self->db_map->{$src}{db}=>'color');
   $color ||= 'blue';
   my $bgcolor = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),110);
   my $border  = $gd->colorResolve(Bio::Graphics::Panel->color_name_to_rgb($color));
   $gd->filledRectangle(@rect,$bgcolor);
   $gd->rectangle(@rect,$border);
-  my $title = $MAP->{$src}{desc} . ' (reference)';
+  my $title = $self->db_map->{$src}{desc} . ' (reference)';
   $gd->string(GD::gdSmallFont,$rect[0]+5,$rect[1],$title,$black);
   push @map_items,Area({shape=>'rect',
 			coords=>join(',',@rect),
@@ -787,7 +796,7 @@ END
 }
 
 sub segment2image {
-  my ($segment,$src,$options) = @_;
+  my ($self,$segment,$src,$options) = @_;
   $segment or return;
 
   my $width       = $options->{width};
@@ -796,7 +805,7 @@ sub segment2image {
   my $background  = $options->{background} || 'white';
   my $flip        = $options->{flip};
 
-  my $dsn = $MAP->{$src}{db} or return;
+  my $dsn = $self->db_map->{$src}{db} or return;
   $SCONF->source($dsn);
   # make sure balloon tooltips are turned on
   $SCONF->setting('GENERAL','balloon tips',1);
@@ -849,12 +858,12 @@ sub segment2image {
 
   $SCONF->setting('general','detail bgcolor'=> $background);
 
-  my $title = $MAP->{$src}{desc};
+  my $title = $self->db_map->{$src}{desc};
 
   # cache no panels if some params change
   my $no_cache = [md5_hex(url(-query_string=>1))];
 
-  landmark2segment() if _isref($segment);
+  $self->landmark2segment if _isref($segment);
 
   my ($img,$boxes) = $SCONF->render_panels(
 					    {
@@ -896,6 +905,7 @@ sub format_segment {
 }
 
 sub landmark2segment {
+  my $self = shift;
   my $settings = shift || $CONF->page_settings;
   my ($name,$source) = @_;
   if ($name && $source) {
@@ -911,13 +921,13 @@ sub landmark2segment {
 
   $source ||= $CONF->page_settings("search_src");
 
-  my $segment  = _do_search($name,$source) if $name && $source;
+  my $segment  = $self->_do_search($name,$source) if $name && $source;
 
   # Did not find our segment?  Try the other species
   if (!$segment) {
     for my $src (grep {defined $_} @{$settings->{species}}) {
       next if $src eq $source;
-      $segment = _do_search($name,$src) if $name;
+      $segment = $self->_do_search($name,$src) if $name;
       if ($segment) {
 	$settings->{search_src} = $src;
 	$CONF->search_src($src);
@@ -938,8 +948,8 @@ sub landmark2segment {
 }
 
 sub _do_search {
-  my ($landmark,$src) = @_;
-  my $dsn = $MAP->{$src}{db} or return undef;
+  my ($self,$landmark,$src) = @_;
+  my $dsn = $self->db_map->{$src}{db} or return undef;
   $SCONF->source($dsn);
   my $db = open_database();
   my ($segment) = grep {$_} $SCONF->name2segments($landmark,$db);
@@ -951,13 +961,13 @@ sub warning {
 }
 
 sub add_hit_to_ff {
-  my ($segment,$ff,$hit,$hit2span,$invert) = @_;
+  my ($self,$segment,$ff,$hit,$hit2span,$invert) = @_;
   my $flip_hit = $hit->tstrand eq '-';
   $CONF->flip($hit->name => 1) if $flip_hit;
   my @attributes = $flip_hit ? (-attributes => {flip=>1}) : ();
 
   my $src = $hit->src2;
-  my $setcolor = $CONF->setting($MAP->{$src}->{db} => 'color');
+  my $setcolor = $CONF->setting($self->db_map->{$src}->{db} => 'color');
 
   $ff->add_type(
 		"match:$src" => {
@@ -1031,6 +1041,7 @@ sub adjust_container {
 }
 
 sub navigation_table {
+  my $self = shift;
   my $segment = shift;
   my @species = @_;
 
@@ -1071,21 +1082,20 @@ sub navigation_table {
 				 landmark_search($segment) . '&nbsp;' .
 				 submit(-name=>$CONF->tr('Search')) .
 				 reset(-name=>$CONF->tr('Reset'), -onclick=>"window.location='?reset=1'"),
-				 species_search(),
+				 $self->species_search,
 				 $slidertable
 				 ]
 				)
 			     ),
 			  TR({-class=>'searchtitle'},
-			     td({-colspan=>3},
-				species_chooser())
-			     ),
+			     td({-colspan=>3},$self->species_chooser)
+                            ),
 			  TR({-class=>'searchtitle'},
 			     td({-valign=>'bottom'},
 				source_menu()
 				) .
 			     td( {-colspan=>2, -valign=>'bottom'},
-				expand_notice()
+				$self->expand_notice
 				)
 			     ),
 			  ) # end table
@@ -1095,7 +1105,8 @@ sub navigation_table {
 }
 
 sub expand_display {
-  return '' if keys %$MAP < 4;
+  my $self = shift;
+  return '' if keys %{$self->db_map} < 4;
   my $options = [qw/expanded compact/];
   my $labels  = { expanded => 'ref. species plus 2',
 		  compact  => 'all species in one panel' };
@@ -1124,7 +1135,7 @@ sub options_table {
                                                              @onclick ))
                             ),
                          td(
-                             expand_display()
+                             $self->expand_display
                              ),
                          td(
                             submit(-name => 'Update Image')
@@ -1234,10 +1245,10 @@ sub belong_together {
 
 
 sub overview_panel {
-  my ($whole_segment,$segment) = @_;
+  my ($self,$whole_segment,$segment) = @_;
   return '' if $SCONF->section_setting('overview') eq 'hide';
-  my $image = overview($whole_segment,$segment);
-  my $ref = $MAP->{$CONF->page_settings("search_src")}->{desc};
+  my $image = $self->overview($whole_segment,$segment);
+  my $ref = $self->db_map->{$CONF->page_settings("search_src")}->{desc};
   return toggle('Overview',
                 table({-border=>0,-width=>'100%'},
 		      TR(th("<center>Reference genome: <i>$ref</i></center>")),
@@ -1249,7 +1260,7 @@ sub overview_panel {
 }
 
 sub overview {
-  my ($region_segment,$segment) = @_;
+  my ($self,$region_segment,$segment) = @_;
   return unless $segment;
   my $width = $CONF->page_settings('imagewidth')   || IMAGE_WIDTH;
   $width *= $CONF->setting('overview_ratio') || OVERVIEW_RATIO;
@@ -1259,7 +1270,7 @@ sub overview {
   my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
 
   # reference genome
-  my $ref = $MAP->{$CONF->page_settings("search_src")}->{desc};
+  my $ref = $self->db_map->{$CONF->page_settings("search_src")}->{desc};
 
   my ($overview)   = $CONF->render_panels(
 						  {
@@ -1552,6 +1563,7 @@ sub my_path_info {
 }
 
 sub page_settings {
+  my $self = shift;
   my $session
       = Legacy::Graphics::Browser::PageSettings->new( $CONF, param('id') );
   my $source = param('src') || param('source') || my_path_info() || $session->source;
@@ -1563,15 +1575,16 @@ sub page_settings {
   my $old_source    = $session->source($source);
   $CONF->source($source);
 
-  my $settings = get_settings($session);
+  my $settings = $self->get_settings($session);
   return ($settings,$session);
 }
 
 sub get_settings {
+  my $self = shift;
   my $session = shift;
   my $hash = $session->page_settings;
   default_settings($hash) if param('reset') or !%$hash;
-  adjust_settings($hash);
+  $self->adjust_settings($hash);
   $hash->{id} = $session->id;
   return $hash;
 }
@@ -1609,6 +1622,7 @@ sub _is_checkbox {
 }
 
 sub adjust_settings {
+  my $self = shift;
   my $settings = shift;
 
   if ( param('reset') ) {
@@ -1643,7 +1657,7 @@ sub adjust_settings {
   # expect >1 species
   my @species = param('species');
   if (!@species) {
-    $settings->{species} = [keys %$MAP];
+    $settings->{species} = [keys %{$self->db_map}];
   }
   else {
     $settings->{species} = \@species;
@@ -1749,6 +1763,14 @@ sub syn_io {
         $self->{syn_io} = shift;
     }
     return $self->{syn_io};
+}
+
+sub map {
+    my $self = shift;
+    if( @_ ) {
+        $self->{map} = shift;
+    }
+    return $self->{map};
 }
 
 

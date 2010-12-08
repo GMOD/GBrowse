@@ -56,8 +56,6 @@ use constant SETTINGS =>
       species    => undef
       );
 
-our $CONF;
-
 sub new {
     my $class   = shift;
     my $globals = shift;
@@ -87,20 +85,20 @@ END
 
 
     # search soure (general) configuration
-    $CONF       = Legacy::Graphics::Browser::Synteny->new();
-    $CONF->read_configuration($conf_dir,'synconf');
+    $self->syn_conf( Legacy::Graphics::Browser::Synteny->new );
+    $self->syn_conf->read_configuration($conf_dir,'synconf');
 
     # species-specific configuration
-    my $extension = $CONF->setting('config_extension') || EXTENSION;
+    my $extension = $self->syn_conf->setting('config_extension') || EXTENSION;
     $self->species_conf( open_config( $conf_dir, $extension ) );
 
     my ($page_settings,$session) = $self->page_settings();
     my $source = $page_settings->{source};
-    $CONF->page_settings($page_settings);
-    $CONF->search_src($page_settings->{search_src});
-    $CONF->source($page_settings->{source});
+    $self->syn_conf->page_settings($page_settings);
+    $self->syn_conf->search_src($page_settings->{search_src});
+    $self->syn_conf->source($page_settings->{source});
 
-    $self->syn_io(  Bio::DB::SyntenyIO->new($CONF->setting('join')) );
+    $self->syn_io(  Bio::DB::SyntenyIO->new($self->syn_conf->setting('join')) );
 
     my $segment = $self->landmark2segment($page_settings);
 
@@ -111,7 +109,7 @@ END
         redirect(url()."?name=$name");
       }
 
-      $CONF->current_segment($segment);
+      $self->syn_conf->current_segment($segment);
       param(name => $name);
       $page_settings->{name} = $name;
     }
@@ -120,15 +118,15 @@ END
     if (param('reset')) {
       @reset = (1, 'All settings have been reset to their default values');
     }
-    $CONF->print_page_top($CONF->setting('description'),@reset,$session);
+    $self->syn_conf->print_page_top($self->syn_conf->setting('description'),@reset,$session);
 
     # warning if trying to search with no species
-    if (!$segment && param('name') && !$CONF->page_settings("search_src")) {
+    if (!$segment && param('name') && !$self->syn_conf->page_settings("search_src")) {
       print warning("Error: select a species to search");
     }
 
     # Which aligned species have been asked for
-    my @requested_species  = _unique(@{$page_settings->{species}});
+    my @requested_species  = $self->_unique(@{$page_settings->{species}});
     if (!@requested_species) {
         my $search_src = $page_settings->{search_src} || '';
         unless ($search_src && $search_src ne 'nosrc' && $self->db_map->{$search_src}->{db}) {
@@ -149,9 +147,9 @@ END
         ]);
     }
 
-    my $header = $CONF->setting('header');
+    my $header = $self->syn_conf->setting('header');
     $header = &$header if ref $header;
-    print $header || h1($CONF->setting('description'));
+    print $header || h1($self->syn_conf->setting('description'));
 
     if (my $src = $self->invalid_src) {
         print warning("Species '$src' is not configured for this database");
@@ -159,13 +157,13 @@ END
 
     $self->search_form($segment);
 
-    print $self->overview_panel($CONF->whole_segment($segment),$segment) if $segment;
+    print $self->overview_panel($self->syn_conf->whole_segment($segment),$segment) if $segment;
 
     if ($segment) {
         # make sure no hits go off-screen
         $self->remap_coordinates($_) for @{ $self->hits };
 
-        segment_info($page_settings,$segment);
+        $self->segment_info($page_settings,$segment);
 
         my %species = map {$_->src2 => 1} @{ $self->hits };
         my @species = sort keys %species;
@@ -183,10 +181,10 @@ END
 
     $self->options_table;
     print end_form();
-    print $CONF->footer || end_html();
+    print $self->syn_conf->footer || end_html();
 
     # remember former source for the checkbox
-    $page_settings->{old_src} = $CONF->search_src;
+    $page_settings->{old_src} = $self->syn_conf->search_src;
 
 }
 
@@ -195,16 +193,16 @@ sub species_chooser {
 
   # pointless if < 3 species
   return '' if keys %{$self->db_map} < 3;
-  my $src = $CONF->search_src();
+  my $src = $self->syn_conf->search_src();
   my @species = grep {$_ ne $src} grep {$self->db_map->{$_}->{db}} keys %{$self->db_map};
-  my $default = $CONF->page_settings->{species} || \@species;
-  push @$default, $CONF->page_settings('old_src');
+  my $default = $self->syn_conf->page_settings->{species} || \@species;
+  push @$default, $self->syn_conf->page_settings('old_src');
 
   if (!param('species')) {
     $default = [keys %{$self->db_map}];
   }
 
-  b(wiki_help('Aligned_Species',,$CONF->tr('Aligned Species'))) . ':' . br .
+  b(wiki_help('Aligned_Species',,$self->syn_conf->tr('Aligned Species'))) . ':' . br .
   checkbox_group(
 		 -id        => 'speciesChooser',
 		 -name      => 'species',
@@ -222,11 +220,11 @@ sub expand_notice {
 
   # pointless if < 4 species
   return '' if keys %{$self->db_map} < 4;
-  my $state = param('display') || $CONF->page_settings->{display};
-  my $ref = $CONF->search_src;
-  my $title = b(wiki_help("Display_Mode",$CONF->tr("Display Mode")), ':');
+  my $state = param('display') || $self->syn_conf->page_settings->{display};
+  my $ref = $self->syn_conf->search_src;
+  my $title = b(wiki_help("Display_Mode",$self->syn_conf->tr("Display Mode")), ':');
 
-  my $url = url . "/" . $CONF->source;
+  my $url = url . "/" . $self->syn_conf->source;
   if ($state eq 'expanded') {
     return br, $title, br,  "Three species/panel ",
 	a( {-href => $url.'?display=compact'}, 'Click to show all species in one panel');
@@ -238,22 +236,23 @@ sub expand_notice {
 }
 
 sub landmark_search {
-  my $segment = shift;
+  my ( $self, $segment ) = @_;
+
   my $default = format_segment($segment) if $segment;
-  return $CONF->setting('no search')
-      ? '' : b(wiki_help('Landmark',$CONF->tr('Landmark'))).':'.br.
+  return $self->syn_conf->setting('no search')
+      ? '' : b(wiki_help('Landmark',$self->syn_conf->tr('Landmark'))).':'.br.
       textfield(-name=>'name', -size=>25, -value=>$default);
 }
 
 sub species_search {
   my $self = shift;
-  my $default = $CONF->page_settings("search_src");
+  my $default = $self->syn_conf->page_settings("search_src");
   my %labels = map {$_=>$self->db_map->{$_}{desc}} keys %{$self->db_map};
   my $values  = [sort {$self->db_map->{$a}{desc} cmp $self->db_map->{$b}{desc}} grep {$self->db_map->{$_}{desc}} keys %labels];
   unshift @$values, '';
 
   my $onchange = "document.mainform.submit()";
-  return b(wiki_help('Reference_Species',$CONF->tr('Genome to Search'))) . ':' . br .
+  return b(wiki_help('Reference_Species',$self->syn_conf->tr('Genome to Search'))) . ':' . br .
       popup_menu(
 		 -onchange => $onchange,
 		 -name     =>'search_src',
@@ -276,7 +275,7 @@ sub db_map {
 
     $self->{db_map} ||= do {
         my %map;
-        my @map = shellwords($CONF->setting('source_map'));
+        my @map = shellwords($self->syn_conf->setting('source_map'));
         while (my($symbol,$db,$desc) = splice(@map,0,3)) {
             $map{$symbol}{db}   = $db;
             $map{$symbol}{desc} = $desc;
@@ -300,24 +299,24 @@ sub draw_image {
     push @hits, grep {$_->src2 eq $species} @$hits;
   }
 
-  my $src     = $CONF->page_settings("search_src");
-  my $segment = $CONF->current_segment or return;
-  my $max_segment = $CONF->setting('max_segment') || MAX_SEGMENT;
+  my $src     = $self->syn_conf->page_settings("search_src");
+  my $segment = $self->syn_conf->current_segment or return;
+  my $max_segment = $self->syn_conf->setting('max_segment') || MAX_SEGMENT;
 
   if ( $segment->length > $max_segment) {
-    my $units = $CONF->unit_label($max_segment);
+    my $units = $self->syn_conf->unit_label($max_segment);
     print h2("Sorry: the size of region $segment exceeds the maximum ($units)");
     exit;
   }
 
-  my $max_gap = $segment->length * ($CONF->setting('max_span') || MAX_SPAN);
+  my $max_gap = $segment->length * ($self->syn_conf->setting('max_span') || MAX_SPAN);
 
   # dynamically create synteny blocks
-  @hits = aggregate(\@hits) if $CONF->page_settings("aggregate");
+  @hits = aggregate(\@hits) if $self->syn_conf->page_settings("aggregate");
 
   # save the hits by name so we can access them from the name alone
   for (@hits) {
-    $CONF->name2hit( $_->name => $_ );
+    $self->syn_conf->name2hit( $_->name => $_ );
   }
 
 
@@ -338,7 +337,7 @@ sub draw_image {
     # Tally the plus and minus strand total.  We will flip the panel
     # if more aligned sequence is on the minus strand than the plus strand.
     # only count actual alignmnts (not aggregates).
-    my $panel_flip = $CONF->panel_flip($key);
+    my $panel_flip = $self->syn_conf->panel_flip($key);
     if ($h->parts) {
       for my $p (@{$h->parts}) {
 	$panel_flip->{$key}{yes} += ($p->tend - $p->tstart) if $p->tstrand eq '-';
@@ -368,9 +367,9 @@ sub draw_image {
   }
 
   # get rid of tiny spans
-  my $src_fraction = ($CONF->setting('min_alignment_size') || TOO_SMALL || 0) * $segment->length;
+  my $src_fraction = ($self->syn_conf->setting('min_alignment_size') || TOO_SMALL || 0) * $segment->length;
   my @unused_hits;
-  unless ($CONF->page_settings("tiny")) {
+  unless ($self->syn_conf->page_settings("tiny")) {
     for my $key (keys %span) {
       my $too_short = ($span{$key}{end} - $span{$key}{start}) < $src_fraction
 	  && ($span{$key}{tend} - $span{$key}{tstart}) < $src_fraction;
@@ -412,7 +411,7 @@ sub draw_image {
   if ($only_aligned && @hits) {
     my @coords = map {$_->start, $_->end} @hits;
     my $new_name = $segment->ref .':'.(min @coords).'..'.(max @coords);
-    $segment = $self->landmark2segment($page_settings,$new_name,$CONF->page_settings('search_src'));
+    $segment = $self->landmark2segment($page_settings,$new_name,$self->syn_conf->page_settings('search_src'));
   }
 
   for my $h (@hits) {
@@ -434,7 +433,7 @@ sub draw_image {
   }
 
   # base image width
-  my $width = $CONF->page_settings('imagewidth') || $CONF->setting("imagewidth") || IMAGE_WIDTH;
+  my $width = $self->syn_conf->page_settings('imagewidth') || $self->syn_conf->setting("imagewidth") || IMAGE_WIDTH;
 
   # but also allow for padding
   my $ip = $self->species_conf->setting('image_padding') || 0;
@@ -474,7 +473,7 @@ sub draw_image {
   my $bases_below  = sum( map {$span{$_}{end} - $span{$_}{start}} @panels_below );
   my ($pad_top,$pad_bottom) = (0,0);
   my ($img,$boxes);
-  my $im_pad = $CONF->setting('interimage_pad') || INTERIMAGE_PAD;
+  my $im_pad = $self->syn_conf->setting('interimage_pad') || INTERIMAGE_PAD;
 
   for my $key (keys %span) {
     my $panel_position   = $span{$key}{position};
@@ -510,7 +509,7 @@ sub draw_image {
       $segment_args->{features_top} = $ff;
     }
 
-    $segment_args->{flip}++ if panel_is_flipped($key,1);
+    $segment_args->{flip}++ if $self->panel_is_flipped($key,1);
 
     ($img,$boxes)     = $self->segment2image($segment, $src, $segment_args);
 
@@ -518,7 +517,7 @@ sub draw_image {
     $span{$key}{image} = $img;
     $span{$key}{boxes} = $boxes;
     $span{$key}{title} = $self->db_map->{$src}{desc};
-    $span{$key}{title} .= ' (reverse)' if panel_is_flipped($key);
+    $span{$key}{title} .= ' (reverse)' if $self->panel_is_flipped($key);
 
     $pad_top    = $img->height if $is_above  && $pad_top < $img->height;
     $pad_bottom = $img->height if !$is_above && $pad_bottom < $img->height;
@@ -526,7 +525,7 @@ sub draw_image {
 
   # total height is height of reference + pad_top + pad_bottom + VERTICAL_PAD pixels of spacing
   my $total_height = $ref_img->height + $pad_top + $pad_bottom;
-  my $vertical_pad = $CONF->setting('vertical_pad') || VERTICAL_PAD;
+  my $vertical_pad = $self->syn_conf->setting('vertical_pad') || VERTICAL_PAD;
   $total_height   += $vertical_pad   if $panels_above;
   $total_height   += $vertical_pad   if $panels_below;
   $total_height   += $im_pad;
@@ -542,7 +541,7 @@ sub draw_image {
   my $translucent = $gd->colorAllocateAlpha(0,0,255,90);
 
   for my $key (keys %span) {
-    my $color            = $CONF->setting($self->db_map->{$span{$key}{src}}{db}=>'color');
+    my $color            = $self->syn_conf->setting($self->db_map->{$span{$key}{src}}{db}=>'color');
     # report missing config for the species if no color is found
     my $db = $self->db_map->{$span{$key}{src}}{db};
     $color || die <<END;
@@ -600,7 +599,7 @@ END
   # middle row (reference)
   my @rect = ($im_pad,$ref_top,$im_pad+$ref_img->width,$ref_top+$ref_img->height);
   $gd->copy($ref_img,$im_pad,$ref_top,0,0,$ref_img->width,$ref_img->height);
-  my $color   = $CONF->setting($self->db_map->{$src}{db}=>'color');
+  my $color   = $self->syn_conf->setting($self->db_map->{$src}{db}=>'color');
   $color ||= 'blue';
   my $bgcolor = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),110);
   my $border  = $gd->colorResolve(Bio::Graphics::Panel->color_name_to_rgb($color));
@@ -660,24 +659,24 @@ END
 
   my %grid_line;
   my %gc;
-  $gc{1} = $CONF->page_settings("pgrid") ? $gd->colorResolveAlpha(10,10,10,100) : $gd->colorResolveAlpha(10,10,10,70);
+  $gc{1} = $self->syn_conf->page_settings("pgrid") ? $gd->colorResolveAlpha(10,10,10,100) : $gd->colorResolveAlpha(10,10,10,70);
   $gc{3} = $gd->colorResolveAlpha(10,10,255,100);
   my $thickness = 3;
 
   my $grid_upper;
   for my $feature (keys %ref_boxes) {
     next unless defined $ref_boxes{$feature} && defined $panel_boxes{$feature};
-    my $hit = $CONF->name2hit($feature);
+    my $hit = $self->syn_conf->name2hit($feature);
     next unless defined $hit;
     my $span = $hit2span->{$feature};
-    my $flip =  !panel_is_flipped($span) && $CONF->flip($feature)
-             ||  panel_is_flipped($span) && !$CONF->flip($feature);
+    my $flip =  !$self->panel_is_flipped($span) && $self->syn_conf->flip($feature)
+             ||  $self->panel_is_flipped($span) && !$self->syn_conf->flip($feature);
 
     my ($rx1,$ry1,$rx2,$ry2) = @{$ref_boxes{$feature}};
     my ($px1,$py1,$px2,$py2) = @{$panel_boxes{$feature}};
     my $upper = $py2 < $ry1;
 
-    if ($CONF->page_settings("shading")) {
+    if ($self->syn_conf->page_settings("shading")) {
       my $poly = GD::Polygon->new();
       $upper = $py2 < $ry1;
       ($rx1,$rx2) = ($rx2,$rx1) if $flip;
@@ -706,31 +705,31 @@ END
   for my $feature (keys %ref_boxes) {
     next unless defined $ref_boxes{$feature} && defined $panel_boxes{$feature};
     next if $feature =~ /aggregate/;
-    my $exact = $CONF->setting('grid coordinates');
+    my $exact = $self->syn_conf->setting('grid coordinates');
     $exact = $exact && $exact eq 'exact';
 
-    next unless my $hit = $CONF->name2hit($feature);
+    next unless my $hit = $self->syn_conf->name2hit($feature);
 
     my $span = $hit2span->{$feature};
-    my $flip =  !panel_is_flipped($span) && $CONF->flip($feature)
-             ||  panel_is_flipped($span) && !$CONF->flip($feature);
+    my $flip =  !$self->panel_is_flipped($span) && $self->syn_conf->flip($feature)
+             ||  $self->panel_is_flipped($span) && !$self->syn_conf->flip($feature);
 
     my ($rx1,$ry1,$rx2,$ry2) = @{$ref_boxes{$feature}};
     my ($px1,$py1,$px2,$py2) = @{$panel_boxes{$feature}};
     my $upper = $py2 < $ry1;
 
-    my @grid_coords = $CONF->page_settings("pgrid") 
+    my @grid_coords = $self->syn_conf->page_settings("pgrid") 
 	? $self->grid_coords(
             $hit,
             $ref_boxes{$feature},
             $panel_boxes{$feature},
-            panel_is_flipped($span),
+            $self->panel_is_flipped($span),
             $segment
           )
         : ();
 
     # add edges
-    if ($CONF->page_settings("edge")) {
+    if ($self->syn_conf->page_settings("edge")) {
       unshift @grid_coords, $flip ? [$rx1,$px2] :  [$rx1,$px1];
       push @grid_coords, $flip ? [$rx2,$px1] :  [$rx2,$px2];
     }
@@ -777,11 +776,11 @@ END
 
   my $url = $self->species_conf->generate_image($gd);
 
-  my $label = $CONF->page_settings->{display} eq 'compact' ? # all
+  my $label = $self->syn_conf->page_settings->{display} eq 'compact' ? # all
               'Details'                                    : # or a sub-set
                join(', ',@species);
   my $map_name = md5_hex($label);
-  print toggle( $label,
+  print $self->toggle( $label,
 		table( {-width=>'100%'},
 		       Tr( td( {-align=>'center', -class => 'databody'},
 			       img({-src=>$url,-border=>0,-usemap=>'#'.$map_name} )))
@@ -808,7 +807,7 @@ sub segment2image {
   # make sure balloon tooltips are turned on
   $self->species_conf->setting('GENERAL','balloon tips',1);
 
-  my @tracks    = shellwords($CONF->setting($dsn => 'tracks'));
+  my @tracks    = shellwords($self->syn_conf->setting($dsn => 'tracks'));
   my $ff_scale  = Bio::Graphics::FeatureFile->new;
   $ff_scale->add_type( SCALE => { fgcolor => 'black',
 				  glyph   => 'arrow',
@@ -843,11 +842,11 @@ sub segment2image {
 
   $self->species_conf->width($width);
 
-  my $im_pad = $CONF->setting('interimage_pad') || INTERIMAGE_PAD;
+  my $im_pad = $self->syn_conf->setting('interimage_pad') || INTERIMAGE_PAD;
 
   # padding must be temporarily overridden for inset panels
   my ($pl,$pr);
-  unless ($src eq $CONF->search_src()) {
+  unless ($src eq $self->syn_conf->search_src()) {
     $pl = $self->species_conf->setting('pad_left');
     $pr = $self->species_conf->setting('pad_right');
     $self->species_conf->setting('general','pad_left'  => $im_pad);
@@ -861,7 +860,7 @@ sub segment2image {
   # cache no panels if some params change
   my $no_cache = [md5_hex(url(-query_string=>1))];
 
-  $self->landmark2segment if _isref($segment);
+  $self->landmark2segment if $self->_isref($segment);
 
   my ($img,$boxes) = $self->species_conf->render_panels(
 					    {
@@ -882,7 +881,7 @@ sub segment2image {
 
 
   # restore original padding
-  unless ($src eq $CONF->search_src()) {
+  unless ($src eq $self->syn_conf->search_src()) {
     $self->species_conf->setting('general','pad_left'  => $pl);
     $self->species_conf->setting('general','pad_right' => $pr);
   }
@@ -891,10 +890,10 @@ sub segment2image {
 }
 
 sub _isref {
-  my $segment = shift;
-  return $segment->ref eq $CONF->page_settings('ref') &&
-      $segment->start == $CONF->page_settings('start') &&
-      $segment->stop  == $CONF->page_settings('stop');
+  my ( $self, $segment ) = @_;
+  return $segment->ref eq $self->syn_conf->page_settings('ref') &&
+      $segment->start == $self->syn_conf->page_settings('start') &&
+      $segment->stop  == $self->syn_conf->page_settings('stop');
 }
 
 sub format_segment {
@@ -904,20 +903,20 @@ sub format_segment {
 
 sub landmark2segment {
   my $self = shift;
-  my $settings = shift || $CONF->page_settings;
+  my $settings = shift || $self->syn_conf->page_settings;
   my ($name,$source) = @_;
   if ($name && $source) {
   }
-  elsif ($CONF->page_settings("name")) {
-    $name   = $CONF->page_settings("name");
+  elsif ($self->syn_conf->page_settings("name")) {
+    $name   = $self->syn_conf->page_settings("name");
   }
-  elsif ($CONF->page_settings("ref")) {
-    $name  = $CONF->page_settings("ref") . ':';
-    $name .= $CONF->page_settings("start") . ':';
-    $name .= $CONF->page_settings("stop");
+  elsif ($self->syn_conf->page_settings("ref")) {
+    $name  = $self->syn_conf->page_settings("ref") . ':';
+    $name .= $self->syn_conf->page_settings("start") . ':';
+    $name .= $self->syn_conf->page_settings("stop");
   }
 
-  $source ||= $CONF->page_settings("search_src");
+  $source ||= $self->syn_conf->page_settings("search_src");
 
   my $segment  = $self->_do_search($name,$source) if $name && $source;
 
@@ -928,7 +927,7 @@ sub landmark2segment {
       $segment = $self->_do_search($name,$src) if $name;
       if ($segment) {
 	$settings->{search_src} = $src;
-	$CONF->search_src($src);
+	$self->syn_conf->search_src($src);
 	last;
       }
     }
@@ -961,17 +960,17 @@ sub warning {
 sub add_hit_to_ff {
   my ($self,$segment,$ff,$hit,$hit2span,$invert) = @_;
   my $flip_hit = $hit->tstrand eq '-';
-  $CONF->flip($hit->name => 1) if $flip_hit;
+  $self->syn_conf->flip($hit->name => 1) if $flip_hit;
   my @attributes = $flip_hit ? (-attributes => {flip=>1}) : ();
 
   my $src = $hit->src2;
-  my $setcolor = $CONF->setting($self->db_map->{$src}->{db} => 'color');
+  my $setcolor = $self->syn_conf->setting($self->db_map->{$src}->{db} => 'color');
 
   $ff->add_type(
 		"match:$src" => {
 		  bgcolor   => $setcolor,
 		  fgcolor   => $setcolor,
-		  height    => $CONF->setting('align_height') || ALIGN_HEIGHT,
+		  height    => $self->syn_conf->setting('align_height') || ALIGN_HEIGHT,
 		  glyph     => 'segments',
 		  label     => 0,
 		  box_subparts => 1,
@@ -993,13 +992,13 @@ sub add_hit_to_ff {
 					    -configurator => $ff
 					    );
 
-  my $parts = $CONF->{parts}->{$hit->name};
+  my $parts = $self->syn_conf->{parts}->{$hit->name};
 
   if ($parts) {
     for my $part (@$parts) {
-      $CONF->flip($part->name => 1) if $flip_hit;
+      $self->syn_conf->flip($part->name => 1) if $flip_hit;
       $hit2span->{$part->name} = $hit2span->{$hit};
-      $CONF->name2hit($part->name => $part);
+      $self->syn_conf->name2hit($part->name => $part);
 
       my $start = $invert ? $part->tstart : $part->start;
       my $end   = $invert ? $part->tend : $part->end;
@@ -1047,28 +1046,28 @@ sub navigation_table {
 
   my $slidertable = '';
   if ($segment) {
-    my $whole_segment = $CONF->whole_segment();
-    my ($label)  = $CONF->tr('Scroll');
-    $slidertable = $CONF->slidertable;
+    my $whole_segment = $self->syn_conf->whole_segment();
+    my ($label)  = $self->syn_conf->tr('Scroll');
+    $slidertable = $self->syn_conf->slidertable;
   }
-  elsif (my $name = $CONF->page_settings('name')) {
-    $slidertable = "$name not found in ".($CONF->search_src||'NO SPECIES SELECTED');
+  elsif (my $name = $self->syn_conf->page_settings('name')) {
+    $slidertable = "$name not found in ".($self->syn_conf->search_src||'NO SPECIES SELECTED');
     my $style = "font-size:90%;color:red";
     $slidertable = p(b(span({-style=>$style},$slidertable)));
   }
 
-  $CONF->section_setting(Instructions => 'open');
-  $CONF->section_setting(Search => 'open');
+  $self->syn_conf->section_setting(Instructions => 'open');
+  $self->syn_conf->section_setting(Search => 'open');
 
 
-  $table .= toggle( $CONF->tr('Instructions'),
+  $table .= $self->toggle( $self->syn_conf->tr('Instructions'),
 			   div({-class=>'searchtitle'},
 			       br.'Select a Region to Browse and a Reference species:',
-			       p($CONF->show_examples())));
+			       p($self->syn_conf->show_examples())));
 
-  my $html_frag = $self->invalid_src ? '' : html_frag($segment,$CONF->page_settings);
+  my $html_frag = $self->invalid_src ? '' : html_frag($segment,$self->syn_conf->page_settings);
 
-  $table .= toggle( $CONF->tr('Search'),
+  $table .= $self->toggle( $self->syn_conf->tr('Search'),
                     table({-border=>0, -width => '100%', -cellspacing=>0},
                           TR({-class=>'searchtitle'},
                              td({-align=>'left', -colspan=>3},
@@ -1078,9 +1077,9 @@ sub navigation_table {
 			  TR({-class=>'searchtitle'},
 			     td({-align=>'left', -width=>'30%'},
 				[
-				 landmark_search($segment) . '&nbsp;' .
-				 submit(-name=>$CONF->tr('Search')) .
-				 reset(-name=>$CONF->tr('Reset'), -onclick=>"window.location='?reset=1'"),
+				 $self->landmark_search($segment) . '&nbsp;' .
+				 submit(-name=>$self->syn_conf->tr('Search')) .
+				 reset(-name=>$self->syn_conf->tr('Reset'), -onclick=>"window.location='?reset=1'"),
 				 $self->species_search,
 				 $slidertable
 				 ]
@@ -1091,7 +1090,7 @@ sub navigation_table {
                             ),
 			  TR({-class=>'searchtitle'},
 			     td({-valign=>'bottom'},
-				source_menu()
+				$self->source_menu()
 				) .
 			     td( {-colspan=>2, -valign=>'bottom'},
 				$self->expand_notice
@@ -1112,7 +1111,7 @@ sub expand_display {
   my $default = ['expanded'];
   my $name    = 'display';
 
-  b(' ', wiki_help("Display Mode",$CONF->tr('Display Mode')), ': ') .
+  b(' ', wiki_help("Display Mode",$self->syn_conf->tr('Display Mode')), ': ') .
   popup_menu({-name => $name, -labels => $labels, -values => $options, -default => $default});
 }
 
@@ -1121,16 +1120,16 @@ sub options_table {
   my @onclick = ();
   my $radio_style = {-style=>"background:lightyellow;border:5px solid lightyellow", @onclick};
   my $space = '&nbsp;&nbsp';
-  my @grid = (span($radio_style, option_check('Grid lines', 'pgrid'))) unless $self->syn_io->nomap;
+  my @grid = (span($radio_style, $self->option_check('Grid lines', 'pgrid'))) unless $self->syn_io->nomap;
 
-  print toggle( $CONF->tr('Display_settings'),
+  print $self->toggle( $self->syn_conf->tr('Display_settings'),
                 table({-cellpadding => 5, -width => '100%', -border => 0, -class => 'searchtitle'},
                       TR(
                          td(
-                            b(wiki_help('Image Widths',$CONF->tr('Image widths')), ': '),
+                            b(wiki_help('Image Widths',$self->syn_conf->tr('Image widths')), ': '),
                             span( $radio_style, radio_group( -name   => 'imagewidth',
                                                              -values => [640,768,800,1024,1280],
-                                                             -default=>$CONF->page_settings('imagewidth'),
+                                                             -default=>$self->syn_conf->page_settings('imagewidth'),
                                                              @onclick ))
                             ),
                          td(
@@ -1142,13 +1141,13 @@ sub options_table {
                          ),
                       TR(
                          td( {-colspan => 3},
-                             b(wiki_help('Image Options',$CONF->tr('Image options')), ': '),
+                             b(wiki_help('Image Options',$self->syn_conf->tr('Image options')), ': '),
                              div(
-                                 span($radio_style, option_check('Chain alignments', 'aggregate')),$space,
-                                 span($radio_style, option_check('Flip minus strand panels', 'pflip')),$space,
+                                 span($radio_style, $self->option_check('Chain alignments', 'aggregate')),$space,
+                                 span($radio_style, $self->option_check('Flip minus strand panels', 'pflip')),$space,
                                  @grid,
-                                 span($radio_style, option_check('Edges', 'edge')), $space,
-                                 span($radio_style, option_check('Shading', 'shading')),
+                                 span($radio_style, $self->option_check('Edges', 'edge')), $space,
+                                 span($radio_style, $self->option_check('Shading', 'shading')),
                                  )
                              )
                          )
@@ -1158,40 +1157,39 @@ sub options_table {
 
 
 sub option_check {
-  my $label = shift;
-  my $name  = shift;
-  $label = wiki_help($label,$CONF->tr($label));
-  my $checked = $CONF->page_settings("$name") ? 'on' : 'off';
+  my ( $self, $label, $name ) = @_;
+  $label = wiki_help($label,$self->syn_conf->tr($label));
+  my $checked = $self->syn_conf->page_settings("$name") ? 'on' : 'off';
   return $label.' '.radio_group(-name => $name, -values => [qw/on off/], -default =>$checked);
 }
 
 sub source_menu {
-  my $settings = shift;
-  my @sources      = $CONF->sources;
-  my $show_sources = $CONF->setting('show sources');
+  my ( $self, $settings ) = @_;
+  my @sources      = $self->syn_conf->sources;
+  my $show_sources = $self->syn_conf->setting('show sources');
   $show_sources    = 1 unless defined $show_sources;   # default to true
   my $sources = $show_sources && @sources > 1;
-  my $source = $CONF->get_source;
-  return $sources ? b(wiki_help('Data Source',$CONF->tr('Data Source')), ': ') . br.
+  my $source = $self->syn_conf->get_source;
+  return $sources ? b(wiki_help('Data Source',$self->syn_conf->tr('Data Source')), ': ') . br.
       popup_menu(-onchange => 'document.mainform.submit()',
 		 -name   => 'source',
 		 -values => \@sources,
-		 -labels => { map {$_ => $CONF->description($_)} $CONF->sources},
+		 -labels => { map {$_ => $self->syn_conf->description($_)} $self->syn_conf->sources},
 		 -default => $source,
-		 ) : $CONF->description($sources[0]);
+		 ) : $self->syn_conf->description($sources[0]);
 }
 
 
 sub aggregate {
-  my $hits = shift;
-  $CONF->{parts} = {};
+  my ( $self, $hits ) = @_;
+  $self->syn_conf->{parts} = {};
 
   my @sorted_hits = sort { $a->target cmp $b->target || $a->tstart <=> $b->tstart} @$hits;
 
   my (%group,$last_hit);
 
   for my $hit (@sorted_hits) {
-    if ($last_hit && belong_together($last_hit,$hit)) {
+    if ($last_hit && $self->belong_together($last_hit,$hit)) {
       push @{$group{$last_hit}}, $hit;
       $group{$hit} = $group{$last_hit};
     }
@@ -1214,7 +1212,7 @@ sub aggregate {
       $hit->end(pop @coords);
       $hit->tstart(shift @tcoords);
       $hit->tend(pop @tcoords);
-      $CONF->{parts}->{$hit->name} = $grp;
+      $self->syn_conf->{parts}->{$hit->name} = $grp;
       push @$hits, $hit;
     }
     else {
@@ -1226,8 +1224,8 @@ sub aggregate {
 }
 
 sub belong_together {
-  my ($feat1,$feat2) = @_;
-  my $max_gap = $CONF->setting('max_gap') || MAX_GAP;
+  my ( $self, $feat1, $feat2 ) = @_;
+  my $max_gap = $self->syn_conf->setting('max_gap') || MAX_GAP;
   return unless $feat1->target  eq $feat2->target;  # same chromosome
   return unless $feat1->seqid   eq $feat2->seqid;   # same reference sequence
   return unless $feat1->tstrand eq $feat2->tstrand; # same strand
@@ -1247,8 +1245,8 @@ sub overview_panel {
   my ($self,$whole_segment,$segment) = @_;
   return '' if $self->species_conf->section_setting('overview') eq 'hide';
   my $image = $self->overview($whole_segment,$segment);
-  my $ref = $self->db_map->{$CONF->page_settings("search_src")}->{desc};
-  return toggle('Overview',
+  my $ref = $self->db_map->{$self->syn_conf->page_settings("search_src")}->{desc};
+  return $self->toggle('Overview',
                 table({-border=>0,-width=>'100%'},
 		      TR(th("<center>Reference genome: <i>$ref</i></center>")),
                       TR({-class=>'databody'},
@@ -1261,17 +1259,17 @@ sub overview_panel {
 sub overview {
   my ($self,$region_segment,$segment) = @_;
   return unless $segment;
-  my $width = $CONF->page_settings('imagewidth')   || IMAGE_WIDTH;
-  $width *= $CONF->setting('overview_ratio') || OVERVIEW_RATIO;
-  $CONF->width($width);
+  my $width = $self->syn_conf->page_settings('imagewidth')   || IMAGE_WIDTH;
+  $width *= $self->syn_conf->setting('overview_ratio') || OVERVIEW_RATIO;
+  $self->syn_conf->width($width);
 
   # the postgrid will be invoked to hilite the currently selected region
   my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
 
   # reference genome
-  my $ref = $self->db_map->{$CONF->page_settings("search_src")}->{desc};
+  my $ref = $self->db_map->{$self->syn_conf->page_settings("search_src")}->{desc};
 
-  my ($overview)   = $CONF->render_panels(
+  my ($overview)   = $self->syn_conf->render_panels(
 						  {
 						    length         => $segment->length,
 						    section        => 'overview',
@@ -1280,7 +1278,7 @@ sub overview {
 						    label_scale    => 2,
 						    lang           => $self->species_conf->language,
 						    keystyle       => 'left',
-						    settings       => $CONF->page_settings(),
+						    settings       => $self->syn_conf->page_settings(),
 						    scale_map_type => 'centering_map',
 						    cache_extra    => [$segment->start,$segment->end],
 						    do_map         => 1,
@@ -1288,7 +1286,7 @@ sub overview {
 						    image_button   => 0,
 						    -grid          => 0,
 						    -pad_top       => 5,
-						    -bgcolor       => $CONF->setting('overview bgcolor') || OVERVIEW_BGCOLOR,
+						    -bgcolor       => $self->syn_conf->setting('overview bgcolor') || OVERVIEW_BGCOLOR,
 						  }
 						  );
 
@@ -1302,14 +1300,15 @@ sub overview {
 }
 
 sub toggle {
-  my $title         = shift;
-  my @body           = @_;
+  my $self  = shift;
+  my $title = shift;
+  my @body  = @_;
 
   my $id      = "\L${title}_panel\E";
-  my ($label) = $CONF->tr($title)              or return '';
-  my $state   = $CONF->section_setting($title) || 'open';
+  my ($label) = $self->syn_conf->tr($title)              or return '';
+  my $state   = $self->syn_conf->section_setting($title) || 'open';
   return '' if $state eq 'off';
-  my $settings = $CONF->page_settings;
+  my $settings = $self->syn_conf->page_settings;
   my $visible = exists $settings->{section_visible}{$id} ? $settings->{section_visible}{$id} : $state eq 'open';
   $settings->{section_visible}{$id} = $state eq 'open';
 
@@ -1320,8 +1319,8 @@ sub toggle {
 }
 
 sub get_options {
-  my $tracks_to_show = shift;
-  my $settings = $CONF->page_settings;
+  my ( $self, $tracks_to_show ) = @_;
+  my $settings = $self->syn_conf->page_settings;
   my %options    = map {$_=>$settings->{features}{$_}{options}} @$tracks_to_show;
   my %limits     = map {$_=>$settings->{features}{$_}{limit}}   @$tracks_to_show;
   return (\%options,\%limits);
@@ -1349,9 +1348,10 @@ sub hilite_regions_closure {
 }
 
 sub feature2segment {
-  my $feature = shift;
+  my ( $self, $feature ) = @_;
+
   return $feature if ref $feature eq 'Bio::DB::GFF::RelSegment';
-  my $refclass = $CONF->setting('reference class') || 'Sequence';
+  my $refclass = $self->syn_conf->setting('reference class') || 'Sequence';
   my $db = open_database();
   my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
   return $db->segment(-class => $refclass,
@@ -1387,7 +1387,7 @@ sub expand {
 sub remap_coordinates {
   my $self    = shift;
   my $hit     = shift;
-  my $segment = shift || $CONF->current_segment;
+  my $segment = shift || $self->syn_conf->current_segment;
   my $flip    = $hit->tstrand eq '-';
 
   return unless $hit->start < $segment->start || $hit->end > $segment->end;
@@ -1435,9 +1435,10 @@ sub guess_nearest_position_match {
 
 # take a vote to flip the panel: the majority strand wins
 sub panel_is_flipped {
-  my $key = shift;
-  return 0 unless $CONF->page_settings('pflip');
-  my $panel_flip = $CONF->panel_flip($key);
+  my ( $self, $key ) = @_;
+
+  return 0 unless $self->syn_conf->page_settings('pflip');
+  my $panel_flip = $self->syn_conf->panel_flip($key);
   my $yes = $panel_flip->{$key}{yes} || 0;
   my $no  = $panel_flip->{$key}{no}  || 0;
   return $yes > $no;
@@ -1489,14 +1490,14 @@ sub grid_coords {
   return () if $self->syn_io->nomap;
 
   # exact coordinates if configured
-  my $gcoords = $CONF->setting('grid coordinates') || 'AUTO';
+  my $gcoords = $self->syn_conf->setting('grid coordinates') || 'AUTO';
   if ($gcoords eq 'exact') {
     return $self->exact_grid_coords(@_);
   }
 
   my $step = grid_step($segment) or return;
   my $start = nearest(100,$hit->start);
-  $start += $CONF->page_settings("edge") ? $step : 100;
+  $start += $self->syn_conf->page_settings("edge") ? $step : 100;
 
   my @pairs;
   my $offset = $start;
@@ -1513,7 +1514,7 @@ sub grid_coords {
 sub exact_grid_coords {
   my ($self,$hit,$refbox,$hitbox,$flip,$segment) = @_;
 
-  my $seq_pairs = [$self->syn_io->grid_coords_by_range($hit,$CONF->page_settings->{search_src})];
+  my $seq_pairs = [$self->syn_io->grid_coords_by_range($hit,$self->syn_conf->page_settings->{search_src})];
   $seq_pairs = reorder_pairs($flip,$seq_pairs,1);
 
   my @pairs;
@@ -1564,15 +1565,15 @@ sub my_path_info {
 sub page_settings {
   my $self = shift;
   my $session
-      = Legacy::Graphics::Browser::PageSettings->new( $CONF, param('id') );
+      = Legacy::Graphics::Browser::PageSettings->new( $self->syn_conf, param('id') );
   my $source = param('src') || param('source') || my_path_info() || $session->source;
   if (!$source) {
-    ($source) = $CONF->sources;
+    ($source) = $self->syn_conf->sources;
   }
 
   redirect_legacy_url($source);
   my $old_source    = $session->source($source);
-  $CONF->source($source);
+  $self->syn_conf->source($source);
 
   my $settings = $self->get_settings($session);
   return ($settings,$session);
@@ -1582,17 +1583,17 @@ sub get_settings {
   my $self = shift;
   my $session = shift;
   my $hash = $session->page_settings;
-  default_settings($hash) if param('reset') or !%$hash;
+  $self->default_settings($hash) if param('reset') or !%$hash;
   $self->adjust_settings($hash);
   $hash->{id} = $session->id;
   return $hash;
 }
 
 sub default_settings {
-  my $settings = shift;
+  my ( $self, $settings ) = @_;
   $settings ||= {};
-  $settings->{width}       = $CONF->setting('default width') || $CONF->width;
-  $settings->{source}      = $CONF->source;
+  $settings->{width}       = $self->syn_conf->setting('default width') || $self->syn_conf->width;
+  $settings->{source}      = $self->syn_conf->source;
   $settings->{v}           = $VERSION;
   $settings->{grid}        = 1;
 
@@ -1600,17 +1601,17 @@ sub default_settings {
   foreach (keys %default) {
     $settings->{$_} ||= $default{$_};
   }
-  set_default_tracks($settings);
+  $self->set_default_tracks($settings);
 }
 
 sub set_default_tracks {
-  my $settings = shift;
-  my @labels = $CONF->labels;
+  my ( $self, $settings ) = @_;
+  my @labels = $self->syn_conf->labels;
   $settings->{tracks} = \@labels;
   foreach (@labels) {
     $settings->{features}{$_} = { visible => 0, options => 0, limit => 0 };
   }
-  foreach ( $CONF->default_labels ) {
+  foreach ( $self->syn_conf->default_labels ) {
     $settings->{features}{$_}{visible} = 1;
   }
 }
@@ -1626,11 +1627,11 @@ sub adjust_settings {
 
   if ( param('reset') ) {
     %$settings = ();
-    return default_settings($settings);
+    return $self->default_settings($settings);
   }
 
   $settings->{width} = param('width') if param('width');
-  my $divider = $CONF->setting('unit_divider') || 1;
+  my $divider = $self->syn_conf->setting('unit_divider') || 1;
 
   # Update settings with URL params
   local $^W = 0; # kill uninitialized variable warning
@@ -1670,7 +1671,7 @@ sub adjust_settings {
        ||
        grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
        ) {
-    $CONF->zoomnav($settings);
+    $self->syn_conf->zoomnav($settings);
     $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
     param(name => $settings->{name});
   }
@@ -1683,8 +1684,9 @@ sub adjust_settings {
 
 
 sub _unique {
+  my $self = shift;
   my %seen;
-  my $src = $CONF->search_src || '';
+  my $src = $self->syn_conf->search_src || '';
   my @list = grep {!$seen{$_}++} grep {$_} @_;
   return grep {$_ ne $src} @list;
 }
@@ -1719,11 +1721,11 @@ sub wiki_help {
 }
 
 sub segment_info {
-  my ($settings,$segment) = @_;
-  my $whole_segment = $CONF->whole_segment($segment);
-  my $padl   = $CONF->setting('pad_left')  || $CONF->image_padding;
-  my $padr   = $CONF->setting('pad_right') || $CONF->image_padding;
-  my $max    = $CONF->setting('max segment') || MAX_SEGMENT;
+  my ( $self, $settings, $segment ) = @_;
+  my $whole_segment = $self->syn_conf->whole_segment($segment);
+  my $padl   = $self->syn_conf->setting('pad_left')  || $self->syn_conf->image_padding;
+  my $padr   = $self->syn_conf->setting('pad_right') || $self->syn_conf->image_padding;
+  my $max    = $self->syn_conf->setting('max segment') || MAX_SEGMENT;
   my $width  = ($settings->{width} * OVERVIEW_RATIO);
 
   hide(image_padding        => $padl);
@@ -1778,6 +1780,14 @@ sub species_conf {
         $self->{legacy_bgb} = shift;
     }
     return $self->{legacy_bgb};
+}
+
+sub syn_conf {
+    my $self = shift;
+    if( @_ ) {
+        $self->{legacy_bgb_syn} = shift;
+    }
+    return $self->{legacy_bgb_syn};
 }
 
 

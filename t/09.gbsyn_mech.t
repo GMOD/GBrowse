@@ -12,7 +12,8 @@ my $gbsyn_url = "$base_url/gbrowse_syn";
 
 my $mech = Test::WWW::Mechanize->new;
 
-$mech->get_ok( $gbsyn_url, 'got the default gbrowse_syn page' );
+$mech->get_ok( $gbsyn_url, 'got the default gbrowse_syn page' )
+    or diag $mech->content;
 
 # follow the first example link and check that it's OK
 $mech->follow_link_ok(

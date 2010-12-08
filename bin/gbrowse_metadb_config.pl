@@ -81,9 +81,8 @@ my $session_columns = {
 };
 
 my $openid_columns = {
-    userid     => "int(10) not null $autoincrement",
-    username   => "varchar(32) not null",
-    openid_url => "varchar(128) not null PRIMARY key"
+    userid     => "integer not null",
+    openid_url => "varchar(128) PRIMARY KEY"
 };
 
 my $uploads_columns = {
@@ -239,7 +238,7 @@ sub check_table {
 sub check_sessions {
     my $session_driver = $globals->session_driver;
     my $session_args   = $globals->session_args;
-    my $users_created = 0;
+    my $users_updated  = 0;
     local $database->{PrintError} = 0;
     my $do_session_check = sub {
 	my $session = shift;
@@ -252,17 +251,17 @@ sub check_sessions {
 
 	my $sql         = "SELECT count(*) FROM session WHERE sessionid=? AND uploadsid=?";
 	my $rows        = $database->selectrow_array($sql,undef,$session_id,$uploadsid);
-	return if $rows > 0;
+	return if $rows == 0;
 	$sql       = "UPDATE session SET uploadsid=? WHERE sessionid=?";
-	$rows      = $database->do($sql,undef,$uploadsid,$session_id);
+	$rows      = $database->do($sql,undef,$uploadsid,$session_id) && $users_updated++;
 	return if $rows > 0;
-	$database->do('insert INTO session (sessionid,uploadsid) VALUES(?,?)',
-		      undef,$session_id,$uploadsid)
-	    && $users_created++;
+#	$database->do('insert INTO session (sessionid,uploadsid) VALUES(?,?)',
+#		      undef,$session_id,$uploadsid)
+#	    && $users_created++;
     };
     CGI::Session->find($session_driver,$do_session_check,$session_args);
-    if ($users_created) {
-	print STDERR "Added $users_created anonymous users to session table.\n";
+    if ($users_updated) {
+	print STDERR "$users_updated users had their session/upload IDs updated.\n";
     }
 }
 
@@ -713,6 +712,32 @@ END
 	    or die "Couldn't drop old uploads table";
 	$database->do('alter table uploads_new rename to uploads')
 	    or die "Couldn't rename new uploads table";
+
+	# now do the openid_users table
+	# this creates the new one
+	check_table('openid_users_new', $openid_columns);
+	$select = $database->prepare(<<END) or die $database->errstr;
+SELECT b.sessionid,a.openid_url,a.username,b.userid
+  FROM openid_users as a,session as b
+ WHERE a.username=b.username
+END
+    ;
+	$insert = $database->prepare(<<END) or die $database->errstr;
+REPLACE INTO openid_users_new(userid,openid_url) VALUES (?,?)
+END
+    ;
+
+	$select->execute() or die $select->errstr;
+	while (my ($sessionid,$url,$username,$userid) = $select->fetchrow_array()) {
+	    $insert->execute($userid,$url) or die $insert->errstr;
+	}
+
+	$select->finish();
+	$insert->finish();
+	$database->do('drop table openid_users')
+	    or die "Couldn't drop old openid_users table: ",$database->errstr;
+	$database->do('alter table openid_users_new rename to openid_users')
+	    or die "Couldn't rename new openid_users table: ",$database->errstr;
 
 	$database->commit();
     };

@@ -160,7 +160,7 @@ sub render_openid_confirm {
     return $settings->{head} ?
         iframe({-style  => 'display:none;',
                 -onLoad => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');
-                 login_blackout(true,\'\');confirm_openid(\''.$session.'\',\''.$page.'\','.$logged_in.');'})
+                 login_blackout(true,\'\');confirm_openid(\''.$session->id.'\',\''.$page.'\','.$logged_in.');'})
         : "";
 
 }

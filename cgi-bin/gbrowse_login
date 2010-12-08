@@ -15,6 +15,7 @@ my $user     = param('user');
 my $pass     = param('pass');
 my $email    = param('email');
 my $sessionid   = param('session');
+warn "SESSIONID = $sessionid";
 my $remember = param('remember');
 
 my $old      = param('old_val');

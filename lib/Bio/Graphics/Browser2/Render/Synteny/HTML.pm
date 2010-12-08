@@ -60,7 +60,6 @@ our $INVALID_SRC;
 our $SCONF;
 our $CONF;
 our $MAP;
-our $SYNTENY_IO;
 
 sub new {
     my $class   = shift;
@@ -105,7 +104,7 @@ END
     $CONF->source($page_settings->{source});
     $MAP = db_map();
 
-    $SYNTENY_IO = Bio::DB::SyntenyIO->new($CONF->setting('join'));
+    $self->syn_io(  Bio::DB::SyntenyIO->new($CONF->setting('join')) );
 
     my $segment = landmark2segment($page_settings);
 
@@ -144,7 +143,7 @@ END
 
     if ($segment) {
         $self->hits([
-            map {$SYNTENY_IO->get_synteny_by_range(
+            map { $self->syn_io->get_synteny_by_range(
                 -src   => $page_settings->{search_src},
                 -ref   => $segment->abs_ref,
                 -start => $segment->abs_start,
@@ -168,7 +167,7 @@ END
 
     if ($segment) {
         # make sure no hits go off-screen
-        remap_coordinates($_) for @{ $self->hits };
+        $self->remap_coordinates($_) for @{ $self->hits };
 
         segment_info($page_settings,$segment);
 
@@ -178,14 +177,15 @@ END
         # either display ref species + 2 repeating or 'all in one'
         if ($page_settings->{display} eq 'expanded') {
             while (my @pair = splice @species, 0, 2) {
-                draw_image($page_settings, $self->hits, @pair);
+                $self->draw_image($page_settings, $self->hits, @pair);
             }
         } else {
-            draw_image( $page_settings, $self->hits, @species );
+            $self->draw_image( $page_settings, $self->hits, @species );
         }
     }
 
-    options_table();
+
+    $self->options_table;
     print end_form();
     print $CONF->footer || end_html();
 
@@ -289,7 +289,7 @@ sub _type_from_box {
 
 
 sub draw_image {
-  my ($page_settings,$hits,@species) = @_;
+  my ($self,$page_settings,$hits,@species) = @_;
   my ($toggle_section,@hits);
   for my $species (@species) {
     push @hits, grep {$_->src2 eq $species} @$hits;
@@ -712,12 +712,15 @@ END
     my ($px1,$py1,$px2,$py2) = @{$panel_boxes{$feature}};
     my $upper = $py2 < $ry1;
 
-    my @grid_coords = $CONF->page_settings("pgrid")
-	? grid_coords( $hit,
-		       $ref_boxes{$feature},
-		       $panel_boxes{$feature},
-		       panel_is_flipped($span),
-		       $segment) : ();
+    my @grid_coords = $CONF->page_settings("pgrid") 
+	? $self->grid_coords(
+            $hit,
+            $ref_boxes{$feature},
+            $panel_boxes{$feature},
+            panel_is_flipped($span),
+            $segment
+          )
+        : ();
 
     # add edges
     if ($CONF->page_settings("edge")) {
@@ -1104,10 +1107,11 @@ sub expand_display {
 }
 
 sub options_table {
+  my $self = shift;
   my @onclick = ();
   my $radio_style = {-style=>"background:lightyellow;border:5px solid lightyellow", @onclick};
   my $space = '&nbsp;&nbsp';
-  my @grid = (span($radio_style, option_check('Grid lines', 'pgrid'))) unless $SYNTENY_IO->nomap;
+  my @grid = (span($radio_style, option_check('Grid lines', 'pgrid'))) unless $self->syn_io->nomap;
 
   print toggle( $CONF->tr('Display_settings'),
                 table({-cellpadding => 5, -width => '100%', -border => 0, -class => 'searchtitle'},
@@ -1371,6 +1375,7 @@ sub expand {
 }
 
 sub remap_coordinates {
+  my $self    = shift;
   my $hit     = shift;
   my $segment = shift || $CONF->current_segment;
   my $flip    = $hit->tstrand eq '-';
@@ -1378,7 +1383,7 @@ sub remap_coordinates {
   return unless $hit->start < $segment->start || $hit->end > $segment->end;
 
   if ($hit->start < $segment->start) {
-    my ($new_start,$new_tstart) = $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$segment->start,1000);
+    my ($new_start,$new_tstart) = $self->syn_io->get_nearest_position_match($hit,$hit->src1,$segment->start,1000);
     unless ($new_start) {
       ($new_start,$new_tstart) = guess_nearest_position_match($hit,$segment->start,$flip);
     }
@@ -1389,7 +1394,7 @@ sub remap_coordinates {
     }
   }
   if ($hit->end > $segment->end) {
-    my ($new_end,$new_tend) = $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$segment->end,1000);
+    my ($new_end,$new_tend) = $self->syn_io->get_nearest_position_match($hit,$hit->src1,$segment->end,1000);
     unless ($new_end) {
       ($new_end,$new_tend) = guess_nearest_position_match($hit,$segment->end,$flip);
     }
@@ -1431,10 +1436,10 @@ sub panel_is_flipped {
 # map the reference and target coordinates to pixel locations
 # to draw gridlines
 sub locations2pixels {
-  my ($loc,$hit,$refbox,$hitbox,$flip,$loc2) = @_;
+  my ($self,$loc,$hit,$refbox,$hitbox,$flip,$loc2) = @_;
   #my $reversed = $hit->strand ne $hit->tstrand;
 
-  my ($ref_location,$hit_location) = $loc && $loc2 ? ($loc,$loc2) : $SYNTENY_IO->get_nearest_position_match($hit,$hit->src1,$loc);
+  my ($ref_location,$hit_location) = $loc && $loc2 ? ($loc,$loc2) : $self->syn_io->get_nearest_position_match($hit,$hit->src1,$loc);
   unless ($ref_location && $hit_location) {
     ($ref_location,$hit_location) = guess_nearest_position_match($hit,$loc,$flip);
   }
@@ -1468,15 +1473,15 @@ sub locations2pixels {
 }
 
 sub grid_coords {
-  my ($hit,$refbox,$hitbox,$flip,$segment) = @_;
+  my ($self,$hit,$refbox,$hitbox,$flip,$segment) = @_;
 
   # don't bother if there are no coords in the database
-  return () if $SYNTENY_IO->nomap;
+  return () if $self->syn_io->nomap;
 
   # exact coordinates if configured
   my $gcoords = $CONF->setting('grid coordinates') || 'AUTO';
   if ($gcoords eq 'exact') {
-    return exact_grid_coords(@_);
+    return $self->exact_grid_coords(@_);
   }
 
   my $step = grid_step($segment) or return;
@@ -1486,7 +1491,7 @@ sub grid_coords {
   my @pairs;
   my $offset = $start;
   until ($offset > $hit->end) {
-    my $pair = locations2pixels($offset,$hit,$refbox,$hitbox,$flip);
+    my $pair = $self->locations2pixels($offset,$hit,$refbox,$hitbox,$flip);
     push @pairs, $pair if $pair;
     $offset += $step;
   }
@@ -1496,14 +1501,14 @@ sub grid_coords {
 
 # Do not round off or scale, use the grid as provided
 sub exact_grid_coords {
-  my ($hit,$refbox,$hitbox,$flip,$segment) = @_;
+  my ($self,$hit,$refbox,$hitbox,$flip,$segment) = @_;
 
-  my $seq_pairs = [$SYNTENY_IO->grid_coords_by_range($hit,$CONF->page_settings->{search_src})];
+  my $seq_pairs = [$self->syn_io->grid_coords_by_range($hit,$CONF->page_settings->{search_src})];
   $seq_pairs = reorder_pairs($flip,$seq_pairs,1);
 
   my @pairs;
   for my $s (@$seq_pairs) {
-    my $pair = locations2pixels($s->[0],$hit,$refbox,$hitbox,$flip,$s->[1]);
+    my $pair = $self->locations2pixels($s->[0],$hit,$refbox,$hitbox,$flip,$s->[1]);
     push @pairs, $pair if $pair;
   }
 
@@ -1737,6 +1742,15 @@ sub hits {
     }
     return $self->{hits};
 }
+
+sub syn_io {
+    my $self = shift;
+    if( @_ ) {
+        $self->{syn_io} = shift;
+    }
+    return $self->{syn_io};
+}
+
 
 
 1;

@@ -1,6 +1,5 @@
 package Bio::Graphics::Browser2::Render::Synteny::HTML;
 
-our $CONF_DIR;
 our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
 our $BIOGRAPHICS_VERSION   = 1.8;
 
@@ -58,7 +57,7 @@ use constant SETTINGS =>
       species    => undef
       );
 
-use vars qw($INVALID_SRC $CONF_DIR $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSION $SYNTENY_IO @hits);
+use vars qw($INVALID_SRC $SCONF $CONF $VERSION $MAP $BIOGRAPHICS_VERSION $SYNTENY_IO @hits);
 
 sub new {
     my $class   = shift;
@@ -70,11 +69,11 @@ sub run {
     my $self = shift;
 
     # initialization
-    $CONF_DIR = conf_dir("$ENV{GBROWSE_CONF}/synteny");
+    my $conf_dir = conf_dir("$ENV{GBROWSE_CONF}/synteny");
 
     # error if no data sources configured
     my $go;
-    while (<$CONF_DIR/*.synconf>) {
+    while (<$conf_dir/*.synconf>) {
       $go++;
     }
     unless ($go) {
@@ -94,11 +93,11 @@ END
 
     # search soure (general) configuration
     $CONF       = Legacy::Graphics::Browser::Synteny->new();
-    $CONF->read_configuration($CONF_DIR,'synconf');
+    $CONF->read_configuration($conf_dir,'synconf');
 
     # species-specific configuration
     my $extension = $CONF->setting('config_extension') || EXTENSION;
-    $SCONF      = open_config($CONF_DIR,$extension);
+    $SCONF      = open_config($conf_dir,$extension);
 
     my ($page_settings,$session) = page_settings();
     my $source = $page_settings->{source};

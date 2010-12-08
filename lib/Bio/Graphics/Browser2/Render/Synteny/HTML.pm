@@ -15,7 +15,6 @@ use Bio::Graphics;
 
 # Legacy libraries from 1.7 branch
 # will slowly replace these
-use Legacy::Graphics::Browser;
 use Legacy::Graphics::Browser::Util;
 use Legacy::Graphics::Browser::Synteny;
 use Legacy::Graphics::Browser::PageSettings;

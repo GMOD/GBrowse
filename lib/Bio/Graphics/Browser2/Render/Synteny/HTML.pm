@@ -56,7 +56,12 @@ use constant SETTINGS =>
       species    => undef
       );
 
-use vars qw($INVALID_SRC $SCONF $CONF $VERSION $MAP $SYNTENY_IO @hits);
+our $INVALID_SRC;
+our $SCONF;
+our $CONF;
+our $MAP;
+our $SYNTENY_IO;
+our @hits;
 
 sub new {
     my $class   = shift;
@@ -1725,6 +1730,6 @@ sub hide {
 }
 
 
-
+1;
 
 

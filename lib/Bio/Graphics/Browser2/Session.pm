@@ -188,6 +188,12 @@ sub mysql_lock_name {
     return "gbrowse_session_lock.$id";
 }
 
+sub delete {
+    my $self = shift;
+    $self->{session}->delete if $self->{session};
+    $self->unlock;
+}
+
 sub flush {
   my $self = shift;
   return unless $$ == $self->{pid};

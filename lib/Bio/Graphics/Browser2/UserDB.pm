@@ -457,14 +457,14 @@ sub do_add_user {
   my $confirm = $self->create_key('32');
   my $nowfun = $self->nowfun();
   my $insert_session  = $userdb->prepare(<<END);
-INSERT INTO session (username,sessionid,uploadsid)
+REPLACE INTO session (username,sessionid,uploadsid)
      VALUES (?,?,?)
 END
     ;
   my $insert_userinfo = $userdb->prepare (<<END);
 INSERT INTO users (userid, email, pass, remember, openid_only, 
 		   confirmed, cnfrm_code, last_login, created)
-     VALUES (?,?,0,0,0,?,$nowfun,$nowfun)
+     VALUES (?,?,?,0,0,0,?,$nowfun,$nowfun)
 END
 ;
   my $session = $self->globals->session($sessionid);
@@ -497,7 +497,7 @@ sub do_send_confirmation {
   my $self = shift;
   my ($email,$confirm,$user,$pass) = @_;
   my $globals = $self->{globals};
-  my $link = $globals->gbrowse_url()."?confirm=1;code=$confirm;id=logout";
+  my $link = $globals->gbrowse_url()."?confirm=1;code=$confirm";
 
   my $message  = $self->get_header();
      $message .= "\n\n    Username: $user\n    Password: $pass\n    E-mail:   $email\n\n";
@@ -577,7 +577,7 @@ sub do_confirm_account {
   $rows = $update->rows;
   if($rows == 1) {
     my $query = $userdb->prepare(
-      "SELECT a.userid FROM users as a,session as b WHERE b.username=? AND a.userid=b.userid AND cnfrm_code=? AND confirmed=1");
+      "SELECT b.sessionid FROM users as a,session as b WHERE b.username=? AND a.userid=b.userid AND cnfrm_code=? AND confirmed=1");
     $query->execute($user,$new_confirm)
       or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
     print $query->fetchrow_array();

@@ -37,7 +37,7 @@ sub render_confirm {
     my $render = $self->renderer;
     my $output = '';
 
-    if (param('confirm') && param('code') && param('id')) {
+    if (param('confirm') && param('code')) {
 	$output .= $self->render_account_confirm(param('code'));
     } elsif (param('openid_confirm') && param('page') && param('s')) {
 	$output .= $self->render_openid_confirm(param('page'),param('s'));
@@ -132,7 +132,7 @@ sub render_account_confirm {
     my $images   = $globals->openid_url;
     my $appname  = $globals->application_name;
     my $appnamel = $globals->application_name_long;
-    my $settings = $self->state;
+    my $settings = $render->state;
 
     return $settings->{head} ?
         iframe({-style  => 'display:none;',

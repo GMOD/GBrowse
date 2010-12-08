@@ -409,8 +409,8 @@ sub asynchronous_event {
 
 sub authorize_user {
     my $self = shift;
-    my ($session,$error);
     my ($username,$id,$remember,$using_openid) = @_;
+    my ($session,$error);
     
     warn "Checking current session" if DEBUG;
     my $current = $self->session->id;

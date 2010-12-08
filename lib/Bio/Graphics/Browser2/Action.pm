@@ -370,8 +370,8 @@ sub ACTION_authorize_login {
     my $openid   = $q->param('openid');   # or croak;
     my $remember = $q->param('remember'); # or croak;
 
-    my ($id,$nonce) = $self->render->authorize_user($username, $session, $remember, $openid);
-    return (200,'application/json',{id=>$id,authority=>$nonce});
+    my ($sessionid,$nonce) = $self->render->authorize_user($username, $session, $remember, $openid);
+    return (200,'application/json',{id=>$sessionid,authority=>$nonce});
 }
 
 sub ACTION_register_upload {

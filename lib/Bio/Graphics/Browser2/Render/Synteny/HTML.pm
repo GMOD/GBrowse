@@ -56,7 +56,6 @@ use constant SETTINGS =>
       species    => undef
       );
 
-our $SCONF;
 our $CONF;
 
 sub new {
@@ -93,7 +92,7 @@ END
 
     # species-specific configuration
     my $extension = $CONF->setting('config_extension') || EXTENSION;
-    $SCONF      = open_config($conf_dir,$extension);
+    $self->species_conf( open_config( $conf_dir, $extension ) );
 
     my ($page_settings,$session) = $self->page_settings();
     my $source = $page_settings->{source};
@@ -438,9 +437,9 @@ sub draw_image {
   my $width = $CONF->page_settings('imagewidth') || $CONF->setting("imagewidth") || IMAGE_WIDTH;
 
   # but also allow for padding
-  my $ip = $SCONF->setting('image_padding') || 0;
-  my $pl = $SCONF->setting('pad_left')  || 0;
-  my $pr = $SCONF->setting('pad_right') || 0;
+  my $ip = $self->species_conf->setting('image_padding') || 0;
+  my $pl = $self->species_conf->setting('pad_left')  || 0;
+  my $pr = $self->species_conf->setting('pad_right') || 0;
   my $padding = ($pl || $ip) + ($pr || $ip);
 
   my ($ref_img,$ref_boxes) = $self->segment2image(
@@ -776,7 +775,7 @@ END
     $gd->line($g,$grid_line{$g}{top},$g,$grid_line{$g}{bottom},$gc{$thickness});
   }
 
-  my $url = $SCONF->generate_image($gd);
+  my $url = $self->species_conf->generate_image($gd);
 
   my $label = $CONF->page_settings->{display} eq 'compact' ? # all
               'Details'                                    : # or a sub-set
@@ -805,9 +804,9 @@ sub segment2image {
   my $flip        = $options->{flip};
 
   my $dsn = $self->db_map->{$src}{db} or return;
-  $SCONF->source($dsn);
+  $self->species_conf->source($dsn);
   # make sure balloon tooltips are turned on
-  $SCONF->setting('GENERAL','balloon tips',1);
+  $self->species_conf->setting('GENERAL','balloon tips',1);
 
   my @tracks    = shellwords($CONF->setting($dsn => 'tracks'));
   my $ff_scale  = Bio::Graphics::FeatureFile->new;
@@ -842,20 +841,20 @@ sub segment2image {
   my $scale_label = $hits_bottom && !$hits_bottom ? 'zz_scale' : 'ff_scale';
   $ff_hash{$scale_label}  = $ff_scale;
 
-  $SCONF->width($width);
+  $self->species_conf->width($width);
 
   my $im_pad = $CONF->setting('interimage_pad') || INTERIMAGE_PAD;
 
   # padding must be temporarily overridden for inset panels
   my ($pl,$pr);
   unless ($src eq $CONF->search_src()) {
-    $pl = $SCONF->setting('pad_left');
-    $pr = $SCONF->setting('pad_right');
-    $SCONF->setting('general','pad_left'  => $im_pad);
-    $SCONF->setting('general','pad_right' => $im_pad);
+    $pl = $self->species_conf->setting('pad_left');
+    $pr = $self->species_conf->setting('pad_right');
+    $self->species_conf->setting('general','pad_left'  => $im_pad);
+    $self->species_conf->setting('general','pad_right' => $im_pad);
   }
 
-  $SCONF->setting('general','detail bgcolor'=> $background);
+  $self->species_conf->setting('general','detail bgcolor'=> $background);
 
   my $title = $self->db_map->{$src}{desc};
 
@@ -864,7 +863,7 @@ sub segment2image {
 
   $self->landmark2segment if _isref($segment);
 
-  my ($img,$boxes) = $SCONF->render_panels(
+  my ($img,$boxes) = $self->species_conf->render_panels(
 					    {
 					      drag_n_drop => 0,
 					      image_and_map => 1,
@@ -884,8 +883,8 @@ sub segment2image {
 
   # restore original padding
   unless ($src eq $CONF->search_src()) {
-    $SCONF->setting('general','pad_left'  => $pl);
-    $SCONF->setting('general','pad_right' => $pr);
+    $self->species_conf->setting('general','pad_left'  => $pl);
+    $self->species_conf->setting('general','pad_right' => $pr);
   }
 
   return ($img,$boxes,$segment);
@@ -949,9 +948,9 @@ sub landmark2segment {
 sub _do_search {
   my ($self,$landmark,$src) = @_;
   my $dsn = $self->db_map->{$src}{db} or return undef;
-  $SCONF->source($dsn);
+  $self->species_conf->source($dsn);
   my $db = open_database();
-  my ($segment) = grep {$_} $SCONF->name2segments($landmark,$db);
+  my ($segment) = grep {$_} $self->species_conf->name2segments($landmark,$db);
   return $segment;
 }
 
@@ -1246,7 +1245,7 @@ sub belong_together {
 
 sub overview_panel {
   my ($self,$whole_segment,$segment) = @_;
-  return '' if $SCONF->section_setting('overview') eq 'hide';
+  return '' if $self->species_conf->section_setting('overview') eq 'hide';
   my $image = $self->overview($whole_segment,$segment);
   my $ref = $self->db_map->{$CONF->page_settings("search_src")}->{desc};
   return toggle('Overview',
@@ -1279,7 +1278,7 @@ sub overview {
 						    segment        => $region_segment,
 						    postgrid       => $postgrid,
 						    label_scale    => 2,
-						    lang           => $SCONF->language,
+						    lang           => $self->species_conf->language,
 						    keystyle       => 'left',
 						    settings       => $CONF->page_settings(),
 						    scale_map_type => 'centering_map',
@@ -1771,6 +1770,14 @@ sub invalid_src {
         $self->{invalid_src} = shift;
     }
     return $self->{invalid_src};
+}
+
+sub species_conf {
+    my $self = shift;
+    if( @_ ) {
+        $self->{legacy_bgb} = shift;
+    }
+    return $self->{legacy_bgb};
 }
 
 

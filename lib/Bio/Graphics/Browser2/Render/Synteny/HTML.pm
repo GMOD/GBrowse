@@ -6,8 +6,10 @@ use strict;
 use CGI qw/:standard Map Area delete_all/;
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
-use List::Util qw/min max sum/;
 use Digest::MD5 'md5_hex';
+use File::Glob ':glob';
+use List::Util qw/min max sum/;
+
 use Bio::Graphics::Browser2;
 use Bio::Graphics;
 
@@ -69,7 +71,7 @@ sub run {
     my $conf_dir = conf_dir("$ENV{GBROWSE_CONF}/synteny");
 
     # error if no data sources configured
-    unless( <$conf_dir/*.synconf> ){
+    unless( glob "$conf_dir/*.synconf" ){
       print header,  start_html('No data source');
       print warning("No data source configured for GBrowse_syn\n");
       print p('Please consult '.a({-href=>'http://gmod.org/GBrowse_syn'},'the documentation'));

@@ -370,6 +370,16 @@ END
     return $userdb->last_insert_id('','','','');
 }
 
+sub set_session_and_uploadsid {
+    my $self = shift;
+    my ($userid,$sessionid,$uploadsid) = @_;
+
+    my $userdb = $self->dbi;
+    $userdb->do('UPDATE session SET sessionid=?,uploadsid=? WHERE userid=?',
+		undef,
+		$sessionid,$uploadsid,$userid) or die $userdb->errstr;
+}
+
 #####################################
 # BUG!
 # Everything below here supports the
@@ -497,8 +507,8 @@ INSERT INTO users (userid, email, pass, remember, openid_only,
      VALUES (?,?,?,0,0,0,?,$nowfun,$nowfun)
 END
 ;
-      $pass = sha1($pass);
-      $insert_userinfo->execute($userid,$email,$pass,$confirm)
+      my $sha_pass = sha1($pass);
+      $insert_userinfo->execute($userid,$email,$sha_pass,$confirm)
 	  or die "Couldn't insert information on user: ",$userdb->errstr;
       $userdb->commit();
   };
@@ -782,8 +792,8 @@ sub do_delete_user {
   $userdb->do('DELETE FROM users WHERE userid=?',undef,$userid);
 
   my $query = $userdb->prepare(
-    "DELETE FROM openid_users WHERE userid IN (select userid from session where username=?)");
-  if ($query->execute($user)) {
+    "DELETE FROM openid_users WHERE userid=?");
+  if ($query->execute($userid)) {
     print "Success";
   } else {
     print "Error: ",DBI->errstr,".";

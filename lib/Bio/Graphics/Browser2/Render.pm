@@ -64,7 +64,10 @@ sub new {
     $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     $authority    = param('authority') || CGI::cookie('authority');
     $session = $globals->authorized_session($requested_id, $authority);
-    warn "requested $requested_id, but got ",$session->id unless $requested_id eq $session->id;
+    if ($requested_id ne $session->id) {
+	warn "requested $requested_id, but got ",$session->id;
+	warn "authority = ",param('authority');
+    }
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
   } else {
@@ -78,14 +81,6 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
-
-  if ($self->data_source->globals->user_accounts) {
-    my $userdb = Bio::Graphics::Browser2::UserDB->new($self->globals);
-    $self->{userdb} = $userdb;
-    my $new_uploadsid = $session->page_settings->{uploadid};
-    $session->page_settings->{uploads_id_checked} = ($userdb->get_uploads_id($session->id))? 1 : 0;
-  }
-  $self->{usertracks} = Bio::Graphics::Browser2::UserTracks->new($data_source,$session);
   $self;
 }
 
@@ -314,18 +309,6 @@ sub init {
     warn "set_default_state()" if DEBUG;
     $self->set_default_state();
     warn "init done" if DEBUG;
-    
-    # This fixes a bug with expired/deleted session - instead of just not logging in, we create a new session and update the IDs.
-    if ($self->globals->user_accounts) {
-        my $session = $self->session;
-        my $userdb = $self->{userdb};
-        my $requested_id = param('id');
-        my $new_uploadsid = $session->page_settings->{uploadid};
-        my $old_uploadsid = $userdb->get_uploads_id($requested_id);
-        if (($session->id ne $requested_id) && $new_uploadsid && $old_uploadsid) {
-            $self->change_ids($old_uploadsid, $new_uploadsid, $requested_id, $session->id);
-        }
-    }
 }
 
 # this prints out the HTTP data from an asynchronous event
@@ -411,32 +394,45 @@ sub authorize_user {
     my $self = shift;
     my ($username,$id,$remember,$using_openid) = @_;
     my ($session,$error);
+
+    warn "authorize_user(@_)";
     
-    warn "Checking current session" if DEBUG;
+    warn "Checking current session";# if DEBUG;
     my $current = $self->session->id;
     if ($current eq $id) {
-        warn "Using current session" if DEBUG;
+        warn "Using current session";# if DEBUG;
         $session = $self->session;
     } elsif($self->session->private) {
         warn "Another account is currently in use";
         return ("error");
     } else {
-        warn "Retrieving old session" if DEBUG;
+        warn "Retrieving old session";# if DEBUG;
 	$session = $self->globals->session($id);  # create/retrieve session
+	unless ($session->id eq $id) {
+	    warn "fixing probable expired session";
+	  FIX: {
+	      my $userdb     = $self->userdb;
+	      my $username   = $userdb->username_from_sessionid($id) or last FIX;
+	      my $userid     = $userdb->get_user_id($username)       or last FIX;
+	      my $uploadsid  = $userdb->get_uploads_id($userid)      or last FIX;
+	      $session->uploadsid($uploadsid);
+	      $userdb->set_session_and_uploadsid($userid,$session->id,$uploadsid);
+	      $id = $session->id;
+	    }
+	}
     }
-    
+	
     my $nonce = Bio::Graphics::Browser2::Util->generate_id;
     my $ip    = CGI::remote_addr();
 
     $session->set_nonce($nonce,$ip,$remember);
     $session->username($username);
-
     $session->using_openid($using_openid);
 
-    warn "id=$id, username =",$session->username if DEBUG;
-
+    warn "id=$id, username =",$session->username;# if DEBUG;
+    
     $session->flush();
-    return ($id,$nonce);
+    return ($session->id,$nonce);
 }
 
 sub background_track_render {

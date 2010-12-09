@@ -81,7 +81,7 @@ my $session_columns = {
 };
 
 my $openid_columns = {
-    userid     => "integer not null",
+    userid     => "integer not null UNIQUE",
     openid_url => "varchar(128) PRIMARY KEY"
 };
 
@@ -243,6 +243,7 @@ sub check_sessions {
     my $do_session_check = sub {
 	my $session = shift;
 	my $session_id  = $session->id;
+	warn "$session_id\n";
 	my $source      = $session->param('.source') or return;
 	my $config_hash = $session->param($source)   or return;
 	my $uploadsid   = $session->param('.uploadsid') ||

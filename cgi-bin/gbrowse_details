@@ -193,7 +193,7 @@ sub add_user_tracks {
     my @user_tracks = $userdata->tracks;
     for my $track (@user_tracks) {
 	my $config_path = $userdata->track_conf($track);
-	eval {$data_source->parse_user_file($config_path)};
+	eval {$source->parse_user_file($config_path)};
     }
 }
 

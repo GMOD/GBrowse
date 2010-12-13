@@ -2457,7 +2457,7 @@ sub loaded_segment_outline {
 
 sub details_mult {
     my $self = shift;
-    return $self->render->details_mult;
+    $self->source->details_multiplier;
 }
 
 sub get_detail_width_no_pad {

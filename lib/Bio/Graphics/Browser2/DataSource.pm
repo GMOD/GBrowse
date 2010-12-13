@@ -243,6 +243,14 @@ sub config {
   return $self;
 }
 
+sub details_multiplier {
+    my $self = shift;
+    my $value = $self->global_setting('details multiplier') || 1;
+    $value = 1  if ($value < 1);  #lower limit 
+    $value = 25 if ($value > 15); #set upper limit for performance reasons (prevent massive image files)
+    return $value;
+}
+
 sub unit_label {
   my $self  = shift;
   my $value = shift;

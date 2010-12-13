@@ -92,12 +92,6 @@ sub set_signal_handlers {
     };
 }
 
-sub set_details_multiplier {
-    my $self = shift;
-    my $m    = shift;
-    $self->{details_multiplier} = $m;
-}
-
 sub data_source {
     my $self = shift;
     my $d = $self->{data_source};
@@ -141,6 +135,11 @@ sub is_admin {
 
 sub userdb {
     my $self = shift;
+    return $self->{userdb} if exists $self->{userdb};
+    unless ($self->globals->user_accounts) {
+	$self->{userdb} = undef;
+	return;
+    }
     my $userdb = $self->{userdb} ||= Bio::Graphics::Browser2::UserDB->new($self->globals);
     return $userdb;
 }
@@ -793,7 +792,6 @@ sub render_body {
   }
 
   $main_page .= $self->render_select_track_link;
-  warn "got here";
 
   my $tracks        = $self->render_tracks_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
@@ -2622,7 +2620,7 @@ sub update_state_from_details_mult {
     my $view_start = $state->{view_start};
     my $view_stop  = $state->{view_stop};
 
-    my $details_mult = $self->details_mult_from_setting;
+    my $details_mult = $self->details_mult;
 
     my $length         = $view_stop - $view_start;
     my $length_to_load = int($length * $details_mult);
@@ -3304,19 +3302,9 @@ sub get_total_pad_width {
     return $padl + $padr;
 }
 
-sub details_mult_from_setting {
-    my $self = shift;
-    my $value = $self->data_source->global_setting('details multiplier') || 1;
-    $value = 1  if ($value < 1);  #lower limit 
-    $value = 25 if ($value > 15); #set upper limit for performance reasons (prevent massive image files)
-    return $value;
-}
-
 sub details_mult {
     my $self = shift;
-    # take setting from renderer, else the state, else the configuration setting
-    my $multiplier = $self->{details_multiplier} || $self->state->{details_mult} || $self->details_mult_from_setting;
-    return $multiplier;
+    return $self->data_source->details_multiplier;
 }
 
 sub render_deferred {

@@ -177,13 +177,12 @@ sub check_table {
 
     }
 
-    # If a required column doesn't exist, add it.
     my $sth = $database->prepare("SELECT * from $name LIMIT 1");
     $sth->execute;
     my %existing_columns  = map {$_=>1} @{$sth->{NAME_lc}};
-    my @columns_to_create = grep {!$existing_columns{$_}} keys %$columns;
-    my @columns_to_drop   = grep {!$columns->{$_}}        keys %existing_columns;
-
+    
+    # If an extra column exists, drop it.
+    my @columns_to_drop   = grep {!$columns->{$_}} keys %existing_columns;
     if (@columns_to_drop) {
 	print STDERR "Dropping the following columns: ",join(',',@columns_to_drop),".\n";
 	for my $c (@columns_to_drop) {
@@ -191,42 +190,42 @@ sub check_table {
 	}
     }
 
+    # If a required column doesn't exist, add it.
+    my @columns_to_create = grep {!$existing_columns{$_}} keys %$columns;
     if (@columns_to_create) {
-	my $run = 0;
+    print STDERR ucfirst $name . " table schema is incorrect, adding " 
+		. @columns_to_create . " missing column" 
+		. ((@columns_to_create > 1)? "s." : ".");
         
 	# SQLite doesn't support altering to add multiple columns or ENUMS, 
 	# so it gets special treatment.
 	if ($type =~ /sqlite/i) {
 	    # If we don't find a specific column, add its SQL to the columns_to_create array.
 	    foreach (@columns_to_create) {
-		$$columns{$_} = escape_enums($$columns{$_});
+		    $$columns{$_} = escape_enums($$columns{$_});
                 
-		# Now add each column individually
-		unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
+		    # Now add each column individually
 		    my $alter_sql = "ALTER TABLE $name ADD COLUMN $_ " . $$columns{$_} . ";";
 		    $database->do($alter_sql) or die "While adding column $_ to $name: ",
 		                                      $database->errstr;
-		}
 	    }
 	} else {
-	    # If we don't find a specific column, add its SQL to the columns_to_create array.
-	    foreach (keys %$columns) {
-		unless ((join " ", @{$sth->{NAME_lc}}) =~ /$_/) {
-		    push @columns_to_create, "$_ " . $$columns{$_};
-		    $run++;
-		}
-	    }
+        @columns_to_create = map { "$_ " . $$columns{$_} } @columns_to_create;
             
 	    # Now add all the columns
-	    print STDERR ucfirst $name . " table schema is incorrect, adding " 
-		. @columns_to_create . " missing column" 
-		. ((@columns_to_create > 1)? "s." : ".");
-	    my $alter_sql .= "ALTER TABLE $name ADD (" . (join ", ", @columns_to_create) . ");";
-            
-	    # Run the creation script.
-	    if ($run) {
-		$database->do($alter_sql) or die $database->errstr;
-	    }
+		my $alter_sql;
+		
+		if ($type =~ /mysql/) {
+		    $alter_sql .= "ALTER TABLE $name";
+		    $alter_sql .= " ADD COLUMN " . shift @columns_to_create;
+		    $alter_sql .= ", ADD COLUMN $_" foreach @columns_to_create;
+	        $alter_sql .= ";";
+		} else {
+    		$alter_sql = "ALTER TABLE $name ADD (" . (join ", ", @columns_to_create) . ");" ;
+        }
+        
+        warn $alter_sql;
+	    $database->do($alter_sql) or die $database->errstr;
 	}
     }
 
@@ -598,8 +597,9 @@ sub backup_database {
 	warn "backing up existing users databse to ./$dest";
 	my ($src) = $dsn =~ /dbname=([^;]+)/i;
 	unless ($src) {
-	    ($src) = $dsn =~ /DBI:mysql:([^;]+)/i;
+	    (undef, $src) = $dsn =~ /.*:(database=)?([^;]+)/i;
 	}
+	
 	my ($db_user) = $dsn =~ /user=([^;]+)/i;
 	my ($db_pass) = $dsn =~ /password=([^;]+)/i || ("");
 	no warnings;
@@ -635,7 +635,7 @@ sub upgrade_from_0_to_1 {
 	check_table("users_new",        $users_columns);
 
 	# query to pull old data out of original users table
-	my $select = $database->prepare(<<END) or die $database->errstr;
+	my $select = $database->prepare(<<END ) or die $database->errstr;
 SELECT userid,uploadsid,username,email,pass,remember,openid_only,
        confirmed,cnfrm_code,last_login,created
 FROM   users
@@ -643,14 +643,14 @@ END
     ;
 	
 	# query to insert data into new session table
-	my $insert_session = $database->prepare(<<END) or die $database->errstr;
+	my $insert_session = $database->prepare(<<END ) or die $database->errstr;
 REPLACE INTO session (username,sessionid,uploadsid)
         VALUES (?,?,?)
 END
     ;
 
 	# query to insert data into new users table
-	my $insert_user = $database->prepare(<<END) or die $database->errstr;
+	my $insert_user = $database->prepare(<<END ) or die $database->errstr;
 REPLACE INTO users_new (userid,      email,      pass,       remember, 
 		        openid_only, confirmed, cnfrm_code, last_login, created)
         VALUES (?,?,?,?,?,?,?,?,?)
@@ -682,21 +682,22 @@ END
 	check_table('uploads',      $old_uploads_columns);
 	check_table("uploads_new",  $uploads_columns);
 
-	$select = $database->prepare(<<END) or die $database->errstr;
+	$select = $database->prepare(<<END ) or die $database->errstr;
 SELECT uploadid,userid,path,title,description,imported,
        creation_date,modification_date,sharing_policy,users,
        public_users,public_count,data_source
 FROM   uploads
 END
     ;
-	my $insert = $database->prepare(<<END) or die $database->errstr;
+	my $insert = $database->prepare(<<END ) or die $database->errstr;
 REPLACE INTO uploads_new (trackid,userid,path,title,description,imported,
 			 creation_date,modification_date,sharing_policy,users,
 			 public_users,public_count,data_source)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
 END
     ;
-
+    
+    $select->execute();
 	while (my ($trackid,$uploadsid,@rest) = $select->fetchrow_array()) {
 	    my $uid = $uploadsid_to_userid{$uploadsid};
 	    unless ($uid) {
@@ -716,20 +717,21 @@ END
 
 	# now do the openid_users table
 	# this creates the new one
+	check_table('openid_users', $openid_columns);
 	check_table('openid_users_new', $openid_columns);
-	$select = $database->prepare(<<END) or die $database->errstr;
-SELECT b.sessionid,a.openid_url,a.username,b.userid
+	$select = $database->prepare(<<END ) or die $database->errstr;
+SELECT b.sessionid,a.openid_url,b.userid
   FROM openid_users as a,session as b
- WHERE a.username=b.username
+ WHERE a.userid=b.userid
 END
     ;
-	$insert = $database->prepare(<<END) or die $database->errstr;
+	$insert = $database->prepare(<<END ) or die $database->errstr;
 REPLACE INTO openid_users_new(userid,openid_url) VALUES (?,?)
 END
     ;
 
 	$select->execute() or die $select->errstr;
-	while (my ($sessionid,$url,$username,$userid) = $select->fetchrow_array()) {
+	while (my ($sessionid,$url,$userid) = $select->fetchrow_array()) {
 	    $insert->execute($userid,$url) or die $insert->errstr;
 	}
 

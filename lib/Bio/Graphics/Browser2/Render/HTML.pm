@@ -745,7 +745,7 @@ sub wrap_login_form {
 	    -onClick => "Controller.plugin_authenticate(\$('plugin_configure_form'),\$('login_message'))",
 	),
 	end_form(),
-	script({-type=>'text/javascript'},<<EOS)
+	script({-type=>'text/javascript'},<<EOS )
 Event.observe(\$('plugin_configure_form'),'keydown',
       function(e){ if (e.keyCode==Event.KEY_RETURN)
 	      Controller.plugin_authenticate(\$('plugin_configure_form'),\$('login_message'))})
@@ -1462,7 +1462,6 @@ sub list_tracks {
 		my $count = 0;
 		my @rows = map {
 			my $fileid = $_;
-			my $name = $userdata->filename($fileid);
 			my $type = $listing_type || $userdata->file_type($fileid);
 		
 			my ($background_color, $accent_color) = $self->track_listing_colors($count, $type);
@@ -1571,8 +1570,7 @@ sub render_track_list_title {
 	    },
 	    $short_name
 	);
-	my $owner_id = $userdata->owner($fileid);
-	my $owner_name = ($owner_id eq $self->session->uploadid)? "you" : $userdb->get_username($userdb->get_user_id($owner_id));
+	my $owner_name = $userdata->owner_name($fileid);
 	my $owner = ($globals->user_accounts && $type =~ "public")? $self->translate("UPLOADED_BY") . " " . b($owner_name) : "";
 	
 	return span(
@@ -1615,7 +1613,7 @@ sub render_track_controls {
 				-src         => "$buttons/share.png",
 				-style       => 'cursor:pointer',
 				-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('SHARE_WITH_OTHERS').'",0)',
-				-onClick     => "GBox.showTooltip(event,'url:?action=share_track;track=$track_labels')"
+				-onClick     => "Controller.get_sharing(event,'url:?action=share_track;track=$track_labels')"
 			}
 		) if ($type =~ /upload/ && !$userdata->database);
 	}
@@ -1778,12 +1776,12 @@ sub render_track_sharing {
 	#Building the users list.
 	my $sharing_policy = $userdata->permissions($fileid);
 	my @users = $userdata->shared_with($fileid);
-	$_ = b(($globals->user_accounts)? $userdb->get_username($_) : "an anonymous user") . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
+	$_ = b(($globals->user_accounts)? $userdb->username_from_userid($_) : "an anonymous user") . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
 	my $userlist = join (", ", @users);
 	
     my $sharing_content = b($self->translate('SHARING')) . br() . $self->translate('TRACK_IS') . " ";
 	if ($userdata->is_mine($fileid) == 0) {
-	    my $count = $userdata->public_users($fileid);
+	    my $count = ($sharing_policy eq "public")? $userdata->public_users($fileid) : $userdata->shared_with($fileid);
 		$sharing_content .= b(($sharing_policy =~ /(casual|group)/)? lc $self->translate('SHARED_WITH_YOU') :  lc $self->translate('SHARING_PUBLIC'));
 	    $sharing_content .= ", " . $self->translate('USED_BY') . "&nbsp;" .  ($count? b($count) . "&nbsp;" . $self->translate('USERS') . "." : $self->translate('NO_ONE')) unless $sharing_policy =~ /casual/;
 	} else {
@@ -2947,17 +2945,16 @@ sub share_track {
         @{ $state->{tracks} };
 
     if ( $label eq 'all' ) {
-	for my $l (@visible) {
-	    $usertracks_present ||= $source->is_usertrack($l);
-	}
-        $labels = join '+', map { CGI::escape($_) } @visible;
-        $description = 'all selected tracks';
-    }
-    else {
+	    for my $l (@visible) {
+	        $usertracks_present ||= $source->is_usertrack($l);
+	    }
+            $labels = join '+', map { CGI::escape($_) } @visible;
+            $description = 'all selected tracks';
+    } else {
         $description = $self->setting( $label => 'key' ) 
 	    || $self->setting( $lbase => 'key')
 	    || $label;
-	$usertracks_present ||= $source->is_usertrack($label);
+	    $usertracks_present ||= $source->is_usertrack($label);
         $labels = $label;
     }
 
@@ -2968,12 +2965,11 @@ sub share_track {
                  :$label =~  /:overview$/ ? '$overview'
                  :'$segment';
     my $session = $self->session;
-    my $upload_id = $session->uploadid;
+    my $upload_id = $session->uploadsid;
     if ( $label =~ /^(http|ftp)/ ) {    # reexporting an imported track!
         $gbgff   = $source->setting($label=>'remote feature');
         $gbgff ||= $source->setting($lbase=>'remote feature');
-    }
-    else {
+    } else {
         $gbgff  = $base;
         $gbgff .= "?gbgff=1;q=$segment;t=$labels;s=1;format=gff3";
         $gbgff .= ";uuid=$upload_id" if $usertracks_present;
@@ -2994,68 +2990,92 @@ sub share_track {
     $das .= "?$das_types";
 
     my $return_html = start_html();
-    $return_html .= h1( $self->translate( 'SHARE', $description ) );
+    $return_html .= h1( $self->translate('SHARE', $description));
 
     my $tsize = 72;
+    
+    if ($source->is_usertrack($label)) {
+        my $usertracks = $self->user_tracks;
+        my $file = $usertracks->get_track_upload_id($label);
+        my $permissions = $usertracks->permissions($file);
+        my $is_mine = $usertracks->is_mine($file);
+        if ($is_mine || $permissions eq "public" || $permissions eq "casual") {
+            my $permissions_changed;
+            if ($permissions !~ /(casual|public)/) {
+                $usertracks->permissions($file, "casual");
+                $permissions_changed = 1;
+            }
+            if ($is_mine) {
+                $return_html .= p(($permissions_changed? $self->translate('SHARE_CUSTOM_TRACK_CHANGED', "casual") : $self->translate('SHARE_CUSTOM_TRACK_NO_CHANGE', $permissions)) . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
+                $return_html .= p($self->translate('OTHER_SHARE_METHODS'));
+            } elsif ($permissions =~ /(casual|public)/) {
+                $return_html .= p($self->translate('SHARE_SHARED_TRACK', $permissions) . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
+            }
+            
+            $return_html .= textfield(
+	            -style    => 'background-color: wheat',
+	            -readonly => 1,
+	            -size     => $tsize,
+	            -value    => $usertracks->sharing_link($file),
+	            -onClick  => 'this.select()',
+	        ).br();
+        } else {
+            $return_html .= p($self->translate('CANT_SHARE'));
+        }
+    } else {
+        if ($label ne 'all' && $label !~ /^(http|ftp)/) {
+            my $shared = "$base?label=$label";
 
-    if ($label ne 'all' && $label !~ /^(http|ftp)/) {
-	
-	my $shared;
-	if ($source->is_usertrack($label)) {
-	    (my $escaped = $gbgff) =~ s/;/%251D/g;
-	    $shared = "$base?eurl=$escaped";
-	} else {
-	    $shared="$base?label=$label";
-	}
+	        $return_html .= p(
+	            $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'),br(),
+	            textfield(
+		            -style    => 'background-color: wheat',
+		            -readonly => 1,
+		            -size     => $tsize,
+		            -value    => $shared,
+		            -onClick  => 'this.select()'
+	            )
+	        )
+        }
 
-	$return_html .= p(
-	    $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'),br(),
-	    textfield(
-		-style    => 'background-color: wheat',
-		-readonly => 1,
-		-size     => $tsize,
-		-value    => $shared,
-		-onClick  => 'this.select()'
-	    )
-	    )
+        $return_html .=
+	    p(
+	        $self->translate(
+		    $label eq 'all'
+		    ? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
+		    : 'SHARE_INSTRUCTIONS_ONE_TRACK'
+	        ).br().
+	        textfield(
+		    -style    => 'background-color: wheat',
+		    -readonly => 1,
+		    -size     => $tsize,
+		    -value    => $gbgff,
+		    -onClick  => 'this.select()'));
+
+        if ($das_types) {
+            $return_html .= p(
+                $self->translate(
+                    $label eq 'all'
+                    ? 'SHARE_DAS_INSTRUCTIONS_ALL_TRACKS'
+                    : 'SHARE_DAS_INSTRUCTIONS_ONE_TRACK'
+                )
+                )
+	        . p( textfield(
+                    -style    => 'background-color: wheat',
+                    -readonly => 1,
+		    -size     => $tsize,
+                    -value    => $das,
+                    -onFocus  => 'this.select()',
+                    -onSelect => 'this.select()')
+                 );
+        }
     }
-
-    $return_html .=
-	p(
-	    $self->translate(
-		$label eq 'all'
-		? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
-		: 'SHARE_INSTRUCTIONS_ONE_TRACK'
-	    ).br().
-	    textfield(
-		-style    => 'background-color: wheat',
-		-readonly => 1,
-		-size     => $tsize,
-		-value    => $gbgff,
-		-onClick  => 'this.select()'));
-
-    if ($das_types) {
-        $return_html .= p(
-            $self->translate(
-                $label eq 'all'
-                ? 'SHARE_DAS_INSTRUCTIONS_ALL_TRACKS'
-                : 'SHARE_DAS_INSTRUCTIONS_ONE_TRACK'
-            )
-            )
-	    . p( textfield(
-                -style    => 'background-color: wheat',
-                -readonly => 1,
-		-size     => $tsize,
-                -value    => $das,
-                -onFocus  => 'this.select()',
-                -onSelect => 'this.select()')
-             );
-    }
+    
     $return_html .= 
-	button(
-		 -name    => $self->translate('OK'),
-		 -onClick => 'Balloon.prototype.hideTooltip(1)'
-		 );
+    button(
+	     -name    => $self->translate('OK'),
+	     -onClick => 'Balloon.prototype.hideTooltip(1)'
+	     );
 
     $return_html .= end_html();
     return div({-style=>'width:600px'},$return_html);

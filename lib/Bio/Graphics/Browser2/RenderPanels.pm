@@ -532,7 +532,7 @@ sub wrap_rendered_track {
                 -onMouseOver =>
                     "$balloon_style.showTooltip(event,'$share_this_track')",
 		    -onMousedown =>
-                    "GBox.showTooltip(event,'url:?action=share_track;track=$escaped_label',true)",
+                    "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
             }
         ),
 

@@ -1174,6 +1174,12 @@ var GBrowseController = Class.create({
     url += ';view_start=' + TrackPan.get_start();
     url += ';view_stop='  + TrackPan.get_stop();
     window.location.href = url;
+  },
+  
+  get_sharing:
+  function(event, url) {
+    GBox.showTooltip(event, url);
+	Controller.update_sections(new Array(custom_tracks_id));
   }
 
 });

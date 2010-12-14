@@ -217,7 +217,7 @@ sub userid_from_username {
 
     my $userdb = $self->{dbi};
     my $user_id = 
-	$userdb->selectrow_array(<<END,undef,$username);
+	$userdb->selectrow_array(<<END ,undef,$username);
 SELECT userid
   FROM session as a
   WHERE a.username=?
@@ -231,7 +231,7 @@ sub userid_from_email {
 
     my $userdb = $self->{dbi};
     my $user_id = 
-	$userdb->selectrow_array(<<END,undef,$email);
+	$userdb->selectrow_array(<<END ,undef,$email);
 SELECT userid
   FROM users as a
   WHERE a.email=?
@@ -245,8 +245,23 @@ sub userid_from_uploadsid {
 
     my $userdb = $self->{dbi};
     my $user_id = 
-	$userdb->selectrow_array(<<END,undef,$uploadsid);
+	$userdb->selectrow_array(<<END ,undef,$uploadsid);
 SELECT userid
+  FROM session as a
+  WHERE a.uploadsid=?
+  LIMIT 1
+END
+}
+
+# Username From UploadsID (Uploads ID) - Returns a user's name.
+sub username_from_uploadsid {
+    my $self      = shift;
+    my $uploadsid = shift;
+
+    my $userdb = $self->{dbi};
+    my $user_id = 
+	$userdb->selectrow_array(<<END ,undef,$uploadsid);
+SELECT username
   FROM session as a
   WHERE a.uploadsid=?
   LIMIT 1
@@ -275,12 +290,19 @@ sub get_username {
     croak "you probably want to call username_from_sessionid";
 }
 
+sub username_from_userid {
+    my $self = shift;
+    my $userid = shift;
+    my $userdb = $self->{dbi};
+    return $userdb->selectrow_array("SELECT username FROM session WHERE userid=?", undef, $userid) || 'an anonymous user';
+}
+
 sub username_from_sessionid {
     my $self = shift;
     my $sessionid = shift;
     my $userdb = $self->{dbi};
 
-    return $userdb->selectrow_array(<<END,undef,$sessionid)||'an anonymous user';
+    return $userdb->selectrow_array(<<END ,undef,$sessionid)||'an anonymous user';
 SELECT username FROM session
  WHERE sessionid=?
 END
@@ -291,10 +313,12 @@ sub userid_from_sessionid {
     my $sessionid = shift;
     my $userdb = $self->{dbi};
 
-    return $userdb->selectrow_array(<<END,undef,$sessionid);
+    my $userid = $userdb->selectrow_array(<<END ,undef,$sessionid);
 SELECT userid FROM session
  WHERE sessionid=?
 END
+    ;
+    return $userid if $userid;
 }
 
 # Check Uploads ID (User ID, Uploads ID) - Makes sure a user's ID is in the database.
@@ -304,12 +328,12 @@ sub check_uploads_id {
     my ($sessionid,$uploadsid) = @_;
     my $userdb = $self->{dbi};
 
-    my $rows = $userdb->selectrow_array(<<END,undef,$sessionid,$uploadsid);
+    my $rows = $userdb->selectrow_array(<<END ,undef,$sessionid,$uploadsid);
 SELECT count(*) FROM session
    WHERE sessionid=? and uploadsid=?
 END
     unless ($rows) {
-        $userdb->do(<<END,undef,$sessionid,$uploadsid);
+        $userdb->do(<<END ,undef,$sessionid,$uploadsid);
 INSERT INTO session (sessionid,uploadsid)
      VALUES (?,?)
 END
@@ -328,7 +352,7 @@ sub add_named_session {
     $session->id eq $sessionid or die "Sessionid unavailable";
     my $uploadsid = $session->uploadsid;
 
-    my $insert_session  = $userdb->prepare(<<END);
+    my $insert_session  = $userdb->prepare(<<END );
 REPLACE INTO session (username,sessionid,uploadsid)
      VALUES (?,?,?)
 END
@@ -470,7 +494,7 @@ sub do_add_user {
       my $userid = $self->add_named_session($sessionid,$user) 
 	  or die "Couldn't add named session: ",$userdb->errstr;
 
-      my $insert_userinfo = $userdb->prepare (<<END);
+      my $insert_userinfo = $userdb->prepare (<<END );
 INSERT INTO users (userid, email, pass, remember, openid_only, 
 		   confirmed, cnfrm_code, last_login, created)
      VALUES (?,?,?,0,0,0,?,$nowfun,$nowfun)
@@ -537,7 +561,7 @@ sub do_edit_confirmation {
   
   my $userdb = $self->{dbi};
 
-  my $select = $userdb->prepare(<<END);
+  my $select = $userdb->prepare(<<END );
 SELECT b.username, a.userid,b.sessionid 
     FROM users as a,session as b 
     WHERE a.email=? AND a.userid=b.userid
@@ -957,7 +981,7 @@ sub do_change_openid {
         return;
     }
 
-    my $delete = $userdb->prepare(<<END);
+    my $delete = $userdb->prepare(<<END );
 DELETE FROM openid_users
       WHERE openid_url=?
         AND userid IN (
@@ -1032,7 +1056,7 @@ sub do_add_openid_user {
 	my $userid  = $self->add_named_session($sessionid,$user)
 	    or die "Couldn't add named session: ",$userdb->errstr;
 	    
-	my $query  = $userdb->prepare(<<END);
+	my $query  = $userdb->prepare(<<END );
 INSERT INTO users (userid,email,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created) 
      VALUES (?,?,?,?,1,1,?, $nowfun, $nowfun)
 END
@@ -1094,6 +1118,22 @@ sub do_list_openid {
 
     my @results = sort {$a->{name} cmp $b->{name}} @openids;
     print JSON::to_json(\@results);
+}
+
+# Remember (User) - Get's a user's remember flag.
+sub remember {
+    my $self = shift;
+    my $userid = shift;
+    my $userdb = $self->{dbi};
+    return $userdb->selectrow_array("SELECT remember FROM users WHERE userid = ?", undef, $userid);
+}
+
+# Remember (User) - Get's if a user is using OpenID login.
+sub using_openid {
+    my $self = shift;
+    my $userid = shift;
+    my $userdb = $self->{dbi};
+    return $userdb->selectrow_array("SELECT userid FROM openid_users WHERE userid = ?", undef, $userid)? "true" : "false";
 }
 
 1;

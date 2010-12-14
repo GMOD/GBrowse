@@ -25,11 +25,21 @@ sub _new {
 	my $VERSION = '0.3';
 	my ($data_source, $globals, $uploadsid) = @_;
 	
-    return bless {
-		config		=> $data_source,
-		uploadsid	=> $uploadsid,
-		globals		=> $globals
+    my $self = bless {
+		config		 => $data_source,
+		uploadsid	 => $uploadsid,
+		globals		 => $globals,
     }, ref $class || $class;
+    
+    $self->create_track_lookup;
+    return $self;
+}
+
+# Path - Returns the path to a specified file's owner's (or just the logged-in user's) data folder.
+sub path {
+    my $self = shift;
+    my $uploadsid = $self->uploadsid;
+    return $self->{config}->userdata($uploadsid);
 }
 
 # Get Uploaded Files (User) - Returns an array of the paths of files owned by a user.
@@ -73,6 +83,10 @@ sub file_exists {
 sub add_file {
 	my $self = shift;
 	my $filename = shift;
+	
+	my %track_lookup = $self->track_lookup;
+	$track_lookup{$_} = $filename foreach $self->labels($filename);
+	
 	return $filename;
 }
 
@@ -80,6 +94,10 @@ sub add_file {
 sub delete_file {
     my $self = shift;
     my $file  = shift;
+    
+    my %track_lookup = $self->track_lookup;
+	delete $track_lookup{$_} foreach $self->labels($file);
+    
     my $loader = Bio::Graphics::Browser2::DataLoader->new($file,
 							  $self->track_path($file),
 							  $self->track_conf($file),
@@ -163,17 +181,8 @@ sub get_file_id {
     return shift->filename(shift);
 }
 
-# Change User ID (Old User ID, New User ID) - Changes the current user's user ID stored in the database to something new, in case the session expires.
-sub change_userid {
-    # Nothing to change with this backend. Shouldn't ever be called, anyways.
-}
-
-# Change Uploads ID (Old Uploads ID, New Uploads ID) - Changes the current user's stored uploads ID to something new, in case the session expires.
-sub change_uploadsid {
-    my $self = shift;
-    my $old_uploadsid = shift;
-    my $new_uploadsid = shift;
-    $self->switch_uploads_folder($old_uploadsid, $new_uploadsid);
+sub owner_name {
+    return "you";
 }
 
 1;

@@ -16,6 +16,7 @@ use File::Temp 'tempdir';
 use POSIX ();
 use Carp qw(croak cluck);
 use CGI 'param';
+use Data::Dumper;
 
 use constant DEBUG => 0;
 my $HASBIGWIG;
@@ -40,7 +41,6 @@ sub new {
     my $globals   = $data_source->globals;
     my $uploadsid = $session->uploadsid;
     my $sessionid = $session->id;
-
     my $backend = $globals->user_account_db;
     
     if ($backend && $backend =~ /db/i) {
@@ -54,15 +54,7 @@ sub new {
 
 sub uploadsid {shift->{uploadsid}}
 
-sub database { return (shift =~ /database/i) } # If this changes, also change the constructor.
-
-# Path - Returns the path to a specified file's owner's (or just the logged-in user's) data folder.
-sub path {
-    my $self = shift;
-    my $file = shift;
-    my $uploadsid = ($file)? $self->owner($file) : $self->uploadsid;
-    return $self->{config}->userdata($uploadsid);
-}
+sub database { return (shift =~ /database/i) }
 
 # Tracks - Returns an array of paths to a user's tracks.
 sub tracks {
@@ -71,6 +63,33 @@ sub tracks {
     push @tracks, $self->get_uploaded_files, $self->get_imported_files;
     push @tracks, $self->get_added_public_files, $self->get_shared_files if $self->database;
     return @tracks;
+}
+
+# Track Lookup - Returns a hash of tracks showing the files they originate from.
+sub track_lookup {
+    my $self = shift;
+    return %{$self->{track_lookup}};
+}
+
+# Create Track Lookup - Populate the track lookup hash.
+sub create_track_lookup {
+    my $self = shift;
+    my @tracks = $self->tracks;
+    
+	my $track_lookup = {};
+    foreach my $track (@tracks) {
+        $track_lookup->{$_} = $track foreach $self->labels($track);
+    }
+    
+    $self->{track_lookup} = $track_lookup;
+}
+
+# Get Track Upload ID - Returns the upload ID of the original file the track came from.
+sub get_track_upload_id {
+    my $self = shift;
+    my $track = shift;
+    my %track_lookup = $self->track_lookup;
+    return $track_lookup{$track};
 }
 
 # Is Mirrored - Returns the URL if a specific file is mirrored.
@@ -108,7 +127,7 @@ sub conf_files {
 # Track Path (File) - Returns a verified path to the folder holding a track.
 sub track_path {
     my $self  = shift;
-    my $file = shift or return;
+    my $file = shift;
     my $filename = $self->filename($file);
     my $folder_name = $self->escape_url($filename);
     return File::Spec->catfile($self->path($file), $folder_name);
@@ -171,32 +190,6 @@ sub conf_metadata {
     my $conf = $self->track_conf($file);
     my $name = basename($conf);
     return ($name, (stat($conf))[9, 7]);
-}
-
-# Change IDs (Old Uploads ID, New Uploads ID, Old User ID, New User ID) - Changes the current user's user ID stored in the database to something new, in case the session expires.
-sub change_ids {
-    my $self = shift;
-    my $old_uploadsid = shift;
-    my $new_uploadsid = shift;
-    my $old_userid = shift;
-    my $new_userid = shift;
-    $self->change_userid($old_userid, $new_userid);
-    $self->change_uploadsid($old_uploadsid, $new_uploadsid);
-}
-
-# Switch Uploads Folder (Old Uploads ID, New Uploads ID) - Renames a user's uploads folder to a new ID.
-sub switch_uploads_folder {
-    my $self = shift;
-    my $old_uploadsid = shift;
-    my $new_uploadsid = shift;
-    
-    my $globals = $self->{globals};
-    my @data_sources = $globals->data_sources;
-    foreach my $data_source (@data_sources) {
-        my $old_path = $globals->user_dir($data_source, $old_uploadsid);
-        my $new_path = $globals->user_dir($data_source, $new_uploadsid);
-        move($old_path, $new_path) if -d $old_path;
-    }
 }
 
 # Source Files (File) - Returns an array of source files (with details) associated with a specified track.
@@ -550,9 +543,16 @@ sub merge_conf {
 sub labels {
     my $self = shift;
     my $file = shift;
-    my $filename = $self->filename($file);
-    my $conf = $self->track_conf($file) or return;
+    my $conf = $self->track_conf($file);
+    
     return grep {!/:(database|\d+)/} eval{ Bio::Graphics::FeatureFile->new(-file=>$conf)->labels };
+}
+
+sub file_from_label {
+    my $self = shift;
+    my $label = shift;
+    my %track_lookup = $self->track_lookup;
+    return $track_lookup{$label};
 }
 
 # Status (File) - Returns the status of a DataLoader object for a specific file.

@@ -64,10 +64,6 @@ sub new {
     $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     $authority    = param('authority') || CGI::cookie('authority');
     $session = $globals->authorized_session($requested_id, $authority);
-    if ($requested_id ne $session->id) {
-	warn "requested $requested_id, but got ",$session->id;
-	warn "authority = ",param('authority');
-    }
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
   } else {
@@ -90,6 +86,12 @@ sub set_signal_handlers {
     	my $kid; 
 		do { $kid = waitpid(-1, WNOHANG) } while $kid > 0;
     };
+}
+
+sub set_details_multiplier {
+    my $self = shift;
+    my $m    = shift;
+    $self->{details_multiplier} = $m;
 }
 
 sub data_source {
@@ -207,7 +209,6 @@ sub destroy {
     }
 }
 
-
 ###################################################################################
 #
 # RUN CODE HERE
@@ -241,7 +242,7 @@ sub run {
 
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
-
+  
   warn "[$$] testing for asynchronous event()" if $debug;
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if $debug;
@@ -250,7 +251,9 @@ sub run {
   }
   
   if (my $file = param('share_link')) {
-      $self->user_tracks->share($file);
+      my $usertracks = $self->user_tracks;
+      $usertracks->share_link($file);
+      $self->add_user_tracks;
   }
 
   warn "[$$] init()"         if $debug;
@@ -393,19 +396,17 @@ sub authorize_user {
     my $self = shift;
     my ($username,$id,$remember,$using_openid) = @_;
     my ($session,$error);
-
-    warn "authorize_user(@_)";
     
-    warn "Checking current session";# if DEBUG;
+    warn "Checking current session" if DEBUG;
     my $current = $self->session->id;
     if ($current eq $id) {
-        warn "Using current session";# if DEBUG;
+        warn "Using current session" if DEBUG;
         $session = $self->session;
     } elsif($self->session->private) {
         warn "Another account is currently in use";
         return ("error");
     } else {
-        warn "Retrieving old session";# if DEBUG;
+        warn "Retrieving old session" if DEBUG;
 	$session = $self->globals->session($id);  # create/retrieve session
 	unless ($session->id eq $id) {
 	    warn "fixing probable expired session";
@@ -428,8 +429,8 @@ sub authorize_user {
     $session->username($username);
     $session->using_openid($using_openid);
 
-    warn "id=$id, username =",$session->username;# if DEBUG;
-    
+    warn "id=$id, username =",$session->username if DEBUG;
+
     $session->flush();
     return ($session->id,$nonce);
 }
@@ -704,12 +705,13 @@ sub render_header {
 sub state_cookie {
   my $self    = shift;
   my $session = $self->session;
+  my $id      = shift || $session->id;
   my $path    = url(-absolute => 1);
   $path       =~ s!gbrowse/?$!!;
   my $globals = $self->globals;
   my $cookie = CGI::Cookie->new(
       -name    => $CGI::Session::NAME,
-      -value   => $session->id,
+      -value   => $id,
       -path    => $path,
       -expires => '+'.$globals->time2sec($globals->remember_settings_time).'s',
       );
@@ -720,7 +722,7 @@ sub auth_cookie {
     my $self = shift;
     my $path = url(-absolute => 1);
     $path    =~ s!gbrowse/?$!!;
-    my $auth     = param('authority') or return;
+    my $auth     = (shift || param('authority')) or return;
     my $globals  = $self->globals;
     my $remember = $self->session->remember_auth;
     my @args = (-name => 'authority',
@@ -3558,6 +3560,7 @@ sub external_data {
 sub add_user_tracks {
     my $self        = shift;
     my ($data_source,$uuid) = @_;
+    $data_source ||= $self->data_source;
     my $files   = $self->user_tracks;
     my $userdb  = $self->userdb;
     my $session = $self->session;

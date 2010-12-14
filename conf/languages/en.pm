@@ -491,6 +491,37 @@ other browser and enter it as a new DAS source. <i>Quantitative tracks
 ("wiggle" files) and uploaded files can not be shared using DAS.</i>
 END
 
+ SHARE_CUSTOM_TRACK_NO_CHANGE => <<END,
+This is a track from one of your custom uploads, it is using <b>%s</b>
+permissions, so it can be shared.
+END
+
+ SHARE_CUSTOM_TRACK_CHANGED => <<END,
+This is a track from one of your custom uploads, its permissions have
+been changed to <b>%s</b>, so it can now be shared.
+END
+
+ SHARE_SHARED_TRACK => <<END,
+This track is another user's custom uploads; it is shared under a <b>%s</b>
+policy, so you are free to send the link to other users.
+END
+
+ OTHER_SHARE_METHODS => <<END,
+You can also share it with another user by setting its permissions to
+<b>public</b> and letting the user search for the track by name, or by
+changing its permissions to <b>group</b> and adding the user you want
+by username. To do this, select the "Custom Tracks" page and choose the
+sharing policy you want with the drop-down menu in the "sharing" section,
+then type the user's name or ID in the input field provided.
+END
+
+ CANT_SHARE     => <<END,
+Sorry, this track is owned by another user who has only allowed access to
+a limited group of other users. Since it's not yours, you can't share it
+with anyone else. In order to share this track, you'll have to ask them
+for permission.
+END
+
     MAIN_PAGE             => 'Browser',
     CUSTOM_TRACKS_PAGE    => 'Custom Tracks',
     COMMUNITY_TRACKS_PAGE => 'Community Tracks',

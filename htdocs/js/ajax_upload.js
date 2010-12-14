@@ -353,6 +353,7 @@ function addAnUploadField(after_element, action, upload_prompt, remove_prompt, f
 	Effect.BlindDown($(upload_tag), {duration: 0.25});
 }
 
+// Changes the permissions of fileid to sharing_policy.
 function changePermissions(fileid, sharing_policy) {
 	showUploadBusy(fileid, Controller.translate('CHANGING_PERMISSIONS'));
 	var offset = $("community_display_offset").value;
@@ -375,6 +376,7 @@ function changePermissions(fileid, sharing_policy) {
 	);
 }
 
+// Shares a file with the specific userid (or the logged-in user, if userid is blank). A front-end to UserTracks::share().
 function shareFile(fileid, userid) {
 	showUploadBusy(fileid, Controller.translate('ADDING'));
 	var offset = $("community_display_offset").value;
@@ -402,6 +404,7 @@ function shareFile(fileid, userid) {
 	);
 }
 
+// Unshares a file with the specific userid (or the logged-in user, if userid is blank). A front-end to UserTracks::unshare().
 function unshareFile(fileid, userid) {
 	showUploadBusy(fileid, Controller.translate('REMOVING'));
 	var offset = $("community_display_offset").value;
@@ -427,6 +430,7 @@ function unshareFile(fileid, userid) {
 	);
 }
 
+// Updates the public file listing. If given, searches by keyword or provides and offset.
 function searchPublic(keyword, offset) {
 	Controller.busy();
 	new Ajax.Request(
@@ -448,4 +452,21 @@ function searchPublic(keyword, offset) {
 		}
 	);
 	return false; // This is necessary to stop the form from submitting. Make sure the onSubmit event returns the value of this function.
+}
+
+// Looks up the upload ID of the file that contains a track, so it can be shared.
+function trackLookup(track) {
+	new Ajax.Request(
+		document.URL,
+		{
+			method: 'post',
+			parameters: {
+				action: 'track_lookup',
+				track: track
+			},
+			onSuccess: function (transport) {
+				console.log(transport.responseText);
+			}
+		}
+	);
 }

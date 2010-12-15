@@ -211,10 +211,7 @@ sub share {
     } else {
         $userid = shift;
     }
-    
     $userid ||= $self->{userid};
-    
-    warn "Sharing to $userid";
 
     my $sharing_policy = $self->permissions($file);
     return if $self->is_mine($file) and $sharing_policy =~ /(group|casual)/ and $userid eq $self->{userid}; # No sense in adding yourself to a group. Also fixes a bug with nonsense users returning your ID and adding yourself instead of nothing.
@@ -370,6 +367,10 @@ sub add_file {
     my $filename = shift;
     my $imported = shift || 0;
     my $description = shift;
+    
+    my $userdb = $self->{userdb};
+    $self->{userid} ||= $userdb->add_named_session($self->{sessionid}, "an anonymous user");
+    
     my $userid = shift || $self->{userid};
     my $shared = shift || ($self =~ /admin/)? "public" : "private";
     my $data_source = $self->{data_source};

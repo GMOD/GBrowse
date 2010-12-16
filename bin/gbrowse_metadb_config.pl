@@ -14,7 +14,7 @@ use File::Spec;
 use File::Path 'remove_tree';
 use POSIX 'strftime';
 
-use constant SCHEMA_VERSION => 1;
+use constant SCHEMA_VERSION => 2;
 
 # First, collect all the flags - or output the correct usage, if none listed.
 my ($dsn, $admin);
@@ -99,7 +99,13 @@ my $uploads_columns = {
     public_users      => "text",
     public_count      => "int",
     data_source       => "text",
- };
+};
+
+my $sharing_columns = {
+    trackid => "varchar(32) not null",
+    userid  => "integer not null",
+    public  => "bool",
+};
 
 my $dbinfo_columns = {
     schema_version    => 'int(10) not null UNIQUE'
@@ -144,6 +150,7 @@ check_table("users",            $users_columns);
 check_table("session",          $session_columns);
 check_table("openid_users",     $openid_columns);
 check_table("uploads",          $uploads_columns);
+#check_table("sharing",          $sharing_columns);
 
 check_sessions();
 check_uploads_ids();
@@ -184,10 +191,12 @@ sub check_table {
     # If an extra column exists, drop it.
     my @columns_to_drop   = grep {!$columns->{$_}} keys %existing_columns;
     if (@columns_to_drop) {
-	print STDERR "Dropping the following columns: ",join(',',@columns_to_drop),".\n";
-	for my $c (@columns_to_drop) {
-	    $database->do("ALTER TABLE $name DROP $c");
-	}
+	    print STDERR "Dropping the following columns: ",join(',',@columns_to_drop),".\n";
+	    if ($type !~ /sqlite/i) {
+	        for my $c (@columns_to_drop) {
+	            $database->do("ALTER TABLE $name DROP $c");
+	        }
+	    }
     }
 
     # If a required column doesn't exist, add it.
@@ -754,4 +763,36 @@ END
     }
 }
 
+sub upgrade_from_1_to_2 {
+    # Create sharing table.
+    check_table("sharing", $sharing_columns);
+    
+    # Upgrade sharing table from 
+    my $select = $database->prepare("SELECT trackid, users, public_users FROM uploads") or die $database->errstr;
+    $select->execute();
+    while (my ($trackid, $users, $public_users) = $select->fetchrow_array()) {
+        my @users = split ", ", $users;
+        my @public_users = split ", ", $public_users;
+        
+        $database->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $trackid, $_, 0) foreach @users;
+        $database->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $trackid, $_, 1) foreach @public_users;
+    }
+    
+    # Now delete the users & public_users columns from the database.
+    check_table("uploads", $uploads_columns);
+    
+    $select->finish();
+	$database->commit();
+
+    if ($@) {
+	    warn "upgrade failed due to $@. Rolling back";
+	    eval {$database->rollback()};
+	    die "Can't continue";
+    } else {
+	    print STDERR "Successfully upgraded schema from 1 to 2.\n";
+	    set_schema_version('dbinfo', 2);
+    }
+}
+
 __END__
+

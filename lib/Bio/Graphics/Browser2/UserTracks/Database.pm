@@ -74,7 +74,7 @@ sub get_file_id {
     return $uploads if $uploads;
     
     # Then, check files shared with me.
-    my $shared = $uploadsdb->selectrow_array("SELECT trackid FROM uploads WHERE path = ? AND (sharing_policy = ? OR sharing_policy = ?) AND users LIKE ? AND data_source = ?", undef, $filename, "casual", "group", "%".$userid.", %", $data_source);
+    my $shared = $uploadsdb->selectrow_array("SELECT DISTINCT uploads.trackid FROM uploads LEFT JOIN sharing ON uploads.trackid = sharing.trackid WHERE sharing.userid = ? AND uploads.path = ? AND (uploads.sharing_policy = ? OR uploads.sharing_policy = ?) AND data_source = ?", undef, $userid, $filename, "casual", "group", $data_source);
     return $shared if $shared;
     
     # Lastly, check public files.
@@ -128,11 +128,24 @@ sub get_public_files {
     
     my $uploadsdb = $self->{uploadsdb};
     my $userid = $self->{userid};
-    my $sql = "SELECT trackid FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public") . " AND data_source = " . $uploadsdb->quote($data_source);
-    $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%".$userid."%") . ")" if $userid;
-    $sql .= ($search_id)? " AND (userid = " . $uploadsdb->quote($userid) . ")" : " AND (description LIKE " . $uploadsdb->quote("%".$searchterm."%") . " OR path LIKE " . $uploadsdb->quote("%".$searchterm."%") . "OR title LIKE " . $uploadsdb->quote("%".$searchterm."%") . ")" if $searchterm;
+    
+    # Basic selection statement, limit to public tracks from this data set.
+    my $sql = "SELECT u.trackid FROM uploads u"
+            . " LEFT JOIN (SELECT s.trackid FROM sharing s WHERE s.userid = " . $uploadsdb->quote($userid) . ") s"
+            . " USING(trackid) WHERE s.trackid IS NULL"
+            . " AND sharing_policy = " . $uploadsdb->quote("public")
+            . " AND data_source = " . $uploadsdb->quote($data_source);
+    
+    # Search string - if we have a searched ID, use that as the userid. If not, match the searchterm to description, path or title.
+    $sql .= ($search_id)? " AND (uploads.userid = " . $uploadsdb->quote($userid) . ")"
+                        : " AND (description LIKE " . $uploadsdb->quote("%".$searchterm."%")
+                        . " OR path LIKE "          . $uploadsdb->quote("%".$searchterm."%")
+                        . " OR title LIKE "         . $uploadsdb->quote("%".$searchterm."%") . ")" if $searchterm;
+    
+    # Limit & offset as needed... 
     $sql .= " ORDER BY public_count DESC LIMIT $count";
     $sql .= " OFFSET $offset" if $offset;
+    
     my $rows = $uploadsdb->selectcol_arrayref($sql);
     return @$rows;
 }
@@ -152,10 +165,19 @@ sub public_count {
         $search_id = $userdb->get_user_id($searchterm);
     }
     
-    my $sql = "SELECT count(*) FROM uploads WHERE sharing_policy = " . $uploadsdb->quote("public") . " AND data_source = " . $uploadsdb->quote($data_source);
-    $sql .= " AND (public_users IS NULL OR public_users NOT LIKE " . $uploadsdb->quote("%".$userid."%") . ")";
-    $sql .= $search_id? " AND (userid = " . $uploadsdb->quote($search_id) . ")" : " AND (description LIKE " . $uploadsdb->quote("%".$searchterm."%") . " OR path LIKE " . $uploadsdb->quote("%".$searchterm."%") . "OR title LIKE " . $uploadsdb->quote("%".$searchterm."%") . ")" if $searchterm;
-    return $uploadsdb->selectrow_array($sql);
+    my $sql = "SELECT u.trackid FROM uploads u"
+            . " LEFT JOIN (SELECT s.trackid FROM sharing s WHERE s.userid = " . $uploadsdb->quote($userid) . ") s"
+            . " USING(trackid) WHERE s.trackid IS NULL"
+            . " AND sharing_policy = " . $uploadsdb->quote("public")
+            . " AND data_source = " . $uploadsdb->quote($data_source);
+    
+    $sql .= $search_id? " AND (u.userid = "   . $uploadsdb->quote($search_id) . ")"
+                      : " AND (description LIKE "   . $uploadsdb->quote("%".$searchterm."%")
+                      . " OR path LIKE "            . $uploadsdb->quote("%".$searchterm."%")
+                      . " OR title LIKE "           . $uploadsdb->quote("%".$searchterm."%") . ")" if $searchterm;
+    
+    my $rows = $uploadsdb->selectcol_arrayref($sql);
+    return @$rows;
 }
 
 # Get Imported Files () - Returns an array of files imported by a user.
@@ -174,7 +196,8 @@ sub get_added_public_files {
     my $userid = $self->{userid};
     my $uploadsdb = $self->{uploadsdb};
     my $data_source = $self->{data_source};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads WHERE sharing_policy = ? AND public_users LIKE ? AND data_source = ? ORDER BY trackid", undef, "public", "%".$userid."%", $data_source);
+    my $sql = "SELECT DISTINCT uploads.trackid FROM uploads LEFT JOIN sharing ON uploads.trackid = sharing.trackid WHERE sharing.userid = ? AND uploads.sharing_policy = ? AND sharing.public = 1 AND uploads.data_source = ?";
+    my $rows = $uploadsdb->selectcol_arrayref($sql, undef, $userid, "public", $data_source);
     return @$rows;
 }
 
@@ -185,7 +208,7 @@ sub get_shared_files {
     my $uploadsdb = $self->{uploadsdb};
     my $data_source = $self->{data_source};
     #Since upload IDs are all the same size, we don't have to worry about one ID repeated inside another so this next line is OK. Still, might be a good idea to secure this somehow?
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads WHERE (sharing_policy = ? OR sharing_policy = ?) AND users LIKE ? AND userid <> ? AND data_source = ? ORDER BY trackid", undef, "group", "casual", '%'.$userid.'%', '%'.$userid.'%', $data_source);
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT DISTINCT uploads.trackid FROM uploads LEFT JOIN sharing ON uploads.trackid = sharing.trackid WHERE sharing.userid = ? AND sharing.public = 0 AND (uploads.sharing_policy = ? OR uploads.sharing_policy = ?) AND uploads.userid <> ? AND uploads.data_source = ? ORDER BY uploads.trackid", undef, $userid, "group", "casual", $userid, $data_source);
     return @$rows;
 }
 
@@ -217,27 +240,19 @@ sub share {
     return if $self->is_mine($file) and $sharing_policy =~ /(group|casual)/ and $userid eq $self->{userid}; # No sense in adding yourself to a group. Also fixes a bug with nonsense users returning your ID and adding yourself instead of nothing.
     # Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
     if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /group/))) {
-        # Get the current users.
-        my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
+        my $public_flag = ($sharing_policy=~ /public/)? 1 : 0;
         my $uploadsdb = $self->{uploadsdb};
-        my @users = split ", ", $self->field($users_field, $file);
-        #If we find the user's ID, it's already been added, just return that it worked.
-        return 1 if grep { $_ eq $userid } @users;
-        push @users, $userid;
+        
+        # Get the current users.
+        return if $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", undef, $file, $userid, $public_flag);
         
         # Add the file's tracks to the track lookup hash.
         if ($userid eq $self->{userid}) {
             my %track_lookup = $self->track_lookup;
 	        $track_lookup{$_} = $file foreach $self->labels($file);
 	    }
-        
-        # Update the public count if needed.
-        if ($sharing_policy =~ /public/) {
-            my $public_count = @users;
-            $self->field("public_count", $file, $public_count);
-        }
-        
-        return $self->field($users_field, $file, join ", ", @users);
+	    
+        return $uploadsdb->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $file, $userid, $public_flag);
     } else {
         warn "Share() attempted in an illegal situation on a $sharing_policy file ($file) by user #$userid, a non-owner.";
     }
@@ -252,29 +267,19 @@ sub unshare {
     # Users can remove themselves from the sharing lists of group, casual or public files; owners can remove people from casual or group items.
     my $sharing_policy = $self->permissions($file);
     if ((($sharing_policy =~ /(casual|public|group)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /(casual|group)/))) {
-        # Get the current users.
-        my $users_field = ($sharing_policy =~ /public/)? "public_users" : "users";
+        my $public_flag = ($sharing_policy=~ /public/)? 1 : 0;
         my $uploadsdb = $self->{uploadsdb};
-        my @users = split ", ", $self->field($users_field, $file);
-    
-        #If we find the user's ID, it's already been removed, just return that it worked.
-        return 1 unless grep { $_ eq $userid } @users;
-        my ($index) = grep { $users[$_] eq $userid } 0 .. $#users;
-        splice @users, $index;
+        
+        # Get the current users.
+        return unless $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", undef, $file, $userid, $public_flag);
 
 		# Remove the file's tracks from the track lookup hash.
         if ($userid eq $self->{userid}) {
             my %track_lookup = $self->track_lookup;
         	delete $track_lookup{$_} foreach $self->labels($file);;
 	    }
-        
-        # Update the public count if needed.
-        if ($sharing_policy =~ /public/) {
-            my $public_count = @users;
-            $self->field("public_count", $file, $public_count);
-        }
-        
-        return $self->field($users_field, $file, join ", ", @users);
+	    
+	    return $uploadsdb->do("DELETE FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", undef, $file, $userid, $public_flag);
     } else {
         warn "Unshare() attempted in an illegal situation on a $sharing_policy file ($file) by user #$userid, a non-owner.";
     }
@@ -402,6 +407,7 @@ sub delete_file {
             # First delete from the database - better to have a dangling file then a dangling reference to nothing.
             my $uploadsdb = $self->{uploadsdb};
             $uploadsdb->do("DELETE FROM uploads WHERE trackid = ?", undef, $file);
+            $uploadsdb->do("DELETE FROM sharing WHERE trackid = ?", undef, $file);
             
             # Remove the file's tracks from the track lookup hash.
             my %track_lookup = $self->track_lookup;
@@ -441,7 +447,7 @@ sub permissions {
         if ($self->is_mine($file)) {
             my $old_permissions = $self->field("sharing_policy", $file);
             my $result = $self->field("sharing_policy", $file, $new_permissions);
-			if ((($old_permissions =~ /(casual|group)/) && ($new_permissions eq "public"))) {# || (($old_permissions eq "public") && ($new_permissions =~ //))) {
+			if ((($old_permissions =~ /(casual|group)/) && ($new_permissions eq "public"))) {
                 my @old_users = ($old_permissions eq "public")? $self->shared_with($file) : $self->public_users($file);
                 $self->share($file, $_) foreach @old_users;
             }
@@ -477,7 +483,7 @@ sub is_shared_with_me {
     my $file = shift or return 0;
     my $userid = $self->{userid};
     my $uploadsdb = $self->{uploadsdb};
-    my $results = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads WHERE trackid = ? AND users LIKE ? OR public_users LIKE ?", undef, $file, "%".$userid."%", "%".$userid."%");
+    my $results = $uploadsdb->selectcol_arrayref("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ?", undef, $file, $userid);
     return (@$results > 0);
 }
 
@@ -501,19 +507,27 @@ sub file_type {
 # Shared With (File ID) - Returns an array of users a track is shared with.
 sub shared_with {
     my $self = shift;
-    my $file = shift or return;
+    my $file = shift;
     return unless $self->permissions($file) =~ /(casual|group)/;
-    my $users_string = $self->field("users", $file);
-    return split(", ", $users_string);
+    return $self->get_users($file, 0);
 }
 
 # Public Users (File ID) - Returns an array of users of a public track.
 sub public_users {
     my $self = shift;
-    my $file = shift or return;
+    my $file = shift;
     return unless $self->permissions($file) =~ /public/;
-    my $users_string = $self->field("public_users", $file);
-    return split(", ", $users_string);
+    return $self->get_users($file, 1);
+}
+
+# Public Users (File ID) - Returns an array of users of a public/shared track.
+sub get_users {
+    my $self = shift;
+    my $file = shift;
+    my $public = shift;
+    my $uploadsdb = $self->{uploadsdb};
+    my $usersref = $uploadsdb->selectcol_arrayref("SELECT userid FROM sharing WHERE trackid = ? AND public = ? ORDER BY userid", undef, $file, $public);
+    return @$usersref;
 }
 
 # Public Users (File ID) - Returns the username of the owner of a track.

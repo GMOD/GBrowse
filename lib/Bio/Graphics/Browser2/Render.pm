@@ -254,6 +254,7 @@ sub run {
       my $usertracks = $self->user_tracks;
       $usertracks->share_link($file);
       $self->add_user_tracks;
+      $self->add_track_to_state($_) foreach $usertracks->labels($file);
   }
 
   warn "[$$] init()"         if $debug;

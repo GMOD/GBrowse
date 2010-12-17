@@ -405,6 +405,8 @@ END
 
  AUTOSCALING      => 'Y-axis scaling',
 
+ SD_MULTIPLES     => 'Number of standard deviations (SD) to show',
+
  SCALING          => 'Fixed Y-axis range',
 
  SCALE_MIN        => 'Minimum scale value',

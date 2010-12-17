@@ -100,6 +100,9 @@ var TrackConfigure = Class.create({
 
    var e=$('fixed_minmax');
    if (v=='none') {e.show()} else {e.hide()};
+
+   var f=$('wiggle_z_fold');
+   if (v=='z_score') {f.show()} else {f.hide()};
  },
 
  pivot_select: function(pivot_element) {

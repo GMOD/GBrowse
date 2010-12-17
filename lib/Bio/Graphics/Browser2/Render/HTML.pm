@@ -2382,9 +2382,12 @@ sub track_config {
     my $autoscale = $data_source->semantic_fallback_setting( $label => 'autoscale' ,     $length);
     $autoscale    = 'local' if $summary_mode;
 
-    my $bicolor_pivot= $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,     $length);
-    my $graph_type = $data_source->semantic_fallback_setting( $label => 'graph_type' ,     $length);
-    my $glyph_subtype = $data_source->semantic_fallback_setting( $label => 'glyph_subtype' ,     $length);
+    my $sd_fold   = $data_source->semantic_fallback_setting( $label => 'z_score_bound' ,     $length);
+    $sd_fold    ||= 4;
+
+    my $bicolor_pivot = $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,  $length);
+    my $graph_type    = $data_source->semantic_fallback_setting( $label => 'graph_type' ,     $length);
+    my $glyph_subtype = $data_source->semantic_fallback_setting( $label => 'glyph_subtype' ,  $length);
 
     # options for wiggle_whiskers
     my $max_color   = $data_source->semantic_fallback_setting( $label => 'max_color' ,   $length);
@@ -2493,6 +2496,7 @@ END
 	}
 	if (my $subgraphs = eval{$class->options->{graph_type}}) {
 	    my $options  = $subgraphs->[0];
+	    $graph_type ||= $subgraphs->[1];
 	    next unless ref $options eq 'ARRAY';
 	    push @rows,(TR {-class => "$glyph graphtype",
 			    -id    => "conf_${glyph}_graphtype"},
@@ -2533,15 +2537,21 @@ END
     my $p = $override->{bicolor_pivot} || $bicolor_pivot || 'none';
     my $has_pivot = $g =~ /wiggle_xyplot|wiggle_density|xyplot/;
 
+    warn "\$p = $p";
+
     push @rows,TR( {-class=>'xyplot density',
 		     -id   =>'bicolor_pivot_id'},
                    th( { -align => 'right'}, $self->translate('BICOLOR_PIVOT')),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_bicolor_pivot',
-			   -values  => [qw(none zero mean value)],
-			   -labels  => {value => 'value entered below'},
+			   -values  => [qw(none zero mean 1SD 2SD 3SD value)],
+			   -labels  => {value => 'value entered below',
+					'1SD' => 'mean + 1 standard deviation',
+					'2SD' => 'mean + 2 standard deviations',
+					'3SD' => 'mean + 3 standard deviations',
+			   },
 			   -default => $bicolor_pivot,
-			   -current => $p =~ /^[\d.-eE]+$/ ? 'value' : $p,
+			   -current => $p =~ /^-?[\d.eE]+$/ ? 'value' : $p,
 			   -scripts => {-onChange => 'track_configure.pivot_select(this)',
 					-id       => 'conf_bicolor_pivot'}
 		       )
@@ -2667,24 +2677,43 @@ END
 			    -current => $override->{autoscale},
 			    -scripts => {-onChange => 'track_configure.autoscale_select(this,$(\'glyph_picker_id\'))',
 					 -id  => "conf_xyplot_autoscale"
-}		       )));
+			    }
+			)));
 
     push @rows,TR({-class=>'wiggle vista_plot autoscale',
 		   -id   => 'wiggle_autoscale'},
 		    th( { -align => 'right' },$self->translate('AUTOSCALING')),
 		    td( $picker->popup_menu(
 			    -name    => "conf_wiggle_autoscale",
-			    -values  => $summary_mode ? [qw(none local)] : [qw(none local chromosome global)],
-			    -labels  => {none=>'fixed',
-					 local=>'scale to local min/max',
+			    -values  => $summary_mode ? [qw(none local)] : [qw(none z_score local chromosome global)],
+			    -labels  => {none      =>'fixed',
+					 z_score   =>'scale to SD multiples',
+					 local     =>'scale to local min/max',
 					 chromosome=>'scale to chromosome min/max',
-					 global=>'scale to genome min/max'},
+					 global    =>'scale to genome min/max'},
 			    -default => $autoscale,
 			    -current => $override->{autoscale},
 			    -scripts => {-onChange => 'track_configure.autoscale_select(this,$(\'glyph_picker_id\'))',
 					 -id       => "conf_wiggle_autoscale"
 			    }
 		       )));
+
+    push @rows,TR({-class=>'wiggle vista_plot autoscale',
+		   -id   => 'wiggle_z_fold'},
+		    th( { -align => 'right' },$self->translate('SD_MULTIPLES')),
+		    td( $picker->popup_menu(
+			    -name    => "conf_z_score_bound",
+			    -values  => [qw(1 2 3 4 5 6)],
+			    -labels  => {1   =>'1 SD',
+					 2   =>'2 SD',
+					 3   =>'3 SD',
+					 4   =>'4 SD',
+					 5   =>'5 SD',
+					 6   =>'6 SD',
+					 },
+			    -default => $sd_fold,
+			    -current => $override->{z_score_bound}
+			)));
 
     push @rows,TR( {-class=> 'xyplot density whiskers vista_plot autoscale',
 		    -id   => 'fixed_minmax'

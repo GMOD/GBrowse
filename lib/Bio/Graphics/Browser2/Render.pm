@@ -2055,6 +2055,7 @@ sub reconfigure_track {
 	    my $bp = param('bicolor_pivot_value');
 	    $o->{$s} =    $bp if !defined $configured_value or $bp != $configured_value;
 	} else {
+	    warn "$s=>$value";
 	    $o->{$s} = $value if !defined $configured_value or $value ne $configured_value;
 	    if ($glyph eq 'wiggle_whiskers') {# workarounds for whisker options
 		$o->{"${s}_neg"}  = $value if $s =~ /^(mean_color|stdev_color)/; 
@@ -2063,10 +2064,6 @@ sub reconfigure_track {
 	}
     }
     if (defined $o->{autoscale} && $o->{autoscale} ne 'none') { undef $o->{min_score}; undef $o->{max_score} }
-    # {
-    # 	local $Data::Dumper::Sortkeys=1;
-    # 	warn Data::Dumper::Dumper($o);
-    # }
 }
 
 sub update_options {

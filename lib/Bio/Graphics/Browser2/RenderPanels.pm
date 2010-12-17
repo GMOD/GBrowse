@@ -2457,7 +2457,15 @@ sub loaded_segment_outline {
 
 sub details_mult {
     my $self = shift;
-    $self->source->details_multiplier;
+    my $state = $self->settings;
+
+    if (defined $state->{seg_min} && defined $state->{seg_max} && defined $state->{view_start} && defined $state->{view_stop}) {
+        my $max_length     = $state->{seg_max} - $state->{seg_min};
+        my $request_length = $state->{view_stop} - $state->{view_start};
+        return $self->source->details_multiplier($max_length, $request_length);
+    }
+
+    return $self->source->details_multiplier;
 }
 
 sub get_detail_width_no_pad {

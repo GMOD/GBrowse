@@ -247,7 +247,15 @@ sub details_multiplier {
     my $self = shift;
     my $value = $self->global_setting('details multiplier') || 1;
     $value = 1  if ($value < 1);  #lower limit 
-    $value = 25 if ($value > 15); #set upper limit for performance reasons (prevent massive image files)
+    $value = 25 if ($value > 25); #set upper limit for performance reasons (prevent massive image files)
+    
+    if (@_ > 1) { 
+        my ($max_length, $request_length) = @_;
+        if (($max_length > 0) && ($request_length > 0) && (($request_length * $value) > $max_length)) {
+            return $max_length / $request_length; #limit details multiplier so that region does not go out of bounds
+        }
+    }
+
     return $value;
 }
 

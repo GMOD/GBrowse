@@ -2628,33 +2628,20 @@ sub update_state_from_details_mult {
     my $length         = $view_stop - $view_start;
     my $length_to_load = int($length * $details_mult);
 
-    my ($start_to_load, $stop_to_load);
+    my $start_to_load  = int($view_start - $length * ($details_mult - 1) / 2);
 
-    if (defined $state->{seg_min} && defined $state->{seg_max} && $length_to_load > ($state->{seg_max} - $state->{seg_min})) {
+    if (defined $state->{seg_min} && $start_to_load < $state->{seg_min}) {
         $start_to_load = $state->{seg_min};
-        $stop_to_load  = $state->{seg_max};
-        if ($length <= ($state->{seg_max} - $state->{seg_min}) && $length > 0) {
-            $details_mult = ($state->{seg_max} - $state->{seg_min}) / $length;
-        } else {
-            $details_mult = 1;
-        }
-    } else {
-        $start_to_load  = int($view_start - $length * ($details_mult - 1) / 2);
-
-        if (defined $state->{seg_min} && $start_to_load < $state->{seg_min}) {
-            $start_to_load = $state->{seg_min};
-        }
-
-        $stop_to_load   = $start_to_load + $length_to_load;
-
-        if (defined $state->{seg_max} && $stop_to_load > $state->{seg_max}) {
-            my $delta = $stop_to_load - $state->{seg_max};
-            $start_to_load -= $delta;
-            $stop_to_load  -= $delta;
-        }
     }
 
-    $state->{details_mult} = $details_mult;
+    my $stop_to_load   = $start_to_load + $length_to_load;
+
+    if (defined $state->{seg_max} && $stop_to_load > $state->{seg_max}) {
+        my $delta = $stop_to_load - $state->{seg_max};
+        $start_to_load -= $delta;
+        $stop_to_load  -= $delta;
+    }
+
     $state->{start} = $start_to_load;
     $state->{stop}  = $stop_to_load;
 }
@@ -3307,6 +3294,14 @@ sub get_total_pad_width {
 
 sub details_mult {
     my $self = shift;
+    my $state = $self->state;
+
+    if (defined $state->{seg_min} && defined $state->{seg_max} && defined $state->{view_start} && defined $state->{view_stop}) {
+        my $max_length     = $state->{seg_max} - $state->{seg_min};
+        my $request_length = $state->{view_stop} - $state->{view_start};
+        return $self->data_source->details_multiplier($max_length, $request_length);
+    }
+
     return $self->data_source->details_multiplier;
 }
 

@@ -14,7 +14,7 @@ use File::Spec;
 use File::Path 'remove_tree';
 use POSIX 'strftime';
 
-use constant SCHEMA_VERSION => 1;
+use constant SCHEMA_VERSION => 2;
 
 # First, collect all the flags - or output the correct usage, if none listed.
 my ($dsn, $admin);
@@ -359,7 +359,7 @@ sub check_data_sources {
 
 # Check All Files () - Checks the integrity of the file data for every user.
 sub check_all_files {
-    print STDERR "Checking for any files not in the database...";
+    print STDERR "Checking for any files not in the database...\n";
     # Get all data sources
     my $userdata_folder = $globals->user_dir;
     my @data_sources;
@@ -387,12 +387,12 @@ sub check_all_files {
 	closedir(DS);
 
         foreach my $uploadsid (@uploads_ids) {
-	    my $userid  = check_uploadsid($source_path,$uploadsid) or next;
+	        my $userid  = check_uploadsid($source_path,$uploadsid) or next;
             my $this_ok = check_files($userid,$uploadsid, $data_source);
             $all_ok     = $this_ok if $all_ok;
         }
     }
-    print STDERR "all files are accounted for.\n" if $all_ok;
+    print STDERR "All files are accounted for.\n" if $all_ok;
 }
 
 # remove dangling upload directories
@@ -433,7 +433,7 @@ sub check_files {
     foreach my $file (@files_in_folder) {
 	my $found = grep(/$file/, @files_in_db);
 	unless ($found) {
-	    add_file($file, $userid, $uploadsid, $data_source,File::Spec->catfile($path,$file)) &&
+	    add_file($file, $userid, $uploadsid, $data_source, $file) &&
 		print STDERR "- File \"$file\" found in the \"$data_source/$uploadsid\" folder without metadata, added to database.\n";
 	    $all_ok = 0;
 	}

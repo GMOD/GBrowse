@@ -397,7 +397,7 @@ sub delete_file {
     my $userid = $self->{userid};
     my $uploadsid = $self->uploadsid;
     my $filename = $self->filename($file);
-                                 # If the file doesn't exist, don't throw an error, just 
+                                 # If the file doesn't exist, don't throw an error, just return.
     if ($self->is_mine($file) || !$filename) {
         if ($filename) {
             # Get this information before the record is deleted from the database.

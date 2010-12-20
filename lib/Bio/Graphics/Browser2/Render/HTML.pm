@@ -1464,16 +1464,15 @@ sub list_tracks {
 			my $fileid = $_;
 			my $type = $listing_type || $userdata->file_type($fileid);
 		
-			my ($background_color, $accent_color) = $self->track_listing_colors($count, $type);
+			my $class = $self->track_class($count, $type);
 			my $controls = $self->render_track_controls($fileid, $type);
-			my $short_listing = $self->render_track_list_title($fileid, $type, $accent_color);
+			my $short_listing = $self->render_track_list_title($fileid, $type);
 			my $details = $self->render_track_details($fileid, @tracks? 1 : 0);
 			my $edit_field = div({-id => $fileid . "_editfield", -style => "display: none;"}, '');
 			$count++;
 			div( {
 					-id		=> "$fileid",
-					-class	=> "custom_track",
-					-style	=> "background-color: $background_color; padding: 0.25em; min-height: 2em; height: auto !important; height: 2em;"
+					-class	=> "custom_track $class",
 				},
 				$short_listing,
 				$controls,
@@ -1487,44 +1486,21 @@ sub list_tracks {
     }
 }
 
-# Track Listing Colors (Count, Type) - Returns the accent & background color for the track listing of the specified type & count.
-sub track_listing_colors {
+# Track Class (Count, Type) - Returns the class for a specific custom track.
+sub track_class {
 	my $self = shift;
 	my $count = shift;
 	my $type = shift;
-	my ($background_color1, $background_color2, $accent_color1, $accent_color2);
-	if ($type =~ /upload/) {
-		$background_color1 = 'paleturquoise';
-		$background_color2 = 'lightblue';
-		$accent_color1 = '#8CBEBE';
-		$accent_color2 = '#8AADB8';
-	} elsif ($type =~ /import/) {
-		$background_color1 = 'palegreen';
-		$background_color2 = 'lightgreen';
-		$accent_color1 = '#7AC97A';
-		$accent_color2 = '#73BE73';
-	} elsif ($type =~ /public/) {
-		$background_color1 = '#AAAAAA';
-		$background_color2 = '#CCCCCC';
-		$accent_color1 = '#777777';
-		$accent_color2 = '#999999';
-	} elsif ($type =~ /shared/) {
-		$background_color1 = '#FFFF55';
-		$background_color2 = '#FFFF77';
-		$accent_color1 = '#CCCC44';
-		$accent_color2 = '#CCCC5F';
-	}
-	my $background_color = ($count % 2)? $background_color1 : $background_color2;
-	my $accent_color = ($count % 2)? $accent_color1 : $accent_color2;
-	return ($background_color, $accent_color);
+	$type =~ s/\s?available//;
+	return $type . "_" . (($count % 2)? "even" : "odd");
 }
 
-# Render Track List Title (Track, Type, Accent Color) - Renders the visible HTML which is seen when the details are hidden.
+# Render Track List Title (Track, Type) - Renders the visible HTML which is seen when the details are hidden.
 sub render_track_list_title {
 	my $self = shift;
 	my $fileid = shift;
 	my $type = shift;
-	my $accent_color = shift;
+	$type =~ s/\s?available//;
 	my $userdata = $self->user_tracks;
 	my $globals = $self->globals;
 	my $userdb  = $self->userdb if $globals->user_accounts;
@@ -1539,7 +1515,7 @@ sub render_track_list_title {
 	
 	my @track_labels = $userdata->labels($fileid);
 	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
-	my $source_note = span({-style => "float: right; font-size: 16pt; font-family: Helvetica, Arial, Verdana, sans-serif; color: " . $accent_color . ";"}, $type);
+	my $source_note = span({-class => "source_note"}, $type);
 	my $go_there = join(' ',
 		map {
 			my $label = $_;

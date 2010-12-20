@@ -14,7 +14,7 @@ use File::Spec;
 use File::Path 'remove_tree';
 use POSIX 'strftime';
 
-use constant SCHEMA_VERSION => 2;
+use constant SCHEMA_VERSION => 1;
 
 # First, collect all the flags - or output the correct usage, if none listed.
 my ($dsn, $admin);
@@ -150,7 +150,7 @@ check_table("users",            $users_columns);
 check_table("session",          $session_columns);
 check_table("openid_users",     $openid_columns);
 check_table("uploads",          $uploads_columns);
-#check_table("sharing",          $sharing_columns);
+check_table("sharing",          $sharing_columns);
 
 check_sessions();
 check_uploads_ids();
@@ -232,8 +232,6 @@ sub check_table {
 		} else {
     		$alter_sql = "ALTER TABLE $name ADD (" . (join ", ", @columns_to_create) . ");" ;
         }
-        
-        warn $alter_sql;
 	    $database->do($alter_sql) or die $database->errstr;
 	}
     }
@@ -251,7 +249,6 @@ sub check_sessions {
     my $do_session_check = sub {
 	my $session = shift;
 	my $session_id  = $session->id;
-	warn "$session_id\n";
 	my $source      = $session->param('.source') or return;
 	my $config_hash = $session->param($source)   or return;
 	my $uploadsid   = $session->param('.uploadsid') ||
@@ -325,7 +322,7 @@ sub check_data_sources {
 		    next if $folder =~ /^\.+$/;
 		    next unless -d $folder;
 		    my $user_path = File::Spec->catfile($userdata_folder, $data_source, $folder);
-		    opendir USER, $user_path;
+		    opendir USER, $user_path if -d $user_path;
 		    next unless readdir(USER);
 		    push @users, $folder;
 		    closedir(USER);
@@ -578,13 +575,13 @@ sub get_group_from_user {
 
 sub upgrade_schema {
     my $new_version   = shift;
-    my ($old_version) = $database->selectrow_array('SELECT schema_version FROM dbinfo LIMIT 1');
+    my ($old_version) = $database->selectrow_array('SELECT MAX(schema_version) FROM dbinfo LIMIT 1');
     unless ($old_version) {
 	# table is missing, so add it
 	check_table('dbinfo',$dbinfo_columns);
 	$old_version = 0;
     }
-    backup_database();
+    backup_database() unless $old_version = $new_version;
     for (my $i=$old_version;$i<$new_version;$i++) {
 	my $function = "upgrade_from_${i}_to_".($i+1);
 	eval "$function();1" or die "Can't upgrade from version $i to version ",$i+1;
@@ -770,19 +767,21 @@ sub upgrade_from_1_to_2 {
     # Upgrade sharing table from 
     my $select = $database->prepare("SELECT trackid, users, public_users FROM uploads") or die $database->errstr;
     $select->execute();
+    my $run = 0;
     while (my ($trackid, $users, $public_users) = $select->fetchrow_array()) {
-        my @users = split ", ", $users;
-        my @public_users = split ", ", $public_users;
+        my @users = split ", ", $users if $users;
+        my @public_users = split ", ", $public_users if $public_users;
         
         $database->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $trackid, $_, 0) foreach @users;
         $database->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $trackid, $_, 1) foreach @public_users;
+        $run = 1 if ($users || $public_users);
     }
     
     # Now delete the users & public_users columns from the database.
     check_table("uploads", $uploads_columns);
     
     $select->finish();
-	$database->commit();
+	$database->commit() if $run;
 
     if ($@) {
 	    warn "upgrade failed due to $@. Rolling back";

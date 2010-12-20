@@ -186,7 +186,7 @@ sub get_imported_files {
     my $userid = $self->{userid};
     my $uploadsdb = $self->{uploadsdb};
     my $data_source = $self->{data_source};
-    my $rows = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads WHERE sharing_policy <> 'public' AND imported = 1 AND data_source = ? AND userid = ? ORDER BY trackid", undef, $userid, $data_source);
+    my $rows = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads WHERE sharing_policy <> 'public' AND imported = 1 AND data_source = ? AND userid = ? ORDER BY trackid", undef, $data_source, $userid);
     return @$rows;
 }
 

@@ -102,7 +102,7 @@ var TrackConfigure = Class.create({
    if (v=='none') {e.show()} else {e.hide()};
 
    var f=$('wiggle_z_fold');
-   if (v=='z_score') {f.show()} else {f.hide()};
+   if (v=='z_score' || v=='clipped_global') {f.show()} else {f.hide()};
  },
 
  pivot_select: function(pivot_element) {

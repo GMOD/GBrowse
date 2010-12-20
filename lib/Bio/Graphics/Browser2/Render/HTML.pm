@@ -2381,6 +2381,7 @@ sub track_config {
     $max_score = +1 unless defined $max_score;
     my $autoscale = $data_source->semantic_fallback_setting( $label => 'autoscale' ,     $length);
     $autoscale    = 'local' if $summary_mode;
+    $autoscale  ||= 'local';
 
     my $sd_fold   = $data_source->semantic_fallback_setting( $label => 'z_score_bound' ,     $length);
     $sd_fold    ||= 4;
@@ -2537,8 +2538,6 @@ END
     my $p = $override->{bicolor_pivot} || $bicolor_pivot || 'none';
     my $has_pivot = $g =~ /wiggle_xyplot|wiggle_density|xyplot/;
 
-    warn "\$p = $p";
-
     push @rows,TR( {-class=>'xyplot density',
 		     -id   =>'bicolor_pivot_id'},
                    th( { -align => 'right'}, $self->translate('BICOLOR_PIVOT')),
@@ -2685,12 +2684,14 @@ END
 		    th( { -align => 'right' },$self->translate('AUTOSCALING')),
 		    td( $picker->popup_menu(
 			    -name    => "conf_wiggle_autoscale",
-			    -values  => $summary_mode ? [qw(none local)] : [qw(none z_score local chromosome global)],
+			    -values  => $summary_mode ? [qw(none local)] : [qw(none z_score local chromosome global clipped_global)],
 			    -labels  => {none      =>'fixed',
 					 z_score   =>'scale to SD multiples',
 					 local     =>'scale to local min/max',
 					 chromosome=>'scale to chromosome min/max',
-					 global    =>'scale to genome min/max'},
+					 global    =>'scale to genome min/max',
+					 clipped_global   =>'clip to +/- SDs shown below'
+			    },
 			    -default => $autoscale,
 			    -current => $override->{autoscale},
 			    -scripts => {-onChange => 'track_configure.autoscale_select(this,$(\'glyph_picker_id\'))',

@@ -21,6 +21,7 @@ bin/report_missing_language_tags.pl
 bin/scan_gbrowse.pl
 bin/ucsc_genes2gff.pl
 bin/wiggle2gff3.pl
+bin/windows_install.pl
 Build.PL
 cgi-bin/das
 cgi-bin/gbgff

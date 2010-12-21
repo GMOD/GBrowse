@@ -11,6 +11,7 @@ use Getopt::Long;
 use GBrowse::ConfigData;
 use List::Util;
 use File::Spec;
+use File::Basename 'dirname';
 use File::Path 'remove_tree';
 use POSIX 'strftime';
 
@@ -47,6 +48,7 @@ if (!$dsn || ($dsn =~ /filesystem|memory/i) || !$globals->user_accounts) {
     exit 0;
 }
 
+fix_sqlite_permissions($<)     if $dsn =~ /sqlite/i;
 create_database();
 
 my $database = DBI->connect($dsn) 
@@ -141,9 +143,7 @@ my $old_uploads_columns = {
     data_source       => "text",
 };
 
-
-
-fix_permissions() if $type !~ /sqlite/i;
+fix_permissions()          unless $type =~ /sqlite/;
 
 upgrade_schema(SCHEMA_VERSION);
 check_table("users",            $users_columns);
@@ -156,7 +156,7 @@ check_sessions();
 check_uploads_ids();
 check_all_files();
 check_data_sources();
-fix_permissions() if $type =~ /sqlite/i;
+fix_sqlite_permissions() if $type =~ /sqlite/i;
 
 $database->disconnect;
 
@@ -211,27 +211,27 @@ sub check_table {
 	if ($type =~ /sqlite/i) {
 	    # If we don't find a specific column, add its SQL to the columns_to_create array.
 	    foreach (@columns_to_create) {
-		    $$columns{$_} = escape_enums($$columns{$_});
+		$$columns{$_} = escape_enums($$columns{$_});
                 
-		    # Now add each column individually
-		    my $alter_sql = "ALTER TABLE $name ADD COLUMN $_ " . $$columns{$_} . ";";
-		    $database->do($alter_sql) or die "While adding column $_ to $name: ",
-		                                      $database->errstr;
+		# Now add each column individually
+		my $alter_sql = "ALTER TABLE $name ADD COLUMN $_ " . $$columns{$_} . ";";
+		$database->do($alter_sql) or die "While adding column $_ to $name: ",
+		$database->errstr;
 	    }
 	} else {
-        @columns_to_create = map { "$_ " . $$columns{$_} } @columns_to_create;
+	    @columns_to_create = map { "$_ " . $$columns{$_} } @columns_to_create;
             
 	    # Now add all the columns
-		my $alter_sql;
+	    my $alter_sql;
 		
-		if ($type =~ /mysql/) {
-		    $alter_sql .= "ALTER TABLE $name";
-		    $alter_sql .= " ADD COLUMN " . shift @columns_to_create;
-		    $alter_sql .= ", ADD COLUMN $_" foreach @columns_to_create;
+	    if ($type =~ /mysql/) {
+		$alter_sql .= "ALTER TABLE $name";
+		$alter_sql .= " ADD COLUMN " . shift @columns_to_create;
+		$alter_sql .= ", ADD COLUMN $_" foreach @columns_to_create;
 	        $alter_sql .= ";";
-		} else {
+	    } else {
     		$alter_sql = "ALTER TABLE $name ADD (" . (join ", ", @columns_to_create) . ");" ;
-        }
+	    }
 	    $database->do($alter_sql) or die $database->errstr;
 	}
     }
@@ -447,30 +447,47 @@ sub fix_permissions {
     $db_name ||= "gbrowse_login";
     
     if ($type =~ /mysql/i) {
-	    my ($db_user) = $dsn =~ /user=([^;]+)/i;
-	    my ($db_pass) = $dsn =~ /password=([^;]+)/i || ("");
-	    $database->do("GRANT ALL PRIVILEGES on $db_name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") or die DBI->errstr;
-    } elsif ($type =~ /sqlite/i) {
-	    my ($path) = $dsn =~ /dbname=([^;]+)/i;
-	    unless ($path) {
-	        ($path) = $dsn =~ /DBI:SQLite:([^;]+)/i;
-	    }
-	    my $user  = GBrowse::ConfigData->config('wwwuser');
-	    my $group = get_group_from_user($user);
+	my ($db_user) = $dsn =~ /user=([^;]+)/i;
+	my ($db_pass) = $dsn =~ /password=([^;]+)/i || ("");
+	$database->do("GRANT ALL PRIVILEGES on $db_name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") 
+	    or die DBI->errstr;
+    }
+}
+
+sub fix_sqlite_permissions {
+    my $user  = shift;
+    my (undef, $db_name) = $dsn =~ /.*:(database=)?([^;]+)/;
+    $db_name ||= "gbrowse_login";
+
+    my ($path) = $dsn =~ /dbname=([^;]+)/i;
+    ($path) = $dsn =~ /DBI:SQLite:([^;]+)/i unless $path;
+    die "Couldn't figure out location of database index from $dsn" unless $path;
+
+    $user     ||= GBrowse::ConfigData->config('wwwuser');
+    my $group   = get_group_from_user($user);
+
+    my $dir = dirname($path);
+    my $file_owner = (getpwuid(stat($path)))[4];
+    my $dir_owner  = (getpwuid(stat($dir)))[4];
 	    
-	    # Check if we need to, to avoid unnecessary printing/sudos.
-	    unless ($user eq getpwuid((stat($path))[4])) {
-	        unless ($group) {
-	            print STDERR "Unable to look up group for $user. Will not change ownerships on $path.\n";
-	            print STDERR "You should do this manually to give the Apache web server read/write access to $path.\n";
-	        } else {
-	            print STDERR "Using sudo to set ownership to $user:$group. You may be prompted for your login password now.\n";
-	            die "Couldn't figure out location of database index from $dsn" unless $path;
-	            system "sudo chown $user $path";
-	            system "sudo chgrp $group $path";
-	            system "sudo chmod a+x $path";
-	        }
-	    }
+    # Check if we need to, to avoid unnecessary printing/sudos.
+    unless ($group) {
+	print STDERR "Unable to look up group for $user. Will not change ownerships on $path.\n";
+	print STDERR "You should do this manually to give the Apache web server read/write access to $path.\n";
+	return;
+    }
+
+    if (-e $path && $user ne $file_owner) {
+	print STDERR "Using sudo to set $path ownership to $user:$group. You may be prompted for your login password now.\n";
+	system "sudo chown $user $path" ;
+	system "sudo chgrp $group $path";
+	system "sudo chmod 0644 $path";
+    }
+    if (-e $dir && $user ne $dir_owner) {
+	print STDERR "Using sudo to set $dir ownership to $user:$group. You may be prompted for your login password now.\n";
+	system "sudo chown $user $dir";
+	system "sudo chgrp $group $dir";
+	system "sudo chmod 0755 $dir";
     }
 }
 
@@ -568,7 +585,9 @@ sub prompt {
 
 sub get_group_from_user {
     my $user = shift;
-    my (undef,undef,undef,$gid) = getpwnam($user) or return;
+    my (undef,undef,undef,$gid) = $user =~ /^\d+$/ ? getpwuid($user) 
+                                                   : getpwnam($user);
+    $gid or return;
     my $group = getgrgid($gid);
     return $group;
 }
@@ -581,7 +600,7 @@ sub upgrade_schema {
 	check_table('dbinfo',$dbinfo_columns);
 	$old_version = 0;
     }
-    backup_database() unless $old_version = $new_version;
+    backup_database() unless $old_version == $new_version;
     for (my $i=$old_version;$i<$new_version;$i++) {
 	my $function = "upgrade_from_${i}_to_".($i+1);
 	eval "$function();1" or die "Can't upgrade from version $i to version ",$i+1;
@@ -620,7 +639,18 @@ sub backup_database {
 
 sub set_schema_version {
     my ($table,$version) = @_;
-    $database->do("replace into $table (schema_version) values ($version)");
+    local $database->{AutoCommit} = 0;
+    local $database->{RaiseError} = 1;
+    eval {
+	$database->do("delete from $table");
+	$database->do("insert into $table (schema_version) values ($version)");
+	$database->commit();
+    };
+    if ($@) {
+	warn "update failed due to $@. Rolling back";
+	eval {$database->rollback()};
+	die "Can't continue";
+    }
 }
 
 ############################## one function to upgrade each level
@@ -784,12 +814,12 @@ sub upgrade_from_1_to_2 {
 	$database->commit() if $run;
 
     if ($@) {
-	    warn "upgrade failed due to $@. Rolling back";
-	    eval {$database->rollback()};
-	    die "Can't continue";
+	warn "upgrade failed due to $@. Rolling back";
+	eval {$database->rollback()};
+	die "Can't continue";
     } else {
-	    print STDERR "Successfully upgraded schema from 1 to 2.\n";
-	    set_schema_version('dbinfo', 2);
+	print STDERR "Successfully upgraded schema from 1 to 2.\n";
+	set_schema_version('dbinfo', 2);
     }
 }
 

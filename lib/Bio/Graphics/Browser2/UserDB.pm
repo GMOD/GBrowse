@@ -28,6 +28,7 @@ sub new {
   my $credentials  = $globals->user_account_db 
       || "DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse";
   
+  warn "credentials=$credentials";
   my $login = DBI->connect($credentials);
   unless ($login) {
     print header();

@@ -42,8 +42,9 @@ sub new {
     my $uploadsid = $session->uploadsid;
     my $sessionid = $session->id;
     my $backend = $globals->user_account_db;
+    my $user_accounts = $globals->user_accounts;
     
-    if ($backend && $backend =~ /db/i) {
+    if ($backend && $backend =~ /db/i && $user_accounts) {
 	return Bio::Graphics::Browser2::UserTracks::Database->_new($data_source, $globals, $uploadsid, $sessionid);
     } elsif ($backend && $backend =~ /(filesystem|memory)/i) {
 	return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);

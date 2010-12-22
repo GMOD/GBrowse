@@ -443,23 +443,23 @@ sub wrap_rendered_track {
     );
 
     my $icon = $collapsed ? $plus : $minus;
-    my $show_or_hide = $self->language->tr('SHOW_OR_HIDE_TRACK')
+    my $show_or_hide = $self->language->translate('SHOW_OR_HIDE_TRACK')
         || "Show or Hide";
-    my $kill_this_track = $self->language->tr('KILL_THIS_TRACK')
+    my $kill_this_track = $self->language->translate('KILL_THIS_TRACK')
 	|| "Turn off this track.";
-    my $share_this_track = $self->language->tr('SHARE_THIS_TRACK')
+    my $share_this_track = $self->language->translate('SHARE_THIS_TRACK')
         || "Share this track";
 
     my $configure_this_track = '';
-    $configure_this_track .= $self->language->tr('CONFIGURE_THIS_TRACK')
+    $configure_this_track .= $self->language->translate('CONFIGURE_THIS_TRACK')
         || "Configure this track";
 
     my $download_this_track = '';
-    $download_this_track .= $self->language->tr('DOWNLOAD_THIS_TRACK')
+    $download_this_track .= $self->language->translate('DOWNLOAD_THIS_TRACK')
         || "<b>Download this track</b>";
 
     my $about_this_track = '';
-    $about_this_track .= $self->language->tr('ABOUT_THIS_TRACK')
+    $about_this_track .= $self->language->translate('ABOUT_THIS_TRACK')
         || "<b>About this track</b>";
 
     my $escaped_label = CGI::escape($label);
@@ -1478,10 +1478,10 @@ sub select_features_menu {
 
     # modify the title to show that some subtracks are hidden
     $$titleref .= " ".span({-class       =>'clickable',
-			   -onMouseOver  => "GBubble.showTooltip(event,'" . $self->language->tr('CLICK_MODIFY_SUBTRACK_SEL') . "')",
+			   -onMouseOver  => "GBubble.showTooltip(event,'" . $self->language->translate('CLICK_MODIFY_SUBTRACK_SEL') . "')",
 			   -onClick      => $subtrack_click
 			  },
-			  $self->language->tr('SHOWING_SUBTRACKS',$selected,$total));						#;
+			  $self->language->translate('SHOWING_SUBTRACKS',$selected,$total));						#;
     
 }
 
@@ -1766,7 +1766,7 @@ sub add_features_to_track {
 	my $max   = $tracks->{$l}->feature_limit;
 	my $count = $tracks->{$l}->feature_count;
 	$tracks->{$l}->panel->key_style('between');
-	$tracks->{$l}->configure(-key => $self->language->tr('FEATURES_CLIPPED',$max,$count));
+	$tracks->{$l}->configure(-key => $self->language->translate('FEATURES_CLIPPED',$max,$count));
     }
   }
 

@@ -1647,6 +1647,14 @@ sub add_features_to_track {
 							       -seq_id     => $segment->seq_id,
 		  );
 	      $has_subtracks{$l}++;
+
+	      if ($source->setting($l=>'subtrack single plot')) {
+	          $tracks->{$l}->configure(
+	                 -scale     => 'none',
+	                 -no_grid   => 1,
+	          );
+	      }
+
 	      $groups{$l}{$id}->add_segment($feature);
 	      next;
 	  }
@@ -1680,8 +1688,39 @@ sub add_features_to_track {
 						 -seq_id => $segment->seq_id) 
 	    foreach @ids
     }
-    
-    $track->add_feature($_) foreach values %$g;
+
+    if ($source->setting($l=>'subtrack single plot')) {
+        my $tempFeature = Bio::Graphics::Feature->new(-type       => 'group',
+                                                      -start      => $segment->start,
+                                                      -end        => $segment->end,
+                                                      -seq_id     => $segment->seq_id,
+                      );
+        my $tempSubFeature = Bio::Graphics::Feature->new(-type       => 'scale',
+                                                         -scale      => 'three',
+                                                         -name       => 'scales',
+                                                         -start      => $segment->start,
+                                                         -end        => $segment->end,
+                                                         -seq_id     => $segment->seq_id,
+                      );
+        $tempFeature->add_segment(($tempSubFeature));
+        $track->add_feature($tempFeature);
+        
+        foreach (values %$g) {
+            my $f = $_;
+            my @colours = ( qw(aqua black blue fuchsia gray green lime maroon navy olive purple red silver teal yellow) );
+            my @subFeatures = $f->get_SeqFeatures;
+            my $subf = $subFeatures[0];
+            if ($subf) {
+                my $feature_colour = $colours[rand @colours];
+                $subf->{attributes}{'bgcolor'} = $feature_colour;
+                $subf->{attributes}{'labelcolor'} = $feature_colour;
+            }
+            $track->add_feature($f);
+        }
+    } else {
+        $track->add_feature($_) foreach values %$g;
+    }
+
     $feature_count{$l} += keys %$g;
 
   }
@@ -1715,7 +1754,7 @@ sub add_features_to_track {
 					       $max_labels,
 					       $length);
 
-    $tracks->{$l}->configure(-bump        => $do_bump,
+    $tracks->{$l}->configure(-bump        => ($has_subtracks{$l} && ($source->setting($l=>'subtrack single plot'))) ? 0 : $do_bump,
 			     -label       => $do_label,
 			     -description => $do_description,
 			      );
@@ -1995,7 +2034,7 @@ sub create_track_args {
       push @default_args,(
 	  -group_label          => $group_label||0,
 	  -group_label_position => $left_label ? 'top' : 'left',
-	  -group_subtracks      => 1,
+	  -group_subtracks      => $source->setting($label=>'subtrack single plot') ? 0 : 1,
       );
   }
 

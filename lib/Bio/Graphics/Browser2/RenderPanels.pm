@@ -1478,7 +1478,7 @@ sub select_features_menu {
 
     # modify the title to show that some subtracks are hidden
     $$titleref .= " ".span({-class       =>'clickable',
-			   -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
+			   -onMouseOver  => "GBubble.showTooltip(event,'" . $self->language->tr('CLICK_MODIFY_SUBTRACK_SEL') . "')",
 			   -onClick      => $subtrack_click
 			  },
 			  $self->language->tr('SHOWING_SUBTRACKS',$selected,$total));						#;

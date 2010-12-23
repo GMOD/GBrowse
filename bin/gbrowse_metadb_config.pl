@@ -97,8 +97,6 @@ my $uploads_columns = {
     creation_date     => "datetime not null",
     modification_date => "datetime",
     sharing_policy    => "ENUM('private', 'public', 'group', 'casual') not null",
-    users             => "text",
-    public_users      => "text",
     public_count      => "int",
     data_source       => "text",
 };
@@ -106,7 +104,7 @@ my $uploads_columns = {
 my $sharing_columns = {
     trackid => "varchar(32) not null",
     userid  => "integer not null",
-    public  => "bool",
+    public  => "boolean",
 };
 
 my $dbinfo_columns = {

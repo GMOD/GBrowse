@@ -501,19 +501,6 @@ ok($usertracks->file_type($file), "imported");
 ok($usertracks->created($file));
 ok($usertracks->modified($file));
 
-# Testing the sharing capability only works for the database backend.
-if ($usertracks =~ /database/) {
-    $usertracks->permissions($file, "group");
-    ok($usertracks->permissions($file), "group");
-    $usertracks->share($file, 1);
-    ok(grep(/1/, $usertracks->shared_with($file)));
-    ok($usertracks->filename($file), $url);
-    $usertracks->permissions($file, "public");
-    ok(!(grep(/1/, $usertracks->public_users($file))));
-    $usertracks->share($file, 1);
-    ok(grep(/1/, $usertracks->public_users($file)));
-}
-
 $usertracks->delete_file($file);
 ok(!-e $conf);
 ok($usertracks->tracks+0,0);

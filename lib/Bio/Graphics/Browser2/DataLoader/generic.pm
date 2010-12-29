@@ -26,6 +26,7 @@ sub start_load {
     my $loader = $loader_class->new(-store=> $db,
 				    -fast => $fast,
 				    -summary_stats    => 1,
+				    -verbose          => 0,
 				    -index_subfeatures=> 0,
 	);
     $loader->start_load();
@@ -57,6 +58,12 @@ sub finish_load {
     my $trackno   = 0;
     my $loadid    = $self->loadid;
     my $inhibit_summary = $line_count < TOO_SMALL_FOR_SUMMARY_MODE;
+    eval {
+	$self->set_status('calculating summary statistics');
+	$self->loader->build_summary;
+    } unless $inhibit_summary;
+    warn $@ if $@;
+
     $self->set_status('creating configuration');
     
     print $conf <<END;
@@ -125,7 +132,7 @@ database = $loadid
 feature   = $t
 glyph     = $glyph
 bgcolor   = $color
-fgcolor   = black
+fgcolor   = $color
 label     = 1
 stranded  = $stranded
 connector = solid

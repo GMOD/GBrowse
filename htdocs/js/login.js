@@ -1,4 +1,4 @@
-var LoginScript = '/cgi-bin/gb2/gbrowse_login';
+var LoginScript = '../../gbrowse_login';
 var Logged      = false;
 var OpenIDMenu  = false;
 
@@ -52,6 +52,8 @@ function load_login_balloon(event,session,username,openid) {
                      '<ul style=\'margin:0px 0px 0px 18px\'>' +
                          '<li id=loginChgEmail><a href=#email onClick=edit_details(\'email\')>' +
                              Controller.translate('CHANGE_MY_EMAIL') + '</a></li>' +
+                         '<li id=loginChgName><a href=#email onClick=edit_details(\'gecos\')>' +
+                             Controller.translate('CHANGE_MY_NAME') + '</a></li>' +
                          '<li id=loginChgPass><a href=#pass onClick=edit_details(\'password\')>' +
                              Controller.translate('CHANGE_MY_PASSWORD') + '</a></li>' +
                          (Controller.can_openid?
@@ -69,16 +71,19 @@ function load_login_balloon(event,session,username,openid) {
                  '<tbody id=loginNorm>' +
                    '<tr id=loginURow><td>' + Controller.translate('USERNAME') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginUser type=text maxlength=32 style=font-size:9pt size=20></td></tr>' +
+                       'id=loginUser type=text maxlength=32 style=font-size:9pt size=30></td></tr>' +
+                   '<tr id=loginFRow style=display:none><td>' + Controller.translate('REALNAME') + '</td>' +
+                     '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
+                       'id=loginFullName type=text maxlength=32 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginERow style=display:none><td>' + Controller.translate('EMAIL_TO_VALIDATE') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginEmail type=text maxlength=64 style=font-size:9pt size=20></td></tr>' +
+                       'id=loginEmail type=text maxlength=64 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginPRow><td>' + Controller.translate('PASSWORD') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginPass type=password maxlength=32 style=font-size:9pt size=20></td></tr>' +
+                       'id=loginPass type=password maxlength=32 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginP2Row style=display:none><td>' + Controller.translate('RETYPE_PASSWORD') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginPass2 type=password maxlength=32 style=font-size:9pt size=20></td></tr>' +
+                       'id=loginPass2 type=password maxlength=32 style=font-size:9pt size=30></td></tr>' +
                  '</tbody>' +
 
                    //"Edit Details" input text boxes
@@ -92,6 +97,12 @@ function load_login_balloon(event,session,username,openid) {
                    '<tr><td width=40%>' + Controller.translate('RETYPE_NEW_EMAIL') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);edit_details_verify();} ' +
                        'id=loginDENew2 type=text maxlength=64 style=font-size:9pt size=18></td></tr>' +
+                 '</tbody>' +
+
+                 '<tbody id=loginDRealName style=display:none;>' +
+                   '<tr><td width=40%>' + Controller.translate('NEW_REALNAME') + '</td>' +
+                     '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);edit_details_verify();} ' +
+                       'id=loginDNewname type=text maxlength=64 style=font-size:9pt size=18></td></tr>' +
                  '</tbody>' +
 
                  '<tbody id=loginDPass style=display:none;>' +
@@ -154,7 +165,7 @@ function load_login_balloon(event,session,username,openid) {
                  '<tbody id=loginDList style=display:none;></tbody>' +
 
                   //Submit, remember me and cancel buttons
-                 '<tbody>' +
+                 '<tbody id="loginOptions">' +
                    '<tr><td id=loginButtons colspan=2 align=center style=padding-bottom:3px;padding-top:6px>' +
                      '<input id=loginSubmit style=font-size:90% type=button value=\'' + Controller.translate('LOG_IN') + '\'' +
                        'onClick=login_loading(true);$(\'loginWarning\').hide();validate_info(); />' +
@@ -180,11 +191,10 @@ function load_login_balloon(event,session,username,openid) {
                     //Register, My Account and Forgotten Password selections
                    '<tr id=loginOpts align=center><td id=loginOptsContent1 colspan=2><font size=1>' +
                      '<a href=#register onClick=login_page_change(\'create\');>' + Controller.translate('REGISTER') + '</a> / ' +
-                     '<a href=#account onClick=login_page_change(\'edit\');>' + Controller.translate('MY_ACCOUNT') + '</a> / ' +
                      '<a href=#forgot onClick=login_page_change(\'forgot\');>' + Controller.translate('FORGOTTEN_PASSWORD') + '</a>' +
                    '</font></td>' +
                    '<td id=loginOptsContent2 colspan=2 style=display:none;><font size=1>' +
-                      Controller.translate('REGISTER') + ' / ' + Controller.translate('MY_ACCOUNT') + ' / ' + Controller.translate('FORGOTTEN_PASSWORD') + '</font></td>' +
+	               Controller.translate('REGISTER') + ' / ' + ' / ' + Controller.translate('FORGOTTEN_PASSWORD') + '</font></td>' +
                    '</tr>' +
                  '</tbody>' +
 
@@ -192,9 +202,10 @@ function load_login_balloon(event,session,username,openid) {
                  (Controller.can_openid?
                  '<tbody id=loginOpenID>' +
                    '<tr><td id=loginOpenIDY colspan=2 align=center style=padding-top:12px>' +
-                       Controller.translate('HAVE_OPENID') + ' <a href=#openid onClick=login_page_openid(true)>' +
-                       Controller.translate('SIGN_IN') + '</a></td></tr>' +
-                   '<tr><td id=loginOpenIDN colspan=2 align=center style=display:none;padding-top:12px>' +
+		      ' <a href=#openid onClick=login_page_openid(true)><img src="'+ImgLocation+'/openid-logo.gif" />'+
+		             Controller.translate('SIGN_IN') + '</a> ' +
+		       Controller.translate('WITH_OPENID') + '</td></tr>' +
+		    '<tr><td id=loginOpenIDN colspan=2 align=center style=display:none;padding-top:12px>' +
                        Controller.translate('DONT_HAVE_OPENID') + ' <a href=#noopenid onClick=login_page_openid(false)>' +
                        Controller.translate('GO_BACK') + '</a></td></tr>' +
                  '</tbody>' : ""
@@ -243,20 +254,35 @@ function login_page_change(page) {
             $('loginOpenID').blur();
         $('loginOpts').blur();
         if (Controller.can_openid)
-            $('loginOpenID').show();
-        $('loginERow').hide();  $('loginSubmit').show();
-        $('loginP2Row').hide(); $('loginDSelect').hide();
+	    $('loginOpenID').show();
+	login_show_rows('loginNorm',new Array('loginSubmit'));
+	// $('loginERow').hide();  $('loginSubmit').show();
+	// $('loginFRow').hide();
+        // $('loginP2Row').hide(); $('loginDSelect').hide();
         break;
     case 'create':
         $('loginTitle').innerHTML = Controller.translate('REGISTER');
         $('loginSubmit').value    = Controller.translate('REGISTER');
-        $('loginERow').show();
-        $('loginP2Row').show();
+	login_show_rows('loginNorm',new Array('loginERow','loginFRow','loginP2Row'));
+	// $('loginERow').show();
+	// $('loginFRow').show();
+	// $('loginP2Row').show();
         break;
     case 'forgot':
         $('loginTitle').innerHTML = Controller.translate('FORGOT_MY_PASSWORD');
         $('loginSubmit').value    = Controller.translate('EMAIL_MY_PASSWORD');
-        $('loginERow').show();
+	login_show_rows('loginNorm',new Array('loginERow'));
+        // $('loginERow').show();
+        break;
+    case 'resend':
+        $('loginTitle').innerHTML = Controller.translate('RESEND_CONFIRM_EMAIL');
+        $('loginSubmit').value    = Controller.translate('GO_BACK');
+	$('loginNorm').hide();
+	$('loginOptions').hide();
+	return;
+	//	$('loginURow').hide(); $('loginERow').hide();  $('loginBreak').hide();
+	// $('loginPRow').hide(); $('loginP2Row').hide(); $('loginSubmit').hide();
+	//$('loginFRow').hide(); $('loginOpts').hide();  $('loginRemember').hide();
         break;
     case 'edit':
         $('loginTitle').innerHTML = Controller.translate('EDIT_ACCOUNT_DETAILS');
@@ -306,6 +332,14 @@ function login_page_change(page) {
     return;
 }
 
+function login_show_rows(tableid,rows) {
+    var table = $(tableid);
+    if (table == null) return;
+    var all = table.select('tr');
+    all.each(function(a){a.hide()});
+    rows.each(function(a){$(a).show()});
+}
+
 //Switches between a normal username/pass form and an openid form
 function login_page_openid(openID) {
     $('loginWarning').hide();
@@ -330,7 +364,7 @@ function login_loading(toggle) {
         $('loginOptsContent1').hide();       $('loginOptsContent2').show();
         
         if (Controller.can_openid) {
-            $('loginOpenIDY').innerHTML = Controller.translate('HAVE_OPENID')      + ' ' + Controller.translate('SIGN_IN');
+            $('loginOpenIDY').innerHTML = Controller.translate('SIGN_IN') + ' ' + Controller.translate('WITH_OPENID');
             $('loginOpenIDN').innerHTML = Controller.translate('DONT_HAVE_OPENID') + ' ' + Controller.translate('GO_BACK');
         }
     } else {
@@ -339,8 +373,8 @@ function login_loading(toggle) {
         $('loginOptsContent1').show();       $('loginOptsContent2').hide();
 
         if (Controller.can_openid) {
-            $('loginOpenIDY').innerHTML = Controller.translate('HAVE_OPENID') + ' <a href=#openid onClick=' +
-                                      'login_page_openid(true)>' + Controller.translate('SIGN_IN') + '</a>';
+	    $('loginOpenIDY').innerHTML = ' <a href=#openid onClick=' + 'login_page_openid(true)><img src="'+ImgLocation+'/openid-logo.gif" />' + Controller.translate('SIGN_IN') + '</a> ' +
+		Controller.translate('WITH_OPENID');
             $('loginOpenIDN').innerHTML = Controller.translate('DONT_HAVE_OPENID') + ' <a href=#noopenid onClick=' +
                                       'login_page_openid(false)>' + Controller.translate('GO_BACK') + '</a>.';
         }
@@ -349,10 +383,11 @@ function login_loading(toggle) {
 
 //Checks to make sure that all the information required by a given page is there when "Submit" is clicked
 function validate_info() {
-    var user   = $('loginUser').getValue().length;
-    var email  = $('loginEmail').getValue().length;
-    var pass   = $('loginPass').getValue();
-    var pass2  = $('loginPass2').getValue();
+    var user       = $('loginUser').getValue().length;
+    var fullname   = $('loginFullName').getValue().length;
+    var email      = $('loginEmail').getValue().length;
+    var pass       = $('loginPass').getValue();
+    var pass2      = $('loginPass2').getValue();
     if (Controller.can_openid)
         var openid = $('loginDONew').getValue();
     var html   = '<' + String($('loginWarning').innerHTML).split('<')[2] + '</font>';
@@ -412,6 +447,7 @@ function validate_info() {
 //Adds the user to the database (regular login)
 function add_user() {
     var username = $('loginUser').getValue();
+    var fullname = $('loginFullName').getValue();
     var password = $('loginPass').getValue();
     var email    = $('loginEmail').getValue();
     $('loginBusy').show();
@@ -420,6 +456,7 @@ function add_user() {
         method:      'post',
         parameters:  {action: ['add_user_check'],
                       user:     username,
+		      fullname: fullname,
                       email:    email,
                       pass:     password,
                       session:  SessionID
@@ -446,15 +483,18 @@ function add_user() {
                             ' <a href=#forgot onClick="login_page_change(\'main\');' +
                             'login_page_change(\'forgot\');login_loading(true);' +
                             'email_user_info();return false;">' + Controller.translate('FORGOTTEN_PASSWORD') + '</a>.';
-                } else if(results == 'Message Already Sent') {
-                    var link1 = '<a href=#resend onClick="edit_confirmation(1);return false;">' + Controller.translate('RESEND_CONFIRM_EMAIL') + '</a>';
-                    var link2 = '<a href=#remove onClick="edit_confirmation(0);return false;">' + Controller.translate('DELETE_UNCONFIRMED')   + '</a>';
+                } else if (results == 'Message Already Sent') {
+                    var link1 = '<a href=#resend onClick="edit_confirmation(1);return false;">' 
+			+ Controller.translate('RESEND_CONFIRM_EMAIL') + '</a>';
+                    var link2 = '<a href=#remove onClick="edit_confirmation(0);return false;">' 
+			+ Controller.translate('DELETE_UNCONFIRMED')   + '</a>';
                     $('loginWarning').innerHTML = Controller.translate('MESSAGE_ALREADY_SENT', link1, link2);
                 }
 
                 $('loginURow').hide(); $('loginBreak').hide();
                 $('loginPRow').hide(); $('loginSubmit').hide();
                 $('loginERow').hide(); $('loginWarning').show();
+		$('loginFRow').hide();
                 $('loginP2Row').hide();
             } else {
                 $('loginWarning').innerHTML = results;
@@ -466,11 +506,25 @@ function add_user() {
     return;
 }
 
+function ask_resend_confirmation (email) {
+    if (email != null) {
+	$('loginEmail').value = email;
+    }
+    var link1 = '<a href=#resend onClick="edit_confirmation(1);return false;">' 
+	+ Controller.translate('RESEND_CONFIRM_EMAIL') + '</a>';
+    var link2 = '<a href=#remove onClick="edit_confirmation(0);return false;">' 
+	+ Controller.translate('DELETE_UNCONFIRMED')   + '</a>';
+    $('loginWarning').innerHTML = Controller.translate('MESSAGE_ALREADY_SENT', link1, link2);
+}
+
 //Resends or simply deletes an existing unconfirmed account if the same e-mail is used for a new account
 function edit_confirmation(resend) {
     $('loginWarning').innerHTML = '';
-    login_page_change('main');
-    login_page_change('create');
+    if (resend==1) {
+	login_page_change('resend');
+    } else if (resend==0) {
+	login_page_change('main');
+    }
     login_loading(true);
 
     var email = $('loginEmail').getValue();
@@ -482,10 +536,16 @@ function edit_confirmation(resend) {
                       option: resend
                      },
         onSuccess: function (transport) {
-	    $('loginBusy').hide();
-            $('loginWarning').innerHTML = transport.responseText;
-            login_user(email);
-        }
+		$('loginCancel').value        = Controller.translate('BACK');
+		$('loginWarning').style.color = 'blue';
+		$('loginWarning').innerHTML   = Controller.translate('CONFIRMATION_EMAIL_SENT');
+		$('loginURow').hide(); $('loginERow').hide();  $('loginBreak').hide();
+		$('loginPRow').hide(); $('loginP2Row').hide(); $('loginSubmit').hide();
+		$('loginFRow').hide()
+		login_loading(false);
+		$('loginWarning').show();
+		$('loginBusy').hide();
+	    }
     });
     return;
 }
@@ -493,6 +553,8 @@ function edit_confirmation(resend) {
 //Adds the user to the database if they didn't previously exist (openid login)
 function add_openid_user(openid,html) {
     var username = $('loginUser').getValue();
+    var email    = $('loginEmail').getValue();
+    var gecos    = $('loginFullName').getValue();
     var remember;
 
     $('loginWarning').hide();
@@ -504,6 +566,8 @@ function add_openid_user(openid,html) {
         method:      'post',
         parameters:  {action: ['add_openid_user'],
                       user:     username,
+		      email:    email,
+		      fullname: gecos,
                       openid:   openid,
                       session:  SessionID,
                       remember: remember
@@ -568,7 +632,10 @@ function login_validation() {
             if(results.indexOf('session')!=-1) {
                 session = results.slice(7);
                 $('loginWarning').innerHTML = 'Success';
-            } else {
+            } else if (results.indexOf('unconfirmed')!=-1) {
+		var email = results.slice(11);
+		ask_resend_confirmation(email);
+	    } else {
                 $('loginWarning').innerHTML = results;
             }
             UsingOpenID = false;
@@ -594,9 +661,9 @@ function login_user(username,session,remember) {
             $('loginCancel').value        = Controller.translate('BACK');
             $('loginWarning').style.color = 'blue';
             $('loginWarning').innerHTML   = Controller.translate('CONFIRMATION_EMAIL_SENT');
-
             $('loginURow').hide(); $('loginERow').hide();  $('loginBreak').hide();
             $('loginPRow').hide(); $('loginP2Row').hide(); $('loginSubmit').hide();
+            $('loginFRow').hide()
             login_loading(false);
             $('loginWarning').show();
             return;
@@ -701,7 +768,9 @@ function email_user_info() {
                 $('loginWarning').style.color = 'blue';
                 $('loginWarning').innerHTML = Controller.translate('PROFILE_EMAIL_SENT');
                 $('loginERow').hide();  $('loginSubmit').hide();
+		$('loginFRow').hide();
                 $('loginBreak').hide(); $('loginWarning').show();
+                $('loginFRow');
             }
             login_loading(false);
         }
@@ -738,6 +807,7 @@ function edit_details(details) {
         $('loginDPass').hide();   
         $('loginDList').hide();
         $('loginDEmail').hide();
+        $('loginDRealName').hide();
         $('loginNorm').hide();
         $('loginBreak').hide();
 
@@ -766,6 +836,12 @@ function edit_details(details) {
         $('loginDEOrig').focus();
         EditDetails = 'email';
         return;
+    case 'gecos':
+        $('loginTitle').innerHTML = Controller.translate('CHANGE_MY_NAME');
+        $('loginDRealName').show();
+        $('loginDNewname').focus();
+        EditDetails = 'gecos';
+        return;
     case 'password':
         $('loginTitle').innerHTML = Controller.translate('CHANGE_MY_PASSWORD');
         $('loginDPass').show();
@@ -778,7 +854,7 @@ function edit_details(details) {
         LoginPage = 'openid-add';
         $('loginDOpenid').show();
         if(UsingOpenID) {$('loginDOpenidUser').show(); $('loginDOUser').focus();}
-        else {$('loginDOpenidPass').show(); $('loginDOPass').focus();}
+        // else {$('loginDOpenidPass').show(); $('loginDOPass').focus();}
         return;
     case 'openid-remove':
         $('loginDList').innerHTML   = '<tr><td></td></tr>';
@@ -810,7 +886,8 @@ function edit_details(details) {
         $('loginWarning').show();
         $('loginDCancel').value = Controller.translate('NO');
         $('loginDSubmit').value = Controller.translate('YES');
-        EditDetails = 'delete';
+	$('loginDOUser').value = CurrentUser;
+	EditDetails = 'delete';
         return;
     case 'delete-confirm':
         $('loginTitle').innerHTML   = Controller.translate('CONFIRM_ACCOUNT_DELETE');
@@ -895,8 +972,6 @@ function edit_details_verify() {
     case 'delete-confirm':
         if((!UsingOpenID && opass.length==0) || (UsingOpenID && ouser.length==0)) {
             $('loginWarning').innerHTML = Controller.translate('PLEASE_CONFIRM_INFO');
-        } else if(UsingOpenID && CurrentUser != ouser) {
-            $('loginWarning').innerHTML = Controller.translate('INCORRECT_USERNAME');
         } else {
             login_delete_user(CurrentUser,opass);
             return;
@@ -1049,15 +1124,16 @@ function remove_openid_cookie() {
 }
 
 //Retrieve the GET variables and pass them to the OpenID handler
-function confirm_openid(session,page,logged_in) {
+function confirm_openid(session,page,logged_in,email,gecos) {
     remove_openid_cookie();
     var callback = process_openid();
     new Ajax.Request(LoginScript,{
         method:      'post',
-        parameters:  {action: ['confirm_openid'],
-                      callback: callback,
-                      session:  session,
-                      option:   page
+        parameters:  {
+		action: ['confirm_openid'],
+		    callback: callback,
+		    session:  session,
+		    option:   page
         },
         onSuccess: function (transport) {
             var results = transport.responseJSON;
@@ -1067,8 +1143,8 @@ function confirm_openid(session,page,logged_in) {
                 setTimeout(command,2000);
             } else if(results[0].error != null) {
                 var command = 'confirm_openid_error("'+session+'","'+page+'",'+logged_in+',' +
-                              '"'+results[0].error+'","'+results[0].openid+'")';
-                setTimeout(command,2000);
+		              '"'+results[0].error+'","'+results[0].openid+'",0,'+'"'+email+'","'+gecos+'")';
+		setTimeout(command,2000);
             } else {
                 if(results[0].only == 0) {UsingOpenID = false;}
                 else {UsingOpenID = true;}
@@ -1080,7 +1156,7 @@ function confirm_openid(session,page,logged_in) {
 }
 
 //Handle the different cases and error messages associated with openid accounts
-function confirm_openid_error(session,page,logged_in,error,openid,only) {
+function confirm_openid_error(session,page,logged_in,error,openid,only,email,gecos) {
     var event  = new fakeEvent();
     (only == 0 || logged_in) ? OpenIDMenu = false : OpenIDMenu = true;
     load_login_balloon(event,session,false,false);
@@ -1097,11 +1173,14 @@ function confirm_openid_error(session,page,logged_in,error,openid,only) {
         $('loginSubmit').value        = Controller.translate('CREATE_ACCOUNT');
         $('loginWarning').innerHTML   = '<font /><font color=blue>' + Controller.translate('OPENID_NOT_ASSOC', AppName) + '</font>';
 
-        $('loginRemember').hide();  $('loginRememberTxt').hide();
-        $('loginWarning').show();   $('loginDOpenid').hide();
-        $('loginOpenID').hide();    $('loginNorm').show();
-        $('loginCancel').show();    $('loginPRow').hide();
-        $('loginOpts').hide();      $('loginUser').focus();
+        $('loginRemember').hide();      $('loginRememberTxt').hide();
+        $('loginWarning').show();       $('loginDOpenid').hide();
+        $('loginOpenID').hide();        $('loginNorm').show();
+	$('loginFRow').show();
+	$('loginERow').show();
+        $('loginCancel').show();        $('loginPRow').hide();
+        $('loginOpts').hide();          $('loginUser').focus();
+	setTimeout("$('loginUser').value='"+email+"';$('loginFullName').value='"+gecos+"';$('loginEmail').value='"+email+"'",100);    
     } else if(error == 'error') {
         $('loginWarning').innerHTML = Controller.translate('ANOTHER_ACCOUNT_IN_USE');
         $('loginWarning').show();
@@ -1236,7 +1315,7 @@ function confirm_screen(confirm) {
                    '<td><input align=right width=20% onKeyPress="if(event.keyCode==13){' +
                      '$(\'loginSubmit\').disabled=true;confirm_update($(\'loginUser\').'+
                        'getValue(),\'' + confirm + '\');return false;}" ' +
-                       'id=loginUser type=text style=font-size:9pt size=20></td>' +
+                       'id=loginUser type=text style=font-size:9pt size=30></td>' +
                    '<td align=center padding-top:3px>' +
                      '<input id=loginSubmit style=font-size:90% type=button value=\'' + Controller.translate('CONTINUE') + '\'' +
                        'onClick=this.disabled=true;' +

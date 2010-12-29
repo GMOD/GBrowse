@@ -800,8 +800,10 @@ sub get_scan {
 	next if $l =~ /:\w+/;
 	next unless    $config->fallback_setting($l => 'discoverable');
 	next if        $config->code_setting($l=>'global feature');
-	my $key      = $config->code_setting($l => 'key');
+	my $key      = $config->code_setting($l => 'key') || $l;
 	my $citation = $config->code_setting($l => 'citation');
+	my $data_source  = $config->code_setting($l => 'data source');
+	my $track_source = $config->code_setting($l => 'track source');
 	my $subtracks = $config->subtrack_scan_list($l);
 	$result .=  <<END;
 [$l]
@@ -810,6 +812,8 @@ END
     ;
     $result .=  "select   = @$subtracks\n" if $subtracks;
     $result .=  "citation = $citation\n"   if $citation;
+    $result .=  "data source = $data_source\n"   if $data_source;
+    $result .=  "track source = $data_source\n"   if $track_source;
     $result .=  "\n";
     }
 return $result;

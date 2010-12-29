@@ -190,7 +190,9 @@ sub create_big_wig {
     my $dir    = $self->data_path;
     my $fasta  = $self->get_fasta_file or return;
     my $wigout = Bio::DB::Sam::SamToGBrowse->new($dir,$fasta,0);
+    warn "start bam_to_wig()";
     $wigout->bam_to_wig($self->chrom_sizes);  # this creates the wig files
+    warn "end bam_to_wig";
     die $wigout->last_error if $wigout->last_error;
     1;
 }

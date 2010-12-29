@@ -479,10 +479,6 @@ sub wrap_rendered_track {
 	$config_click    = qq[Controller.edit_upload('$escaped_file')];
     }
 
-    elsif ( $label =~ /^(http|ftp)/ ) {
-	$config_click    = '';
-    }
-
     else {
         my $config_url = "url:?action=configure_track;track=$escaped_label";
         $config_click
@@ -628,10 +624,11 @@ sub wrap_rendered_track {
 	div({-class=>'subtrack',-style=>"top:${top}px;left:20px;background-color:white"},$label);
     } @$titles;
 
-    return div({-class=>'centered_block',
+    my $html = div({-class=>'centered_block',
 		 -style=>"position:relative;overflow:hidden"
 		},
                 ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
+    return $html;
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 
@@ -1335,10 +1332,12 @@ sub run_local_requests {
             if $multiple_tracks;
 
 	my $key = $source->setting( $base => 'key' ) || '' ;
-	my @nopad = (($key eq '') || ($key eq 'none')) 
-	    && !$multiple_tracks
-             ? (-pad_top => 0)
-             : ();
+# this no longer is needed with details_mult
+#	my @nopad = (($key eq '') || ($key eq 'none')) 
+#	    && !$multiple_tracks
+#             ? (-pad_top => 0)
+#             : ();
+	my @nopad = ();
         my $panel_args = $requests->{$label}->panel_args;
 
 	
@@ -1377,7 +1376,7 @@ sub run_local_requests {
 	    else {
 
 		if ( exists $feature_files->{$base} ) {
-		    
+
 		    my $file = $feature_files->{$base};
 		
 		    # Add feature files, including remote annotations
@@ -2048,7 +2047,7 @@ sub create_track_args {
       eval { # honor the database indicated in the track config
 	  my $db    = $self->source->open_database($label,$length);
 	  my $class = eval {$segment->seq_id->class} || eval{$db->refclass};
-	  $segment  = $db->segment(-name  => $segment->seq_id,
+	  ($segment)= $db->segment(-name  => $segment->seq_id,
 				   -start => $segment->start,
 				   -end   => $segment->end,
 				   -class => $class);

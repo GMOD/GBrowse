@@ -11,13 +11,16 @@ use Getopt::Long;
 use GBrowse::ConfigData;
 use List::Util;
 use File::Spec;
-use File::Basename 'dirname';
+use File::Basename 'dirname','basename';
 use File::Path 'remove_tree';
+use File::Spec;
 use POSIX 'strftime';
 
-use constant SCHEMA_VERSION => 2;
+use constant SCHEMA_VERSION => 3;
 
 # First, collect all the flags - or output the correct usage, if none listed.
+my @argv = @ARGV;
+
 my ($dsn, $admin);
 GetOptions('dsn=s'         => \$dsn,
            'admin=s'       => \$admin) or die <<EOF;
@@ -40,6 +43,14 @@ and password that has database create privileges on the server.
 EOF
     ;
 
+my $www_user       = GBrowse::ConfigData->config('wwwuser');
+my ($current_user) = getpwuid($<);
+unless ($< == 0) {
+    print STDERR "For this script to work properly, it must be run as the 'root' user.\n";
+    print STDERR "Trying to invoke sudo to change permissions now. You may be prompted for your password.\n";
+    exec 'sudo','-u','root',$0,@argv;
+}
+
 # Open the connections.
 my $globals = Bio::Graphics::Browser2->open_globals;
 $dsn ||= $globals->user_account_db;
@@ -48,8 +59,8 @@ if (!$dsn || ($dsn =~ /filesystem|memory/i) || !$globals->user_accounts) {
     exit 0;
 }
 
-fix_sqlite_permissions($<)     if $dsn =~ /sqlite/i;
-create_database();
+fix_sqlite_permissions()     if $dsn =~ /sqlite/i;
+create_mysql_database()      if $dsn =~ /mysql/i;
 
 my $database = DBI->connect($dsn) 
     or die "Error: Could not open users database, please check your credentials.\n" . DBI->errstr;
@@ -67,6 +78,7 @@ my $users_columns = {
     userid      => "integer PRIMARY KEY $autoincrement",
     email       => "varchar(64) not null UNIQUE",
     pass        => "varchar(32) not null",
+    gecos       => "varchar(64)",
     remember    => "boolean not null",
     openid_only => "boolean not null",
     confirmed   => "boolean not null",
@@ -140,8 +152,6 @@ my $old_uploads_columns = {
     public_count      => "int",
     data_source       => "text",
 };
-
-fix_permissions()          unless $type =~ /sqlite/;
 
 upgrade_schema(SCHEMA_VERSION);
 check_table("users",            $users_columns);
@@ -263,7 +273,9 @@ sub check_sessions {
 #		      undef,$session_id,$uploadsid)
 #	    && $users_created++;
     };
-    CGI::Session->find($session_driver,$do_session_check,$session_args);
+    eval {
+	CGI::Session->find($session_driver,$do_session_check,$session_args);
+    };
     if ($users_updated) {
 	print STDERR "$users_updated users had their session/upload IDs updated.\n";
     }
@@ -443,17 +455,19 @@ sub check_files {
 sub fix_permissions {
     my (undef, $db_name) = $dsn =~ /.*:(database=)?([^;]+)/;
     $db_name ||= "gbrowse_login";
-    
+    ($type)    = $dsn =~ /^dbi:([^:]+)/i unless defined $type;
+
     if ($type =~ /mysql/i) {
 	my ($db_user) = $dsn =~ /user=([^;]+)/i;
-	my ($db_pass) = $dsn =~ /password=([^;]+)/i || ("");
-	$database->do("GRANT ALL PRIVILEGES on $db_name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass' WITH GRANT OPTION") 
+	my ($db_pass) = $dsn =~ /password=([^;]+)/i;
+	$db_pass    ||= '';
+	warn "GRANT ALL PRIVILEGES on $db_name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass'";
+	$database->do("GRANT ALL PRIVILEGES on $db_name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass'")
 	    or die DBI->errstr;
     }
 }
 
 sub fix_sqlite_permissions {
-    my $user  = shift;
     my (undef, $db_name) = $dsn =~ /.*:(database=)?([^;]+)/;
     $db_name ||= "gbrowse_login";
 
@@ -461,13 +475,13 @@ sub fix_sqlite_permissions {
     ($path) = $dsn =~ /DBI:SQLite:([^;]+)/i unless $path;
     die "Couldn't figure out location of database index from $dsn" unless $path;
 
-    $user     ||= GBrowse::ConfigData->config('wwwuser');
+    my $user    = GBrowse::ConfigData->config('wwwuser');
     my $group   = get_group_from_user($user);
 
     my $dir = dirname($path);
-    my $file_owner = (getpwuid(stat($path)))[4];
-    my $dir_owner  = (getpwuid(stat($dir)))[4];
-	    
+    my $file_owner = getpwuid((stat($path))[4]);
+    my $dir_owner  = getpwuid((stat($dir))[4]);
+
     # Check if we need to, to avoid unnecessary printing/sudos.
     unless ($group) {
 	print STDERR "Unable to look up group for $user. Will not change ownerships on $path.\n";
@@ -490,12 +504,12 @@ sub fix_sqlite_permissions {
 }
 
 # Create Database() - Creates the database specified (or the default gbrowse_login database).
-sub create_database {
+sub create_mysql_database {
     my (undef, $db_name) = $dsn =~ /.*:(database=)?([^;]+)/;
     $db_name ||= "gbrowse_login";
     unless (DBI->connect($dsn)) {
         if ($dsn =~ /mysql/i) {
-            print STDERR "Could not find $db_name database, creating...\n";
+            print STDERR "Could not log into $db_name database, creating and/or fixing login permissions...\n";
             
             my ($admin_user, $admin_pass);
             if ($admin) {
@@ -504,11 +518,16 @@ sub create_database {
             }
             
             $admin_user ||= prompt("Please enter the MySQL administrator user", "root");
-            $admin_pass ||= prompt("Please enter the MySQL administrator password", "");
+            $admin_pass ||= prompt("Please enter the MySQL administrator password", "",1);
+
+	    my ($db_user) = $dsn =~ /user=([^;]+)/i;
+	    my ($db_pass) = $dsn =~ /password=([^;]+)/i;
+	    $db_pass    ||= '';
+
             my $test_dbi = DBI->connect("DBI:mysql:database=mysql;user=$admin_user;password=$admin_pass;");
             $test_dbi->do("CREATE DATABASE IF NOT EXISTS $db_name");
-            
-            print STDERR "Database has been created!\n" unless DBI->errstr;
+	    $test_dbi->do("GRANT ALL PRIVILEGES on $db_name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass'");
+	    print STDERR "Database created!\n" unless DBI->errstr;
         }
     }
     # SQLite will create the file/database upon first connection.
@@ -558,26 +577,26 @@ sub escape_enums {
 sub prompt {
   my $mess = shift
     or die "prompt() called without a prompt message";
+  my ($default,$hide) = @_;
 
-  # use a list to distinguish a default of undef() from no default
-  my @def;
-  @def = (shift) if @_;
-  # use dispdef for output
-  my @dispdef = scalar(@def) ?
-    ('[', (defined($def[0]) ? $def[0] : ''), '] ') :
-    (' ', '');
-    
-  print STDERR "$mess ", @dispdef;
-
-  my $ans = <STDIN>;
+  print STDERR "$mess [$default] ";
+  my $ans;
+  if ($hide) {
+      eval {
+	  use Term::ReadKey;
+	  ReadMode('noecho');
+	  $ans = ReadLine(0);
+	  ReadMode('normal');
+	  print STDERR "\n";
+      };
+  }
+  $ans ||= <STDIN>;
   chomp $ans if defined $ans;
 
-  if ( !defined($ans)        # Ctrl-D or unattended
-       or !length($ans) ) {  # User hit return
-    print STDERR "$dispdef[1]\n";
-    $ans = scalar(@def) ? $def[0] : '';
+  if (!defined($ans) || !length($ans)) {
+      print STDERR "$default\n";
+      $ans = $default;
   }
-
   return $ans;
 }
 
@@ -606,25 +625,28 @@ sub upgrade_schema {
 }
 
 sub backup_database {
+    my $temp = File::Spec->tmpdir;
     if ($type =~ /sqlite/i) {
 	my ($src) = $dsn =~ /dbname=([^;]+)/i;
 	unless ($src) {
 	    ($src) = $dsn =~ /DBI:SQLite:([^;]+)/i;
 	}
 	my $time = localtime;
-	my $dest = strftime("${src}_%d%b%Y.%H:%M",localtime);
+	my $basename = basename($src);
+	my $dest = strftime("$temp/${basename}_%d%b%Y.%H:%M",localtime);
 	warn "backing up existing users database to $dest";
 	system ('cp',$src,$dest);
     } elsif ($type =~ /mysql/i) {
-	my $dest = strftime('gbrowse_users_%d%b%Y.%H:%M',localtime);
-	warn "backing up existing users databse to ./$dest";
+	my $dest = strftime("$temp/gbrowse_users_%d%b%Y.%H:%M",localtime);
+	warn "backing up existing users database to ./$dest";
 	my ($src) = $dsn =~ /dbname=([^;]+)/i;
 	unless ($src) {
 	    (undef, $src) = $dsn =~ /.*:(database=)?([^;]+)/i;
 	}
 	
 	my ($db_user) = $dsn =~ /user=([^;]+)/i;
-	my ($db_pass) = $dsn =~ /password=([^;]+)/i || ("");
+	my ($db_pass) = $dsn =~ /password=([^;]+)/i;
+	$db_pass    ||= '';
 	no warnings;
 	open SAVEOUT,">&STDOUT";
 	open STDOUT,">$dest" or die "$dest: $!";
@@ -820,6 +842,12 @@ sub upgrade_from_1_to_2 {
 	set_schema_version('dbinfo', 2);
     }
 }
+
+sub upgrade_from_2_to_3 {
+    # add the gecos field
+    check_table('users',$users_columns);
+}
+
 
 __END__
 

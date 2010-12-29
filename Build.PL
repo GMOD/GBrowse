@@ -62,6 +62,9 @@ my $build = GBrowseInstall->new(
         'bin/gbrowse_syn_load_alignments_msa.pl',
 	'bin/make_das_conf.pl',
 	'bin/wiggle2gff3.pl',
+	'bin/gtf2gff3.pl',
+	'bin/bed2gff3.pl',
+	'bin/ucsc_genes2gff.pl',
 # not sure if these still work
 #	'bin/register_moby_services.pl',
 #	'bin/process_wormbase.pl',

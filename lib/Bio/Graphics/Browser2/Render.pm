@@ -88,12 +88,6 @@ sub set_signal_handlers {
     };
 }
 
-sub set_details_multiplier {
-    my $self = shift;
-    my $m    = shift;
-    $self->{details_multiplier} = $m;
-}
-
 sub data_source {
     my $self = shift;
     my $d = $self->{data_source};
@@ -207,6 +201,7 @@ sub destroy {
 	$lm->destroy;
 	delete $self->{login_manager};
     }
+    $self->session->flush if $self->session;
 }
 
 ###################################################################################
@@ -225,6 +220,7 @@ sub run {
        request_method(),': ',
        url(-path=>1),' ',
        query_string() if $debug || TRACE_RUN;
+  warn "[$$] session id = ",$self->session->id if $debug;
 
   $self->set_source() && return;
   my $state = $self->state;
@@ -251,10 +247,7 @@ sub run {
   }
   
   if (my $file = param('share_link')) {
-      my $usertracks = $self->user_tracks;
-      $usertracks->share_link($file);
-      $self->add_user_tracks;
-      $self->add_track_to_state($_) foreach $usertracks->labels($file);
+      $self->share_link($file);
   }
 
   warn "[$$] init()"         if $debug;
@@ -505,6 +498,17 @@ sub background_track_render {
     return (\%track_keys, $display_details, $details_msg);
 }
 
+sub share_link {
+    my $self = shift;
+    my $file = shift;
+    my $usertracks = $self->user_tracks;
+    $usertracks->share_link($file);
+    $self->add_user_tracks;
+    my @tracks = $usertracks->labels($file);
+    $self->add_track_to_state($_) foreach @tracks;
+    return \@tracks;
+}
+
 sub add_tracks {
     my $self        = shift;
     my $track_names = shift;
@@ -537,7 +541,7 @@ sub add_tracks {
 		my $track_section    = $self->get_section_from_label($track_id);
 		my $image_width      = $self->get_image_width($self->state);
 		my $image_element_id = $track_name . "_image";
-
+		
 		my $track_html;
 		if ( $track_section eq 'detail' and not $display_details ) {
 		    my $image_width = $self->get_image_width($self->state);
@@ -2055,7 +2059,6 @@ sub reconfigure_track {
 	    my $bp = param('bicolor_pivot_value');
 	    $o->{$s} =    $bp if !defined $configured_value or $bp != $configured_value;
 	} else {
-	    warn "$s=>$value";
 	    $o->{$s} = $value if !defined $configured_value or $value ne $configured_value;
 	    if ($glyph eq 'wiggle_whiskers') {# workarounds for whisker options
 		$o->{"${s}_neg"}  = $value if $s =~ /^(mean_color|stdev_color)/; 
@@ -2063,7 +2066,10 @@ sub reconfigure_track {
 	    }
 	}
     }
-    if (defined $o->{autoscale} && $o->{autoscale} ne 'none') { undef $o->{min_score}; undef $o->{max_score} }
+    unless (defined $o->{autoscale} && $o->{autoscale} eq 'none') { 
+	undef $o->{min_score}; 
+	undef $o->{max_score} 
+    }
 }
 
 sub update_options {
@@ -2141,39 +2147,39 @@ sub update_tracks {
       if (!@ds && @ts) {
        my %ds = ();
        foreach my $label (@main_l) {
-        my @tracks = grep {!/^#/} shellwords $self->setting($label=>'track source');
-        my @datasr = grep {!/^#/} shellwords $self->setting($label=>'data source');
+	   my @tracks = grep {!/^#/} shellwords $self->setting($label=>'track source');
+	   my @datasr = grep {!/^#/} shellwords $self->setting($label=>'data source');
 
-        for (my $i = 0; $i <@tracks; $i++) {
-         map{$ds{$datasr[$i]}++ if $_ == $tracks[$i] && $datasr[$i]} (@ts);
+	   for (my $i = 0; $i <@tracks; $i++) {
+	       map{$ds{$datasr[$i]}++ if $_ == $tracks[$i] && $datasr[$i]} (@ts);
+	   }
        }
-      }
-      @ds = keys %ds;
+       @ds = keys %ds;
       }
 
       foreach my $label (@main_l) {
-      my @subs = grep {!/^#/} shellwords $self->setting($label=>'select');
-      shift @subs;
-
-      my @matched;
-       foreach my $s (@subs) {
-        map {push(@matched,$`) if ($s=~/\D(\d+)\;*$/i && $1 == $_)} @ds;
-        map {s/\s*//} @matched;													#**
-       }
-       $label.="/".join("+",@matched) if @matched;
+	  my @subs = grep {!/^#/} shellwords $self->setting($label=>'select');
+	  shift @subs;
+	  
+	  my @matched;
+	  foreach my $s (@subs) {
+	      map {push(@matched,$`) if ($s=~/\D(\d+)\;*$/i && $1 == $_)} @ds;
+	      map {s/\s*//} @matched;													#**
+	  }
+	  $label.="/".join("+",@matched) if @matched;
       }
-
-    $self->set_tracks(@main_l);
+      
+      $self->set_tracks(@main_l);
   }
-
+  
   if (my @selected = $self->split_labels_correctly(param('enable'))) {
-    $state->{features}{$_}{visible} = 1 foreach @selected;
+      $self->add_track_to_state($_) foreach @selected;
   }
-
+  
   if (my @selected = $self->split_labels_correctly(param('disable'))) {
-    $state->{features}{$_}{visible} = 0 foreach @selected;
+      $self->remove_track_from_state($_) foreach @selected;
   }
-
+  
 }
 
 # update coordinates logic
@@ -2990,7 +2996,9 @@ sub set_tracks {
 	$state->{subtracks}{$main} = \@subtracks if @subtracks;
     }
 
-    $state->{tracks} = [grep {$potential{$_}} @main];
+    my %seenit;
+
+    $state->{tracks} = [grep {$potential{$_} && !$seenit{$_}++} @main];
     $self->load_plugin_annotators(\@main);
     $state->{features}{$_}{visible} = 0 foreach $self->data_source->labels;
     $state->{features}{$_}{visible} = 1 foreach @main;
@@ -3293,7 +3301,10 @@ sub details_mult {
     my $self = shift;
     my $state = $self->state;
 
-    if (defined $state->{seg_min} && defined $state->{seg_max} && defined $state->{view_start} && defined $state->{view_stop}) {
+    if (defined $state->{seg_min} 
+	&& defined $state->{seg_max} 
+	&& defined $state->{view_start} 
+	&& defined $state->{view_stop}) {
         my $max_length     = $state->{seg_max} - $state->{seg_min};
         my $request_length = $state->{view_stop} - $state->{view_start};
         return $self->data_source->details_multiplier($max_length, $request_length);

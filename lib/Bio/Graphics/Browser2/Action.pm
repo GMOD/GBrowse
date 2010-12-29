@@ -247,7 +247,6 @@ sub ACTION_reconfigure_plugin {
     my $self   = shift;
     my $q      = shift;
     my $plugin = $q->param('plugin');
-    warn "reconfigure_plugin($plugin)";
     # currently we reinit all plugins, not just the one involved
     $self->render->init_plugins();
     return (204,'text/plain',undef);
@@ -422,10 +421,19 @@ sub ACTION_upload_file {
     $state->{uploads}{$upload_id} = [$track_name,$$];
     $session->flush();
     $session->unlock();
-    
-    my ($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1)
-                                       :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1)
-                                              : $usertracks->upload_file($track_name, $fh, $content_type, $overwrite);
+
+    my ($result,$msg,$tracks,$pid);
+    # in case user pasted the "share link" into the upload field.
+    if ($url && $url =~ /share_link=([0-9a-fA-F]+)/) { 
+	my $file  = $1;
+	my $t     = $self->render->share_link($file);
+	($result,$msg,$tracks,$pid) = (1,'shared track added to your session',$t,$$);
+    }
+    else {
+	($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1)
+                                        :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1)
+                                               : $usertracks->upload_file($track_name, $fh, $content_type, $overwrite);
+    }
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};

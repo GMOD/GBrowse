@@ -163,7 +163,7 @@ sub lock_ex {
 sub unlock {
     my $self     = shift;
     my $lock = $self->lockobj or return;
-    warn "[$$] session unlock" if DEBUG;
+    warn "[$$] session unlock" if DEBUG_LOCK;
     if ($lock->isa('DBI::db')) {
 	my $lock_name = $self->mysql_lock_name($self->id);
 	$lock->do("SELECT RELEASE_LOCK('$lock_name')");

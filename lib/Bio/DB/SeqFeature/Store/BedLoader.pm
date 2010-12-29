@@ -193,6 +193,9 @@ sub split_gene_bits {
 	    push @bits,[$start+1,$end,'UTR'];  # UTR wholly contained in an exon
 	}
 
+	elsif ($start == $thickEnd) {
+	    push @bits,[$start+1,$end,'UTR'];  # non-coding gene ?!
+	}
 	else {
 	    croak "Programmer error when calculating UTR bounds";
 	}

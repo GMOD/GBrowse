@@ -41,7 +41,9 @@ if ($fcgi) {
 
     my %sys_env = %ENV;
     while (!$FCGI_DONE) {
+	warn "waiting to accept";
 	my $status = $fcgi->Accept;
+	warn "accepted";
 	next unless $status >= 0;
         %ENV = ( %sys_env, %ENV );
 	my $globals = Bio::Graphics::Browser2->open_globals;
@@ -49,7 +51,7 @@ if ($fcgi) {
 	my $gbi = GBrowse_img->new($globals);
 	$gbi->run();
 	$gbi->destroy;
-	$fcgi->Finish();
+#	$fcgi->Finish();
     }
 }
 
@@ -121,7 +123,10 @@ sub session { shift->render->session        }
 sub cookie  { shift->render->create_cookie  }
 sub source  { shift->render->data_source    }
 
-sub destroy { shift->{render}->destroy      }
+sub destroy { my $self = shift;
+	      $self->{render}->destroy;
+	      undef $self->{render};
+}
 
 sub header {
     my $self   = shift;
@@ -186,8 +191,8 @@ sub render_image {
     $format = 'GD::SVG' if $format eq 'SVG';
     $format      = 'GD' if $embed;
 
-    warn "setting detais multiplier";
-    $render->set_details_multiplier(1);
+    warn "setting details multiplier";
+    $render->data_source->set_details_multiplier(1);
 
     my ($img_data,$map) = $render->region->feature_count > 1 
                                  ? $self->render_multiple($renderer,$format,$flip,$embed)

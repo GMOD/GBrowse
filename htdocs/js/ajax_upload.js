@@ -129,7 +129,8 @@ function startAjaxUpload(upload_id) {
 	status.insert(new Element("span").update(Controller.translate('UPLOADING')));
 	var cancel = new Element("a", {href: 'javascript:void(0)'}).update("[" + Controller.translate('CANCEL') + "]");
 	cancel.observe("click", function() {
-		Controller.cancel_upload(upload_id + "_status", upload_id)
+		Controller.cancel_upload(upload_id + "_status", upload_id);
+		cleanRemove($(upload_id));
 	});
 	status.insert({after: cancel});
 	status.insert({after: "&nbsp;"});

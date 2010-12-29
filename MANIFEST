@@ -1,4 +1,5 @@
 bin/auto_install_databases.pl
+bin/bed2gff3.pl
 bin/bp_load_gff.pl
 bin/gbrowse_clean.pl
 bin/gbrowse_metadb_config.pl

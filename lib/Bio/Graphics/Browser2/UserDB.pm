@@ -28,7 +28,6 @@ sub new {
   my $credentials  = $globals->user_account_db 
       || "DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse";
   
-  warn "credentials=$credentials";
   my $login = DBI->connect($credentials);
   unless ($login) {
     print header();
@@ -118,16 +117,28 @@ sub check_admin {
   return $username eq $admin_name;
 }
 
-# Check Old Confirmations - Deletes any unconfirmed accounts more than 7 days old.
+# Check Old Confirmations - Deletes any unconfirmed accounts more than 3 days old.
 sub check_old_confirmations {
   my $self = shift;
   my $nowfun = $self->nowfun();
   my $userdb = $self->{dbi};
-  
-  my $delete = $userdb->prepare(
-    "DELETE FROM users WHERE confirmed=0 AND ($nowfun - last_login) >= 7000000");
-  $delete->execute()
-    or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+  my $days = $self->globals->user_account_db =~ /sqlite/i ? "julianday('now')-julianday(last_login)"
+                                                          : 'datediff(now(),last_login)';
+  local $userdb->{AutoCommit} = 0;
+  local $userdb->{RaiseError} = 1;
+  eval {
+      my $ids = $userdb->selectcol_arrayref("SELECT userid FROM users WHERE confirmed=0 AND $days>3");
+      for my $id (@$ids) {
+	  $userdb->do('DELETE FROM users WHERE userid=?',undef,$id);
+	  $userdb->do('DELETE FROM session WHERE userid=?',undef,$id);
+      }
+      $userdb->commit();
+  };
+  if ($@) {
+      warn "deletion of expired new accounts failed due to '$@'. Rolling back.";
+      eval {$userdb->rollback()};
+  }
   return;
 }
 
@@ -210,7 +221,6 @@ sub get_user_id {
     my $search = shift;
     return $self->userid_from_username($search) || $self->userid_from_email($search);
 }
-
 
 sub userid_from_username {
     my $self     = shift;
@@ -309,6 +319,21 @@ SELECT username FROM session
 END
 }
 
+sub fullname_from_sessionid {
+    my $self = shift;
+    my $sessionid = shift;
+    my $userdb = $self->{dbi};
+
+    my ($fullname,$username) = $userdb->selectrow_array(<<END ,undef,$sessionid);
+SELECT b.gecos,a.username 
+  FROM session as a,users as b
+ WHERE a.userid=b.userid
+   AND a.sessionid=?
+END
+;
+    return $fullname || $username; # fallback to username if fullname not available
+}
+
 sub userid_from_sessionid {
     my $self = shift;
     my $sessionid = shift;
@@ -347,9 +372,14 @@ sub add_named_session {
     my $self = shift;
     my ($sessionid,$username) = @_;
 
+    warn join ' ',caller();
+
+    warn "add_named_session($sessionid,$username)";
+
     my $userdb  = $self->dbi;
 
     my $session = $self->globals->session($sessionid);
+    warn "wanted $sessionid but got ",$session->id;
     $session->id eq $sessionid or die "Sessionid unavailable";
     my $uploadsid = $session->uploadsid;
 
@@ -392,6 +422,9 @@ sub do_validate {
   my $userdb = $self->{dbi};
   my $update;
 
+  # remove dangling unconfirmed accounts here
+  $self->check_old_confirmations();
+
   if($self->check_user($user)==0) {
     print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";
     return;
@@ -399,46 +432,51 @@ sub do_validate {
 
   my $userid = $self->userid_from_username($user);
   my $nowfun = $self->nowfun();
-  if($remember != 2) {
-    $update = $userdb->prepare(
-      "UPDATE users SET last_login=$nowfun,remember=$remember WHERE userid=? AND pass=? AND confirmed=1");
+
+  # WARNING: bad design here
+  # EXPLANATION: a remember value of "2" means to update last_login
+  # but not to retrieve session ID. This seems to be requested during account
+  # editing/updating.
+  if($remember == 2) {
+      $update = $userdb->prepare(
+	  "UPDATE users SET last_login=$nowfun WHERE userid=? AND pass=? AND confirmed=1");
   } else {
-    $update = $userdb->prepare(
-      "UPDATE users SET last_login=$nowfun WHERE userid=? AND pass=? AND confirmed=1");
+      $update = $userdb->prepare(
+	  "UPDATE users SET last_login=$nowfun,remember=$remember WHERE userid=? AND pass=? AND confirmed=1");
   }
 
   # BUG: we should salt the password
   $pass = sha1($pass);
+
+  my $select = $userdb->prepare(
+      "SELECT sessionid,email,confirmed FROM users as a,session as b WHERE a.userid=b.userid and a.userid=? AND pass=?");
+  $select->execute($userid,$pass)
+      or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+
+  # BUG: this is truly nasty -- the session id is found by string searching
+  # in login.js!!!!
+  my ($session,$email,$confirmed) = $select->fetchrow_array;
+  warn "session = $session, confirmed=$confirmed";
+
+  if ($session) {
+      if ($confirmed) {
+	  print $remember == 2 ? "Success" : "session".$session;
+      } else {
+	  print "unconfirmed${email}"; # ugly!
+      }
+  } else {
+      print "Invalid username or password provided, please try again.";      
+  }
+
+  # update time login now
   $update->execute($userid,$pass)
     or (print "Error: ", DBI->errstr, "." and die "Error: ", DBI->errstr);
-
-  my $rows = $update->rows;
-  if($rows == 1) {
-    $self->check_old_confirmations();
-    if($remember != 2) {
-      my $select = $userdb->prepare(
-        "SELECT sessionid FROM users as a,session as b WHERE a.userid=b.userid and a.userid=? AND pass=? AND confirmed=1");
-      $select->execute($userid,$pass)
-        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-      # BUG: this is truly nasty -- the session id is found by string searching
-      # in login.js!!!!
-      my $result = "session".$select->fetchrow_array;
-      print $result;
-    } else {
-      print "Success";
-    }
-  } elsif($rows == 0) {
-    print "Invalid username or password provided, please try again.";
-  } else {
-    print "Error: $rows rows returned, please consult your service host.";
-  }
-  return;
 }
 
 # Add User Check - Checks to see if the user has already been added.
 sub do_add_user_check {
   my $self = shift;
-  my ($user,$email,$pass,$userid) = @_;
+  my ($user,$email,$fullname,$pass,$userid) = @_;
   
   my $userdb = $self->{dbi};
   
@@ -454,7 +492,7 @@ sub do_add_user_check {
 
   my $confirmed = $select->fetchrow_array;
   if($select->rows == 0) {
-    $self->do_add_user($user,$email,$pass,$userid);
+    $self->do_add_user($user,$email,$fullname,$pass,$userid);
   } elsif($confirmed == 1) {
     print "E-mail in use";
   } elsif($confirmed == 0) {
@@ -466,7 +504,7 @@ sub do_add_user_check {
 # Add User - Adds a new non-openid user to the user database.
 sub do_add_user {
   my $self = shift;
-  my ($user,$email,$pass,$sessionid) = @_;
+  my ($user,$email,$fullname,$pass,$sessionid) = @_;
   
   my $userdb = $self->dbi;
   
@@ -496,13 +534,13 @@ sub do_add_user {
 	  or die "Couldn't add named session: ",$userdb->errstr;
 
       my $insert_userinfo = $userdb->prepare (<<END );
-INSERT INTO users (userid, email, pass, remember, openid_only, 
+INSERT INTO users (userid, gecos, email, pass, remember, openid_only, 
 		   confirmed, cnfrm_code, last_login, created)
-     VALUES (?,?,?,0,0,0,?,$nowfun,$nowfun)
+     VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)
 END
 ;
       my $sha_pass = sha1($pass);
-      $insert_userinfo->execute($userid,$email,$sha_pass,$confirm)
+      $insert_userinfo->execute($userid,$fullname,$email,$sha_pass,$confirm)
 	  or die "Couldn't insert information on user: ",$userdb->errstr;
       $userdb->commit();
   };
@@ -559,34 +597,43 @@ sub do_send_confirmation {
 sub do_edit_confirmation {
   my $self = shift;
   my ($email,$option) = @_;
+  warn "email = $email, option=$option";
   
   my $userdb = $self->{dbi};
 
   my $select = $userdb->prepare(<<END );
-SELECT b.username, a.userid,b.sessionid 
+SELECT b.username, a.userid, b.sessionid, a.gecos, a.cnfrm_code
     FROM users as a,session as b 
     WHERE a.email=? AND a.userid=b.userid
 END
   $select->execute($email)
     or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-  my ($user,$userid,$sessionid) = $select->fetchrow_array();
+  my ($username,$userid,$sessionid,$fullname, $confirm) = $select->fetchrow_array();
 
-  my $delete = $userdb->prepare(
-    "DELETE FROM users WHERE userid=?");
-  $delete->execute($userid)
-    or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-  my $delete2 = $userdb->prepare(
-    "DELETE FROM openid_users WHERE userid=?");
-  $delete2->execute($userid)
-    or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-
-  if ($option == 1) {
-    my $pass = $self->create_key('23');
-    $self->do_add_user($user,$email,$pass,$sessionid);
-  } else {
-    print "Your account has been successfully removed.";
+  if ($option == 0) { # delete account!
+      eval {
+	  local $userdb->{AutoCommit} = 0;
+	  local $userdb->{RaiseError} = 1;
+	  $userdb->do("DELETE FROM users        WHERE userid=?",undef,$userid);
+	  $userdb->do("DELETE FROM openid_users WHERE userid=?",undef,$userid);
+	  $userdb->do("DELETE FROM session      WHERE userid=?",undef,$userid);
+	  $userdb->commit();
+      };
+      if ($@) {
+	  eval {$userdb->rollback()};
+	  print $@;
+	  return;
+      } else {
+	  print "Your account has been successfully removed.";
+      }
   }
-  return;
+
+  elsif ($option == 1) {
+      my $pass = '';
+      $self->do_send_confirmation($email,$confirm,$userid,$pass);
+      print "Success";
+  }
+
 }
 
 # Confirm Account - Activates a new account when the user follows the mailed link.
@@ -694,7 +741,7 @@ sub do_email_info {
   if(@openids) {foreach(@openids) {$openid .= "$_\n             ";}}
   else {$openid = "None\n";}
 
-  my $pass = $self->create_key('23');
+  my $pass = $self->create_key('8');
   my $message  = "\nYour password has been reset to the one seen below. To fix this,";
      $message .= " select \"My Account\" from the log in menu and log in with the";
      $message .= " credentials found below.\n\n    Username: $user\n    ";
@@ -745,7 +792,7 @@ sub do_retrieve_user {
   if ($rows == 1) {
     my $user  = $users->[0];
     my $query = $userdb->prepare(
-      "SELECT openid_url FROM openid_users WHERE username=?");
+      "SELECT openid_url FROM openid_users,session WHERE openid_users.userid=session.userid and session.username=?");
     $query->execute($user)
       or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
@@ -824,6 +871,8 @@ sub do_check_openid {
         trust_root => "http://$ENV{'HTTP_HOST'}/",
         delayed_return => 1
     );
+    # request information about email address and full name
+    $check_url .= "&openid.ns.ax=http://openid.net/srv/ax/1.0&openid.ax.mode=fetch_request&openid.ax.required=email,firstname,lastname&openid.ax.type.email=http://axschema.org/contact/email&openid.ax.type.firstname=http://axschema.org/namePerson/first&openid.ax.type.lastname=http://axschema.org/namePerson/last";
 
     print "Location: $check_url";
     return;
@@ -833,7 +882,6 @@ sub do_check_openid {
 sub do_confirm_openid {
     my $self = shift;
     my ($callback, $sessionid, $option) = @_;
-    warn "do_confirm_openid($callback,$sessionid,$option)";
     
     my $userdb = $self->{dbi};
     
@@ -853,7 +901,6 @@ sub do_confirm_openid {
 	    $sessionid)
             or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
 		and print JSON::to_json(\@results) and return);
-	warn "user=$user";
         unless (defined $user) {
             push @results,{error=>"Error: Wrong session ID provided, please try again."};
             print JSON::to_json(\@results);
@@ -893,12 +940,12 @@ sub do_confirm_openid {
 
 # Get OpenID - Check to see if the provided openid is unused
 sub do_get_openid {
-    my $self = shift;
+    my $self   = shift;
     my $openid = shift;
 
     my $userdb = $self->{dbi};
     
-    my ($error,@results);
+    my ($error,$userinfo,@results);
 
     my $from = <<END;
 FROM users as A, openid_users as B, session as C
@@ -922,7 +969,7 @@ END
             $error  = "The OpenID provided has not been used before. ";
             $error .= "Please create an account first before trying to edit your information.";
         }
-        push @results,{error=>$error,openid=>$openid};
+        push @results,{error=>$error,openid=>$openid,userinfo=>$userinfo};
         return \@results;
     }
 
@@ -1034,10 +1081,11 @@ sub do_add_openid_to_account {
     return \@results;
 }
 
-# Add OpenID User (Username, OpenID, UserID, Remember?) - Adds a new openid user to the user database.
+# Add OpenID User (Username, Email, Gecos(fullname), OpenID, UserID, Remember?) - Adds a new openid user to the user database.
 sub do_add_openid_user {
     my $self = shift;
-    my ($user, $openid, $sessionid, $remember) = @_;
+    my ($user, $email, $gecos, $openid, $sessionid, $remember) = @_;
+    warn "gecos=$gecos";
     
     my $userdb = $self->{dbi};
 
@@ -1047,7 +1095,6 @@ sub do_add_openid_user {
 
     my $confirm = sha1($self->create_key('32'));
     my $pass    = sha1($self->create_key('32'));
-    my $email   = $self->create_key('64');
 
     my $nowfun  = $self->nowfun();
 
@@ -1058,14 +1105,14 @@ sub do_add_openid_user {
 	    or die "Couldn't add named session: ",$userdb->errstr;
 	    
 	my $query  = $userdb->prepare(<<END );
-INSERT INTO users (userid,email,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created) 
-     VALUES (?,?,?,?,1,1,?, $nowfun, $nowfun)
+INSERT INTO users (userid,email,gecos,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created) 
+     VALUES (?,?,?,?,?,1,1,?, $nowfun, $nowfun)
 END
 ;
 
 	# BUG: we should salt the password
 	$pass = sha1($pass);
-	$query->execute($userid, $email, $pass, $remember, $confirm)
+	$query->execute($userid, $email, $gecos, $pass, $remember, $confirm)
 	    or die "Couldn't insert openid_user into users table: ",$query->errstr;
 
 	my $insert = $userdb->prepare("INSERT INTO openid_users (userid,openid_url) VALUES (?,?)");

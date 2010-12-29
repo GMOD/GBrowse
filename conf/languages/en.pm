@@ -405,6 +405,8 @@ END
 
  AUTOSCALING      => 'Y-axis scaling',
 
+ SD_MULTIPLES     => 'Number of standard deviations (SD) to show',
+
  SCALING          => 'Fixed Y-axis range',
 
  SCALE_MIN        => 'Minimum scale value',
@@ -508,11 +510,12 @@ END
 
  OTHER_SHARE_METHODS => <<END,
 You can also share it with another user by setting its permissions to
-<b>public</b> and letting the user search for the track by name, or by
-changing its permissions to <b>group</b> and adding the user you want
-by username. To do this, select the "Custom Tracks" page and choose the
-sharing policy you want with the drop-down menu in the "sharing" section,
-then type the user's name or ID in the input field provided.
+<b>public</b> and giving them this link or letting them search for the
+track by name, or by changing its permissions to <b>group</p> and adding
+the user you want by username. To do this, select the "Custom Tracks"
+page and choose the sharing policy you want with the drop-down menu in
+the "sharing" section, then type the user's name or ID in the input
+field provided.
 END
 
  CANT_SHARE     => <<END,
@@ -539,14 +542,15 @@ END
    EMAIL_MY_PASSWORD         => 'E-mail my password',
    EDIT_ACCOUNT_DETAILS      => 'Edit account details',
    CONTINUE                  => 'Continue',
-   HAVE_OPENID               => 'Have an OpenID?',
-   SIGN_IN                   => 'Sign In.',
+   WITH_OPENID               => 'with your OpenID',
+   SIGN_IN                   => 'Sign in',
    DONT_HAVE_OPENID          => 'Don\'t have an OpenID?',
    GO_BACK                   => 'Go Back.',
    ALL_FIELDS_REQUIRED       => 'All fields are required.',
    PASSWORDS_DO_NOT_MATCH    => 'Passwords do not match.',
    LOG_IN                    => 'Log In',
    CHANGE_MY_EMAIL           => 'Change my E-mail',
+   CHANGE_MY_NAME            => 'Change my Full Name',
    CHANGE_MY_PASSWORD        => 'Change my Password',
    ADD_OPENID                => 'Add OpenID to Account',
    REMOVE_OPENID             => 'Remove OpenId from Account',
@@ -554,12 +558,14 @@ END
    NEED_OPENID_TO_ACCESS     => 'Sorry, but you need at least one active OpenID associated with this account in order to access %s.',
    DELETE_MY_ACCOUNT         => 'Delete My Account',
    USERNAME                  => 'Username:',
+   REALNAME                  => 'Your full name (optional):',
    EMAIL_TO_VALIDATE         => 'E-mail (to validate your registration):',
    PASSWORD                  => 'Password:',
    RETYPE_PASSWORD           => 'Retype Password:',
    CURRENT_EMAIL             => 'Current E-mail:',
    NEW_EMAIL                 => 'New E-mail:',
    RETYPE_NEW_EMAIL          => 'Retype New E-mail:',
+   NEW_REALNAME              => 'Your full name:',
    CURRENT_PASSWORD          => 'Current Password:',
    NEW_PASSWORD              => 'New Password:',
    RETYPE_NEW_PASSWORD       => 'Retype New Password:',
@@ -608,7 +614,7 @@ END
    OPERATION_SUCCESS         => 'Operation completed successfully.', 
    BACK                      => 'Back',
    CREATE_ACCOUNT            => 'Create Account',
-   OPENID_NOT_ASSOC          => 'The OpenID provided is not associated with any active %s Account. If you would like to create an account now, please type a username to identify yourself below.',
+   OPENID_NOT_ASSOC          => 'The OpenID provided is not associated with any active %s Account. If you would like to create an account now, please confirm or edit the information to set up your account below.',
    SUCCESS                   => 'Success',
    LOADING                   => 'Loading...',
    NO_OPENIDS_ASSOCIATED     => 'There are no OpenIDs currently associated with this %s Account.',
@@ -625,6 +631,7 @@ END
    LOG_OUT                   => 'Log Out',
    CHANGE_SETTINGS_DESC      => 'Click here to change your account settings',
    LOGIN_CREATE_DESC         => 'Click here to log in or create a new account. This will allow you to access your settings and uploaded tracks from multiple computers.',
+   LOGIN                     => 'Log in',
    LOGIN_CREATE              => 'Log in / create account',
 
    #------------

@@ -1606,12 +1606,13 @@ sub render_track_controls {
 			);
 		}
 	} else {
-		$controls .= '&nbsp;' . a(
-			{
-				-href	 => "javascript:void(0);",
-				-onClick => "shareFile('$fileid', '$userid')"
-			},
-			"[Add]"
+	    $userid ||= '';
+	    $controls .= '&nbsp;' . a(
+		{
+		    -href	 => "javascript:void(0);",
+		    -onClick => "shareFile('$fileid', '$userid')"
+		},
+		"[Add]"
 		);
 	}
 	
@@ -1686,57 +1687,59 @@ sub render_track_source_files {
 	my $userdata     = $self->user_tracks();
 	my @source_files = $userdata->source_files($fileid);
 	my ($conf_name, $conf_modified, $conf_size) = $userdata->conf_metadata($fileid);
+	$conf_modified ||= 0;
+	$conf_size     ||=0;
 	my $mirror_url = $userdata->is_mirrored($fileid);
 	my $source_listing =
 		b($self->translate('SOURCE_FILES')) .
 		ul(
-			{-style => "margin: 0; padding: 0; list-style: none;"},
-			li(
-				[map {
-					a( {
-							-href => $mirror_url || "?userdata_download=$_->[0];track=$fileid",
-							-style	=> "display: inline-block; width: 30em; overflow: hidden;"
-						},
-							$_->[0]
-					).
-					span({-style => "display: inline-block; width: 15em;"}, scalar localtime($_->[2])).
-					span({-style => "display: inline-block; width: 10em;"}, $_->[1],'bytes').
-					span(
-						($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3] && $userdata->is_mine($fileid))?
-							$mirror_url?
-							a( {
-									-href => "javascript:void(0)",
-									-onClick => "reloadURL('$fileid','$mirror_url')"
-								},
-								$self->translate('RELOAD_FROM', $mirror_url)
-							) : 
-							a( {
-									-href    => "javascript:void(0)",
-									-onClick => "editUploadData('$fileid','$_->[0]')"
-								},
-								$self->translate('EDIT_BUTTON')
-							)
-						: '&nbsp;'
-					)
-				} @source_files]
-			),
-			li(
-				a( {
-						-href	=> "?userdata_download=conf;track=$fileid",
-						-style	=> "display: inline-block; width: 30em;"
-					},
-					$self->translate('CONFIGURATION')
+		    {-style => "margin: 0; padding: 0; list-style: none;"},
+		    li(
+			[map {
+			    a( {
+				-href => $mirror_url || "?userdata_download=$_->[0];track=$fileid",
+				-style	=> "display: inline-block; width: 30em; overflow: hidden;"
+			       },
+			       $_->[0]
 				).
-				span({-style => "display: inline-block; width: 15em;"}, scalar localtime $conf_modified).
-				span({-style => "display: inline-block; width: 10em;"}, "$conf_size bytes").
+				span({-style => "display: inline-block; width: 15em;"}, scalar localtime($_->[2])).
+				span({-style => "display: inline-block; width: 10em;"}, $_->[1],'bytes').
 				span(
-					($userdata->is_mine($fileid))? a({
-							-href    => "javascript:void(0)",
-							-onClick => "editUploadConf('$fileid')"
-						}, $self->translate('EDIT_BUTTON')
-					) : "&nbsp;"
+				    ($_->[1] <= MAXIMUM_EDITABLE_UPLOAD && -T $_->[3] && $userdata->is_mine($fileid))?
+				    $mirror_url?
+				    a( {
+					-href => "javascript:void(0)",
+					-onClick => "reloadURL('$fileid','$mirror_url')"
+				       },
+				       $self->translate('RELOAD_FROM', $mirror_url)
+				    ) : 
+				    a( {
+					-href    => "javascript:void(0)",
+					-onClick => "editUploadData('$fileid','$_->[0]')"
+				       },
+				       $self->translate('EDIT_BUTTON')
+				    )
+				    : '&nbsp;'
 				)
+			 } @source_files]
+		    ),
+		    li(
+			a( {
+			    -href	=> "?userdata_download=conf;track=$fileid",
+			    -style	=> "display: inline-block; width: 30em;"
+			   },
+			   $self->translate('CONFIGURATION')
+			).
+			span({-style => "display: inline-block; width: 15em;"}, scalar localtime $conf_modified).
+			span({-style => "display: inline-block; width: 10em;"}, "$conf_size bytes").
+			span(
+			    ($userdata->is_mine($fileid))? a({
+				-href    => "javascript:void(0)",
+				-onClick => "editUploadConf('$fileid')"
+							     }, $self->translate('EDIT_BUTTON')
+			    ) : "&nbsp;"
 			)
+		    )
 		);
 	return $source_listing;
 }
@@ -2526,7 +2529,7 @@ END
 					'3SD' => 'mean + 3 standard deviations',
 			   },
 			   -default => $bicolor_pivot,
-			   -current => $p =~ /^-?[\d.eE]+$/ ? 'value' : $p,
+			   -current => $p =~ /^-?[\d.eE]+(?:SD)?$/i ? 'value' : $p,
 			   -scripts => {-onChange => 'track_configure.pivot_select(this)',
 					-id       => 'conf_bicolor_pivot'}
 		       )

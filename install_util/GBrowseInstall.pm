@@ -365,6 +365,11 @@ ScriptAlias  "/gb2"      "$cgibin"
     Options      ExecCGI
   </Location>
   DefaultInitEnv GBROWSE_CONF $conf
+  # these directives prevent idle/busy timeouts and may need to be
+  # adjusted up or down
+  FcgidMinProcessesPerClass 6
+  FcgidIOTimeout   600
+  FcgidBusyTimeout 600
   $fcgid_inc
 </IfModule>
 
@@ -374,7 +379,9 @@ ScriptAlias  "/gb2"      "$cgibin"
     SetHandler   fastcgi-script
     Options      ExecCGI
   </Location>
-  FastCgiConfig $fcgi_inc -initial-env GBROWSE_CONF=$conf
+  # Note: you may need to increase -idle-timeout if file uploads are timing out and returning server
+  # errors.
+  FastCgiConfig -idle-timeout 600 -maxClassProcesses 20 $fcgi_inc -initial-env GBROWSE_CONF=$conf 
 </IfModule>
 
 <IfModule mod_perl.c>
@@ -456,6 +463,7 @@ sub ACTION_install {
     }
     
     # Configure the databases, if needed.
+    print STDERR "Updating user account database...\n";
     my $metadb_script = File::Spec->catfile("bin", "gbrowse_metadb_config.pl");
     system "perl $metadb_script";
 

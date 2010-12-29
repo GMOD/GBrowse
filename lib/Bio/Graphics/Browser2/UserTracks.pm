@@ -37,7 +37,7 @@ sub sources_dir_name   { 'SOURCES'   }
 sub new {
     my $class = shift;
     my ($data_source,$session) = @_;
-    
+
     my $globals   = $data_source->globals;
     my $uploadsid = $session->uploadsid;
     my $sessionid = $session->id;
@@ -398,7 +398,7 @@ sub mirror_url {
 
     if ($@ =~ /cancelled/) {
 		$self->delete_file($file);
-		return (0,'Cancelled by user',[]);
+		return (0,'Upload process terminated',[]);
     }
 
     my $msg = $@;

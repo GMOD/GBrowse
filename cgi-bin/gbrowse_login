@@ -44,6 +44,8 @@ sub run {
     my %actions  = map {$_=>1} param('action');
     my %callback;
 
+    warn 'gbrowse_login(',join ',',param('action'),')';
+
     my $user     = param('user');
     my $pass     = param('pass');
     my $email    = param('email');
@@ -58,6 +60,7 @@ sub run {
     my $confirm  = param('confirm');
     my $openid   = param('openid');
     my $option   = param('option');
+    my $source   = param('source');
 
     
     my $userdb = Bio::Graphics::Browser2::UserDB->new(Bio::Graphics::Browser2->open_globals);
@@ -96,8 +99,9 @@ sub run {
     
     $userdb->do_add_openid_user		($user, $email,$fullname,$openid, $sessionid, $remember)
 	                                                                                if $actions{add_openid_user};
-    $userdb->do_check_openid		($openid, $sessionid, $option)			if $actions{check_openid};
+    $userdb->do_check_openid		($openid, $sessionid, $source, $option)  	if $actions{check_openid};
     $userdb->do_change_openid		($user, $pass, $openid, $option)		if $actions{change_openid};
+    $userdb->do_get_gecos		($user)		                                if $actions{get_gecos};
 }
 
 __END__

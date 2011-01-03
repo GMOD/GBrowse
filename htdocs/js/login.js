@@ -2,9 +2,9 @@ var LoginScript = '../../gbrowse_login';
 var Logged      = false;
 var OpenIDMenu  = false;
 
-var ImgLocation, AppName, AppNameLong;                 // General Information
-var CurrentUser, SessionID, LoginPage, EditDetails;    // Dynamic Variables
-var UsingOpenID, OpenIDCount, SelectedID;              // OpenID Variables
+var ImgLocation, AppName, AppNameLong;                         // General Information
+var Source, CurrentUser, SessionID, LoginPage, EditDetails;    // Dynamic Variables
+var UsingOpenID, OpenIDCount, SelectedID;                      // OpenID Variables
 
 ////////////////////////////////////////////////////////////////////////////////////
 //  Logged      = true if the user is logged in, false otherwise.
@@ -19,10 +19,11 @@ var UsingOpenID, OpenIDCount, SelectedID;              // OpenID Variables
 ////////////////////////////////////////////////////////////////////////////////////
 
 //Loads the global variables for the rest of the script
-function load_login_globals(images,app,applong) {
+function load_login_globals(images,app,applong,source) {
     ImgLocation = images;   // eg. /gbrowse2/images/openid
     AppName     = app;      // eg. GBrowse
     AppNameLong = applong;  // eg. The Generic Genome Browser
+    Source      = source;   // eg. "yeast"
 }
 
 //Formats the entire login popup
@@ -170,7 +171,7 @@ function load_login_balloon(event,session,username,openid) {
                      '<input id=loginSubmit style=font-size:90% type=button value=\'' + Controller.translate('LOG_IN') + '\'' +
                        'onClick=login_loading(true);$(\'loginWarning\').hide();validate_info(); />' +
                      '<b id=loginBreak>&nbsp; &nbsp;</b>' +
-                     '<input id=loginRemember type=checkbox checked>' +
+                     '<input id=loginRemember type=checkbox >' +
                        '<font id=loginRememberTxt>' + Controller.translate('REMEMBER_ME') + '</font></input>' +
                      '<input id=loginCancel style=font-size:90%;display:none type=button value=\'' + Controller.translate('CANCEL') + '\'' +
                        'onClick=login_page_change(\'main\') /></td></tr>' +
@@ -840,6 +841,17 @@ function edit_details(details) {
         $('loginTitle').innerHTML = Controller.translate('CHANGE_MY_NAME');
         $('loginDRealName').show();
         $('loginDNewname').focus();
+	$('loginDNewname').value='wait...';
+	new Ajax.Request(LoginScript,{
+		parameters: { 
+		    action: 'get_gecos',
+		    user:   CurrentUser
+			},
+		onSuccess: function (t) {
+		    $('loginDNewname').value=t.responseText;
+		    $('loginFullName').value=t.responseText;
+		}
+	});
         EditDetails = 'gecos';
         return;
     case 'password':
@@ -916,6 +928,9 @@ function edit_details_verify() {
     var old_pass  = $('loginDPOrig').getValue();
     var new_pass  = $('loginDPNew').getValue();
     var new_pass2 = $('loginDPNew2').getValue();
+
+    var old_gecos  = $('loginFullName').getValue();
+    var new_gecos  = $('loginDNewname').getValue();
     
     var openid = "";
     var ouser  = "";
@@ -943,6 +958,14 @@ function edit_details_verify() {
             $('loginWarning').innerHTML = Controller.translate('NEW_PASSWORDS_DIFFERENT');
         } else {
             edit_details_submit(CurrentUser,'pass',old_pass,new_pass);
+            return;
+        }
+        break;
+    case 'gecos':
+        if(old_gecos.length==0  || new_gecos.length==0) {
+            $('loginWarning').innerHTML = Controller.translate('ALL_FIELDS_REQUIRED');
+        } else {
+            edit_details_submit(CurrentUser,'gecos',old_gecos,new_gecos);
             return;
         }
         break;
@@ -1026,7 +1049,6 @@ function edit_details_confirm() {
     return;
 }
 
-
 //******************************************************************
 // OpenID Functions:
 //******************************************************************
@@ -1047,6 +1069,7 @@ function check_openid(openid) {
         parameters:  {action: ['check_openid'],
                       openid:  openid,
                       session: SessionID,
+		      source:  Source,
                       option:  LoginPage
         },
         onSuccess: function (transport) {

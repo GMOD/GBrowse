@@ -753,17 +753,21 @@ var GBrowseController = Class.create({
     },
 
     reconfigure_plugin:
-    function(plugin_action,plugin_track_id,pc_div_id,plugin_type,form_element) {
+    function(plugin_action,plugin_track_id,pc_div_id,plugin_type,form_element,synchronous) {
         if (form_element==null)
             form_element = $("configure_plugin");
         else
             Element.extend(form_element);
 
+	if (synchronous == null)
+	    synchronous = false;
+
         new Ajax.Request(Controller.url, {
                 method:     'post',
+		asynchronous: !synchronous,
                 parameters: form_element.serialize() +"&"+ $H({
                 plugin_action: plugin_action,
-                action:  'reconfigure_plugin'
+	        action:  'reconfigure_plugin'
             }).toQueryString(),
 
             onSuccess: function(transport) {
@@ -795,7 +799,8 @@ var GBrowseController = Class.create({
     plugin_authenticate:
     function(configuration_form,message_area) {
 	message_area.innerHTML='<img src="'+this.button_url('spinner.gif')+'" />'+Controller.translate('WORKING');
-	this.reconfigure_plugin('Configure',null,null,'authorizer',configuration_form);
+	this.reconfigure_plugin('Configure',null,null,'authorizer',configuration_form,true);
+	var remember = $('authenticate_remember_me').getValue() == 'on';
 	new Ajax.Request(Controller.url, {
                 method:     'post',
 	        parameters: {
@@ -805,13 +810,12 @@ var GBrowseController = Class.create({
 		    var results    = t.responseJSON;
 		    if (results.userOK) {
 			Balloon.prototype.hideTooltip(1);
-			var remember = true;
 			// the definition for this call is in login.js
 			login_get_account(results.username,results.sessionid,remember,false);
 		    }
 		    else
 			message_area.innerHTML='<div style="color:red">'+results.message+'</div>';
-		}
+		},
 	});
     },
 

@@ -16,7 +16,7 @@ use File::Path 'remove_tree';
 use File::Spec;
 use POSIX 'strftime';
 
-use constant SCHEMA_VERSION => 3;
+use constant SCHEMA_VERSION => 4;
 
 # First, collect all the flags - or output the correct usage, if none listed.
 my @argv = @ARGV;
@@ -77,7 +77,7 @@ my $last_id       = $type =~ /mysql/i  ? 'mysql_insertid'
 my $users_columns = {
     userid      => "integer PRIMARY KEY $autoincrement",
     email       => "varchar(64) not null UNIQUE",
-    pass        => "varchar(32) not null",
+    pass        => "varchar(44) not null",
     gecos       => "varchar(64)",
     remember    => "boolean not null",
     openid_only => "boolean not null",
@@ -622,6 +622,7 @@ sub upgrade_schema {
 	my $function = "upgrade_from_${i}_to_".($i+1);
 	eval "$function();1" or die "Can't upgrade from version $i to version ",$i+1;
     }
+    set_schema_version('dbinfo',$new_version);
 }
 
 sub backup_database {
@@ -806,32 +807,36 @@ END
 	die "Can't continue";
     } else {
 	print STDERR "Successfully upgraded schema from 0 to 1.\n";
-	set_schema_version('dbinfo',1);
     }
 }
 
 sub upgrade_from_1_to_2 {
     # Create sharing table.
     check_table("sharing", $sharing_columns);
+
+    local $database->{AutoCommit} = 0;
+    local $database->{RaiseError} = 1;
+    eval {
+
+	# Upgrade sharing table from 
+	my $select = $database->prepare("SELECT trackid, users, public_users FROM uploads") or die $database->errstr;
+	$select->execute();
+	my $run = 0;
+	while (my ($trackid, $users, $public_users) = $select->fetchrow_array()) {
+	    my @users = split ", ", $users if $users;
+	    my @public_users = split ", ", $public_users if $public_users;
+	    
+	    $database->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $trackid, $_, 0) foreach @users;
+	    $database->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $trackid, $_, 1) foreach @public_users;
+	    $run = 1 if ($users || $public_users);
+	}
     
-    # Upgrade sharing table from 
-    my $select = $database->prepare("SELECT trackid, users, public_users FROM uploads") or die $database->errstr;
-    $select->execute();
-    my $run = 0;
-    while (my ($trackid, $users, $public_users) = $select->fetchrow_array()) {
-        my @users = split ", ", $users if $users;
-        my @public_users = split ", ", $public_users if $public_users;
-        
-        $database->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $trackid, $_, 0) foreach @users;
-        $database->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $trackid, $_, 1) foreach @public_users;
-        $run = 1 if ($users || $public_users);
-    }
+	# Now delete the users & public_users columns from the database.
+	check_table("uploads", $uploads_columns);
     
-    # Now delete the users & public_users columns from the database.
-    check_table("uploads", $uploads_columns);
-    
-    $select->finish();
+	$select->finish();
 	$database->commit() if $run;
+    };
 
     if ($@) {
 	warn "upgrade failed due to $@. Rolling back";
@@ -839,13 +844,52 @@ sub upgrade_from_1_to_2 {
 	die "Can't continue";
     } else {
 	print STDERR "Successfully upgraded schema from 1 to 2.\n";
-	set_schema_version('dbinfo', 2);
     }
 }
 
 sub upgrade_from_2_to_3 {
     # add the gecos field
     check_table('users',$users_columns);
+}
+
+sub upgrade_from_3_to_4 {
+    # change the size of the password table in the users table
+    local $database->{AutoCommit} = 0;
+    local $database->{RaiseError} = 1;
+    eval {
+	check_table("users_new",$users_columns);
+	my $select = $database->prepare(<<END ) or die $database->errstr;
+SELECT userid,email,pass,gecos,remember,openid_only,confirmed,cnfrm_code,last_login,created
+FROM   users
+END
+    ;
+    	# query to insert data into new users table
+	my $insert = $database->prepare(<<END ) or die $database->errstr;
+REPLACE INTO users_new (userid,email,pass,gecos,remember,openid_only,confirmed,cnfrm_code,last_login,created)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
+END
+;
+	$select->execute();
+	while (my @cols = $select->fetchrow_array) {
+	    $insert->execute(@cols);
+	}
+	$select->finish;
+	$insert->finish;
+	$database->do('drop table users')
+	    or die "Couldn't drop old users table";
+
+	$database->do('alter table users_new rename to users')
+	    or die "Couldn't rename new users table";
+	$database->commit();
+    };
+    
+    if ($@) {
+	warn "upgrade failed due to $@. Rolling back";
+	eval {$database->rollback()};
+	die "Can't continue";
+    } else {
+	print STDERR "Successfully upgraded schema from 3 to 4.\n";
+    }
 }
 
 

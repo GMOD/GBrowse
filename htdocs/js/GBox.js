@@ -197,6 +197,7 @@ Box.prototype.addCloseButton = function () {
     closeButton.setAttribute('src',self.closeButton);
     closeButton.onclick = function() {
       Balloon.prototype.hideTooltip(1);
+      eval("login_blackout(false,'')");  // hack because we are using gbox to display login instructions on blacked out background
     };
     self.setStyle(closeButton,'position','absolute');
     document.body.appendChild(closeButton);

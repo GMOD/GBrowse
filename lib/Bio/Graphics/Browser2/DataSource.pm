@@ -245,7 +245,7 @@ sub config {
 
 sub must_authenticate {
     my $self = shift;
-    return $self->global_setting('must_authenticate');
+    return $self->global_setting('must authenticate');
 }
 
 sub set_details_multiplier {

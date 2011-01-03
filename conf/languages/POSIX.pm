@@ -632,8 +632,10 @@ END
    LOG_OUT                   => 'Log Out',
    CHANGE_SETTINGS_DESC      => 'Click here to change your account settings',
    LOGIN_CREATE_DESC         => 'Click here to log in or create a new account. This will allow you to access your settings and uploaded tracks from multiple computers.',
+   LOGIN_REQUEST             => 'Please log in %s',
    LOGIN                     => 'Log in',
    LOGIN_CREATE              => 'Log in / create account',
+   LOGIN_REQUIRED            => 'You must log in to access this data source',
 
    #------------
    # USER TRACKS

@@ -53,17 +53,18 @@ sub render_plugin_login {
     my $render   = $self->renderer;
     my $session  = $render->session;
     my $style    = $self->link_style;
+    my $fullname = $render->userdb->fullname_from_sessionid($session->id);
     return span({-style=>$self->container_style},
 		$session->private ? (
 		    span({-style => 'font-weight:bold;color:black;'}, 
-			 $render->translate('WELCOME', $session->username)),
+			 $render->translate('WELCOME', $fullname)),
 		    span({-style => $style,
 			 -onMouseDown => "location.href='?id=logout'"},
-			 $render->translate('LOG_OUT', $session->username))
+			 $render->translate('LOG_OUT', $fullname))
 		)
 		: (
 		    span({-style       => $style,
-			  -onMouseDown => "GBox.showTooltip(event,'url:?action=plugin_login',true)"
+			  -onMouseDown => "login_blackout(true,'');GBox.showTooltip(event,'url:?action=plugin_login',true)"
 			 },
 			 $render->translate('LOGIN'))
 		)
@@ -104,27 +105,60 @@ sub render_builtin_login {
         $login_controls .= span({
 	    -style 	   => $style,
 	    -title 	   => $render->translate('LOG_OUT_DESC', $session->username).'',
-	    -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',\''.$session->username.'\','.$session->using_openid.');',
+	    -onMouseDown => $self->login_globals.';'.$self->logout_dialogue,
 	    -onMouseOver => 'this.style.textDecoration=\'underline\'',
 	    -onMouseOut  => 'this.style.textDecoration=\'none\''}, $render->translate('MY_ACCOUNT'));
 	$login_controls .= '&nbsp; &nbsp;';
         $login_controls .= span({
 	    -style       => $style,
 	    -title       => $render->translate('CHANGE_SETTINGS_DESC'),
-	    -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); location.href=\'?id=logout\';',
+	    -onMouseDown => $self->login_globals.';'.'location.href=\'?id=logout\';',
 	    -onMouseOver => 'this.style.textDecoration=\'underline\'',
 	    -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out');
     } else {
         $login_controls .= span({
 	    -style	   => $style,
 	    -title 	   => $render->translate('LOGIN_CREATE_DESC'),
-	    -onMouseDown => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\'); load_login_balloon(event,\''.$session->id.'\',false,false);',
+	    -onMouseDown => $self->login_globals.';'.$self->login_dialogue,
 	    -onMouseOver => 'this.style.textDecoration=\'underline\'',
 	    -onMouseOut  => 'this.style.textDecoration=\'none\''},
 				$render->translate('LOGIN_CREATE'));
     }
     my $container = span({-style => $self->container_style}, $login_controls);
     return $container;
+}
+
+sub login_script {
+    my $self = shift;
+    return join (';',$self->login_globals,$self->login_dialogue);
+}
+
+sub login_globals {
+    my $self = shift;
+    my $globals   = $self->renderer->globals;
+    my $images    = $globals->openid_url;
+    my $appname   = $globals->application_name;
+    my $appnamel  = $globals->application_name_long;
+    my $source    = $self->renderer->data_source->name;
+    return "load_login_globals('$images','$appname','$appnamel','$source')";
+    
+}
+
+sub login_dialogue {
+    my $self = shift;
+    my $render    = $self->renderer;
+    my $sessionid = $render->session->id;
+    return "load_login_balloon(event,'$sessionid',false,false)";
+}
+
+sub logout_dialogue {
+    my $self = shift;
+    my $render    = $self->renderer;
+    my $session   = $render->session;
+    my $sessionid = $session->id;
+    my $username  = $session->username;
+    my $openid    = $session->using_openid;
+    return "load_login_balloon(event,'$sessionid','$username',$openid)";
 }
 
 sub render_account_confirm {

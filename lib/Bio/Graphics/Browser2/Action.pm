@@ -34,11 +34,9 @@ sub segment     {shift->render->segment}
 # all others are forbidden
 sub is_authentication_event {
     my $class = shift;
-    my $action = param('action');
-    return 1 if $action eq 'authorize_login';
-    return 1 if $action eq 'plugin_authenticate';
-    return 1 if $action eq 'plugin_login';
-    return;
+    my $action = CGI::param('action');
+    my %ok = map {$_=>1} qw(authorize_login plugin_authenticate plugin_login get_translation_tables reconfigure_plugin);
+    return $ok{$action};
 }
 
 sub handle_legacy_calls {
@@ -381,6 +379,7 @@ sub ACTION_authorize_login {
     my $remember = $q->param('remember'); # or croak;
 
     my ($sessionid,$nonce) = $self->render->authorize_user($username, $session, $remember, $openid);
+    $sessionid or return(403,'application/txt','unknown user');
     return (200,'application/json',{id=>$sessionid,authority=>$nonce});
 }
 
@@ -858,15 +857,25 @@ sub ACTION_plugin_authenticate {
     warn "plugin_authenticate";
     my $plugin = eval{$render->plugins->auth_plugin} 
        or return (204,'text/plain','no authorizer defined');
-    my $username  = $plugin->authenticate;
-    my $sessionid = $self->session->id;
-    my $result = defined $username ? { userOK  => 1,
-				       sessionid => $sessionid,
-				       username  => $username,
-				       message   => 'login ok'}
-                                   : { userOK   => undef,
-				       message  => "Invalid name/password"
-				   };
+
+    my $result;
+    if (my ($username,$fullname)  = $plugin->authenticate) {
+	my $session   = $self->session;
+	$session->unlock;
+	my $userdb = $render->userdb;
+	my $id = $userdb->check_or_add_named_session($session->id,$username);
+	$userdb->set_fullname_from_username($username=>$fullname);
+	$result = { userOK  => 1,
+		    sessionid => $id,
+		    username  => $username,
+		    message   => 'login ok'};
+    } 
+    # failed to authenticate
+    else {
+	$result = { userOK   => undef,
+		    message  => "Invalid name/password"
+	};
+    }
     return (200,'application/json',$result);
 }
 

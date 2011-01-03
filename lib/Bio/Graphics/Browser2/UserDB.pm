@@ -5,14 +5,14 @@ use strict;
 use Bio::Graphics::Browser2;
 use CGI qw(:standard);
 use DBI;
-use Digest::SHA qw(sha1);
+use Digest::SHA qw(sha1_hex sha1);
 use JSON;
-use LWP::UserAgent;
-#use LWPx::ParanoidAgent; (Better, but currently broken)
 use Net::SMTP;
 use Text::ParseWords 'quotewords';
 use Digest::MD5 qw(md5_hex);
 use Carp qw(confess cluck croak);
+use LWP::UserAgent;
+#use LWPx::ParanoidAgent; (Better, but currently broken)
 
 use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; 1" || 0;
 
@@ -47,6 +47,33 @@ sub new {
 sub globals {shift->{globals} };
 sub dbi     {shift->{dbi}     };
 sub openid  {shift->{openid}  };
+
+sub generate_salted_digest {
+    my $self     = shift;
+    my $password = shift;
+    my $salt     = $self->create_key(4);
+    return $salt . sha1_hex($salt,$password);
+}
+
+sub salted_digest_match {
+    my $self   = shift;
+    my ($offered,$correct) = @_;
+    my ($salt,$digest) = $correct =~ /^(.{4})(.+)/;
+    return sha1_hex($salt,$offered) eq $digest;
+}
+
+sub is_salted {
+    my $self    = shift;
+    my $correct = shift;
+    return $correct =~ /^[a-zA-Z0-9_]{4}[0-9a-f]{40}$/;
+}
+
+sub passwd_match {
+    my $self = shift;
+    my ($offered,$correct) = @_;
+    return $self->is_salted($correct) ? $self->salted_digest_match($offered,$correct)
+	                              : sha1($offered) eq $correct;
+}
 
 # Get Header - Returns the message found at the top of all confirmation e-mails.
 sub get_header {
@@ -264,6 +291,52 @@ SELECT userid
 END
 }
 
+sub set_fullname_from_username {
+    my $self = shift;
+    my ($username,$fullname) = @_;
+    my $userdb = $self->dbi;
+
+    my $userid = $self->userid_from_username($username) or return;
+
+    local $userdb->{AutoCommit} = 0;
+    local $userdb->{RaiseError} = 1;
+    eval {
+	my ($rows) = $userdb->selectrow_array(<<END,undef,$userid);
+SELECT count(*) FROM users WHERE userid=?
+END
+;
+	if ($rows > 0) {
+	    $userdb->do('UPDATE users SET gecos=? WHERE userid=?',undef,$fullname,$userid);
+	} else {
+	    my $nowfun = $self->nowfun();
+	    $userdb->do(<<END,undef,$userid,$fullname);
+INSERT INTO users(userid,gecos,email,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created)
+VALUES (?,?,'x','x',1,1,1,'x',$nowfun,$nowfun)
+END
+;
+	}
+	$userdb->commit();
+    };
+    if ($@) {
+	warn "Setting fullname for $username failed due to $@. Rolling back.";
+	eval {$userdb->rollback()};
+    }
+}
+
+sub sessionid_from_username {
+    my $self = shift;
+    my $username = shift;
+    my $userdb   = $self->{dbi};
+    my $sessionid = $userdb->selectrow_array(<<END ,undef,$username);
+SELECT sessionid
+  FROM session as a
+  WHERE a.username=?
+  LIMIT 1
+END
+;
+    return $sessionid;
+}
+
 # Username From UploadsID (Uploads ID) - Returns a user's name.
 sub username_from_uploadsid {
     my $self      = shift;
@@ -368,18 +441,26 @@ END
     return $uploadsid;
 }
 
+sub check_or_add_named_session {
+    my $self = shift;
+    my ($sessionid,$username) = @_;
+    if (my $old_session = $self->sessionid_from_username($username)) {
+	return $old_session;
+    } else {
+	$self->add_named_session($sessionid,$username);
+	return $sessionid;
+    }
+}
+
 sub add_named_session {
     my $self = shift;
     my ($sessionid,$username) = @_;
 
-    warn join ' ',caller();
-
     warn "add_named_session($sessionid,$username)";
-
     my $userdb  = $self->dbi;
 
     my $session = $self->globals->session($sessionid);
-    warn "wanted $sessionid but got ",$session->id;
+    warn "wanted $sessionid and got ",$session->id;
     $session->id eq $sessionid or die "Sessionid unavailable";
     my $uploadsid = $session->uploadsid;
 
@@ -439,26 +520,22 @@ sub do_validate {
   # editing/updating.
   if($remember == 2) {
       $update = $userdb->prepare(
-	  "UPDATE users SET last_login=$nowfun WHERE userid=? AND pass=? AND confirmed=1");
+	  "UPDATE users SET last_login=$nowfun WHERE userid=? AND confirmed=1");
   } else {
       $update = $userdb->prepare(
-	  "UPDATE users SET last_login=$nowfun,remember=$remember WHERE userid=? AND pass=? AND confirmed=1");
+	  "UPDATE users SET last_login=$nowfun,remember=$remember WHERE userid=? AND confirmed=1");
   }
 
-  # BUG: we should salt the password
-  $pass = sha1($pass);
-
   my $select = $userdb->prepare(
-      "SELECT sessionid,email,confirmed FROM users as a,session as b WHERE a.userid=b.userid and a.userid=? AND pass=?");
-  $select->execute($userid,$pass)
+      "SELECT sessionid,email,confirmed,pass FROM users as a,session as b WHERE a.userid=b.userid and a.userid=?");
+  $select->execute($userid)
       or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
 
-  # BUG: this is truly nasty -- the session id is found by string searching
-  # in login.js!!!!
-  my ($session,$email,$confirmed) = $select->fetchrow_array;
+  # BUG: this is truly nasty -- the session id is found by string searching in login.js!!!!
+  my ($session,$email,$confirmed,$correct_pass) = $select->fetchrow_array;
   warn "session = $session, confirmed=$confirmed";
 
-  if ($session) {
+  if ($session && $self->passwd_match($pass,$correct_pass)) {
       if ($confirmed) {
 	  print $remember == 2 ? "Success" : "session".$session;
       } else {
@@ -469,7 +546,7 @@ sub do_validate {
   }
 
   # update time login now
-  $update->execute($userid,$pass)
+  $update->execute($userid)
     or (print "Error: ", DBI->errstr, "." and die "Error: ", DBI->errstr);
 }
 
@@ -539,7 +616,7 @@ INSERT INTO users (userid, gecos, email, pass, remember, openid_only,
      VALUES (?,?,?,?,0,0,0,?,$nowfun,$nowfun)
 END
 ;
-      my $sha_pass = sha1($pass);
+      my $sha_pass = $self->generate_salted_digest($pass);
       $insert_userinfo->execute($userid,$fullname,$email,$sha_pass,$confirm)
 	  or die "Couldn't insert information on user: ",$userdb->errstr;
       $userdb->commit();
@@ -642,8 +719,7 @@ sub do_confirm_account {
   my ($user,$confirm) = @_;
   my $userdb = $self->{dbi};
 
-  # BUG: we should salt the password
-  my $new_confirm = sha1($confirm);
+  my $new_confirm = sha1_hex($confirm);
 
   my ($rows) = $userdb->selectrow_array(
     "SELECT count(*) FROM users WHERE cnfrm_code=? AND confirmed=0",
@@ -676,16 +752,24 @@ sub do_confirm_account {
 sub do_edit_details {
   my $self = shift;
   my ($user,$column,$old,$new) = @_;
-  my $userdb = $self->{dbi};
+  my $userdb = $self->dbi;
+  my $userid = $self->userid_from_username($user);
 
   if($column eq 'email') {
     if($self->check_email($new) == 0) {
       print "New e-mail address is invalid, please try another.";return;}
   }
 
-  # BUG: we should salt the password
-  $old = sha1($old) if($column eq 'pass');
-  $new = sha1($new) if($column eq 'pass');
+  if ($column eq 'pass') {
+      my ($pass) = $userdb->selectrow_array('SELECT pass FROM users WHERE userid=?',undef,$userid);
+      warn "user=$user, pass=$pass";
+      unless ($self->passwd_match($old,$pass)) {
+	  print "Incorrect password provided, please check your spelling.";
+	  return;
+      }
+      $new = $self->generate_salted_digest($new);
+      $old = $pass;
+  }
 
   my $querystring  = "UPDATE users       ";
      $querystring .= "   SET $column  = ?";
@@ -693,7 +777,6 @@ sub do_edit_details {
      $querystring .= "   AND $column  = ?";
 
   my $update = $userdb->prepare($querystring);
-  my $userid = $self->userid_from_username($user);
   unless($update->execute($new,$userid,$old)) {
     if($column eq 'email') {
       print "New e-mail already in use, please try another.";
@@ -762,7 +845,7 @@ sub do_email_info {
   }
 
   # BUG: we should salt the password
-  my $secret = sha1($pass);
+  my $secret = $self->generated_salted_digest($pass);
   my $update = $userdb->prepare(
     "UPDATE users SET pass=? WHERE userid=? AND email=? AND confirmed=1");
   my $userid = $self->userid_from_username($user);
@@ -813,11 +896,7 @@ sub do_delete_user {
   my $self = shift;
   my ($user, $pass) = @_;
   
-  my $userdb = $self->{dbi};
-  my $unseqpass = $pass;
-
-  # BUG we should salt the password
-  $pass = sha1($pass);
+  my $userdb = $self->dbi;
   my $userid = $self->userid_from_username($user);
   unless ($userid) {
       print "Error: unknown user $user";
@@ -849,9 +928,11 @@ sub do_delete_user {
 sub do_check_openid {
     my $self = shift;
     my $globals = $self->{globals};
-    my ($openid, $sessionid, $option) = @_;
+    my ($openid, $sessionid, $source, $option) = @_;
     warn "do_check_openid($openid,$sessionid,$option)";
-    my $return_to  = $globals->gbrowse_url()."?openid_confirm=1;page=$option;s=$sessionid;";
+    warn "gbrowse_url = ",$globals->gbrowse_url($source);
+    
+    my $return_to  = $globals->gbrowse_url($source)."?openid_confirm=1;page=$option;s=$sessionid;";
        $return_to .= "id=logout;" if $option ne "openid-add";
        #id=logout needed in case another user is already signed in
     
@@ -938,6 +1019,16 @@ sub do_confirm_openid {
     return;
 }
 
+sub do_get_gecos {
+    my $self = shift;
+    my $user = shift;
+    warn "user=$user";
+    my $sessionid = $self->sessionid_from_username($user) or return '';
+    my $fullname = $self->fullname_from_sessionid($sessionid);
+    warn "sessionid=$sessionid,fullname=$fullname";
+    print $fullname;
+}
+
 # Get OpenID - Check to see if the provided openid is unused
 sub do_get_openid {
     my $self   = shift;
@@ -995,32 +1086,17 @@ END
 sub do_change_openid {
     my $self = shift;
     my ($user, $pass, $openid, $option) = @_;
+
+    warn "not using password $pass; is this a bug?";
     
-    my $userdb = $self->{dbi};
-    my $unseqpass = $pass;
-
-    # BUG: we should salt the password
-    $pass = sha1($pass);
-
-    my ($sql,@bind);
-    if ($unseqpass eq "") {
-        $sql  = "SELECT a.userid FROM users as a,session as b WHERE b.username=? AND a.userid=b.userid AND a.openid_only=1";
-        @bind = $user;
-    } else {
-        $sql  = "SELECT a.userid FROM users as a,session as b WHERE b.username=? AND a.userid=b.userid AND a.pass=?";
-        @bind = ($user, $pass);
-    }
-
-    my $users = $userdb->selectrow_arrayref($sql,undef,@bind)
+    my $userdb = $self->dbi;
+    my $users = $userdb->selectrow_arrayref('SELECT a.userid FROM users as a,session as b WHERE b.username=? AND a.userid=b.userid',
+					    undef,$user)
         or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
     my $rows = @$users;
 
     if($rows != 1) {
-        if($rows != 0) {
-            print "Error: $rows rows returned, please consult your service host.";
-        } else {
-            print "Incorrect password provided, please check your spelling and try again.";
-        }
+	print "Error: unknown user $user.";
         return;
     }
 
@@ -1093,8 +1169,8 @@ sub do_add_openid_user {
         print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
     }
 
-    my $confirm = sha1($self->create_key('32'));
-    my $pass    = sha1($self->create_key('32'));
+    my $confirm = sha1_hex($self->create_key('32'));
+    my $pass    = $self->generate_salted_digest($self->create_key('32'));
 
     my $nowfun  = $self->nowfun();
 
@@ -1110,8 +1186,6 @@ INSERT INTO users (userid,email,gecos,pass,remember,openid_only,confirmed,cnfrm_
 END
 ;
 
-	# BUG: we should salt the password
-	$pass = sha1($pass);
 	$query->execute($userid, $email, $gecos, $pass, $remember, $confirm)
 	    or die "Couldn't insert openid_user into users table: ",$query->errstr;
 

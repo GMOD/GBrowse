@@ -132,8 +132,10 @@ sub gbrowse_base {
 
 # this returns the URL of the "master" gbrowse instance
 sub gbrowse_url {
-    my $self   = shift;
+    my $self            = shift;
+    my $fallback_source = shift;
     my ($base,$source) = $self->gbrowse_base;
+    $source          ||= $fallback_source if $fallback_source;
     return "$base/gbrowse/$source";
 }
 

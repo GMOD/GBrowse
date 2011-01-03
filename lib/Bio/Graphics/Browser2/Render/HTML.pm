@@ -77,6 +77,16 @@ sub render_error_div {
 	).br();
 }
 
+sub render_login_required {
+    my $self   = shift;
+    my $action = shift;
+    return div(
+	h1($self->translate('LOGIN_REQUIRED'),
+	   button(-name    => $self->translate('LOGIN'),
+		  -onClick => $action)
+	));
+}
+
 # Render Tabbed Pages - Returns the HTML containing the tabs & the page DIVs to hold the content.
 sub render_tabbed_pages {
     my $self = shift;
@@ -725,24 +735,32 @@ sub wrap_login_form {
 
     my $plugin_type  = $plugin->type;
     my $plugin_name  = $plugin->name;
+    my $auth_hint    = $plugin->authentication_hint;
 
     my $form = $plugin->configure_form;
     my $html = div(
 	div({-id=>'login_message'},''),
+	b($auth_hint ? $self->translate('LOGIN_REQUEST',"to $auth_hint")
+	   	     : $self->translate('LOGIN_REQUEST')),
 	start_form({-name     => 'configure_plugin',
 		   -id        => 'plugin_configure_form',
-		   -onSubmit => 'return false'}
+		   -onSubmit  => 'return false'}
 	),
 	$form,
 	hidden(-name=>'plugin',-value=>$plugin_name),
 	button(
 	    -name    => $self->translate('Cancel'),
-	    -onClick => 'Balloon.prototype.hideTooltip(1)'
+	    -onClick => 'Balloon.prototype.hideTooltip(1);login_blackout(false)'
 	),
 	button(
 	    -name    => 'plugin_button',
 	    -value   => $self->translate('LOGIN'),
 	    -onClick => "Controller.plugin_authenticate(\$('plugin_configure_form'),\$('login_message'))",
+	),
+	checkbox(
+	    -id      => 'authenticate_remember_me',
+	    -name    => 'remember',
+	    -label   => $self->translate('REMEMBER_ME')
 	),
 	end_form(),
 	script({-type=>'text/javascript'},<<EOS )
@@ -784,7 +802,7 @@ sub galaxy_form {
     return '' unless $galaxy_url;
 
     my $URL  = $source->global_setting('galaxy incoming');
-    $URL   ||= $self->globals->gbrowse_url;
+    $URL   ||= $self->globals->gbrowse_url();
 
     # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
     # when Galaxy posts the URL.

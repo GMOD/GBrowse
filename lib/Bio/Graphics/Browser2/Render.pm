@@ -219,10 +219,13 @@ sub run {
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string() if $debug || TRACE_RUN;
+       query_string();# if $debug || TRACE_RUN;
   warn "[$$] session id = ",$self->session->id if $debug;
 
   $self->set_source() && return;
+
+  warn "private session = ",$self->session->private;
+  warn "username = ",       $self->session->username;
 
   if ( $self->data_source->must_authenticate &&
        !$self->session->private) {
@@ -386,6 +389,11 @@ sub authorize_user {
     my $self = shift;
     my ($username,$id,$remember,$using_openid) = @_;
     my ($session,$error);
+
+    warn "Checking that user exists in database";
+    my $userdb     = $self->userdb;
+    $userdb->username_from_sessionid($id) eq $id;
+    return unless $userdb->username_from_sessionid($id) eq $username;
     
     warn "Checking current session" if DEBUG;
     my $current = $self->session->id;
@@ -401,7 +409,6 @@ sub authorize_user {
 	unless ($session->id eq $id) {
 	    warn "fixing probable expired session";
 	  FIX: {
-	      my $userdb     = $self->userdb;
 	      my $username   = $userdb->username_from_sessionid($id) or last FIX;
 	      my $userid     = $userdb->get_user_id($username)       or last FIX;
 	      my $uploadsid  = $userdb->get_uploads_id($userid)      or last FIX;
@@ -1754,15 +1761,39 @@ sub get_external_presets {
 ##################################################################3
 sub force_authentication {
     my $self = shift;
+
+    # asynchronous event -- only allow the ones needed for authentication
     if (Bio::Graphics::Browser2::Action->is_authentication_event) {
 	warn "running preauthenticated asynchronous event";
 	$self->run_asynchronous_event;
+	return
+    } 
+
+    if (param('action')) {
+	print CGI::header(-status => '403 Forbidden');
 	return;
     }
+
+    # render main page
+    $self->init();
     $self->render_header();
-    my $output = $self->render_html_start('Login Needed',
-					  "GBox.showTooltip(event,'url:?action=plugin_login',true)");
-    warn "FINISH THIS";
+
+    my $action;
+    if ($self->globals->auth_plugin) {
+	$action = "GBox.showTooltip(event,'url:?action=plugin_login',true)";
+    } else {
+ 	$action = $self->login_manager->login_script();
+    }
+    $action .= ";login_blackout(true,'')";
+
+    my $output = $self->render_html_start('GBrowse Login Required',
+					  $self->get_post_load_functions,
+					  $action);
+    $output .= div({-id=>'source_form'},$self->source_form());
+    $output .= $self->render_login_required($action);
+    $output .= "<hr>";
+    $output .= $self->render_bottom();
+    print $output;
 }
 
 ##################################################################3

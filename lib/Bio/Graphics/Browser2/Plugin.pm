@@ -836,6 +836,16 @@ sub reconfigure {
   # do nothing
 }
 
+sub authenticate {
+    my $self = shift;
+    # do nothing
+}
+
+sub authentication_hint {
+    my $self = shift;
+    # return nothing
+}
+
 # get/store database
 sub database {
   my $self = shift;
@@ -1002,6 +1012,7 @@ sub stylesheets {
   my $self = shift;
   return;
 }
+
 
 # A list of all Javascript commands to be run once the page or tab is loaded (in either the body's onLoad section, or the callback event from the tab's rendering animation).
 # Should return a hash, key is the section which contains the elements plus "_select", value is the function (e.g. "track_page_select", "some.function();").

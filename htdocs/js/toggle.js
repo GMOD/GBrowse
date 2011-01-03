@@ -7,7 +7,10 @@ function setVisState (element_name,is_visible) {
 
 // checkSummaries makes sure any collapsed nodes have their summaries visible upon page load.
 function checkSummaries() {
-  var sections = $('trackform').select("div.searchbody div.el_visible");
+  var tf = $('trackform');
+  if (tf==null) return;
+
+  var sections = tf.select("div.searchbody div.el_visible");
   for(j = 0; j < sections.length; j++) {
     if(sections[j].visible() == false)
       summarizeTracks(sections[j]);

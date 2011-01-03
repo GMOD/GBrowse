@@ -20,6 +20,8 @@
       users to line things up.
     * Track configuration dialog handles the vista plot in addition to regular and quantitative
       tracks.
+    * Added a simple authentication plugin framework that allows you to authenticate against Unix password files,
+      LDAP, Kerberos, etc (with the correct plugin written, of course!)
 
 2.17
      * Track configuration dialog now allows for control of autoscaling behavior in quantitative

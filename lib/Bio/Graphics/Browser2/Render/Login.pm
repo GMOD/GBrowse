@@ -23,6 +23,7 @@ sub render_login {
     my $self   = shift;
     my $render = $self->renderer;
 
+    $render->init_plugins;
     my $auth     =  $render->plugins->auth_plugin;
     if ($auth) {
 	$self->render_plugin_login($auth);
@@ -124,7 +125,7 @@ sub render_builtin_login {
 	    -onMouseOut  => 'this.style.textDecoration=\'none\''},
 				$render->translate('LOGIN_CREATE'));
     }
-    my $container = span({-style => $self->container_style}, $login_controls);
+    my $container = span({-id=>'login_menu',-style => $self->container_style}, $login_controls);
     return $container;
 }
 
@@ -141,7 +142,6 @@ sub login_globals {
     my $appnamel  = $globals->application_name_long;
     my $source    = $self->renderer->data_source->name;
     return "load_login_globals('$images','$appname','$appnamel','$source')";
-    
 }
 
 sub login_dialogue {
@@ -192,8 +192,6 @@ sub render_openid_confirm {
     my $appnamel        = $globals->application_name_long;
     my $settings        = $render->state;
     my $session         = $render->session;
-    warn "render_openid_confirm()";
-    warn 'param=',join ' ',param();
     my ($email,$gecos) = $self->gecos_from_openid;
 
     my $logged_in = $session->private ? 'true' : 'false';
@@ -207,7 +205,6 @@ sub render_openid_confirm {
                 -onLoad => $load}
 	)
         : "";
-
 }
 
 sub gecos_from_openid {
@@ -215,7 +212,6 @@ sub gecos_from_openid {
     my $email = param('openid.ax.value.email')     || param('openid.ext1.value.email')     || '';
     my $first = param('openid.ax.value.firstname') || param('openid.ext1.value.firstname') || '';
     my $last  = param('openid.ax.value.lastname')  || param('openid.ext1.value.lastname') || '';
-    warn "email=$email, first=$first, last=$last";
     my $gecos;
     # pull name out of email
     if ($email =~ /^\"([^\"]+)\"\s+([^@]+@[^@]+)$/) {
@@ -227,6 +223,54 @@ sub gecos_from_openid {
     return ($email,$gecos);
 }
 
+##########################################################33
+## handle asynchronous requests
+##
+## this used to be done in gbrowse_login script
+##########################################################33
 
+sub run_asynchronous_request {
+    my $self = shift;
+    my $q    = shift;  # CGI object
+    my $userdb = $self->renderer->userdb;
+    $userdb or return (500,'text/plain',"Couldn't get userdb object");
+
+    my %actions  = map {$_=>1} $q->param('login_action');
+    my %callback;
+
+    my $user       = $q->param('user');
+    my $pass       = $q->param('pass');
+    my $email      = $q->param('email');
+    my $fullname   = $q->param('fullname');
+    my $sessionid  = $q->param('session');
+    my $remember   = $q->param('remember');
+    
+    my $old      = $q->param('old_val');
+    my $new      = $q->param('new_val');
+    my $column   = $q->param('column');
+    
+    my $confirm  = $q->param('confirm');
+    my $openid   = $q->param('openid');
+    my $option   = $q->param('option');
+    my $source   = $q->param('source');
+
+    my ($status,$content_type,$content) =
+	  $actions{list_openid}       ? $userdb->do_list_openid($user)
+	 :$actions{confirm_openid}    ? $userdb->do_confirm_openid({$q->param('callback')},$sessionid, $option,$email,$fullname)
+	 :$actions{validate}          ? $userdb->do_validate($user, $pass, $remember)
+	 :$actions{add_user_check}    ? $userdb->do_add_user_check($user, $email, $fullname, $pass, $sessionid)
+	 :$actions{add_user}          ? $userdb->do_add_user($user, $email, $fullname, $pass, $sessionid)
+	 :$actions{edit_confirmation} ? $userdb->do_edit_confirmation($email, $option)
+	 :$actions{confirm_account}   ? $userdb->do_confirm_account($user, $confirm)
+	 :$actions{edit_details}      ? $userdb->do_edit_details($user, $column, $old, $new, $self->renderer->session)
+	 :$actions{email_info}        ? $userdb->do_email_info($email)
+	 :$actions{delete_user}       ? $userdb->do_delete_user($user, $pass)
+	 :$actions{add_openid_user}   ? $userdb->do_add_openid_user($user, $email,$fullname,$openid, $sessionid, $remember)
+	 :$actions{check_openid}      ? $userdb->do_check_openid($openid, $sessionid, $source, $option)
+	 :$actions{change_openid}     ? $userdb->do_change_openid($user, $pass, $openid, $option)
+	 :$actions{get_gecos}         ? $userdb->do_get_gecos($user)
+	 :(500,'text/plain','programmer error');
+    return ($status,$content_type,$content);
+}
 
 1;

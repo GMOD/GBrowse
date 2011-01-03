@@ -30,9 +30,7 @@ sub new {
   
   my $login = DBI->connect($credentials);
   unless ($login) {
-    print header();
-    print "Error: Could not open login database. Please ensure your credentials are present and working in the GBrowse.conf file.";
-    confess "Could not open login database $credentials";
+      confess "Could not open login database $credentials";
   }
   
   my $self = bless {
@@ -456,11 +454,9 @@ sub add_named_session {
     my $self = shift;
     my ($sessionid,$username) = @_;
 
-    warn "add_named_session($sessionid,$username)";
     my $userdb  = $self->dbi;
 
     my $session = $self->globals->session($sessionid);
-    warn "wanted $sessionid and got ",$session->id;
     $session->id eq $sessionid or die "Sessionid unavailable";
     my $uploadsid = $session->uploadsid;
 
@@ -506,10 +502,8 @@ sub do_validate {
   # remove dangling unconfirmed accounts here
   $self->check_old_confirmations();
 
-  if($self->check_user($user)==0) {
-    print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";
-    return;
-  }
+  return $self->string_result('Usernames cannot contain any backslashes, whitespace or non-ascii characters.')
+      unless $self->check_user($user);
 
   my $userid = $self->userid_from_username($user);
   my $nowfun = $self->nowfun();
@@ -529,25 +523,25 @@ sub do_validate {
   my $select = $userdb->prepare(
       "SELECT sessionid,email,confirmed,pass FROM users as a,session as b WHERE a.userid=b.userid and a.userid=?");
   $select->execute($userid)
-      or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+      or return $self->dbi_err;
 
   # BUG: this is truly nasty -- the session id is found by string searching in login.js!!!!
   my ($session,$email,$confirmed,$correct_pass) = $select->fetchrow_array;
-  warn "session = $session, confirmed=$confirmed";
 
   if ($session && $self->passwd_match($pass,$correct_pass)) {
       if ($confirmed) {
-	  print $remember == 2 ? "Success" : "session".$session;
+	  my $result = $remember == 2 ? 'Success' : "session".$session;
+	  return $self->string_result($result);
       } else {
-	  print "unconfirmed${email}"; # ugly!
+	  return $self->string_result("unconfirmed${email}");
       }
   } else {
-      print "Invalid username or password provided, please try again.";      
+      return $self->string_result('Invalid username or password provided, please try again.'); 
   }
 
   # update time login now
   $update->execute($userid)
-    or (print "Error: ", DBI->errstr, "." and die "Error: ", DBI->errstr);
+      or return $self->dbi_err;
 }
 
 # Add User Check - Checks to see if the user has already been added.
@@ -555,27 +549,29 @@ sub do_add_user_check {
   my $self = shift;
   my ($user,$email,$fullname,$pass,$userid) = @_;
   
-  my $userdb = $self->{dbi};
+  my $userdb = $self->dbi;
   
-  if($self->check_email($email)==0) {print "Invalid e-mail address (" . $email . ") provided.";return;}
-  if($self->check_user($user)==0) {
-    print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
-  }
+  return $self->string_result('Invalid e-mail address (',$email,') provided.')
+      unless $self->check_email($email);
+  
+  return $self->string_result("Usernames cannot contain any backslashes, whitespace or non-ascii characters.")
+      unless $self->check_user($user);
 
   my $select = $userdb->prepare(
     "SELECT confirmed FROM users WHERE email=?");
   $select->execute($email)
-    or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+      or return $self->dbi_err;
 
   my $confirmed = $select->fetchrow_array;
   if($select->rows == 0) {
-    $self->do_add_user($user,$email,$fullname,$pass,$userid);
+      return $self->do_add_user($user,$email,$fullname,$pass,$userid);
   } elsif($confirmed == 1) {
-    print "E-mail in use";
+      return $self->string_result('E-mail in use');
   } elsif($confirmed == 0) {
-    print "Message Already Sent";
+      return $self->string_result('Message Already Sent');
   }
-  return;
+
+  return $self->programmer_error;
 }
 
 # Add User - Adds a new non-openid user to the user database.
@@ -585,21 +581,18 @@ sub do_add_user {
   
   my $userdb = $self->dbi;
   
-  if($self->check_email($email)==0) {print "Invalid e-mail address provided.";return;}
-  if($self->check_user($user)==0) {
-    print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";
-    return;
-  }
-  if($self->check_admin($user)) {
-    print "Invalid username. Try a different one."; 
-    return;
-  }
+  return $self->string_result("Invalid e-mail address (",$email,") provided.")
+      unless $self->check_email($email);
+
+  return $self->string_result('Usernames cannot contain any backslashes, whitespace or non-ascii characters.')
+      unless $self->check_user($user);
+		  
+  return $self->string_result("Invalid username. Try a different one.")
+      if $self->check_admin($user);
 
   # see if this username is already taken
-  if ($self->userid_from_username($user)) {
-      	print "Username already in use, please try another.";
-	return;
-  }
+  return (200,'text/plain','Username already in use, please try another.')
+      if $self->userid_from_username($user);
 
   my $confirm = $self->create_key('32');
   my $nowfun = $self->nowfun();
@@ -608,7 +601,7 @@ sub do_add_user {
   local $userdb->{RaiseError} = 1;
   eval {
       my $userid = $self->add_named_session($sessionid,$user) 
-	  or die "Couldn't add named session: ",$userdb->errstr;
+	  or return $self->dbi_err;
 
       my $insert_userinfo = $userdb->prepare (<<END );
 INSERT INTO users (userid, gecos, email, pass, remember, openid_only, 
@@ -618,29 +611,29 @@ END
 ;
       my $sha_pass = $self->generate_salted_digest($pass);
       $insert_userinfo->execute($userid,$fullname,$email,$sha_pass,$confirm)
-	  or die "Couldn't insert information on user: ",$userdb->errstr;
+	  or return $self->dbi_err;
       $userdb->commit();
   };
   if ($@) {
       warn "user account insertion failed due to $@. Rolling back.";
       eval {$userdb->rollback()};
       if(DBI->errstr =~ m/for key 1$/      || DBI->errstr =~ m/username is not unique/) {
-	  print "Username already in use, please try another.";
+	  return $self->string_result("Username already in use, please try another.");
       } elsif(DBI->errstr =~ m/for key 2$/ || DBI->errstr =~ m/email is not unique/) {
-	  print "E-mail address already in use, please provide another.";
+	  return $self->string_result("E-mail address already in use, please provide another.");
       } elsif(DBI->errstr =~ m/for key 3$/ || DBI->errstr =~ m/userid is not unique/) {
-	  print "Session Error";
+	  return $self->string_result("Session Error");
       } else {
-	  print "Error: ", DBI->errstr, ".";
+	  return $self->dbi_err;
       }
   }
   
   else {
       $self->do_send_confirmation($email,$confirm,$user,$pass);
-      print "Success";
+      return $self->string_result("Success");
   }
 
-  return;
+    return $self->programmer_error;
 }
 
 # Send Confirmation - Sends an e-mail when a user creates a new non-openid account to ensure that the user is valid and the e-mail exists.
@@ -664,17 +657,15 @@ sub do_send_confirmation {
      msg        => $message
   });
   unless ($status) {
-    print $err;
-    die   "Error while sending outgoing email: $err";
+      return $self->string_result($err);
   }
-  return;
+  return (204,'text/plain','');
 }
 
 # Edit Confirmation - Deletes or resends unconfirmed information based on "option"
 sub do_edit_confirmation {
   my $self = shift;
   my ($email,$option) = @_;
-  warn "email = $email, option=$option";
   
   my $userdb = $self->{dbi};
 
@@ -684,7 +675,7 @@ SELECT b.username, a.userid, b.sessionid, a.gecos, a.cnfrm_code
     WHERE a.email=? AND a.userid=b.userid
 END
   $select->execute($email)
-    or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    or return $self->dbi_err;
   my ($username,$userid,$sessionid,$fullname, $confirm) = $select->fetchrow_array();
 
   if ($option == 0) { # delete account!
@@ -698,19 +689,19 @@ END
       };
       if ($@) {
 	  eval {$userdb->rollback()};
-	  print $@;
-	  return;
+	  return $self->string_result($@);
       } else {
-	  print "Your account has been successfully removed.";
+	  return $self->string_result("Your account has been successfully removed.");
       }
   }
 
   elsif ($option == 1) {
       my $pass = '';
       $self->do_send_confirmation($email,$confirm,$userid,$pass);
-      print "Success";
+      return $self->string_result("Success");
   }
 
+  return $self->programmer_error;
 }
 
 # Confirm Account - Activates a new account when the user follows the mailed link.
@@ -725,87 +716,94 @@ sub do_confirm_account {
     "SELECT count(*) FROM users WHERE cnfrm_code=? AND confirmed=0",
     undef,
     $confirm);
-  if($rows != 1) {print "Already Active"; return;}
+
+  return $self->string_result('Already Active') unless $rows == 1;
 
   my $userid = $self->userid_from_username($user);
 
   my $update = $userdb->prepare(
     "UPDATE users SET confirmed=1,cnfrm_code=? WHERE userid=? AND cnfrm_code=? AND confirmed=0");
   $update->execute($new_confirm,$userid,$confirm)
-    or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    or return $self->dbi_err;
+
   $rows = $update->rows;
-  if($rows == 1) {
+  if ($rows == 1) {
     my $query = $userdb->prepare(
       "SELECT b.sessionid FROM users as a,session as b WHERE b.username=? AND a.userid=b.userid AND cnfrm_code=? AND confirmed=1");
+
     $query->execute($user,$new_confirm)
-      or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
-    print $query->fetchrow_array();
+      or return $self->dbi_err;
+
+    return $self->string_result($query->fetchrow_array());
   } elsif($rows == 0) {
-    print "Error: Incorrect username provided, please check your spelling and try again.";
+      return $self->string_result("Error: Incorrect username provided, please check your spelling and try again.");
   } else {
-    print "Error: $rows rows returned, please consult your service host.";
+      return $self->string_result("Error: $rows rows returned, please consult your service host.");
   }
   return;
 }
 
 # Edit Details - Updates the user's e-mail or password depending on the "column"
 sub do_edit_details {
-  my $self = shift;
-  my ($user,$column,$old,$new) = @_;
-  my $userdb = $self->dbi;
-  my $userid = $self->userid_from_username($user);
+    my $self = shift;
+    my ($user,$column,$old,$new,$session) = @_;
+    my $userdb = $self->dbi;
+    my $userid = $self->userid_from_username($user)
+	or return $self->string_result("Error: unkown user $user");
 
-  if($column eq 'email') {
-    if($self->check_email($new) == 0) {
-      print "New e-mail address is invalid, please try another.";return;}
-  }
-
-  if ($column eq 'pass') {
-      my ($pass) = $userdb->selectrow_array('SELECT pass FROM users WHERE userid=?',undef,$userid);
-      warn "user=$user, pass=$pass";
-      unless ($self->passwd_match($old,$pass)) {
-	  print "Incorrect password provided, please check your spelling.";
-	  return;
-      }
-      $new = $self->generate_salted_digest($new);
-      $old = $pass;
-  }
-
-  my $querystring  = "UPDATE users       ";
-     $querystring .= "   SET $column  = ?";
-     $querystring .= " WHERE userid   = ?";
-     $querystring .= "   AND $column  = ?";
-
-  my $update = $userdb->prepare($querystring);
-  unless($update->execute($new,$userid,$old)) {
+    $session->private && $session->username eq $user
+	or return $self->string_result('Error: Apparent attempt to change details for another user');
+    
     if($column eq 'email') {
-      print "New e-mail already in use, please try another.";
-      die "Error: ",DBI->errstr;
-    } else {
-      print "Error: ",DBI->errstr,".";
-      die "Error: ",DBI->errstr;
+	return $self->string_result("New e-mail address is invalid, please try another.")
+	    unless $self->check_email($new);
     }
-  }
 
-  if(DBI->errstr =~ m/for key 3$/) {
-    print "New e-mail already in use, please try another.";}
-
-  my $rows = $update->rows;
-  if($rows == 1) {
-    print "Success";
-  } elsif($rows == 0) {
-    print "Incorrect password provided, please check your spelling." if($column eq 'pass');
-    print "Incorrect e-mail provided, please check your spelling."   if($column eq 'email');
-  } else {
-    if(($column eq 'email') and ($rows == -1)) {
-      print "New e-mail already in use, please try another.";
-    } else {
-      print "Error: $rows rows returned, please consult your service host.";
+    if ($column eq 'pass') {
+	my ($pass) = $userdb->selectrow_array('SELECT pass FROM users WHERE userid=?',undef,$userid);
+	unless ($self->passwd_match($old,$pass)) {
+	    return $self->string_result("Incorrect password provided, please check your spelling.");
+	}
+	$new = $self->generate_salted_digest($new);
+	$old = $pass;
     }
-  }
-  return;
+
+    my $querystring  = "UPDATE users       ";
+    $querystring .= "   SET $column  = ?";
+    $querystring .= " WHERE userid   = ?";
+    $querystring .= "   AND $column  = ?";
+
+    my $update = $userdb->prepare($querystring);
+    unless($update->execute($new,$userid,$old)) {
+	if ($column eq 'email') {
+	    return $self->string_result("New e-mail already in use, please try another.");
+	} else {
+	    return $self->dbi_err;
+	}
+    }
+
+    if (DBI->errstr =~ m/for key 3$/) {
+	return $self->string_result("New e-mail already in use, please try another.");
+    }
+
+    my $rows = $update->rows;
+    if($rows == 1) {
+	return $self->string_result("Success");
+    } elsif ($rows == 0) {
+	my $explanation = $column eq 'pass'  ? 'password' 
+	                 :$column eq 'email' ? 'email address'
+			 :'information';
+	return $self->string_result("Incorrect $explanation provided, please check your spelling.");
+    } else {
+	if(($column eq 'email') and ($rows == -1)) {
+	    return $self->string_result("New e-mail already in use, please try another.");
+	} else {
+	    return $self->string_result("Error: $rows rows returned, please consult your service host.");
+	}
+    }
+    return $self->programmer_error;
 }
-
+  
 # E-mail Info - Sends an e-mail when a user has forgotten their password.
 sub do_email_info {
   my $self = shift;
@@ -813,15 +811,16 @@ sub do_email_info {
   my $globals = $self->{globals};
   my $userdb = $self->{dbi};
   
-  if($self->check_email($email)==0) {print "Invalid e-mail address provided.";return;}
+  return $self->string_result("Invalid e-mail address provided.")
+      unless $self->check_email($email);
 
   my ($user,$rows,$openid_ref) = $self->do_retrieve_user($email);
   my @openids = @$openid_ref;
   my $openid  = "";
   
-  if($rows != 1) {print $user; return;}
+  return $self->string_result($user) unless $rows == 1;
 
-  if(@openids) {foreach(@openids) {$openid .= "$_\n             ";}}
+  if (@openids) {foreach(@openids) {$openid .= "$_\n             ";}}
   else {$openid = "None\n";}
 
   my $pass = $self->create_key('8');
@@ -838,22 +837,16 @@ sub do_email_info {
 			     subject    => $globals->application_name . " Account Information",
 			     msg        => $message
 			    });
+  return $self->string_result($err) unless $status;
 
-  if(!$status) {
-    print "Error: ",$err;
-    die "Error while sending outgoing email: ",$err;
-  }
-
-  # BUG: we should salt the password
   my $secret = $self->generated_salted_digest($pass);
   my $update = $userdb->prepare(
     "UPDATE users SET pass=? WHERE userid=? AND email=? AND confirmed=1");
   my $userid = $self->userid_from_username($user);
   $update->execute($secret,$userid,$email)
-    or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+    or return $self->dbi_err;
 
-  print "Success";
-  return;
+  return $self->string_result('Success');
 }
 
 # Retrieve User - Gets the username associated with a given e-mail.
@@ -869,7 +862,7 @@ sub do_retrieve_user {
     "SELECT username FROM users as a,session as b WHERE a.userid=b.userid AND email=? AND confirmed=1",
   	undef,
   	$email)
-  or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+  or return $self->dbi_err;
 
   my $rows = @$users;
   if ($rows == 1) {
@@ -877,7 +870,7 @@ sub do_retrieve_user {
     my $query = $userdb->prepare(
       "SELECT openid_url FROM openid_users,session WHERE openid_users.userid=session.userid and session.username=?");
     $query->execute($user)
-      or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+      or return $self->dbi_err;
 
     while (my $openid = $query->fetchrow_array) {
       push (@openids,$openid);
@@ -898,10 +891,7 @@ sub do_delete_user {
   
   my $userdb = $self->dbi;
   my $userid = $self->userid_from_username($user);
-  unless ($userid) {
-      print "Error: unknown user $user";
-      return;
-  }
+  return $self->string_result("Error: unknown user $user") unless $userid;
 
   my $sessionid = $self->get_sessionid($userid);
   $userdb->do('DELETE FROM session where userid=?',undef,$userid);
@@ -914,9 +904,9 @@ sub do_delete_user {
   my $query = $userdb->prepare(
     "DELETE FROM openid_users WHERE userid=?");
   if ($query->execute($userid)) {
-    print "Success";
+      return $self->string_result('Success');
   } else {
-    print "Error: ",DBI->errstr,".";
+      return $self->dbi_err;
   }
   return;
 }
@@ -929,8 +919,6 @@ sub do_check_openid {
     my $self = shift;
     my $globals = $self->{globals};
     my ($openid, $sessionid, $source, $option) = @_;
-    warn "do_check_openid($openid,$sessionid,$option)";
-    warn "gbrowse_url = ",$globals->gbrowse_url($source);
     
     my $return_to  = $globals->gbrowse_url($source)."?openid_confirm=1;page=$option;s=$sessionid;";
        $return_to .= "id=logout;" if $option ne "openid-add";
@@ -944,9 +932,8 @@ sub do_check_openid {
     );
 
     my $claimed_identity = $csr->claimed_identity($openid)
-        or print "The URL provided is not a valid OpenID, please check your spelling and try again."
-        and die $csr->err;
-
+        or return $self->string_result("The URL provided is not a valid OpenID, please check your spelling and try again.");
+    
     my $check_url = $claimed_identity->check_url(
         return_to  => $return_to,
         trust_root => "http://$ENV{'HTTP_HOST'}/",
@@ -955,14 +942,20 @@ sub do_check_openid {
     # request information about email address and full name
     $check_url .= "&openid.ns.ax=http://openid.net/srv/ax/1.0&openid.ax.mode=fetch_request&openid.ax.required=email,firstname,lastname&openid.ax.type.email=http://axschema.org/contact/email&openid.ax.type.firstname=http://axschema.org/namePerson/first&openid.ax.type.lastname=http://axschema.org/namePerson/last";
 
-    print "Location: $check_url";
-    return;
+
+    # this shouldn't work, but oddly it does.
+    # it has something to do with prototype ajax and the Location: string
+    return (200,'text/html',"Location: $check_url"); # shouldn't work?
+
+    # this should work, but oddly it doesn't
+    # return (302,undef,$check_url);
+
 }
 
 # Confirm OpenID - Checks that the returned credentials are valid.
 sub do_confirm_openid {
     my $self = shift;
-    my ($callback, $sessionid, $option) = @_;
+    my ($callbacks, $sessionid, $option) = @_;
     
     my $userdb = $self->{dbi};
     
@@ -970,7 +963,7 @@ sub do_confirm_openid {
 
     my $csr = Net::OpenID::Consumer->new(
         ua              => LWP::UserAgent->new,
-        args            => $callback,
+        args            => $callbacks,
         consumer_secret => Bio::Graphics::Browser2->openid_secret,
         required_root   => "http://$ENV{'HTTP_HOST'}/"
     );
@@ -980,53 +973,45 @@ sub do_confirm_openid {
 	    "SELECT b.username,a.openid_only FROM users as a,session as b WHERE b.sessionid=? AND a.userid=b.userid",
 	    undef,
 	    $sessionid)
-            or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
-		and print JSON::to_json(\@results) and return);
+	    or return(200,'application/json',[{error=>'Error: '.$userdb->errstr.'.'}]);
         unless (defined $user) {
             push @results,{error=>"Error: Wrong session ID provided, please try again."};
-            print JSON::to_json(\@results);
-            return;
+            return (200,'application/json',\@results);
         }
     }
 
     $csr->handle_server_response(
         not_openid => sub {
             push @results,{user=>$user,only=>$only,error=>"Invalid OpenID provided, please check your spelling."};
-            print JSON::to_json(\@results);
         },
         setup_required => sub {
             push @results,{user=>$user,only=>$only,error=>"Error: Your OpenID requires setup."};
-            print JSON::to_json(\@results);
         },
         cancelled => sub {
             push @results,{user=>$user,only=>$only,error=>"OpenID verification cancelled."};
-            print JSON::to_json(\@results);
         },
         verified => sub {
             my $vident = shift;
             if($option eq "openid-add") {
-                print JSON::to_json($self->do_add_openid_to_account($sessionid, $user, $vident->url, $only));
+		push @results,$self->do_add_openid_to_account($sessionid, $user, $vident->url, $only)
             } else {
-                print JSON::to_json($self->do_get_openid($vident->url));
+		push @results,$self->do_get_openid($vident->url);
             }
         },
         error => sub {
             $error = $csr->err;
             push @results,{user=>$user,only=>$only,error=>"Error validating identity: $error."};
-            print JSON::to_json(\@results);
         }
     );
-    return;
+    return (200,'application/json',\@results);
 }
 
 sub do_get_gecos {
     my $self = shift;
     my $user = shift;
-    warn "user=$user";
     my $sessionid = $self->sessionid_from_username($user) or return '';
     my $fullname = $self->fullname_from_sessionid($sessionid);
-    warn "sessionid=$sessionid,fullname=$fullname";
-    print $fullname;
+    return $self->string_result($fullname);
 }
 
 # Get OpenID - Check to see if the provided openid is unused
@@ -1036,7 +1021,7 @@ sub do_get_openid {
 
     my $userdb = $self->{dbi};
     
-    my ($error,$userinfo,@results);
+    my ($error,$userinfo);
 
     my $from = <<END;
 FROM users as A, openid_users as B, session as C
@@ -1050,8 +1035,7 @@ END
 	"select count(*) $from",
 	undef,
 	$openid)
-	or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
-	    and return \@results);
+	or return {error=>'Error: '.$userdb->errstr.'.'};
     
     if($rows != 1) {
         if($rows != 0) {
@@ -1060,14 +1044,12 @@ END
             $error  = "The OpenID provided has not been used before. ";
             $error .= "Please create an account first before trying to edit your information.";
         }
-        push @results,{error=>$error,openid=>$openid,userinfo=>$userinfo};
-        return \@results;
+        return {error=>$error,openid=>$openid,userinfo=>$userinfo};
     }
 
     my $select = $userdb->prepare("SELECT C.username, C.sessionid, A.remember, A.openid_only, A.userid $from");
     $select->execute($openid)
-        or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
-        and return \@results);
+	or return {error=>'Error: '.$select->errstr.'.'};
 
     my @info = $select->fetchrow_array;
 
@@ -1075,11 +1057,9 @@ END
     my $update = $userdb->prepare(
         "UPDATE users SET last_login=$nowfun WHERE userid=? AND confirmed=1");
     $update->execute($info[4])
-        or ($error = DBI->errstr and push @results,{error=>"Error: $error."}
-        and return \@results);
+	or return {error=>'Error: '.$update->errstr.'.'};
 
-    push @results,{user=>$info[0],session=>$info[1],remember=>$info[2],only=>$info[3]};
-    return \@results;
+    return {user=>$info[0],session=>$info[1],remember=>$info[2],only=>$info[3]};
 }
 
 # Change OpenID - Add or removes an openid from an account based on "option"
@@ -1087,23 +1067,24 @@ sub do_change_openid {
     my $self = shift;
     my ($user, $pass, $openid, $option) = @_;
 
-    warn "not using password $pass; is this a bug?";
-    
     my $userdb = $self->dbi;
     my $users = $userdb->selectrow_arrayref('SELECT a.userid FROM users as a,session as b WHERE b.username=? AND a.userid=b.userid',
 					    undef,$user)
-        or (print "Error: ",DBI->errstr,"." and die "Error: ",DBI->errstr);
+        or return $self->dbi_err;
     my $rows = @$users;
 
-    if($rows != 1) {
-	print "Error: unknown user $user.";
-        return;
-    }
+    return $self->string_result("Error: unknown user $user.") unless $rows == 1;
 
     if ($option eq "add") {
-        $self->do_check_openid($openid, $users->[0],"openid-add");
-        return;
+        return $self->do_check_openid($openid, $users->[0],"openid-add");
     }
+
+    # if we get here, we are deleting
+    my ($correct_pass) = $userdb->selectrow_array('SELECT a.pass FROM users as a WHERE a.userid=?',undef,$users->[0])
+	or return $self->dbi_err;
+    
+    $self->passwd_match($pass,$correct_pass)
+	or return $self->string_result('Invalid password. Please try again.');
 
     my $delete = $userdb->prepare(<<END );
 DELETE FROM openid_users
@@ -1117,15 +1098,15 @@ DELETE FROM openid_users
 END
 ;
     if ($delete->execute($openid,$user)) {
-        print "Success";
+	return $self->string_result('Success');
     } else {
         if(DBI->errstr =~ m/for key 1$/) {
-            print "The OpenID provided is already in use, please try another.";
+	    return $self->string_result("The OpenID provided is already in use, please try another.");
         } else {
-            print "Error: ",DBI->errstr,".";
+	    return $self->dbi_err;
         }
     }
-    return;
+    return $self->programmer_error;
 }
 
 # Add OpenID to Account (UserID, Username, OpenID, Only(?)) - Adds a confirmed openid to an account.
@@ -1134,15 +1115,11 @@ sub do_add_openid_to_account {
     my ($sessionid, $user, $openid, $only) = @_;
     
     my $userdb = $self->{dbi};
+    my $error;
+
+    my $userid = $self->userid_from_sessionid($sessionid)
+	or return {user=>$user,only=>$only,error=>"Error: No userid associated with the current session"};
     
-    my ($error,@results);
-
-    my $userid = $self->userid_from_sessionid($sessionid);
-    unless ($userid) {
-	print "Error: No userid associated with the current session";
-	return;
-    }
-
     my $insert = $userdb->prepare("INSERT INTO openid_users (userid,openid_url) VALUES (?,?)");
     if($insert->execute($userid, $openid)) {
         $error = "Success";
@@ -1153,8 +1130,7 @@ sub do_add_openid_to_account {
             $error = "Error: ".DBI->errstr.".";
         }
     }
-    push @results,{user=>$user,only=>$only,error=>$error};
-    return \@results;
+    return {user=>$user,only=>$only,error=>$error};
 }
 
 # Add OpenID User (Username, Email, Gecos(fullname), OpenID, UserID, Remember?) - Adds a new openid user to the user database.
@@ -1165,9 +1141,8 @@ sub do_add_openid_user {
     
     my $userdb = $self->{dbi};
 
-    if($self->check_user($user)==0) {
-        print "Usernames cannot contain any backslashes, whitespace or non-ascii characters.";return;
-    }
+    return $self->string_result("Usernames cannot contain any backslashes, whitespace or non-ascii characters.")
+	unless $self->check_user($user);
 
     my $confirm = sha1_hex($self->create_key('32'));
     my $pass    = $self->generate_salted_digest($self->create_key('32'));
@@ -1178,7 +1153,7 @@ sub do_add_openid_user {
     local $userdb->{RaiseError} = 1;
     eval {
 	my $userid  = $self->add_named_session($sessionid,$user)
-	    or die "Couldn't add named session: ",$userdb->errstr;
+	    or return $self->dbi_err;
 	    
 	my $query  = $userdb->prepare(<<END );
 INSERT INTO users (userid,email,gecos,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created) 
@@ -1187,7 +1162,7 @@ END
 ;
 
 	$query->execute($userid, $email, $gecos, $pass, $remember, $confirm)
-	    or die "Couldn't insert openid_user into users table: ",$query->errstr;
+	    or return $self->dbi_err;
 
 	my $insert = $userdb->prepare("INSERT INTO openid_users (userid,openid_url) VALUES (?,?)");
 	$insert->execute($userid, $openid) or die "Couldn't insert url into openid_users table: ",$insert->errstr;
@@ -1200,21 +1175,21 @@ END
 	eval {$userdb->rollback()};
 
 	if(DBI->errstr =~ m/for key 1$/) {
-	    print "The OpenID provided is already in use, please try another.";
+	    return $self->string_result("The OpenID provided is already in use, please try another.");
 	}
 	elsif (DBI->errstr =~ m/for key 1$/ || DBI->errstr =~ m/for key 3$/) {
             #If the e-mail happens to match another, this will still be called.
-            print "Username already in use, please try another.";
+	    return $self->string_result("Username already in use, please try another.");
         } elsif(DBI->errstr =~ m/for key 2$/) {
-            print "Session Error";
+	    return $self->string_result("Session Error");
         } else {
-            print "Error: ",DBI->errstr,".";
+	    return $self->dbi_err;
         }
     }
     else {
-	print "Success";
+	return $self->string_result('Success');
     }
-    return;
+    return $self->programmer_error;
 }
 
 # List OpenID (User) - Generates a list of openids associated with a user's account.
@@ -1226,9 +1201,7 @@ sub do_list_openid {
 
     my $select = $userdb->prepare(
         "SELECT a.openid_url FROM openid_users as a,session as b WHERE b.username=? AND a.userid=b.userid");
-    $select->execute($user)
-        or ($error = DBI->errstr and push @openids,{error=>"Error: $error."}
-        and print JSON::to_json(\@openids) and die "Error: ",DBI->errstr);
+    $select->execute($user) or return (200,'application/json',[{error=>'Error: '.$userdb->errstr.'.'}]);
 
     while (my $openid = $select->fetchrow_array) {
         push @openids,{name=>$openid};
@@ -1239,7 +1212,25 @@ sub do_list_openid {
     }
 
     my @results = sort {$a->{name} cmp $b->{name}} @openids;
-    print JSON::to_json(\@results);
+    return(200,'application/json',\@results);
+}
+
+# convenience methods
+sub dbi_err {
+    my $self = shift;
+    my $error = DBI->errstr;
+    return (200,'text/plain',"Error: $error.");
+}
+
+sub string_result {
+    my $self = shift;
+    my @msg  = @_;
+    return (200,'text/plain',join('',@msg));
+}
+
+sub programmer_error {
+    my $self = shift;
+    return (500,'text/plain','programmer error?');
 }
 
 # Remember (User) - Get's a user's remember flag.

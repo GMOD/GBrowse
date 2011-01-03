@@ -1,4 +1,4 @@
-var LoginScript = '../../gbrowse_login';
+var LoginScript = '../../gbrowse/';
 var Logged      = false;
 var OpenIDMenu  = false;
 
@@ -453,9 +453,10 @@ function add_user() {
     var email    = $('loginEmail').getValue();
     $('loginBusy').show();
 
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['add_user_check'],
+		parameters:  {action: 'gbrowse_login',
+		      login_action: ['add_user_check'],
                       user:     username,
 		      fullname: fullname,
                       email:    email,
@@ -530,9 +531,11 @@ function edit_confirmation(resend) {
 
     var email = $('loginEmail').getValue();
     $('loginBusy').show();
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['edit_confirmation'],
+        parameters:  {
+		      action: 'gbrowse_login',
+		      login_action: ['edit_confirmation'],
                       email:  email,
                       option: resend
                      },
@@ -563,9 +566,11 @@ function add_openid_user(openid,html) {
     else {remember=0;}
     $('loginBusy').show();
 
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['add_openid_user'],
+        parameters:  {
+		      action: 'gbrowse_login',
+		      login_action: ['add_openid_user'],
                       user:     username,
 		      email:    email,
 		      fullname: gecos,
@@ -620,9 +625,11 @@ function login_validation() {
     }
 
     $('loginBusy').show();
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['validate'],
+        parameters:  {
+		      action: 'gbrowse_login',
+		      login_action: ['validate'],
                       user:     username,
                       pass:     password,
                       remember: remember
@@ -749,9 +756,11 @@ function email_user_info() {
     var email = $('loginEmail').getValue();
     $('loginBusy').show();
 
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['email_info'],
+        parameters:  {
+		      action: 'gbrowse_login',
+		      login_action: ['email_info'],
                       email: email
                      },
         onSuccess: function (transport) {
@@ -842,9 +851,10 @@ function edit_details(details) {
         $('loginDRealName').show();
         $('loginDNewname').focus();
 	$('loginDNewname').value='wait...';
-	new Ajax.Request(LoginScript,{
+	new Ajax.Request(LoginScript+Source+'/',{
 		parameters: { 
-		    action: 'get_gecos',
+		    action: 'gbrowse_login',
+		    login_action: ['get_gecos'],
 		    user:   CurrentUser
 			},
 		onSuccess: function (t) {
@@ -1012,9 +1022,11 @@ function edit_details_verify() {
 //Updates either the user's e-mail or password
 function edit_details_submit(username,column,old_val,new_val) {  
     $('loginBusy').show();
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['edit_details'],
+        parameters:  {
+		      action: 'gbrowse_login',
+		      login_action: ['edit_details'],
                       user:    username,
                       column:  column,
                       old_val: old_val,
@@ -1024,6 +1036,7 @@ function edit_details_submit(username,column,old_val,new_val) {
 	    $('loginBusy').hide();
             $('loginWarning').innerHTML = transport.responseText;
             edit_details_confirm();
+	    Controller.update_sections(new Array('login_menu'));
         }
     });
     return;
@@ -1064,9 +1077,12 @@ function login_openid_html(html,start,strLength) {
 //Send the user to their openid provider to be authenticated
 function check_openid(openid) {
     $('loginBusy').show();
-    new Ajax.Request(LoginScript,{
+    login_blackout(true,'');
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['check_openid'],
+        parameters:  {
+		      action: 'gbrowse_login',
+		      login_action: ['check_openid'],
                       openid:  openid,
                       session: SessionID,
 		      source:  Source,
@@ -1150,10 +1166,11 @@ function remove_openid_cookie() {
 function confirm_openid(session,page,logged_in,email,gecos) {
     remove_openid_cookie();
     var callback = process_openid();
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
         parameters:  {
-		action: ['confirm_openid'],
+		    action:  'gbrowse_login',
+		    login_action: ['confirm_openid'],
 		    callback: callback,
 		    session:  session,
 		    option:   page
@@ -1237,9 +1254,11 @@ function confirm_openid_error(session,page,logged_in,error,openid,only,email,gec
 //Adds or Removes an openid from an account
 function change_openid(user,pass,openid,option) {
     $('loginBusy').show();
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['change_openid'],
+        parameters:  {
+		      action: 'gbrowse_login',
+		      login_action: ['change_openid'],
                       user:   user,
                       pass:   pass,
                       openid: openid,
@@ -1264,9 +1283,11 @@ function list_openid() {
     $('loginWarning').innerHTML = Controller.translate('LOADING');
     $('loginWarning').show();
     $('loginBusy').show();
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['list_openid'],
+        parameters:  {
+		      action: 'gbrowse_login',
+		      login_action: ['list_openid'],
                       user:   CurrentUser
         },
         onSuccess: function (transport) {
@@ -1360,9 +1381,10 @@ function confirm_update(username, confirm) {
     } else {
         $('loginError').innerHTML = '&nbsp; &nbsp;';
 	$('loginBusy').show();
-        new Ajax.Request(LoginScript,{
+        new Ajax.Request(LoginScript+Source+'/',{
             method:      'post',
-            parameters:  {action: ['confirm_account'],
+		    parameters:  {action: 'gbrowse_login',
+			  login_action: ['confirm_account'],
                           user:    username,
                           confirm: confirm
             },
@@ -1411,9 +1433,10 @@ function reload_login_script() {
 //Deletes a user from an account provided the username and pass are correct
 function login_delete_user(username,pass) {
     $('loginBusy').show();
-    new Ajax.Request(LoginScript,{
+    new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
-        parameters:  {action: ['delete_user'],
+		parameters:  {action: 'gbrowse_login',
+		      login_action: ['delete_user'],
                       user:    username,
                       pass:    pass
                      },

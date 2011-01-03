@@ -219,13 +219,13 @@ sub run {
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
-       query_string();# if $debug || TRACE_RUN;
+       query_string() if $debug || TRACE_RUN;
   warn "[$$] session id = ",$self->session->id if $debug;
 
   $self->set_source() && return;
 
-  warn "private session = ",$self->session->private;
-  warn "username = ",       $self->session->username;
+  warn "private session = ",$self->session->private if $debug;
+  warn "username = ",       $self->session->username if $debug;
 
   if ( $self->data_source->must_authenticate &&
        !$self->session->private) {
@@ -285,7 +285,6 @@ sub set_source {
 	$url     =~ s!(gbrowse[^/]*)(?\!.*gbrowse)/.+$!$1!;  # fix CGI/Apache bug
 	$url    .= "/$source/";
 	$url .= "?$args" if $args && $args !~ /^source=/;
-	warn "[$$] redirecting to $url";
 	print CGI::redirect($url);
 	return 1;
     }
@@ -316,7 +315,7 @@ sub run_asynchronous_event {
     if ($status == 204) { # no content
 		print CGI::header( -status => '204 No Content', %headers );
     } elsif ($status == 302) { # redirect
-		print CGI::redirect($data, %headers);
+	print CGI::redirect($data, %headers);
     } elsif ($mime_type eq 'application/json') {
 		print CGI::header(
 			-status			=> $status,
@@ -390,9 +389,7 @@ sub authorize_user {
     my ($username,$id,$remember,$using_openid) = @_;
     my ($session,$error);
 
-    warn "Checking that user exists in database";
     my $userdb     = $self->userdb;
-    $userdb->username_from_sessionid($id) eq $id;
     return unless $userdb->username_from_sessionid($id) eq $username;
     
     warn "Checking current session" if DEBUG;
@@ -1173,6 +1170,7 @@ sub get_search_object {
 # ========================= plugins =======================
 sub init_plugins {
   my $self        = shift;
+  return if $self->{'.plugins_inited'}++;
 
   my $source      = $self->data_source->name;
   my @plugin_path = shellwords($self->data_source->globals->plugin_path);
@@ -2445,6 +2443,10 @@ sub asynchronous_update_sections {
     if ( $handle_section_name{'search_form_objects'} ) {
         $return_object->{'search_form_objects'} 
 	    = $self->render_search_form_objects();
+    }
+
+    if ($handle_section_name{'login_menu'}) {
+	$return_object->{login_menu} = $self->login_manager->render_login();
     }
 
     # Plugin Configuration Form

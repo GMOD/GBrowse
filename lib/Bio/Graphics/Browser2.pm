@@ -386,14 +386,12 @@ sub update_data_source {
     $session->source($new_source);
     $source = $new_source;
   } else {
-    carp "Invalid source $new_source";
     my $fallback_source = $self->valid_source($old_source) 
 	? $old_source
 	: $self->default_source;
     $session->source($fallback_source);
     $source = $fallback_source;
   }
-
   return $source;
 }
 

@@ -370,6 +370,16 @@ sub ACTION_reset_dsn {
     return (204,'text/plain',undef);
 }
 
+# this supports the internal login/account facilities
+sub ACTION_gbrowse_login {
+    my $self   = shift;
+    my $q      = shift;
+    my $render = $self->render;
+    my $login  = $render->login_manager;
+    $self->session->unlock();
+    return $login->run_asynchronous_request($q);
+}
+
 sub ACTION_authorize_login {
     my $self = shift;
     my $q    = shift;

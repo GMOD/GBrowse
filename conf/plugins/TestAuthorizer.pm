@@ -54,7 +54,8 @@ sub credentials {
 sub authenticate {
     my $self = shift;
     my ($name,$password) = $self->credentials;
-    return $name eq 'lincoln' && $password eq 'foobar';
+    return unless $name eq 'lincoln' && $password eq 'foobar';
+    return $name;
 }
 
 1;

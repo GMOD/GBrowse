@@ -30,6 +30,17 @@ sub data_source {shift->render->data_source}
 sub session     {shift->render->session}
 sub segment     {shift->render->segment}
 
+# list of authentication events allowed prior to authentication
+# all others are forbidden
+sub is_authentication_event {
+    my $class = shift;
+    my $action = param('action');
+    return 1 if $action eq 'authorize_login';
+    return 1 if $action eq 'plugin_authenticate';
+    return 1 if $action eq 'plugin_login';
+    return;
+}
+
 sub handle_legacy_calls {
     my $self  = shift;
     my $q     = shift;
@@ -833,7 +844,8 @@ sub ACTION_plugin_login {
     my $q    = shift;
     my $render = $self->render;
     $render->init_plugins();
-    my $plugin = eval{$render->plugins->auth_plugin} or return (204,'text/plain','no authorizer defined');
+    my $plugin = eval{$render->plugins->auth_plugin} 
+      or return (204,'text/plain','no authorizer defined');
     my $html = $render->wrap_login_form($plugin);
     return (200,'text/html',$html);
 }
@@ -844,12 +856,17 @@ sub ACTION_plugin_authenticate {
     my $render = $self->render;
     $render->init_plugins();
     warn "plugin_authenticate";
-    my $plugin = eval{$render->plugins->auth_plugin} or return (204,'text/plain','no authorizer defined');
-    my $ok     = $plugin->authenticate;
-    my $result = $ok ? { userOK  => 1,
-			 message => 'login ok'}
-                     : { userOK   => undef,
-			 message  => "Invalid name/password"};
+    my $plugin = eval{$render->plugins->auth_plugin} 
+       or return (204,'text/plain','no authorizer defined');
+    my $username  = $plugin->authenticate;
+    my $sessionid = $self->session->id;
+    my $result = defined $username ? { userOK  => 1,
+				       sessionid => $sessionid,
+				       username  => $username,
+				       message   => 'login ok'}
+                                   : { userOK   => undef,
+				       message  => "Invalid name/password"
+				   };
     return (200,'application/json',$result);
 }
 

@@ -10,3 +10,4 @@
 ^blib/etc\/init\.d\/gbrowse\-slave$
 ^blib/conf\/GBrowse\.conf$
 ^blib/etc\/init\.d\/gbrowse\-slave$
+^blib/conf\/GBrowse\.conf$

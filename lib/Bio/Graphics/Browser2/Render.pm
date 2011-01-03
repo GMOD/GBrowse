@@ -223,18 +223,14 @@ sub run {
   warn "[$$] session id = ",$self->session->id if $debug;
 
   $self->set_source() && return;
-  my $state = $self->state;
 
-  # this should no longer be necessary
-  # if ($self->data_source->globals->user_accounts) {
-  #     my $session = $self->session;
-  #     $self->{userdb} = Bio::Graphics::Browser2::UserDB->new($self);
-  #     $self->{userdb}->check_uploads_id($session->id, 
-  # 					$session->uploadsid);
-  # 	  unless $session->page_settings->{uploads_id_checked};
-  #     $session->page_settings->{uploads_id_checked} = 
-  # 	  ($self->{userdb}->get_uploads_id($session->id))? 1 : 0;
-  # }
+  if ( $self->data_source->must_authenticate &&
+       !$self->session->private) {
+      warn "NEED AUTHENTICATED SESSION HERE";
+      $self->force_authentication;
+      $self->session->flush;
+      return;
+  }
 
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
@@ -1749,6 +1745,24 @@ sub get_external_presets {
   my %presets;
   @presets{@urls} = @labels;
   return \%presets;
+}
+
+##################################################################3
+#
+# AUTHENTICATION
+#
+##################################################################3
+sub force_authentication {
+    my $self = shift;
+    if (Bio::Graphics::Browser2::Action->is_authentication_event) {
+	warn "running preauthenticated asynchronous event";
+	$self->run_asynchronous_event;
+	return;
+    }
+    $self->render_header();
+    my $output = $self->render_html_start('Login Needed',
+					  "GBox.showTooltip(event,'url:?action=plugin_login',true)");
+    warn "FINISH THIS";
 }
 
 ##################################################################3

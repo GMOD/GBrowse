@@ -803,8 +803,12 @@ var GBrowseController = Class.create({
 		},
 		onSuccess: function (t) {
 		    var results    = t.responseJSON;
-		    if (results.userOK)
+		    if (results.userOK) {
 			Balloon.prototype.hideTooltip(1);
+			var remember = true;
+			// the definition for this call is in login.js
+			login_get_account(results.username,results.sessionid,remember,false);
+		    }
 		    else
 			message_area.innerHTML='<div style="color:red">'+results.message+'</div>';
 		}

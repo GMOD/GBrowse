@@ -57,7 +57,8 @@ sub render_plugin_login {
 		$session->private ? (
 		    span({-style => 'font-weight:bold;color:black;'}, 
 			 $render->translate('WELCOME', $session->username)),
-		    span({-style => $style},
+		    span({-style => $style,
+			 -onMouseDown => "location.href='?id=logout'"},
 			 $render->translate('LOG_OUT', $session->username))
 		)
 		: (

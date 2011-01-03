@@ -243,6 +243,11 @@ sub config {
   return $self;
 }
 
+sub must_authenticate {
+    my $self = shift;
+    return $self->global_setting('must_authenticate');
+}
+
 sub set_details_multiplier {
     my $self = shift;
     $self->{details_mult} = shift;

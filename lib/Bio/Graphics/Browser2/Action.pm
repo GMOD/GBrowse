@@ -607,9 +607,10 @@ sub ACTION_set_upload_title {
 }
 
 sub ACTION_share_file {
-	my $self = shift;
-	my $q = shift;
-	my $render = $self->render;
+    my $self = shift;
+    my $q = shift;
+    my $render = $self->render;
+    $render->session->unlock(); # session manipulation happening here
     my $fileid = $q->param('fileid') or confess "No file ID given to share_file.";
     my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
 
@@ -620,9 +621,10 @@ sub ACTION_share_file {
 }
 
 sub ACTION_unshare_file {
-	my $self = shift;
-	my $q = shift;
-	my $render = $self->render;
+    my $self = shift;
+    my $q = shift;
+    my $render = $self->render;
+    $render->session->unlock(); # will need this
     my $fileid = $q->param('fileid') or confess "No file ID given to unshare_file.";
     my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
 
@@ -633,9 +635,9 @@ sub ACTION_unshare_file {
 }
 
 sub ACTION_change_permissions {
-	my $self = shift;
-	my $q = shift;
-	my $render = $self->render;
+    my $self = shift;
+    my $q = shift;
+    my $render = $self->render;
     my $fileid = $q->param('fileid') or confess "No file ID given to change_permissions.";
     my $new_policy = $q->param('sharing_policy') or confess "No new sharing policy given to change_permissions.";
 

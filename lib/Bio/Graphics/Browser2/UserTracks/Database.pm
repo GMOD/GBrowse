@@ -224,15 +224,20 @@ sub share_link {
 sub share {
     my $self = shift;
     my $file = shift or confess "No input or invalid input given to share()";
+    my $name_or_id = shift;
     
     # If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
     my $userid;
+    warn "HERE I AM";
+
     if ($self->{globals}->user_accounts) {
         my $userdb = $self->{userdb};
-        $userid = $userdb->get_user_id(shift);
+        $userid = $userdb->get_user_id($name_or_id);
+	warn "calling add_named_session with $self->{sessionid}";
         $self->{userid} ||= $userdb->add_named_session($self->{sessionid}, "an anonymous user");
+	warn "got $self->{userid}";
     } else {
-        $userid = shift;
+        $userid = $name_or_id;
     }
     $userid ||= $self->{userid};
 
@@ -245,7 +250,7 @@ sub share {
         
         # Get the current users.
         return if $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", undef, $file, $userid, $public_flag);
-        
+
         # Add the file's tracks to the track lookup hash.
         if ($userid eq $self->{userid}) {
             my %track_lookup = $self->track_lookup;

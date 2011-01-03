@@ -1473,6 +1473,7 @@ sub list_tracks {
 	my $listing_type = shift || "";
 	# If we've been given input, use the input. If we've been given the public type, use that, or default to all of the current user's tracks.
 	my @tracks = @_? @_ : (($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : $userdata->tracks;
+
 	$listing_type .= " available" if $listing_type =~ /public/;
 	
 	# Main track roll code.
@@ -1500,7 +1501,8 @@ sub list_tracks {
 		} @tracks;
 		return join '', @rows;
     } else {
-    	return p($self->translate('THERE_ARE_NO_TRACKS_YET', $listing_type));
+	$listing_type =~ s/ available//;  # back hack
+    	return p($self->translate(($listing_type =~ /public/i ? 'THERE_ARE_NO_AVAILABLE_TRACKS':'THERE_ARE_NO_TRACKS_YET'), $listing_type));
     }
 }
 

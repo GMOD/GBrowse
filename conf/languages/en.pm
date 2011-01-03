@@ -667,6 +667,7 @@ END
    USED_BY                   => 'used by',
    PUBLIC_TRACKS             => 'Public Tracks',
    COMMUNITY_TRACKS          => 'Community Tracks',
+   THERE_ARE_NO_AVAILABLE_TRACKS => 'There are no available unused %s tracks. Select "Custom Tracks" to see ones you\'ve already added to your session.',
    THERE_ARE_NO_TRACKS_YET   => 'There are no %s tracks yet.',
    NO_PUBLIC_RESULTS         => 'There are no community tracks that match "%s"',
    TOGGLE_DETAILS            => 'Toggle Details',

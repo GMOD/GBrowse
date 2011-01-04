@@ -372,6 +372,8 @@ END
  ADD_YOUR_OWN_TRACKS => 'Add custom tracks',
 
  ADD_DESCRIPTION    => 'Click to add a description',
+ ADD_TITLE          => 'Click to edit the title',
+ NO_DESCRIPTION     => 'No description',
 
  CONFIGURATION     => 'Configuration',
 

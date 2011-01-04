@@ -2488,12 +2488,12 @@ sub asynchronous_update_sections {
 
     # New Custom Tracks Section
     if ( $handle_section_name{'custom_tracks'}) {
-		$return_object->{'custom_tracks'} = $self->render_custom_track_listing();
+	$return_object->{'custom_tracks'} = $self->render_custom_track_listing();
     }
     
     # Community Tracks Section
     if ( $handle_section_name{'community_tracks'}) {
-		$return_object->{'community_tracks'} = $self->render_community_track_listing(@_); #Passing on any search terms.
+	$return_object->{'community_tracks'} = $self->render_community_track_listing(@_); #Passing on any search terms.
     }
 
     # Handle Remaining and Undefined Sections

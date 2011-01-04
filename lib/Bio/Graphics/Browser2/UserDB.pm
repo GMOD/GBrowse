@@ -247,6 +247,31 @@ sub get_user_id {
     return $self->userid_from_username($search) || $self->userid_from_email($search);
 }
 
+sub match_user {
+    my $self   = shift;
+    my $search = shift;
+    my $userdb = $self->dbi;
+    my $select = $userdb->prepare(<<END) or die $userdb->errstr;
+SELECT a.username,b.gecos,b.email 
+  FROM session as a,users as b 
+ WHERE a.userid=b.userid
+   AND (a.username LIKE ? OR
+        b.gecos    LIKE ? OR
+        b.email    LIKE ?)
+END
+;
+    my $search = "%$search%";
+    warn "searching for $search";
+    $select->execute($search,$search,$search) or die $select->errstr;
+    my @results;
+    while (my ($username,$gecos,$email) = $select->fetchrow_array) {
+	push @results,"$username $gecos <$email>";
+    }
+    $select->finish;
+    warn @results;
+    return \@results;
+}
+
 sub userid_from_username {
     my $self     = shift;
     my $username = shift;

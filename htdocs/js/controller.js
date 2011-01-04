@@ -299,7 +299,7 @@ var GBrowseController = Class.create({
                     $(section_name).innerHTML = html;
                     if (scroll_there)
                         new Effect.ScrollTo(section_name);
-                    if ((section_name=="search_form_objects") && ($('autocomplete_choices') != null))
+                    if ((section_name==search_form_objects_id) && ($('autocomplete_choices') != null))
                         initAutocomplete();
                     if (section_name == page_title_id)
                         document.title = $(section_name).innerHTML;
@@ -913,13 +913,14 @@ var GBrowseController = Class.create({
             return true;
         title_element.setStyle({
             border: '2px',
+	    cursor: 'text',
             inset:  'black',
             backgroundColor:'beige',
             padding:'5px 5px 5px 5px'
         });
-        var r = document.createRange();
-        r.selectNodeContents(title_element);
-        window.getSelection().addRange(r);
+	// var r = document.createRange();
+        // r.selectNodeContents(title_element);
+        // window.getSelection().addRange(r);
         Event.observe(title_element, 'keypress', this.set_upload_title);
         Event.observe(title_element, 'blur', this.set_upload_title);
     },
@@ -970,13 +971,14 @@ var GBrowseController = Class.create({
             return true;
         container_element.setStyle({
             border: '2px',
+	    cursor: 'text',
             inset:  'black',
             backgroundColor:'beige',
             padding:'5px 5px 5px 5px'
         });
-        var r = document.createRange();
-        r.selectNodeContents(container_element);
-        window.getSelection().addRange(r);
+        // var r = document.createRange();
+        // r.selectNodeContents(container_element);
+        // window.getSelection().addRange(r);
         Event.observe(container_element,'keypress',this.set_upload_description);
         Event.observe(container_element,'blur',this.set_upload_description);
     },
@@ -1199,32 +1201,39 @@ function using_database() {
 }
 
 function initialize_page() {
+
+    // This oddity prevents ?id=logout from appearing in the url box.
+    // Otherwise whenever user reloads he is logged out :-(
+    var index;
+    if ((index = location.href.indexOf('?id=logout')) >= 0)
+	location.href=location.href.substr(0,index);
+
     checkSummaries();
-	// These statements initialize the tabbing
-	var tabs = $$("div.tabbody").collect( function(element) {
+    // These statements initialize the tabbing
+    var tabs = $$("div.tabbody").collect( function(element) {
 	    return element.id;
 	});
-	Controller.tabs = new TabbedSection(tabs);
+    Controller.tabs = new TabbedSection(tabs);
 
-	//event handlers
-	[page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
-		if ($(el) != null) {
-		  Controller.segment_observers.set(el,1);
-		}
+    //event handlers
+    [page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
+	    if ($(el) != null) {
+		Controller.segment_observers.set(el,1);
+	    }
 	});
-
-	// The next statement is to avoid the scalebars from being "out of sync"
-	// when manually advancing the browser with its forward/backward buttons.
-	// Unfortunately it causes an infinite loop when there are multiple regions!
-	if ($(detail_container_id) != null)
-	  Controller.update_coordinates('left 0');
-
-	// These statements get the rubberbanding running.
-	Overview.prototype.initialize();
-	Region.prototype.initialize();
-	Details.prototype.initialize();
-	if ($('autocomplete_choices') != null) 
-	   initAutocomplete();
+    
+    // The next statement is to avoid the scalebars from being "out of sync"
+    // when manually advancing the browser with its forward/backward buttons.
+    // Unfortunately it causes an infinite loop when there are multiple regions!
+    if ($(detail_container_id) != null)
+	Controller.update_coordinates('left 0');
+    
+    // These statements get the rubberbanding running.
+    Overview.prototype.initialize();
+    Region.prototype.initialize();
+    Details.prototype.initialize();
+    if ($('autocomplete_choices') != null) 
+	initAutocomplete();
 }
 
 // set the colors for the rubberband regions

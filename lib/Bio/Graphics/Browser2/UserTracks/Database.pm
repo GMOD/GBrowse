@@ -46,6 +46,8 @@ sub _new {
     return $self;
 }
 
+sub globals {shift->{globals}}
+
 # Path - Returns the path to a specified file's owner's (or just the logged-in user's) data folder.
 sub path {
     my $self = shift;
@@ -104,6 +106,18 @@ sub get_uploaded_files {
     my $data_source = $self->{data_source};
     my $rows = $uploadsdb->selectcol_arrayref("SELECT trackid FROM uploads WHERE userid = ? AND sharing_policy <> ? AND imported <> 1 AND data_source=? ORDER BY trackid", undef, $userid, "public", $data_source);
     return @$rows;
+}
+
+# this is used to autocomplete usernames, descriptions and filenames
+sub prefix_search {
+    my $self   = shift;
+    my $prefix = shift;
+
+    if ($self->globals->user_accounts) {
+	my $userdb = $self->{userdb};
+	my $results = $userdb->match_user($prefix);
+	return $results;
+    }
 }
 
 # Get Public Files ([Search Term, Offset]) - Returns an array of available public files that the user hasn't added. Will filter results if the extra parameter is given.
@@ -228,14 +242,11 @@ sub share {
     
     # If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
     my $userid;
-    warn "HERE I AM";
 
     if ($self->{globals}->user_accounts) {
         my $userdb = $self->{userdb};
         $userid = $userdb->get_user_id($name_or_id);
-	warn "calling add_named_session with $self->{sessionid}";
         $self->{userid} ||= $userdb->add_named_session($self->{sessionid}, "an anonymous user");
-	warn "got $self->{userid}";
     } else {
         $userid = $name_or_id;
     }

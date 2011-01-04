@@ -1417,29 +1417,50 @@ sub render_community_track_listing {
 	
 	my $first_number = $offset + 1;
 	my $last_number = $offset + $tracks_displayed;
+
+	my $autocomplete = '';
+
+	if ($self->setting('autocomplete')) {
+	    my $spinner_url = $self->data_source->button_url.'/spinner.gif';
+	    $autocomplete = <<END
+<span id="indicator2" style="display: none">
+  <img src="$spinner_url" />
+</span>
+<div id="autocomplete_upload_filter" class="autocomplete"></div>
+END
+	}
 	
 	# Create the HTML for the title & header
 	$html .= span({-style => "display: inline-block;"},
-		start_form({-action => "javascript:void(0);", -onsubmit => "return searchPublic(\$('public_search_keyword').value);"}), # The return here is necessary to stop the form from ACTUALLY submitting.
-		input({-type => "hidden", -name => "offset", -value => $offset, -id => "community_display_offset"}),
+		start_form({-action => "javascript:void(0);", 
+                            # The return here is necessary to stop the form from ACTUALLY submitting.
+			    -onsubmit => "return searchPublic(\$('public_search_keyword').value);"
+			   }), 
+		input({-type => "hidden", -name => "offset", 
+		       -value => $offset, -id => "community_display_offset"}),
 		ucfirst $self->translate('FILTER') . ":",
 		input({
 		    -type => "text",
 		    -name => "keyword",
 		    -id => "public_search_keyword",
-		    -width => 50,
-		    -value => $search || ($self->globals->user_accounts? $self->translate('ENTER_KEYWORD') . " " . $self->translate('OR_USER') : $self->translate('ENTER_KEYWORD')),
+		    -style => "width:400px",
+		    -value => $search || ($self->globals->user_accounts? $self->translate('ENTER_KEYWORD') . 
+					  " " . $self->translate('OR_USER') : $self->translate('ENTER_KEYWORD')),
 		    -onClick => "this.value='';"
 		}),
 		input({-type => "submit", -value => "Search"}),
-		($tracks_previous > 0)? a({-href => '#', -onClick => "return searchPublic(\"$search\", $previous_offset);"}, "[" . $self->translate('PREVIOUS_N', $tracks_previous) . "]") . "&nbsp;" : "",
+		($tracks_previous > 0)? a({-href => '#', 
+					   -onClick => "return searchPublic(\"$search\", $previous_offset);"}, 
+					  "[" . $self->translate('PREVIOUS_N', $tracks_previous) . "]") . "&nbsp;" : "",
 		ucfirst $self->translate('SHOWING'). " "
 		. (($total_tracks > 0)? $self->translate('N_TO_N_OUT_OF', $first_number, $last_number) : "") . " " 
 		. $self->translate('N_FILES', $total_tracks)
 		. ($search? (" " . $self->translate("MATCHING", $search)) : "")
 		. ".",
-		($tracks_next > 0)? "&nbsp;" . a({-href => '#', -onClick => "return searchPublic(\"$search\", $next_offset);"}, "[" . $self->translate('NEXT_N', $tracks_next) . "]") : "",
-		end_form()
+		($tracks_next > 0)? "&nbsp;" . a({-href => '#', -onClick => "return searchPublic(\"$search\", $next_offset);"}, 
+						 "[" . $self->translate('NEXT_N', $tracks_next) . "]") : "",
+		end_form(),
+		$autocomplete
 	);
 	
 	# Add the results
@@ -1473,15 +1494,16 @@ sub list_tracks {
 	my $listing_type = shift || "";
 	# If we've been given input, use the input. If we've been given the public type, use that, or default to all of the current user's tracks.
 	my @tracks = @_? @_ : (($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : $userdata->tracks;
+	my $track_type = $listing_type;
 
-	$listing_type .= " available" if $listing_type =~ /public/;
+	$track_type .= " available" if $listing_type =~ /public/;
 	
 	# Main track roll code.
 	if (@tracks) {
 		my $count = 0;
 		my @rows = map {
 			my $fileid = $_;
-			my $type = $listing_type || $userdata->file_type($fileid);
+			my $type = $track_type || $userdata->file_type($fileid);
 		
 			my $class = $self->track_class($count, $type);
 			my $controls = $self->render_track_controls($fileid, $type);
@@ -1501,8 +1523,7 @@ sub list_tracks {
 		} @tracks;
 		return join '', @rows;
     } else {
-	$listing_type =~ s/ available//;  # back hack
-    	return p($self->translate(($listing_type =~ /public/i ? 'THERE_ARE_NO_AVAILABLE_TRACKS':'THERE_ARE_NO_TRACKS_YET'), $listing_type));
+    	return p($self->translate(($track_type =~ /public/i ? 'THERE_ARE_NO_AVAILABLE_TRACKS':'THERE_ARE_NO_TRACKS_YET'), $track_type));
     }
 }
 
@@ -1558,11 +1579,14 @@ sub render_track_list_title {
 		},
 		''
 	);
+	my $is_mine = $userdata->is_mine($fileid);
+	my $cursor  = $is_mine ? 'cursor:pointer' : 'cursor:auto';
 	my $title = h1(
 	    {
-	        -style => "display: inline; font-size: 14pt;",
-	        -onClick         => ($userdata->database && $userdata->is_mine($fileid))? "Controller.edit_upload_title('$fileid', this)" : "",
-			-contentEditable => ($userdata->database && $userdata->is_mine($fileid))? 'true' : 'false',
+		($is_mine ? (-title => $self->tr('ADD_TITLE')) : ()),
+	        -style => "display: inline; font-size: 14pt;$cursor",
+	        -onClick         => ($userdata->database && $is_mine)? "Controller.edit_upload_title('$fileid', this)" : "",
+			-contentEditable => ($userdata->database && $is_mine)? 'true' : 'false',
 	    },
 	    $short_name
 	);
@@ -1652,14 +1676,17 @@ sub render_track_details {
 	my $userdata = $self->user_tracks;
 	my $globals	= $self->globals;
 	my $random_id = 'upload_'.int rand(9999);
-	
+	my $is_mine   = $userdata->is_mine($fileid);
+	my $cursor  = $is_mine ? 'cursor:pointer' : 'cursor:auto';	
 	my $description = div(
 		{
-			-id              => $fileid . "_description",
-			-onClick         => ($userdata->is_mine($fileid))? "Controller.edit_upload_description('$fileid', this)" : "",
-			-contentEditable => ($userdata->is_mine($fileid))? 'true' : 'false',
+		    ($is_mine ? (-title           => $self->tr('ADD_DESCRIPTION')) : ()),
+		    -style           => $cursor,
+		    -id              => $fileid . "_description",
+		    -onClick         => $is_mine ? "Controller.edit_upload_description('$fileid', this)" : "",
+		    -contentEditable => $is_mine ? 'true' : 'false',
 		},
-		$userdata->description($fileid) || $self->translate('ADD_DESCRIPTION')
+	    $userdata->description($fileid) || $self->translate($is_mine ? 'ADD_DESCRIPTION' : 'NO_DESCRIPTION')
 	);
 	my $source_listing = div(
 		{-style => "margin-left: 2em; display: inline-block;"},
@@ -3274,5 +3301,22 @@ sub format_autocomplete {
     return $html;
 }
 
+sub format_upload_autocomplete {
+    my $self     = shift;
+    my $matches = shift;
+    my $partial  = shift;
+    my %names;
+    for my $f (@$matches) {
+	my ($name) = grep {/$partial/i} $f;
+	$names{$name}++;
+    }
+    my $html = "<ul>\n";
+    for my $n (sort keys %names) {
+	$n =~ s/($partial)/<b>$1<\/b>/i;
+	$html .= "<li>$n</li>\n";
+    }
+    $html .= "</ul>\n";
+    return $html;
+}
 1;
 

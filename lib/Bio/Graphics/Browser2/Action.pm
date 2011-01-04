@@ -364,6 +364,19 @@ sub ACTION_autocomplete {
     return (200,'text/html',$autocomplete);
 }
 
+sub ACTION_autocomplete_upload_search {
+    my $self   = shift;
+    my $q      = shift;
+    my $render = $self->render;
+
+    my $match  = $q->param('prefix') or croak;
+    my $usertracks = $render->user_tracks;
+    warn $usertracks;
+    my $matches= $usertracks->prefix_search($match);
+    my $autocomplete = $render->format_upload_autocomplete($matches,$match);
+    return (200,'text/html',$autocomplete);
+}
+
 sub ACTION_reset_dsn {
     my $self = shift;
     $self->data_source->clear_cached_config();

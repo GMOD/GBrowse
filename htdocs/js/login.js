@@ -203,7 +203,7 @@ function load_login_balloon(event,session,username,openid) {
                  (Controller.can_openid?
                  '<tbody id=loginOpenID>' +
                    '<tr><td id=loginOpenIDY colspan=2 align=center style=padding-top:12px>' +
-		      ' <a href=#openid onClick=login_page_openid(true)><img src="'+ImgLocation+'/openid-logo.gif" />'+
+		      ' <a href=#openid onClick=login_page_openid(true)><img border=0 src="'+ImgLocation+'/openid-logo.gif" />'+
 		             Controller.translate('SIGN_IN') + '</a> ' +
 		       Controller.translate('WITH_OPENID') + '</td></tr>' +
 		    '<tr><td id=loginOpenIDN colspan=2 align=center style=display:none;padding-top:12px>' +
@@ -217,8 +217,9 @@ function load_login_balloon(event,session,username,openid) {
 	                'onClick="Balloon.prototype.hideTooltip(1)">' + Controller.translate('CLOSE') + '</a>' +
 	       '</form>';
 
-    GBox.showTooltip(event,html,1,320);
-    $('loginMain').style.width = '268px';
+    //GBox.showTooltip(event,html,1,320);
+    GBox.showTooltip(event,html,1);
+    //$('loginMain').style.width = '268px';
 
     //If the user is logged in, display only the "edit account details" page when login is called
     if(username != false) {

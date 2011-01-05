@@ -109,14 +109,12 @@ sub lock {
     my $self    = shift;
     my $dotfile = $self->dotfile;
     my $tsfile  = $self->tsfile;
-    # my $error   = $self->errorfile;
     if (-e $dotfile) {  # if it exists, then either we are in process or something died
 	return if $self->status eq 'PENDING';
     }
-    # unlink $error if -e $error;
     my $f = IO::File->new(">$dotfile") or die "Can't open $dotfile for writing: $!";
     flock $f,LOCK_EX;
-    $f->print(time());
+    $f->print($$,' ',time());     # PID<sp>timestamp
     $f->close;
     return 1;
 }
@@ -229,11 +227,11 @@ sub height {
 # 'EXPIRED'   there is data, but it has expired
 # 'ERROR'     an error occurred, and data will never be available
 sub status {
-    my $self     = shift;
-    my $dir      = $self->cachedir;
-    my $dotfile  = $self->dotfile;
-    my $tsfile   = $self->tsfile;
-    my $datafile = $self->datafile;
+    my $self      = shift;
+    my $dir       = $self->cachedir;
+    my $dotfile   = $self->dotfile;
+    my $tsfile    = $self->tsfile;
+    my $datafile  = $self->datafile;
     my $errorfile = $self->errorfile;
 
     # if a dotfile exists then either we are in the midst of updating the
@@ -244,9 +242,13 @@ sub status {
 	my $f = IO::File->new($dotfile) 
 	    or return 'AVAILABLE'; # dotfile disappeared, so data has just become available
 	flock $f,LOCK_SH;
-	my $timestamp = $f->getline();
+	my ($pid,$timestamp) = split /\s+/,$f->getline();
 	$f->close;
 	return 'DEFUNCT' unless $timestamp;
+	unless (kill 0=>$pid) {
+	    $self->flag_error('the rendering process crashed');
+	    return 'ERROR';
+	}
 	return 'PENDING' if time()-$timestamp < $self->max_time;
 	$self->flag_error('timeout; try viewing a smaller region');
 	return 'ERROR';

@@ -372,6 +372,7 @@ function changePermissions(fileid, sharing_policy) {
 				if (using_database())
 					sections.push(community_tracks_id);
 				Controller.update_sections(sections, "&offset=" + offset);
+				if ($('autocomplete_upload_filter') != null)  initAutocomplete();
 			}
 		}
 	);
@@ -448,8 +449,7 @@ function searchPublic(keyword, offset) {
 				var html = transport.responseText.evalJSON(true).section_html[community_tracks_id];
 				$(community_tracks_id).update(html);
 				Controller.idle();
-				if ($('autocomplete_upload_filter') != null)
-			            initAutocomplete();
+				if ($('autocomplete_upload_filter') != null)  initAutocomplete();
 				$("public_search_keyword").focus()
 			}
 		}

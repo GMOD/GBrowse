@@ -260,6 +260,8 @@ sub make_requests {
     my @cache_extra = @{ $args->{cache_extra} || [] };
     my %d;
 
+    warn "panel_args = @panel_args, cache_extra=@cache_extra" if DEBUG;
+
     foreach my $label ( @{ $labels || [] } ) {
 
         my @track_args = $self->create_track_args( $label, $args );
@@ -1243,7 +1245,7 @@ sub run_local_requests {
 
     my $time     = time();
 
-    warn "[$$] run_local_requests" if DEBUG;
+    warn "[$$] run_local_requests on @$labels";# if DEBUG;
 
     $labels    ||= [keys %$requests];
 
@@ -1278,9 +1280,9 @@ sub run_local_requests {
 
     my @labels_to_generate = @$labels;
 
-    foreach (@labels_to_generate) {
-	$requests->{$_}->lock();   # flag that request is in process
-    }
+#    foreach (@labels_to_generate) {
+#	$requests->{$_}->lock();   # flag that request is in process
+#    }
 
     my @ordinary_tracks    = grep {!$feature_files->{$_}} @labels_to_generate;
     my @feature_tracks     = grep {$feature_files->{$_} } @labels_to_generate;
@@ -1332,11 +1334,6 @@ sub run_local_requests {
             if $multiple_tracks;
 
 	my $key = $source->setting( $base => 'key' ) || '' ;
-# this no longer is needed with details_mult
-#	my @nopad = (($key eq '') || ($key eq 'none')) 
-#	    && !$multiple_tracks
-#             ? (-pad_top => 0)
-#             : ();
 	my @nopad = ();
         my $panel_args = $requests->{$label}->panel_args;
 
@@ -1348,23 +1345,13 @@ sub run_local_requests {
 
 	my $timeout         = $source->global_setting('global_timeout');
 	
-# this was causing more problems than it was worth
-#	my $has_sigset = $] >= 5.008;
-	my $has_sigset = undef;
 	my $oldaction;
-	if ($has_sigset) {
-	    eval "use POSIX ':signal_h'" unless defined &SIGALRM;
-	    my $mask = POSIX::SigSet->new(SIGALRM());
-	    my $action = POSIX::SigAction->new(sub {die "timeout"},$mask);
-	    $oldaction = POSIX::SigAction->new();
-	    sigaction(SIGALRM(),$action,$oldaction);
-	}
-
 	my $time = time();
 	eval {
-	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" } unless $has_sigset;
+	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" };
 	    alarm($timeout);
 
+	    $requests->{$label}->lock();
 	    my ($gd,$map,$titles);
 
 	    if (my $hide = $source->semantic_setting($label=>'hide',$self->segment_length)) {
@@ -1425,14 +1412,12 @@ sub run_local_requests {
 	    alarm(0);
 	};
 	alarm(0);
-	sigaction(SIGALRM(),$oldaction) if $has_sigset;
 
 	my $elapsed = time()-$time;
 	warn "render($label): $elapsed seconds ", ($@ ? "(error)" : "(ok)") if BENCHMARK;
 	
 	if ($@) {
 	    warn "RenderPanels error: $@";
-#	    warn $@;
 	    if ($@ =~ /timeout/) {
 		$requests->{$label}->flag_error('Timeout; Try turning off tracks or looking at a smaller region.');
 	    } else {
@@ -1910,6 +1895,7 @@ sub create_panel_args {
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
   my @argv = (
 	      -grid         => $section eq 'detail' ? $settings->{'grid'} : 0,
+              -seqid        => $segment->seq_id,
 	      -start        => $seg_start,
 	      -end          => $seg_stop,
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
@@ -2493,17 +2479,10 @@ sub loaded_segment_outline {
     return $self->source->global_setting('loaded segment outline') || 'gray';
 }
 
-sub details_mult {
+sub details_mult { 
     my $self = shift;
-    my $state = $self->settings;
-
-    if (defined $state->{seg_min} && defined $state->{seg_max} && defined $state->{view_start} && defined $state->{view_stop}) {
-        my $max_length     = $state->{seg_max} - $state->{seg_min};
-        my $request_length = $state->{view_stop} - $state->{view_start};
-        return $self->source->details_multiplier($max_length, $request_length);
-    }
-
-    return $self->source->details_multiplier;
+    my $mult = $self->render->details_mult;
+    return $mult;
 }
 
 sub get_detail_width_no_pad {

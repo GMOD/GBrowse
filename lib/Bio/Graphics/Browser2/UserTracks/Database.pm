@@ -36,10 +36,10 @@ sub _new {
     
     # Check to see if user accounts are enabled, set some commonly-used variables.
     if ($globals->user_accounts) {
-	    #BUG: Two copies of UserDB; one here and one in the Render object
+	# BUG: Two copies of UserDB; one here and one in the Render object
         $self->{userdb}   = Bio::Graphics::Browser2::UserDB->new($globals);
         $self->{username} = $self->{userdb}->username_from_sessionid($self->{sessionid});
-        $self->{userid} = $self->{userdb}->userid_from_sessionid($self->{sessionid});
+        $self->{userid}   = $self->{userdb}->userid_from_sessionid($self->{sessionid});
     }
     
     $self->create_track_lookup;
@@ -47,6 +47,8 @@ sub _new {
 }
 
 sub globals {shift->{globals}}
+
+sub datasource_name {shift->{data_source}}
 
 # Path - Returns the path to a specified file's owner's (or just the logged-in user's) data folder.
 sub path {
@@ -113,11 +115,20 @@ sub prefix_search {
     my $self   = shift;
     my $prefix = shift;
 
+    my (%results);
     if ($self->globals->user_accounts) {
 	my $userdb = $self->{userdb};
-	my $results = $userdb->match_user($prefix);
-	return $results;
+	my $user_matches = $userdb->match_user($self->datasource_name,$prefix);
+	foreach (@$user_matches) {
+	    $results{$_} = "<i>$_</i>";
+	}
     }
+    my $upload_matches = $self->match_uploads($self->datasource_name,$prefix);
+    foreach (@$upload_matches) {
+	$results{$_} = "<b>$_</b>";
+    }
+    my @results = map {$results{$_}} sort {lc $a cmp lc $b} keys %results;
+    return \@results;
 }
 
 # Get Public Files ([Search Term, Offset]) - Returns an array of available public files that the user hasn't added. Will filter results if the extra parameter is given.
@@ -133,7 +144,7 @@ sub get_public_files {
     if ($self->{globals}->user_accounts) {
         # If we find a user from the term (ID or username), we'll search by user.
         my $userdb = $self->{userdb};
-        $search_id = $userdb->get_uploads_id($userdb->get_user_id($searchterm));
+        $search_id = $userdb->get_user_id($searchterm);
     }
     
     # Make sure we're not looking for files outside of the range.
@@ -141,25 +152,29 @@ sub get_public_files {
     $offset = ($offset > $public_count)? $public_count : $offset;
     
     my $uploadsdb = $self->{uploadsdb};
-    my $userid = $self->{userid};
+    my $userid    = $self->{userid};
     
     # Basic selection statement, limit to public tracks from this data set.
-    my $sql = "SELECT u.trackid FROM uploads u"
-            . " LEFT JOIN (SELECT s.trackid FROM sharing s WHERE s.userid = " . $uploadsdb->quote($userid) . ") s"
-            . " USING(trackid) WHERE s.trackid IS NULL"
-            . " AND sharing_policy = " . $uploadsdb->quote("public")
-            . " AND data_source = " . $uploadsdb->quote($data_source);
+    my $ds = $uploadsdb->quote($data_source);
+    my $sql =<<END;
+SELECT u.trackid FROM uploads u
+ WHERE u.sharing_policy='public'
+   AND u.data_source=$ds
+END
+;
+    $sql .=  "AND u.trackid NOT IN (SELECT trackid FROM sharing WHERE userid=$userid)"
+	if $userid;
     
     # Search string - if we have a searched ID, use that as the userid. If not, match the searchterm to description, path or title.
-    $sql .= ($search_id)? " AND (uploads.userid = " . $uploadsdb->quote($userid) . ")"
-                        : " AND (description LIKE " . $uploadsdb->quote("%".$searchterm."%")
-                        . " OR path LIKE "          . $uploadsdb->quote("%".$searchterm."%")
-                        . " OR title LIKE "         . $uploadsdb->quote("%".$searchterm."%") . ")" if $searchterm;
+    $sql .= $search_id? " AND (u.userid = "       . $uploadsdb->quote($search_id) . ")"
+                      : " AND (description LIKE " . $uploadsdb->quote("%".$searchterm."%")
+                      . " OR path LIKE "          . $uploadsdb->quote("%".$searchterm."%")
+                      . " OR title LIKE "         . $uploadsdb->quote("%".$searchterm."%") . ")" if $searchterm;
     
     # Limit & offset as needed... 
     $sql .= " ORDER BY public_count DESC LIMIT $count";
     $sql .= " OFFSET $offset" if $offset;
-    
+
     my $rows = $uploadsdb->selectcol_arrayref($sql);
     return @$rows;
 }
@@ -213,6 +228,40 @@ sub get_added_public_files {
     my $sql = "SELECT DISTINCT uploads.trackid FROM uploads LEFT JOIN sharing ON uploads.trackid = sharing.trackid WHERE sharing.userid = ? AND uploads.sharing_policy = ? AND sharing.public = 1 AND uploads.data_source = ?";
     my $rows = $uploadsdb->selectcol_arrayref($sql, undef, $userid, "public", $data_source);
     return @$rows;
+}
+
+sub match_uploads {
+    my $self = shift;
+    my ($source,$prefix) = @_;
+
+    my $sql =<<END;
+SELECT a.title
+  FROM uploads as a,sharing as b
+ WHERE a.userid=b.userid
+   AND a.sharing_policy='public'
+   AND a.title LIKE ?
+END
+    ;
+    my $userid    = $self->{userid};
+    $sql .=  "AND u.trackid NOT IN (SELECT trackid FROM sharing WHERE userid=$userid)"
+	if $userid;
+
+    my $uploadsdb = $self->{uploadsdb};
+    my $search = $uploadsdb->quote($prefix);
+    $search =~ s/^'//;
+    $search =~ s/'$//;
+    $search = "$search%";
+    my $select = $uploadsdb->prepare($sql)  or die $uploadsdb->errstr;
+    $select->execute($search)  or die $uploadsdb->errstr;
+    $prefix = quotemeta($prefix);
+
+    my @results;
+    while (my @a = $select->fetchrow_array) {
+	warn @a;
+	push @results,(grep /^$prefix/i,@a);
+    }
+    $select->finish;
+    return \@results;
 }
 
 # Get Shared Files () - Returns an array of files shared specifically to a user.
@@ -367,7 +416,7 @@ sub description {
 # Title (File ID[, Value]) - Returns a file's title, or changes the current title if defined.
 sub title {
     my $self  = shift;
-    my $file = shift or return;
+    my $file  = shift or return;
     my $value = shift;
     my $userid = $self->{userid};
     if ($value) {

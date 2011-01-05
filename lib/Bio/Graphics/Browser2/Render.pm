@@ -513,7 +513,7 @@ sub add_tracks {
     my $self        = shift;
     my $track_names = shift;
 
-    warn "add_tracks(@$track_names)" if DEBUG;
+    warn "add_tracks(@$track_names)";# if DEBUG;
 
     my %track_data;
     my $segment = $self->segment;
@@ -1209,6 +1209,7 @@ sub current_plugin {
 sub plugin_auto_find {
     my $self = shift;
     my $search_string = shift;
+    return if Bio::Graphics::Browser2::Region->is_chromosome_region($search_string);
     my (@results,$found_one);
     my $plugins = $self->plugins or return;
 
@@ -1828,7 +1829,7 @@ sub _update_state {
 	$state->{seg_min} = $whole_segment->start;
 	$state->{seg_max} = $whole_segment->end;
 	
-	$state->{ref}     ||= $seg->seq_id;
+	$state->{ref}          ||= $seg->seq_id;
 	$state->{view_start}   ||= $seg->start; # The user has selected the area that they want to see. Therefore, this
 	$state->{view_stop}    ||= $seg->stop;  # will be the view_start and view_stop, rather than just start and stop.
 	                                        # asynchronous_update_coordinates will multiply this by the correct factor
@@ -2246,9 +2247,6 @@ sub update_coordinates {
   delete $self->{region}; # clear cached region
   my $position_updated;
 
-  # I really don't know if this belongs here. Divider should only be used for displaying
-  # numbers, not for doing calculations with them.
-  # my $divider  = $self->setting('unit_divider') || 1;
   if (param('ref')) {
     $state->{ref}   = param('ref');
     $state->{view_start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
@@ -3022,6 +3020,7 @@ sub remove_invalid_tracks {
 
     my %potential = map {$_=>1} $self->potential_tracks;
     my @defunct   = grep {!$potential{$_}} keys %{$state->{features}};
+    warn "defunct tracks = @defunct";
     delete $state->{features}{$_} foreach @defunct;
     $state->{tracks} = [grep {$potential{$_}} @{$state->{tracks}}];
 }
@@ -3202,6 +3201,8 @@ sub expand_track_names {
 	    push @results,$t;
 	}
     }
+
+    warn "expand_track_names(@tracks) => @results";
     return @results;
  }
 
@@ -3344,8 +3345,21 @@ sub get_total_pad_width {
     return $padl + $padr;
 }
 
+sub set_details_multiplier {
+    my $self = shift;
+    my $mult = shift || 1;
+    $self->{'.details_mult'} = $mult;
+}
+
 sub details_mult {
     my $self = shift;
+    $self->{'.details_mult'} ||= $self->_details_mult;
+    return $self->{'.details_mult'};
+}
+
+sub _details_mult {
+    my $self = shift;
+
     my $state = $self->state;
 
     if (defined $state->{seg_min} 
@@ -3487,8 +3501,10 @@ sub render_deferred_track {
         $result_html = $result->{$track_id};
     }
     elsif ($cache->status eq 'ERROR') {
-	warn "[$$] rendering error track" if DEBUG;
-        my $image_width = $self->get_detail_image_width($self->state);
+	warn "[$$] rendering error track";# if DEBUG;
+	warn $cache->errstr;
+        my $image_width = $track_id =~ /overview|region/ ? $self->get_image_width($self->state)
+	                                                 : $self->get_detail_image_width($self->state);
         $result_html   .= $self->render_error_track(
 						  track_id       => $track_id,
 						  image_width      => $image_width,

@@ -22,6 +22,8 @@
       tracks.
     * Added a simple authentication plugin framework that allows you to authenticate against Unix password files,
       LDAP, Kerberos, etc (with the correct plugin written, of course!)
+    * Fixed bug that caused regions with identical start and end coordinates but different chromosomes to be
+      inappropriately cached to the same location.
 
 2.17
      * Track configuration dialog now allows for control of autoscaling behavior in quantitative

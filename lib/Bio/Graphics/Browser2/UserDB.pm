@@ -244,31 +244,34 @@ sub do_sendmail {
 sub get_user_id {
     my $self = shift;
     my $search = shift;
-    return $self->userid_from_username($search) || $self->userid_from_email($search);
+    # inefficient use of three separate SQL statements
+    return $self->userid_from_username($search) || $self->userid_from_email($search) || $self->userid_from_fullname($search);
 }
 
 sub match_user {
     my $self   = shift;
-    my $search = shift;
+    my ($source,$search) = @_;
     my $userdb = $self->dbi;
     my $select = $userdb->prepare(<<END) or die $userdb->errstr;
 SELECT a.username,b.gecos,b.email 
-  FROM session as a,users as b 
+  FROM session as a,users as b,uploads as c
  WHERE a.userid=b.userid
+   AND a.userid=c.userid
+   AND c.sharing_policy='public'
+   AND c.data_source=?
    AND (a.username LIKE ? OR
         b.gecos    LIKE ? OR
         b.email    LIKE ?)
 END
 ;
-    my $search = "%$search%";
-    warn "searching for $search";
-    $select->execute($search,$search,$search) or die $select->errstr;
+    $search = quotemeta($search);
+    my $db_search = "%$search%";
+    $select->execute($source,$db_search,$db_search,$db_search) or die $select->errstr;
     my @results;
-    while (my ($username,$gecos,$email) = $select->fetchrow_array) {
-	push @results,"$username $gecos <$email>";
+    while (my @a = $select->fetchrow_array) {
+	push @results,(grep /$search/,@a);
     }
     $select->finish;
-    warn @results;
     return \@results;
 }
 
@@ -277,13 +280,14 @@ sub userid_from_username {
     my $username = shift;
 
     my $userdb = $self->{dbi};
-    my $user_id = 
+    my ($user_id) = 
 	$userdb->selectrow_array(<<END ,undef,$username);
 SELECT userid
   FROM session as a
   WHERE a.username=?
   LIMIT 1
 END
+return $user_id;
 }
 
 sub userid_from_email {
@@ -291,13 +295,31 @@ sub userid_from_email {
     my $email = shift;
 
     my $userdb = $self->{dbi};
-    my $user_id = 
+    my ($user_id) = 
 	$userdb->selectrow_array(<<END ,undef,$email);
 SELECT userid
   FROM users as a
   WHERE a.email=?
   LIMIT 1
 END
+;
+    return $user_id;
+}
+
+sub userid_from_fullname {
+    my $self     = shift;
+    my $email = shift;
+
+    my $userdb = $self->{dbi};
+    my ($user_id) = 
+	$userdb->selectrow_array(<<END ,undef,$email);
+SELECT userid
+  FROM users as a
+  WHERE a.gecos=?
+  LIMIT 1
+END
+;
+    return $user_id;
 }
 
 sub userid_from_uploadsid {
@@ -435,12 +457,12 @@ sub userid_from_sessionid {
     my $sessionid = shift;
     my $userdb = $self->{dbi};
 
-    my $userid = $userdb->selectrow_array(<<END ,undef,$sessionid);
+    my ($userid) = $userdb->selectrow_array(<<END ,undef,$sessionid);
 SELECT userid FROM session
  WHERE sessionid=?
 END
     ;
-    return $userid if $userid;
+    return $userid;
 }
 
 # Check Uploads ID (User ID, Uploads ID) - Makes sure a user's ID is in the database.

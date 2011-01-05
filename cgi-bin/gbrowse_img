@@ -86,6 +86,7 @@ sub new {
 sub run {
     my $self   = shift;
     my $render = $self->render;
+    $render->set_details_multiplier(1);
 
     unless (param()) {
 	print $self->header();
@@ -190,9 +191,6 @@ sub render_image {
 
     $format = 'GD::SVG' if $format eq 'SVG';
     $format      = 'GD' if $embed;
-
-    warn "setting details multiplier";
-    $render->data_source->set_details_multiplier(1);
 
     my ($img_data,$map) = $render->region->feature_count > 1 
                                  ? $self->render_multiple($renderer,$format,$flip,$embed)

@@ -248,14 +248,9 @@ sub must_authenticate {
     return $self->global_setting('must authenticate');
 }
 
-sub set_details_multiplier {
-    my $self = shift;
-    $self->{details_mult} = shift;
-}
-
 sub details_multiplier {
     my $self = shift;
-    my $value = $self->{details_mult} || $self->global_setting('details multiplier') || 1;
+    my $value = $self->global_setting('details multiplier') || 1;
     $value = 1  if ($value < 1);  #lower limit 
     $value = 25 if ($value > 25); #set upper limit for performance reasons (prevent massive image files)
     
@@ -265,7 +260,6 @@ sub details_multiplier {
             return $max_length / $request_length; #limit details multiplier so that region does not go out of bounds
         }
     }
-    
     return $value;
 }
 

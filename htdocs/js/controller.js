@@ -299,7 +299,8 @@ var GBrowseController = Class.create({
                     $(section_name).innerHTML = html;
                     if (scroll_there)
                         new Effect.ScrollTo(section_name);
-                    if ((section_name==search_form_objects_id) && ($('autocomplete_choices') != null))
+                    if (    (section_name==search_form_objects_id) && ($('autocomplete_choices') != null)
+			  ||(section_name==community_tracks_id)    && ($('autocomplete_upload_filter') != null))
                         initAutocomplete();
                     if (section_name == page_title_id)
                         document.title = $(section_name).innerHTML;

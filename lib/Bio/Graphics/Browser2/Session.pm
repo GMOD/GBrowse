@@ -91,17 +91,32 @@ sub lock {
 
     warn "[$$] waiting on session lock..." if DEBUG_LOCK;
 
-    if ($locktype eq 'flock') {
-	$self->lock_flock($type,$id);
-    }
-    elsif ($locktype eq 'nfs') {
-	$self->lock_nfs($type,$id);
-    }
-    elsif ($locktype eq 'mysql') {
-	$self->lock_mysql($type,$id);
-    }
-    else {
-	die "unknown lock type $locktype";
+    eval {
+	local $SIG{ALRM} = sub {die "timeout\n"};
+	# timeout lock to avoid some process from keeping process open
+	# 1 sec is probably too short for some database searches
+	alarm(1); 
+
+	if ($locktype eq 'flock') {
+	    $self->lock_flock($type,$id);
+	}
+	elsif ($locktype eq 'nfs') {
+	    $self->lock_nfs($type,$id);
+	}
+	elsif ($locktype eq 'mysql') {
+	    $self->lock_mysql($type,$id);
+	}
+	else {
+	    die "unknown lock type $locktype";
+	}
+	alarm(0);
+    };
+    if ($@) {
+	die $@ unless $@ eq "timeout\n";
+	warn ("[##] session lock timed out on request: ",
+	      CGI::request_method(),': ',
+	      CGI::url(-path=>1),' ',
+	      CGI::query_string());
     }
     warn "[$$] ...got session lock" if DEBUG_LOCK;
 }

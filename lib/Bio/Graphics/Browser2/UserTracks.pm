@@ -477,7 +477,11 @@ sub upload_file {
 
     my $msg = $@;
     warn "UPLOAD ERROR: ", $msg if $msg;
-    $self->delete_file($file) unless $result;
+    if ($result) {
+	$self->title($file,$filename);
+    } else {
+	$self->delete_file($file);
+    }
     return ($result, $msg, \@tracks);
 }
 

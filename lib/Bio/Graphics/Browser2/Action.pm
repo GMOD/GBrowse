@@ -203,7 +203,7 @@ sub ACTION_retrieve_multiple {
 
     foreach my $track_id (@track_ids) {
 	my $track_key = $q->param( 'tk_' . $track_id ) or next;
-	warn "retrieving $track_id=>$track_key" if DEBUG;
+	warn "retrieving $track_id=>$track_key"; # if DEBUG;
 	
 	$track_html{$track_id} = $render->render_deferred_track(
 	    cache_key  => $track_key,
@@ -368,10 +368,10 @@ sub ACTION_autocomplete_upload_search {
     my $self   = shift;
     my $q      = shift;
     my $render = $self->render;
+    warn "prefix search...";
 
     my $match  = $q->param('prefix') or croak;
     my $usertracks = $render->user_tracks;
-    warn $usertracks;
     my $matches= $usertracks->prefix_search($match);
     my $autocomplete = $render->format_upload_autocomplete($matches,$match);
     return (200,'text/html',$autocomplete);

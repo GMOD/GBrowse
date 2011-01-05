@@ -1414,6 +1414,7 @@ sub render_community_track_listing {
 	my $next_offset = $offset + $track_limit;
 	my $tracks_previous = ($max_files < $tracks_before)? $max_files : $tracks_before;
 	my $previous_offset = $offset - $globals->public_files;
+	$previous_offset    = 0 if $previous_offset < 0;
 	
 	my $first_number = $offset + 1;
 	my $last_number = $offset + $tracks_displayed;
@@ -1443,7 +1444,7 @@ END
 		    -type => "text",
 		    -name => "keyword",
 		    -id => "public_search_keyword",
-		    -style => "width:400px",
+		    -style => "width:200px",
 		    -value => $search || ($self->globals->user_accounts? $self->translate('ENTER_KEYWORD') . 
 					  " " . $self->translate('OR_USER') : $self->translate('ENTER_KEYWORD')),
 		    -onClick => "this.value='';"
@@ -1452,6 +1453,8 @@ END
 		($tracks_previous > 0)? a({-href => '#', 
 					   -onClick => "return searchPublic(\"$search\", $previous_offset);"}, 
 					  "[" . $self->translate('PREVIOUS_N', $tracks_previous) . "]") . "&nbsp;" : "",
+		button(-label=>$self->tr('CLEAR'),
+		       -onClick=>"\$('public_search_keyword').value='';searchPublic('',$previous_offset);"),
 		ucfirst $self->translate('SHOWING'). " "
 		. (($total_tracks > 0)? $self->translate('N_TO_N_OUT_OF', $first_number, $last_number) : "") . " " 
 		. $self->translate('N_FILES', $total_tracks)

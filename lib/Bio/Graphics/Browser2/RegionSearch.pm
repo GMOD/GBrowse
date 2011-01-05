@@ -297,8 +297,6 @@ sub search_features {
 	$args->{-search_term} = $state->{name}
     }
 
-    warn "search_features (",join ' ',%$args,')' if DEBUG;
-
     local $self->{shortcircuit} = 0;
     my $local   = $self->search_features_locally($args);  # if default db has a hit, then we short circuit
     my $remote  = $self->search_features_remotely($args) unless $self->{shortcircuit};

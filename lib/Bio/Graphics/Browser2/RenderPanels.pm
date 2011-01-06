@@ -655,11 +655,9 @@ sub run_remote_requests {
   my $self      = shift;
   my ($requests,$args,$labels) = @_;
 
+  warn "[$$] run_remote_requests on @$labels"; #if DEBUG;
+
   my @labels_to_generate = @$labels;
-  foreach (@labels_to_generate) {
-      $requests->{$_}->lock();   # flag that request is in process
-  }
-  
   return unless @labels_to_generate;
 
   eval { use HTTP::Request::Common; } unless HTTP::Request::Common->can('POST');
@@ -727,6 +725,10 @@ sub run_remote_requests {
       my @labels   = keys %{$renderers{$url}};
       my $s_track  = Storable::nfreeze(\@labels);
 
+      foreach (@labels) {
+	  $requests->{$_}->lock();   # flag that request is in process
+      }
+  
     FETCH: {
 	my $request = POST ($url,
 			    Content_Type => 'multipart/form-data',
@@ -828,6 +830,7 @@ sub sort_local_remote {
 			      !/file:/   &&
 			      !/^(ftp|http|das):/ &&
 			      !$source->is_usertrack($_) &&
+			      !$source->is_remotetrack($_) &&
 			      (($url = $source->fallback_setting($_=>'remote renderer') ||0) &&
 			      ($url ne 'none') &&
 			      ($url ne 'local')))
@@ -1245,7 +1248,7 @@ sub run_local_requests {
 
     my $time     = time();
 
-    warn "[$$] run_local_requests on @$labels" if DEBUG;
+    warn "[$$] run_local_requests on @$labels";# if DEBUG;
 
     $labels    ||= [keys %$requests];
 
@@ -2481,9 +2484,12 @@ sub loaded_segment_outline {
 
 sub details_mult { 
     my $self = shift;
-    my $render = $self->render or return 1;
-    my $mult = $render->details_mult;
-    return $mult;
+    my $render = $self->render;
+    return $render->details_mult if $render;
+
+    # workaround for Slave processes, which have no render object
+    # 
+    return $self->source->details_multiplier($self->settings);
 }
 
 sub get_detail_width_no_pad {

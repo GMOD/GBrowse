@@ -257,17 +257,24 @@ sub must_authenticate {
 }
 
 sub details_multiplier {
-    my $self = shift;
+    my $self  = shift;
+    my $state = shift;
+
     my $value = $self->global_setting('details multiplier') || 1;
     $value = 1  if ($value < 1);  #lower limit 
     $value = 25 if ($value > 25); #set upper limit for performance reasons (prevent massive image files)
     
-    if (@_ > 1) { 
-        my ($max_length, $request_length) = @_;
-        if (($max_length > 0) && ($request_length > 0) && (($request_length * $value) > $max_length)) {
-            return $max_length / $request_length; #limit details multiplier so that region does not go out of bounds
-        }
+    return $value unless $state;
+    foreach (qw(seg_min seg_max view_start view_stop)) {
+	return $value unless defined $state->{$_};
     }
+
+    my $max_length     = $state->{seg_max}   - $state->{seg_min};
+    my $request_length = $state->{view_stop} - $state->{view_start};
+    if (($max_length > 0) && ($request_length > 0) && (($request_length * $value) > $max_length)) {
+	return $max_length / $request_length; #limit details multiplier so that region does not go out of bounds
+    }
+
     return $value;
 }
 
@@ -479,6 +486,14 @@ sub is_usertrack {
     my $self  = shift;
     my $label = shift;
     return exists $self->{_user_tracks}{config}{$label};
+}
+
+sub is_remotetrack {
+    my $self  = shift;
+    my $label = shift;
+    (my $base = $label) =~ s/:\w+$//;
+    return exists $self->{config}{$base}{'remote feature'} 
+        || exists $self->{config}{$label}{'remote feature'};
 }
 
 sub category_open {

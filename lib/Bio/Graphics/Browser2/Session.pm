@@ -113,7 +113,7 @@ sub lock {
     };
     if ($@) {
 	die $@ unless $@ eq "timeout\n";
-	warn ("[##] session lock timed out on request: ",
+	warn ("[$$] session lock timed out on request: ",
 	      CGI::request_method(),': ',
 	      CGI::url(-path=>1),' ',
 	      CGI::query_string());

@@ -513,7 +513,7 @@ sub add_tracks {
     my $self        = shift;
     my $track_names = shift;
 
-    warn "add_tracks(@$track_names)";# if DEBUG;
+    warn "add_tracks(@$track_names)" if DEBUG;
 
     my %track_data;
     my $segment = $self->segment;
@@ -522,7 +522,9 @@ sub add_tracks {
     foreach (@$track_names) {
 	$self->add_track_to_state($_);
 	$remote++ if /http|ftp|das/;
+	$remote++ if $self->data_source->setting($_=>'remote feature');
     }
+
     $self->init_remote_sources if $remote;
     
     if ($segment) {
@@ -3202,7 +3204,6 @@ sub expand_track_names {
 	}
     }
 
-    warn "expand_track_names(@tracks) => @results";
     return @results;
  }
 
@@ -3619,7 +3620,6 @@ sub external_data {
 			 $self->whole_segment,$self->region_segment);
 	} foreach ($self->plugins,$self->remote_sources);
     }
-    warn "FEATURE files = ",join ' ',%$f if DEBUG;
     return $self->{feature_files} = $f;
 }
 #

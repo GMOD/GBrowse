@@ -1245,7 +1245,7 @@ sub run_local_requests {
 
     my $time     = time();
 
-    warn "[$$] run_local_requests on @$labels";# if DEBUG;
+    warn "[$$] run_local_requests on @$labels" if DEBUG;
 
     $labels    ||= [keys %$requests];
 
@@ -1280,6 +1280,7 @@ sub run_local_requests {
 
     my @labels_to_generate = @$labels;
 
+    # this is now done in the subprocess
 #    foreach (@labels_to_generate) {
 #	$requests->{$_}->lock();   # flag that request is in process
 #    }
@@ -1363,9 +1364,8 @@ sub run_local_requests {
 	    else {
 
 		if ( exists $feature_files->{$base} ) {
-
 		    my $file = $feature_files->{$base};
-		
+
 		    # Add feature files, including remote annotations
 		    my $featurefile_select = $args->{featurefile_select}
 		    || $self->feature_file_select($section);

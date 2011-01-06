@@ -203,7 +203,7 @@ sub ACTION_retrieve_multiple {
 
     foreach my $track_id (@track_ids) {
 	my $track_key = $q->param( 'tk_' . $track_id ) or next;
-	warn "retrieving $track_id=>$track_key"; # if DEBUG;
+	warn "retrieving $track_id=>$track_key" if DEBUG;
 	
 	$track_html{$track_id} = $render->render_deferred_track(
 	    cache_key  => $track_key,

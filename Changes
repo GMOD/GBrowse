@@ -24,6 +24,8 @@
       LDAP, Kerberos, etc (with the correct plugin written, of course!)
     * Fixed bug that caused regions with identical start and end coordinates but different chromosomes to be
       inappropriately cached to the same location.
+    * Fixed bug in which tracks with a "remote feature" did not display correctly the very first time they
+      are added to the session.
 
 2.17
      * Track configuration dialog now allows for control of autoscaling behavior in quantitative

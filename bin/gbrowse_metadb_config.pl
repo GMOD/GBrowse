@@ -51,6 +51,8 @@ unless ($< == 0) {
     exec 'sudo','-u','root',$0,@argv;
 }
 
+my $line_counter  = 0; # controls newlines
+
 # Open the connections.
 my $globals = Bio::Graphics::Browser2->open_globals;
 $dsn ||= $globals->user_account_db;
@@ -367,6 +369,7 @@ sub check_data_sources {
 # Check All Files () - Checks the integrity of the file data for every user.
 sub check_all_files {
     print STDERR "Checking for any files not in the database...";
+    $line_counter = 0;
     # Get all data sources
     my $userdata_folder = $globals->user_dir;
     my @data_sources;
@@ -405,11 +408,12 @@ sub check_all_files {
 # remove dangling upload directories
 sub check_uploadsid {
     my ($source_path,$uploadsid) = @_;
+    return if $uploadsid eq 'shared_remote_tracks';
     my ($userid)  = $database->selectrow_array('select (userid) from session where uploadsid=?',
 					       undef,$uploadsid);
-    my $count;
+
     unless ($userid) {
-	print STDERR "\n" unless $count++;
+	print STDERR "\n" unless $line_counter++;
 	print STDERR "Uploadsid $uploadsid has no corresponding user. Removing.\n";
 	remove_tree(File::Spec->catfile($source_path,$uploadsid));
 	return;
@@ -439,11 +443,10 @@ sub check_files {
     closedir(D);
 	
     my $all_ok = 1;
-    my $count;
     foreach my $file (@files_in_folder) {
 	my $found = grep(/$file/, @files_in_db);
 	unless ($found) {
-	    print STDERR "\n" unless $count++;
+	    print STDERR "\n" unless $line_counter++;
 	    add_file($file, $userid, $uploadsid, $data_source, $file) &&
 		print STDERR "- File \"$file\" found in the \"$data_source/$uploadsid\" folder without metadata, added to database.\n";
 	    $all_ok = 0;

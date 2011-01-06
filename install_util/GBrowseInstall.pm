@@ -456,17 +456,17 @@ sub ACTION_install {
 
     my $base = basename($self->install_path->{htdocs});
 
+    # Configure the databases, if needed.
+    print STDERR "Updating user account database...\n";
+    my $metadb_script = File::Spec->catfile("bin", "gbrowse_metadb_config.pl");
+    system 'perl',$metadb_script;
+
     if (Module::Build->y_n(
 	    "It is recommended that you restart Apache. Shall I try this for you?",'y'
 	)) {
 	system "sudo /etc/init.d/apache2 restart";
     }
     
-    # Configure the databases, if needed.
-    print STDERR "Updating user account database...\n";
-    my $metadb_script = File::Spec->catfile("bin", "gbrowse_metadb_config.pl");
-    system "perl $metadb_script";
-
     print STDERR "\n***INSTALLATION COMPLETE***\n";
     print STDERR "Load http://localhost/$base for demo and documentation.\n";
     print STDERR "Visit the http://gmod.org for more information on setting up databases for users and custom tracks.\n";

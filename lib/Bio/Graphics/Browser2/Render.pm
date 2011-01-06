@@ -1172,9 +1172,9 @@ sub get_search_object {
 # ========================= plugins =======================
 sub init_plugins {
   my $self        = shift;
-  return if $self->{'.plugins_inited'}++;
-
   my $source      = $self->data_source->name;
+  return $PLUGINS{$source} if $PLUGINS{$source} && $self->{'.plugins_inited'}++;
+
   my @plugin_path = shellwords($self->data_source->globals->plugin_path);
 
   my $plugins = $PLUGINS{$source} ||= Bio::Graphics::Browser2::PluginSet->new($self->data_source,@plugin_path);
@@ -3022,7 +3022,6 @@ sub remove_invalid_tracks {
 
     my %potential = map {$_=>1} $self->potential_tracks;
     my @defunct   = grep {!$potential{$_}} keys %{$state->{features}};
-    warn "defunct tracks = @defunct";
     delete $state->{features}{$_} foreach @defunct;
     $state->{tracks} = [grep {$potential{$_}} @{$state->{tracks}}];
 }

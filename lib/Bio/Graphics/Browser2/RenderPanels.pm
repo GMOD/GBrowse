@@ -1279,7 +1279,6 @@ sub run_local_requests {
     my %feature_file_offsets;
 
     my @labels_to_generate = @$labels;
-    warn "run_local_requests(@labels_to_generate)";
 
     # this is now done in the subprocess
 #    foreach (@labels_to_generate) {
@@ -2482,7 +2481,8 @@ sub loaded_segment_outline {
 
 sub details_mult { 
     my $self = shift;
-    my $mult = $self->render->details_mult;
+    my $render = $self->render or return 1;
+    my $mult = $render->details_mult;
     return $mult;
 }
 

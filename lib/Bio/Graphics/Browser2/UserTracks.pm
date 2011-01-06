@@ -322,9 +322,6 @@ sub import_url {
 
     my $filename = $self->trackname_from_url($url, !$overwrite);
     my $file = $self->add_file($filename, 1);
-
-    warn "$self track_path = ",$self->track_path($file);
-    warn "$self track_conf = ",$self->track_conf($file);
     
     my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
 							  $self->track_path($file),
@@ -629,9 +626,6 @@ sub get_loader {
     my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";
     die $@ if $@;
-
-    warn "$self track_path = ",$self->track_path($file);
-    warn "$self track_conf = ",$self->track_conf($file);
     
     my $loader = $module->new($filename,
 			      $self->track_path($file),

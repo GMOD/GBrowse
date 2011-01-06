@@ -38,24 +38,58 @@ sub new {
     my $class = shift;
     my ($data_source,$session) = @_;
 
-    my $globals   = $data_source->globals;
-    my $uploadsid = $session->uploadsid;
-    my $sessionid = $session->id;
-    my $backend = $globals->user_account_db;
+    my $globals       = $data_source->globals;
+    my $uploadsid     = $session->uploadsid;
+    my $sessionid     = $session->id;
+    my $backend       = $globals->user_account_db;
     my $user_accounts = $globals->user_accounts;
     
+    my $implementer;
+
     if ($backend && $backend =~ /db/i && $user_accounts) {
-	return Bio::Graphics::Browser2::UserTracks::Database->_new($data_source, $globals, $uploadsid, $sessionid);
-    } elsif ($backend && $backend =~ /(filesystem|memory)/i) {
-	return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
+	$implementer = 'Bio::Graphics::Browser2::UserTracks::Database';
     } else {
-	return Bio::Graphics::Browser2::UserTracks::Filesystem->_new($data_source, $globals, $uploadsid);
+	$implementer = 'Bio::Graphics::Browser2::UserTracks::Filesystem';
     }
+
+    my $self = $implementer->_new($data_source, $globals, $uploadsid, $sessionid);
+    $self->is_admin(1) if $class->admin;
+    $self->create_track_lookup;
+    return $self;
 }
 
-sub uploadsid {shift->{uploadsid}}
+sub _new {
+    my $class = shift;
+    my ($data_source, $globals, $uploadsid, $sessionid) = @_;
+	
+    my $self = bless {
+		config	    => $data_source,
+		uploadsid   => $uploadsid,
+		globals	    => $globals,
+		sessionid   => $sessionid,
+		data_source => $data_source->name,
+    }, ref $class || $class;
+    return $self;
+}
 
-sub database { return (shift =~ /database/i) }
+##### CLASS METHOD #####
+sub admin     {0}
+########################
+
+sub uploadsid       {shift->{uploadsid}}
+sub database        {
+    my $self = shift;
+    return $self->isa('Bio::Graphics::Browser2::UserTracks::Database');
+}
+sub globals         {shift->{globals}       }
+sub data_source     {shift->{config}        }
+sub datasource_name {shift->{data_source}   }
+sub is_admin {
+    my $self = shift;
+    my $d    = $self->{is_admin};
+    $self->{is_admin} = shift if @_;
+    $d;
+}
 
 # Tracks - Returns an array of paths to a user's tracks.
 sub tracks {
@@ -125,13 +159,21 @@ sub conf_files {
     return grep {-e $_} map { $self->track_conf($file) } $self->tracks;
 }
 
+sub path {
+    my $self = shift;
+    my $uploadsid = $self->uploadsid;
+    my $source    = $self->data_source;
+    return $self->is_admin ? $source->admindata() : $source->userdata($uploadsid);
+}
+
 # Track Path (File) - Returns a verified path to the folder holding a track.
 sub track_path {
     my $self  = shift;
-    my $file = shift;
-    my $filename = $self->filename($file);
+    warn "track_path(@_), caller = ",join ' ',caller();
+    my $file  = shift;
+    my $filename    = $self->filename($file);
     my $folder_name = $self->escape_url($filename);
-    return File::Spec->catfile($self->path($file), $folder_name);
+    return File::Spec->catfile($self->path, $file, $folder_name);
 }
 
 # Blind Track Path (Filename) - Blindly attaches the userdata path to whatever filename you give it.
@@ -281,6 +323,9 @@ sub import_url {
 
     my $filename = $self->trackname_from_url($url, !$overwrite);
     my $file = $self->add_file($filename, 1);
+
+    warn "$self track_path = ",$self->track_path($file);
+    warn "$self track_conf = ",$self->track_conf($file);
     
     my $loader = Bio::Graphics::Browser2::DataLoader->new($filename,
 							  $self->track_path($file),
@@ -453,7 +498,7 @@ sub upload_file {
     
     
     my $fileid = $self->get_file_id($filename) if $self->database;
-    my $file = $self->database? $fileid? $fileid : $self->add_file($filename) : $filename;
+    my $file   = $self->database ? $fileid ? $fileid : $self->add_file($filename) : $filename;
     
     # guess the file type from the first non-blank line
     my ($type, $lines, $eol) = $self->guess_upload_type($file, $fh);
@@ -585,6 +630,9 @@ sub get_loader {
     my $module = "Bio::Graphics::Browser2::DataLoader::$type";
     eval "require $module";
     die $@ if $@;
+
+    warn "$self track_path = ",$self->track_path($file);
+    warn "$self track_conf = ",$self->track_conf($file);
     
     my $loader = $module->new($filename,
 			      $self->track_path($file),
@@ -593,6 +641,7 @@ sub get_loader {
 			      $self->uploadsid,
 	);
     $loader->strip_prefix($self->{config}->seqid_prefix);
+    $loader->force_category('General') if $self->is_admin;
     return $loader;
 }
 
@@ -808,33 +857,33 @@ sub _print_url {
 
 # These methods are replaced by methods in Filesystem.pm and Database.pm
 # Many of these functions are called asynchronously, if you want to connect an AJAX call to one of these functions add a hook in Action.pm
-sub get_file_id { warn "get_file_id() has been called, without properly inheriting subclass Datbase.pm"; }
-sub filename { warn "filename() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub nowfun { warn "nowfun() has been called, without properly inheriting subclass Datbase.pm"; }
-sub get_uploaded_files { warn "get_uploaded_files() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub get_public_files { warn "get_public_files() has been called, without properly inheriting subclass Datbase.pm"; }
-sub get_imported_files { warn "get_imported_files() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub get_shared_files { warn "get_shared_files() has been called, without properly inheriting subclass Datbase.pm"; }
-sub share { warn "share() has been called, without properly inheriting subclass Datbase.pm"; }
-sub unshare { warn "unshare() has been called, without properly inheriting subclass Datbase.pm"; }
-sub field { warn "field() has been called, without properly inheriting subclass Datbase.pm"; }
-sub update_modified { warn "update_modified() has been called, without properly inheriting subclass Datbase.pm"; }
-sub created { warn "created() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub modified { warn "modified() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub description { warn "description() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub add_file { warn "add_file() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub delete_file { warn "delete_file() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub is_imported { warn "is_imported() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub permissions { warn "permissions() has been called, without properly inheriting subclass Datbase.pm"; }
-sub is_mine { warn "is_mine() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub owner { warn "owner() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub is_shared_with_me { warn "is_shared_with_me() has been called, without properly inheriting subclass Datbase.pm"; }
-sub sharing_link { warn "sharing_link() has been called, without properly inheriting subclass Datbase.pm"; }
-sub file_type { warn "file_type() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub shared_with { warn "shared_with() has been called, without properly inheriting subclass Datbase.pm"; }
+sub get_file_id { warn "get_file_id() has been called, without properly inheriting subclass Database.pm"; }
+sub filename { warn "filename() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub nowfun { warn "nowfun() has been called, without properly inheriting subclass Database.pm"; }
+sub get_uploaded_files { warn "get_uploaded_files() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub get_public_files { warn "get_public_files() has been called, without properly inheriting subclass Database.pm"; }
+sub get_imported_files { warn "get_imported_files() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub get_shared_files { warn "get_shared_files() has been called, without properly inheriting subclass Database.pm"; }
+sub share { warn "share() has been called, without properly inheriting subclass Database.pm"; }
+sub unshare { warn "unshare() has been called, without properly inheriting subclass Database.pm"; }
+sub field { warn "field() has been called, without properly inheriting subclass Database.pm"; }
+sub update_modified { warn "update_modified() has been called, without properly inheriting subclass Database.pm"; }
+sub created { warn "created() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub modified { warn "modified() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub description { warn "description() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub add_file { warn "add_file() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub delete_file { warn "delete_file() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub is_imported { warn "is_imported() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub permissions { warn "permissions() has been called, without properly inheriting subclass Database.pm"; }
+sub is_mine { warn "is_mine() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub owner { warn "owner() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub is_shared_with_me { warn "is_shared_with_me() has been called, without properly inheriting subclass Database.pm"; }
+sub sharing_link { warn "sharing_link() has been called, without properly inheriting subclass Database.pm"; }
+sub file_type { warn "file_type() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub shared_with { warn "shared_with() has been called, without properly inheriting subclass Database.pm"; }
 sub file_exists { warn "file_exists() has been called, without properly inheriting subclass Filesystem.pm"; }
-sub change_userid { warn "change_userid() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
-sub change_uploadsid { warn "change_uploadsid() has been called, without properly inheriting a subclass (like Filesystem.pm or Datbase.pm)"; }
+sub change_userid { warn "change_userid() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub change_uploadsid { warn "change_uploadsid() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
 
 package Bio::Graphics::Browser2::UserConf;
 
@@ -886,21 +935,6 @@ sub CLOSE { close shift->{fh} }
 package Bio::Graphics::Browser2::AdminTracks;
 use base 'Bio::Graphics::Browser2::UserTracks';
 
-sub path {
-    my $self    = shift;
-    my $globals   = $self->{globals};
-    my $admin_dbs = $globals->admin_dbs 
-	or return $self->SUPER::path;
-    my $source    = $self->{config}->name;
-    my $path      = File::Spec->catfile($admin_dbs,$source);
-    return $path;
-}
-
-sub get_loader {
-    my $self = shift;
-    my $loader = $self->SUPER::get_loader(@_);
-    $loader->force_category('General');
-    return $loader;
-}
+sub admin {1}
 
 1;

@@ -252,7 +252,7 @@ sub load {
     eval {
 	    $self->set_status('starting load');
 	
-	    mkdir $self->sources_path or die $!;
+	    mkdir $self->sources_path or die "Couldn't make ",$self->sources_path," directory: $!";
 	    my $source_file = IO::File->new($self->source_file, '>');
 
 	    $self->open_conf;

@@ -465,6 +465,14 @@ END
     return $userid;
 }
 
+sub set_confirmed_from_username {
+    my $self = shift;
+    my $username = shift;
+    my $userdb = $self->dbi;
+    my $userid = $self->userid_from_username($username) or return;
+    return $userdb->do('UPDATE users SET confirmed=1 WHERE userid=?',undef,$userid);
+}
+
 # Check Uploads ID (User ID, Uploads ID) - Makes sure a user's ID is in the database.
 sub check_uploads_id {
     my $self = shift;
@@ -526,6 +534,28 @@ sub set_session_and_uploadsid {
     $userdb->do('UPDATE session SET sessionid=?,uploadsid=? WHERE userid=?',
 		undef,
 		$sessionid,$uploadsid,$userid) or die $userdb->errstr;
+}
+
+sub delete_user_by_username {
+    my $self = shift;
+    my $username = shift;
+    my $userdb = $self->dbi;
+    my $userid = $self->userid_from_username($username) or return;
+    local $userdb->{AutoCommit} = 0;
+    local $userdb->{RaiseError} = 1;
+    eval {
+	$userdb->do('DELETE FROM users        WHERE userid=?',undef,$userid);
+	$userdb->do('DELETE FROM session      WHERE userid=?',undef,$userid);
+	$userdb->do('DELETE FROM openid_users WHERE userid=?',undef,$userid);
+	$userdb->do('DELETE FROM uploads      WHERE userid=?',undef,$userid);
+	$userdb->do('DELETE FROM sharing      WHERE userid=?',undef,$userid);
+	$userdb->commit();
+    };
+    if ($@) {
+	warn "Account deletion failed due to $@. Rolling back.";
+	eval {$userdb->rollback()};
+    }
+    1;
 }
 
 #####################################
@@ -624,7 +654,7 @@ sub do_add_user_check {
 # Add User - Adds a new non-openid user to the user database.
 sub do_add_user {
   my $self = shift;
-  my ($user,$email,$fullname,$pass,$sessionid) = @_;
+  my ($user,$email,$fullname,$pass,$sessionid,$allow_admin) = @_;
   
   my $userdb = $self->dbi;
   
@@ -635,7 +665,7 @@ sub do_add_user {
       unless $self->check_user($user);
 		  
   return $self->string_result("Invalid username. Try a different one.")
-      if $self->check_admin($user);
+      if !$allow_admin && $self->check_admin($user);
 
   # see if this username is already taken
   return (200,'text/plain','Username already in use, please try another.')

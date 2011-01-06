@@ -167,6 +167,14 @@ sub userdata {
     return $globals->user_dir($self->name,@path);
 }
 
+sub admindata {
+    my $self = shift;
+    my @path = @_;
+    my $globals = $self->globals;
+    return $self->userdata(@path) unless $globals->admin_dbs;
+    return $globals->admin_dir($self->name,@path);
+}
+
 sub taxon_id {
     my $self = shift;
     my $meta = $self->metadata or return;

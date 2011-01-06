@@ -13,26 +13,18 @@ use File::Path qw(rmtree);
 
 sub _new {
     my $class = shift;
-    my $VERSION = '0.5';
-    my ($data_source, $globals, $uploadsid, $sessionid) = @_;
+    my $self  = $class->SUPER::_new(@_);
     
     # Attempt to login to the database or die, and access the necessary tables or create them.
+    my $globals     = $self->globals;
     my $credentials = $globals->user_account_db or warn "No credentials given to uploads DB in GBrowse.conf";
-    my $uploadsdb = DBI->connect($credentials);
+    my $uploadsdb   = DBI->connect($credentials);
     unless ($uploadsdb) {
         print header();
         print "Error: Could not open uploads database.";
         die "Could not open uploads database with $credentials";
     }
-    
-    my $self = bless {
-        config      => $data_source,
-        uploadsdb   => $uploadsdb,
-        sessionid   => $sessionid,
-        uploadsid   => $uploadsid,
-        globals     => $globals,
-        data_source => $data_source->name,
-    }, ref $class || $class;
+    $self->uploadsdb($uploadsdb);
     
     # Check to see if user accounts are enabled, set some commonly-used variables.
     if ($globals->user_accounts) {
@@ -42,13 +34,15 @@ sub _new {
         $self->{userid}   = $self->{userdb}->userid_from_sessionid($self->{sessionid});
     }
     
-    $self->create_track_lookup;
     return $self;
 }
 
-sub globals {shift->{globals}}
-
-sub datasource_name {shift->{data_source}}
+sub uploadsdb {
+    my $self = shift;
+    my $d    = $self->{uploadsdb};
+    $self->{uploadsdb} = shift if @_;
+    $d;
+}
 
 # Path - Returns the path to a specified file's owner's (or just the logged-in user's) data folder.
 sub path {
@@ -57,12 +51,16 @@ sub path {
     my ($userid, $uploadsid);
     if ($file) {
         my $userdb = $self->{userdb};
-        $userid = $self->owner($file);
+        $userid    = $self->owner($file);
         $uploadsid = $userdb->get_uploads_id($userid);
     } else {
         $uploadsid = $self->uploadsid;
     }
-    return $self->{config}->userdata($uploadsid);
+    if ($uploadsid eq $self->uploadsid) {
+	return $self->SUPER::path();
+    } else {
+	return $self->data_source->userdata($uploadsid);
+    }
 }
 
 # Get File ID (File ID [, Owner ID]) - Returns a file's validated ID from the database.
@@ -459,6 +457,7 @@ sub add_file {
 sub delete_file {
     my $self = shift;
     my $file = shift or return;
+
     my $userid = $self->{userid};
     my $uploadsid = $self->uploadsid;
     my $filename = $self->filename($file);

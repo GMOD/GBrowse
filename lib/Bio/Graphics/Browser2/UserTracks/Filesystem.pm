@@ -20,28 +20,6 @@ use Carp "cluck";
 # Each directory has a .conf file that describes its contents and configuration.
 # There will also be data files associated with the configuration.
 
-sub _new {
-	my $class = shift;
-	my $VERSION = '0.3';
-	my ($data_source, $globals, $uploadsid) = @_;
-	
-    my $self = bless {
-		config		 => $data_source,
-		uploadsid	 => $uploadsid,
-		globals		 => $globals,
-    }, ref $class || $class;
-    
-    $self->create_track_lookup;
-    return $self;
-}
-
-# Path - Returns the path to a specified file's owner's (or just the logged-in user's) data folder.
-sub path {
-    my $self = shift;
-    my $uploadsid = $self->uploadsid;
-    return $self->{config}->userdata($uploadsid);
-}
-
 # Get Uploaded Files (User) - Returns an array of the paths of files owned by a user.
 sub get_uploaded_files {
     my $self = shift;

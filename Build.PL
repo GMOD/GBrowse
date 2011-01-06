@@ -78,16 +78,15 @@ my $build = GBrowseInstall->new(
 
 print STDERR <<END;
 **** WARNING *****************************************************************************************
-You are trying to install a development version of GBrowse. This
-particular version has known critical bugs. For now, you are recommended
-to use CPAN version 2.17, or SVN branch release-2_17-bugfixes
-(https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/branches/release-2_17-bugfixes)
+If you are upgrading from an earlier version of GBrowse and are using named user accounts, please run
+bin/gbrowse_metadb_config.pl to update your user account database. This will be done automatically for
+you when you do Build install.
 ******************************************************************************************************
 END
 
-print STDERR "Continue? [y/n] ";
-my $line = <>;
-exit 0 unless $line =~ /[yY]/;
+#print STDERR "Continue? [y/n] ";
+#my $line = <>;
+#exit 0 unless $line =~ /[yY]/;
 
 if(-e '/proc/filesystems' 
    && `grep selinux /proc/filesystems`) {

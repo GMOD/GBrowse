@@ -199,7 +199,7 @@ sub check_table {
     # If an extra column exists, drop it.
     my @columns_to_drop   = grep {!$columns->{$_}} keys %existing_columns;
     if (@columns_to_drop) {
-	    print STDERR "Dropping the following columns: ",join(',',@columns_to_drop),".\n";
+	    print STDERR "Dropping the following columns from $name: ",join(',',@columns_to_drop),".\n";
 	    if ($type !~ /sqlite/i) {
 	        for my $c (@columns_to_drop) {
 	            $database->do("ALTER TABLE $name DROP $c");
@@ -266,12 +266,9 @@ sub check_sessions {
 	my $sql         = "SELECT count(*) FROM session WHERE sessionid=? AND uploadsid=?";
 	my $rows        = $database->selectrow_array($sql,undef,$session_id,$uploadsid);
 	return if $rows == 0;
-	$sql       = "UPDATE session SET uploadsid=? WHERE sessionid=?";
-	$rows      = $database->do($sql,undef,$uploadsid,$session_id) && $users_updated++;
-	return if $rows > 0;
-#	$database->do('insert INTO session (sessionid,uploadsid) VALUES(?,?)',
-#		      undef,$session_id,$uploadsid)
-#	    && $users_created++;
+	$sql       = "UPDATE session SET uploadsid=? WHERE sessionid=? AND uploadsid!=?";
+	$rows      = $database->do($sql,undef,$uploadsid,$session_id,$uploadsid);
+	$users_updated += $rows;
     };
     eval {
 	CGI::Session->find($session_driver,$do_session_check,$session_args);
@@ -369,7 +366,7 @@ sub check_data_sources {
 
 # Check All Files () - Checks the integrity of the file data for every user.
 sub check_all_files {
-    print STDERR "Checking for any files not in the database...\n";
+    print STDERR "Checking for any files not in the database...";
     # Get all data sources
     my $userdata_folder = $globals->user_dir;
     my @data_sources;
@@ -397,12 +394,12 @@ sub check_all_files {
 	closedir(DS);
 
         foreach my $uploadsid (@uploads_ids) {
-	        my $userid  = check_uploadsid($source_path,$uploadsid) or next;
+	    my $userid  = check_uploadsid($source_path,$uploadsid) or next;
             my $this_ok = check_files($userid,$uploadsid, $data_source);
             $all_ok     = $this_ok if $all_ok;
         }
     }
-    print STDERR "All files are accounted for.\n" if $all_ok;
+    print STDERR "all files are accounted for.\n" if $all_ok;
 }
 
 # remove dangling upload directories
@@ -410,7 +407,9 @@ sub check_uploadsid {
     my ($source_path,$uploadsid) = @_;
     my ($userid)  = $database->selectrow_array('select (userid) from session where uploadsid=?',
 					       undef,$uploadsid);
+    my $count;
     unless ($userid) {
+	print STDERR "\n" unless $count++;
 	print STDERR "Uploadsid $uploadsid has no corresponding user. Removing.\n";
 	remove_tree(File::Spec->catfile($source_path,$uploadsid));
 	return;
@@ -440,9 +439,11 @@ sub check_files {
     closedir(D);
 	
     my $all_ok = 1;
+    my $count;
     foreach my $file (@files_in_folder) {
 	my $found = grep(/$file/, @files_in_db);
 	unless ($found) {
+	    print STDERR "\n" unless $count++;
 	    add_file($file, $userid, $uploadsid, $data_source, $file) &&
 		print STDERR "- File \"$file\" found in the \"$data_source/$uploadsid\" folder without metadata, added to database.\n";
 	    $all_ok = 0;
@@ -548,7 +549,6 @@ sub add_file {
 
     my $trackid = md5_hex($uploadsid.$filename.$data_source);
     my $now = nowfun();
-    warn "userid = $userid";
     $database->do("INSERT INTO uploads (trackid, userid, path, description, imported, creation_date, modification_date, sharing_policy, data_source) VALUES (?, ?, ?, ?, ?, $now, $now, ?, ?)", undef, $trackid, $userid, $filename, $description, $imported, $shared, $data_source);
     return $trackid;
 }

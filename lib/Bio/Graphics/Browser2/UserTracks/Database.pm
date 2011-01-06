@@ -49,13 +49,13 @@ sub path {
     my $self = shift;
     my $file = shift;
     my ($userid, $uploadsid);
-    if ($file) {
+    if (defined $file) {
         my $userdb = $self->{userdb};
         $userid    = $self->owner($file);
         $uploadsid = $userdb->get_uploads_id($userid);
-    } else {
-        $uploadsid = $self->uploadsid;
     }
+
+    $uploadsid ||= $self->uploadsid;
     if ($uploadsid eq $self->uploadsid) {
 	return $self->SUPER::path();
     } else {

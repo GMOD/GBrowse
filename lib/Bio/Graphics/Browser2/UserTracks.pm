@@ -169,11 +169,10 @@ sub path {
 # Track Path (File) - Returns a verified path to the folder holding a track.
 sub track_path {
     my $self  = shift;
-    warn "track_path(@_), caller = ",join ' ',caller();
     my $file  = shift;
     my $filename    = $self->filename($file);
     my $folder_name = $self->escape_url($filename);
-    return File::Spec->catfile($self->path, $file, $folder_name);
+    return File::Spec->catfile($self->path($file), $folder_name);
 }
 
 # Blind Track Path (Filename) - Blindly attaches the userdata path to whatever filename you give it.

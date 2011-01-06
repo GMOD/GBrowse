@@ -161,6 +161,13 @@ sub user_dir {
     return $self->tmpdir('userdata',@components);
 }
 
+sub admin_dir {
+    my $self = shift;
+    my @components = @_;
+    my $path = $self->admin_dbs();
+    return File::Spec->catfile($path,@components);
+}
+
 sub tmpimage_dir {
     my $self  = shift;
     return $self->tmpdir('images',@_);

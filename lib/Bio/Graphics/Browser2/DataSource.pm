@@ -661,7 +661,8 @@ sub type2label {
 sub _type2label {
     my $self = shift;
     my ($storage_hash,$type,$dbid) = @_;
-    my $type2label = $storage_hash->{_type2label} 
+
+    my $type2label = $storage_hash->{_type2label}{$storage_hash}
                  ||= $self->invert_types($storage_hash->{config});
     $dbid =~ s/:database$//;
     my @labels = keys %{$type2label->{lc $type}{$dbid}};
@@ -695,12 +696,12 @@ sub invert_types {
 
   my %inverted;
   for my $label (keys %{$config}) {
-    my $feature = $self->setting($label => 'feature') or next;
-    my ($dbid)  = $self->db_settings($label) or next;
-    $dbid =~ s/:database$//;
-    foreach (shellwords($feature||'')) {
-      $inverted{lc $_}{$dbid}{$label}++;
-    }
+      my $feature = $self->setting($label => 'feature') or next;
+      my ($dbid)  = $self->db_settings($label) or next;
+      $dbid =~ s/:database$//;
+      foreach (shellwords($feature||'')) {
+	  $inverted{lc $_}{$dbid}{$label}++;
+      }
   }
   \%inverted;
 }

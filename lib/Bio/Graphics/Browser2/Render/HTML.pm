@@ -728,50 +728,6 @@ sub render_login {
     return $self->login_manager->render_login;
 }
 
-# this is the contents of the plugin-generated login form
-sub wrap_login_form {
-    my $self = shift;
-    my $plugin = shift;
-
-    my $plugin_type  = $plugin->type;
-    my $plugin_name  = $plugin->name;
-    my $auth_hint    = $plugin->authentication_hint;
-
-    my $form = $plugin->configure_form;
-    my $html = div(
-	div({-id=>'login_message'},''),
-	b($auth_hint ? $self->translate('LOGIN_REQUEST',"to $auth_hint")
-	   	     : $self->translate('LOGIN_REQUEST')),
-	start_form({-name     => 'configure_plugin',
-		   -id        => 'plugin_configure_form',
-		   -onSubmit  => 'return false'}
-	),
-	$form,
-	hidden(-name=>'plugin',-value=>$plugin_name),
-	button(
-	    -name    => $self->translate('Cancel'),
-	    -onClick => 'Balloon.prototype.hideTooltip(1);login_blackout(false)'
-	),
-	button(
-	    -name    => 'plugin_button',
-	    -value   => $self->translate('LOGIN'),
-	    -onClick => "Controller.plugin_authenticate(\$('plugin_configure_form'),\$('login_message'))",
-	),
-	checkbox(
-	    -id      => 'authenticate_remember_me',
-	    -name    => 'remember',
-	    -label   => $self->translate('REMEMBER_ME')
-	),
-	end_form(),
-	script({-type=>'text/javascript'},<<EOS )
-Event.observe(\$('plugin_configure_form'),'keydown',
-      function(e){ if (e.keyCode==Event.KEY_RETURN)
-	      Controller.plugin_authenticate(\$('plugin_configure_form'),\$('login_message'))})
-EOS
-    );
-    return $html;
-}
-
 # For the subset of plugins that are named in the 'quicklink plugins' option, create quick links for them.
 sub plugin_links {
   my $self    = shift;
@@ -2306,22 +2262,25 @@ RULER
 sub source_menu {
   my $self = shift;
 
-  my $globals = $self->globals;
+  my $globals  = $self->globals;
+  my $username = $self->session->username if $self->session->private;
 
   my @sources      = $globals->data_sources;
   my $show_sources = $self->setting('show sources');
   $show_sources    = 1 unless defined $show_sources;   # default to true
-  @sources         = grep {$globals->data_source_show($_)} @sources;
-  my $sources = $show_sources && @sources > 1;
+  @sources         = grep {$globals->data_source_show($_,$username)} @sources;
+  my $sources      = $show_sources && @sources > 1;
 
   my %descriptions = map {$_=>$globals->data_source_description($_)} @sources;
   @sources         = sort {$descriptions{$a} cmp $descriptions{$b}} @sources;
 
   my %sources      = map {$_=>1} @sources;
-  unless ($sources{$self->data_source->name}) { # for regexp-based sources
-      my $n = $self->data_source->name;
-      $descriptions{$n} = $self->data_source->description;
-      @sources         = sort {$descriptions{$a} cmp $descriptions{$b}} (@sources,$n);
+  
+  my $current_source = $self->data_source->name;
+  if (!$sources{$current_source} && 
+      $globals->data_source_show($current_source,$username) ) { # for regexp-based sources
+      $descriptions{$current_source} = $self->data_source->description;
+      @sources          = sort {$descriptions{$a} cmp $descriptions{$b}} (@sources,$current_source);
   }
 
   return b($self->translate('DATA_SOURCE')).br.

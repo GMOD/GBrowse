@@ -77,6 +77,7 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
+  $data_source->set_username($session->username) if $session->private;
   $self;
 }
 
@@ -228,13 +229,16 @@ sub run {
   warn "username = ",       $self->session->username if $debug;
 
   if ($self->data_source->must_authenticate) {
-      if (!$self->session->private) {
+      if ($self->session->private) {
+	  # login session - make sure that the data source has the information needed
+	  # to restrict tracks according to policy
+	  my $p = $self->data_source->auth_plugin ? $self->init_plugins() : undef;
+	  $self->data_source->authenticator($p);
+      } else {
+	  # authentication required, but not a login session, so initiate authentication request
 	  $self->force_authentication;
 	  $self->session->flush;
 	  return;
-      } else {
-	  my $p = $self->data_source->auth_plugin ? $self->init_plugins() : undef;
-	  $self->data_source->authenticator($p);
       }
   }
 
@@ -1770,8 +1774,8 @@ sub force_authentication {
     if (Bio::Graphics::Browser2::Action->is_authentication_event) {
 	warn "running preauthenticated asynchronous event";
 	$self->run_asynchronous_event;
-	return
-    } 
+	return;
+    }
 
     if (param('action')) {
 	print CGI::header(-status => '403 Forbidden');
@@ -1794,7 +1798,11 @@ sub force_authentication {
 					  $self->get_post_load_functions,
 					  $action);
     $output .= div({-id=>'source_form'},$self->source_form());
-    $output .= $self->render_login_required($action);
+    if (param('openid_confirm')) {
+	$output .= $self->login_manager->render_confirm;
+    } else {
+	$output .= $self->render_login_required($action);
+    }
     $output .= "<hr>";
     $output .= $self->render_bottom();
     print $output;
@@ -1836,7 +1844,7 @@ sub _update_state {
 	
 	$state->{ref}          ||= $seg->seq_id;
 	$state->{view_start}   ||= $seg->start; # The user has selected the area that they want to see. Therefore, this
-	$state->{view_stop}    ||= $seg->stop;  # will be the view_start and view_stop, rather than just start and stop.
+	$state->{view_stop}    ||= $seg->end;   # will be the view_start and view_stop, rather than just start and stop.
 	                                        # asynchronous_update_coordinates will multiply this by the correct factor
 	                                        # to find the size of the segment to load
 

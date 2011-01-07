@@ -214,7 +214,8 @@ function load_login_balloon(event,session,username,openid) {
                '</table></font>'+
                '<img id="loginBusy" src="'+Controller.button_url('spinner.gif')+'" style="display:none;float:left" />' +
 	       '&nbsp;<a style="float:right;font-size:90%" href="javascript:void(0)" '+
-	                'onClick="Balloon.prototype.hideTooltip(1)">' + Controller.translate('CLOSE') + '</a>' +
+	                'onClick="Balloon.prototype.hideTooltip(1);login_blackout(false)">' 
+	                    + Controller.translate('CLOSE') + '</a>' +
 	       '</form>';
 
     //GBox.showTooltip(event,html,1,320);

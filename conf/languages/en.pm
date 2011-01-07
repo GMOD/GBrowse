@@ -723,12 +723,10 @@ END
    CREATED                   => 'Created %s',
    MODIFIED                  => 'Modified %s',
    NO_FURTHER_INFO_AVAILABLE => 'No further information on <b>%s</b> is available.',
-   ABOUT_ME_TEXT             => '<h2>Session IDs</h2>'.
-                                '<p>If you wish to use a script to upload or download browser data from this session'.
-                                'you will need the user and/or upload IDs for the currently active session.</p>'.
-                                '<p>Your   userID is <b>%s</b></p>'.
-                                '<p>Your uploadID is <b>%s</b></p>',
-
+   ABOUT_ME_TEXT             => '<h2>User IDs</h2>'.
+                                '<p>Your    userID is <b>%s</b></p>'.
+                                '<p>Your sessionID is <b>%s</b></p>'.
+                                '<p>Your  uploadID is <b>%s</b></p>',
    CLICK_MODIFY_SUBTRACK_SEL => 'Click to modify subtrack selections.',
    CLICK_FOR_MORE            => 'Click for more',
    PLUGIN_BASE_CLASS_DUMP    => "This is the base class for all GBrowse plugins.\n".

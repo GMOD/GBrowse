@@ -97,6 +97,14 @@ sub run {
     $render->set_source() && exit;  # may cause a redirect and exit 
     $render->init();
 
+    if ($render->data_source->must_authenticate 
+	&& !$self->session->private) {
+	my $base = $render->globals->gbrowse_url;
+	print $self->header();
+	print CGI->h1('Authentication required. Please log into',CGI->a({-href=>$base},'GBrowse'),'from this computer.');
+	return;
+    }
+
     $render->add_user_tracks($render->data_source);
     $render->update_state();
 

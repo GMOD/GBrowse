@@ -543,6 +543,7 @@ lib/Bio/Graphics/Browser2/Markup.pm
 lib/Bio/Graphics/Browser2/OptionPick.pm
 lib/Bio/Graphics/Browser2/PadAlignment.pm
 lib/Bio/Graphics/Browser2/Plugin.pm
+lib/Bio/Graphics/Browser2/Plugin/AuthPlugin.pm
 lib/Bio/Graphics/Browser2/PluginSet.pm
 lib/Bio/Graphics/Browser2/Realign.pm
 lib/Bio/Graphics/Browser2/Region.pm

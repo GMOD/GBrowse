@@ -35,7 +35,7 @@ sub segment     {shift->render->segment}
 sub is_authentication_event {
     my $class = shift;
     my $action = CGI::param('action');
-    my %ok = map {$_=>1} qw(authorize_login plugin_authenticate plugin_login get_translation_tables reconfigure_plugin);
+    my %ok = map {$_=>1} qw(gbrowse_login authorize_login plugin_authenticate plugin_login get_translation_tables reconfigure_plugin);
     return $ok{$action};
 }
 
@@ -811,7 +811,7 @@ sub ACTION_about_me {
     my $state = $self->state;
     my $session=$self->render->session;
 
-    my $html = $q->div($self->render->translate('ABOUT_ME_TEXT',$session->id,$session->uploadsid));
+    my $html = $q->div($self->render->translate('ABOUT_ME_TEXT',$session->username||'anonymous user',$session->id,$session->uploadsid));
     return (200,'text/html',$html);
 }
 
@@ -870,7 +870,7 @@ sub ACTION_plugin_login {
     $render->init_plugins();
     my $plugin = eval{$render->plugins->auth_plugin} 
       or return (204,'text/plain','no authorizer defined');
-    my $html = $render->wrap_login_form($plugin);
+    my $html = $render->login_manager->wrap_login_form($plugin);
     return (200,'text/html',$html);
 }
 

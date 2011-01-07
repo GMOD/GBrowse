@@ -46,6 +46,52 @@ sub render_confirm {
     return $output;
 }
 
+# this is the contents of the plugin-generated login form
+sub wrap_login_form {
+    my $self = shift;
+    my $plugin = shift;
+    my $render     = $self->renderer;
+
+    my $plugin_type  = $plugin->type;
+    my $plugin_name  = $plugin->name;
+    my $auth_hint    = $plugin->authentication_hint;
+    my $auth_help    = $plugin->authentication_help;
+    
+    my $form = $plugin->configure_form;
+    my $html = div(
+	div({-id=>'login_message'},''),
+	b($auth_hint ? $render->translate('LOGIN_REQUEST',"to $auth_hint")
+	   	     : $render->translate('LOGIN_REQUEST','')),
+	start_form({-name     => 'configure_plugin',
+		   -id        => 'plugin_configure_form',
+		   -onSubmit  => 'return false'}
+	),
+	$form,
+	hidden(-name=>'plugin',-value=>$plugin_name),
+	button(
+	    -name    => $render->translate('Cancel'),
+	    -onClick => 'Balloon.prototype.hideTooltip(1);login_blackout(false)'
+	),
+	button(
+	    -name    => 'plugin_button',
+	    -value   => $render->translate('LOGIN'),
+	    -onClick => "Controller.plugin_authenticate(\$('plugin_configure_form'),\$('login_message'))",
+	),
+	checkbox(
+	    -id      => 'authenticate_remember_me',
+	    -name    => 'remember',
+	    -label   => $render->translate('REMEMBER_ME')
+	),
+	end_form(),
+	script({-type=>'text/javascript'},<<EOS )
+Event.observe(\$('plugin_configure_form'),'keydown',
+      function(e){ if (e.keyCode==Event.KEY_RETURN)
+	      Controller.plugin_authenticate(\$('plugin_configure_form'),\$('login_message'))})
+EOS
+    );
+    $html .= div($auth_help) if $auth_help;
+    return $html;
+}
 
 sub render_plugin_login {
     my $self = shift;

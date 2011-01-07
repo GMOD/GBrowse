@@ -45,7 +45,11 @@ sub set_authenticator { shift->{'.authenticator'} = shift;     }
 sub authenticator     { shift->{'.authenticator'};             }
 
 # get or set the username used in authentication processes
-sub set_username { shift->{'.authenticated_username'} = shift; }
+sub set_username { 
+    my $self = shift;
+    my $username = shift;
+    $self->{'.authenticated_username'} = $username;
+}
 sub username     { 
     my $self = shift;
     return $self->{'.authenticated_username'} || CGI->remote_user;
@@ -61,8 +65,8 @@ sub authorized {
 
   return 1 unless $restrict;
   my $host     = CGI->remote_host;
-  my $addr     = $self->username;
-  my $user     = CGI->remote_user;
+  my $addr     = CGI->remote_addr;
+  my $user     = $self->username;
 
   undef $host if $host eq $addr;
   return $restrict->($host,$addr,$user) if ref $restrict eq 'CODE';
@@ -81,7 +85,7 @@ sub authorized {
       $mode = $value;
       next;
     }
-    my @values = split /[^\w.-]/,$value;
+    my @values = split /[^\w.@-]/,$value;
 
     if ($directive eq 'allow from') {
       push @allow,@values;

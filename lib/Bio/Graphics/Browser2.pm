@@ -116,7 +116,7 @@ sub openid_url  { shift->url_path('openid')             }
 sub js_url      { shift->url_path('js')                 }
 sub help_url    { shift->url_path('gbrowse_help')       }
 sub stylesheet_url   { shift->url_path('stylesheet')    }
-
+sub auth_plugin { shift->setting(general=>'authorization plugin') }
 
 # this returns the base URL and path info for use in constructing
 # links. For example, if gbrowse is running at http://foo.bar/cgi-bin/gb2/gbrowse/yeast,
@@ -303,10 +303,21 @@ sub data_source_description {
   return $self->setting($dsn=>'description');
 }
 
+sub data_source_restrict {
+  my $self = shift;
+  my $dsn  = shift;
+  return $self->setting($dsn=>'restrict');
+}
+
 sub data_source_show {
     my $self = shift;
-    my $dsn  = shift;
+    my $dsn      = shift;
+    my $username = shift;
     return if $self->setting($dsn=>'hide');
+
+    # because globals are cached between use, we do not want usernames
+    # to be defined outside the scope of this call
+    local $self->{'.authenticated_username'} = $username if defined $username;
     return $self->authorized($dsn);
 }
 

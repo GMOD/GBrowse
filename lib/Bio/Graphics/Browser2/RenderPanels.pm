@@ -655,7 +655,7 @@ sub run_remote_requests {
   my $self      = shift;
   my ($requests,$args,$labels) = @_;
 
-  warn "[$$] run_remote_requests on @$labels"; #if DEBUG;
+  warn "[$$] run_remote_requests on @$labels" if DEBUG;
 
   my @labels_to_generate = @$labels;
   return unless @labels_to_generate;
@@ -1248,7 +1248,7 @@ sub run_local_requests {
 
     my $time     = time();
 
-    warn "[$$] run_local_requests on @$labels";# if DEBUG;
+    warn "[$$] run_local_requests on @$labels" if DEBUG;
 
     $labels    ||= [keys %$requests];
 

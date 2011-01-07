@@ -253,8 +253,13 @@ sub config {
 
 sub must_authenticate {
     my $self = shift;
-    return $self->global_setting('must authenticate');
+    my $restrict = $self->global_setting('restrict') ||
+	          $self->globals->data_source_restrict($self->name)
+		  or return;
+    return $restrict =~ /require\s+(valid-user|user|group)/;
 }
+
+sub auth_plugin { shift->globals->auth_plugin }
 
 sub details_multiplier {
     my $self  = shift;

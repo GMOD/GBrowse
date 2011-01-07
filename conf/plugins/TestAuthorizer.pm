@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser2::Plugin::TestAuthorizer;
 # $Id$
 use strict;
-use base Bio::Graphics::Browser2::Plugin::AuthPlugin;
+use base 'Bio::Graphics::Browser2::Plugin::AuthPlugin';
 
 sub authenticate {
     my $self = shift;
@@ -11,10 +11,6 @@ sub authenticate {
     return ($name,'Lincoln Stein');  # username, fullname
 }
 
-# use this to return a hint about what type of account is wanted
-sub authentication_hint {
-    return 'your FooBar LDAP  account';
-}
 
 1;
 

@@ -227,12 +227,15 @@ sub run {
   warn "private session = ",$self->session->private if $debug;
   warn "username = ",       $self->session->username if $debug;
 
-  if ( $self->data_source->must_authenticate &&
-       !$self->session->private) {
-      warn "NEED AUTHENTICATED SESSION HERE";
-      $self->force_authentication;
-      $self->session->flush;
-      return;
+  if ($self->data_source->must_authenticate) {
+      if (!$self->session->private) {
+	  $self->force_authentication;
+	  $self->session->flush;
+	  return;
+      } else {
+	  my $p = $self->data_source->auth_plugin ? $self->init_plugins() : undef;
+	  $self->data_source->authenticator($p);
+      }
   }
 
   warn "[$$] add_user_tracks()" if $debug;
@@ -1780,7 +1783,7 @@ sub force_authentication {
     $self->render_header();
 
     my $action;
-    if ($self->globals->auth_plugin) {
+    if ($self->data_source->auth_plugin) {
 	$action = "GBox.showTooltip(event,'url:?action=plugin_login',true)";
     } else {
  	$action = $self->login_manager->login_script();

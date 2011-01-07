@@ -40,6 +40,17 @@ sub label_options {
     return $self->SUPER::_setting($label);
 }
 
+# get or set the authenticator used to map usernames onto groups
+sub set_authenticator { shift->{'.authenticator'} = shift;     }
+sub authenticator     { shift->{'.authenticator'};             }
+
+# get or set the username used in authentication processes
+sub set_username { shift->{'.authenticated_username'} = shift; }
+sub username     { 
+    my $self = shift;
+    return $self->{'.authenticated_username'} || CGI->remote_user;
+}
+
 # implement the "restrict" option
 sub authorized {
   my $self  = shift;
@@ -50,8 +61,8 @@ sub authorized {
 
   return 1 unless $restrict;
   my $host     = CGI->remote_host;
+  my $addr     = $self->username;
   my $user     = CGI->remote_user;
-  my $addr     = CGI->remote_addr;
 
   undef $host if $host eq $addr;
   return $restrict->($host,$addr,$user) if ref $restrict eq 'CODE';
@@ -100,9 +111,15 @@ sub authorized {
       $users{$user}++ if defined $user;
     }
     if ($directive eq 'require group') {
-      croak "Sorry, but gbrowse does not support the require group limit.  Use a subroutine to implement role-based authentication.";
+	my $auth_plugin = $self->authenticator
+	    or croak "To use the 'require group' limit you must load a authentication plugin. Otherwise use a subroutine to implement role-based authentication.";
+	$user_directive++;
+	for my $grp (@values) {
+	    $users{$user} ||= $auth_plugin->user_in_group($user,$_);
+	}
     }
   }
+
   my $allow = $mode eq  'allow,deny' ? match_host(\@allow,$host,$addr) && !match_host(\@deny,$host,$addr)
                       : 'deny,allow' ? !match_host(\@deny,$host,$addr) ||  match_host(\@allow,$host,$addr)
 		      : croak "$mode is not a valid authorization mode";

@@ -18,7 +18,7 @@ sub new {
   warn "initializing plugins with $config..." if DEBUG;
   my @plugins = shellwords($config->plugins);
   # only one authorization plugin allowed, from globals
-  if (my $auth = $config->globals->auth_plugin) {
+  if (my $auth = $config->auth_plugin) {
       push @plugins,$auth;
   }
   warn "PLUGINS = @plugins" if DEBUG;

@@ -3,7 +3,7 @@ package Bio::Graphics::Browser2::Plugin::AuthPlugin;
 
 =head1 NAME
 
-Bio::Graphics::Browser2::Plugin::AuthPlugin -- Base class for authorization plugins
+Bio::Graphics::Browser2::Plugin::AuthPlugin -- Base class for authentication plugins
 
 =head1 SYNOPSIS
 
@@ -135,7 +135,7 @@ sub description {
     "It was written by Lincoln Stein.");
 }
 
-sub type { 'authorizer' }
+sub type { 'authenticator' }
 
 =head2 Methods that you may want to override
 

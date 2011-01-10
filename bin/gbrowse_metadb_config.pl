@@ -3,7 +3,6 @@
 use strict;
 use FindBin '$Bin';
 use lib "$Bin/../lib";
-use DBI;
 use Bio::Graphics::Browser2 "open_globals";
 use CGI::Session;
 use Digest::MD5 qw(md5_hex);
@@ -64,6 +63,8 @@ if (!$dsn || ($dsn =~ /filesystem|memory/i) || !$globals->user_accounts) {
 fix_sqlite_permissions()     if $dsn =~ /sqlite/i;
 create_mysql_database()      if $dsn =~ /mysql/i;
 
+eval "require DBI" or die "DBI module not installed. Cannot continue.";
+
 my $database = DBI->connect($dsn) 
     or die "Error: Could not open users database, please check your credentials.\n" . DBI->errstr;
 my $type = $database->{Driver}->{Name};
@@ -97,7 +98,7 @@ my $session_columns = {
 };
 
 my $openid_columns = {
-    userid     => "integer not null UNIQUE",
+    userid     => "integer not null",
     openid_url => "varchar(128) PRIMARY KEY"
 };
 

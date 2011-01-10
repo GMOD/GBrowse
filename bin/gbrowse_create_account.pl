@@ -13,27 +13,26 @@ my ($name,$pass);
 
 my @ORIGINAL_ARGV = @ARGV;
 
-GetOptions('name=s'        => \$name,
-	   'password=s'    => \$pass) or die <<EOF;
-Usage: $0 [options]
+use constant USAGE => <<END;
+Usage: $0 [-pass password] user
 
-Sets the administrator\'s login name and password. This login name
-will have the ability to upload public tracks to GBrowse.
+Creates a user account with the desired username and
+password. If the account already exists, then the password
+is reset.
 
-   -name      Login name for admin user [default "admin"].
    -pass      Login password for admin user.
 
-This script uses the "user_account_db" and "admin_account" options
-in the currently installed GBrowse.conf configuration file to find 
-the appropriate accounts database and the name of the administrator.
-If a password is not provided on the command line, you will be 
-prompted for it on standard input.
+This script uses the "user_account_db"  option in the currently 
+installed GBrowse.conf configuration file to find 
+the appropriate accounts database. If a password is not provided 
+on the command line, you will be prompted for it on standard input.
 
 WARNING: This script should be run as the web server user using
 "sudo -u www-data $0". If it detects that it is not being run as this
 user, it will attempt to sudo itself for you.
-EOF
- ;
+END
+
+GetOptions('password=s'    => \$pass) or die USAGE;
 
 my $wwwuser = GBrowse::ConfigData->config('wwwuser');
 my $uid     = (getpwnam($wwwuser))[2];
@@ -47,7 +46,7 @@ unless ($uid == $<) {
 my $globals = Bio::Graphics::Browser2->open_globals or die "Couldn't open GBrowse.conf";
 my $userdb  = Bio::Graphics::Browser2::UserDB->new($globals);
 
-$name ||= $globals->admin_account;
+$name=shift or die "Please provide a username. Run $0 --help for help\n";
 
 unless ($pass) {
     print STDERR "New password for $name: ";
@@ -65,20 +64,24 @@ unless ($pass) {
     die "Passwords don't match!\n" unless $pass eq $newpass;
 }
 
-$userdb->delete_user_by_username($name);
+my $uid = $userdb->userid_from_username($name);
 
+unless ($uid) {
 # this creates a new session for the admin user
-my $session     = $globals->session;
-my $sessionid   = $session->id;
-my $uploadsid   = $session->uploadsid;
-$session->flush();
+    my $session     = $globals->session;
+    my $sessionid   = $session->id;
+    my $uploadsid   = $session->uploadsid;
+    $session->flush();
 
-my ($status,undef,$message) = 
-    $userdb->do_add_user($name,'admin@nowhere.net','GBrowse Administrator',$pass,$sessionid,'allow admin');
-warn $message,"\n";
-$userdb->set_confirmed_from_username($name);
-
-warn "Admin account \"$name\" is now registered with sessionid=$sessionid, uploadsid=$uploadsid.\n" if $message =~ /success/i;
+    my ($status,undef,$message) = 
+	$userdb->do_add_user($name,"$name\@nowhere.net",$name,$pass,$sessionid);
+    warn $message,"\n";
+    $userdb->set_confirmed_from_username($name);
+    warn "Account \"$name\": now registered with sessionid=$sessionid, uploadsid=$uploadsid.\n" if $message =~ /success/i;
+} else {
+    $userdb->set_password($uid,$pass);
+    warn "Account \"$name\": password successfully set.\n";
+}
 
 exit 0;
 

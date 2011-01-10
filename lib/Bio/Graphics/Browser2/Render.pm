@@ -77,7 +77,6 @@ sub new {
   $self->state($session->page_settings);
   $self->set_language();
   $self->set_signal_handlers();
-  $data_source->set_username($session->username) if $session->private;
   $self;
 }
 
@@ -225,15 +224,15 @@ sub run {
 
   $self->set_source() && return;
 
-  warn "private session = ",$self->session->private if $debug;
+  warn "private session = ",$self->session->private  if $debug;
   warn "username = ",       $self->session->username if $debug;
 
   if ($self->data_source->must_authenticate) {
-      if ($self->session->private) {
+      if ($self->session->private && 
+	  $self->user_authorized_for_source($self->session->username))
+      {
 	  # login session - make sure that the data source has the information needed
 	  # to restrict tracks according to policy
-	  my $p = $self->data_source->auth_plugin ? $self->init_plugins() : undef;
-	  $self->data_source->authenticator($p);
       } else {
 	  # authentication required, but not a login session, so initiate authentication request
 	  $self->force_authentication;
@@ -279,6 +278,18 @@ sub run {
   
   delete $self->{usertracks};
   warn "[$$] synchronous exit" if $debug;
+}
+
+sub user_authorized_for_source {
+    my $self = shift;
+    my $username = shift;
+    my $source   = $self->data_source;
+    my $globals  = $source->globals;
+    my $session  = $self->session;
+    my $plugins = $self->init_plugins();
+    $source->set_username($username);
+    return $globals->authorized($source->name,$username,$plugins->auth_plugin)
+	&& $source->authorized('general');
 }
 
 sub set_source {
@@ -404,25 +415,24 @@ sub authorize_user {
     if ($current eq $id) {
         warn "Using current session" if DEBUG;
         $session = $self->session;
-    } elsif($self->session->private) {
-        warn "Another account is currently in use";
-        return ("error");
+    } elsif ($self->session->private) { # trying to login without logging out?
+	$session = $self->globals->session($id);  # create/retrieve session
     } else {
         warn "Retrieving old session" if DEBUG;
 	$session = $self->globals->session($id);  # create/retrieve session
-	unless ($session->id eq $id) {
-	    warn "fixing probable expired session";
-	  FIX: {
-	      my $username   = $userdb->username_from_sessionid($id) or last FIX;
-	      my $userid     = $userdb->get_user_id($username)       or last FIX;
-	      my $uploadsid  = $userdb->get_uploads_id($userid)      or last FIX;
-	      $session->uploadsid($uploadsid);
-	      $userdb->set_session_and_uploadsid($userid,$session->id,$uploadsid);
-	      $id = $session->id;
-	    }
+    }
+    unless ($session->id eq $id) {
+	warn "fixing probable expired session";
+      FIX: {
+	  my $username   = $userdb->username_from_sessionid($id) or last FIX;
+	  my $userid     = $userdb->get_user_id($username)       or last FIX;
+	  my $uploadsid  = $userdb->get_uploads_id($userid)      or last FIX;
+	  $session->uploadsid($uploadsid);
+	  $userdb->set_session_and_uploadsid($userid,$session->id,$uploadsid);
+	  $id = $session->id;
 	}
     }
-	
+
     my $nonce = Bio::Graphics::Browser2::Util->generate_id;
     my $ip    = CGI::remote_addr();
 
@@ -1772,7 +1782,6 @@ sub force_authentication {
 
     # asynchronous event -- only allow the ones needed for authentication
     if (Bio::Graphics::Browser2::Action->is_authentication_event) {
-	warn "running preauthenticated asynchronous event";
 	$self->run_asynchronous_event;
 	return;
     }
@@ -1786,6 +1795,8 @@ sub force_authentication {
     $self->init();
     $self->render_header();
 
+    my $confirm        = param('confirm') || param('openid_confirm');
+
     my $action;
     if ($self->data_source->auth_plugin) {
 	$action = "GBox.showTooltip(event,'url:?action=plugin_login',true)";
@@ -1796,9 +1807,9 @@ sub force_authentication {
 
     my $output = $self->render_html_start('GBrowse Login Required',
 					  $self->get_post_load_functions,
-					  $action);
+					  ($confirm ? '' : $action));
     $output .= div({-id=>'source_form'},$self->source_form());
-    if (param('openid_confirm')) {
+    if ($confirm) {
 	$output .= $self->login_manager->render_confirm;
     } else {
 	$output .= $self->render_login_required($action);

@@ -540,7 +540,7 @@ END
 
    FORGOT_MY_PASSWORD        => 'Forgot my password',
    EMAIL_MY_PASSWORD         => 'E-mail my password',
-   EDIT_ACCOUNT_DETAILS      => 'Edit account details',
+   EDIT_ACCOUNT_DETAILS      => '%s: Edit account details',
    CONTINUE                  => 'Continue',
    WITH_OPENID               => 'with your OpenID',
    SIGN_IN                   => 'Sign in',
@@ -595,7 +595,6 @@ END
    ANOTHER_ACCOUNT_IN_USE    => 'Another account is currently in use, please reload the page and log out before attempting to sign in.',
    CANNOT_CONNECT_NOT_SENT   => 'Error: Cannot connect to mail server, your information has not been sent.',
    PROFILE_EMAIL_SENT        => 'A message has been sent to your e-mail address with your profile information.<br><br>Please follow the instructions provided to retrieve your account.',
-   EDIT_ACCOUNT_DETAILS      => 'Edit account details',
    CONFIRM_ACCOUNT_PASSWORD  => 'Confirm Account Password',
    ARE_YOU_SURE              => 'Are you sure?',
    WARNING_DELETE_OPENID     => 'Warning: Deleting your %s Account will remove all user information including any saved data or uploaded tracks. Once deleted, you will no longer have access to this %s Account or any of the information associated with it. Are you sure you wish to perform this action?',

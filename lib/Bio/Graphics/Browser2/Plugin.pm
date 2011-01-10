@@ -1009,8 +1009,10 @@ sub setting {
     my $setting_name = shift;
 
     eval "use Class::ISA";
+    
+    my $config  = $self->browser_config;
+    my $globals = $config->globals;
 
-    my $config = $self->browser_config;
     my @classes = Class::ISA->can('self_and_super_path') 
 	        ? Class::ISA::self_and_super_path(ref $self)
 		: ref $self;
@@ -1018,10 +1020,12 @@ sub setting {
 	my ($last_name)   = /(\w+)$/;
 	my $option_name   = "${last_name}:plugin";
 	if ($setting_name) {
-	    my $result = $config->setting($option_name => $setting_name);
+	    my $result = $config->setting($option_name => $setting_name) 
+		     || $globals->setting($option_name=>$setting_name);
 	    return $result if defined $result;
 	} else {
 	    my @options = $config->label_options($option_name);
+	    @options    = $globals->label_options($option_name) unless @options;
 	    return @options if @options;
 	}
     }

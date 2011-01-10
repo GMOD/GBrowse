@@ -819,7 +819,8 @@ sub ACTION_list {
     my $self = shift;
     my $q    = shift;
     my $globals = $self->render->globals;
-    my @sources = grep {$globals->data_source_show($_)} $globals->data_sources;
+    my $username = eval {$self->session->username};
+    my @sources = grep {$globals->data_source_show($_,$username)} $globals->data_sources;
     my $text = '# '.join ("\t",
 			  'Name',
 			  'Description',
@@ -869,7 +870,7 @@ sub ACTION_plugin_login {
     my $render = $self->render;
     $render->init_plugins();
     my $plugin = eval{$render->plugins->auth_plugin} 
-      or return (204,'text/plain','no authorizer defined');
+      or return (204,'text/plain','no authenticator defined');
     my $html = $render->login_manager->wrap_login_form($plugin);
     return (200,'text/html',$html);
 }
@@ -879,9 +880,8 @@ sub ACTION_plugin_authenticate {
     my $q    = shift;
     my $render = $self->render;
     $render->init_plugins();
-    warn "plugin_authenticate";
     my $plugin = eval{$render->plugins->auth_plugin} 
-       or return (204,'text/plain','no authorizer defined');
+       or return (204,'text/plain','no authenticator defined');
 
     my $result;
     if (my ($username,$fullname)  = $plugin->authenticate) {
@@ -890,10 +890,17 @@ sub ACTION_plugin_authenticate {
 	my $userdb = $render->userdb;
 	my $id = $userdb->check_or_add_named_session($session->id,$username);
 	$userdb->set_fullname_from_username($username=>$fullname);
-	$result = { userOK  => 1,
-		    sessionid => $id,
-		    username  => $username,
-		    message   => 'login ok'};
+	# now authenticate
+	my $is_authorized = $render->user_authorized_for_source($username);
+	if ($is_authorized) {
+	    $result = { userOK  => 1,
+			sessionid => $id,
+			username  => $username,
+			message   => 'login ok'};
+	} else {
+	    $result = { userOK    => 0,
+			message   => 'You are not authorized to access this data source.'};
+	}
     } 
     # failed to authenticate
     else {

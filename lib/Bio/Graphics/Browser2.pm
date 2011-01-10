@@ -116,7 +116,7 @@ sub openid_url  { shift->url_path('openid')             }
 sub js_url      { shift->url_path('js')                 }
 sub help_url    { shift->url_path('gbrowse_help')       }
 sub stylesheet_url   { shift->url_path('stylesheet')    }
-sub auth_plugin { shift->setting(general=>'authorization plugin') }
+sub auth_plugin { shift->setting(general=>'authentication plugin') }
 
 # this returns the base URL and path info for use in constructing
 # links. For example, if gbrowse is running at http://foo.bar/cgi-bin/gb2/gbrowse/yeast,
@@ -241,7 +241,19 @@ sub application_name_long  { shift->setting(general=>'application_name_long') ||
 sub email_address          { shift->setting(general=>'email_address')         || 'noreply@gbrowse.com'        }
 sub smtp                   { shift->setting(general=>'smtp_gateway')          || 'smtp.res.oicr.on.ca'        }
 sub user_account_db        { shift->setting(general=>'user_account_db')                                       } # Used by uploads & user databases, they set their own defaults.
-sub user_accounts		   { shift->setting(general=>'user accounts')		  || 0                            }
+sub user_accounts	   { shift->setting(general=>'user accounts')	      || 0                            }
+sub user_accounts_allow_registration
+                           { 
+			       my $val = shift->setting(general=>'user accounts registration');
+			       return 1 unless defined $val;
+			       return $val;
+			   }
+sub user_accounts_allow_openid
+                           { 
+			       my $val = shift->setting(general=>'user accounts openid');
+			       return 1 unless defined $val;
+			       return $val;
+			   }
 sub public_files           { shift->setting(general=>'public_files')          || 10                           }
 sub admin_account          { shift->setting(general=>'admin_account')                                         }
 sub admin_dbs              { shift->setting(general=>'admin_dbs')                                             }
@@ -294,7 +306,7 @@ sub session_args    {
 
 ## methods for dealing with data sources
 sub data_sources {
-  return sort grep {!/^\s*=~/} shift->SUPER::configured_types();
+  return sort grep {!/^\s*=~/ && !/:plugin$/} shift->SUPER::configured_types();
 }
 
 sub data_source_description {
@@ -312,12 +324,13 @@ sub data_source_restrict {
 sub data_source_show {
     my $self = shift;
     my $dsn      = shift;
-    my $username = shift;
+    my ($username,$authenticator) = @_;
     return if $self->setting($dsn=>'hide');
 
     # because globals are cached between use, we do not want usernames
     # to be defined outside the scope of this call
-    local $self->{'.authenticated_username'} = $username if defined $username;
+    local $self->{'.authenticated_username'} = $username      if defined $username;
+    local $self->{'.authenticator'}          = $authenticator if defined $authenticator;
     return $self->authorized($dsn);
 }
 
@@ -335,6 +348,15 @@ sub data_source_path {
   }
   my $path = $self->setting($dsn=>'path') or return;
   $self->resolve_path($path,'config');
+}
+
+sub authorized {
+    my $self = shift;
+    my $sourcename = shift;
+    my ($username,$authenticator)   = @_;
+    local $self->{'.authenticated_username'} = $username      if defined $username;
+    local $self->{'.authenticator'}          = $authenticator if defined $authenticator;
+    return $self->SUPER::authorized($sourcename);
 }
 
 sub create_data_source {

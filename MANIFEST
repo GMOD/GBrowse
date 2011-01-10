@@ -2,6 +2,7 @@ bin/auto_install_databases.pl
 bin/bed2gff3.pl
 bin/bp_load_gff.pl
 bin/gbrowse_clean.pl
+bin/gbrowse_create_account.pl
 bin/gbrowse_metadb_config.pl
 bin/gbrowse_netinstall.pl
 bin/gbrowse_netinstall2.pl
@@ -70,6 +71,7 @@ conf/plugins/FBTableDumper.pm
 conf/plugins/FilterTest.pm
 conf/plugins/GeneFinder.pm
 conf/plugins/OligoFinder.pm
+conf/plugins/PamAuthenticate.pm
 conf/plugins/PrimerDesigner.pm
 conf/plugins/ProteinDumper.pm
 conf/plugins/RandomGene.pm
@@ -81,6 +83,7 @@ conf/plugins/SourceTrackFinder.pm
 conf/plugins/Spectrogram.pm
 conf/plugins/Submitter.pm
 conf/plugins/test.pm
+conf/plugins/TestAuthenticator.pm
 conf/plugins/TestAuthorizer.pm
 conf/plugins/TestFinder.pm
 conf/plugins/TrackDumper.pm

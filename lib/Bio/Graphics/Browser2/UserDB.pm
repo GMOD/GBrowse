@@ -7,14 +7,14 @@ use CGI qw(:standard);
 use DBI;
 use Digest::SHA qw(sha1_hex sha1);
 use JSON;
-use Net::SMTP;
 use Text::ParseWords 'quotewords';
 use Digest::MD5 qw(md5_hex);
 use Carp qw(confess cluck croak);
 use LWP::UserAgent;
 #use LWPx::ParanoidAgent; (Better, but currently broken)
 
-use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; 1" || 0;
+use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; 1";
+use constant HAVE_SMTP   => eval "require Net::SMTP;1";
 
 # SOME CLARIFICATION ON TERMINOLOGY
 # "userid"    -- internal dbm ID for a user; a short integer
@@ -32,19 +32,21 @@ sub new {
   unless ($login) {
       confess "Could not open login database $credentials";
   }
-  
+
   my $self = bless {
       dbi => $login,
       globals => $globals,
-      openid => HAVE_OPENID,
+      openid   => HAVE_OPENID,
+      register => HAVE_SMTP,
   }, ref $class || $class;
 
   return $self;
 }
 
-sub globals {shift->{globals} };
-sub dbi     {shift->{dbi}     };
-sub openid  {shift->{openid}  };
+sub globals  {shift->{globals} };
+sub dbi      {shift->{dbi}     };
+sub can_openid   {shift->{openid}  };
+sub can_register {shift->{register}  };
 
 sub generate_salted_digest {
     my $self     = shift;
@@ -354,9 +356,10 @@ END
 	    $userdb->do('UPDATE users SET gecos=? WHERE userid=?',undef,$fullname,$userid);
 	} else {
 	    my $nowfun = $self->nowfun();
-	    $userdb->do(<<END,undef,$userid,$fullname);
+	    my $email  = 'unused_'.$self->create_key(32).'@nowhere.net';
+	    $userdb->do(<<END,undef,$userid,$fullname,$email);
 INSERT INTO users(userid,gecos,email,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created)
-VALUES (?,?,'x','x',1,1,1,'x',$nowfun,$nowfun)
+VALUES (?,?,?,'x',1,1,1,'x',$nowfun,$nowfun)
 END
 ;
 	}
@@ -450,6 +453,21 @@ SELECT b.gecos,a.username
 END
 ;
     return $fullname || $username; # fallback to username if fullname not available
+}
+
+sub email_from_sessionid {
+    my $self = shift;
+    my $sessionid = shift;
+    my $userdb = $self->{dbi};
+
+    my ($email) = $userdb->selectrow_array(<<END ,undef,$sessionid);
+SELECT b.email
+  FROM session as a,users as b
+ WHERE a.userid=b.userid
+   AND a.sessionid=?
+END
+;
+    return $email;
 }
 
 sub userid_from_sessionid {
@@ -916,7 +934,7 @@ sub do_email_info {
 			    });
   return $self->string_result($err) unless $status;
 
-  my $secret = $self->generated_salted_digest($pass);
+  my $secret = $self->generate_salted_digest($pass);
   my $update = $userdb->prepare(
     "UPDATE users SET pass=? WHERE userid=? AND email=? AND confirmed=1");
   my $userid = $self->userid_from_username($user);
@@ -924,6 +942,17 @@ sub do_email_info {
     or return $self->dbi_err;
 
   return $self->string_result('Success');
+}
+
+sub set_password {
+    my $self = shift;
+    my ($userid,$password) = @_;
+    my $userdb   = $self->dbi;
+    my $secret = $self->generate_salted_digest($password);
+    my $update = $userdb->prepare(
+	"UPDATE users SET pass=? WHERE userid=?") or die $userdb->errstr;
+    my $status = $update->execute($secret,$userid) or die $userdb->errstr;
+    return $status;
 }
 
 # Retrieve User - Gets the username associated with a given e-mail.
@@ -1088,6 +1117,14 @@ sub do_get_gecos {
     my $user = shift;
     my $sessionid = $self->sessionid_from_username($user) or return '';
     my $fullname = $self->fullname_from_sessionid($sessionid);
+    return $self->string_result($fullname);
+}
+
+sub do_get_email {
+    my $self = shift;
+    my $user = shift;
+    my $sessionid = $self->sessionid_from_username($user) or return '';
+    my $fullname = $self->email_from_sessionid($sessionid);
     return $self->string_result($fullname);
 }
 

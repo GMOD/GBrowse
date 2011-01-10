@@ -254,8 +254,8 @@ sub config {
 sub must_authenticate {
     my $self = shift;
     my $restrict = $self->global_setting('restrict') ||
-	          $self->globals->data_source_restrict($self->name)
-		  or return;
+	           $self->globals->data_source_restrict($self->name)
+		   or return;
     return $restrict =~ /require\s+(valid-user|user|group)/;
 }
 

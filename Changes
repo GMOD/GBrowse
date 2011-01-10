@@ -20,8 +20,14 @@
       users to line things up.
     * Track configuration dialog handles the vista plot in addition to regular and quantitative
       tracks.
-    * Added a simple authentication plugin framework that allows you to authenticate against Unix password files,
-      LDAP, Kerberos, etc (with the correct plugin written, of course!)
+    * Added a simple authentication plugin framework that allows you to authenticate against external
+      authentication systems.
+    * Added the PamAuthenticator plugin, which will authenticate against any Pluggable Authentication
+      Module compatible data source (e.g. Unix, NIS, LDAP, Kerberbos, AD).
+    * The ability to register new accounts can be disabled by setting "user accounts registration=0"
+      in GBrowse.conf.
+    * Support for Open ID can be disabled by setting "user accounts openid=0"
+      in GBrowse.conf.
     * Fixed bug that caused regions with identical start and end coordinates but different chromosomes to be
       inappropriately cached to the same location.
     * Fixed bug in which tracks with a "remote feature" did not display correctly the very first time they

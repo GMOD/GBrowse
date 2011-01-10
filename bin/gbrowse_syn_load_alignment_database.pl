@@ -11,7 +11,6 @@ use strict;
 #
 
 use strict;
-use DBI;
 use Bio::DB::GFF::Util::Binning 'bin';
 use Getopt::Long;
 
@@ -42,6 +41,7 @@ elsif ($verbose) {
 
 
 $dsn = "dbi:mysql:$dsn" unless $dsn =~ /^dbi/;
+eval "require DBI; 1" or die "DBI module not installed. Cannot continue";
 my $dbh = DBI->connect($dsn, $user, $pass);
 unless ($dbh) {
   $dsn =~ s/\S+\:([^:]+)$/$1/;

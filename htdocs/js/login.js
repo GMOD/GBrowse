@@ -1,6 +1,6 @@
 var LoginScript = '../../gbrowse/';
 var Logged      = false;
-var OpenIDMenu  = false;
+var OpenIDMenu        = false;
 
 var ImgLocation, AppName, AppNameLong;                         // General Information
 var Source, CurrentUser, SessionID, LoginPage, EditDetails;    // Dynamic Variables
@@ -8,6 +8,7 @@ var UsingOpenID, OpenIDCount, SelectedID;                      // OpenID Variabl
 
 ////////////////////////////////////////////////////////////////////////////////////
 //  Logged      = true if the user is logged in, false otherwise.
+//  OpenIDMenu  = true if the user is viewing the openID login menu.
 //  OpenIDMenu  = true if the user is viewing the openID login menu.
 //  CurrentUser = holds the value of the currently logged in username.
 //  SessionID   = holds the value of the current session id.
@@ -191,7 +192,8 @@ function load_login_balloon(event,session,username,openid) {
 
                     //Register, My Account and Forgotten Password selections
                    '<tr id=loginOpts align=center><td id=loginOptsContent1 colspan=2><font size=1>' +
-                     '<a href=#register onClick=login_page_change(\'create\');>' + Controller.translate('REGISTER') + '</a> / ' +
+	           (Controller.can_register?
+		    '<a href=#register onClick=login_page_change(\'create\');>' + Controller.translate('REGISTER') + '</a> / ' : '') +
                      '<a href=#forgot onClick=login_page_change(\'forgot\');>' + Controller.translate('FORGOTTEN_PASSWORD') + '</a>' +
                    '</font></td>' +
                    '<td id=loginOptsContent2 colspan=2 style=display:none;><font size=1>' +
@@ -288,7 +290,7 @@ function login_page_change(page) {
 	//$('loginFRow').hide(); $('loginOpts').hide();  $('loginRemember').hide();
         break;
     case 'edit':
-        $('loginTitle').innerHTML = Controller.translate('EDIT_ACCOUNT_DETAILS');
+        $('loginTitle').innerHTML = Controller.translate('EDIT_ACCOUNT_DETAILS',CurrentUser);
         $('loginSubmit').value    = Controller.translate('CONTINUE');
         if (Controller.can_openid)
             $('loginOpenID').show();
@@ -802,7 +804,7 @@ function edit_details(details) {
 
     if(details == 'home') {
         $('loginMain').reset();
-        $('loginTitle').innerHTML = Controller.translate('EDIT_ACCOUNT_DETAILS');
+        $('loginTitle').innerHTML = Controller.translate('EDIT_ACCOUNT_DETAILS',CurrentUser);
         $('loginCancel').value    = Controller.translate('GO_BACK');
         $('loginTable').style.paddingTop = '18px';
         login_loading(false);
@@ -845,6 +847,17 @@ function edit_details(details) {
     case 'email':
         $('loginTitle').innerHTML = Controller.translate('CHANGE_MY_EMAIL');
         $('loginDEmail').show();
+	$('loginDEOrig').value='wait...';
+	new Ajax.Request(LoginScript+Source+'/',{
+		parameters: { 
+		    action: 'gbrowse_login',
+		    login_action: ['get_email'],
+		    user:   CurrentUser
+			},
+		onSuccess: function (t) {
+		    $('loginDEOrig').value=t.responseText;
+		}
+	});
         $('loginDEOrig').focus();
         EditDetails = 'email';
         return;

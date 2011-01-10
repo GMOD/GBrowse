@@ -464,8 +464,10 @@ sub render_js_controller_settings {
     
     if ($globals->user_accounts) {
 	my $userdb = $self->userdb;
-        my $openid = $userdb->openid;
-        $scripts .= "Controller.can_openid = $openid;";
+        my $openid   = ($userdb->can_openid   && $self->globals->user_accounts_allow_openid)      ||0;
+        my $register = ($userdb->can_register && $self->globals->user_accounts_allow_registration)||0;
+        $scripts .= "Controller.can_openid  = $openid;";
+        $scripts .= "Controller.can_register = $register;";
     }
     
     return script({-type=>'text/javascript'}, $scripts);
@@ -2264,11 +2266,12 @@ sub source_menu {
 
   my $globals  = $self->globals;
   my $username = $self->session->username if $self->session->private;
+  my $p        = eval{$self->plugins->auth_plugin};
 
   my @sources      = $globals->data_sources;
   my $show_sources = $self->setting('show sources');
   $show_sources    = 1 unless defined $show_sources;   # default to true
-  @sources         = grep {$globals->data_source_show($_,$username)} @sources;
+  @sources         = grep {$globals->data_source_show($_,$username,$p)} @sources;
   my $sources      = $show_sources && @sources > 1;
 
   my %descriptions = map {$_=>$globals->data_source_description($_)} @sources;
@@ -2278,7 +2281,7 @@ sub source_menu {
   
   my $current_source = $self->data_source->name;
   if (!$sources{$current_source} && 
-      $globals->data_source_show($current_source,$username) ) { # for regexp-based sources
+      $globals->data_source_show($current_source,$username,$p) ) { # for regexp-based sources
       $descriptions{$current_source} = $self->data_source->description;
       @sources          = sort {$descriptions{$a} cmp $descriptions{$b}} (@sources,$current_source);
   }

@@ -5,7 +5,7 @@ use warnings;
 use base 'Bio::Graphics::FeatureFile';
 
 use Socket 'AF_INET','inet_aton';  # for inet_aton() call
-use Carp 'croak';
+use Carp 'croak','cluck';
 use CGI();
 
 =head1 NAME
@@ -41,8 +41,13 @@ sub label_options {
 }
 
 # get or set the authenticator used to map usernames onto groups
-sub set_authenticator { shift->{'.authenticator'} = shift;     }
-sub authenticator     { shift->{'.authenticator'};             }
+sub set_authenticator { 
+    my $self = shift;
+    $self->{'.authenticator'} = shift;
+}
+sub authenticator     { 
+    shift->{'.authenticator'};             
+}
 
 # get or set the username used in authentication processes
 sub set_username { 
@@ -59,11 +64,11 @@ sub username     {
 sub authorized {
   my $self  = shift;
   my $label = shift;
-
+  
   my $restrict = $self->code_setting($label=>'restrict')
     || ($label ne 'general' && $self->code_setting('TRACK DEFAULTS' => 'restrict'));
-
   return 1 unless $restrict;
+
   my $host     = CGI->remote_host;
   my $addr     = CGI->remote_addr;
   my $user     = $self->username;
@@ -114,12 +119,14 @@ sub authorized {
       $user_directive++;
       $users{$user}++ if defined $user;
     }
-    if ($directive eq 'require group') {
-	my $auth_plugin = $self->authenticator
-	    or croak "To use the 'require group' limit you must load a authentication plugin. Otherwise use a subroutine to implement role-based authentication.";
+    if ($directive eq 'require group' && defined $user) {
 	$user_directive++;
-	for my $grp (@values) {
-	    $users{$user} ||= $auth_plugin->user_in_group($user,$_);
+	if (my $auth_plugin = $self->authenticator) {
+	    for my $grp (@values) {
+		$users{$user} ||= $auth_plugin->user_in_group($user,$grp);
+	    }
+	} else {
+	    cluck("To use the 'require group' limit you must load an authentication plugin. Otherwise use a subroutine to implement role-based authentication.");
 	}
     }
   }

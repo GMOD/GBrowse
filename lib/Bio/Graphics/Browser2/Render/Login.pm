@@ -151,14 +151,14 @@ sub render_builtin_login {
     	$login_controls .= '&nbsp; &nbsp;';
         $login_controls .= span({
 	    -style 	   => $style,
-	    -title 	   => $render->translate('LOG_OUT_DESC', $session->username).'',
+	    -title 	   => $render->translate('CHANGE_SETTINGS_DESC'),
 	    -onMouseDown => $self->login_globals.';'.$self->logout_dialogue,
 	    -onMouseOver => 'this.style.textDecoration=\'underline\'',
 	    -onMouseOut  => 'this.style.textDecoration=\'none\''}, $render->translate('MY_ACCOUNT'));
 	$login_controls .= '&nbsp; &nbsp;';
         $login_controls .= span({
 	    -style       => $style,
-	    -title       => $render->translate('CHANGE_SETTINGS_DESC'),
+	    -title       => $render->translate('LOG_OUT_DESC', $session->username),
 	    -onMouseDown => $self->login_globals.';'.'location.href=\'?id=logout\';',
 	    -onMouseOver => 'this.style.textDecoration=\'underline\'',
 	    -onMouseOut  => 'this.style.textDecoration=\'none\''}, 'Log Out');
@@ -300,21 +300,30 @@ sub run_asynchronous_request {
     my $option   = $q->param('option');
     my $source   = $q->param('source');
 
+    my $can_register = $self->renderer->globals->user_accounts_allow_registration;
+    my $can_openid   = $self->renderer->globals->user_accounts_allow_openid;
+
     my ($status,$content_type,$content) =
 	  $actions{list_openid}       ? $userdb->do_list_openid($user)
-	 :$actions{confirm_openid}    ? $userdb->do_confirm_openid({$q->param('callback')},$sessionid, $option,$email,$fullname)
+	 :$actions{confirm_openid}    ? $can_openid &&
+	                                $userdb->do_confirm_openid({$q->param('callback')},$sessionid, $option,$email,$fullname)
 	 :$actions{validate}          ? $userdb->do_validate($user, $pass, $remember)
 	 :$actions{add_user_check}    ? $userdb->do_add_user_check($user, $email, $fullname, $pass, $sessionid)
-	 :$actions{add_user}          ? $userdb->do_add_user($user, $email, $fullname, $pass, $sessionid)
+	 :$actions{add_user}          ? $can_register && 
+	                                $userdb->do_add_user($user, $email, $fullname, $pass, $sessionid)
 	 :$actions{edit_confirmation} ? $userdb->do_edit_confirmation($email, $option)
-	 :$actions{confirm_account}   ? $userdb->do_confirm_account($user, $confirm)
+	 :$actions{confirm_account}   ? $can_register && 
+	                                $userdb->do_confirm_account($user, $confirm)
 	 :$actions{edit_details}      ? $userdb->do_edit_details($user, $column, $old, $new, $self->renderer->session)
 	 :$actions{email_info}        ? $userdb->do_email_info($email)
 	 :$actions{delete_user}       ? $userdb->do_delete_user($user, $pass)
-	 :$actions{add_openid_user}   ? $userdb->do_add_openid_user($user, $email,$fullname,$openid, $sessionid, $remember)
+	 :$actions{add_openid_user}   ? $can_openid &&
+                                        $userdb->do_add_openid_user($user, $email,$fullname,$openid, $sessionid, $remember)
 	 :$actions{check_openid}      ? $userdb->do_check_openid($openid, $sessionid, $source, $option)
-	 :$actions{change_openid}     ? $userdb->do_change_openid($user, $pass, $openid, $option)
+	 :$actions{change_openid}     ? $can_openid &&
+	                                $userdb->do_change_openid($user, $pass, $openid, $option)
 	 :$actions{get_gecos}         ? $userdb->do_get_gecos($user)
+	 :$actions{get_email}         ? $userdb->do_get_email($user)
 	 :(500,'text/plain','programmer error');
     return ($status,$content_type,$content);
 }

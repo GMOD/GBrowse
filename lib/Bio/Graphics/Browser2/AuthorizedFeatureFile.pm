@@ -126,7 +126,7 @@ sub authorized {
 		$users{$user} ||= $auth_plugin->user_in_group($user,$grp);
 	    }
 	} else {
-	    cluck("To use the 'require group' limit you must load an authentication plugin. Otherwise use a subroutine to implement role-based authentication.");
+	   warn "To use the 'require group' limit you must load an authentication plugin. Otherwise use a subroutine to implement role-based authentication.";
 	}
     }
   }

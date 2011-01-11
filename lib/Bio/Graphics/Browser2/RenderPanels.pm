@@ -1076,7 +1076,7 @@ sub make_map {
   my $source = $self->source;
 
   my $flip = $panel->flip;
-  my $tips = $source->global_setting('balloon tips') && $self->settings->{show_tooltips};
+  my $tips = $source->global_setting('balloon tips') && $self->settings->{'show_tooltips'};
   my $use_titles_for_balloons = $source->global_setting('titles are balloons');
 
   my $did_map;
@@ -1131,19 +1131,22 @@ sub make_map {
 	    ? "$balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
 	      "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
 	      : "$balloon_ct.showTooltip(event,'$balloonclick',$stick)";
+	undef $href;
 	undef $target;
-	# workarounds to accomodate observation that some browsers don't respect cursor:pointer styles in
-	# <area> tags unless there is an href defined
-	my $agent =  CGI->user_agent || '';
-	$href     =  $agent =~ /msie/i    ? undef
-                     : $agent =~ /firefox/i ? undef
-                     : 'javascript:void(0)';
       }
     }
+
+    # workarounds to accomodate observation that some browsers don't respect cursor:pointer styles in
+    # <area> tags unless there is an href defined
+    my $agent =  CGI->user_agent || '';
+    $href    ||=     $agent =~ /msie/i    ? 'javascript:void(0)'
+                   : $agent =~ /firefox/i ? undef
+                   : 'javascript:void(0)';
+
     my %attributes = (
 		      title       => $title,
-		      href        => $href,
-		      target      => $target,
+	              href        => $href,
+	              target      => $target,
 		      onmouseover => $mouseover,
 		      onmousedown => $mousedown,
 		      style       => $style,

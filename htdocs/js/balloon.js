@@ -859,7 +859,9 @@ Balloon.prototype.getEventTarget = function(event) {
   var e = event || window.event;
   if (e.target) targ = e.target;
   else if (e.srcElement) targ = e.srcElement;
-  if (targ.nodeType == 3) targ = targ.parentNode; // Safari
+  if (targ==null) targ=document.createElement('div');
+  if (targ.nodeType == 3) 
+      targ = targ.parentNode; // Safari
   return targ;
 }
 ////
@@ -875,6 +877,7 @@ Balloon.prototype.setStyle = function(el,att,val) {
   if (!el) {
     return false;
   }
+  el = Element.extend(el);
 
   if (val && att.match(/left|top|bottom|right|width|height|padding|margin/)) {
     val = new String(val);

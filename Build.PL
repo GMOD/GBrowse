@@ -57,7 +57,7 @@ my $build = GBrowseInstall->new(
     script_files => [
 	'bin/gbrowse_clean.pl',
 	'bin/gbrowse_set_admin_passwd.pl',
-	'bin/gbrowse_set_create_account.pl',
+	'bin/gbrowse_create_account.pl',
 	'bin/gbrowse_slave',
         'bin/gbrowse_syn_load_alignment_database.pl',
         'bin/gbrowse_syn_load_alignments_msa.pl',

@@ -1026,10 +1026,10 @@ sub do_check_openid {
     my $globals = $self->{globals};
     my ($openid, $sessionid, $source, $option) = @_;
     
-    my $return_to  = $globals->gbrowse_url($source)."?openid_confirm=1;page=$option;s=$sessionid;";
-       $return_to .= "id=logout;" if $option ne "openid-add";
+    my $return_to  = $globals->gbrowse_url($source)."/?openid_confirm=1;page=$option;s=$sessionid";
+    # $return_to .= "id=logout;" if $option ne "openid-add";
        #id=logout needed in case another user is already signed in
-    
+
     my $csr = Net::OpenID::Consumer->new(
         ua              => LWP::UserAgent->new,
         args            => CGI->new,
@@ -1047,7 +1047,6 @@ sub do_check_openid {
     );
     # request information about email address and full name
     $check_url .= "&openid.ns.ax=http://openid.net/srv/ax/1.0&openid.ax.mode=fetch_request&openid.ax.required=email,firstname,lastname&openid.ax.type.email=http://axschema.org/contact/email&openid.ax.type.firstname=http://axschema.org/namePerson/first&openid.ax.type.lastname=http://axschema.org/namePerson/last";
-
 
     # this shouldn't work, but oddly it does.
     # it has something to do with prototype ajax and the Location: string
@@ -1150,6 +1149,8 @@ END
 	undef,
 	$openid)
 	or return {error=>'Error: '.$userdb->errstr.'.'};
+
+    warn "do_get_openid($openid) => rows = $rows";
     
     if($rows != 1) {
         if($rows != 0) {
@@ -1286,18 +1287,19 @@ END
 
     if ($@) {
 	warn "openid user account insertion failed due to $@. Rolling back.";
+	my $err = $@;
 	eval {$userdb->rollback()};
 
-	if(DBI->errstr =~ m/for key 1$/) {
+	if($err =~ m/for key 1$/) {
 	    return $self->string_result("The OpenID provided is already in use, please try another.");
 	}
-	elsif (DBI->errstr =~ m/for key 1$/ || DBI->errstr =~ m/for key 3$/) {
+	elsif ($err =~ m/for key 1$/ || DBI->errstr =~ m/for key 3$/) {
             #If the e-mail happens to match another, this will still be called.
 	    return $self->string_result("Username already in use, please try another.");
-        } elsif(DBI->errstr =~ m/for key 2$/) {
+        } elsif($err =~ m/for key 2$/) {
 	    return $self->string_result("Session Error");
         } else {
-	    return $self->dbi_err;
+	    return $self->dbi_err($err);
         }
     }
     else {
@@ -1332,8 +1334,10 @@ sub do_list_openid {
 # convenience methods
 sub dbi_err {
     my $self = shift;
-    my $error = DBI->errstr;
-    return (200,'text/plain',"Error: $error.");
+    my $err  = shift;
+    my $error = $err || DBI->errstr;
+    $error    =~ s/at.+line \d+//;
+    return (200,'text/plain',"Error: $error");
 }
 
 sub string_result {

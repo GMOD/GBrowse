@@ -40,7 +40,8 @@ sub render_confirm {
 
     if (param('confirm') && param('code')) {
 	$output .= $self->render_account_confirm(param('code'));
-    } elsif (param('openid_confirm') && param('page') && param('s')) {
+    } 
+    elsif (param('openid_confirm') && param('page') && param('s')) {
 	$output .= $self->render_openid_confirm(param('page'),param('s'));
     }
     return $output;
@@ -111,7 +112,7 @@ sub render_plugin_login {
 		)
 		: (
 		    span({-style       => $style,
-			  -onMouseDown => "login_blackout(true,'');GBox.showTooltip(event,'url:?action=plugin_login',true)"
+			  -onMouseDown => "login_blackout(true,'');GBox.showTooltip(event,'url:?action=plugin_login',true,380)"
 			 },
 			 $render->translate('LOGIN'))
 		)
@@ -210,41 +211,36 @@ sub logout_dialogue {
 sub render_account_confirm {
     my $self = shift;
     my $confirm = shift;
-
-    my $render  = $self->renderer;
-    my $globals = $render->globals;
-
-    my $images   = $globals->openid_url;
-    my $appname  = $globals->application_name;
-    my $appnamel = $globals->application_name_long;
+    my $render   = $self->renderer;
     my $settings = $render->state;
+    my $login_globals = $self->login_globals;
 
-    return $settings->{head} ?
-        iframe({-style  => 'display:none;',
-                -onLoad => 'load_login_globals(\''.$images.'\',\''.$appname.'\',\''.$appnamel.'\');
-                 confirm_screen(\''.$confirm.'\')'})
+    return $settings->{head} 
+       ? iframe({-style  => 'display:none;',
+		 -onLoad => "$login_globals;confirm_screen('$confirm')"
+		}
+	   )
         : "";
 }
 
 sub render_openid_confirm {
     my $self = shift;
-    my ($page,$sesson) = @_;
+    my ($page,$current_sessionid) = @_;
 
     my $render  = $self->renderer;
     my $globals = $render->globals;
 
-    my $images          = $globals->openid_url;
-    my $appname         = $globals->application_name;
-    my $appnamel        = $globals->application_name_long;
     my $settings        = $render->state;
     my $session         = $render->session;
-    my ($email,$gecos) = $self->gecos_from_openid;
+    my ($email,$gecos)  = $self->gecos_from_openid;
 
-    my $logged_in = $session->private ? 'true' : 'false';
-    my $id        = $session->id;
-    my $load      = "load_login_globals('$images','$appname','$appnamel');".
-	            "login_blackout(true,'');".
-		    "confirm_openid('$id','$page',$logged_in,'$email','$gecos');";
+    my $logged_in      = $session->private ? 'true' : 'false';
+    my $id             = $session->id;
+    my $login_globals  = $self->login_globals;
+
+    my $load      = "$login_globals;".
+     	            "login_blackout(true,'');".
+     		    "confirm_openid('$id','$page',$logged_in,'$email','$gecos');";
 
     return $settings->{head} ?
         iframe({-style  => 'display:none;',

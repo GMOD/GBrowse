@@ -63,6 +63,7 @@ sub new {
     my $globals = shift;
     $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     $authority    = param('authority') || CGI::cookie('authority');
+
     $session = $globals->authorized_session($requested_id, $authority);
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
@@ -243,7 +244,7 @@ sub run {
 
   warn "[$$] add_user_tracks()" if $debug;
   $self->add_user_tracks($self->data_source);
-  
+
   warn "[$$] testing for asynchronous event()" if $debug;
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if $debug;
@@ -260,7 +261,7 @@ sub run {
 
   warn "[$$] update_state()" if $debug;
   $self->update_state();
-
+  
   # EXPERIMENTAL CODE -- GET RID OF THE URL PARAMETERS
   if ($ENV{QUERY_STRING} && $ENV{QUERY_STRING} =~ /reset/) {
       print CGI::redirect(CGI::url(-absolute=>1,-path_info=>1));

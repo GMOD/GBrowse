@@ -49,7 +49,10 @@ var GBrowseController = Class.create({
 
 	initialize:
 	function () {
-		this.url = document.URL;
+	        var url  = document.URL;
+		var q    = url.indexOf('?');
+                if (q >= 0) url  = url.substr(0,q);
+		this.url = url;
 		this.gbtracks                 = new Hash(); // maps track ids to gbtrack objects
 		this.segment_observers        = new Hash();
 		this.retrieve_tracks          = new Hash();
@@ -816,7 +819,7 @@ var GBrowseController = Class.create({
 		    }
 		    else
 			message_area.innerHTML='<div style="color:red">'+results.message+'</div>';
-		},
+		}
 	});
     },
 
@@ -1202,6 +1205,8 @@ function using_database() {
 }
 
 function initialize_page() {
+
+    if (Controller == null) Controller = new GBrowseController;
 
     // This oddity prevents ?id=logout from appearing in the url box.
     // Otherwise whenever user reloads he is logged out :-(

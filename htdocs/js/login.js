@@ -42,7 +42,7 @@ function load_login_balloon(event,session,username,openid) {
 
                '<font face=Arial size=2>' +
                //Table containing login form
-               '<table id=loginTable cellspacing=0 cellpadding=3 align=center width=100% style=padding-top:3px>' +
+               '<table border=0 id=loginTable cellspacing=0 cellpadding=3 align=center width=100% style=padding-top:3px>' +
                  //Warning message
                  '<tbody><tr><td id=loginWarning colspan=2 align=center style=display:none;' +
                    'color:red;padding-bottom:3px>' + Controller.translate('ALL_FIELDS_REQUIRED') + 
@@ -140,12 +140,10 @@ function load_login_balloon(event,session,username,openid) {
                   //OpenID textbox and images
                  (Controller.can_openid?
                  '<tbody id=loginDOpenid align=center style=display:none;>' +
-                   '<tr><td colspan=2 style=padding-top:6px;>' +
-                     '<input onKeyPress=if(event.keyCode==13){login_loading(true);if(LoginPage==\'details\'){' +
-                       'edit_details_verify();}else{validate_info();}} value=http:// ' +
-                       'id=loginDONew type=text maxlength=128 size=26 style=font-size:9pt;' +
-                       'padding-left:16px;background-image:url('+ImgLocation+'/openid-logo.gif);' +
-                       'background-repeat:no-repeat;border:solid;></td></tr>' +
+                   '<tr><td id=loginOpenIDP colspan=2 align=left style=padding-top:12px>' +
+		      '<img border=0 src="'+ImgLocation+'/openid-logo.gif" />'+
+		             Controller.translate('OPENID_PROMPT')+'</td></tr>' +
+		  '<tr><td colspan=2>&nbsp;</td></tr>' +
                    '<tr><td colspan=2>' +
                        '<image style="cursor:pointer" onClick=check_openid(\'https://www.google.com/accounts/o8/id\'); ' +
                          'src='+ImgLocation+'/google-logo.gif alt=\'Google\' height=20px width=20px>' +
@@ -160,11 +158,18 @@ function load_login_balloon(event,session,username,openid) {
                        '<image style="cursor:pointer" onClick=login_openid_html(\'http://username.myopenid.com/\',7,8); ' +
                          'src='+ImgLocation+'/myopenid-logo.png alt=\'myOpenID\' height=20px width=20px>' +
                    '</td></tr>' +
+                   '<tr><td colspan=2 style=padding-top:6px;>' +
+                     '<input onKeyPress=if(event.keyCode==13){login_loading(true);if(LoginPage==\'details\'){' +
+                       'edit_details_verify();}else{validate_info();}} value=http:// ' +
+                       'id=loginDONew type=text maxlength=128 size=36 style=font-size:9pt;' +
+                       'padding-left:16px;background-image:url('+ImgLocation+'/openid-logo.gif);' +
+                       'background-repeat:no-repeat;></td></tr>' +
                  '</tbody>' : ""
                  ) +
 
                   //Initially empty section used for populating with a list of openids associated with an account
-                 '<tbody id=loginDList style=display:none;></tbody>' +
+	          // '<tbody id=loginDList style=display:none;><tr><td>dummy</td></tr></tbody>' +
+	          '<div id=loginDList style="display:none;margin-left:-30px"></div>' +
 
                   //Submit, remember me and cancel buttons
                  '<tbody id="loginOptions">' +
@@ -221,8 +226,9 @@ function load_login_balloon(event,session,username,openid) {
 	       '</form>';
 
     //GBox.showTooltip(event,html,1,320);
-    GBox.showTooltip(event,html,1);
-    //$('loginMain').style.width = '268px';
+    GBox.showTooltip(event,html,1,320);
+    if ($('loginMain')) 
+	$('loginMain').style.width = '320';
 
     //If the user is logged in, display only the "edit account details" page when login is called
     if(username != false) {
@@ -353,6 +359,7 @@ function login_page_openid(openID) {
         $('loginOpenIDY').hide();  $('loginDOpenid').show();
         $('loginOpenIDN').show();  $('loginNorm').hide();
         $('loginDONew').focus();
+	login_openid_html('http://youropenidhere',7,14);
     } else {
         OpenIDMenu = false;
         $('loginOpenIDY').show();  $('loginDOpenid').hide();
@@ -691,7 +698,7 @@ function login_user(username,session,remember) {
 //Refresh the page with the user logged in
 function login_get_account(username,session,remember,openid) {
     if ($('loginBusy') != null) $('loginBusy').show();
-    new Ajax.Request(document.URL,{
+    new Ajax.Request(Controller.url,{
         method:      'post',
         parameters: {action:   'authorize_login',
                      username: username,
@@ -890,11 +897,10 @@ function edit_details(details) {
         EditDetails = 'openid-add';
         LoginPage = 'openid-add';
         $('loginDOpenid').show();
-        if(UsingOpenID) {$('loginDOpenidUser').show(); $('loginDOUser').focus();}
-        // else {$('loginDOpenidPass').show(); $('loginDOPass').focus();}
+	login_openid_html('http://youropenidhere',7,14);
         return;
     case 'openid-remove':
-        $('loginDList').innerHTML   = '<tr><td></td></tr>';
+	$('loginDList').innerHTML   = '';
         $('loginTitle').innerHTML   = Controller.translate('REMOVE_OPENID');
         $('loginDSubmit2').disabled = true;
         $('loginDList').show();
@@ -1082,10 +1088,20 @@ function edit_details_confirm() {
 //******************************************************************
 
 //Switches the openid text based on the icon selected
-function login_openid_html(html,start,strLength) {
-    $('loginDONew').value = html;
-    $('loginDONew').focus();
-    $('loginDONew').setSelectionRange(start, start + strLength);
+function login_openid_html(html,start,strLength,input) {
+    if (input == null)
+	input = $('loginDONew');
+    input.value = html;
+    input.focus();
+    if (input.setSelectionRange)  // Safari/Mozilla
+	input.setSelectionRange(start, start + strLength);
+    else if(input.createTextRange) { // IE
+	var selRange = input.createTextRange();
+	selRange.collapse(true);
+	selRange.moveStart("character",start);
+	selRange.moveEnd("character",strLength);
+	selRange.select();
+    }
     return;
 }
 
@@ -1179,7 +1195,7 @@ function remove_openid_cookie() {
 
 //Retrieve the GET variables and pass them to the OpenID handler
 function confirm_openid(session,page,logged_in,email,gecos) {
-    remove_openid_cookie();
+    // remove_openid_cookie();
     var callback = process_openid();
     new Ajax.Request(LoginScript+Source+'/',{
         method:      'post',
@@ -1187,19 +1203,23 @@ function confirm_openid(session,page,logged_in,email,gecos) {
 		    action:  'gbrowse_login',
 		    login_action: ['confirm_openid'],
 		    callback: callback,
+		    id:       session,
 		    session:  session,
 		    option:   page
         },
         onSuccess: function (transport) {
+	    login_blackout(false,'');
             var results = transport.responseJSON;
-            if(page == 'edit' || page == 'openid-add') {
-                var command = 'confirm_openid_error("'+session+'","'+page+'",'+logged_in+',' +
-                              '"'+results[0].error+'","'+results[0].user+'","'+results[0].only+'")';
-                setTimeout(command,2000);
-            } else if(results[0].error != null) {
-                var command = 'confirm_openid_error("'+session+'","'+page+'",'+logged_in+',' +
-		              '"'+results[0].error+'","'+results[0].openid+'",0,'+'"'+email+'","'+gecos+'")';
-		setTimeout(command,2000);
+	    if(results[0].error != null && results[0].error != 'Success') {
+		if (results[0].error.indexOf('not unique') >= 0)
+		    alert(Controller.translate('OPENID_ADD_FAILED','OpenID already in use.'));
+		  else
+		      alert(Controller.translate('OPENID_ADD_FAILED',results[0].error));
+		reload_login_script();
+	    }
+	    else if (page == 'edit' || page == 'openid-add') {
+		alert(Controller.translate('OPENID_ADD_SUCCESS'));
+		reload_login_script();
             } else {
                 if(results[0].only == 0) {UsingOpenID = false;}
                 else {UsingOpenID = true;}
@@ -1308,12 +1328,16 @@ function list_openid() {
         onSuccess: function (transport) {
 	    $('loginBusy').hide();
             var results = transport.responseJSON;
-            if(results[0].error != null) {
-                $('loginWarning').innerHTML = results[0].error;
-            } else {
+            if(results[0].error == null)
                 format_openids(results);
-            }
-        }
+	    else if (results[0].error.indexOf('There are no')>=0)
+		  $('loginWarning').innerHTML = results[0].error 
+		      + 
+	            ' <a href=#add onClick=$(\'loginDList\').hide();$(\'loginDOpenid\').show();' +
+	                'edit_details(\'openid-add\')>' + Controller.translate('ADD_ONE') + '</a>';
+	    else
+		  $('loginWarning').innerHTML = results[0].error;
+	    }
     });
     return;
 }
@@ -1326,28 +1350,22 @@ function format_openids(results) {
     var i       = 0;
 
     results.each(function (hash) {
-        html += '<tr><td align=right style=padding-left=12px>' +
+        html += '<li>' +
                 '<input type=radio onClick=$(\'loginDSubmit2\').disabled=false;' +
                 '$(\'loginWarning\').hide();SelectedID=this.value; name=list ' +
-                'value="'+hash.name+'" /></td>';
+                'value="'+hash.name+'" />';
 
         for(i=0; i < hash.name.length; i+=36) {
             i==0 ? value = '' : value += '<br>';
             value += hash.name.substr(i,36);
         }
 
-        html += '<td align=left><tt>'+value+'</tt></td></tr>';
+        html += '<span style="font-family:monospace">'+value+'</span></li>';
         OpenIDCount++;
     });
 
-    if(html == '') {
-        $('loginWarning').innerHTML = '<tr><td colspan=2><br>' + Controller.translate('NO_OPENIDS_ASSOCIATED', AppName) +
-            '<a href=#add onClick=$(\'loginDList\').hide();$(\'loginDOpenid\').show();' +
-                'edit_details(\'openid-add\')>' + Controller.translate('ADD_ONE') + '</a></td></tr>';
-    } else {
-        $('loginDList').innerHTML = html;
-        $('loginWarning').hide();
-    }
+    $('loginDList').innerHTML = '<ul style="list-style-type:none">'+html+'</ul>';
+    $('loginWarning').hide();
     return;
 }
 
@@ -1483,6 +1501,7 @@ function login_delete_user(username,pass) {
 
 //Adapted from http://www.hunlock.com/blogs/Snippets:_Howto_Grey-Out_The_Screen
 function login_blackout(turnOn,text) {
+    //    if (Prototype.Browser.IE) return;
     var html    = text;
     var screen  = document.getElementById('loginConfirmScreen');
     var text    = document.getElementById('loginConfirmText');
@@ -1501,7 +1520,7 @@ function login_blackout(turnOn,text) {
             div.style.position        = 'absolute';
             div.style.top             = '0px';
             div.style.width           = '100%';
-            div.style.zIndex          = '50';
+	    //            div.style.zIndex          = '50';
 
         var msg = document.createElement('div');
             msg.id                    = 'loginConfirmText';
@@ -1518,7 +1537,7 @@ function login_blackout(turnOn,text) {
             msg.style.textAlign       = 'center';
             msg.style.top             = '0px';
             msg.style.width           = '380px';
-            msg.style.zIndex          = '60';
+	    //            msg.style.zIndex          = '60';
 
         contents.appendChild(msg);
         contents.appendChild(div);

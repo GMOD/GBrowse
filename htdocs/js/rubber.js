@@ -40,6 +40,7 @@ SelectArea.prototype.replaceImage = function(image) {
   // escape backslashes that may appear in the src attribute
   src = escape(src.replace(/\\/g,"\\\\"));
 
+  image = Element.extend(image);
   image.setStyle({ background: 'url('+src+') top left no-repeat',
                    width: width+'px',
                    height: height+'px',
@@ -184,7 +185,7 @@ SelectArea.prototype.startRubber = function(self,event) {
                             visibility: 'hidden' 
   });
 
-  var spanReport = self.spanReport || self.createAndAppend('p',self.selectBox,'spanReport');
+  var spanReport = Element.extend(self.spanReport || self.createAndAppend('p',self.selectBox,'spanReport'));
   spanReport.setStyle({ color: self.fontColor||'black',
                         marginTop: self.marginTop||'0px',
                         background: 'transparent',
@@ -355,6 +356,7 @@ SelectArea.prototype.addSelectMenu = function(view) {
   }
 
   // required style 
+  menu = Element.extend(menu);
   menu.setStyle({ position: 'absolute',
                   display: 'block',
                   zIndex: '101',
@@ -380,7 +382,7 @@ SelectArea.prototype.addSelectBox = function(view) {
   if (this.selectBox) return false;
  
   var box = this.createAndAppend('div',this.selectLayer,view+'selectBox');
-
+  box     = Element.extend(box);
   box.setStyle({ position: 'absolute',
                  visibility: 'hidden',
                  top: '0px',
@@ -472,6 +474,7 @@ SelectArea.prototype.showMenu = function(event) {
   if ((left+menuWidth) > pageWidth) left -= menuWidth + 10;
   var top  = self.eventLocation(event,'y') - menuYHalf;
 
+  menu = Element.extend(menu);
   menu.setStyle({ top:  top+'px' }); 
   menu.setStyle({ left: left+'px' });
 

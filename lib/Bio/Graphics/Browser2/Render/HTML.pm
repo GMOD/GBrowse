@@ -677,17 +677,17 @@ sub render_actionmenu {
 
     my $help_link     = a({-href=>$self->general_help(),
 			   -target=>'_new'},$self->translate('HELP_WITH_BROWSER'));
-    my $about_gb_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_gbrowse')",
+    my $about_gb_link    = a({-onMouseDown => "Controller.show_info_message('about_gbrowse')",
 			   -href        => 'javascript:void(0)',
 			   -style       => 'cursor:pointer'
 			  },
 			  $self->translate('ABOUT'));
-    my $about_dsn_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_dsn')",
+    my $about_dsn_link    = a({-onMouseDown => "Controller.show_info_message('about_dsn')",
 			       -href        => 'javascript:void(0)',
 			       -style       => 'cursor:pointer'
 			      },
 			      $self->translate('ABOUT_DSN'));
-    my $about_me_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_me')",
+    my $about_me_link    = a({-onMouseDown => "Controller.show_info_message('about_me')",
 			       -href        => 'javascript:void(0)',
 			       -style       => 'cursor:pointer'
 			      },

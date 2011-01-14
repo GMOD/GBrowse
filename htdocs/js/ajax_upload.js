@@ -408,28 +408,28 @@ function shareFile(fileid, userid) {
 
 // Unshares a file with the specific userid (or the logged-in user, if userid is blank). A front-end to UserTracks::unshare().
 function unshareFile(fileid, userid) {
-	showUploadBusy(fileid, Controller.translate('REMOVING'));
-	var offset = $("community_display_offset").value;
-	new Ajax.Request(
-		document.URL,
-		{
-			method: 'post',
-			parameters: {
-				action: 'unshare_file',
-				fileid: fileid,
-				userid: userid
-			},
-			onSuccess: function (transport) {
-				var sections = new Array(custom_tracks_id, track_listing_id);
-				if (using_database())
-					sections.push(community_tracks_id);
-				Controller.update_sections(sections, "&offset=" + offset);
-				var tracks = transport.responseText.evalJSON(true).tracks;
-				if (tracks != null)
-					tracks.each(function(tid) { Controller.delete_tracks(tid) });
-			}
-		}
-	);
+    showUploadBusy(fileid, Controller.translate('REMOVING'));
+    var cdo    = $('community_display_offset');
+    var offset = cdo ? cdo.value : 0;
+    new Ajax.Request(
+		     document.URL,
+		     {
+			 method: 'post',
+			     parameters: {
+			     action: 'unshare_file',
+				 fileid: fileid,
+				 userid: userid
+				 },
+			     onSuccess: function (transport) {
+			     var sections = new Array(custom_tracks_id, track_listing_id);
+			     if (using_database())
+				 sections.push(community_tracks_id);
+			     Controller.update_sections(sections, "&offset=" + offset);
+			     var tracks = transport.responseText.evalJSON(true).tracks;
+			     if (tracks != null)
+				 tracks.each(function(tid) { Controller.delete_tracks(tid) });
+			 }
+		     });
 }
 
 // Updates the public file listing. If given, searches by keyword or provides and offset.

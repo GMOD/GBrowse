@@ -144,7 +144,6 @@ sub userdb {
 # User Tracks - Returns a list of a user's tracks.
 sub user_tracks {
     my $self  = shift;
-    my $uuid  = shift;
 
     # note: Bio::Graphics::Browser2::AdminTracks is a subclass of UserTracks
     # that is defined within the UserTracks.pm file.
@@ -153,6 +152,18 @@ sub user_tracks {
     
     $self->{usertracks} ||= $class->new($self->data_source,$self->session);
     return $self->{usertracks};
+}
+
+sub get_usertrack_labels {
+    my $self = shift;
+    return $self->{'.user_labels'} if exists $self->{'.user_labels'};
+    my $userdata = $self->user_tracks;
+    my @files    = $userdata->tracks;  # misnomer -- should be "uploads" or "files"
+    for my $f (@files) {
+	my @labels = $userdata->labels($f);
+	$self->{'.user_labels'}{$_}=$f foreach @labels;
+    }
+    return $self->{'.user_labels'} ||= {};
 }
 
 sub remote_sources {
@@ -2917,6 +2928,7 @@ sub set_language {
   return unless @languages;
   $lang->language(@languages);
   $self->language($lang);
+  Bio::Graphics::Browser2::Util->set_language($lang);
 }
 
 sub language {
@@ -3584,15 +3596,23 @@ sub make_hilite_callback {
 sub categorize_track {
   my $self  = shift;
   my $label = shift;
+
+  my $user_labels = $self->get_usertrack_labels;
+
   return $self->translate('OVERVIEW') if $label =~ /:overview$/;
   return $self->translate('REGION')   if $label =~ /:region$/;
   return $self->translate('EXTERNAL') if $label =~ /^(http|ftp|file):/;
   return $self->translate('ANALYSIS') if $label =~ /^plugin:/;
 
+  if ($user_labels->{$label}) {
+      return $self->user_tracks->is_mine($user_labels->{$label}) 
+	  ? $self->translate('UPLOADED_TRACKS_CATEGORY')
+	  : $self->translate('SHARED_WITH_ME_CATEGORY');
+  }
+
   my $category;
   for my $l ($self->language->language) {
     $category      ||= $self->setting($label=>"category:$l");
-
   }
   $category        ||= $self->setting($label => 'category');
   $category        ||= '';  # prevent uninit variable warnings
@@ -3645,13 +3665,13 @@ sub add_user_tracks {
     return if $self->is_admin;  # admin user's tracks are already in main config file.
     $self->session->uploadsid;
 
-    my $userdata    = $self->user_tracks($self);
+    my $userdata    = $self->user_tracks;
     my @user_tracks = $userdata->tracks;
 
 #    warn "adding usertracks for $uuid, getting @user_tracks";
     for my $track (@user_tracks) {
-		my $config_path = $userdata->track_conf($track);
-		eval {$data_source->parse_user_file($config_path)};
+	my $config_path = $userdata->track_conf($track);
+	eval {$data_source->parse_user_file($config_path)};
     }
 
     return @user_tracks;

@@ -343,7 +343,7 @@ sub load_line {
 
 sub category {
     my $self = shift;
-    return $self->force_category || "My Tracks:Uploaded Tracks:".$self->track_name;
+    return $self->force_category || Bio::Graphics::Browser2::Util->translate('UPLOADED_TRACKS').':'.$self->track_name;
 }
 
 sub backend {

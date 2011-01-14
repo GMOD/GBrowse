@@ -30,8 +30,8 @@ sub _new {
     if ($globals->user_accounts) {
 	# BUG: Two copies of UserDB; one here and one in the Render object
         $self->{userdb}   = Bio::Graphics::Browser2::UserDB->new($globals);
-        $self->{username} = $self->{userdb}->username_from_sessionid($self->{sessionid});
-        $self->{userid}   = $self->{userdb}->userid_from_sessionid($self->{sessionid});
+        $self->{username} = $self->{userdb}->username_from_sessionid($self->sessionid);
+        $self->{userid}   = $self->{userdb}->userid_from_sessionid($self->sessionid);
     }
     
     return $self;
@@ -276,7 +276,6 @@ sub get_shared_files {
 sub share_link {
     my $self = shift;
     my $file = shift or confess "No input or invalid input given to share()";
-    
     my $permissions = $self->permissions($file);
     return $self->share($file) if ($permissions eq "public" || $permissions eq "casual"); # Can't hijack group files with a link, public are OK.
 }
@@ -293,16 +292,23 @@ sub share {
     if ($self->{globals}->user_accounts) {
         my $userdb = $self->{userdb};
         $userid = $userdb->get_user_id($name_or_id);
-        $self->{userid} ||= $userdb->add_named_session($self->{sessionid}, "an anonymous user");
+        $self->{userid} ||= $userdb->add_named_session($self->sessionid, "an anonymous user");
     } else {
         $userid = $name_or_id;
     }
     $userid ||= $self->{userid};
 
     my $sharing_policy = $self->permissions($file);
-    return if $self->is_mine($file) and $sharing_policy =~ /(group|casual)/ and $userid eq $self->{userid}; # No sense in adding yourself to a group. Also fixes a bug with nonsense users returning your ID and adding yourself instead of nothing.
-    # Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
-    if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /group/))) {
+    # No sense in adding yourself to a group. Also fixes a bug with nonsense users
+    # returning your ID and adding yourself instead of nothing.
+    # Users can add themselves to the sharing lists of casual or public files; 
+    # Owners can add people to group lists but can't force anyone to have a public or casual file.
+    return if $self->is_mine($file) and 
+	$sharing_policy =~ /(group|casual)/ and 
+	$userid eq $self->{userid}; 
+    if ((($sharing_policy =~ /(casual|public)/) && 
+	 ($userid eq $self->{userid})) || 
+	($self->is_mine($file) && ($sharing_policy =~ /group/))) {
         my $public_flag = ($sharing_policy=~ /public/)? 1 : 0;
         my $uploadsdb = $self->{uploadsdb};
         
@@ -437,7 +443,7 @@ sub add_file {
     my $description = shift;
     
     my $userdb = $self->{userdb};
-    $self->{userid} ||= $userdb->add_named_session($self->{sessionid}, "an anonymous user");
+    $self->{userid} ||= $userdb->add_named_session($self->sessionid, "an anonymous user");
     
     my $userid = shift || $self->{userid};
     my $shared = shift || ($self =~ /admin/)? "public" : "private";
@@ -549,13 +555,6 @@ sub is_shared_with_me {
     my $uploadsdb = $self->{uploadsdb};
     my $results = $uploadsdb->selectcol_arrayref("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ?", undef, $file, $userid);
     return (@$results > 0);
-}
-
-# Sharing Link (File ID) - Generates the sharing link for a specific file.
-sub sharing_link {
-    my $self = shift;
-    my $file = shift or return;
-    return url(-full => 1, -path_info => 1) . "?share_link=" . $file;
 }
 
 # File Type (File ID) - Returns the type of a specified track, in relation to the user.

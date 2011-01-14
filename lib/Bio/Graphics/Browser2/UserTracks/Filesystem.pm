@@ -8,7 +8,7 @@ use Bio::Graphics::Browser2;
 use File::Spec;
 use File::Path 'remove_tree';
 use Cwd;
-use Carp "cluck";
+use Carp "cluck",'croak';
 
 # Filesystem works on the basis of a file-based database with the following structure:
 #    base      -- e.g. /var/tmp/gbrowse2/userdata
@@ -50,6 +50,13 @@ sub get_imported_files {
 	return @result;
 }
 
+sub get_track_upload_id {
+    my $self = shift;
+    my $uploadsid = $self->{uploadsid};
+    my $id        = $self->SUPER::get_track_upload_id(@_);
+    return "$uploadsid:$id";
+}
+
 # File Exists (Full Path[, Owner]) - Returns the number of results for a file, 0 if not found.
 sub file_exists {
     my $self = shift;
@@ -59,13 +66,41 @@ sub file_exists {
 
 # Add File - A placeholder function while UserTracks holds the file uploading bit.
 sub add_file {
-	my $self = shift;
-	my $filename = shift;
+    my $self = shift;
+    my $filename = shift;
 	
-	my %track_lookup = $self->track_lookup;
-	$track_lookup{$_} = $filename foreach $self->labels($filename);
+    my %track_lookup = $self->track_lookup;
+    $track_lookup{$_} = $filename foreach $self->labels($filename);
 	
-	return $filename;
+    return $filename;
+}
+
+sub share_link {
+    my $self = shift;
+    my $file = shift or die "No input or invalid input given to share()";
+    return $self->share($file);
+}
+
+sub share {
+    my $self = shift;
+    my $fileid = shift;
+    my ($uploadsid,$filename) = split ':',$fileid,2;
+    my %track_lookup          = $self->track_lookup;
+    my $label = 'track_'.substr($uploadsid,0,6).'_'.$filename;
+    $track_lookup{$label} = "$uploadsid/$filename";
+
+    # add to user's session
+    my $page_settings = $self->page_settings;
+    $page_settings->{shared_files}{$label} = $track_lookup{$label};
+    $self->session->flush;
+}
+
+sub unshare {
+    my $self = shift;
+    my $file = shift or croak "No input or invalid input given to unshare()";
+    my $page_settings = $self->page_settings;
+    delete $page_settings->{shared_files}{$file};
+    $self->session->flush;
 }
 
 # Delete File - Pretty self-explanatory.
@@ -74,7 +109,7 @@ sub delete_file {
     my $file  = shift;
     
     my %track_lookup = $self->track_lookup;
-	delete $track_lookup{$_} foreach $self->labels($file);
+    delete $track_lookup{$_} foreach $self->labels($file);
     
     my $loader = Bio::Graphics::Browser2::DataLoader->new($file,
 							  $self->track_path($file),
@@ -83,6 +118,14 @@ sub delete_file {
 							  $self->{uploadsid});
     $loader->drop_databases($self->track_conf($file));
     remove_tree($self->track_path($file));
+}
+
+sub get_added_public_files { return }
+sub get_shared_files {
+    my $self = shift;
+    my $settings = $self->page_settings;
+    my $shared_files = $settings->{shared_files} or return;
+    return keys %$shared_files;
 }
 
 # Created (File) - Returns creation date of $track.
@@ -127,31 +170,43 @@ sub is_imported {
 
 # File Type (File) - Returns the type of a specified track.
 sub file_type {
-	my $self = shift;
-	my $file = shift;
-	return ($self->is_imported($file) || $self->is_mirrored($file))? "imported" : "uploaded";
+    my $self = shift;
+    my $file = shift;
+    return !$self->is_mine($file)     ? 'shared'
+	:$self->is_imported($file)    ? 'imported'
+	:$self->is_mirrored($file)    ? 'imported'
+	:'uploaded';
 }
 
 # Filename (File) - Returns the filename - is used basically in contrast with Database.pm's filename function, which is more involved.
 sub filename {
-	my $self = shift;
-	my $file = shift;
+    my $self = shift;
+    my $file = shift;
+    if (my $shared_files = $self->page_settings->{shared_files}) {
+	return $shared_files->{$file} || $file;
+    } else {
 	return $file;
+    }
 }
 
 # Is Mine (File) - Returns if a file belongs to the logged-in user. Since this only works with logged-in users, is always true.
 sub is_mine {
-	return 1;
+    my $self = shift;
+    my $file = shift;
+    return !exists $self->page_settings->{shared_files}{$file};
 }
 
 # Owner (File) - Returns the owner of a file. It's basically used in contrast with Database.pm's owner function.
 sub owner {
-	return shift->{uploadsid};
+    return shift->{uploadsid};
 }
 
 # Title (File) - Returns the title of a file, which is the filename.
 sub title {
-    return shift->filename(shift);
+    my $self = shift;
+    my $filename = $self->filename(shift);
+    $filename    =~ s!^[a-f0-9]{32}/!!;
+    return $filename;
 }
 
 # Get File ID (File) - Returns the ID of a file, which is the filename.

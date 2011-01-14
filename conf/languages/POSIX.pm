@@ -513,7 +513,7 @@ END
  OTHER_SHARE_METHODS => <<END,
 You can also share it with another user by setting its permissions to
 <b>public</b> and giving them this link or letting them search for the
-track by name, or by changing its permissions to <b>group</p> and adding
+track by name, or by changing its permissions to <b>group</b> and adding
 the user you want by username. To do this, select the "Custom Tracks"
 page and choose the sharing policy you want with the drop-down menu in
 the "sharing" section, then type the user's name or ID in the input
@@ -659,6 +659,8 @@ END
    INTERRUPTED_RESUME        => 'Interrupted [Resume]',
    SHARING                   => 'Sharing:',
    TRACK_IS                  => 'Track is',
+   UPLOADED_TRACKS_CATEGORY  => 'My Tracks:Uploaded Tracks',
+   SHARED_WITH_ME_CATEGORY   => 'My Tracks:Shared with me',
    SHARED_WITH_YOU           => '<b>shared</b> with you',
    SHARING_PRIVATE           => 'Private',
    SHARING_CASUAL            => 'Casual',

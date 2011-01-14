@@ -2,6 +2,7 @@ var Autocomplete1;
 var Autocomplete2;
 
 function initAutocomplete() {
+    if ($('landmark_search_field'))
 	 Autocomplete1 =
 	 	 new Ajax.Autocompleter(
 	                 "landmark_search_field",
@@ -15,6 +16,8 @@ function initAutocomplete() {
 			  minChars:           2
                          }
 	 );
+
+    if ($('public_search_keyword'))
 	 Autocomplete2 =
 	 	 new Ajax.Autocompleter(
 	                 "public_search_keyword",

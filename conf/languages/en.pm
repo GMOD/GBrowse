@@ -511,7 +511,7 @@ END
  OTHER_SHARE_METHODS => <<END,
 You can also share it with another user by setting its permissions to
 <b>public</b> and giving them this link or letting them search for the
-track by name, or by changing its permissions to <b>group</p> and adding
+track by name, or by changing its permissions to <b>group</b> and adding
 the user you want by username. To do this, select the "Custom Tracks"
 page and choose the sharing policy you want with the drop-down menu in
 the "sharing" section, then type the user's name or ID in the input
@@ -545,6 +545,7 @@ END
    WITH_OPENID               => 'with your OpenID',
    SIGN_IN                   => 'Sign in',
    DONT_HAVE_OPENID          => 'Don\'t have an OpenID?',
+   OPENID_PROMPT             => "Select your OpenID provider's icon from the list below, or type your OpenID into the text box.",
    GO_BACK                   => 'Go Back.',
    ALL_FIELDS_REQUIRED       => 'All fields are required.',
    PASSWORDS_DO_NOT_MATCH    => 'Passwords do not match.',

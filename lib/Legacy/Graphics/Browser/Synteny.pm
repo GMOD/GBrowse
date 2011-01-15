@@ -13,10 +13,9 @@ use CGI qw/:standard escape/;
 use CGI::Toggle;
 use CGI::Carp 'fatalsToBrowser';
 use GD;
-use vars qw/$VERSION @ISA/;
-@ISA = ('Legacy::Graphics::Browser');
 
-$VERSION = 0.01;
+our @ISA = ('Legacy::Graphics::Browser');
+our $VERSION = 0.01;
 
 use constant DEFAULT_FINE_ZOOM => '20%';
 use constant BUTTONSDIR        => '/gbrowse2/images/buttons';

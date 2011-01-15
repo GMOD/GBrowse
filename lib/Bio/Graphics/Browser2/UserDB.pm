@@ -10,10 +10,8 @@ use JSON;
 use Text::ParseWords 'quotewords';
 use Digest::MD5 qw(md5_hex);
 use Carp qw(confess cluck croak);
-use LWP::UserAgent;
-#use LWPx::ParanoidAgent; (Better, but currently broken)
 
-use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; 1";
+use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; require LWP::UserAgent; 1";
 use constant HAVE_SMTP   => eval "require Net::SMTP;1";
 
 # SOME CLARIFICATION ON TERMINOLOGY
@@ -252,6 +250,32 @@ sub get_user_id {
 
 sub match_user {
     my $self   = shift;
+    my $search = shift;
+
+    my $userdb = $self->dbi;
+    my $select = $userdb->prepare(<<END) or die $userdb->errstr;
+SELECT a.username,b.gecos,b.email 
+  FROM session as a,users as b
+ WHERE a.userid=b.userid
+   AND (a.username LIKE ? OR
+        b.gecos    LIKE ? OR
+        b.email    LIKE ?)
+END
+;
+    $search = quotemeta($search);
+    my $db_search = "%$search%";
+    $select->execute($db_search,$db_search,$db_search) or die $select->errstr;
+    my @results;
+    while (my @a = $select->fetchrow_array) {
+	push @results,(grep /$search/i,@a);
+    }
+    $select->finish;
+    return \@results;
+}
+
+ # similar to match_user() except that it only finds users who are sharing files
+sub match_sharing_user {
+    my $self   = shift;
     my ($source,$search) = @_;
     my $userdb = $self->dbi;
     my $select = $userdb->prepare(<<END) or die $userdb->errstr;
@@ -271,7 +295,7 @@ END
     $select->execute($source,$db_search,$db_search,$db_search) or die $select->errstr;
     my @results;
     while (my @a = $select->fetchrow_array) {
-	push @results,(grep /$search/,@a);
+	push @results,(grep /$search/i,@a);
     }
     $select->finish;
     return \@results;
@@ -415,6 +439,14 @@ sub get_sessionid {
     my $userdb = $self->{dbi};
     return $userdb->selectrow_array("SELECT sessionid FROM session WHERE userid=?",
 				    undef,$userid);
+}
+
+sub accountinfo_from_username {
+    my $self     = shift;
+    my $username = shift;
+    my $userdb = $self->dbi;
+    return $userdb->selectrow_array('SELECT a.gecos,a.email FROM users as a,session as b WHERE a.userid=b.userid AND b.username=?',
+				    undef,$username);
 }
 
 # Get Username (User ID) - Returns a user's username, given their ID.
@@ -866,10 +898,9 @@ sub do_edit_details {
     my $querystring  = "UPDATE users       ";
     $querystring .= "   SET $column  = ?";
     $querystring .= " WHERE userid   = ?";
-    $querystring .= "   AND $column  = ?";
 
     my $update = $userdb->prepare($querystring);
-    unless($update->execute($new,$userid,$old)) {
+    unless($update->execute($new,$userid)) {
 	if ($column eq 'email') {
 	    return $self->string_result("New e-mail already in use, please try another.");
 	} else {

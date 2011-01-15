@@ -924,9 +924,11 @@ sub render_track_table {
 
   # Get the list of all the categories needed.
   my %exclude = map {$_=>1} map {$self->translate($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
+
   (my $usertrack_cat = $self->translate('UPLOADED_TRACKS_CATEGORY')) =~ s/:.+$//;
   my @user_tracks    = grep {/^$usertrack_cat/i} keys %track_groups;
   $exclude{$_}++ foreach @user_tracks;
+
   my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
 
   my $all_on  = $self->translate('ALL_ON');
@@ -954,15 +956,6 @@ sub render_track_table {
     $category_title      =~ s/\\//g;
     
     my $file_id;
-    my $shared    = $self->translate('SHARED_WITH_ME');
-    my $uploaded  = $self->translate('UPLOADED_TRACKS');
-    if ($usertracks->database && $category =~ /$shared|$uploaded/) {
-        $file_id        = $usertracks->get_file_id($category_title);
-        $category_title = $usertracks->title($file_id);
-        # Re-write the category labels appropriately.
-        #$category =~ s/Uploaded Tracks/Community Tracks/ if $usertracks->database && $usertracks->permissions($file_id) eq "public";
-        #$category =~ s/Uploaded Tracks/Custom Tracks/;
-    }
 
     if ($category eq $self->translate('REGION') 
 	&& !$self->setting('region segment')) {
@@ -1556,15 +1549,26 @@ sub render_track_list_title {
 	},
 	$short_name
 	);
-    my $owner_name = $userdata->owner_name($fileid);
-    my $owner      = ($globals->user_accounts && $type =~ "public")? $self->translate("UPLOADED_BY") . " " . b($owner_name) : "";
+    my $owner;
+    if ($globals->user_accounts) {
+	my $owner_name = $userdata->owner_name($fileid);
+	my $users      = $self->userdb;
+	my ($fullname,$email)   = $users->accountinfo_from_username($owner_name);
+	$email ||= '';
+	my $email_link          = a({-href=>"mailto:$email"},$email);
+	$fullname             ||= $owner_name;
+	$owner = $self->translate("UPLOADED_BY") . " " . b($fullname).($email ? " &lt;${email_link}&gt;" : '');
+    } else { 
+	$owner = '';
+    }
     
     return span(
 	{-style => "display: inline-block;"},
 	$stat,
 	$title,
 	$owner,
-	$go_there
+	br(),
+	$go_there,
 	) . $source_note;
 }
 
@@ -1818,20 +1822,27 @@ sub render_track_sharing {
 	}
 		
 	if ($sharing_policy =~ /group/) {
+	    my $id = 'username_entry_'.int(rand(100000));
 	    my $add_box = "&nbsp;" . input(
 		{
 		    -length => 20,
-		    -value => $self->translate('ENTER_SOMETHING_HERE', (($globals->user_accounts)? $self->translate('USERNAME_OR_USER_ID') : $self->translate('USER_ID'))),
+		    -class  => 'username_entry',
+		    -id     => $id,
+		    -value => $self->translate('ENTER_SOMETHING_HERE', 
+					       (($globals->user_accounts)
+						? $self->translate('USERNAME_OR_USER_ID') 
+						: $self->translate('USER_ID'))),
 		    -onFocus => "this.clear()"
-		}
-		);		
+		});
+	    my $add_autocomplete = div({-id=>"${id}_choices",
+					-class=>'autocomplete'},'') if $self->setting('autocomplete');
 	    my $add_link = "&nbsp;" . a(
 		{
 		    -href => "javascript: void(0)",
 		    -onClick => "shareFile('$fileid', this.previous('input').getValue())",
 		},
 		$self->translate('ADD_BUTTON') );
-	    $sharing_content .= $add_box . $add_link;
+	    $sharing_content .= $add_box . $add_autocomplete . $add_link;
 	};
     }
     return $sharing_content;
@@ -3039,10 +3050,14 @@ sub share_track {
                 $permissions_changed = 1;
             }
             if ($is_mine) {
-                $return_html .= p(($permissions_changed? $self->translate('SHARE_CUSTOM_TRACK_CHANGED', "casual") : $self->translate('SHARE_CUSTOM_TRACK_NO_CHANGE', $permissions)) . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
+                $return_html .= p(($permissions_changed? 
+				   $self->translate('SHARE_CUSTOM_TRACK_CHANGED', "casual") 
+				   : $self->translate('SHARE_CUSTOM_TRACK_NO_CHANGE', $permissions)) 
+				   . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
                 $return_html .= p($self->translate('OTHER_SHARE_METHODS'));
             } elsif ($permissions =~ /(casual|public)/) {
-                $return_html .= p($self->translate('SHARE_SHARED_TRACK', $permissions) . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
+                $return_html .= p($self->translate('SHARE_SHARED_TRACK', $permissions) 
+				  . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
             }
             
             $return_html .= textfield(

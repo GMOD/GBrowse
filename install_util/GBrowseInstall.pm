@@ -94,6 +94,11 @@ sub ACTION_demo {
 	    s!\$TMP!$dir/tmp!g;
 	    s/\$CGIURL/$cgiurl/g;
 	    s!\$VERSION!$self->dist_version!eg;
+	    s/\$CAN_USER_ACCOUNTS_OPENID/$self->has_openid/eg;
+	    s/\$CAN_USER_ACCOUNTS_REG/$self->has_smtp/eg;
+	    s/\$CAN_USER_ACCOUNTS/$self->has_mysql_or_sqlite/eg;
+	    s/\$USER_ACCOUNT_DB/$self->guess_user_account_db/eg;
+	    s/\$SMTP_GATEWAY/$self->guess_smtp_gateway/eg;
 	    s!^url_base\s*=.+!url_base               = /!g;
 	    $out->print($_);
 	}
@@ -527,7 +532,7 @@ sub process_conf_files {
 	    my $installed = File::Spec->catfile($install_path,$new);
 	    if (-e $installed && $base =~ /\.conf$/ && (compare($base,$installed) != 0)) {
 		warn "$installed conf file is already installed. New version will be installed as $installed.new\n";
-		copy ("blib/$base","blib/$base.new");
+		rename ("blib/$base","blib/$base.new");
 		print $skip '^',"blib/",quotemeta($base),'$',"\n";
 	    }
 	}
@@ -546,10 +551,6 @@ sub process_htdocs_files {
 	$self->substitute_in_place("blib/$_")
 	    if $copied
 	    or !$self->up_to_date('_build/config_data',"blib/$_");
-# was  trying to do something about localizing installed perl, but forget what it was
-#	if (/\.pl$/ && $copied) {
-#	    
-#	}
     }
 }
 
@@ -595,7 +596,7 @@ sub process_etc_files {
 		my $installed = File::Spec->catfile($install_path,$new);
 		if (-e $installed) {
 		    warn "$installed is already installed. New version will be installed as $installed.new\n";
-		    copy ("blib/$base","blib/$base.new");
+		    rename ("blib/$base","blib/$base.new");
 		    print $skip '^',"blib/",quotemeta($base),'$',"\n";
 		}
 	    }
@@ -667,7 +668,7 @@ sub substitute_in_place {
     my $wwwuser  = $self->config_data('wwwuser');
     my $perl5lib = $self->perl5lib || '';
     my $installscript = $self->scriptdir;
-    my $cgiurl   = $self->cgiurl;
+    my $cgiurl        = $self->cgiurl;
 
     while (<$in>) {
 	s/\$INSTALLSCRIPT/$installscript/g;
@@ -679,12 +680,49 @@ sub substitute_in_place {
 	s/\$WWWUSER/$wwwuser/g;
 	s/\$DATABASES/$databases/g;
 	s/\$VERSION/$self->dist_version/eg;
+	s/\$CAN_USER_ACCOUNTS_OPENID/$self->has_openid/eg;
+	s/\$CAN_USER_ACCOUNTS_REG/$self->has_smtp/eg;
+	s/\$CAN_USER_ACCOUNTS/$self->has_mysql_or_sqlite/eg;
+	s/\$USER_ACCOUNT_DB/$self->guess_user_account_db/eg;
+	s/\$SMTP_GATEWAY/$self->guess_smtp_gateway/eg;
 	s/\$TMP/$tmp/g;
 	$out->print($_);
     }
     $in->close;
     $out->close;
     rename("$path.$$",$path);
+}
+
+sub has_mysql_or_sqlite {
+    my $self = shift;
+    return eval "require DBD::mysql; 1" || eval "require DBD::SQLite; 1" || 0;
+}
+
+sub has_smtp {
+    my $self = shift;
+    return eval "require Net::SMTP; 1" || 0;
+}
+
+sub has_openid {
+    my $self = shift;
+    return eval "require Net::OpenID::Consumer; require LWP::UserAgent; 1" || 0;
+}
+
+sub guess_user_account_db {
+    my $self = shift;
+    if (eval "require DBD::mysql; 1") {
+	return 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse';
+    } elsif (eval "require DBD::SQLite; 1") {
+	my $databases = $self->install_path->{'databases'};
+	return "DBI:SQLite:$databases/users.sqlite";
+    } else {
+	return "no database defined # please correct this";
+    }
+}
+
+sub guess_smtp_gateway {
+    my $self = shift;
+    return 'localhost  # this assumes that a correctly configured smtp server is running on current machine; change if necessary';
 }
 
 sub private_props {

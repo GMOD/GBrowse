@@ -116,7 +116,7 @@ sub prefix_search {
     my (%results);
     if ($self->globals->user_accounts) {
 	my $userdb = $self->{userdb};
-	my $user_matches = $userdb->match_user($self->datasource_name,$prefix);
+	my $user_matches = $userdb->match_sharing_user($self->datasource_name,$prefix);
 	foreach (@$user_matches) {
 	    $results{$_} = "<i>$_</i>";
 	}
@@ -129,11 +129,22 @@ sub prefix_search {
     return \@results;
 }
 
+sub user_search {
+    my $self   = shift;
+    my $prefix = shift;
+
+    return unless $self->globals->user_accounts;
+    my $userdb = $self->{userdb};
+    my $results = $userdb->match_user($prefix);
+    return $results;
+}
+
 # Get Public Files ([Search Term, Offset]) - Returns an array of available public files that the user hasn't added. Will filter results if the extra parameter is given.
 sub get_public_files {
     my $self = shift;
     my $searchterm = shift;
-    my $offset = shift;
+    my $offset     = shift;
+
     my $globals = $self->{globals};
     my $count = $globals->public_files;
     my $data_source = $self->{data_source};
@@ -177,7 +188,8 @@ END
     return @$rows;
 }
 
-# Public Count ([Search Term]) - Returns the total number of public files available to a user.  Will filter results if a search parameter is given.
+# Public Count ([Search Term]) - Returns the total number of public files available to a user.  
+# Will filter results if a search parameter is given.
 sub public_count {
     my $self = shift;
     my $searchterm = shift;
@@ -241,7 +253,7 @@ SELECT a.title
 END
     ;
     my $userid    = $self->{userid};
-    $sql .=  "AND u.trackid NOT IN (SELECT trackid FROM sharing WHERE userid=$userid)"
+    $sql .=  "AND a.trackid NOT IN (SELECT trackid FROM sharing WHERE userid=$userid)"
 	if $userid;
 
     my $uploadsdb = $self->{uploadsdb};
@@ -333,16 +345,21 @@ sub unshare {
     my $file = shift or confess "No input or invalid input given to unshare()";
     my $userid = shift || $self->{userid};
     
-    # Users can remove themselves from the sharing lists of group, casual or public files; owners can remove people from casual or group items.
+    # Users can remove themselves from the sharing lists of group, casual or public files; 
+    # owners can remove people from casual or group items.
     my $sharing_policy = $self->permissions($file);
-    if ((($sharing_policy =~ /(casual|public|group)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /(casual|group)/))) {
+    if ((($sharing_policy =~ /(casual|public|group)/) 
+	 && ($userid eq $self->{userid})) 
+	|| ($self->is_mine($file) && ($sharing_policy =~ /(casual|group)/))) {
         my $public_flag = ($sharing_policy=~ /public/)? 1 : 0;
         my $uploadsdb = $self->{uploadsdb};
         
         # Get the current users.
-        return unless $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", undef, $file, $userid, $public_flag);
+        return unless $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", 
+						  undef, 
+						  $file, $userid, $public_flag);
 
-		# Remove the file's tracks from the track lookup hash.
+	# Remove the file's tracks from the track lookup hash.
         if ($userid eq $self->{userid}) {
             my %track_lookup = $self->track_lookup;
         	delete $track_lookup{$_} foreach $self->labels($file);;

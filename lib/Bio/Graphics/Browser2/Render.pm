@@ -3605,9 +3605,10 @@ sub categorize_track {
   return $self->translate('ANALYSIS') if $label =~ /^plugin:/;
 
   if ($user_labels->{$label}) {
-      return $self->user_tracks->is_mine($user_labels->{$label}) 
+      my $cat = $self->user_tracks->is_mine($user_labels->{$label}) 
 	  ? $self->translate('UPLOADED_TRACKS_CATEGORY')
 	  : $self->translate('SHARED_WITH_ME_CATEGORY');
+      return "$cat:".$self->user_tracks->title($user_labels->{$label});
   }
 
   my $category;

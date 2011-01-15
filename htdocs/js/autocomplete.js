@@ -37,6 +37,24 @@ function initAutocomplete() {
 			     }
                          }
 	 );
+
+    var group_fields = document.body.select('input.username_entry');
+    group_fields.each(function(f) {
+	    var id = f.id;
+	    new Ajax.Autocompleter(
+				   id,
+				   id + "_choices",
+                    	 document.URL,
+                         {
+			  frequency: 0.2,
+                          parameters:         'action=autocomplete_user_search',
+                          paramName:          'prefix',
+			  minChars:           3,
+			  updateElement: function(t) {
+				 var stripped = t.innerHTML.replace(/(<([^>]+)>)/ig,"");
+				 $(id).value=stripped;
+			     }
+                         })});
 }
 
 

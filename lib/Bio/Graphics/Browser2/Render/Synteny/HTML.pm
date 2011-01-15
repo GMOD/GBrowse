@@ -68,7 +68,7 @@ sub run {
     my $self = shift;
 
     # initialization
-    my $conf_dir = conf_dir("$ENV{GBROWSE_CONF}/synteny");
+    my $conf_dir = "$ENV{GBROWSE_CONF}/synteny";
 
     # error if no data sources configured
     unless( glob "$conf_dir/*.synconf" ){

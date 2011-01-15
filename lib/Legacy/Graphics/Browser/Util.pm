@@ -13,7 +13,7 @@ use Text::ParseWords ();
 use vars qw(@ISA @EXPORT $CONFIG $LANG %DB $HEADER $HTML $ADDED_FEATURES);
 require Exporter;
 @ISA = 'Exporter';
-@EXPORT = qw(conf_dir open_config open_database
+@EXPORT = qw( open_config open_database
 	     print_header print_top print_bottom html_frag
 	     error fatal_error redirect_legacy_url
 	     parse_feature_str url2file modperl_request is_safari
@@ -22,19 +22,6 @@ require Exporter;
 
 use constant DEBUG => 0;
 use constant JS    => '/gbrowse2/js';
-
-sub conf_dir {
-  my $default = shift;
-  if (my $request = modperl_request()) {
-    my $conf  = $request->dir_config('GBrowseConf') or return $default;
-    return $conf if $conf =~ m!^/!;                # return absolute
-    return (exists $ENV{MOD_PERL_API_VERSION} &&
-	    $ENV{MOD_PERL_API_VERSION} >= 2)
-      ? Apache2::ServerUtil::server_root() . "/$conf"
-      : Apache->server_root_relative($conf);
-  }
-  return $default;
-}
 
 sub url2file {
   my $url = shift;

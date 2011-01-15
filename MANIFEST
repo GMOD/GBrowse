@@ -2,6 +2,7 @@ bin/auto_install_databases.pl
 bin/bed2gff3.pl
 bin/bp_load_gff.pl
 bin/gbrowse_clean.pl
+bin/gbrowse_change_passwd.pl
 bin/gbrowse_create_account.pl
 bin/gbrowse_metadb_config.pl
 bin/gbrowse_netinstall.pl

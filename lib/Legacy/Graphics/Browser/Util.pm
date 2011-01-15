@@ -16,24 +16,12 @@ require Exporter;
 @EXPORT = qw( open_config open_database
 	     print_header print_top print_bottom html_frag
 	     error fatal_error redirect_legacy_url
-	     parse_feature_str url2file modperl_request is_safari
+	     parse_feature_str modperl_request is_safari
              shellwords
 	    );
 
 use constant DEBUG => 0;
 use constant JS    => '/gbrowse2/js';
-
-sub url2file {
-  my $url = shift;
-  my $request = modperl_request();
-
-  for my $l ((map {"$url.$_"} $CONFIG->language->language), $url) {
-    my $file = $request ? $request->lookup_uri($l)->filename
-                        : "$ENV{DOCUMENT_ROOT}/$l";
-    return $file if -e $file;
-  }
-  return;
-}
 
 sub modperl_request {
   return unless $ENV{MOD_PERL};

@@ -44,6 +44,10 @@ sub uploadsdb {
     $d;
 }
 
+sub userdb   { shift->{userdb}   }
+sub userid   { shift->{userid}   }
+sub username { shift->{username} }
+
 # Path - Returns the path to a specified file's owner's (or just the logged-in user's) data folder.
 sub path {
     my $self = shift;
@@ -289,7 +293,8 @@ sub share_link {
     my $self = shift;
     my $file = shift or confess "No input or invalid input given to share()";
     my $permissions = $self->permissions($file);
-    return $self->share($file) if ($permissions eq "public" || $permissions eq "casual"); # Can't hijack group files with a link, public are OK.
+    return $self->share($file) 
+	if ($permissions eq "public" || $permissions eq "casual"); # Can't hijack group files with a link, public are OK.
 }
 
 # Share (File[, Username OR User ID]) - Adds a public or shared track to a user's session.
@@ -297,8 +302,11 @@ sub share {
     my $self = shift;
     my $file = shift or confess "No input or invalid input given to share()";
     my $name_or_id = shift;
+
+    warn "share($file,$name_or_id)";
     
-    # If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
+    # If we've been passed a user ID, use that. If we've been passed a username, get the ID. 
+    # If we haven't been passed anything, use the session user ID.
     my $userid;
 
     if ($self->{globals}->user_accounts) {
@@ -321,19 +329,25 @@ sub share {
     if ((($sharing_policy =~ /(casual|public)/) && 
 	 ($userid eq $self->{userid})) || 
 	($self->is_mine($file) && ($sharing_policy =~ /group/))) {
-        my $public_flag = ($sharing_policy=~ /public/)? 1 : 0;
+        my $public_flag = ($sharing_policy=~ /public/) ? 1 : 0;
         my $uploadsdb = $self->{uploadsdb};
-        
+
+	warn "($file,$userid,$public_flag)";
+
         # Get the current users.
-        return if $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", undef, $file, $userid, $public_flag);
+        return if $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", 
+					      undef, $file, $userid, $public_flag);
 
         # Add the file's tracks to the track lookup hash.
         if ($userid eq $self->{userid}) {
             my %track_lookup = $self->track_lookup;
-	        $track_lookup{$_} = $file foreach $self->labels($file);
-	    }
+	    $track_lookup{$_} = $file foreach $self->labels($file);
+	} else {
+	    $self->email_sharee($file,$userid);
+	}
 	    
-        return $uploadsdb->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $file, $userid, $public_flag);
+        return $uploadsdb->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", 
+			      undef, $file, $userid, $public_flag);
     } else {
         warn "Share() attempted in an illegal situation on a $sharing_policy file ($file) by user #$userid, a non-owner.";
     }
@@ -369,6 +383,46 @@ sub unshare {
     } else {
         warn "Unshare() attempted in an illegal situation on a $sharing_policy file ($file) by user #$userid, a non-owner.";
     }
+}
+
+sub email_sharee {
+    my $self = shift;
+    my ($file,$recipient) = @_;
+    my $userdb     = $self->userdb;
+
+    my $description = $self->description($file);
+    my $title       = $self->title($file);
+    my $upload_name = $self->filename($file);
+    my @labels      = $self->labels($file);
+    my ($from_fullname,$from_email) = $userdb->accountinfo_from_username($self->username);
+    $from_fullname                ||= $self->username;
+    $from_fullname               .= " ($from_email)" if $from_email;
+    my ($to_fullname,$to_email)     = $self->userdb->accountinfo_from_username($self->userdb->username_from_userid($recipient));
+    return unless $to_email;
+
+    my $gbrowse_link       = $self->globals->gbrowse_url.'/';
+    my $gbrowse_show_link  = $gbrowse_link."?show=".Bio::Graphics::Browser2::Render->join_tracks(\@labels);
+    my $gbrowse_readd_link = $gbrowse_link."?share_link=$file";
+
+    my $source   = $self->data_source;
+
+    my $subject  = Bio::Graphics::Browser2::Util->translate('SHARE_GROUP_EMAIL_SUBJECT',$source->description);
+    my $contents = Bio::Graphics::Browser2::Util->translate('SHARE_GROUP_EMAIL',
+							    $from_fullname,
+							    $gbrowse_link,
+							    $gbrowse_show_link,
+							    $title,
+							    $description,
+							    join(',',map {$source->setting($_=>'key')||$_} @labels),
+							    $gbrowse_readd_link);
+    $contents = CGI::unescapeHTML($contents);
+    $subject = CGI::unescapeHTML($subject);
+    $userdb->do_sendmail({
+	to         => $to_email,
+	from_title => $from_fullname,
+	from       => $from_email,
+	subject    => $subject,
+	msg        => $contents});
 }
 
 # Field (Field, File ID[, Value]) - Returns (or, if defined, sets to the new value) the specified field of a file.

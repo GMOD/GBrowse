@@ -506,8 +506,24 @@ been changed to <b>%s</b>, so it can now be shared.
 END
 
  SHARE_SHARED_TRACK => <<END,
-This track is another user's custom uploads; it is shared under a <b>%s</b>
+This track is another user\'s custom uploads; it is shared under a <b>%s</b>
 policy, so you are free to send the link to other users.
+END
+
+ SHARE_GROUP_EMAIL_SUBJECT => <<END,
+Track sharing notification from the %s browser
+END
+
+ SHARE_GROUP_EMAIL => <<END,
+The user named %s has shared some tracks with you. They will appear in your "Custom Tracks" section the next time you log into %s. To see the shared track(s) now, click on %s.
+
+Additional information about the shared tracks follows:
+
+  Upload name:        %s
+  Upload description: %s
+  Track names:        %s
+
+If you wish to remove these tracks from your session, go to "Custom Tracks" and click on the '[X]' next to the upload name. To add it back to your session, click on %s.
 END
 
  OTHER_SHARE_METHODS => <<END,

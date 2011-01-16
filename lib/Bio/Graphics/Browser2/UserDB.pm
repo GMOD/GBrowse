@@ -155,7 +155,7 @@ sub check_old_confirmations {
   eval {
       my $ids = $userdb->selectcol_arrayref("SELECT userid FROM users WHERE confirmed=0 AND $days>3");
       for my $id (@$ids) {
-	  $userdb->do('DELETE FROM users WHERE userid=?',undef,$id);
+	  $userdb->do('DELETE FROM users   WHERE userid=?',undef,$id);
 	  $userdb->do('DELETE FROM session WHERE userid=?',undef,$id);
       }
       $userdb->commit();
@@ -212,7 +212,7 @@ sub do_sendmail {
 	  my $smtp_obj = $smtp_sender->new(
 	    $server,
       Port    => $port,
-      Debug  => 0,
+      Debug  => 1,
     )
     or die "Could not connect to outgoing mail server $server";
 

@@ -1470,12 +1470,13 @@ sub list_tracks {
 	    my $details       = $self->render_track_details($fileid, @tracks? 1 : 0);
 	    my $edit_field    = div({-id => $fileid . "_editfield", -style => "display: none;"}, '');
 	    $count++;
-	    div( {
+	    div({
 		-id		=> "$fileid",
 		-class	=> "custom_track $class",
+		-style  => 'padding: 0.5em',
 		 },
-		 $short_listing,
 		 $controls,
+		 $short_listing,
 		 $details,
 		 $edit_field
 		);
@@ -1563,7 +1564,7 @@ sub render_track_list_title {
     }
     
     return span(
-	{-style => "display: inline-block;"},
+	{-style => "display: inline;"},
 	$stat,
 	$title,
 	$owner,
@@ -1626,14 +1627,14 @@ sub render_track_controls {
 		    -href	 => "javascript:void(0);",
 		    -onClick => "shareFile('$fileid', '$userid')"
 		},
-		"[Add]"
+		'['.$self->translate('SHARING_ADD_USER').']'
 		);
 	}
 	
-	return div(
+	return span(
 		{
 			-class => "controls",
-			-style => "display: inline-block; padding: 0.15em;"
+			-style => "display: inline; padding: 0.3em;"
 		}, $controls
 	);
 }
@@ -1664,7 +1665,7 @@ sub render_track_details {
 	);
 	my $sharing = ($userdata->database == 1)? div(
 		{
-			-style => "margin-left: 2em; display: inline-block;",
+			-style => "margin-left: 2em; display: inline;",
 			-class => "sharing"
 		},
 		$self->render_track_sharing($fileid)
@@ -1692,6 +1693,7 @@ sub render_track_details {
 		},
 		i($description),
 		$source_listing,
+	        br(),
 		$sharing,
 		$status_box
 	);
@@ -1772,7 +1774,10 @@ sub render_track_sharing {
     #Building the users list.
     my $sharing_policy = $userdata->permissions($fileid);
     my @users = $userdata->shared_with($fileid);
-    $_ = b(($globals->user_accounts)? $userdb->username_from_userid($_) : "an anonymous user") . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
+    $_ = b(($globals->user_accounts)
+	   ? $userdb->username_from_userid($_) : "an anonymous user") . 
+	   "&nbsp;" . 
+	   a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
     my $userlist = join (", ", @users);
 	
     my $sharing_content = b($self->translate('SHARING')) . br() . $self->translate('TRACK_IS') . " ";
@@ -1825,7 +1830,8 @@ sub render_track_sharing {
 	    my $id = 'username_entry_'.int(rand(100000));
 	    my $add_box = "&nbsp;" . input(
 		{
-		    -length => 20,
+		    -length => 60,
+		    -style  => 'width:300px',
 		    -class  => 'username_entry',
 		    -id     => $id,
 		    -value => $self->translate('ENTER_SOMETHING_HERE', 

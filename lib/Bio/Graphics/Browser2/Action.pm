@@ -643,6 +643,9 @@ sub ACTION_share_file {
     $render->session->unlock(); # session manipulation happening here
     my $fileid = $q->param('fileid') or confess "No file ID given to share_file.";
     my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
+    if ($userid =~ /\(([^\)]+)\)/) {
+	$userid = $1;
+    }
 
     my $usertracks = $render->user_tracks;
     my @tracks     = $usertracks->labels($fileid);

@@ -678,13 +678,14 @@ END
    UPLOADED_TRACKS_CATEGORY  => 'My Tracks:Uploaded Tracks',
    SHARED_WITH_ME_CATEGORY   => 'My Tracks:Shared with me',
    SHARED_WITH_YOU           => '<b>shared</b> with you',
+   SHARING_ADD_USER          => 'Add',
    SHARING_PRIVATE           => 'Private',
    SHARING_CASUAL            => 'Casual',
    SHARING_GROUP             => 'Group',
    SHARING_PUBLIC            => 'Public',
    SHARING_HELP              => '<b>Private</b> - Visible only to me.<br>'.
 		                        '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
-		                        '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
+		                        '<b>Group</b> - Visible to me and anyone I add to the sharing group. Search for users by typing a portion of their name or email address in the box to a right and click [Add]. An email will be sent to alert them that the track has been shared.<br>'.
 		                        '<b>Public</b> - Visible to anyone.',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
    USERS                     => 'user(s)',

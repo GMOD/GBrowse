@@ -51,7 +51,7 @@ function initAutocomplete() {
                           paramName:          'prefix',
 			  minChars:           3,
 			  updateElement: function(t) {
-				 var stripped = t.innerHTML.replace(/(<([^>]+)>)/ig,"");
+				 var stripped = t.innerHTML.replace(/(<([^>]+)>)/ig,"").replace(/&gt;/,'>').replace(/&lt;/,'<');
 				 $(id).value=stripped;
 			     }
                          })});

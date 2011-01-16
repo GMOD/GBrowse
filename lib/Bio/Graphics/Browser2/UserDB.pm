@@ -212,7 +212,7 @@ sub do_sendmail {
 	  my $smtp_obj = $smtp_sender->new(
 	    $server,
       Port    => $port,
-      Debug  => 1,
+      Debug   => 0,
     )
     or die "Could not connect to outgoing mail server $server";
 
@@ -267,7 +267,8 @@ END
     $select->execute($db_search,$db_search,$db_search) or die $select->errstr;
     my @results;
     while (my @a = $select->fetchrow_array) {
-	push @results,(grep /$search/i,@a);
+#	push @results,(grep /$search/i,@a);
+	push @results, "$a[1] &lt;$a[2]&gt; ($a[0])";
     }
     $select->finish;
     return \@results;

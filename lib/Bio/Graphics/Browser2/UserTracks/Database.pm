@@ -389,6 +389,7 @@ sub email_sharee {
     my $self = shift;
     my ($file,$recipient) = @_;
     my $userdb     = $self->userdb;
+    my $globals    = $self->globals;
 
     my $description = $self->description($file);
     my $title       = $self->title($file);
@@ -400,7 +401,7 @@ sub email_sharee {
     my ($to_fullname,$to_email)     = $self->userdb->accountinfo_from_username($self->userdb->username_from_userid($recipient));
     return unless $to_email;
 
-    my $gbrowse_link       = $self->globals->gbrowse_url.'/';
+    my $gbrowse_link       = $globals->gbrowse_url.'/';
     my $gbrowse_show_link  = $gbrowse_link."?show=".Bio::Graphics::Browser2::Render->join_tracks(\@labels);
     my $gbrowse_readd_link = $gbrowse_link."?share_link=$file";
 
@@ -418,9 +419,9 @@ sub email_sharee {
     $contents = CGI::unescapeHTML($contents);
     $subject = CGI::unescapeHTML($subject);
     $userdb->do_sendmail({
+	from       => $globals->email_address,
+	from_title => $globals->application_name,
 	to         => $to_email,
-	from_title => $from_fullname,
-	from       => $from_email,
 	subject    => $subject,
 	msg        => $contents});
 }

@@ -862,7 +862,6 @@ sub render_track_table {
    my $key = $self->label2key($label);
    my ($link,$mouseover);
    if ($label =~ /^plugin:/) {
-#       $labels{$label} = $key;
        $labels{$label} = $self->plugin_name($label);
        next;
    }
@@ -925,7 +924,8 @@ sub render_track_table {
   # Get the list of all the categories needed.
   my %exclude = map {$_=>1} map {$self->translate($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
 
-  (my $usertrack_cat = $self->translate('UPLOADED_TRACKS_CATEGORY')) =~ s/:.+$//;
+  (my $usertrack_cat = $self->translate('UPLOADED_TRACKS_CATEGORY')||'') =~ s/:.+$//;
+  $usertrack_cat    ||= '';
   my @user_tracks    = grep {/^$usertrack_cat/i} keys %track_groups;
   $exclude{$_}++ foreach @user_tracks;
 
@@ -954,6 +954,8 @@ sub render_track_table {
     my $id = "${category}_section";
     my $category_title   = (split m/(?<!\\):/,$category)[-1];
     $category_title      =~ s/\\//g;
+    $category_title      =~ s!($_)!<span style="background-color:yellow">$1</span>!gi foreach @hilite;    
+
     
     my $file_id;
 
@@ -983,10 +985,9 @@ sub render_track_table {
 				     );
       my $table      = $self->tableize(\@checkboxes,$category);
 
-      my $visible =  $filter_active ? 1
-                   : exists $settings->{section_visible}{$id} 
-                        ? $settings->{section_visible}{$id} 
-                        : $c_default;
+      my $visible =  $filter_active                            ? 1
+                   : exists $settings->{section_visible}{$id}  ? $settings->{section_visible}{$id} 
+                   : $c_default;
                         
       # Get the content for this track.
       my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
@@ -1013,7 +1014,7 @@ sub render_track_table {
   }
 
   autoEscape(1);
-  my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories);
+  my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories,$filter_active);
   return join( "\n",
 	       start_form(-name=>'trackform',
 			  -id=>'trackform'),
@@ -1044,7 +1045,7 @@ sub category_table {
 
 sub indent_categories {
     my $self = shift;
-    my ($contents,$categories) = @_;
+    my ($contents,$categories,$force_open) = @_;
 
     my $category_hash = {};
     my %sort_order;
@@ -1069,13 +1070,13 @@ sub indent_categories {
 	    }
     }
     my $i               = 1;
-    my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order);
+    my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order,$force_open);
 }
 
 # Nest Toggles - This turns the nested category/subcategory hashes into a prettily-indented tracks table.
 sub nest_toggles {
     my $self         = shift;
-    my ($hash,$sort) = @_;
+    my ($hash,$sort,$force_open) = @_;
     my $settings = $self->state;
 
     my $result = '';
@@ -1087,18 +1088,18 @@ sub nest_toggles {
 	    if ($key eq '__contents__') {
 	        $result .= $hash->{$key}."\n";
 	    } elsif ($key eq '__next__') {
-	        $result .= $self->nest_toggles($hash->{$key},$sort);
+	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
 	    } elsif ($hash->{$key}{__next__}) {
 	        my $id =  "${key}_section";
 	        $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
-     	    $result .= $self->toggle_section({on=>$settings->{section_visible}{$id}},
+     	    $result .= $self->toggle_section({on=>$force_open||$settings->{section_visible}{$id}},
 					         $id,
 					         b($key).span({-class => "list",
 			                -id => "${id}_list"},""),
 					         div({-style=>'margin-left:1.5em;margin-right:1em'},
-						     $self->nest_toggles($hash->{$key},$sort)));
+						     $self->nest_toggles($hash->{$key},$sort,$force_open)));
 	    } else {
-	        $result .= $self->nest_toggles($hash->{$key},$sort);
+	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
 	    }
     }
     return $result;

@@ -675,8 +675,6 @@ END
    INTERRUPTED_RESUME        => 'Interrupted [Resume]',
    SHARING                   => 'Sharing:',
    TRACK_IS                  => 'Track is',
-   UPLOADED_TRACKS_CATEGORY  => 'My Tracks:Uploaded Tracks',
-   SHARED_WITH_ME_CATEGORY   => 'My Tracks:Shared with me',
    SHARED_WITH_YOU           => '<b>shared</b> with you',
    SHARING_ADD_USER          => 'Add',
    SHARING_PRIVATE           => 'Private',
@@ -687,6 +685,8 @@ END
 		                        '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
 		                        '<b>Group</b> - Visible to me and anyone I add to the sharing group. Search for users by typing a portion of their name or email address in the box to a right and click [Add]. An email will be sent to alert them that the track has been shared.<br>'.
 		                        '<b>Public</b> - Visible to anyone.',
+   UPLOADED_TRACKS_CATEGORY  => 'Custom Tracks:Uploaded Tracks',
+   SHARED_WITH_ME_CATEGORY   => 'Custom Tracks:Shared with me',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
    USERS                     => 'user(s)',
    USED_BY                   => 'used by',

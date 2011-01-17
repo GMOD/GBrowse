@@ -81,7 +81,7 @@ my $build = GBrowseInstall->new(
 print STDERR <<END;
 **** WARNING *****************************************************************************************
 If you are upgrading from an earlier version of GBrowse and wish to use named user accounts, please 
-set "user accounts" to 1 in /etc/gbrowse2/GBrowse.conf and run bin/gbrowse_metadb_config.pl to 
+set "user_accounts" to 1 in /etc/gbrowse2/GBrowse.conf and run bin/gbrowse_metadb_config.pl to 
 create/update your user account database.
 
 See /etc/gbrowse2/GBrowse.conf.new for suggested settings.

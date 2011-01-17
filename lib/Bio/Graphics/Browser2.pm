@@ -241,16 +241,19 @@ sub application_name_long  { shift->setting(general=>'application_name_long') ||
 sub email_address          { shift->setting(general=>'email_address')         || 'noreply@gbrowse.com'        }
 sub smtp                   { shift->setting(general=>'smtp_gateway')          || 'smtp.res.oicr.on.ca'        }
 sub user_account_db        { shift->setting(general=>'user_account_db')                                       } # Used by uploads & user databases, they set their own defaults.
-sub user_accounts	   { shift->setting(general=>'user accounts')	      || 0                            }
+sub user_accounts	   { my $self = shift;
+			     return $self->setting(general=>'user_accounts') ||
+				    $self->setting(general=>'user_accounts')  || 
+				    0; }
 sub user_accounts_allow_registration
                            { 
-			       my $val = shift->setting(general=>'user accounts registration');
+			       my $val = shift->setting(general=>'user_accounts_registration');
 			       return 1 unless defined $val;
 			       return $val;
 			   }
 sub user_accounts_allow_openid
                            { 
-			       my $val = shift->setting(general=>'user accounts openid');
+			       my $val = shift->setting(general=>'user_accounts_openid');
 			       return 1 unless defined $val;
 			       return $val;
 			   }

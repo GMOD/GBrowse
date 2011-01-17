@@ -340,7 +340,7 @@ sub render_html_head {
       foreach qw(controls.js autocomplete.js);
   }
 
-  if ($self->setting('user accounts')) {
+  if ($self->globals->user_accounts)) {
     push @scripts,{src=>"$js/$_"}
       foreach qw(login.js);
   }
@@ -696,7 +696,7 @@ sub render_actionmenu {
     my $chrom_sizes_link = a({-href=>'?action=chrom_sizes'},$self->translate('CHROM_SIZES'));
     my $reset_link       = a({-href=>'?reset=1',-class=>'reset_button'},    $self->translate('RESET'));
 
-    my $login = $self->setting('user accounts') ? $self->render_login : '';
+    my $login = $self->globals->user_accounts ? $self->render_login : '';
 
     my $file_menu = ul({-id    => 'actionmenu',
 			-class => 'dropdown downdown-horizontal'},

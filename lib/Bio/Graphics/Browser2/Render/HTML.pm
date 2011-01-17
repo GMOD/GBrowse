@@ -340,7 +340,7 @@ sub render_html_head {
       foreach qw(controls.js autocomplete.js);
   }
 
-  if ($self->globals->user_accounts)) {
+  if ($self->globals->user_accounts) {
     push @scripts,{src=>"$js/$_"}
       foreach qw(login.js);
   }

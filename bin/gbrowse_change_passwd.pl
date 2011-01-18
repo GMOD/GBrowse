@@ -22,6 +22,10 @@ This script uses the "user_account_db"  option in the currently
 installed GBrowse.conf configuration file to find 
 the appropriate accounts database.
 END
+    ;
+if ($ARGV[0] =~ /^--?h/) {
+    die USAGE;
+}
 
 my $wwwuser = GBrowse::ConfigData->config('wwwuser');
 my $uid     = (getpwnam($wwwuser))[2];

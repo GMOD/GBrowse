@@ -365,7 +365,7 @@ END
 
 sub set_fullname_from_username {
     my $self = shift;
-    my ($username,$fullname) = @_;
+    my ($username,$fullname,$email) = @_;
     my $userdb = $self->dbi;
 
     my $userid = $self->userid_from_username($username) or return;
@@ -378,10 +378,10 @@ SELECT count(*) FROM users WHERE userid=?
 END
 ;
 	if ($rows > 0) {
-	    $userdb->do('UPDATE users SET gecos=? WHERE userid=?',undef,$fullname,$userid);
+	    $userdb->do('UPDATE users SET gecos=?,email=? WHERE userid=?',undef,$fullname,$userid);
 	} else {
 	    my $nowfun = $self->nowfun();
-	    my $email  = 'unused_'.$self->create_key(32).'@nowhere.net';
+	    my $email  = $email || ('unused_'.$self->create_key(32).'@nowhere.net');
 	    $userdb->do(<<END,undef,$userid,$fullname,$email);
 INSERT INTO users(userid,gecos,email,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created)
 VALUES (?,?,?,'x',1,1,1,'x',$nowfun,$nowfun)

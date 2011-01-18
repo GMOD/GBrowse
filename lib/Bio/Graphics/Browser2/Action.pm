@@ -904,12 +904,12 @@ sub ACTION_plugin_authenticate {
        or return (204,'text/plain','no authenticator defined');
 
     my $result;
-    if (my ($username,$fullname)  = $plugin->authenticate) {
+    if (my ($username,$fullname,$email)  = $plugin->authenticate) {
 	my $session   = $self->session;
 	$session->unlock;
 	my $userdb = $render->userdb;
 	my $id = $userdb->check_or_add_named_session($session->id,$username);
-	$userdb->set_fullname_from_username($username=>$fullname);
+	$userdb->set_fullname_from_username($username=>$fullname,$email) if defined $fullname;
 	# now authenticate
 	my $is_authorized = $render->user_authorized_for_source($username);
 	if ($is_authorized) {

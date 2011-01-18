@@ -303,7 +303,7 @@ sub using_openid {
 sub set_nonce {
     my $self = shift;
     my ($nonce,$salt,$remember) = @_;
-    warn "id=",$self->id," writing nonce = ",md5_hex($nonce,$salt);# if DEBUG;
+    warn "id=",$self->id," writing nonce = ",md5_hex($nonce,$salt) if DEBUG;
     $self->{session}->param('.nonce' => md5_hex($nonce,$salt));
 
     # handle session expiration

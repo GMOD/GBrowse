@@ -149,9 +149,11 @@ sub run {
 
     $self->search_form($segment);
 
-    print $self->overview_panel($self->syn_conf->whole_segment($segment),$segment) if $segment;
-
     if ($segment) {
+
+        print $self->overview_panel($self->syn_conf->whole_segment($segment),$segment);
+        print $self->reference_panel($self->syn_conf->whole_segment($segment),$segment);
+
         # make sure no hits go off-screen
         $self->remap_coordinates($_) for @{ $self->hits };
 
@@ -282,7 +284,6 @@ sub _type_from_box {
   my ($feature,$fname) = @type[0,-1];
   return ($feature,$fname);
 }
-
 
 sub draw_image {
   my ($self,$page_settings,$hits,@species) = @_;
@@ -773,11 +774,11 @@ END
                join(', ',@species);
   my $map_name = md5_hex($label);
   print $self->toggle( $label,
-		table( {-width=>'100%'},
-		       Tr( td( {-align=>'center', -class => 'databody'},
-			       img({-src=>$url,-border=>0,-usemap=>'#'.$map_name} )))
-		       ),
-		);
+         table( {-name => 'detailWrapper', style=>'margin:auto'},
+                Tr( td( {-align=>'center', -class => 'databody'},
+                        img({-src=>$url,-border=>0,-usemap=>'#'.$map_name, -id => 'details'} )))
+         ),
+       );
 
   my $map = Map({-name=>$map_name},reverse @map_items);
   $map =~ s/\</\n\</g;
@@ -878,7 +879,9 @@ sub segment2image {
     $self->species_conf->setting('general','pad_right' => $pr);
   }
 
+
   return ($img,$boxes,$segment);
+
 }
 
 sub _isref {
@@ -1248,15 +1251,30 @@ sub overview_panel {
 		);
 }
 
+sub reference_panel {
+    my ($self,$whole_segment,$segment) = @_;
+    return '' if $self->species_conf->section_setting('overview') eq 'hide';
+    my $image = $self->overview($segment,$segment,1);
+    my $ref = $self->db_map->{$self->syn_conf->page_settings("search_src")}->{desc};
+    return $self->toggle('Selection',
+                 table({-border=>0,-width=>'100%'},
+                       TR(th("<center>Selected reference genome coordinates")),
+                       TR({-class=>'databody'},
+                          td({-align=>'center'},$image)
+                        )
+                 )
+       );
+}
+
 sub overview {
-  my ($self,$region_segment,$segment) = @_;
+  my ($self,$region_segment,$segment,$wide) = @_;
   return unless $segment;
   my $width = $self->syn_conf->page_settings('imagewidth')   || IMAGE_WIDTH;
-  $width *= $self->syn_conf->setting('overview_ratio') || OVERVIEW_RATIO;
+  $width *= $self->syn_conf->setting('overview_ratio') || OVERVIEW_RATIO unless $wide;
   $self->syn_conf->width($width);
 
   # the postgrid will be invoked to hilite the currently selected region
-  my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
+  my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']) unless $wide;
 
   # reference genome
   my $ref = $self->db_map->{$self->syn_conf->page_settings("search_src")}->{desc};
@@ -1271,9 +1289,7 @@ sub overview {
 						    lang           => $self->species_conf->language,
 						    keystyle       => 'left',
 						    settings       => $self->syn_conf->page_settings(),
-						    scale_map_type => 'centering_map',
 						    cache_extra    => [$segment->start,$segment->end],
-						    do_map         => 1,
 						    drag_n_drop    => 0,
 						    image_button   => 0,
 						    -grid          => 0,
@@ -1282,13 +1298,8 @@ sub overview {
 						  }
 						  );
 
-  # make sure overview is busy with redirects
-  #my $server =$ENV{SERVER_NAME};
-  #if ($server) {
-  #  $overview =~ s/src="/src="http:\/\/$server\//;
-  #}
-
-  return div({-id=>'overview',-class=>'track'},$overview);
+  $overview =~ s/Overview/Detail/ if $wide;
+  return div({-id => $wide ? 'referenceview' : 'overview',-class=>'track'},$overview);
 }
 
 sub toggle {
@@ -1719,16 +1730,18 @@ sub segment_info {
   my $padr   = $self->syn_conf->setting('pad_right') || $self->syn_conf->image_padding;
   my $max    = $self->syn_conf->setting('max segment') || MAX_SEGMENT;
   my $width  = ($settings->{width} * OVERVIEW_RATIO);
-
+  my $dwidth = $settings->{width};
   hide(image_padding        => $padl);
   hide(max_segment          => $max);
   hide(overview_start       => $whole_segment->start);
   hide(overview_stop        => $whole_segment->end);
   hide(overview_pixel_ratio => $whole_segment->length/$width);
+  hide(detail_pixel_ratio   => $segment->length/$dwidth);
   hide(overview_width       => $width + $padl + $padr);
   hide(detail_start         => $segment->start);
   hide(detail_stop          => $segment->end);
   hide(overview_width       => $width + $padl + $padr);
+  hide(detail_width         => $dwidth + $padl + $padr);
 }
 
 sub hide {

@@ -340,7 +340,7 @@ sub render_html_head {
       foreach qw(controls.js autocomplete.js);
   }
 
-  if ($self->setting('user accounts')) {
+  if ($self->globals->user_accounts) {
     push @scripts,{src=>"$js/$_"}
       foreach qw(login.js);
   }
@@ -677,17 +677,17 @@ sub render_actionmenu {
 
     my $help_link     = a({-href=>$self->general_help(),
 			   -target=>'_new'},$self->translate('HELP_WITH_BROWSER'));
-    my $about_gb_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_gbrowse')",
+    my $about_gb_link    = a({-onMouseDown => "Controller.show_info_message('about_gbrowse')",
 			   -href        => 'javascript:void(0)',
 			   -style       => 'cursor:pointer'
 			  },
 			  $self->translate('ABOUT'));
-    my $about_dsn_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_dsn')",
+    my $about_dsn_link    = a({-onMouseDown => "Controller.show_info_message('about_dsn')",
 			       -href        => 'javascript:void(0)',
 			       -style       => 'cursor:pointer'
 			      },
 			      $self->translate('ABOUT_DSN'));
-    my $about_me_link    = a({-onMouseDown => "GBox.showTooltip(event,'url:?action=about_me')",
+    my $about_me_link    = a({-onMouseDown => "Controller.show_info_message('about_me')",
 			       -href        => 'javascript:void(0)',
 			       -style       => 'cursor:pointer'
 			      },
@@ -696,7 +696,7 @@ sub render_actionmenu {
     my $chrom_sizes_link = a({-href=>'?action=chrom_sizes'},$self->translate('CHROM_SIZES'));
     my $reset_link       = a({-href=>'?reset=1',-class=>'reset_button'},    $self->translate('RESET'));
 
-    my $login = $self->setting('user accounts') ? $self->render_login : '';
+    my $login = $self->globals->user_accounts ? $self->render_login : '';
 
     my $file_menu = ul({-id    => 'actionmenu',
 			-class => 'dropdown downdown-horizontal'},
@@ -862,7 +862,6 @@ sub render_track_table {
    my $key = $self->label2key($label);
    my ($link,$mouseover);
    if ($label =~ /^plugin:/) {
-#       $labels{$label} = $key;
        $labels{$label} = $self->plugin_name($label);
        next;
    }
@@ -924,8 +923,12 @@ sub render_track_table {
 
   # Get the list of all the categories needed.
   my %exclude = map {$_=>1} map {$self->translate($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
-  my ($user_tracks) = grep {/^My tracks/i} keys %track_groups;
-  $exclude{$user_tracks}++ if $user_tracks;
+
+  (my $usertrack_cat = $self->translate('UPLOADED_TRACKS_CATEGORY')||'') =~ s/:.+$//;
+  $usertrack_cat    ||= '';
+  my @user_tracks    = grep {/^$usertrack_cat/i} keys %track_groups;
+  $exclude{$_}++ foreach @user_tracks;
+
   my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
 
   my $all_on  = $self->translate('ALL_ON');
@@ -933,12 +936,12 @@ sub render_track_table {
 
   my (%seenit,%section_contents);
 
-  my @categories = ($self->translate('OVERVIEW'),
+  my @categories = (@user_keys,
+		    $self->translate('OVERVIEW'),
 		    $self->translate('REGION'),
-		    @user_keys,
 		    $self->translate('ANALYSIS'),
       );
-  push @categories,$user_tracks if $user_tracks;
+  unshift @categories,@user_tracks if @user_tracks;
 
   my $c_default = $source->category_default;
 
@@ -951,16 +954,10 @@ sub render_track_table {
     my $id = "${category}_section";
     my $category_title   = (split m/(?<!\\):/,$category)[-1];
     $category_title      =~ s/\\//g;
+    $category_title      =~ s!($_)!<span style="background-color:yellow">$1</span>!gi foreach @hilite;    
+
     
     my $file_id;
-    if ($usertracks->database && $category =~ /Uploaded Tracks/) {
-        $file_id = $usertracks->get_file_id($category_title);
-        $category_title = $usertracks->title($file_id);
-        
-        # Re-write the category labels appropriately.
-        #$category =~ s/Uploaded Tracks/Community Tracks/ if $usertracks->database && $usertracks->permissions($file_id) eq "public";
-        #$category =~ s/Uploaded Tracks/Custom Tracks/;
-    }
 
     if ($category eq $self->translate('REGION') 
 	&& !$self->setting('region segment')) {
@@ -988,10 +985,9 @@ sub render_track_table {
 				     );
       my $table      = $self->tableize(\@checkboxes,$category);
 
-      my $visible =  $filter_active ? 1
-                   : exists $settings->{section_visible}{$id} 
-                        ? $settings->{section_visible}{$id} 
-                        : $c_default;
+      my $visible =  $filter_active                            ? 1
+                   : exists $settings->{section_visible}{$id}  ? $settings->{section_visible}{$id} 
+                   : $c_default;
                         
       # Get the content for this track.
       my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
@@ -1018,7 +1014,7 @@ sub render_track_table {
   }
 
   autoEscape(1);
-  my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories);
+  my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories,$filter_active);
   return join( "\n",
 	       start_form(-name=>'trackform',
 			  -id=>'trackform'),
@@ -1049,7 +1045,7 @@ sub category_table {
 
 sub indent_categories {
     my $self = shift;
-    my ($contents,$categories) = @_;
+    my ($contents,$categories,$force_open) = @_;
 
     my $category_hash = {};
     my %sort_order;
@@ -1074,13 +1070,13 @@ sub indent_categories {
 	    }
     }
     my $i               = 1;
-    my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order);
+    my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order,$force_open);
 }
 
 # Nest Toggles - This turns the nested category/subcategory hashes into a prettily-indented tracks table.
 sub nest_toggles {
     my $self         = shift;
-    my ($hash,$sort) = @_;
+    my ($hash,$sort,$force_open) = @_;
     my $settings = $self->state;
 
     my $result = '';
@@ -1092,18 +1088,18 @@ sub nest_toggles {
 	    if ($key eq '__contents__') {
 	        $result .= $hash->{$key}."\n";
 	    } elsif ($key eq '__next__') {
-	        $result .= $self->nest_toggles($hash->{$key},$sort);
+	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
 	    } elsif ($hash->{$key}{__next__}) {
 	        my $id =  "${key}_section";
 	        $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
-     	    $result .= $self->toggle_section({on=>$settings->{section_visible}{$id}},
+     	    $result .= $self->toggle_section({on=>$force_open||$settings->{section_visible}{$id}},
 					         $id,
 					         b($key).span({-class => "list",
 			                -id => "${id}_list"},""),
 					         div({-style=>'margin-left:1.5em;margin-right:1em'},
-						     $self->nest_toggles($hash->{$key},$sort)));
+						     $self->nest_toggles($hash->{$key},$sort,$force_open)));
 	    } else {
-	        $result .= $self->nest_toggles($hash->{$key},$sort);
+	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
 	    }
     }
     return $result;
@@ -1450,39 +1446,43 @@ sub render_custom_track_listing {
 
 # List Tracks - Renders a visual listing of an array of tracks. No arguments creates the standard "my tracks" listing.
 sub list_tracks {
-	my $self = shift;
-	my $userdata = $self->user_tracks;
-	my $listing_type = shift || "";
-	# If we've been given input, use the input. If we've been given the public type, use that, or default to all of the current user's tracks.
-	my @tracks = @_? @_ : (($listing_type =~ /public/) && ($userdata->database == 1))? $userdata->get_public_files : $userdata->tracks;
-	my $track_type = $listing_type;
+    my $self = shift;
+    my $userdata = $self->user_tracks;
+    my $listing_type = shift || "";
+    # If we've been given input, use the input. If we've been given the public type, use that, or default to all of the current user's tracks.
+    my @tracks = @_? @_ 
+	: (($listing_type =~ /public/)  && ($userdata->database == 1))
+	? $userdata->get_public_files 
+	: $userdata->tracks;
+    my $track_type = $listing_type;
 
-	$track_type .= " available" if $listing_type =~ /public/;
+    $track_type .= " available" if $listing_type =~ /public/;
 	
-	# Main track roll code.
-	if (@tracks) {
-		my $count = 0;
-		my @rows = map {
-			my $fileid = $_;
-			my $type = $track_type || $userdata->file_type($fileid);
-		
-			my $class = $self->track_class($count, $type);
-			my $controls = $self->render_track_controls($fileid, $type);
-			my $short_listing = $self->render_track_list_title($fileid, $type);
-			my $details = $self->render_track_details($fileid, @tracks? 1 : 0);
-			my $edit_field = div({-id => $fileid . "_editfield", -style => "display: none;"}, '');
-			$count++;
-			div( {
-					-id		=> "$fileid",
-					-class	=> "custom_track $class",
-				},
-				$short_listing,
-				$controls,
-				$details,
-				$edit_field
-			);
-		} @tracks;
-		return join '', @rows;
+    # Main track roll code.
+    if (@tracks) {
+	my $count = 0;
+	my @rows = map {
+	    my $fileid = $_;
+	    my $type = $track_type || $userdata->file_type($fileid);
+	    
+	    my $class         = $self->track_class($count, $type);
+	    my $controls      = $self->render_track_controls($fileid, $type);
+	    my $short_listing = $self->render_track_list_title($fileid, $type);
+	    my $details       = $self->render_track_details($fileid, @tracks? 1 : 0);
+	    my $edit_field    = div({-id => $fileid . "_editfield", -style => "display: none;"}, '');
+	    $count++;
+	    div({
+		-id		=> "$fileid",
+		-class	=> "custom_track $class",
+		-style  => 'padding: 0.5em',
+		 },
+		 $controls,
+		 $short_listing,
+		 $details,
+		 $edit_field
+		);
+	} @tracks;
+	return join '', @rows;
     } else {
     	return p($self->translate(($track_type =~ /public/i ? 'THERE_ARE_NO_AVAILABLE_TRACKS':'THERE_ARE_NO_TRACKS_YET'), $track_type));
     }
@@ -1490,76 +1490,87 @@ sub list_tracks {
 
 # Track Class (Count, Type) - Returns the class for a specific custom track.
 sub track_class {
-	my $self = shift;
-	my $count = shift;
-	my $type = shift;
-	$type =~ s/\s?available//;
-	return $type . "_" . (($count % 2)? "even" : "odd");
+    my $self = shift;
+    my $count = shift;
+    my $type = shift;
+    $type =~ s/\s?available//;
+    return $type . "_" . (($count % 2)? "even" : "odd");
 }
 
 # Render Track List Title (Track, Type) - Renders the visible HTML which is seen when the details are hidden.
 sub render_track_list_title {
-	my $self = shift;
-	my $fileid = shift;
-	my $type = shift;
-	$type =~ s/\s?available//;
-	my $userdata = $self->user_tracks;
-	my $globals = $self->globals;
-	my $userdb  = $self->userdb if $globals->user_accounts;
+    my $self = shift;
+    my $fileid = shift;
+    my $type = shift;
+    $type =~ s/\s?available//;
+    my $userdata = $self->user_tracks;
+    my $globals = $self->globals;
+    my $userdb  = $self->userdb if $globals->user_accounts;
 	
-	my $short_name = $userdata->title($fileid);
-	if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
-		my @tracks = split /\+/, $2;
-		$short_name = "Shared track from $1 (@tracks)";
-	} elsif (length $short_name > 40) {
-		$short_name =~ s/^(.{40}).+/$1.../;
-	}
+    my $short_name = $userdata->title($fileid);
+    if ($short_name =~ /http_([^_]+).+_gbgff_.+_t_(.+)_s_/) {
+	my @tracks = split /\+/, $2;
+	$short_name = "Shared track from $1 (@tracks)";
+    } elsif (length $short_name > 40) {
+	$short_name =~ s/^(.{40}).+/$1.../;
+    }
 	
-	my @track_labels = $userdata->labels($fileid);
-	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
-	my $source_note = span({-class => "source_note"}, $type);
-	my $go_there = join(' ',
-		map {
-			my $label = $_;
-			my $key   = $self->data_source->setting($label=>'key');
-			$key? (
+    my @track_labels = $userdata->labels($fileid);
+    my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
+    my $source_note = span({-class => "source_note"}, $type);
+    my $go_there = join(' ',
+			map {
+			    my $label = $_;
+			    my $key   = $self->data_source->setting($label=>'key');
+			    $key? (
 				'['.
 				a( {
-						-href    => 'javascript:void(0)',
-						-onClick => qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))
-					},
-					b($key)
+				    -href    => 'javascript:void(0)',
+				    -onClick => qq(Controller.select_tab('main_page');Controller.scroll_to_matching_track("$label"))
+				   },
+				   b($key)
 				).
 				']'
-			) : ''
-		} @track_labels);
-	my $stat = div(
-		{
-			-id => $fileid . "_stat",
-			-style=> "display: inline;"
-		},
-		''
+				) : ''
+			} @track_labels);
+    my $stat = div(
+	{
+	    -id => $fileid . "_stat",
+	    -style=> "display: inline;"
+	},
+	''
 	);
-	my $is_mine = $userdata->is_mine($fileid);
-	my $cursor  = $is_mine ? 'cursor:pointer' : 'cursor:auto';
-	my $title = h1(
-	    {
-		($is_mine ? (-title => $self->tr('ADD_TITLE')) : ()),
-	        -style => "display: inline; font-size: 14pt;$cursor",
-	        -onClick         => ($userdata->database && $is_mine)? "Controller.edit_upload_title('$fileid', this)" : "",
-			-contentEditable => ($userdata->database && $is_mine)? 'true' : 'false',
-	    },
-	    $short_name
+    my $is_mine = $userdata->is_mine($fileid);
+    my $cursor  = $is_mine ? 'cursor:pointer' : 'cursor:auto';
+    my $title = h1(
+	{
+	    ($is_mine ? (-title => $self->tr('ADD_TITLE')) : ()),
+	    -style => "display: inline; font-size: 14pt;$cursor",
+	    -onClick         => ($userdata->database && $is_mine)? "Controller.edit_upload_title('$fileid', this)" : "",
+	    -contentEditable => ($userdata->database && $is_mine)? 'true' : 'false',
+	},
+	$short_name
 	);
+    my $owner;
+    if ($globals->user_accounts) {
 	my $owner_name = $userdata->owner_name($fileid);
-	my $owner = ($globals->user_accounts && $type =~ "public")? $self->translate("UPLOADED_BY") . " " . b($owner_name) : "";
-	
-	return span(
-		{-style => "display: inline-block;"},
-		$stat,
-		$title,
-		$owner,
-		$go_there
+	my $users      = $self->userdb;
+	my ($fullname,$email)   = $users->accountinfo_from_username($owner_name);
+	$email ||= '';
+	my $email_link          = a({-href=>"mailto:$email"},$email);
+	$fullname             ||= $owner_name;
+	$owner = $self->translate("UPLOADED_BY") . " " . b($fullname).($email ? " &lt;${email_link}&gt;" : '');
+    } else { 
+	$owner = '';
+    }
+    
+    return span(
+	{-style => "display: inline;"},
+	$stat,
+	$title,
+	$owner,
+	br(),
+	$go_there,
 	) . $source_note;
 }
 
@@ -1569,7 +1580,7 @@ sub render_track_controls {
 	my $fileid = shift;
 	my $type = shift;
 	my $userdata = $self->user_tracks;
-	my $userid = $userdata->{userid};
+	my $userid   = $userdata->{userid}||'';
 	my @track_labels = $userdata->labels($fileid);
 	my $track_labels = join '+', map {CGI::escape($_)} @track_labels;
 	my $globals = $self->globals;
@@ -1579,37 +1590,37 @@ sub render_track_controls {
 	my $controls;
 	# Conditional controls, based on the type of track.
 	if ($userdata->is_mine($fileid)) {
-		# The delete icon,
-		$controls .= '&nbsp;' . img(
-			{
-				-src     	 => "$buttons/trash.png",
-				-style  	 => 'cursor:pointer',
-				-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('DELETE').'",0)',
-				-onClick     => "deleteUpload('$fileid')"
-			}
+	    # The delete icon,
+	    $controls .= '&nbsp;' . img(
+		{
+		    -src     	 => "$buttons/trash.png",
+		    -style  	 => 'cursor:pointer',
+		    -onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('DELETE').'",0)',
+		    -onClick     => "deleteUpload('$fileid')"
+		}
 		);
-		# The sharing icon, if it's an upload.
-		$controls .= '&nbsp;' . img(
-			{
-				-src         => "$buttons/share.png",
-				-style       => 'cursor:pointer',
-				-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('SHARE_WITH_OTHERS').'",0)',
-				-onClick     => "Controller.get_sharing(event,'url:?action=share_track;track=$track_labels')"
-			}
+	    # The sharing icon, if it's an upload.
+	    $controls .= '&nbsp;' . img(
+		{
+		    -src         => "$buttons/share.png",
+		    -style       => 'cursor:pointer',
+		    -onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('SHARE_WITH_OTHERS').'",0)',
+		    -onClick     => "Controller.get_sharing(event,'url:?action=share_track;track=$track_labels')"
+		}
 		) if ($type =~ /upload/ && !$userdata->database);
 	}
 	if ($type !~ /available/) {
-		if ($type =~ /(public|shared)/) {
-			# The "remove" [x] link.
-			$controls .= '&nbsp;' . a(
-				{
-					-href     	 => "javascript: void(0)",
-					-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('REMOVE_FROM_MY_SESSION').'",0,200)',
-					-onClick     => "unshareFile('$fileid', '$userid')"
-				},
-				"[X]"
-			);
-		}
+	    if ($type =~ /(public|shared)/) {
+		# The "remove" [x] link.
+		$controls .= '&nbsp;' . a(
+		    {
+			-href     	 => "javascript: void(0)",
+			-onMouseOver => 'GBubble.showTooltip(event,"'.$self->translate('REMOVE_FROM_MY_SESSION').'",0,200)',
+			-onClick     => "unshareFile('$fileid', '$userid')"
+		    },
+		    "[X]"
+		    );
+	    }
 	} else {
 	    $userid ||= '';
 	    $controls .= '&nbsp;' . a(
@@ -1617,14 +1628,14 @@ sub render_track_controls {
 		    -href	 => "javascript:void(0);",
 		    -onClick => "shareFile('$fileid', '$userid')"
 		},
-		"[Add]"
+		'['.$self->translate('SHARING_ADD_USER').']'
 		);
 	}
 	
-	return div(
+	return span(
 		{
 			-class => "controls",
-			-style => "display: inline-block; padding: 0.15em;"
+			-style => "display: inline; padding: 0.3em;"
 		}, $controls
 	);
 }
@@ -1655,7 +1666,7 @@ sub render_track_details {
 	);
 	my $sharing = ($userdata->database == 1)? div(
 		{
-			-style => "margin-left: 2em; display: inline-block;",
+			-style => "margin-left: 2em; display: inline;",
 			-class => "sharing"
 		},
 		$self->render_track_sharing($fileid)
@@ -1683,6 +1694,7 @@ sub render_track_details {
 		},
 		i($description),
 		$source_listing,
+	        br(),
 		$sharing,
 		$status_box
 	);
@@ -1754,75 +1766,93 @@ sub render_track_source_files {
 
 # Render Track Sharing (Track) - Renders the HTML listing of a track's sharing properties.
 sub render_track_sharing {
-	my $self = shift;
-	my $fileid = shift;
-	my $globals = $self->globals;
-	my $userdb = $self->userdb if $globals->user_accounts;
-	my $userdata = $self->user_tracks;
-	
-	#Building the users list.
-	my $sharing_policy = $userdata->permissions($fileid);
-	my @users = $userdata->shared_with($fileid);
-	$_ = b(($globals->user_accounts)? $userdb->username_from_userid($_) : "an anonymous user") . "&nbsp;" . a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
-	my $userlist = join (", ", @users);
+    my $self = shift;
+    my $fileid = shift;
+    my $globals = $self->globals;
+    my $userdb = $self->userdb if $globals->user_accounts;
+    my $userdata = $self->user_tracks;
+    
+    #Building the users list.
+    my $sharing_policy = $userdata->permissions($fileid);
+    my @users = $userdata->shared_with($fileid);
+    $_ = b(($globals->user_accounts)
+	   ? $userdb->username_from_userid($_) : "an anonymous user") . 
+	   "&nbsp;" . 
+	   a({-href => "javascript:void(0)", -onClick => "unshareFile('$fileid', '$_')"}, "[X]") . "" foreach @users;
+    my $userlist = join (", ", @users);
 	
     my $sharing_content = b($self->translate('SHARING')) . br() . $self->translate('TRACK_IS') . " ";
-	if ($userdata->is_mine($fileid) == 0) {
-	    my $count = ($sharing_policy eq "public")? $userdata->public_users($fileid) : $userdata->shared_with($fileid);
-		$sharing_content .= b(($sharing_policy =~ /(casual|group)/)? lc $self->translate('SHARED_WITH_YOU') :  lc $self->translate('SHARING_PUBLIC'));
-	    $sharing_content .= ", " . $self->translate('USED_BY') . "&nbsp;" .  ($count? b($count) . "&nbsp;" . $self->translate('USERS') . "." : $self->translate('NO_ONE')) unless $sharing_policy =~ /casual/;
-	} else {
-		my %sharing_type_labels = ( private => $self->translate('SHARING_PRIVATE'),
-									casual  => $self->translate('SHARING_CASUAL') ,
-									group   => $self->translate('SHARING_GROUP')  ,
-									public  => $self->translate('SHARING_PUBLIC') );
-		$sharing_content .= Select(
-			{-onChange => "changePermissions('$fileid', this.options[this.selectedIndex].value.toLowerCase())"},
-			map {
-				option(
+    if ($userdata->is_mine($fileid) == 0) {
+	my $count = ($sharing_policy eq "public")? $userdata->public_users($fileid) : $userdata->shared_with($fileid);
+	$sharing_content .= b(($sharing_policy =~ /(casual|group)/)? lc $self->translate('SHARED_WITH_YOU') :  lc $self->translate('SHARING_PUBLIC'));
+	$sharing_content .= ", " . $self->translate('USED_BY') . "&nbsp;" .  ($count? b($count) . "&nbsp;" . $self->translate('USERS') . "." : $self->translate('NO_ONE')) unless $sharing_policy =~ /casual/;
+    } else {
+	my %sharing_type_labels = ( private => $self->translate('SHARING_PRIVATE'),
+				    casual  => $self->translate('SHARING_CASUAL') ,
+				    group   => $self->translate('SHARING_GROUP')  ,
+				    public  => $self->translate('SHARING_PUBLIC') );
+	$sharing_content .= Select(
+	    {-onChange => "changePermissions('$fileid', this.options[this.selectedIndex].value.toLowerCase())"},
+	    map {
+		option(
                     {
-					 -value => $_,
-					 ($sharing_policy =~ /$_/i)? (-selected => "selected") : ()
-					},
-					$sharing_type_labels{$_}
-				)
-			} keys %sharing_type_labels
-		);
+			-value => $_,
+			($sharing_policy =~ /$_/i)? (-selected => "selected") : ()
+		    },
+		    $sharing_type_labels{$_}
+		    )
+	    } keys %sharing_type_labels
+	    );
+	
+	my $sharing_help = $self->translate('SHARING_HELP');
 		
-		my $sharing_help = $self->translate('SHARING_HELP');
-		
-		$sharing_content .= "&nbsp;" . a({-href => "javascript:void(0)", -onMouseOver => "GBubble.showTooltip(event,'$sharing_help',0,300);"}, "[?]");
-		$sharing_content .= "&nbsp;" . $self->translate('SHARED_WITH') . "&nbsp;" .  ($userlist? "$userlist" : $self->translate('NO_ONE')) if ($sharing_policy =~ /(casual|group)/);
-		if ($sharing_policy =~ /public/) {
-		    my $count = $userdata->public_users($fileid);
-		    $sharing_content .= "&nbsp;" . $self->translate('USED_BY') . "&nbsp;" .  ($count? b($count) . "&nbsp;" . $self->translate('USERS') . "." : $self->translate('NO_ONE'));
-		}
-		
-		if ($sharing_policy =~ /casual/) {
-			my $sharing_url = $userdata->sharing_link($fileid);
-			my $sharing_link = a({-href => $sharing_url}, $sharing_url);
-			$sharing_content .= br() . $self->translate('SHARE_WITH_THIS_LINK');
-			$sharing_content .= $sharing_link;
-		}
-		
-		if ($sharing_policy =~ /group/) {
-			my $add_box = "&nbsp;" . input(
-				{
-					-length => 20,
-					-value => $self->translate('ENTER_SOMETHING_HERE', (($globals->user_accounts)? $self->translate('USERNAME_OR_USER_ID') : $self->translate('USER_ID'))),
-					-onFocus => "this.clear()"
-				}
-			);		
-			my $add_link = "&nbsp;" . a(
-				{
-					-href => "javascript: void(0)",
-					-onClick => "shareFile('$fileid', this.previous('input').getValue())",
-				},
-				$self->translate('ADD_BUTTON') );
-			$sharing_content .= $add_box . $add_link;
-		};
+	$sharing_content .= "&nbsp;" . a({-href => "javascript:void(0)", 
+					  -onMouseOver => "GBubble.showTooltip(event,'$sharing_help',0,300);"}, 
+					 "[?]");
+	$sharing_content .= "&nbsp;" . $self->translate('SHARED_WITH') . 
+	                    "&nbsp;" .  ($userlist? "$userlist" : $self->translate('NO_ONE')
+			    )   if ($sharing_policy =~ /(casual|group)/);
+	if ($sharing_policy =~ /public/) {
+	    my $count = $userdata->public_users($fileid);
+	    $sharing_content .= "&nbsp;" . 
+		$self->translate('USED_BY') . 
+		"&nbsp;" .  ($count? b($count) . 
+			     "&nbsp;" . $self->translate('USERS') . "." : $self->translate('NO_ONE'));
 	}
-	return $sharing_content;
+		
+	if ($sharing_policy =~ /casual/) {
+	    my $sharing_url = $userdata->sharing_link($fileid);
+	    my $sharing_link = a({-href => $sharing_url}, $sharing_url);
+	    $sharing_content .= br() . $self->translate('SHARE_WITH_THIS_LINK');
+	    $sharing_content .= $sharing_link;
+	}
+		
+	if ($sharing_policy =~ /group/) {
+	    my $id = 'username_entry_'.int(rand(100000));
+	    my $add_box = "&nbsp;" . input(
+		{
+		    -length => 60,
+		    -style  => 'width:300px',
+		    -class  => 'username_entry',
+		    -id     => $id,
+		    -value => $self->translate('ENTER_SOMETHING_HERE', 
+					       (($globals->user_accounts)
+						? $self->translate('USERNAME_OR_USER_ID') 
+						: $self->translate('USER_ID'))),
+		    -onFocus => "this.clear()"
+		});
+	    my $add_autocomplete = div({-id=>"${id}_choices",
+					-class=>'autocomplete'},'') if $self->setting('autocomplete');
+	    my $add_link = "&nbsp;" . a(
+		{
+		    -href => "javascript: void(0)",
+		    -onClick => "shareFile('$fileid', this.previous('input').getValue())",
+		},
+		$self->translate('ADD_BUTTON') );
+	    $sharing_content .= $add_box . $add_autocomplete . $add_link;
+	};
+    }
+    return $sharing_content;
 }
 
 sub segment2link {
@@ -3027,10 +3057,14 @@ sub share_track {
                 $permissions_changed = 1;
             }
             if ($is_mine) {
-                $return_html .= p(($permissions_changed? $self->translate('SHARE_CUSTOM_TRACK_CHANGED', "casual") : $self->translate('SHARE_CUSTOM_TRACK_NO_CHANGE', $permissions)) . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
+                $return_html .= p(($permissions_changed? 
+				   $self->translate('SHARE_CUSTOM_TRACK_CHANGED', "casual") 
+				   : $self->translate('SHARE_CUSTOM_TRACK_NO_CHANGE', $permissions)) 
+				   . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
                 $return_html .= p($self->translate('OTHER_SHARE_METHODS'));
             } elsif ($permissions =~ /(casual|public)/) {
-                $return_html .= p($self->translate('SHARE_SHARED_TRACK', $permissions) . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
+                $return_html .= p($self->translate('SHARE_SHARED_TRACK', $permissions) 
+				  . $self->translate('SHARE_INSTRUCTIONS_BOOKMARK'));
             }
             
             $return_html .= textfield(

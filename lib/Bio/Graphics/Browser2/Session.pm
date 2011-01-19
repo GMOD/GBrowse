@@ -308,10 +308,10 @@ sub set_nonce {
 
     # handle session expiration
     if ($remember) {
-        $self->{session}->expire('.nonce' => '30d');
+        $self->{session}->expire('.nonce' => '30d'); # remembers authorization for 30 days
 	$self->remember_auth(1);
     } else {
-        $self->{session}->expire('.nonce' => '10m');
+        $self->{session}->expire('.nonce' => '1d');  # force reauthorization every day
 	$self->remember_auth(0);
     }
     $self->private(1);

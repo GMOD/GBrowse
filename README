@@ -60,6 +60,19 @@ that. What follows here is a brief synopsis.
     prerequisites. All of these are available on CPAN (www.cpan.org),
     or by using the CPAN shell ("perl -MCPAN -e shell").
 
+- If you wish to take advantage of user accounts (which lets users share
+  tracks with each other), you must have:
+
+    Module                  Version
+    ---------------------+----------
+    DBI                     any
+    Net::SMTP               any
+
+  -and either-
+    DBD::mysql              any
+  -or-
+    DBD::SQLite             any
+
 - You should install BioPerl from CPAN (currently version 1.6.9) or, to
   take advantage of additional features and performance boosts, get a
   snapshot of the current developer version:

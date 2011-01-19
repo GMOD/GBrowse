@@ -30,8 +30,8 @@ sub _new {
     if ($globals->user_accounts) {
 	# BUG: Two copies of UserDB; one here and one in the Render object
         $self->{userdb}   = Bio::Graphics::Browser2::UserDB->new($globals);
-        $self->{username} = $self->{userdb}->username_from_sessionid($self->{sessionid});
-        $self->{userid}   = $self->{userdb}->userid_from_sessionid($self->{sessionid});
+        $self->{username} = $self->{userdb}->username_from_sessionid($self->sessionid);
+        $self->{userid}   = $self->{userdb}->userid_from_sessionid($self->sessionid);
     }
     
     return $self;
@@ -43,6 +43,10 @@ sub uploadsdb {
     $self->{uploadsdb} = shift if @_;
     $d;
 }
+
+sub userdb   { shift->{userdb}   }
+sub userid   { shift->{userid}   }
+sub username { shift->{username} }
 
 # Path - Returns the path to a specified file's owner's (or just the logged-in user's) data folder.
 sub path {
@@ -116,7 +120,7 @@ sub prefix_search {
     my (%results);
     if ($self->globals->user_accounts) {
 	my $userdb = $self->{userdb};
-	my $user_matches = $userdb->match_user($self->datasource_name,$prefix);
+	my $user_matches = $userdb->match_sharing_user($self->datasource_name,$prefix);
 	foreach (@$user_matches) {
 	    $results{$_} = "<i>$_</i>";
 	}
@@ -129,11 +133,22 @@ sub prefix_search {
     return \@results;
 }
 
+sub user_search {
+    my $self   = shift;
+    my $prefix = shift;
+
+    return unless $self->globals->user_accounts;
+    my $userdb = $self->{userdb};
+    my $results = $userdb->match_user($prefix);
+    return $results;
+}
+
 # Get Public Files ([Search Term, Offset]) - Returns an array of available public files that the user hasn't added. Will filter results if the extra parameter is given.
 sub get_public_files {
     my $self = shift;
     my $searchterm = shift;
-    my $offset = shift;
+    my $offset     = shift;
+
     my $globals = $self->{globals};
     my $count = $globals->public_files;
     my $data_source = $self->{data_source};
@@ -177,7 +192,8 @@ END
     return @$rows;
 }
 
-# Public Count ([Search Term]) - Returns the total number of public files available to a user.  Will filter results if a search parameter is given.
+# Public Count ([Search Term]) - Returns the total number of public files available to a user.  
+# Will filter results if a search parameter is given.
 sub public_count {
     my $self = shift;
     my $searchterm = shift;
@@ -241,7 +257,7 @@ SELECT a.title
 END
     ;
     my $userid    = $self->{userid};
-    $sql .=  "AND u.trackid NOT IN (SELECT trackid FROM sharing WHERE userid=$userid)"
+    $sql .=  "AND a.trackid NOT IN (SELECT trackid FROM sharing WHERE userid=$userid)"
 	if $userid;
 
     my $uploadsdb = $self->{uploadsdb};
@@ -276,9 +292,9 @@ sub get_shared_files {
 sub share_link {
     my $self = shift;
     my $file = shift or confess "No input or invalid input given to share()";
-    
     my $permissions = $self->permissions($file);
-    return $self->share($file) if ($permissions eq "public" || $permissions eq "casual"); # Can't hijack group files with a link, public are OK.
+    return $self->share($file) 
+	if ($permissions eq "public" || $permissions eq "casual"); # Can't hijack group files with a link, public are OK.
 }
 
 # Share (File[, Username OR User ID]) - Adds a public or shared track to a user's session.
@@ -286,36 +302,52 @@ sub share {
     my $self = shift;
     my $file = shift or confess "No input or invalid input given to share()";
     my $name_or_id = shift;
+
+    warn "share($file,$name_or_id)";
     
-    # If we've been passed a user ID, use that. If we've been passed a username, get the ID. If we haven't been passed anything, use the session user ID.
+    # If we've been passed a user ID, use that. If we've been passed a username, get the ID. 
+    # If we haven't been passed anything, use the session user ID.
     my $userid;
 
     if ($self->{globals}->user_accounts) {
         my $userdb = $self->{userdb};
         $userid = $userdb->get_user_id($name_or_id);
-        $self->{userid} ||= $userdb->add_named_session($self->{sessionid}, "an anonymous user");
+        $self->{userid} ||= $userdb->add_named_session($self->sessionid, "an anonymous user");
     } else {
         $userid = $name_or_id;
     }
     $userid ||= $self->{userid};
 
     my $sharing_policy = $self->permissions($file);
-    return if $self->is_mine($file) and $sharing_policy =~ /(group|casual)/ and $userid eq $self->{userid}; # No sense in adding yourself to a group. Also fixes a bug with nonsense users returning your ID and adding yourself instead of nothing.
-    # Users can add themselves to the sharing lists of casual or public files; owners can add people to group lists but can't force anyone to have a public or casual file.
-    if ((($sharing_policy =~ /(casual|public)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /group/))) {
-        my $public_flag = ($sharing_policy=~ /public/)? 1 : 0;
+    # No sense in adding yourself to a group. Also fixes a bug with nonsense users
+    # returning your ID and adding yourself instead of nothing.
+    # Users can add themselves to the sharing lists of casual or public files; 
+    # Owners can add people to group lists but can't force anyone to have a public or casual file.
+    return if $self->is_mine($file) and 
+	$sharing_policy =~ /(group|casual)/ and 
+	$userid eq $self->{userid}; 
+    if ((($sharing_policy =~ /(casual|public)/) && 
+	 ($userid eq $self->{userid})) || 
+	($self->is_mine($file) && ($sharing_policy =~ /group/))) {
+        my $public_flag = ($sharing_policy=~ /public/) ? 1 : 0;
         my $uploadsdb = $self->{uploadsdb};
-        
+
+	warn "($file,$userid,$public_flag)";
+
         # Get the current users.
-        return if $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", undef, $file, $userid, $public_flag);
+        return if $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", 
+					      undef, $file, $userid, $public_flag);
 
         # Add the file's tracks to the track lookup hash.
         if ($userid eq $self->{userid}) {
             my %track_lookup = $self->track_lookup;
-	        $track_lookup{$_} = $file foreach $self->labels($file);
-	    }
+	    $track_lookup{$_} = $file foreach $self->labels($file);
+	} else {
+	    $self->email_sharee($file,$userid);
+	}
 	    
-        return $uploadsdb->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", undef, $file, $userid, $public_flag);
+        return $uploadsdb->do("INSERT INTO sharing (trackid, userid, public) VALUES (?, ?, ?)", 
+			      undef, $file, $userid, $public_flag);
     } else {
         warn "Share() attempted in an illegal situation on a $sharing_policy file ($file) by user #$userid, a non-owner.";
     }
@@ -327,16 +359,21 @@ sub unshare {
     my $file = shift or confess "No input or invalid input given to unshare()";
     my $userid = shift || $self->{userid};
     
-    # Users can remove themselves from the sharing lists of group, casual or public files; owners can remove people from casual or group items.
+    # Users can remove themselves from the sharing lists of group, casual or public files; 
+    # owners can remove people from casual or group items.
     my $sharing_policy = $self->permissions($file);
-    if ((($sharing_policy =~ /(casual|public|group)/) && ($userid eq $self->{userid})) || ($self->is_mine($file) && ($sharing_policy =~ /(casual|group)/))) {
+    if ((($sharing_policy =~ /(casual|public|group)/) 
+	 && ($userid eq $self->{userid})) 
+	|| ($self->is_mine($file) && ($sharing_policy =~ /(casual|group)/))) {
         my $public_flag = ($sharing_policy=~ /public/)? 1 : 0;
         my $uploadsdb = $self->{uploadsdb};
         
         # Get the current users.
-        return unless $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", undef, $file, $userid, $public_flag);
+        return unless $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", 
+						  undef, 
+						  $file, $userid, $public_flag);
 
-		# Remove the file's tracks from the track lookup hash.
+	# Remove the file's tracks from the track lookup hash.
         if ($userid eq $self->{userid}) {
             my %track_lookup = $self->track_lookup;
         	delete $track_lookup{$_} foreach $self->labels($file);;
@@ -346,6 +383,47 @@ sub unshare {
     } else {
         warn "Unshare() attempted in an illegal situation on a $sharing_policy file ($file) by user #$userid, a non-owner.";
     }
+}
+
+sub email_sharee {
+    my $self = shift;
+    my ($file,$recipient) = @_;
+    my $userdb     = $self->userdb;
+    my $globals    = $self->globals;
+
+    my $description = $self->description($file);
+    my $title       = $self->title($file);
+    my $upload_name = $self->filename($file);
+    my @labels      = $self->labels($file);
+    my ($from_fullname,$from_email) = $userdb->accountinfo_from_username($self->username);
+    $from_fullname                ||= $self->username;
+    $from_fullname               .= " ($from_email)" if $from_email;
+    my ($to_fullname,$to_email)     = $self->userdb->accountinfo_from_username($self->userdb->username_from_userid($recipient));
+    return unless $to_email;
+
+    my $gbrowse_link       = $globals->gbrowse_url.'/';
+    my $gbrowse_show_link  = $gbrowse_link."?show=".Bio::Graphics::Browser2::Render->join_tracks(\@labels);
+    my $gbrowse_readd_link = $gbrowse_link."?share_link=$file";
+
+    my $source   = $self->data_source;
+
+    my $subject  = Bio::Graphics::Browser2::Util->translate('SHARE_GROUP_EMAIL_SUBJECT',$source->description);
+    my $contents = Bio::Graphics::Browser2::Util->translate('SHARE_GROUP_EMAIL',
+							    $from_fullname,
+							    $gbrowse_link,
+							    $gbrowse_show_link,
+							    $title,
+							    $description,
+							    join(',',map {$source->setting($_=>'key')||$_} @labels),
+							    $gbrowse_readd_link);
+    $contents = CGI::unescapeHTML($contents);
+    $subject = CGI::unescapeHTML($subject);
+    $userdb->do_sendmail({
+	from       => $globals->email_address,
+	from_title => $globals->application_name,
+	to         => $to_email,
+	subject    => $subject,
+	msg        => $contents});
 }
 
 # Field (Field, File ID[, Value]) - Returns (or, if defined, sets to the new value) the specified field of a file.
@@ -437,7 +515,7 @@ sub add_file {
     my $description = shift;
     
     my $userdb = $self->{userdb};
-    $self->{userid} ||= $userdb->add_named_session($self->{sessionid}, "an anonymous user");
+    $self->{userid} ||= $userdb->add_named_session($self->sessionid, "an anonymous user");
     
     my $userid = shift || $self->{userid};
     my $shared = shift || ($self =~ /admin/)? "public" : "private";
@@ -549,13 +627,6 @@ sub is_shared_with_me {
     my $uploadsdb = $self->{uploadsdb};
     my $results = $uploadsdb->selectcol_arrayref("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ?", undef, $file, $userid);
     return (@$results > 0);
-}
-
-# Sharing Link (File ID) - Generates the sharing link for a specific file.
-sub sharing_link {
-    my $self = shift;
-    my $file = shift or return;
-    return url(-full => 1, -path_info => 1) . "?share_link=" . $file;
 }
 
 # File Type (File ID) - Returns the type of a specified track, in relation to the user.

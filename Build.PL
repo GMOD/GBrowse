@@ -58,19 +58,18 @@ my $build = GBrowseInstall->new(
 	'bin/gbrowse_clean.pl',
 	'bin/gbrowse_set_admin_passwd.pl',
 	'bin/gbrowse_create_account.pl',
+	'bin/gbrowse_change_passwd.pl',
+	'bin/gbrowse_metadb_config.pl',
 	'bin/gbrowse_slave',
         'bin/gbrowse_syn_load_alignment_database.pl',
         'bin/gbrowse_syn_load_alignments_msa.pl',
 	'bin/make_das_conf.pl',
+	'bin/scan_gbrowse.pl',
 	'bin/wiggle2gff3.pl',
 	'bin/gtf2gff3.pl',
 	'bin/bed2gff3.pl',
 	'bin/ucsc_genes2gff.pl',
-# not sure if these still work
-#	'bin/register_moby_services.pl',
-#	'bin/process_wormbase.pl',
-#	'bin/process_sgd.pl',
-#	'bin/load_genbank.pl',
+	'bin/load_genbank.pl',
     ],
 
     create_makefile_pl => 'passthrough',
@@ -79,9 +78,11 @@ my $build = GBrowseInstall->new(
 
 print STDERR <<END;
 **** WARNING *****************************************************************************************
-If you are upgrading from an earlier version of GBrowse and are using named user accounts, please run
-bin/gbrowse_metadb_config.pl to update your user account database. This will be done automatically for
-you when you do Build install.
+If you are upgrading from an earlier version of GBrowse and wish to use named user accounts, please 
+set "user_accounts" to 1 in /etc/gbrowse2/GBrowse.conf and run bin/gbrowse_metadb_config.pl to 
+create/update your user account database.
+
+See /etc/gbrowse2/GBrowse.conf.new for suggested settings.
 ******************************************************************************************************
 END
 

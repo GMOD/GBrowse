@@ -346,6 +346,10 @@ Balloon.prototype.doShowTooltip = function() {
   self.contents.appendChild(wrapper);
   wrapper.innerHTML = helpText;
 
+  // this partially fixes a bug in IE in which sticky balloons
+  // start failing to appear.
+  window.blur();
+
   // run any javascript in the thing -- sorry Sheldon
   if (self.evalScripts) {
      helpText.evalScripts();

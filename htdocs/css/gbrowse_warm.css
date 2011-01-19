@@ -116,7 +116,7 @@ BODY              { background-color: #F7FBFF;
     color: #73BE73;
 }
 .shared_even {
-    background-color: #FF9999;
+    background-color: pink;
 }
 .shared_even span.source_note {
     color: #CC8888;
@@ -125,7 +125,7 @@ BODY              { background-color: #F7FBFF;
     background-color: #FF7777;
 }
 .shared_odd span.source_note {
-    color: #FF5555;
+    color: LightPink;
 }
 .public_odd {
     background-color: #AAAAAA;

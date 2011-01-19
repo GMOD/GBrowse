@@ -75,7 +75,7 @@ sub ACTION_navigate {
     my $view_start = $q->param('view_start');
     my $view_stop  = $q->param('view_stop');
 
-    unless ($view_start eq 'NaN' or $view_stop eq 'NaN') {
+    unless (!defined $view_start or $view_start eq 'NaN' or $view_stop eq 'NaN') {
 	$render->state->{view_start} = ($view_start && $view_start >= 0)? $view_start : $render->state->{view_start},
 	$render->state->{view_stop}  = ($view_stop  && $view_stop  >= 0)? $view_stop  : $render->state->{view_stop},
     }
@@ -382,6 +382,18 @@ sub ACTION_autocomplete_upload_search {
     return (200,'text/html',$autocomplete);
 }
 
+sub ACTION_autocomplete_user_search {
+    my $self   = shift;
+    my $q      = shift;
+    my $render = $self->render;
+
+    my $match  = $q->param('prefix') or croak;
+    my $usertracks = $render->user_tracks;
+    my $matches    = $usertracks->user_search($match);
+    my $autocomplete = $render->format_upload_autocomplete($matches,$match);
+    return (200,'text/html',$autocomplete);
+}
+
 sub ACTION_reset_dsn {
     my $self = shift;
     $self->data_source->clear_cached_config();
@@ -631,6 +643,9 @@ sub ACTION_share_file {
     $render->session->unlock(); # session manipulation happening here
     my $fileid = $q->param('fileid') or confess "No file ID given to share_file.";
     my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
+    if ($userid =~ /\(([^\)]+)\)/) {
+	$userid = $1;
+    }
 
     my $usertracks = $render->user_tracks;
     my @tracks     = $usertracks->labels($fileid);
@@ -889,12 +904,12 @@ sub ACTION_plugin_authenticate {
        or return (204,'text/plain','no authenticator defined');
 
     my $result;
-    if (my ($username,$fullname)  = $plugin->authenticate) {
+    if (my ($username,$fullname,$email)  = $plugin->authenticate) {
 	my $session   = $self->session;
 	$session->unlock;
 	my $userdb = $render->userdb;
 	my $id = $userdb->check_or_add_named_session($session->id,$username);
-	$userdb->set_fullname_from_username($username=>$fullname);
+	$userdb->set_fullname_from_username($username=>$fullname,$email) if defined $fullname;
 	# now authenticate
 	my $is_authorized = $render->user_authorized_for_source($username);
 	if ($is_authorized) {

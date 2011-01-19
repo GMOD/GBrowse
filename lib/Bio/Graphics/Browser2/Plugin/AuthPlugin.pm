@@ -13,7 +13,8 @@ Bio::Graphics::Browser2::Plugin::AuthPlugin -- Base class for authentication plu
  sub authenticate {
      my $self = shift;
      my ($user,$password) = $self->credentials;
-     return $user eq 'george' && $password eq 'washington';
+     return unless  $user eq 'george' && $password eq 'washington';
+     return ($user,'George Washington','george@whitehouse.gov');
  }
 
  sub user_in_group {
@@ -27,8 +28,9 @@ Bio::Graphics::Browser2::Plugin::AuthPlugin -- Base class for authentication plu
 This is a template for authorizer plugins. To define a new type of
 authorizer, you need only inherit from this class and define an
 authenticate() method. This method takes two arguments: the username
-and password. You should return true if the username and password are
-valid, false otherwise.
+and password and returns an empty list if authentication fails, or a 
+list of (username, fullname, email) if authentication succeeds (fullname
+and email are optional).
 
 In addition, you may override the user_in_group() method, which takes
 two argumetns: the username and group. Return true if the user belongs

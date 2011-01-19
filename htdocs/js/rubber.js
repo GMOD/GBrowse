@@ -394,7 +394,7 @@ SelectArea.prototype.addSelectBox = function(view) {
                  border: this.border||'none' });
 
  /* // click on scalebar initializes selection
-  this.scalebar.onmousedown = this.startSelection;
+  this.scalebar.onmousedown      = this.startSelection;
 
   // drag and mouseup on details panel fires menu
   this.selectLayer.onmousemove   = this.moveRubber;

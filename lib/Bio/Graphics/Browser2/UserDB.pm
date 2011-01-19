@@ -10,10 +10,8 @@ use JSON;
 use Text::ParseWords 'quotewords';
 use Digest::MD5 qw(md5_hex);
 use Carp qw(confess cluck croak);
-use LWP::UserAgent;
-#use LWPx::ParanoidAgent; (Better, but currently broken)
 
-use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; 1";
+use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; require LWP::UserAgent; 1";
 use constant HAVE_SMTP   => eval "require Net::SMTP;1";
 
 # SOME CLARIFICATION ON TERMINOLOGY
@@ -157,7 +155,7 @@ sub check_old_confirmations {
   eval {
       my $ids = $userdb->selectcol_arrayref("SELECT userid FROM users WHERE confirmed=0 AND $days>3");
       for my $id (@$ids) {
-	  $userdb->do('DELETE FROM users WHERE userid=?',undef,$id);
+	  $userdb->do('DELETE FROM users   WHERE userid=?',undef,$id);
 	  $userdb->do('DELETE FROM session WHERE userid=?',undef,$id);
       }
       $userdb->commit();
@@ -214,7 +212,7 @@ sub do_sendmail {
 	  my $smtp_obj = $smtp_sender->new(
 	    $server,
       Port    => $port,
-      Debug  => 0,
+      Debug   => 0,
     )
     or die "Could not connect to outgoing mail server $server";
 
@@ -252,6 +250,33 @@ sub get_user_id {
 
 sub match_user {
     my $self   = shift;
+    my $search = shift;
+
+    my $userdb = $self->dbi;
+    my $select = $userdb->prepare(<<END) or die $userdb->errstr;
+SELECT a.username,b.gecos,b.email 
+  FROM session as a,users as b
+ WHERE a.userid=b.userid
+   AND (a.username LIKE ? OR
+        b.gecos    LIKE ? OR
+        b.email    LIKE ?)
+END
+;
+    $search = quotemeta($search);
+    my $db_search = "%$search%";
+    $select->execute($db_search,$db_search,$db_search) or die $select->errstr;
+    my @results;
+    while (my @a = $select->fetchrow_array) {
+#	push @results,(grep /$search/i,@a);
+	push @results, "$a[1] &lt;$a[2]&gt; ($a[0])";
+    }
+    $select->finish;
+    return \@results;
+}
+
+ # similar to match_user() except that it only finds users who are sharing files
+sub match_sharing_user {
+    my $self   = shift;
     my ($source,$search) = @_;
     my $userdb = $self->dbi;
     my $select = $userdb->prepare(<<END) or die $userdb->errstr;
@@ -271,7 +296,7 @@ END
     $select->execute($source,$db_search,$db_search,$db_search) or die $select->errstr;
     my @results;
     while (my @a = $select->fetchrow_array) {
-	push @results,(grep /$search/,@a);
+	push @results,(grep /$search/i,@a);
     }
     $select->finish;
     return \@results;
@@ -340,7 +365,7 @@ END
 
 sub set_fullname_from_username {
     my $self = shift;
-    my ($username,$fullname) = @_;
+    my ($username,$fullname,$email) = @_;
     my $userdb = $self->dbi;
 
     my $userid = $self->userid_from_username($username) or return;
@@ -353,10 +378,10 @@ SELECT count(*) FROM users WHERE userid=?
 END
 ;
 	if ($rows > 0) {
-	    $userdb->do('UPDATE users SET gecos=? WHERE userid=?',undef,$fullname,$userid);
+	    $userdb->do('UPDATE users SET gecos=?,email=? WHERE userid=?',undef,$fullname,$userid);
 	} else {
 	    my $nowfun = $self->nowfun();
-	    my $email  = 'unused_'.$self->create_key(32).'@nowhere.net';
+	    my $email  = $email || ('unused_'.$self->create_key(32).'@nowhere.net');
 	    $userdb->do(<<END,undef,$userid,$fullname,$email);
 INSERT INTO users(userid,gecos,email,pass,remember,openid_only,confirmed,cnfrm_code,last_login,created)
 VALUES (?,?,?,'x',1,1,1,'x',$nowfun,$nowfun)
@@ -415,6 +440,14 @@ sub get_sessionid {
     my $userdb = $self->{dbi};
     return $userdb->selectrow_array("SELECT sessionid FROM session WHERE userid=?",
 				    undef,$userid);
+}
+
+sub accountinfo_from_username {
+    my $self     = shift;
+    my $username = shift;
+    my $userdb = $self->dbi;
+    return $userdb->selectrow_array('SELECT a.gecos,a.email FROM users as a,session as b WHERE a.userid=b.userid AND b.username=?',
+				    undef,$username);
 }
 
 # Get Username (User ID) - Returns a user's username, given their ID.
@@ -866,10 +899,9 @@ sub do_edit_details {
     my $querystring  = "UPDATE users       ";
     $querystring .= "   SET $column  = ?";
     $querystring .= " WHERE userid   = ?";
-    $querystring .= "   AND $column  = ?";
 
     my $update = $userdb->prepare($querystring);
-    unless($update->execute($new,$userid,$old)) {
+    unless($update->execute($new,$userid)) {
 	if ($column eq 'email') {
 	    return $self->string_result("New e-mail already in use, please try another.");
 	} else {

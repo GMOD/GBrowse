@@ -40,7 +40,6 @@ sub new {
 
     my $globals       = $data_source->globals;
     my $uploadsid     = $session->uploadsid;
-    my $sessionid     = $session->id;
     my $backend       = $globals->user_account_db;
     my $user_accounts = $globals->user_accounts;
     
@@ -52,7 +51,7 @@ sub new {
 	$implementer = 'Bio::Graphics::Browser2::UserTracks::Filesystem';
     }
 
-    my $self = $implementer->_new($data_source, $globals, $uploadsid, $sessionid);
+    my $self = $implementer->_new($data_source, $globals, $uploadsid, $session);
     $self->is_admin(1) if $class->admin;
     $self->create_track_lookup;
     return $self;
@@ -60,13 +59,13 @@ sub new {
 
 sub _new {
     my $class = shift;
-    my ($data_source, $globals, $uploadsid, $sessionid) = @_;
+    my ($data_source, $globals, $uploadsid, $session) = @_;
 	
     my $self = bless {
 		config	    => $data_source,
 		uploadsid   => $uploadsid,
 		globals	    => $globals,
-		sessionid   => $sessionid,
+		session     => $session,
 		data_source => $data_source->name,
     }, ref $class || $class;
     return $self;
@@ -77,6 +76,12 @@ sub admin     {0}
 ########################
 
 sub uploadsid       {shift->{uploadsid}}
+sub session         {shift->{session}}
+sub sessionid       {shift->session->id}
+sub page_settings        {
+    my $self = shift;
+    return $self->{'.page_settings'} ||= $self->session->page_settings;
+}
 sub database        {
     my $self = shift;
     return $self->isa('Bio::Graphics::Browser2::UserTracks::Database');
@@ -95,8 +100,8 @@ sub is_admin {
 sub tracks {
     my $self = shift;	
     my @tracks;
-    push @tracks, $self->get_uploaded_files, $self->get_imported_files;
-    push @tracks, $self->get_added_public_files, $self->get_shared_files if $self->database;
+    push @tracks, $self->get_uploaded_files,     $self->get_imported_files;
+    push @tracks, $self->get_added_public_files, $self->get_shared_files;
     return @tracks;
 }
 
@@ -111,7 +116,7 @@ sub create_track_lookup {
     my $self = shift;
     my @tracks = $self->tracks;
     
-	my $track_lookup = {};
+    my $track_lookup = {};
     foreach my $track (@tracks) {
         $track_lookup->{$_} = $track foreach $self->labels($track);
     }
@@ -169,10 +174,15 @@ sub path {
 # Track Path (File) - Returns a verified path to the folder holding a track.
 sub track_path {
     my $self  = shift;
-    my $file  = shift;
-    my $filename    = $self->filename($file);
-    my $folder_name = $self->escape_url($filename);
-    return File::Spec->catfile($self->path($file), $folder_name);
+    my $track       = shift;
+    my $filename    = $self->filename($track);
+    if ($filename =~ m!/!) {
+	my ($uploadsid,$base) = split '/',$filename;
+	return File::Spec->catfile($self->data_source->userdata($uploadsid),$self->escape_url($base));
+    } else {
+	my $folder_name = $self->escape_url($filename);
+	return File::Spec->catfile($self->path($track), $folder_name);
+    }
 }
 
 # Blind Track Path (Filename) - Blindly attaches the userdata path to whatever filename you give it.
@@ -255,28 +265,38 @@ sub source_files {
 
 # Escape URL (URL[, Uniquefy]) - Gets an escaped name from a given URL.
 sub escape_url {
-	my $self     = shift;
+    my $self     = shift;
     my $url      = shift;
     my $uniquefy = shift;
 
-	# Remove any illegal chars
-    (my $filename = $url) =~ tr/a-zA-Z0-9_%^@.-/_/cs;
-	
-	# Cut the length at the maximum filename.
-    if (length $filename > $self->max_filename) {
-		$filename = substr($filename, 0, $self->max_filename);
+    my $filename;
+
+    # Remove any illegal chars
+    # hack here: if the URL looks like a "uploadid/filename", then we
+    # leave the slash there.
+    if ($url =~ m!^[a-f0-9]{32}/!) { # treat as a path to another userid
+	my ($dir,$rest) = split '/',$url;
+	$rest           =~ tr/a-zA-Z0-9_%^@.-/_/cs;
+	$filename       = $rest;
+    } else {
+	($filename = $url) =~ tr/a-zA-Z0-9_%^@.-/_/cs;
     }
 	
-	# If the file isn't unique, add a number on the end.
+    # Cut the length at the maximum filename.
+    if (length $filename > $self->max_filename) {
+	$filename = substr($filename, 0, $self->max_filename);
+    }
+	
+    # If the file isn't unique, add a number on the end.
     my $unique = 0;
     while ($uniquefy && !$unique) {
-		my $path = $self->blind_track_path($filename);
-		if (-e $path) {
-			$filename .= "-0" unless $filename =~ /-\d+$/;
-			$filename  =~ s/-(\d+)$/'-'.($1+1)/e; # add +1 to the trackname
-		} else {
-			$unique++;
-		}
+	my $path = $self->blind_track_path($filename);
+	if (-e $path) {
+	    $filename .= "-0" unless $filename =~ /-\d+$/;
+	    $filename  =~ s/-(\d+)$/'-'.($1+1)/e; # add +1 to the trackname
+	} else {
+	    $unique++;
+	}
     }
     return $filename;
 }
@@ -848,6 +868,13 @@ sub _print_url {
     $agent->get($url,':content_cb' => sub { print $fh shift; });
 }
 
+# Sharing Link (File ID) - Generates the sharing link for a specific file.
+sub sharing_link {
+    my $self = shift;
+    my $file = shift or return;
+    return CGI::url(-full => 1, -path_info => 1) . "?share_link=" . $file;
+}
+
 # These methods are replaced by methods in Filesystem.pm and Database.pm
 # Many of these functions are called asynchronously, if you want to connect an AJAX call to one of these functions add a hook in Action.pm
 sub get_file_id { warn "get_file_id() has been called, without properly inheriting subclass Database.pm"; }
@@ -871,7 +898,6 @@ sub permissions { warn "permissions() has been called, without properly inheriti
 sub is_mine { warn "is_mine() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
 sub owner { warn "owner() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
 sub is_shared_with_me { warn "is_shared_with_me() has been called, without properly inheriting subclass Database.pm"; }
-sub sharing_link { warn "sharing_link() has been called, without properly inheriting subclass Database.pm"; }
 sub file_type { warn "file_type() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
 sub shared_with { warn "shared_with() has been called, without properly inheriting subclass Database.pm"; }
 sub file_exists { warn "file_exists() has been called, without properly inheriting subclass Filesystem.pm"; }

@@ -506,14 +506,30 @@ been changed to <b>%s</b>, so it can now be shared.
 END
 
  SHARE_SHARED_TRACK => <<END,
-This track is another user's custom uploads; it is shared under a <b>%s</b>
+This track is another user\'s custom uploads; it is shared under a <b>%s</b>
 policy, so you are free to send the link to other users.
+END
+
+ SHARE_GROUP_EMAIL_SUBJECT => <<END,
+Track sharing notification from the %s browser
+END
+
+ SHARE_GROUP_EMAIL => <<END,
+The user named %s has shared some tracks with you. They will appear in your "Custom Tracks" section the next time you log into %s. To see the shared track(s) now, click on %s.
+
+Additional information about the shared tracks follows:
+
+  Upload name:        %s
+  Upload description: %s
+  Track names:        %s
+
+If you wish to remove these tracks from your session, go to "Custom Tracks" and click on the '[X]' next to the upload name. To add it back to your session, click on %s.
 END
 
  OTHER_SHARE_METHODS => <<END,
 You can also share it with another user by setting its permissions to
 <b>public</b> and giving them this link or letting them search for the
-track by name, or by changing its permissions to <b>group</p> and adding
+track by name, or by changing its permissions to <b>group</b> and adding
 the user you want by username. To do this, select the "Custom Tracks"
 page and choose the sharing policy you want with the drop-down menu in
 the "sharing" section, then type the user's name or ID in the input
@@ -660,14 +676,17 @@ END
    SHARING                   => 'Sharing:',
    TRACK_IS                  => 'Track is',
    SHARED_WITH_YOU           => '<b>shared</b> with you',
+   SHARING_ADD_USER          => 'Add',
    SHARING_PRIVATE           => 'Private',
    SHARING_CASUAL            => 'Casual',
    SHARING_GROUP             => 'Group',
    SHARING_PUBLIC            => 'Public',
    SHARING_HELP              => '<b>Private</b> - Visible only to me.<br>'.
 		                        '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
-		                        '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
+		                        '<b>Group</b> - Visible to me and anyone I add to the sharing group. Search for users by typing a portion of their name or email address in the box to a right and click [Add]. An email will be sent to alert them that the track has been shared.<br>'.
 		                        '<b>Public</b> - Visible to anyone.',
+   UPLOADED_TRACKS_CATEGORY  => 'Custom Tracks:Uploaded Tracks',
+   SHARED_WITH_ME_CATEGORY   => 'Custom Tracks:Shared with me',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
    USERS                     => 'user(s)',
    USED_BY                   => 'used by',

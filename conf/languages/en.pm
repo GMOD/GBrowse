@@ -504,24 +504,24 @@ been changed to <b>%s</b>, so it can now be shared.
 END
 
  SHARE_SHARED_TRACK => <<END,
-This track is another user's custom uploads; it is shared under a <b>%s</b>
+This track is another user\'s custom uploads; it is shared under a <b>%s</b>
 policy, so you are free to send the link to other users.
 END
 
  OTHER_SHARE_METHODS => <<END,
 You can also share it with another user by setting its permissions to
 <b>public</b> and giving them this link or letting them search for the
-track by name, or by changing its permissions to <b>group</p> and adding
+track by name, or by changing its permissions to <b>group</b> and adding
 the user you want by username. To do this, select the "Custom Tracks"
 page and choose the sharing policy you want with the drop-down menu in
-the "sharing" section, then type the user's name or ID in the input
+the "sharing" section, then type the user\'s name or ID in the input
 field provided.
 END
 
  CANT_SHARE     => <<END,
 Sorry, this track is owned by another user who has only allowed access to
-a limited group of other users. Since it's not yours, you can't share it
-with anyone else. In order to share this track, you'll have to ask them
+a limited group of other users. Since it\'s not yours, you can\'t share it
+with anyone else. In order to share this track, you\'ll have to ask them
 for permission.
 END
 
@@ -545,6 +545,7 @@ END
    WITH_OPENID               => 'with your OpenID',
    SIGN_IN                   => 'Sign in',
    DONT_HAVE_OPENID          => 'Don\'t have an OpenID?',
+   OPENID_PROMPT             => "Select your OpenID provider\'s icon from the list below, or type your OpenID into the text box.",
    GO_BACK                   => 'Go Back.',
    ALL_FIELDS_REQUIRED       => 'All fields are required.',
    PASSWORDS_DO_NOT_MATCH    => 'Passwords do not match.',
@@ -659,8 +660,10 @@ END
    SHARING_PUBLIC            => 'Public',
    SHARING_HELP              => '<b>Private</b> - Visible only to me.<br>'.
 		                        '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
-		                        '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
+		                        '<b>Group</b> - Visible to me and anyone I add to the sharing group. Search for users by typing a portion of their name or email address in the box to a right and click [Add]. An email will be sent to alert them that the track has been shared.<br>'.
 		                        '<b>Public</b> - Visible to anyone.',
+   UPLOADED_TRACKS_CATEGORY  => 'Custom Tracks:Uploaded Tracks',
+   SHARED_WITH_ME_CATEGORY   => 'Custom Tracks:Shared with me',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
    USERS                     => 'user(s)',
    USED_BY                   => 'used by',
@@ -729,8 +732,8 @@ END
    CLICK_MODIFY_SUBTRACK_SEL => 'Click to modify subtrack selections.',
    CLICK_FOR_MORE            => 'Click for more',
    PLUGIN_BASE_CLASS_DUMP    => "This is the base class for all GBrowse plugins.\n".
-                                "The fact that you're seeing this means that the author of ".
-                                "this plugin hasn't yet implemented a real dump() method.\n",
+                                "The fact that you\'re seeing this means that the author of ".
+                                "this plugin hasn\'t yet implemented a real dump() method.\n",
    PLUGIN_BASE_CLASS_DESC    => "This is the base class for all GBrowse plugins.\n".
                                 "The fact that you're seeing this means that the author of ".
                                 "this plugin hasn't yet entered a real description.\n",

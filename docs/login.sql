@@ -29,16 +29,16 @@ CREATE TABLE openid_users (
 
 DROP TABLE IF EXISTS sessions;
 CREATE TABLE sessions (
-    userid            integer not null PRIMARY KEY $autoincrement",
-    username      varchar(32)
+    userid            integer not null PRIMARY KEY auto_increment,
+    username      varchar(32) not null,
     sessionid        char(32) not null UNIQUE,
-    uploadsid        char(32) not null UNIQUE,
+    uploadsid        char(32) not null UNIQUE
 ) ENGINE=InnoDB;
 
 DROP TABLE IF EXISTS uploads;
 CREATE TABLE uploads (
-    trackid       varchar(32) not null PRIMARY key",
-    userid            integer not null",
+    trackid       varchar(32) not null PRIMARY key,
+    userid            integer not null,
     path                text,
     title               text,
     description         text,
@@ -47,14 +47,14 @@ CREATE TABLE uploads (
     modification_date   datetime,
     sharing_policy      ENUM('private', 'public', 'group', 'casual') not null,
     public_count        int,
-    data_source         text,
+    data_source         text
 ) ENGINE=InnoDB;
 
 DROP TABLE IF EXISTS sharing;
 CREATE TABLE sharing (
     trackid       varchar(32) not null,
     userid            integer not null,
-    public              boolean,
+    public              boolean
 ) ENGINE=InnoDB;
 
 DROP TABLE IF EXISTS dbinfo;

@@ -494,10 +494,16 @@ SelectArea.prototype.showMenu = function(event) {
   var menuHeight = self.elementLocation(menu,'height');
   var menuYHalf  = Math.round(menuHeight/2); 
   
+  if ('createTouch' in document){
+  var left = Event.pointerX(event)+705;
+  //if ((left+menuWidth) > pageWidth) left -= menuWidth + 10;
+  var top  = Event.pointerY(event)+363;
+    
+  }else {
   var left = self.eventLocation(event,'x') + 5;
   if ((left+menuWidth) > pageWidth) left -= menuWidth + 10;
   var top  = self.eventLocation(event,'y') - menuYHalf;
-
+  }
   menu = Element.extend(menu);
   menu.setStyle({ top:  top+'px' }); 
   menu.setStyle({ left: left+'px' });

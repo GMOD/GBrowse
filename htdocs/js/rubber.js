@@ -143,10 +143,10 @@ SelectArea.prototype.elementLocation = function(el,request) {
 SelectArea.prototype.eventLocation = function(event,request) {
   var e = event || window.event;
   if (request == 'x') {
-    return e.pageX || e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+    return Event.pointerX(e) || Event.clientX(e) + document.body.scrollLeft + document.documentElement.scrollLeft;
   }
   else if (request == 'y') {
-    return e.pageY || e.clientY + document.body.scrollTop  + document.documentElement.scrollTop;
+    return Event.pointerY(e) || Event.clientY(e) + document.body.scrollTop  + document.documentElement.scrollTop;
   }
   else {  
     return false;
@@ -378,6 +378,8 @@ SelectArea.prototype.addSelectMenu = function(view) {
 
 // Initial creation of the select box
 SelectArea.prototype.addSelectBox = function(view) {
+  
+  var supportsTouch = ('createTouch' in document);
 
   if (this.selectBox) return false;
  
@@ -391,14 +393,36 @@ SelectArea.prototype.addSelectBox = function(view) {
                  zIndex: 100,
                  border: this.border||'none' });
 
-  // click on scalebar initializes selection
+ /* // click on scalebar initializes selection
   this.scalebar.onmousedown = this.startSelection;
 
   // drag and mouseup on details panel fires menu
   this.selectLayer.onmousemove   = this.moveRubber;
   this.selectLayer.onmouseup     = this.stopRubber;  
 
-  // allows drag-back
+  // allows drag-back*/
+ 
+
+/* this.scalebar[supportsTouch ? 'ontouchmove' : 'onmousedown'] = this.startSelection;
+ 
+ this.selectLayer[supportsTouch ? 'ontouchmove' : 'onmousemove'] = this.moveRubber;
+ 
+ this.selectLayer[supportsTouch ? 'ontouchend' : 'onmouseup'] = this.stopRubber;
+ */
+ if ('createTouch' in document) {
+  this.scalebar.ontouchstart = this.startSelection;
+
+  // drag and mouseup on details panel fires menu
+  this.selectLayer.ontouchmove   = this.moveRubber;
+  this.selectLayer.ontouchend     = this.stopRubber;  
+  } else {
+    this.scalebar.onmousedown = this.startSelection;
+
+  // drag and mouseup on details panel fires menu
+  this.selectLayer.onmousemove   = this.moveRubber;
+  this.selectLayer.onmouseup   = this.stopRubber;
+    
+  }
 
 
   // 'esc' key aborts

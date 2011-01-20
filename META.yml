@@ -38,7 +38,7 @@ provides:
     file: lib/Bio/DB/Tagger/mysql.pm
   Bio::Graphics::Browser2:
     file: lib/Bio/Graphics/Browser2.pm
-    version: 2.16
+    version: 2.20
   Bio::Graphics::Browser2::Action:
     file: lib/Bio/Graphics/Browser2/Action.pm
   Bio::Graphics::Browser2::AdminTracks:
@@ -93,7 +93,9 @@ provides:
     file: lib/Bio/Graphics/Browser2/PadAlignment.pm
   Bio::Graphics::Browser2::Plugin:
     file: lib/Bio/Graphics/Browser2/Plugin.pm
-    version: 0.20
+    version: 0.30
+  Bio::Graphics::Browser2::Plugin::AuthPlugin:
+    file: lib/Bio/Graphics/Browser2/Plugin/AuthPlugin.pm
   Bio::Graphics::Browser2::PluginSet:
     file: lib/Bio/Graphics/Browser2/PluginSet.pm
   Bio::Graphics::Browser2::Realign:
@@ -108,6 +110,8 @@ provides:
     file: lib/Bio/Graphics/Browser2/Render.pm
   Bio::Graphics::Browser2::Render::HTML:
     file: lib/Bio/Graphics/Browser2/Render/HTML.pm
+  Bio::Graphics::Browser2::Render::Login:
+    file: lib/Bio/Graphics/Browser2/Render/Login.pm
   Bio::Graphics::Browser2::Render::Slave:
     file: lib/Bio/Graphics/Browser2/Render/Slave.pm
   Bio::Graphics::Browser2::Render::Slave::Status:
@@ -124,8 +128,15 @@ provides:
     file: lib/Bio/Graphics/Browser2/TrackDumper.pm
   Bio::Graphics::Browser2::UserConf:
     file: lib/Bio/Graphics/Browser2/UserTracks.pm
+  Bio::Graphics::Browser2::UserDB:
+    file: lib/Bio/Graphics/Browser2/UserDB.pm
+    version: 0.5
   Bio::Graphics::Browser2::UserTracks:
     file: lib/Bio/Graphics/Browser2/UserTracks.pm
+  Bio::Graphics::Browser2::UserTracks::Database:
+    file: lib/Bio/Graphics/Browser2/UserTracks/Database.pm
+  Bio::Graphics::Browser2::UserTracks::Filesystem:
+    file: lib/Bio/Graphics/Browser2/UserTracks/Filesystem.pm
   Bio::Graphics::Browser2::Util:
     file: lib/Bio/Graphics/Browser2/Util.pm
   Bio::Graphics::GBrowseFeature:
@@ -196,4 +207,4 @@ requires:
   perl: 5.008
 resources:
   license: http://dev.perl.org/licenses/
-version: 2.16
+version: 2.20

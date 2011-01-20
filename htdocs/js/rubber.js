@@ -9,6 +9,7 @@
 
 var currentSelectArea;
 var selectAreaIsActive;
+var lefttemp; 
 
 // Constructor
 var SelectArea = function () {
@@ -144,9 +145,12 @@ SelectArea.prototype.eventLocation = function(event,request) {
   var e = event || window.event;
   if (request == 'x') {
     return Event.pointerX(e) || Event.clientX(e) + document.body.scrollLeft + document.documentElement.scrollLeft;
+   
+    
   }
   else if (request == 'y') {
     return Event.pointerY(e) || Event.clientY(e) + document.body.scrollTop  + document.documentElement.scrollTop;
+ 
   }
   else {  
     return false;
@@ -226,6 +230,7 @@ SelectArea.prototype.moveRubber = function(event) {
   var self = currentSelectArea;
   var selectPixelStart = self.selectPixelStart;
   var selectPixelEnd   = self.eventLocation(event,'x') - self.elementLocation(self.selectLayer,'x1');
+   lefttemp   = selectPixelEnd;
   var selectPixelWidth = Math.abs(selectPixelStart - selectPixelEnd);
 
   var rev, left;
@@ -489,16 +494,24 @@ SelectArea.prototype.showMenu = function(event) {
   var menu = self.selectMenu;
   menu.innerHTML = self.menuHTML.replace(/SELECTION/g,self.currentSegment);
 
-  var pageWidth  = document.viewport.getWidth();
+  var pageWidth  =
+  document.viewport.getWidth();
   var menuWidth  = self.elementLocation(menu,'width');
   var menuHeight = self.elementLocation(menu,'height');
   var menuYHalf  = Math.round(menuHeight/2); 
   
   if ('createTouch' in document){
-  var left = Event.pointerX(event)+705;
+  var left = lefttemp;
+  var top = 360;
+  //alert (top)
+   // alert (left);
+   // alert (lefttemp);
   //if ((left+menuWidth) > pageWidth) left -= menuWidth + 10;
-  var top  = Event.pointerY(event)+363;
+  //var top  = toptemp;
     
+
+  
+  
   }else {
   var left = self.eventLocation(event,'x') + 5;
   if ((left+menuWidth) > pageWidth) left -= menuWidth + 10;

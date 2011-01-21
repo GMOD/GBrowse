@@ -416,7 +416,8 @@ SelectArea.prototype.addSelectBox = function(view) {
  */
  if ('createTouch' in document) {
   this.scalebar.ontouchstart = this.startSelection;
-
+  event.preventDefault();
+  
   // drag and mouseup on details panel fires menu
   this.selectLayer.ontouchmove   = this.moveRubber;
   this.selectLayer.ontouchend     = this.stopRubber;  

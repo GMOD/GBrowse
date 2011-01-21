@@ -2,9 +2,11 @@
                      position: absolute;
 		     text-align: right;	
 		     left: 5em;
+		     z-index: -1;
                   }
 .titlebar_inactive {
                      position: absolute;
 		     text-align: right;	
 		     left: 5em;
+		     z-index: -1;
                   }

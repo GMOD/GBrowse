@@ -516,44 +516,42 @@ sub wrap_rendered_track {
                 -id          => "${label}_icon",
                 -onClick     => "collapse('$label')",
                 -style       => 'cursor:pointer',
-                -onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')",
+		$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')"),
             }
         ),
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
 		-onClick     => "ShowHideTrack('$label',false)",
                 -style       => 'cursor:pointer',
-                -onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')",
+                $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
             }
         ),
         img({   -src   => $share,
                 -style => 'cursor:pointer',
-                -onMouseOver =>
-                    "$balloon_style.showTooltip(event,'$share_this_track')",
-		    -onMousedown =>
-                    "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
+		-onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
+                $self->if_not_ipad(-onMouseOver =>
+                    "$balloon_style.showTooltip(event,'$share_this_track')"),
             }
         ),
 
         $config_click ? img({   -src         => $configure,
 				-style       => 'cursor:pointer',
 				-onmousedown => $config_click,
-				-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')",
+				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
 			    })
 	              : '',
         $download_click ? img({   -src         => $download,
 				  -style       => 'cursor:pointer',
 				  -onmousedown => $download_click,
-				  -onMouseOver =>
-				      "$balloon_style.showTooltip(event,'$download_this_track')",
+				  $self->if_not_ipad(-onMouseOver =>
+						     "$balloon_style.showTooltip(event,'$download_this_track')"),
 			      })
 	                 : '',
 
         img({   -src         => $help,
                 -style       => 'cursor:pointer',
                 -onmousedown => $help_click,
-                -onMouseOver =>
-	    "$balloon_style.showTooltip(event,'$about_this_track')",
+                $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$about_this_track')"),
             }
         )
 	);
@@ -561,13 +559,14 @@ sub wrap_rendered_track {
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
 
-    my $titlebar = span(
-        {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
-            -id => "${label}_title"
-        },
-	@images,
-	$title
-    );
+    my $titlebar = 
+	span(
+		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
+		    -id => "${label}_title"
+		},
+	    @images,
+	    span({-class => 'drag_region'},$title)
+	);
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
@@ -630,6 +629,14 @@ sub wrap_rendered_track {
 		},
                 ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
     return $html;
+}
+
+sub if_not_ipad {
+    my $self = shift;
+    my @args = @_;
+    my $probably_ipad = CGI->user_agent =~ /Mobile.+Safari/i;
+    return if $probably_ipad;
+    return @args;
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 

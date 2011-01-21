@@ -100,7 +100,7 @@ function create_drag (div_name) {
 		      tag:     'div',
 		      constraint:  'vertical',
   		      only:    'track',
-		      handle:  'titlebar',
+		      handle:  'drag_region',
 		      scroll:   window,
 		      onUpdate: function() {
 		      var items   = $(div_name).select('[class="track"]');

@@ -2512,15 +2512,17 @@ else if (Prototype.Browser.IE) {
         element = $(element);
         try { element.offsetParent }
         catch(e) { return Element._returnOffset(0,0) }
-        var position = element.getStyle('position');
-        if (position !== 'static') return proceed(element);
-        var offsetParent = element.getOffsetParent();
-        if (offsetParent && offsetParent.getStyle('position') === 'fixed')
-          offsetParent.setStyle({ zoom: 1 });
-        element.setStyle({ position: 'relative' });
-        var value = proceed(element);
-        element.setStyle({ position: position });
-        return value;
+	try {
+	    var position = element.getStyle('position');
+	    if (position !== 'static') return proceed(element);
+	    var offsetParent = element.getOffsetParent();
+	    if (offsetParent && offsetParent.getStyle('position') === 'fixed')
+		offsetParent.setStyle({ zoom: 1 });
+	    element.setStyle({ position: 'relative' });
+	    var value = proceed(element);
+	    element.setStyle({ position: position });
+	    return value;
+	} catch (e) { return false } 
       }
     );
   });
@@ -3296,10 +3298,11 @@ var Selector = Class.create({
           e = "#" + id + " " + e;
         }
 
-        results = $A(root.querySelectorAll(e)).map(Element.extend);
-        root.id = oldId;
-
-        return results;
+	try {
+	    results = $A(root.querySelectorAll(e)).map(Element.extend);
+	    root.id = oldId;
+	    return results;
+	} catch (e) { return false }
       case 'xpath':
         return document._getElementsByXPath(this.xpath, root);
       default:

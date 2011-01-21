@@ -11,7 +11,7 @@ use GBrowse::ConfigData;
 use List::Util;
 use File::Spec;
 use File::Basename 'dirname','basename';
-use File::Path 'remove_tree';
+use File::Path 'rmtree';
 use File::Spec;
 use POSIX 'strftime';
 
@@ -416,7 +416,7 @@ sub check_uploadsid {
     unless ($userid) {
 	print STDERR "\n" unless $line_counter++;
 	print STDERR "Uploadsid $uploadsid has no corresponding user. Removing.\n";
-	remove_tree(File::Spec->catfile($source_path,$uploadsid));
+	rmtree(File::Spec->catfile($source_path,$uploadsid));
 	return;
     }
     return $userid;

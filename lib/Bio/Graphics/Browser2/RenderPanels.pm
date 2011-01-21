@@ -599,8 +599,6 @@ sub wrap_rendered_track {
     # Add arrows for panning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
-# works with IE7, but looks awful. IE8 should support standard css opacity.
-#	$style      .= ';filter:alpha(opacity=30);moz-opacity:0.35';
         my $pan_left   =  img({
 	    -style   => $style . ';left:5px',
 	    -class   => 'panleft',

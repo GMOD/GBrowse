@@ -6,7 +6,7 @@ use base 'Bio::Graphics::Browser2::UserTracks';
 use Bio::Graphics::Browser2::UserTracks;
 use Bio::Graphics::Browser2;
 use File::Spec;
-use File::Path 'remove_tree';
+use File::Path 'rmtree';
 use Cwd;
 use Carp "cluck",'croak';
 
@@ -117,7 +117,7 @@ sub delete_file {
 							  $self->{config},
 							  $self->{uploadsid});
     $loader->drop_databases($self->track_conf($file));
-    remove_tree($self->track_path($file));
+    rmtree($self->track_path($file));
 }
 
 sub get_added_public_files { return }

@@ -41,8 +41,10 @@ var GBrowseTrackPan = Class.create({
 			gbt.get_image_div().style.left = pos;
 		});
 
-		if ($('overview_marker')) { $('overview_marker').style.left = Math.round(this.overview_segment_start + this.overview_draggable_width * x) + 'px'; }
-		if ($('region_marker'))   { $('region_marker').style.left   = Math.round(this.region_segment_start   + this.region_draggable_width   * x) + 'px'; }
+		if ($('overview_marker')) { $('overview_marker').style.left = 
+			Math.round(this.overview_segment_start + this.overview_draggable_width * x) + 'px'; }
+		if ($('region_marker'))   { $('region_marker').style.left   = 
+			Math.round(this.region_segment_start   + this.region_draggable_width   * x) + 'px'; }
 
 		updateRuler();
 
@@ -191,22 +193,28 @@ var GBrowseTrackPan = Class.create({
 		new Draggable(gbtrack.get_image_div(), {
 			constraint: 'horizontal',
 			zindex: 0, // defaults to 1000, which we don't want because it covers labels
+			starteffect: false,
+			endeffect: false,
 			snap:   function (x) { return[ (x < 0) ? ((x > -TrackPan.detail_draggable_width) ? x : -TrackPan.detail_draggable_width ) : 0 ]; },
 			onDrag: function ()  { 
 				if (TrackPan.flip) {
-					TrackPan.update_pan_position(1 + parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
+					TrackPan.update_pan_position(1 + 
+								     parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
 				} else {
-					TrackPan.update_pan_position(0 - parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
+					TrackPan.update_pan_position(0 - 
+								     parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
 				}
 			},
 			onEnd:  function ()  { 
 				if (TrackPan.flip) {
-					TrackPan.update_pan_position(1 + parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
+					TrackPan.update_pan_position(1 + 
+								     parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
 				} else {
-					TrackPan.update_pan_position(0 - parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
+					TrackPan.update_pan_position(0 - 
+								     parseInt(gbtrack.get_image_div().style.left) / TrackPan.detail_draggable_width);
 				}
 			}
-		});
+		    });
 	},
 
 	// Called by controller when the loaded tracks may have changed. Makes sure all tracks are draggable, and 

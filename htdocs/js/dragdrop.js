@@ -403,10 +403,12 @@ event.preventDefault();
         with(this._getWindowScroll(this.options.scroll)) { p = [ left, top, left+width, top+height ]; }
       } else {
         p = Position.page(this.options.scroll);
-        p[0] += this.options.scroll.scrollLeft + Position.deltaX;
-        p[1] += this.options.scroll.scrollTop + Position.deltaY;
-        p.push(p[0]+this.options.scroll.offsetWidth);
-        p.push(p[1]+this.options.scroll.offsetHeight);
+	try {
+	    p[0] += this.options.scroll.scrollLeft + Position.deltaX;
+	    p[1] += this.options.scroll.scrollTop + Position.deltaY;
+	    p.push(p[0]+this.options.scroll.offsetWidth);
+	    p.push(p[1]+this.options.scroll.offsetHeight);
+	} catch (e) { }
       }
       var speed = [0,0];
       if(pointer[0] < (p[0]+this.options.scrollSensitivity)) speed[0] = pointer[0]-(p[0]+this.options.scrollSensitivity);

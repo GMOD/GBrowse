@@ -191,6 +191,8 @@ var GBrowseTrackPan = Class.create({
 		new Draggable(gbtrack.get_image_div(), {
 			constraint: 'horizontal',
 			zindex: 0, // defaults to 1000, which we don't want because it covers labels
+			starteffect: false,
+			endeffect: false,
 			snap:   function (x) { return[ (x < 0) ? ((x > -TrackPan.detail_draggable_width) ? x : -TrackPan.detail_draggable_width ) : 0 ]; },
 			onDrag: function ()  { 
 				if (TrackPan.flip) {

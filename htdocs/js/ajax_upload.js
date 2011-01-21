@@ -144,7 +144,7 @@ function startAjaxUpload(upload_id) {
 			success: status.down('span'),
 			frequency: 2	// Don't set this too low, otherwise the first status request will happen before the uploads hash (in $state) is updated.
 		},
-		document.URL,
+		'#',
 		{	parameters: {
 				action: 'upload_status',
 				upload_id: upload_id
@@ -154,7 +154,8 @@ function startAjaxUpload(upload_id) {
 				if (transport.responseText.match(/complete/)) {
 					Ajax_Status_Updater.get(upload_id).stop();
 					var sections = new Array(custom_tracks_id, track_listing_id);
-					if (using_database()) sections.push(community_tracks_id);
+					if (using_database())
+						sections.push(community_tracks_id);
 					Controller.update_sections(sections);
 				}
 			}
@@ -174,48 +175,56 @@ function completeAjaxUpload(response, upload_id, field_type) {
 		r = response.evalJSON(true);
 	} catch(e) { 
     	r = {
-	    success:     false, 
+       		success:     false, 
             uploadName: 'Uploaded file',
             error_msg:  Controller.translate('UPLOAD_ERROR')
     	}
     }
-	
+    
 	if (r.success) {
-	    var fields = new Array(track_listing_id, custom_tracks_id);
-	    var updater = Ajax_Status_Updater.get(upload_id);
-	    if (updater != null) updater.stop();
-	    cleanRemove($(upload_id));
-
-	    if (using_database()) fields.push(community_tracks_id);
-
-	    // Add any tracks returned to the Controller.
-	    if (r.tracks != null && r.tracks.length > 0) {
-		Controller.add_tracks(
-				      r.tracks,
-				      function() {
-					  Controller.update_sections(
-								     fields,
-								     '',
-								     false,
-								     false);
-					      }
-				      );
-	    }
+		var fields = new Array(track_listing_id, custom_tracks_id)
+		if (using_database())
+			fields.push(community_tracks_id);
+		// Add any tracks returned to the Controller.
+		if (r.tracks != null && r.tracks.length > 0) {
+			Controller.add_tracks(
+				r.tracks,
+				function() { 
+					Controller.update_sections(
+						fields,
+						'',
+						false,
+						false,
+						function() {
+							var updater = Ajax_Status_Updater.get(upload_id);
+							if (updater != null)
+								updater.stop()
+							cleanRemove($(upload_id));
+						}
+					)
+				}
+			);
+		} else {
+			// If no tracks were returned, just stop the updater & remove the upload field.
+			var updater = Ajax_Status_Updater.get(upload_id);
+			if (updater != null) updater.stop();
+			cleanRemove($(upload_id));
+		}
 	} else {
-	    // Remove the updater, and display the error returned.
-	    if (Ajax_Status_Updater.get(upload_id) !=null)
-		Ajax_Status_Updater.get(upload_id).stop();
-	    Ajax_Status_Updater.unset(upload_id);
-	    var status = $(upload_id + '_status');
-	    var msg =  new Element("div").setStyle({"background-color": "pink", "padding": "5px"});
-	    msg.insert({bottom: new Element("b").update(r.uploadName) });
-	    msg.insert({bottom: "&nbsp;" + r.error_msg + "&nbsp;"});
-	    var remove_link = new Element("a", {href: "javascript:void(0)"}).update(Controller.translate('REMOVE_MESSAGE'));
-	    remove_link.observe("click", function() {
-		    Effect.BlindUp($(upload_id), {duration: 0.25, afterFinish: function() { $(upload_id).remove() } });
+		// Remove the updater, and display the error returned.
+		if (Ajax_Status_Updater.get(upload_id) !=null)
+		     Ajax_Status_Updater.get(upload_id).stop();
+		Ajax_Status_Updater.unset(upload_id);
+		var status = $(upload_id + '_status');
+		var msg =  new Element("div").setStyle({"background-color": "pink", "padding": "5px"});
+		msg.insert({bottom: new Element("b").update(r.uploadName) });
+		msg.insert({bottom: "&nbsp;" + r.error_msg + "&nbsp;"});
+		var remove_link = new Element("a", {href: "javascript:void(0)"}).update(Controller.translate('REMOVE_MESSAGE'));
+		remove_link.observe("click", function() {
+			Effect.BlindUp($(upload_id), {duration: 0.25, afterFinish: function() { $(upload_id).remove() } });
 		});
-	    msg.insert({bottom: remove_link});
-	    status.update(msg);
+		msg.insert({bottom: remove_link});
+		status.update(msg);
 	}
 	return true;
 }
@@ -399,28 +408,28 @@ function shareFile(fileid, userid) {
 
 // Unshares a file with the specific userid (or the logged-in user, if userid is blank). A front-end to UserTracks::unshare().
 function unshareFile(fileid, userid) {
-    showUploadBusy(fileid, Controller.translate('REMOVING'));
-    var cdo    = $('community_display_offset');
-    var offset = cdo ? cdo.value : 0;
-    new Ajax.Request(
-		     document.URL,
-		     {
-			 method: 'post',
-			     parameters: {
-			     action: 'unshare_file',
-				 fileid: fileid,
-				 userid: userid
-				 },
-			     onSuccess: function (transport) {
-			     var sections = new Array(custom_tracks_id, track_listing_id);
-			     if (using_database())
-				 sections.push(community_tracks_id);
-			     Controller.update_sections(sections, "&offset=" + offset);
-			     var tracks = transport.responseText.evalJSON(true).tracks;
-			     if (tracks != null)
-				 tracks.each(function(tid) { Controller.delete_tracks(tid) });
-			 }
-		     });
+	showUploadBusy(fileid, Controller.translate('REMOVING'));
+	var offset = $("community_display_offset").value;
+	new Ajax.Request(
+		document.URL,
+		{
+			method: 'post',
+			parameters: {
+				action: 'unshare_file',
+				fileid: fileid,
+				userid: userid
+			},
+			onSuccess: function (transport) {
+				var sections = new Array(custom_tracks_id, track_listing_id);
+				if (using_database())
+					sections.push(community_tracks_id);
+				Controller.update_sections(sections, "&offset=" + offset);
+				var tracks = transport.responseText.evalJSON(true).tracks;
+				if (tracks != null)
+					tracks.each(function(tid) { Controller.delete_tracks(tid) });
+			}
+		}
+	);
 }
 
 // Updates the public file listing. If given, searches by keyword or provides and offset.

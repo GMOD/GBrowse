@@ -22,6 +22,7 @@ use constant HAVE_SMTP   => eval "require Net::SMTP;1";
 sub new {
   my $class   = shift;
   my $globals = shift;
+
   my $VERSION = '0.5';
   my $credentials  = $globals->user_account_db 
       || "DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse";
@@ -1397,6 +1398,12 @@ sub using_openid {
     my $userid = shift;
     my $userdb = $self->{dbi};
     return $userdb->selectrow_array("SELECT userid FROM openid_users WHERE userid = ?", undef, $userid)? "true" : "false";
+}
+
+sub clone_database {
+    my $self = shift;
+    $self->{dbi}{InactiveDestroy} = 1;
+    $self->{dbi} = $self->{dbi}->clone
 }
 
 1;

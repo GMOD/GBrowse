@@ -480,10 +480,12 @@ sub ACTION_upload_file {
 	($result,$msg,$tracks,$pid) = (1,'shared track added to your session',$t,$$);
     }
     else {
-	($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1)
+	($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1,$self->render)
                                         :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1)
                                                : $usertracks->upload_file($track_name, $fh, $content_type, $overwrite);
     }
+
+    warn "tracks = @$tracks";
 
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
@@ -502,8 +504,8 @@ sub ACTION_upload_file {
 		uploadName	=> $name,
     };
     
-    return (200, 'text/html', JSON::to_json($return_object));
-    #return (200, 'application/json', $return_object);
+    #return (200, 'text/html', JSON::to_json($return_object));
+    return (200, 'application/json', $return_object);
 }
 
 sub ACTION_import_track {
@@ -580,12 +582,13 @@ sub ACTION_upload_status {
     my $render     = $self->render;
 	
     if ($file_name = $state->{uploads}{$upload_id}[0]) {
-		my $usertracks = $render->user_tracks;
-		my $file = $usertracks->database? $usertracks->get_file_id($file_name) : $file_name;
-		$status		   = $usertracks->status($file);
-		return (200,'text/html', "<b>$file_name:</b> <i>$status</i>");
+	my $usertracks = $render->user_tracks;
+	my $file = $usertracks->database? $usertracks->get_file_id($file_name) : $file_name;
+	$status		   = $usertracks->status($file);
+	return (200,'text/html', "<b>$file_name:</b> <i>$status</i>");
     } else {
-		return (500,'text/html', "not found");
+	my $waiting = $render->translate('PENDING');
+	return (200,'text/html', "<i>$waiting</i>");
     }
 }
 

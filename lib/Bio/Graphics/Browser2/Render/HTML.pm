@@ -1674,19 +1674,19 @@ sub render_track_details {
 	
 	my $status    = $userdata->status($fileid) || 'complete';
 	my $status_box = div(
-			div({-id=>"${random_id}_form", -style=>"display: none;"},'&nbsp;'),
-			div({-id=>"${random_id}_status", -style=>"display: none;"},
-				i($status),
-				a(
-					{
-						-href    =>'javascript:void(0)',
-			  			-onClick => "Controller.monitor_upload('$random_id','$fileid')",
-			 		},
-			 		$self->translate('INTERRUPTED_RESUME')
-			 	)
-			)
-		 );
-			 
+	    div({-id=>"${random_id}_form", -style=>"display: none;"},'&nbsp;'),
+	    div({-id=>"${random_id}_status", -style=>"display: none;"},
+		i($status),
+		a(
+		    {
+			-href    =>'javascript:void(0)',
+			-onClick => "Controller.monitor_upload('$random_id','$fileid')",
+		    },
+		    $self->translate('INTERRUPTED_RESUME')
+		)
+	    )
+	    );
+	
 	return div(
 		{
 			-style => $display? "display: block;" : "display: none;",
@@ -1753,11 +1753,13 @@ sub render_track_source_files {
 			span({-style => "display: inline-block; width: 15em;"}, scalar localtime $conf_modified).
 			span({-style => "display: inline-block; width: 10em;"}, "$conf_size bytes").
 			span(
-			    ($userdata->is_mine($fileid))? a({
+			    ($userdata->is_mine($fileid))
+			    ? a({
 				-href    => "javascript:void(0)",
 				-onClick => "editUploadConf('$fileid')"
-							     }, $self->translate('EDIT_BUTTON')
-			    ) : "&nbsp;"
+			      }, $self->translate('EDIT_BUTTON')
+			    ) 
+			    : "&nbsp;"
 			)
 		    )
 		);

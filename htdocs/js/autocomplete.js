@@ -2,7 +2,6 @@ var Autocomplete1;
 var Autocomplete2;
 
 function initAutocomplete() {
-    if ($('landmark_search_field'))
 	 Autocomplete1 =
 	 	 new Ajax.Autocompleter(
 	                 "landmark_search_field",
@@ -16,8 +15,6 @@ function initAutocomplete() {
 			  minChars:           2
                          }
 	 );
-
-    if ($('public_search_keyword'))
 	 Autocomplete2 =
 	 	 new Ajax.Autocompleter(
 	                 "public_search_keyword",
@@ -37,25 +34,6 @@ function initAutocomplete() {
 			     }
                          }
 	 );
-
-    var b            = Element.extend(document.body);
-    var group_fields = b.select('input.username_entry');
-    group_fields.each(function(f) {
-	    var id = f.id;
-	    new Ajax.Autocompleter(
-				   id,
-				   id + "_choices",
-                    	 document.URL,
-                         {
-			  frequency: 0.2,
-                          parameters:         'action=autocomplete_user_search',
-                          paramName:          'prefix',
-			  minChars:           3,
-			  updateElement: function(t) {
-				 var stripped = t.innerHTML.replace(/(<([^>]+)>)/ig,"").replace(/&gt;/,'>').replace(/&lt;/,'<');
-				 $(id).value=stripped;
-			     }
-                         })});
 }
 
 

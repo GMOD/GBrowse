@@ -42,6 +42,23 @@ Details.prototype.initialize = function() {
   self.width       = self.elementLocation(i,'width');
   self.selectLayer = p.parentNode.parentNode;
 
+//   try {
+//       detailBalloon = new Balloon();
+//       detailBalloon.vOffset  = 1;
+//       detailBalloon.showOnly = 2; // just show twice
+//       var helpFunction = function(event) {
+// 	  if (!event) {
+// 	      event = window.event;
+// 	  }
+// 	  var help = '<b>Scalebar:</b> Click here to recenter or click and drag left or right to select a region';
+// 	  detailBalloon.showTooltip(event,help,0,250);
+//       }
+//       i.onmouseover = helpFunction;
+//   }
+//   catch(e) {
+//       i.setAttribute('title','click and drag to select a region');
+//   }
+
   self.scalebar = i;
   self.addSelectMenu('detail');
   self.addSelectBox('detail');

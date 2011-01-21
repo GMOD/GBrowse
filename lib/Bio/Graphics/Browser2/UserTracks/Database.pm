@@ -527,6 +527,7 @@ sub add_file {
     
     my $fileid = md5_hex($userid.$filename.$data_source);
     my $now = $self->nowfun;
+    my $result = $uploadsdb->do("DELETE FROM uploads WHERE trackid='$fileid'");
     $uploadsdb->do("INSERT INTO uploads (trackid, userid, path, description, imported, creation_date, modification_date, sharing_policy, data_source ) VALUES (?, ?, ?, ?, ?, $now, $now, ?, ?)", undef, $fileid, $userid, $filename, $description, $imported, $shared, $data_source);
     return $fileid;
 }
@@ -672,6 +673,13 @@ sub owner_name {
     my $userdb = $self->{userdb};
     my $owner_id = $self->owner($file);
     return ($owner_id eq $self->{userid})? "you" : $userdb->username_from_userid($owner_id);
+}
+
+sub clone_database {
+    my $self = shift;
+    $self->userdb->clone_database;
+    $self->{uploadsdb}{InactiveDestroy} = 1;
+    $self->{uploadsdb} = $self->{uploadsdb}->clone
 }
 
 1;

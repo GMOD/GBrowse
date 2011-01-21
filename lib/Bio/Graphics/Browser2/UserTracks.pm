@@ -396,9 +396,7 @@ sub reload_file {
 # Mirror URL (Filename, URL, Overwrite?) - Attempts to "mirror" a file on a URL, to avoid fetching it every time.
 sub mirror_url {
     my $self = shift;
-    my $filename = shift;
-    my $url = shift;
-    my $overwrite = shift;
+    my ($filename,$url,$overwrite,$render) = @_;
     
     warn "mirroring..." if DEBUG;
 
@@ -419,7 +417,7 @@ sub mirror_url {
     # fetch in one process, process in another
     eval "use IO::Pipe" unless IO::Pipe->can('new');
     my $fh  = IO::Pipe->new;
-    my $child = Bio::Graphics::Browser2::Render->fork();
+    my $child = $render->fork();
     die "Couldn't fork" unless defined $child;
 
     unless ($child) {
@@ -903,6 +901,7 @@ sub shared_with { warn "shared_with() has been called, without properly inheriti
 sub file_exists { warn "file_exists() has been called, without properly inheriting subclass Filesystem.pm"; }
 sub change_userid { warn "change_userid() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
 sub change_uploadsid { warn "change_uploadsid() has been called, without properly inheriting a subclass (like Filesystem.pm or Database.pm)"; }
+sub close_database { }  # do nothing
 
 package Bio::Graphics::Browser2::UserConf;
 

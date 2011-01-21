@@ -1,4 +1,6 @@
-// Copyright (c) 2005-2009 Thomas Fuchs (http://script.aculo.us, http://mir.aculo.us)
+// script.aculo.us dragdrop.js v1.9.0, Thu Dec 23 16:54:48 -0500 2010
+
+// Copyright (c) 2005-2010 Thomas Fuchs (http://script.aculo.us, http://mir.aculo.us)
 //
 // script.aculo.us is freely distributable under the terms of an MIT-style license.
 // For details, see the script.aculo.us web site: http://script.aculo.us/
@@ -109,11 +111,13 @@ var Droppables = {
     if(!this.last_active) return;
     Position.prepare();
     
-    if(Draggables.supportsTouch) {
+    
+      if(Draggables.supportsTouch) {
     	var pointer = Draggables._lastPointer; 
     } else {
     	var pointer = [Event.pointerX(event), Event.pointerY(event)];
     }
+    
 
     if (this.isAffected(pointer, element, this.last_active))
       if (this.last_active.onDrop) {
@@ -121,6 +125,9 @@ var Droppables = {
         return true;
       }
   },
+
+
+    
 
   reset: function() {
     if(this.last_active)
@@ -131,14 +138,13 @@ var Droppables = {
 var Draggables = {
   drags: [],
   observers: [],
-  supportsTouch: ('createTouch' in document),
-
+  supportsTouch : ('createTouch' in document),
   register: function(draggable) {
     if(this.drags.length == 0) {
       this.eventMouseUp   = this.endDrag.bindAsEventListener(this);
       this.eventMouseMove = this.updateDrag.bindAsEventListener(this);
       this.eventKeypress  = this.keyPress.bindAsEventListener(this);
-
+      
       if(Draggables.supportsTouch) {
     	  Event.observe(document, "touchend", this.eventMouseUp);
     	  Event.observe(document, "touchmove", this.eventMouseMove);
@@ -152,6 +158,7 @@ var Draggables = {
     }
     this.drags.push(draggable);
   },
+
 
   unregister: function(draggable) {
     this.drags = this.drags.reject(function(d) { return d==draggable });
@@ -202,7 +209,7 @@ var Draggables = {
       this._timeout = null;
     }
     if(!this.activeDraggable) return;
-    //this._lastPointer = null;
+    this._lastPointer = null;
     this.activeDraggable.endDrag(event);
     this.activeDraggable = null;
   },
@@ -263,7 +270,7 @@ var Draggable = Class.create({
       zindex: 1000,
       revert: false,
       quiet: false,
-      scroll: true,
+      scroll: false,
       scrollSensitivity: 20,
       scrollSpeed: 15,
       snap: false,  // false, or xy or [x,y] or function(x,y){ return [x,y] }
@@ -289,12 +296,10 @@ var Draggable = Class.create({
     if(!this.handle) this.handle = $(options.handle);
     if(!this.handle) this.handle = this.element;
 
-    try {
-	if(options.scroll && !options.scroll.scrollTo && !options.scroll.outerHTML) {
-	    options.scroll = $(options.scroll);
-	    this._isScrollChild = Element.childOf(this.element, options.scroll);
-	}
-    } catch (e) { }
+    if(options.scroll && !options.scroll.scrollTo && !options.scroll.outerHTML) {
+      options.scroll = $(options.scroll);
+      this._isScrollChild = Element.childOf(this.element, options.scroll);
+    }
 
     Element.makePositioned(this.element); // fix IE
 
@@ -302,12 +307,15 @@ var Draggable = Class.create({
     this.dragging = false;
 
     this.eventMouseDown = this.initDrag.bindAsEventListener(this);
-     if(Draggables.supportsTouch) {
-	 Event.observe(this.handle, "touchstart", this.eventMouseDown);
-	 event.preventDefault();
-     } else {
+    
+  if(Draggables.supportsTouch) {
+    	Event.observe(this.handle, "touchstart", this.eventMouseDown);
+   ;
+
+    } else {
     	Event.observe(this.handle, "mousedown", this.eventMouseDown);
     }
+
     Draggables.register(this);
   },
 
@@ -402,13 +410,11 @@ var Draggable = Class.create({
       if (this.options.scroll == window) {
         with(this._getWindowScroll(this.options.scroll)) { p = [ left, top, left+width, top+height ]; }
       } else {
-        p = Position.page(this.options.scroll);
-	try {
-	    p[0] += this.options.scroll.scrollLeft + Position.deltaX;
-	    p[1] += this.options.scroll.scrollTop + Position.deltaY;
-	    p.push(p[0]+this.options.scroll.offsetWidth);
-	    p.push(p[1]+this.options.scroll.offsetHeight);
-	} catch (e) { }
+        p = Position.page(this.options.scroll).toArray();
+        p[0] += this.options.scroll.scrollLeft + Position.deltaX;
+        p[1] += this.options.scroll.scrollTop + Position.deltaY;
+        p.push(p[0]+this.options.scroll.offsetWidth);
+        p.push(p[1]+this.options.scroll.offsetHeight);
       }
       var speed = [0,0];
       if(pointer[0] < (p[0]+this.options.scrollSensitivity)) speed[0] = pointer[0]-(p[0]+this.options.scrollSensitivity);
@@ -445,7 +451,6 @@ var Draggable = Class.create({
     if(success) {
       dropped = Droppables.fire(event, this.element);
       if (!dropped) dropped = false;
-      else Draggables._lastPointer = null;
     }
     if(dropped && this.options.onDropped) this.options.onDropped(this.element);
     Draggables.notify('onEnd', this, event);

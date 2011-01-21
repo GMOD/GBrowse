@@ -64,59 +64,62 @@ var GBrowseTrackPan = Class.create({
 	// If it already exists, updates its width based on the segment size
 	create_overview_pos_marker:
 	function() {
-		if (!($('overview_panels'))) { return; }
+	    if (!($('overview_panels'))) { return; }
 
-		if (!($('overview_marker'))) {
-			$('overview_panels').insert("<div id='overview_marker'></div>");
-			$('overview_marker').setStyle({
-				backgroundColor: this.marker_fill,
-				position:        'absolute',
-				top:             '0px',
-				borderLeft:      '1px solid ' + this.marker_outline,
-				borderRight:     '1px solid ' + this.marker_outline,
-				height:          '400px',
-				cursor:          'text',
-				zIndex:          5
-			});
-			$('overview_marker').onmousedown = Overview.prototype.startSelection; // Rubber band selection
+	    if (!($('overview_marker'))) {
+		$('overview_panels').insert("<div id='overview_marker'></div>");
+		$('overview_marker').setStyle({
+			backgroundColor: this.marker_fill,
+			    position:        'absolute',
+			    top:             '0px',
+			    borderLeft:      '1px solid ' + this.marker_outline,
+			    borderRight:     '1px solid ' + this.marker_outline,
+			    height:          '400px',
+			    cursor:          'text',
+			    zIndex:          5
+			    });
+		$('overview_marker').onmousedown = Overview.prototype.startSelection; // Rubber band selection
+	    }
+	    $('overview_marker').setOpacity(0.55);
+	    if (this.details_mult > 1.0) {
+		var drag_handle = new Element('div');
+		$('overview_marker').innerHTML = '';
+		$('overview_marker').insert({top: drag_handle});
+		drag_handle.setStyle({
+			backgroundColor: this.marker_outline,
+			    width:           '100%',
+			    height:          '12px',
+			    opacity:         0.6  // Cross-browser opacity setter (from Prototype)
+			    });
+
+		if (this.details_mult > 1.0) {  //No need to be draggable if viewport is same size as loaded image
+		    drag_handle.setStyle({cursor: 'move'});
+		    this.overview_draggable = new Draggable($('overview_marker'), {
+		    	    constraint: 'horizontal',
+		     	    snap: function(x) {
+		     	    	return[ (x > TrackPan.overview_segment_start) ? (x < (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ? x : (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ) : TrackPan.overview_segment_start ];
+		     	    },
+		     	    handle: drag_handle,
+		     	    onDrag: function () { 
+			    	TrackPan.update_pan_position((parseInt($('overview_marker').style.left) 
+			    				      - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) },
+		     	    onEnd:  function () { 
+			    	TrackPan.update_pan_position((parseInt($('overview_marker').style.left) 
+			    				      - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) }
+		     	});
 		}
-		$('overview_marker').setOpacity(0.55);
-		if (this.details_mult > 1.0) {
-			var drag_handle = new Element('div');
-			$('overview_marker').innerHTML = '';
-			$('overview_marker').insert({top: drag_handle});
-			drag_handle.setStyle({
-				backgroundColor: this.marker_outline,
-				width:           '100%',
-				height:          '12px',
-				opacity:         0.6  // Cross-browser opacity setter (from Prototype)
-			});
-
-			if (this.details_mult > 1.0) {  //No need to be draggable if viewport is same size as loaded image
-				drag_handle.setStyle({cursor: 'move'});
-
-				this.overview_draggable = new Draggable($('overview_marker'), {
-					constraint: 'horizontal',
-					snap: function(x) {
-						return[ (x > TrackPan.overview_segment_start) ? (x < (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ? x : (TrackPan.overview_segment_start + TrackPan.overview_draggable_width) ) : TrackPan.overview_segment_start ];
-					},
-					handle: drag_handle,
-					onDrag: function () { TrackPan.update_pan_position((parseInt($('overview_marker').style.left) - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) },
-					onEnd:  function () { TrackPan.update_pan_position((parseInt($('overview_marker').style.left) - TrackPan.overview_segment_start) / TrackPan.overview_draggable_width) }
-				});
-			}
-		} else if (this.details_mult <= 1.0) {
-			//No need to be draggable if viewport is same size as loaded image
-			if (this.overview_draggable) { this.overview_draggable.destroy(); }
-			$('overview_marker').innerHTML = '';
-		}
-
-		$('overview_marker').style.left  = this.overview_segment_start + 'px';
-		var width = Math.round(this.overview_segment_width/this.details_mult) - 2;
-		if (width < 1) {
-			width = 1;
-		}
-		$('overview_marker').style.width = width + 'px';
+	    } else {
+		//No need to be draggable if viewport is same size as loaded image
+		if (this.overview_draggable) { this.overview_draggable.destroy(); }
+		$('overview_marker').innerHTML = '';
+	    }
+	    
+	    $('overview_marker').style.left  = this.overview_segment_start + 'px';
+	    var width = Math.round(this.overview_segment_width/this.details_mult) - 2;
+	    if (width < 1) {
+		width = 1;
+	    }
+	    $('overview_marker').style.width = width + 'px';
 	},
 
 	// Creates the semi-transparent div that marks the current view on the region track

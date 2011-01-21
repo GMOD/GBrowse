@@ -289,10 +289,12 @@ var Draggable = Class.create({
     if(!this.handle) this.handle = $(options.handle);
     if(!this.handle) this.handle = this.element;
 
-    if(options.scroll && !options.scroll.scrollTo && !options.scroll.outerHTML) {
-      options.scroll = $(options.scroll);
-      this._isScrollChild = Element.childOf(this.element, options.scroll);
-    }
+    try {
+	if(options.scroll && !options.scroll.scrollTo && !options.scroll.outerHTML) {
+	    options.scroll = $(options.scroll);
+	    this._isScrollChild = Element.childOf(this.element, options.scroll);
+	}
+    } catch (e) { }
 
     Element.makePositioned(this.element); // fix IE
 
@@ -300,14 +302,12 @@ var Draggable = Class.create({
     this.dragging = false;
 
     this.eventMouseDown = this.initDrag.bindAsEventListener(this);
-    if(Draggables.supportsTouch) {
-    	Event.observe(this.handle, "touchstart", this.eventMouseDown);
-event.preventDefault();
-
-    } else {
+     if(Draggables.supportsTouch) {
+	 Event.observe(this.handle, "touchstart", this.eventMouseDown);
+	 event.preventDefault();
+     } else {
     	Event.observe(this.handle, "mousedown", this.eventMouseDown);
     }
-
     Draggables.register(this);
   },
 

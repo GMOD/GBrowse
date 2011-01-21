@@ -2,6 +2,7 @@
                      position: absolute;
 		     text-align: right;	
 		     left: 5em;
+		     z-index : 0; 
                   }
 .titlebar_inactive {
                      position: absolute;

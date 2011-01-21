@@ -9,6 +9,7 @@
 
 var currentSelectArea;
 var selectAreaIsActive;
+var lefttemp; 
 
 // Constructor
 var SelectArea = function () {
@@ -143,10 +144,13 @@ SelectArea.prototype.elementLocation = function(el,request) {
 SelectArea.prototype.eventLocation = function(event,request) {
   var e = event || window.event;
   if (request == 'x') {
-    return e.pageX || e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+    return Event.pointerX(e) || Event.clientX(e) + document.body.scrollLeft + document.documentElement.scrollLeft;
+   
+    
   }
   else if (request == 'y') {
-    return e.pageY || e.clientY + document.body.scrollTop  + document.documentElement.scrollTop;
+    return Event.pointerY(e) || Event.clientY(e) + document.body.scrollTop  + document.documentElement.scrollTop;
+ 
   }
   else {  
     return false;
@@ -226,6 +230,7 @@ SelectArea.prototype.moveRubber = function(event) {
   var self = currentSelectArea;
   var selectPixelStart = self.selectPixelStart;
   var selectPixelEnd   = self.eventLocation(event,'x') - self.elementLocation(self.selectLayer,'x1');
+   lefttemp   = selectPixelEnd;
   var selectPixelWidth = Math.abs(selectPixelStart - selectPixelEnd);
 
   var rev, left;
@@ -378,6 +383,8 @@ SelectArea.prototype.addSelectMenu = function(view) {
 
 // Initial creation of the select box
 SelectArea.prototype.addSelectBox = function(view) {
+  
+  var supportsTouch = ('createTouch' in document);
 
   if (this.selectBox) return false;
  
@@ -391,14 +398,36 @@ SelectArea.prototype.addSelectBox = function(view) {
                  zIndex: 100,
                  border: this.border||'none' });
 
-  // click on scalebar initializes selection
+ /* // click on scalebar initializes selection
   this.scalebar.onmousedown      = this.startSelection;
 
   // drag and mouseup on details panel fires menu
   this.selectLayer.onmousemove   = this.moveRubber;
   this.selectLayer.onmouseup     = this.stopRubber;  
 
-  // allows drag-back
+  // allows drag-back*/
+ 
+
+/* this.scalebar[supportsTouch ? 'ontouchmove' : 'onmousedown'] = this.startSelection;
+ 
+ this.selectLayer[supportsTouch ? 'ontouchmove' : 'onmousemove'] = this.moveRubber;
+ 
+ this.selectLayer[supportsTouch ? 'ontouchend' : 'onmouseup'] = this.stopRubber;
+ */
+ if ('createTouch' in document) {
+  this.scalebar.ontouchstart = this.startSelection;
+
+  // drag and mouseup on details panel fires menu
+  this.selectLayer.ontouchmove   = this.moveRubber;
+  this.selectLayer.ontouchend     = this.stopRubber;  
+  } else {
+    this.scalebar.onmousedown = this.startSelection;
+
+  // drag and mouseup on details panel fires menu
+  this.selectLayer.onmousemove   = this.moveRubber;
+  this.selectLayer.onmouseup   = this.stopRubber;
+    
+  }
 
 
   // 'esc' key aborts
@@ -465,15 +494,20 @@ SelectArea.prototype.showMenu = function(event) {
   var menu = self.selectMenu;
   menu.innerHTML = self.menuHTML.replace(/SELECTION/g,self.currentSegment);
 
-  var pageWidth  = document.viewport.getWidth();
+  var pageWidth  =
+  document.viewport.getWidth();
   var menuWidth  = self.elementLocation(menu,'width');
   var menuHeight = self.elementLocation(menu,'height');
   var menuYHalf  = Math.round(menuHeight/2); 
   
+  if ('createTouch' in document){
+  var left = lefttemp;
+  var top = 360;
+  } else {
   var left = self.eventLocation(event,'x') + 5;
   if ((left+menuWidth) > pageWidth) left -= menuWidth + 10;
   var top  = self.eventLocation(event,'y') - menuYHalf;
-
+  }
   menu = Element.extend(menu);
   menu.setStyle({ top:  top+'px' }); 
   menu.setStyle({ left: left+'px' });

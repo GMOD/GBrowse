@@ -38,7 +38,8 @@ function initAutocomplete() {
                          }
 	 );
 
-    var group_fields = document.body.select('input.username_entry');
+    var b            = Element.extend(document.body);
+    var group_fields = b.select('input.username_entry');
     group_fields.each(function(f) {
 	    var id = f.id;
 	    new Ajax.Autocompleter(

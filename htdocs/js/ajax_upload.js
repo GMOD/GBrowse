@@ -51,14 +51,17 @@ AIM = {
 }
 
 function selectUpload(upload_id) {
-    if (upload_container = $$("div[id=" + upload_id + "]")[0].down("div.upload_field")) // We're dealing with an upload field.
+    var containers = $$("div[id=" + upload_id + "]");
+    if (containers.length == 0) return false;
+
+    if (containers[0].down("div.upload_field")) // We're dealing with an upload field.
 		status_selector = "*#" + upload_id + "_status";
 	else if(upload_container = $$("div[class~=custom_track][id=" + upload_id + "]")[0])	// We're dealing with an uploaded file in the main listing.
 		status_selector = "div[id$='_status']";
 	else    // Couldn't find the item, return false.
 		return false;
     var status_container = upload_container.down(status_selector);
-	return {upload: upload_container, status: status_container};
+    return {upload: upload_container, status: status_container};
 }
 
 // Visually indicates an upload (whether uploaded already, or in the process of uploading) as "busy".
@@ -66,17 +69,18 @@ function showUploadBusy(upload_id, message) {
 	message = typeof(message) != 'undefined' ? message : Controller.translate('WORKING');
 	var spinner = new Element("img", {src: Controller.button_url('spinner.gif'), alt: Controller.translate('WORKING'), "class": "busy_signal"});
 	var containers = selectUpload(upload_id);
+	if (!containers) return;
 	
 	// If it's condensed, just show the spinner. If the details are shown, show the message too.
 	if (!containers.upload.down("div.details").visible())
-    	containers.upload.down("h1").insert({top: spinner});
-    else {
+	    containers.upload.down("h1").insert({top: spinner});
+	else {
 	    containers.status.update();
-        containers.status.insert({bottom: spinner});
-        containers.status.insert({bottom: "&nbsp;"});
-        containers.status.insert({bottom: message});
-        if (!containers.status.visible())
-		    Effect.BlindDown(containers.status, {duration: 0.25});
+	    containers.status.insert({bottom: spinner});
+	    containers.status.insert({bottom: "&nbsp;"});
+	    containers.status.insert({bottom: message});
+	    if (!containers.status.visible())
+		Effect.BlindDown(containers.status, {duration: 0.25});
 	}
 	return true;
 }
@@ -122,7 +126,8 @@ function cleanRemove(element, speed) {
 function startAjaxUpload(upload_id) {
 	var status       = $(upload_id + '_status');
 	var upload_form  = $(upload_id + '_form');
-	upload_form.hide();
+	if ($(upload_form))
+	    upload_form.hide();
 	
 	// Create & insert the status update elements.
 	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
@@ -254,35 +259,41 @@ function editUploadConf (fileid) {
 
 function editUpload (fileid, sourceFile) {
     var container = selectUpload(fileid);
-	var editDiv = container.upload.down("*[id$=_form]").id;
-	var editID  = 'edit_' + Math.floor(Math.random() * 99999);
-	$(editDiv).hide();
+    var editDiv = container.upload.down("*[id$=_form]").id;
+    var editID  = 'edit_' + Math.floor(Math.random() * 99999);
+    $(editDiv).hide();
 	
-	//Add the fields, cancel link and submit button.
-	$(editDiv).update("<p><b>" + Controller.translate('EDITING_FILE', sourceFile) + "</b></p>");
-	$(editDiv).insert({bottom: new Element("textarea", {id: editID, cols: "120", rows: "20", wrap: "off"}).update(Controller.translate('FETCHING')) });
-	$(editDiv).insert({bottom: new Element("p")});
+    //Add the fields, cancel link and submit button.
+    $(editDiv).update("<p><b>" + Controller.translate('EDITING_FILE', sourceFile) + "</b></p>");
+    $(editDiv).insert({bottom: new Element("textarea", {id: editID, cols: "120", rows: "20", wrap: "off"}).update(Controller.translate('FETCHING')) });
+    $(editDiv).insert({bottom: new Element("p")});
 	
-	var cancel = new Element("a", {href: "javascript:void(0)"}).update(Controller.translate('CANCEL'))
+    var cancel = new Element("a", {href: "javascript:void(0)"}).update(Controller.translate('CANCEL'))
 	cancel.observe("click", function() {
-	    Effect.BlindUp($(editDiv), {duration: 0.5 })
-	});
-	$(editDiv).down("p", 1).update("&nbsp;").insert({bottom: cancel});
+		Effect.BlindUp($(editDiv), {duration: 0.5 })
+	    });
+    $(editDiv).down("p", 1).update("&nbsp;").insert({bottom: cancel});
 	
-	var submit = new Element("button").update(Controller.translate('SUBMIT'));
-	submit.observe("click", function() {
-		Controller.uploadUserTrackSource(editID, fileid, sourceFile, editDiv);
+    var submit = new Element("button").update(Controller.translate('SUBMIT'));
+    submit.observe("click", function() {
+	    Controller.uploadUserTrackSource(editID, fileid, sourceFile, editDiv);
 	});
-	$(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: submit });
-	
-	Effect.BlindDown($(editDiv), {duration: 0.5});
-	Controller.downloadUserTrackSource(editID, fileid, sourceFile);
+    $(editDiv).down("p", 1).insert("&nbsp;").insert({bottom: submit });
+    
+    Effect.BlindDown($(editDiv), {duration: 0.5});
+    Controller.downloadUserTrackSource(editID, fileid, sourceFile);
 }
 
 function reloadURL (fileid, mirrorURL) {
     showUploadBusy(fileid, "Reloading...");
-	var statusDiv = fileid + "_editfield";
-	Controller.mirrorTrackSource(mirrorURL, fileid, statusDiv);
+    var statusDiv = fileid + "_editfield";
+    if ($(statusDiv) == null) {
+	var container = new Element('div',{id:fileid});
+	$('custom_list_start').insert(container);
+	container.insert(new Element('div',{id:'upload_field'}));
+	container.insert(new Element('div',{id:statusDiv,class:'custom_track odd',style:'padding:0.5em'}));
+    }
+    Controller.mirrorTrackSource(mirrorURL, fileid, statusDiv);
 }
 
 function addAnUploadField(after_element, action, upload_prompt, remove_prompt, field_type, help_link) {

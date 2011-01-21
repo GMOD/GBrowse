@@ -78,3 +78,4 @@
 ^blib/conf\/yeast_simple\.conf$
 ^blib/etc\/default\/gbrowse\-slave$
 ^blib/etc\/init\.d\/gbrowse\-slave$
+^blib/conf\/GBrowse\.conf$

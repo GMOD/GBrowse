@@ -310,7 +310,7 @@ var Draggable = Class.create({
     
   if(Draggables.supportsTouch) {
     	Event.observe(this.handle, "touchstart", this.eventMouseDown);
-event.preventDefault();
+   ;
 
     } else {
     	Event.observe(this.handle, "mousedown", this.eventMouseDown);

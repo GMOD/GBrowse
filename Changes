@@ -2,7 +2,10 @@
    * Fix all references to File::Path 'remove_tree" to "rm_tree" in order to work
    with older versions of File::Path.
    * Fixed display bug in Safari (popup balloons not working after zooming into a track).
+   * Fixed Internet Explorer crash when uploading new files.
+   * Fixed 'eurl=url' remote feature addition.
    * Added basic ipad functionality.
+   * Newly-added uploaded tracks appear on the top now.
 
 2.20
     * User uploads can be run in the usual file-based mode or with a new database-driven system that

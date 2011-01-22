@@ -634,7 +634,8 @@ sub wrap_rendered_track {
 sub if_not_ipad {
     my $self = shift;
     my @args = @_;
-    my $probably_ipad = CGI->user_agent =~ /Mobile.+Safari/i;
+    my $agent = CGI->user_agent || '';
+    my $probably_ipad = $agent =~ /Mobile.+Safari/i;
     return if $probably_ipad;
     return @args;
 }

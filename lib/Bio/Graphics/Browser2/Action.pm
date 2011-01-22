@@ -485,8 +485,6 @@ sub ACTION_upload_file {
                                                : $usertracks->upload_file($track_name, $fh, $content_type, $overwrite);
     }
 
-    warn "tracks = @$tracks";
-
     $session->lock('exclusive');
     delete $state->{uploads}{$upload_id};
     $session->flush();
@@ -503,9 +501,12 @@ sub ACTION_upload_file {
 		tracks		=> $tracks,
 		uploadName	=> $name,
     };
-    
-    #return (200, 'text/html', JSON::to_json($return_object));
-    return (200, 'application/json', $return_object);
+
+    if ($q->param('forcejson')) {
+	return (200, 'application/json', $return_object);
+    } else {
+	return (200, 'text/html', JSON::to_json($return_object));
+    }
 }
 
 sub ACTION_import_track {
@@ -631,7 +632,7 @@ sub ACTION_set_upload_title {
 
     my $state       = $self->state;
     my $render      = $self->render;
-    my $file = $q->param('upload_id') or confess "No file given to set_upload_title.";
+    my $file = $q->param('upload_id')  or confess "No file given to set_upload_title.";
     my $new_title = $q->param('title') or confess "No new title given to set_upload_title.";
 
     my $usertracks = $render->user_tracks;

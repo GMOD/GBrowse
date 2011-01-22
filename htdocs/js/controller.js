@@ -453,7 +453,7 @@ var GBrowseController = Class.create({
     },
 
     add_tracks:
-    function(track_names, onSuccessFunc, force) {
+    function(track_names, onSuccessFunc, force, onTop) {
 
         if (force == null)
             force = false;
@@ -499,7 +499,7 @@ var GBrowseController = Class.create({
                     var html           = this_track_data.track_html;
                     var panel_id       = this_track_data.panel_id;
 
-                    Controller.append_child_from_html(html,$(panel_id));
+                    Controller.append_child_from_html(html,$(panel_id),onTop);
 
                     if (this_track_data.display_details == 0) {
                         $(ret_gbtrack.track_image_id).setOpacity(0);
@@ -1031,15 +1031,15 @@ var GBrowseController = Class.create({
     // with source or configuration data for the track
     downloadUserTrackSource:
     function (destination, fileid, sourceFile) {
-        new Ajax.Updater(
-            destination,
+        new Ajax.Request (
             document.URL, 
             {
                 method: 'post',
                 parameters: {
                     userdata_download: sourceFile,
                     track: fileid
-                }
+                },
+		onSuccess: function (t) { $(destination).value=t.responseText }
             }
         );
     },
@@ -1104,12 +1104,14 @@ var GBrowseController = Class.create({
 
     // mirrorTrackSource() is called to mirror a URL to a track
     mirrorTrackSource:
-    function (sourceURL, fileid, statusElement, displayWhenDone) {
+    function (sourceURL, fileid, statusElement, displayWhenDone, forcejson) {
+	if (forcejson == null) forcejson=false;
         this._modifyUserTrackSource(
             {
-                action: 'upload_file',
+                action:     'upload_file',
                 mirror_url: sourceURL,
-                overwrite: 1
+                overwrite: 1,
+		forcejson: forcejson
             },
             statusElement,
             displayWhenDone

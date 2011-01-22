@@ -1614,7 +1614,7 @@ sub write_auto {
 
 sub handle_download_userdata {
     my $self = shift;
-    my $ftype    = param('userdata_download')    or return;
+    my $ftype   = param('userdata_download')    or return;
     my $file   = param('track')                or return;
 
     my $userdata = $self->user_tracks;
@@ -1635,11 +1635,11 @@ sub handle_download_userdata {
     if ($is_text) {
 	# try to make the file match the native line endings
 	# not necessary?
-	# my $eol = $self->guess_eol();
+	my $eol = $self->guess_eol();
 	while (<$f>) {
-	    print;
-         #	chomp;
-	 #      print $_,$eol;
+	    # print;
+	    s/[\r\n]+$//;
+	    print $_,$eol;
 	}
     } else {
 	my $buffer;
@@ -2011,7 +2011,6 @@ sub add_track_to_state {
   return unless $potential_tracks{$label};
 
   my %current = map {$_=> 1} @{$state->{tracks}};
-#  push @{$state->{tracks}},$label unless $current{$label};   # on bottom
   unshift @{$state->{tracks}},$label unless $current{$label}; # on top (better)
 
   warn "[$$]ADD TRACK TO STATE WAS: ",

@@ -11,7 +11,7 @@ var Ajax_Status_Updater;
 AIM = {
 	frame: function(c) {
 		var n = 'f' + Math.floor(Math.random() * 99999);
-		var d = document.createElement('DIV');
+		var d = Element.extend(document.createElement('DIV'));
 		d.update( new Element("iframe", {src: "about:blank", id: n, name: n}).observe("load", function() { AIM.loaded(n) }).setStyle({display: "none"}));
 		document.body.appendChild(d);
  
@@ -133,7 +133,9 @@ function startAjaxUpload(upload_id) {
 	    upload_form.hide();
 	
 	// Create & insert the status update elements.
-	status.update(new Element("img", {href: Controller.button_url('spinner.gif')}) );
+	var spinner = Controller.button_url('spinner.gif');
+	// var img = new Element('img', {'href': spinner}); // broken in IE; don't know why
+	status.update('<img src="'+spinner+'" />');
 	status.insert(new Element("span").update(Controller.translate('UPLOADING')));
 	var cancel = new Element("a", {href: 'javascript:void(0)'}).update("[" + Controller.translate('CANCEL') + "]");
 	cancel.observe("click", function() {
@@ -298,7 +300,7 @@ function editUpload (fileid, sourceFile) {
 function loadURL (fileid, mirrorURL, gothere) {
     var container = new Element('div',{id:fileid});
     $('custom_list_start').insert(container);
-    Controller.mirrorTrackSource(mirrorURL, fileid, container,gothere);    
+    Controller.mirrorTrackSource(mirrorURL, fileid, container, gothere, true);
 }
 
 function reloadURL (fileid, mirrorURL) {

@@ -41,6 +41,7 @@ var balloonIsSticky;
 var balloonInvisibleSelects;
 var balloonIsSuppressed;
 var tooltipIsSuppressed;
+var supportsTouch = ('createTouch' in document);
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -344,7 +345,13 @@ Balloon.prototype.doShowTooltip = function() {
   var wrapper = document.createElement('div');
   wrapper.id = 'contentWrapper';
   self.contents.appendChild(wrapper);
-  wrapper.innerHTML = helpText;
+  
+  if ('createTouch' in document){
+      wrapper.innerHTML = helpText + "\n Tap feature again to view Details ";
+  }else {
+
+  wrapper.innerHTML = helpText ;
+  };
 
   // run any javascript in the thing -- sorry Sheldon
   if (self.evalScripts) {

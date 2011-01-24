@@ -1,0 +1,11 @@
+<script src="/gbrowse/js/x_core.js" type="text/javascript"></script>
+<script src="/gbrowse/js/x_cook.js" type="text/javascript"></script>
+<script src="/gbrowse/js/toggle.js" type="text/javascript"></script>
+<script src="/gbrowse/js/buttons.js" type="text/javascript"></script>
+[% IF config.setting('autocomplete') %]
+<script type="text/javascript" src="/gbrowse/js/yahoo.js"></script> 
+<script type="text/javascript" src="/gbrowse/js/dom.js"></script> 
+<script type="text/javascript" src="/gbrowse/js/event.js"></script> 
+<script type="text/javascript" src="/gbrowse/js/connection.js"></script> 
+<script type="text/javascript" src="/gbrowse/js/autocomplete.js"></script> 
+[% END %]

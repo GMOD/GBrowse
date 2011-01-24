@@ -1,0 +1,9 @@
+* Document the REST API; in particular the action=list and action=scan commands.
+* Reload globals when GBrowse.conf changes under FastCGI.
+* Bring internationalization support up to date.
+* Share tracks via a LOCAL link rather than through gff3 bottleneck.
+* Automatically load datasource .conf files from a special directory
+* Turn off show/hide toggles for any section.
+
+$Id: TODO,v 1.15 2006-12-02 21:34:26 lstein Exp $
+

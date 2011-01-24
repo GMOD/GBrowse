@@ -1,0 +1,244 @@
+14 June 2009
+
+Notes on what needs to be done at the user interface level to share
+tracks properly.
+
+1. GBROWSE ACCOUNTS
+
+1a. Use case 1 -- Signing into GBrowse
+
+   Motivation: Currently when a user logs into gbrowse, he gets an anonymous
+   cookie that provides access to his stored preferences and uploaded files.
+   This means that he loses the information when moving to a different machine
+   or after "cleaning" his cookies. This needs to be supplemented with a sign-in
+   mechanism that identifies the user via a username and password.
+
+   - When bringing up gbrowse, a "log in/create account" link appears 
+     in the upper right corner of the screen.
+   - User clicks on link -- a username/password box appears in dropdown fashion.
+   - User enters username/password and optionally clicks on a "remember me 
+     on this computer" checkbox.
+   - User presses "submit" link.
+       -  To CANCEL at any point, user presses "cancel" link.
+   - Dropdown box disappears and is replaced by a "Logged in as
+     <username>" message, and a "log out" link.
+   - Screen is refreshed to show users custom settings and tracks.
+
+   
+
+1b. Use case 2 -- Signing out of GBrowse
+
+   Motivation: On public computers, people will want to erase their tracks.
+
+   - User presses "log out" link.
+   - Screen refreshes to show anonymous page.
+
+1c. Use case 3 -- Signing up for new GBrowse account
+
+   Motivation: Users need a way to create new accounts for themselves.
+
+   - User presses "log in/create account" link.
+   - Username/password dropdown box appears. There is a "create new account"
+     link inside it.
+   - User presses "create new account".
+   - Box expands to show user "first name (optional)", "last name
+     (optional)", "email address (required)", "password (required)"
+     and "confirm password (required)" links.
+   - User fills out information and submits.
+   - Confirmation appears telling user that an email message has been sent
+     with confirmation code.
+   - Within a few minutes, confirmation email appears in user's
+     inbox. It contains a confirmation code link.
+   - User clicks on link, which takes him to GBrowse, confirms account
+     activation, and logs him in for the first time.
+
+1d. Use case 4 -- User has forgotten his password
+
+   Motivation: Users are human.
+
+   - User presses "log in/create account" link.
+   - Dropdown box appears. There is a "forgotten username/password" link
+     inside it.
+   - User clicks this link. Box expands to prompt user for his email address.
+   - User fills in email address and presses submit. An email message with
+     username and a newly-generated password appears.
+
+1e. Use case 4 -- User wants to change his password
+
+   Motivation: Good idea
+   - User presses "log in/create account" link.
+   - Dropdown box appears. There is a "change password" link
+     inside it.
+   - User clicks this link. Box expands to prompt user for old password,
+     new password and confirm password.
+   - User submits.
+
+IMPLEMENTATION NOTES:
+
+- Users should be identified in a MySQL database.
+- Passwords should not be stored in the database in the clear, but
+  instead be hashed using a salt plus a one-way hash algorithm.
+- When users log in, the db should keep track of when the most recent
+  login, so that admin can clear out old unused accounts.
+
+2. UPLOADING TRACKS
+
+INTRO: Logged-in users have access to long-term track storage and
+configuration. Their tracks are stored as a series of configuration
+files and databases. The databases are indexed file or mysql-based
+databases, and not in-memory databases.
+
+2a. Use case 5 -- User creates a new track
+
+   Motivation: Users want to add their own custom tracks to the genome.
+
+   - User presses "Manage custom tracks" button.
+   - A new section called "My tracks" drops down. This section lists all
+     previously-created custom tracks, along with track management
+     controls, and has a link marked "New track".
+   - User presses "New track" button.
+   - Section expands to show two controls: a file upload field marked 
+     "Upload data file", and a text box marked "View a shared track."
+   - User presses the "Upload data file" field.
+   - The upload data field is replaced by a spinning disk icon, and user is
+     given the message that "Your data is being processed. You will receive 
+     an email notification when it is ready for configuration."
+   - When data processing is completed, a new entry for the uploaded data
+     file appears in the section's track management listing.
+
+2b. Use case 5 -- User configures a (new) track
+
+   Motivation: After uploading a new file, GBrowse guesses at the track 
+   configuration using a generic configuration. The user will want to
+   customize this.
+
+   - User presses the "Manage custom tracks" button. The track management
+     section appears.
+   - Each uploaded file appears as a line in the custom tracks listing, 
+     accompanied by icons to manage the following functions "configure",
+     "share" and "delete."
+   - User presses the "configure" icon. This expands the box to show
+     a series of controls to adjust the track configuration. The details
+     of the track configuration need to be worked out, but should build
+     on the work of WebGBrowse 
+     (http://webgbrowse.cgb.indiana.edu/webgbrowse/cgi-bin/uploadData)
+     and Sheldon McKay's track config templates (mckays@cshl.edu).
+   - There are three commit controls: "cancel", "preview" and "save".
+     The preview button updates the main gbrowse screen to show the effect
+     of a change, but doesn't save the changes.
+   - User presses "cancel" to leave the previous configuration intact, and
+     "save" to permanently save the changes.
+
+2c. Use case 6 -- User deletes a track
+
+    Motivation: User wants to permanently remove an uploaded track.
+
+   - User presses the "Manage custom tracks" button. The track management
+     section appears.
+   - Each uploaded file appears as a line in the custom tracks listing, 
+     accompanied by icons to manage the following functions "configure",
+     "share" and "delete."
+   - User presses the "delete" icon. The track disappears in the main
+     gbrowse screen is updated to reflect this fact.
+
+2d. Use case 7 -- User shares a track
+
+    Motivation: User wants to share a track with friends or with the
+    public.
+
+   - User presses the "Manage custom tracks" button. The track management
+     section appears.
+   - Each uploaded file appears as a line in the custom tracks listing, 
+     accompanied by icons to manage the following functions "configure",
+     "share" and "delete."
+   - User presses the "share" icon. The section expands to show the
+     following two controls:
+         - a checkbox saying "make this track public".
+	 - a textbox prompting user to enter email address of someone
+	   to share the track with.
+   - If user presses the checkbox, then the track becomes public. Other
+     users can then search for it using the interface described later.
+   - If user presses the "share this track with individuals" link, a textbox
+     appears that prompts him to enter the email address of an individual to
+     share the link with. User types an email address and presses a save3
+     button (or types <enter>).
+   - The email address converts to plain text, and a new text field appears
+     to prompt for additional email addresses.
+   - The system will send an email message to the designated user containing
+     a link that allows him access to the track.
+
+2e. Use case 8 -- User unshares a track
+
+    Motivation: User wants to share a track with friends or with the
+    public.
+
+   - User presses the "Manage custom tracks" button. The track management
+     section appears.
+   - Each uploaded file appears as a line in the custom tracks listing, 
+     accompanied by icons to manage the following functions "configure",
+     "share" and "delete."
+   - User presses the "share" icon.
+   - User sees the list of people with whom the track is shared. Each email
+     addresses has a "delete" icon next to it. User presses "delete" button.
+   - To unshare a public track, user unselects the "make this track public"
+     checkbox.
+
+2f. Use case 9 -- Finding a public shared track
+
+    Motivation: User wants to access a track that was uploaded by a
+    different user. Anyone can access tracks marked public.
+
+    - User presses the "Manage custom tracks" button.
+    - The track management section appears (see use case 5). User presses
+      the "New track" button.
+    - Section expands to show the "Upload data file" and "Add a shared track"
+      fields.
+    - Next to the latter field is a "Search for public tracks" link. User
+      presses it.
+    - A text field appears. User types in search terms. User can search for
+      following fields: 1) name or email address of the track owner; 2)
+      track title (contents of its "key" configure option); 3) track 
+      description (contents of its "citation" configure option).
+    - User presses "search" button or presses <enter>. A checkbox list of 
+      suggested matches appears. User checks the track(s) that he desires.
+    - User presses the "submit" button to close the section and view shared
+      tracks.
+
+2g. Use case 10 -- Entering a public or private track by its URL
+
+    Motivation: User enters the known URL of a public or private track.
+    He will get the URL of a private track from the email that is generated
+    when the track owner shares the track with him. A user can only get
+    access to a private track if he is logged in under an authorized email
+    address/account.
+
+    - User presses the "Manage custom tracks" button.
+    - The track management section appears (see use case 5). User presses
+      the "New track" button.
+    - Section expands to show the "Upload data file" and "Add a shared track"
+      fields.
+    - User pastes URL of a private track into the "Add a shared track" field.
+    - User presses the "submit" button to close the section and view
+      the shared track.
+
+    Alternative scenarios
+
+    - If user is not authorized to see this track, he is given an error
+      message.
+
+    - Instead of pasting the track URL into the field, user can simply click on 
+      the link in the email that is sent him when the owner shares the track.
+
+2h. Use case 11 -- Managing shared tracks
+
+    Motivation: As shared tracks are added, a list of those tracks appears. User
+    can delete them.
+
+    - In the "Manage custom tracks" section, there is a "Other tracks" section
+      in addition to the "My tracks" section. The "Other tracks" section lists
+      each shared track that is being viewed, along with a "delete" icon.
+    - User presses "delete" icon to remove shared track.
+    - Shared track disappears from gbrowse main section.
+
+
+      

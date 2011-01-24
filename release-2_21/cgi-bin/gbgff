@@ -1,0 +1,65 @@
+#!/usr/bin/perl -w
+# $Id: gbgff,v 1.2 2009-08-27 19:13:18 idavies Exp $
+
+# just redirect to gbrowse in same directory
+
+use strict;
+use warnings;
+use File::Basename 'dirname';
+use CGI 'url','path_info','redirect','header','param';
+use Bio::Graphics::Browser2::Render;
+umask 022;
+
+my $fcgi   = Bio::Graphics::Browser2::Render->fcgi_request;
+if ($fcgi) {
+
+    my $FCGI_DONE = 0;
+    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+	my $sig  = shift;
+	my $time = localtime;
+	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+	$FCGI_DONE = 1;
+    };
+
+    while (!$FCGI_DONE && ($fcgi->Accept >= 0)) {
+	CGI->initialize_globals();
+	process_transaction();
+    }
+
+} else {
+    process_transaction();
+}
+
+exit 0;;
+
+sub process_transaction {
+
+    my $base      = url();
+    my $path_info = path_info();
+    $path_info    =~ s!^/!!;
+
+    my $source    = param('source');
+    my $segment   = param('q')   || param('segment');
+    my $ref       = param('ref') || param('seqid');
+    my $start     = param('start');
+    my $end       = param('end') || param('stop');
+    my $dump      = param('d');
+    my $type      = param('t')   || param('type');
+    my $id        = param('id');
+    my $stylesheet= param('s');
+    
+    my $url       = dirname($base);
+    $url         .= '/gbrowse';
+    $url         .= "/".($source || $path_info);
+    $url         .= "/?";
+    $url         .= "gbgff=1";
+    $url         .= ";q=".($segment || "$ref:$start..$end");
+    $url         .= ";d=$dump"          if defined $dump;
+    $url         .= ";t=$type"          if defined $type;
+    $url         .= ";id=$id"           if defined $id;
+    $url         .= ";s=$stylesheet"    if defined $stylesheet;
+
+    print redirect($url);
+}
+
+1;

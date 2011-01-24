@@ -1,0 +1,107 @@
+#!/usr/bin/perl -w
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
+use strict;
+use Bio::Graphics::Browser2::UserDB;
+use Bio::Graphics::Browser2::Render;
+
+our $VERSION = '$Id: gbrowse_login,v 1.1 2009-08-27 20:33:23 idavies Exp $';
+
+umask 022;
+
+my $fcgi = Bio::Graphics::Browser2::Render->fcgi_request;
+
+if ($fcgi) {
+    my $FCGI_DONE = 0;
+    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+	my $sig  = shift;
+	my $time = localtime;
+	print STDERR "[$time] [notice] gbrowse_login FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+	$FCGI_DONE = 1;
+    };
+
+    my %sys_env = %ENV;
+    while (!$FCGI_DONE) {
+	my $status = $fcgi->Accept;
+	next unless $status >= 0;
+        %ENV = ( %sys_env, %ENV );
+	CGI->initialize_globals();
+	GBrowseLogin->run();
+	$fcgi->Finish();
+    }
+}
+else {
+    GBrowseLogin->run();
+}
+
+package GBrowseLogin;
+
+use CGI qw(:standard);
+
+sub run {
+    my %actions  = map {$_=>1} param('action');
+    my %callback;
+
+    warn 'gbrowse_login(',join ',',param('action'),')';
+
+    my $user     = param('user');
+    my $pass     = param('pass');
+    my $email    = param('email');
+    my $fullname = param('fullname');
+    my $sessionid   = param('session');
+    my $remember = param('remember');
+    
+    my $old      = param('old_val');
+    my $new      = param('new_val');
+    my $column   = param('column');
+    
+    my $confirm  = param('confirm');
+    my $openid   = param('openid');
+    my $option   = param('option');
+    my $source   = param('source');
+
+    
+    my $userdb = Bio::Graphics::Browser2::UserDB->new(Bio::Graphics::Browser2->open_globals);
+
+    if($actions{list_openid}) {
+	print header('application/json');
+	$userdb->do_list_openid($user)  if $actions{list_openid};
+	return;
+    }
+
+    if($actions{confirm_openid}) {
+	my $arg;
+	my $print = -1;
+	
+	foreach(param('callback')) {
+	    $arg   = $_           if($print == -1);
+	    $callback{$arg} = $_  if($print ==  1);
+	    $print = $print * -1;
+	}
+
+	print header('application/json');
+	$userdb->do_confirm_openid(\%callback, $sessionid, $option,$email,$fullname);
+	return;
+    }
+
+    print header();
+
+    $userdb->do_validate		($user, $pass, $remember)			if $actions{validate};
+    $userdb->do_add_user_check		($user, $email, $fullname, $pass, $sessionid)	if $actions{add_user_check};
+    $userdb->do_add_user		($user, $email, $fullname, $pass, $sessionid)	if $actions{add_user};
+    $userdb->do_edit_confirmation	($email, $option)				if $actions{edit_confirmation};
+    $userdb->do_confirm_account		($user, $confirm)				if $actions{confirm_account};
+    $userdb->do_edit_details		($user, $column, $old, $new)			if $actions{edit_details};
+    $userdb->do_email_info		($email)					if $actions{email_info};
+    $userdb->do_delete_user		($user, $pass)					if $actions{delete_user};
+    
+    $userdb->do_add_openid_user		($user, $email,$fullname,$openid, $sessionid, $remember)
+	                                                                                if $actions{add_openid_user};
+    $userdb->do_check_openid		($openid, $sessionid, $source, $option)  	if $actions{check_openid};
+    $userdb->do_change_openid		($user, $pass, $openid, $option)		if $actions{change_openid};
+    $userdb->do_get_gecos		($user)		                                if $actions{get_gecos};
+}
+
+__END__

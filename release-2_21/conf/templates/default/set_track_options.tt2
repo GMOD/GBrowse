@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="[% config.tr('CHARSET') %]"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- FIXME is EN a language code above? -->
+<html>
+<body>
+
+<!-- Process header template defined in config file -->
+[% PROCESS 'header_wrapper.tt2' %]
+
+<h1 align='center'>[% config.tr('Settings',config.setting('description')) %]</h1>
+<form name='settings'>
+  <table width='100%' border=0>
+    [%- PROCESS 'set_track_options_controls.tt2' -%]
+    <tr class='searchtitle'>
+        <th colspan=6>[% config.tr('Options_title') %]</th>
+    </tr>
+    <tr class='searchbody'>
+        <td colspan=6>[% config.tr('Settings_instructions') %]</td>
+    </tr>
+    <tr class='searchtitle'>
+        <th>[% config.tr('Track') %]</th>
+        <th>[% config.tr('Track Type') %]</th>
+        <th>[% config.tr('Show') %]</th>
+        <th>[% config.tr('Format') %]</th>
+        <th>[% config.tr('Limit') %]</th>
+        <th>[% config.tr('Change_Order') %]</th>
+    </tr>
+    <!-- Track Information -->
+    [%- SET track_num = 0 -%]
+    [%- FOREACH track_label = labels -%]
+      [%- SET track_num = track_num + 1 -%]
+      <tr>
+      <th align='left' class='searchtitle'>[% config.tr("Track") %] [% track_num %] </th>
+      <th align='left' class='searchbody'>
+        [%- IF track_label.match(':overview$') -%]
+            <div style="background: [% overview_bgcolor %]">[% track_keys.$track_label %]<sup>*</sup></div>
+        [%- ELSIF track_label.match(':region$') -%]
+            <div style="background: [% overview_bgcolor %]">[% track_keys.$track_label %]<sup>*</sup></div>
+        [%- ELSE -%]
+            [% track_keys.$track_label %]
+        [%- END -%]
+      </th>
+      <td align='center'class='searchbody'>
+        <input type='checkbox' name='track.label' value='[% track_label %]' 
+            [%- IF page_settings.features.$track_label.visible %]checked="checked"[% END -%]
+        >
+      </td>
+      <td align="center" class="searchbody">
+        <select name="option.[% track_num %]">
+            <option [% UNLESS page_settings.features.$track_label.options %]selected="selected"[% END %] value="0">[% config.tr("Auto") %]</option>
+            <option [% IF page_settings.features.$track_label.options==1 %]selected="selected"[% END %] value="1">[% config.tr("Compact") %]</option>
+            <option [% IF page_settings.features.$track_label.options==2 %]selected="selected"[% END %] value="2">[% config.tr("Expand") %]</option>
+            <option [% IF page_settings.features.$track_label.options==3 %]selected="selected"[% END %] value="3">[% config.tr("Expand_Label") %]</option>
+        </select>
+      </td>
+      <td align="center" class="searchbody">
+        <select name="limit.[% track_num %]">
+            <option [% UNLESS page_settings.features.$track_label.limit %]selected="selected"[% END %] value="0">No limit</option>
+            <option [% IF page_settings.features.$track_label.limit==5 %]selected="selected"[% END %] value="5">5</option>
+            <option [% IF page_settings.features.$track_label.limit==10 %]selected="selected"[% END %] value="10">10</option>
+            <option [% IF page_settings.features.$track_label.limit==25 %]selected="selected"[% END %] value="25">25</option>
+            <option [% IF page_settings.features.$track_label.limit==100 %]selected="selected"[% END %] value="100">100</option>
+        </select>
+      </td>
+
+      <td align="center" class="searchbody">
+        <select name="track.[% track_num %]" onchange="document.settings.submit()">
+            <option selected="selected" value=""></option>
+            [%- FOREACH option_label = sorted_labels -%]
+                <option value="[% option_label %]">[% track_keys.$option_label %]</option>
+            [%- END -%]
+        </select>
+      </td>
+      </tr>
+    [%- END -%]
+    [%- PROCESS 'set_track_options_controls.tt2' -%]
+    <tr>
+
+    <input type=hidden name='[% config.tr('Set_options') %]' value=1>
+    <input type=hidden name='[% config.tr('Adjust_order') %]' value=1>
+  </table>
+  [% config.tr('EXTERNAL_TRACKS') %]
+  <br>
+  <div style="background: [% overview_bgcolor %]">
+    [% config.tr('OVERVIEW_TRACKS') %]
+  </div>
+  <br>
+  <div style="background: [% overview_bgcolor %]">
+    [% config.tr('REGION_TRACKS') %]
+  </div>
+</form>
+
+<!-- Process footer template defined in config file -->
+[% PROCESS 'footer_wrapper.tt2' %]
+
+</body>
+</html>

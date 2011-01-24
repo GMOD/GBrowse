@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="[% config.tr('CHARSET') %]"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- FIXME is EN a language code above? -->
+[% PROCESS "helperfunctions.tt2" %]
+<html>
+<head>
+  <title>
+  [%- IF config.setting('unit_divider') == 1 %]
+    [% config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% segment.start %]..[% segment.end %][% END %]
+  [% ELSE %]
+    [% config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% unit_label(segment.start) %]..[% unit_label(segment.end) %][% END %]
+  [% END -%]
+  </title>
+
+  <link rel="stylesheet" type="text/css" href="[% config.setting('stylesheet') %]"/>
+
+[% PROCESS "script.tt2" %]
+</head>
+
+<body lang="[% config.language_code.list.0 %]">
+
+[% IF error %]
+<h2 class="error">[% error %]</h1>
+[% END %]
+
+<!-- Process header template defined in config file -->
+[% PROCESS 'header_wrapper.tt2' %]
+
+<!-- datasource description and current position -->
+<div class="target" id="target1">
+  [% IF page_settings.head %]
+  <h1>[% config.setting('description') %]</h1>
+  [% END %]
+  <!-- FIXME need to fix formatting on string below -->
+  <h2>[%- IF segment -%]
+      [% SET length_str = unit_label( segment.length ) %]
+      [% SET start_str = unit_label( segment.start ) %]
+      [% SET end_str = unit_label( segment.end ) %]
+      [%-
+         config.tr('SHOWING_FROM_TO',
+                           length_str,
+                           segment.seq_id,
+                           start_str,
+                           end_str
+                          );
+      -%]
+    [%- END -%]
+  </h2>
+</div>
+
+<form name="mainform" action="[% action %]" method="POST">
+  <!-- navigation table -->
+  [% PROCESS "navigationtable.tt2" %]
+
+  [% htmlfrag2 %]
+
+  <!-- genome browser images -->
+  [% IF multiple_segments %]
+    [% PROCESS "multiple_segments.tt2" %]
+  [% ELSE %]
+    <div id="target4">
+    [% PROCESS "overviewpanel.tt2" %]
+    [% IF region_size %]
+      [% PROCESS "regionviewpanel.tt2" %]
+    [% END %]
+    [% PROCESS "detailpanel.tt2"   %]
+   </div>
+  [% END %]
+
+  [% htmlfrag3 %]
+
+
+  [% htmlfrag4 %]
+
+  <!-- tracks_table -->
+  [% PROCESS "trackstable.tt2" %]
+
+  [% htmlfrag5 %]
+
+  <!-- settings_table -->
+  [% PROCESS "optionstable.tt2" %]
+
+  [%- htmlfrag6 -%]
+
+</form>
+
+<form method="post" action="[% action %]" name="externalform" enctype="multipart/form-data" ><p/>
+  <!-- upload table -->
+  [% PROCESS "uploadtable.tt2" %]
+
+  <!-- external table -->
+  [% #FIXME PROCESS "externaltable.tt2" %]
+</form>
+
+<!-- Process footer template defined in config file -->
+[% PROCESS 'footer_wrapper.tt2' %]
+
+</body>
+</html>

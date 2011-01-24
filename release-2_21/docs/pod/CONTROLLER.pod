@@ -1,0 +1,663 @@
+=head1 Introduction
+
+This document describes the Controller object used in GBrowse.  There is a
+section describing the controllers methods and a section describing how events
+drive the Controller object.
+
+=head1 Controller
+
+The controller object is used in GBrowse to handle the asynchronous events such
+as scrolling and track loading.  In the controller.js script, the "Controller"
+variable is initialized.
+
+  var Controller = new GBrowseController; // singleton
+
+This object can then be used through out GBrowse.
+
+=head2 Class Utility Methods
+  
+=head3 initialize
+
+Simply sets up the instance variables that will be used.
+
+=head3 reset_after_track_load
+
+This method is called after any track load.  It adds the drag and drop feature
+to each group of tracks (overview, regionview, detailview) so that it doesn't
+break after loading a new track. 
+  
+=head3 register_track
+
+Takes a track name and type and creates a track object (track.js) from it.  It
+then stores that object in the gbtracks hash by the track name for later use.
+
+If the track is not a scale bar it will also set it's retrieve_tracks value to
+true (although this could be stored in the track object itself).  This tells
+the Controller that it's okay to retrieve this track image from the server when
+it's time (in Controller.get_remaining_tracks()).
+
+=head3 set_last_update_keys
+
+Sets the time key for the supplied tracks so we know later if one is outdated.
+
+=head3 set_last_update_key
+Sets the time key for a single track so we know later if one is outdated.
+
+=head3 hide_detail_tracks
+
+Hides the detail tracks in cases where they shouldn't be displayed for some
+reason such as the max segment being exceeded.
+
+=head2 DOM Utility Methods
+
+=head3 wipe_div
+
+Takes the id of a div element and clears the innerHTML.  It's handy.
+
+=head3 update_scale_bar
+
+This method updates a scale bar that is passed to it from update_coordinates.
+
+=head3 append_child_from_html
+
+Appends new html to the appropriate section.  It does this by creating a temp
+element, reading the html into it and then moving the new html elements over
+the the parent. 
+
+When used to add a track, this keeps the other tracks intact.
+
+=head2 Update Section Methods
+
+=head3 update_sections
+
+This method will update the sections whose ids are passed to it.
+
+It calls the server with the update_sections flag set and the section ids as
+section_names parameters. 
+
+The server then creates the section html for each section and passes them back
+where the html is placed in it's respective section.
+
+=head2 Signal Change to Server Methods
+
+=head3 set_track_visibility
+
+This method tells the server that a tracks visiblility has changed.
+
+If the track is being displayed and the track is stale (based on its
+last_update_key), rerenders the track using Controller.rerender_track().
+
+=head2 Kick-off Render Methods
+
+=head3 first_render
+
+first_render() contacts the server and tells it to start rendering the images.
+It gets back a list of the track keys that it uses to call 
+Controller.get_multiple_tracks().
+
+It sets the last update value for each track which is used to figure out if a
+hidden track is stale.
+
+It also gets the segment_info object which is used for the rubber banding.
+
+=head3 update_coordinates
+
+This method is called when  the user navigates on the reference map by "rubber
+banding" a section or zooming or recentering, etc.
+
+First it determines if there is a view already being displayed (if not, it
+submits the search form).
+
+Then, it greys out all the tracks so the user knows that the tracks are now
+outdated.
+
+The server is called to tell it that segment has changed and it starts
+rendering the new images.
+
+The server returns the new segment_info, the track_keys and the new scale bars.
+
+The onSuccess method of the request then, updates the sections that are
+dependant on the segment for their output and kicks off
+Controller.get_multiple_tracks() to retrieve the track images.
+
+=head3 add_track
+
+This is wraps a track name in an array for add_tracks.
+
+=head3 add_tracks
+
+This method sends a message to the server requesting that new tracks neet to be
+added.
+
+The server responds with by starting to render the tracks and returning a data
+structure with track keys and the div elements that will hold the track images.
+
+The onSuccess method for the request loops through the tracks and registers the
+new tracks, append the new div elements to to the appropriate track group.  It
+also keeps track of any tracks that need to be loaded and calls
+Controller.get_multiple_tracks() to retrieve them.
+
+=head3 rerender_track
+
+This method rerenders a single track.  It is similar to update_coordinates but
+without changing the segment.
+
+It greys the track image.  Then, requests that the track be rendered from the server.
+
+The onSuccess method sets up the track to be retrieved by
+Controller.get_remaining_tracks() and then Controller.get_remaining_tracks() is
+called.
+
+=head2 Retrieve Rendered Track Methods
+  
+=head3 get_multiple_tracks
+
+get_multiple_tracks() sets up for get_remaining_tracks() by creating the time_key
+for each track and setting each one's "retrieve_track" value to true.
+
+Then calls Controller.get_remaining_tracks with the time key.
+
+=head3 get_remaining_tracks
+
+This method goes through all of the tracks and tries to retrieve the tracks
+that have a true value for "retrieve_track".
+
+The method will stop requesting a track if another request for that same track
+has superseded it.  The time_key is used to mark a specific instance of
+get_remaining_tracks() so that if a track has been requested again, the first
+instance will see that the track's time key no longer matches and ignore it.
+The time_key is checked in two places, before querying the server and before
+displaying the track.
+
+Once the tracks have been retrieved, it checks to see if they are finished (aka
+AVAILABLE), broken (ERROR, EXPIRED...) or still pending.  If any are still
+pending, it will call itself again after a brief wait (defined by the decay *
+the time_out) and try to get the remaining tracks. 
+
+=head2 Track Configure Methods
+
+=head3 reconfigure_track
+
+Called from within the track configuration balloon.
+
+This method, will send the new configuration information to the server.  If the
+track is still "show"n then it is rerendered, otherwise it is removed.
+
+Controller.reconfigure_track() is called with the form elements serialized in a
+string.  This is done because the balloon messes with the interaction of the
+controller with the form.
+
+=head2 Plugin Methods
+
+=head3 configure_plugin
+
+All Controller.configure_plugin does is calls update_sections() to update the 
+"plugin_configure_div" with the configuration form from the server.
+
+=head3 reconfigure_plugin
+
+This serializes the plugin configuration form and sends it to the server.  When
+it hears back, it clears the div element holding the form.
+
+If the plugin is an annotator, it reloads the affected track.  If it is a
+filter, then it reloads
+
+=head3 plugin_go
+
+This method, takes the plugin type and figures out what to do with it.  
+
+An annotator will not have a "Go" button in its configuration form.  So the Go
+button simply adds the plugin track and updates the track listing
+
+A dumper will redirect to the dump page.  If "Go" button was from the
+configuration form, then it will serialize and send the configuration info with
+it.
+
+Note: As of this writing, Finder and Filter plugins don't do anything with the
+Go button.
+
+=head2 Upload File Methods
+
+=head3 edit_new_file
+
+Updates the external_utility_div with the edit file form.  This is the same
+form as when editing an existing file, it is just blank and it has a new file
+name attached. 
+
+=head3 edit_upload
+
+Updates the external_utility_div with the edit file form.  This is the same
+form as when editing a new file.  It has the file name and the file contents
+populate the text area.
+
+=head3 commit_file_edit
+
+Submits the file edit form to the server.  If a new file was created, it adds
+the track.  Otherwise, it rerenders the track.
+
+=head3 delete_upload_file
+
+Tells the server to delete the file, removes the track from the panel and
+updates the track listing and external data table.
+
+=head2 Remote Annotations Methods
+
+=head3 new_remote_track
+
+After a check to see if the url is not empty, it simply adds the track using
+Controller.add_track and updates the track listing and external data table.
+
+=head2 Non-Class Methods
+
+The following methods are not class methods and are therefor called directly.
+
+=head3 initialize_page
+
+This method gets the Controller ready and requests the first render of the
+images.
+
+It creates a hash for the sections that update when
+the segment changes (segment_observers).
+
+It then calls Controller.first_render().
+
+It also initializes the objects that handle the rubber banding for the
+overview, region view and detail view.
+
+=head3 create_time_key
+
+This creates a time_key for identifying get_remaining_tracks() instances and
+for determining if a track is stale.  It is simly a time integer.
+
+=head3 actually_remove
+
+Prototype's remove function doesn't actually remove the element from
+reachability.  This function renames the "removed" element so it won't be
+accessible later.
+
+
+=head1 Events
+
+This section describes the GBrowse code's reaction to various events.
+
+=head2 Standard Events
+
+=head3 First Page View
+
+=over 4
+
+=item - Client requests view of a page
+
+=item - Server Creates Page
+
+Server initializes the state and generates the page but does not begin
+rendering the images yet.
+
+=item - Client Recieves Page 
+
+=item - Controller object created immediately 
+
+The Controller.initialize method is called which simply sets up the instance
+variables that will be used.
+
+=item - Track Registration
+
+Each track div has a call to Controller.register_track() which is run on load.
+Controller.register_track() creates a track object and stores it by track name.
+
+=item - On Load, Controller.initialize_page() is called
+
+Controller.initialize_page() creates a hash for the sections that update when
+the segment changes (segment_observers).  
+
+It then calls Controller.first_render().
+
+It also initializes the objects that handle the rubber banding for the
+overview, region view and detail view.
+
+=item - Controller.first_render()
+
+first_render() contacts the server and tells it to start rendering the images.
+
+It gets back a list of the track keys that it uses to call
+Controller.get_multiple_tracks().
+
+It also calls Controller.set_last_update_keys() to set the last update value
+for each track which is useful later to determine if a track is stale.
+
+=over 4
+
+=item - Calls Controller.get_multiple_tracks().
+
+Controller.get_multiple_tracks() sets up for get_remaining_tracks() by creating
+the time_key for each track and setting each one's "retrieve_track" value to
+true.
+
+Then calls Controller.get_remaining_tracks with the time key.
+
+=back
+
+=item - If Not Displaying Details
+
+If the details panel, usually because the max semgent has been exceeded, it
+calls Controller.hide_detail_tracks() to white out the tracks.
+
+=back
+
+=head3 Navigation
+
+When the user navigates on the reference map by "rubber banding" a section or
+zooming or recentering, etc, that information is sent to the
+Controller.update_coordinates() method which begins the work of moving the
+view.
+
+Controller.update_coordinates() controls the update process.
+
+=over 4
+
+=item - Grey out old tracks
+
+=item - Contact Server
+
+Tell the server to that the segment has been updated.  The server will then
+start rendering tracks and return segment info, track keys and scale bars
+
+=item - Display returned scale bars
+
+The Scale bars are generated immediately because they are quick.  This provides
+the user with a visualization that the segment has changed.  Updating is done
+with Controller.update_scale_bar().
+
+=item - Updates sections
+
+Calls Controller.update_sections() to update the sections whose content is
+based on the segment being viewed.
+
+=item - New Segment Info Stored
+
+The new segment_info object is stored so that rubber banding can still work.
+
+=item - Sets last update keys for tracks
+
+Controller.set_last_update_keys() sets the last update value for each track
+which is useful later to determine if a track is stale.
+
+=item - Calls Controller.get_multiple_tracks().
+
+Controller.get_multiple_tracks() sets up for get_remaining_tracks() by creating
+the time_key for each track and setting each one's "retrieve_track" value to
+true.
+
+Then calls Controller.get_remaining_tracks with the time key.
+
+=item - If Not Displaying Details
+
+If the details panel, usually because the max semgent has been exceeded, it
+calls Controller.hide_detail_tracks() to white out the tracks.
+
+=back
+
+=head3 Rubber Banding
+
+=over 4
+
+=item - Start the rubber banding
+
+In rubber.js, the SelectArea.prototype.startRubber is called.  This calls
+"self.loadSegmentInfo()" which is defined in the subclasses overviewSelect.js,
+regionSelect.js and detailSelect.js.
+
+=item - loadSegmentInfo()
+
+This method which is defined in each of the subclasses, copies relevant segment
+information from the Controller.segment_info into the rubber object.
+
+=item - Stretch the Rubber Band
+
+As the rubber band moves, it makes the start < the stop and the search box
+updates.
+
+=item - Finish
+
+When the rubber band is finished, it passes the new segment information to
+Controller.update_corresponences() to do the navigation.
+
+=back
+
+=head3 Selecting A Track's Checkbox
+
+=over 4
+
+=item - Checkbox is selected
+
+When a track Checkbox is selected, it calls the buttons.js method, gbCheck().
+
+=item - buttons.js gbCheck()
+
+This method finds the checkbox element which was checked and calls the
+buttons.js method gbToggleTrack();
+
+=item - buttons.js gbToggleTrack()
+
+Note: Here we just discuss what happens when a track is being selected for
+display.  This method also handles deselection.
+
+If the track has already been drawn it sets the div element to "block" (aka
+visible) and calls Controller.set_track_visibility() which tells the server
+that the track is now visible and if the track is stale, rerenders it.  Then it
+is done.
+
+Otherwise, it needs to add the track, so the method calls Controller.add_track().
+
+=item - Controller.add_track()
+
+Note: add_track() is a wrapper for add_tracks which can update several tracks
+at once.
+
+add_track() sends a message to the server requesting that a new track be added.
+
+The server responds with by starting to render the track and returning a div
+element that will hold the track image. 
+
+The onSuccess method for the request registers the new track, appends the new
+div element to to the appropriate track group and if needed, calls
+Controller.get_multiple_tracks() to retrieve the track.
+
+=back
+
+=head3 Deselecting A Track's Checkbox
+
+=over 4
+
+=item - Checkbox is deselected
+
+When a track Checkbox is deselected, it calls the buttons.js method, gbCheck().
+
+=item - buttons.js gbCheck()
+
+This method finds the checkbox element which was unchecked and calls the
+buttons.js method gbToggleTrack();
+
+=item - buttons.js gbToggleTrack()
+
+Note: Here we just discuss what happens when a track is being deselected. This
+method also handles track selection.
+
+If the track has already drawn it sets the div element to "none" (aka hidden)
+and calls Controller.set_track_visibility() which tells the server that the
+track is now hidden so that it won't be displayed if the page is reloaded.
+
+Otherwise, it doesn't need to do anything.
+
+=back
+
+=head3 Configure Track Submit
+
+Configuring a track starts by hitting the question mark in the track title.  A
+balloon pops up with the configure track form inside.   If the "Change" button
+is hit, then interesting things happen.
+
+=over 4
+
+=item - Call Controller.reconfigure_track()
+
+Controller.reconfigure_track() is called with the form elements serialized in a
+string.  This is done because the balloon messes with the interaction of the
+controller with the form.  
+
+=item - Report the new configuration to the server
+
+The server stores the new configuration data in the state object.
+
+=item - If track is still visible, rerender
+
+If the "show" option was kept on, Controller.rerender_track() is called to
+rerender the track individually.
+
+=item - If track is not visible, rerender
+
+If the "show" option was turned off, remove the track from the being displayed
+(the server will already know about this).  Reload the track listing to turn
+the check box off.
+
+=back
+
+=head2 Plugin Events
+
+=head3 "Configure..." Button Pressed
+
+=over 4
+
+=item - Calls Controller.configure_plugin()
+
+All Controller.configure_plugin does is calls update_sections() to update the
+"plugin_configure_div" with the configuration form from the server.
+
+=back
+
+=head3 Configure Canceled
+
+When the cancel button is pushed, all that needs to be done is call
+Controller.wipe_div() which will remove the html form from the page.
+
+=head3 Plugin Configure
+
+=over 4
+
+=item - Calls Controller.reconfigure_plugin()
+
+This serializes the plugin configuration form and sends it to the server.  When
+it hears back, it clears the div element holding the form.
+
+If the plugin is an annotator, it reloads the affected track.  If it is a
+filter, then it reloads all the tracks because there is no way to tell which
+track it works on.
+
+=back
+
+=head3 "Go" Button Pressed
+
+The "Go" button by the plugin selection box and the "Go" button in the
+configuration form both call Controller.plugin_go().  The only difference is
+for dumpers, where the form version will have the form elements serialized and
+sent to the server.
+
+=over 4
+
+=item - If Annotator
+
+An annotator will not have a "Go" button in its configuration form.  So the Go
+button simply adds the plugin track and updates the track listing
+
+=item - If Dumper
+
+A dumper will redirect to the dump page.  If "Go" button was from the
+configuration form, then it will serialize and send the configuration info with
+it.
+
+=item - If Filter
+
+Doesn't do anything
+
+=item - If Finder
+
+Not yet defined
+
+=back
+
+=head2 Upload File Events
+
+=head3 Upload File
+
+This is not an asynchronous request.  Due to security issues, AJAX does not
+allow asynchronous file uploads.  There is a workaround that is not
+implemented.  Google "AJAX file upload iframe" for more information.
+
+=head3 "New..." Upload File
+
+=over 4
+
+=item - Controller.edit_new_file()
+
+Updates the external_utility_div with a new file form.  Note that the file is
+named at this point but not created on the server until committed.
+
+=back
+
+=head3 Edit Upload File
+
+=over 4
+
+=item - Controller.edit_upload()
+
+Updates the external_utility_div with a form to edit the selected file.  
+
+=back
+
+=head3 Commit File Edit
+
+=over 4
+
+=item - Controller.commit_file_edit()
+
+Submits the file edit form to the server.  If a new file was created, it adds
+the track.  Otherwise, it rerenders the track.
+
+=back
+
+=head3 Delete Upload File
+
+=over 4
+
+=item - Controller.delete_upload_file()
+
+Tells the server to delete the file, removes the track from the panel and
+updates the track listing and external data table.
+
+=back
+
+=head2 Remote Annotation Events
+
+=head3 "Update URLs" Button
+
+=over 4
+
+=item - Calls Controller.new_remote_track()
+
+After a check to see if the url is not empty, it simply adds the track using
+Controller.add_track and updates the track listing and external data table.
+
+=back
+
+=head3 Delete Remote Annotation
+
+=over 4
+
+=item - Calls Controller.delete_upload_file()
+
+The delete_uploads_file does everything needed to remove a remote annotation.
+On the server side it will try to remove the file but that's not much overhead
+for reusing this.
+
+=back
+

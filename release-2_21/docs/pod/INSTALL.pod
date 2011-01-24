@@ -1,0 +1,855 @@
+=head1 Generic Genome Browser Installation
+
+GBrowse is distributed as binary packages for Windows and Macintosh OS
+X, and as source code for Unix systems.
+
+
+=head2 1. WINDOWS INSTALL
+
+Before installing on Windows systems, you will need to install
+ActiveState Perl and the Apache web server.  You may also wish to
+install a database management system such as MySQL.
+
+=over 4
+
+=item Install ActiveState Perl
+
+Go to http://www.activestate.com, and download the product
+"ActivePerl."  This is a little confusing because web site tries to
+point you to the commercial product, ASPN Perl.  At the current time,
+the full download URL for ActivePerl is:
+
+http://www.activestate.com/Products/Download/Download.plex?id=ActivePerl
+
+Choose the "MSI" package for Windows.  Once downloaded, launch the
+package, and it will install automatically.
+
+=item Install the Apache web server
+
+Go to http://httpd.apache.org/download.cgi .  Select the most recent
+version of Apache, and choose the download marked "Win32 Binary (MSI
+Installer)."  Once downloaded, launch the package and it will install
+automatically.
+
+=item Install the MySQL database (optional)
+
+Go to http://dev.mysql.com/downloads/mysql .  Select and download the
+most recent version of the Windows package.  Once the package is
+downloaded, you will need to unpack it with the WinZip program.  Then
+launch the installer. 
+
+=item Install GBrowse
+
+Apache and ActiveState Perl must be installed before you try this
+step.  Launch the Windows command shell by choosing "Run..." and then
+typing "cmd".  Once the command shell appears, type the following
+commands:
+
+	ppm> rep add gmod http://www.gmod.org/ggb/ppm
+	ppm> rep up gmod
+	ppm> rep up gmod
+	ppm> install DBD::mysql   (OPTIONAL)
+	ppm> install Generic-Genome-Browser
+
+The binary distribution of GBrowse is at L<http://www.gmod.org/ggb/ppm>.
+Add this repository to the list of active repositories, and then move the
+repository to the top to ensure that you get the most up to date versions
+of the modules.
+
+If you wish to use a MySQL database, install DBD::mysql if you have
+not already done so.  Then install Generic-Genome-Browser.
+
+At the end of the install, the automatic installation script will ask
+you to confirm the locations of your Apache conf (configuration),
+htdocs (document root) and cgi-bin (CGI executable)
+directories. Usually it will guess right, but if it doesn't, just type
+in the correct path. 
+
+=back
+
+When this is done, go to step (5) below.
+
+=head2 2. MACINTOSH OS X INSTALL
+
+NOTE: The MacOSX installer sited below is quite out of date.  Until it
+is brought up to date, please use the SOURCE CODE INSTALL section below
+for Macs.
+
+Go to the following URL:
+
+    ftp://dev.wormbase.org/pub/people/tharris/macosx/packages
+
+Find the most recent version of the GBrowse package.  These files have
+the .dmg extension.
+
+Once the package is downloaded, double click on it.  The installer
+will handle everything else.
+
+
+=head2 3. SOURCE CODE INSTALL
+
+GBrowse runs on top of several software packages.  These must be
+installed and configured before you can run GBrowse.  Most
+preconfigured Linux systems will have some of these packages installed
+already.
+
+=over
+
+=item A) MySQL -- L<http://www.mysql.com>
+
+The MySQL database is a fast open source relational database
+that is widely used for web applications.  It is required for
+most real-live genome annotation projects.  For small projects
+(a few thousands of annotated features), you can skip installing
+MySQL and use an in-memory database instead.
+
+=item B) Apache Web Server -- L<http://www.apache.org>
+
+The Apache web server is the industry standard open source
+web server for Unix and Windows systems.
+
+=item C) Perl 5.005 -- L<http://www.cpan.org>
+
+The Perl language is widely used for web applications.
+Version 5.6 is preferred, but 5.00503 or higher will work.
+
+=item D) Standard Perl modules -- L<http://www.cpan.org>
+
+The following Perl modules must be installed for GBrowse to work.
+They can be found on the Comprehensive Perl Archive Network
+(CPAN):
+
+        CGI                  (2.56 or higher)
+	GD                   (2.07 or higher)
+        CGI::Session         (4.03 or higher)
+        DBI                  (any version)
+        DBD::mysql           (any version)
+	Digest::MD5          (any version)
+	Text::Shellwords     (any version)
+
+=item E) Bioperl version 1.5 or higher -- L<http://www.bioperl.org>
+
+GBrowse requires functionality that exists in bioperl-live (in the cvs
+repository).  Please either use bioperl-live or Bioperl 1.5 when
+it comes out.  Until then, there is a release candidate of Bioperl 1.5
+that is thought to be stable with regard to GBrowse.  It can
+be found at L<http://bioperl.org/DIST/bioperl-1.5.0-RC1.tar.gz>. 
+Other release candidates and the official 1.5 release of Bioperl can
+also be found in the L<http://bioperl.org/DIST/> directory when they
+are available.
+
+=back
+
+Optional modules:
+
+=over
+
+=item F) XML::Parser, XML::Writer, XML::Twig, XML::DOM
+
+If these modules are present, the "Sequence Dumper" plugin
+will be able to produce GAME and BSML output.  They can be
+downloaded from CPAN.
+
+=item G) LWP
+
+To load remote 3d party annotations. Available from CPAN.
+
+=item H) Bio::Das
+
+To display remote annotations using the Distributed Annotation
+System.  The current version is available at
+http://www.biodas.org/download/Bio::Das/Bio-Das-0.92.tar.gz
+
+=item I) MOBY
+
+Needed by gbrowse_moby to fetch and display data from MOBY providers.
+Available from biomoby.org; obtain via anonymous cvs until it is released.
+Directions are at http://biomoby.open-bio.org/index.php/for-developers/get_code
+
+=item J) GD::SVG
+
+To save images as publication-quality editable images in Scalar
+Vector Graphics format.  Available from CPAN.
+
+
+=back
+
+Once the prerequisites are installed, download the most recent version
+of the Generic-Genome-Browser source code from:
+
+   http://prdownloads.sourceforge.net/gmod
+
+This will give you a .tar.gz file, which must be uncompressed and
+unpacked.  Then run the following commands (in brief):
+
+	perl Makefile.PL
+	make
+        make test (optional)
+	make install UNINST=1
+
+This will install the software in the default location under
+/usr/local/apache. See "Details" to change this, or to install gbrowse
+into your home directory.   The 'UNINST=1' will insure that older
+versions of perl modules being installed will be removed to
+help prevent conflicts.
+
+
+To further configure GBrowse, see L<CONFIGURE_HOWTO>.  To run
+GBrowse on top of Oracle and PostgreSQL databases see
+L<ORACLE_AND_POSTGRESQL>.  To run on top of a BioSQL database, see 
+L<BIOSQL_ADAPTER_HOWTO>. To run GBrowse on top of Gadfly, see
+L<README-berkeley-gadfly>. 
+
+Details:
+
+The browser consists of a CGI script named "gbrowse", a Perl module
+that handles some of the gory details, a small number of static image
+files, and a configuration directory that contains configuration files
+for each data source.  By default, these will be installed in the
+following locations:
+
+   CGI script:      /usr/local/apache/cgi-bin/gbrowse
+   Static images:   /usr/local/apache/htdocs/gbrowse
+   Config files:    /usr/local/apache/conf/gbrowse.conf
+   The module:	    -standard site-specific Perl library location-
+
+You can change change the location of the installation by passing
+Makefile.PL one or more NAME=VALUE pairs, like so:
+
+  perl Makefile.PL CONF=/etc HTDOCS=/home/html
+
+This will cause the configuration files to be installed in
+/etc/gbrowse.conf and the static files to be installed in
+/home/html/gbrowse.
+
+The following arguments are recognized:
+
+   CONF            Configuration file directory
+   HTDOCS          Static files directory
+   CGIBIN          CGI script directory
+   APACHE          Base directory for Apache's conf, htdocs and cgibin directories
+   LIB             Perl site-specific modules directory
+   BIN             Perl executable scripts directory
+   NONROOT         If set to a non-zero value (e.g. NONROOT=1) then install
+	              gbrowse in a way that does not require root access.
+   DO_XS           Compile fast alignment algorithm (XS C extension)
+
+For example, if you are on a RedHat system, where the default Apache
+installation uses /var/www/html for HTML files, /var/www/cgi-bin for
+CGI scripts, and /etc/httpd/conf for the configuration files, you
+should specify the following configuration:
+
+  perl Makefile.PL HTDOCS=/var/www/html \
+	           CONF=/etc/httpd/conf \
+		   CGIBIN=/var/www/cgi-bin
+
+(The backslashes are there to split the command across multiple lines
+only). To make it easier when upgrading to new versions of the
+software, you can put this command into a shell script.
+
+As a convenience, you can use the configuration option APACHE, in
+which case the static and CGI files will be placed into APACHE/conf,
+APACHE/htdocs and APACHE/cgi-bin respectively, where APACHE is the
+location you specified on the command line:
+
+  perl Makefile.PL APACHE=/home/www
+
+Note that the configuration files are always placed in a subdirectory
+named gbrowse.conf.  You cannot change this.  Similarly, the static
+files are placed in a directory named gbrowse.  The install script
+will detect if there are already configuration files in the selected
+directory and not overwrite them if so.  The same applies to the
+cascading stylesheet file (gbrowse.css) located in the gbrowse
+subdirectory.  However, neither the GIF files in the "buttons"
+subdirectory nor the plugin modules in the gbrowse.conf/plugins
+directory are checked before overwriting them, so be careful to copy
+the new copies somewhere safe if you have modified them.
+
+The DO_XS flag, if true (perl Makefile.PL DO_XS=1), will compile a
+small C subroutine for nucleotide alignments.  This will vastly improve
+the performance of the gbrowse_details script when displaying alignments.
+To use this feature, you will need a C compiler.
+
+You can always manually move the files around after install.  See
+L<CONFIGURE_HOWTO> for details.
+
+When installing the static files, the install script also creates an
+empty directory named "tmp".  This directory is set to be world
+writable so that the GBrowse server can use it to manage temporary image
+files that it creates on the fly.  If you would prefer not to have a
+world writable directory on your system, simply change the ownership
+and permissions to allow the web server account to write into it.  The
+directory is located in /usr/local/apache/htdocs/gbrowse/tmp by
+default.
+
+The first time you run Makefile.PL, a file named GGB.def will be
+created your file path settings.  When Makefile.PL is run again, it
+will ask you whether you wish to reuse the settings stored in the file.
+
+=head2 4. INSTALLING INTO YOUR HOME DIRECTORY
+
+Read this section only if you are on a Unix system and do not have
+root privileges. You will need to configure Apache to run out of your
+home directory.  One way to do this is to install Apache from source
+code and to specify your home directory when you first configure it:
+
+   % cd apache_x.xx.xx
+   % ./configure --prefix=$HOME/apache
+   % make
+   % make install
+
+This will place Apache into your home directory under ~/apache.  You
+should then edit ~/apache/conf/httpd.conf and replace the directive:
+
+  Listen 80
+
+with
+
+  Listen 8000
+
+so that Apache will listen for connections to the unprivileged port
+8000 rather than the usual port 80.  If you also see a "Port 80"
+directive, change it to read "Port 8000." You'll now be able to talk
+to Apache using URLs like http://your.host.edu:8000/.
+
+You may not need to install Apache from scratch if your Unix
+distribution already has Apache installed.  What you will do is to
+create an Apache directory tree in your home directory and then start
+Apache using command-line arguments that tell it to start up from the
+home directory rather than its default system-wide directory.
+
+Create an Apache directory and its subdirectories using the following
+series of commands:
+
+  % cd ~
+  % mkdir apache
+  % mkdir apache/conf
+  % mkdir apache/logs
+  % mkdir apache/htdocs
+  % mkdir apache/cgi-bin
+
+Now copy the system-wide httpd.conf into ~/apache/conf.  You may need
+to search around a bit to find out where the system-wide httpd.conf
+lives (try running the command "locate httpd.conf):
+
+  % cp /etc/httpd/conf/httpd.conf ~/apache/conf
+
+Now open up ~/apache/conf/httpd.conf with a text editor and add the
+following four directives, replacing $HOME with the full path to your
+home directory (for example "/home/fred"):
+
+  Listen       8000
+  ServerRoot   $HOME/apache
+  DocumentRoot $HOME/apache/htdocs
+  SetEnv       PERL5LIB $HOME/lib  
+
+You should search the httpd.conf file for older versions of these
+directives, and delete them if they're there.  If you see a Port
+directive, change it to read "Port 8000".
+
+Somewhere in httpd.conf there will be a ScriptAlias directives, as
+well as a <Directory> section that refers to "cgi-bin".  Delete the
+ScriptAlias directive and the entire <Directory> section through to
+the </Directory> line.  Replace both these sections with the
+following:
+
+ ScriptAlias /cgi-bin/ "cgi-bin/"
+
+ <Location "/cgi-bin">
+    AllowOverride None
+    Options None
+    Order allow,deny
+    Allow from all
+ </Location>
+
+You can now start Apache from the command line using the "apachectl"
+script:
+
+ % /usr/sbin/apachectl -d ~/apache -k start
+
+If Apache starts successfully, then this command will return silently.
+Otherwise, it will print an error message.  More error messages may be
+found in ~/apache/logs/error_log.  
+
+To confirm that Apache is running from your home directory, create a
+file named index.html and copy it into ~/apache/htdocs.  You should
+then be able to open a browser, connect to http://localhost:8000/, and
+see the index.html file that you just created.
+
+Now you can build and install gbrowse with the following incantation:
+
+ % cd Generic-Genome-Browser-X.XX
+ % perl Makefile.PL APACHE=~/apache LIB=~/lib BIN=~/bin NONROOT=1
+ % make
+ % make install
+
+When you are prompted to load gbrowse using http://localhost/gbrowse,
+use http://localhost:8000/gbrowse instead.
+
+=head2 5. TRY THE BROWSER OUT
+
+The installation procedure will create a small in-memory database of
+yeast chromosome 1 for you to play with.  To try the browser out, use
+your favorite browser to open:
+ 	 
+  http://localhost/cgi-bin/gbrowse
+
+Try searching for "I" (the name of the first chromosome of yeast), or
+a gene such as NUT21 or TCF3.  Then try searching for "membrane
+trafficking."
+
+For your interest, the feature and DNA files for this database is
+located in the web server's document root at
+gbrowse/databases/yeast_chr1.  The configuration file is in the web
+server's configuration directory under gbrowse.conf/yeast1.conf.
+
+More configuration information and a short tutorial are located at:
+
+   http://localhost/gbrowse
+
+
+
+=head2 6. POPULATING THE DATABASE (MySQL)
+
+This step takes you through populating the database with the full
+yeast genome.  You can skip this step if you use the in-memory
+database for small projects (see section 6).
+
+Synopsis:
+
+  mysql -uroot -p password -e 'create database yeast'
+
+  mysql -uroot -p password -e 'grant all privileges on yeast.* to me@localhost'
+  mysql -uroot -p password -e 'grant file on *.* to me@localhost'
+  mysql -uroot -p password -e 'grant select on yeast.* to nobody@localhost'
+
+  bp_bulk_load_gff.pl -d yeast sample_data/yeast_data.gff
+
+Details:
+
+Note for RedHat Linux users: note that if you are using the default installed
+Apache, the user that apache runs as is 'apache' as opposed to the otherwise
+standard 'nobody'.  Therefore, everywhere 'nobody' occurs in these directions,
+replace it with 'apache'.
+
+In Bioperl versions 1.3 or later (not released as of August 2003),
+this script is named bp_bulk_load_gff.pl.
+
+You will need a MySQL database in order to start using GBrowse.  Using the
+mysql command line, create a database (called "yeast" in the synopsis
+above), and ensure that you have update and file privileges on it.
+The example above assumes that you have a username of "me" and that
+you will allow updates from the local machine only.  It also gives all
+privileges to "me".  You may be comfortable with a more restricted set
+of privileges, but be sure to provide at least SELECT, UPDATE and
+INSERT privileges.  You will need to provide the administrator's name
+and correct password for these commands to succeed.
+
+In addition, grant the "nobody" user the SELECT privilege.  The web
+server usually runs as nobody, and must be able to make queries on the
+database.  Modify this as needed if the web server runs under a
+different account.
+
+The next step is to load the database with data.  This is accomplished
+by loading the database from a tab-delimited file containing the
+genomic annotations in GFF format.  The Bioperl distribution comes
+with three tools for loading Bio::DB::GFF databases:
+
+=over
+
+=item 1 bp_load_gff.pl
+
+This will incrementally load a database, optionally initializing
+it if it does not already exist.  This script will work correctly
+even if the MySQL server is located on another host.
+
+=item 2 bp_bulk_load_gff.pl
+
+This Perl script will initialize a new Bio::DB::GFF database with
+a fresh schema, deleting anything that was there before.  It will
+then load the file.  Only suitable for use the very first time
+you create a database, or when you want to start from scratch!
+The bulk loader is as much as 10x faster than bp_load_gff.pl, but
+does not work in the situation in which the MySQL database
+is running on a remote host.
+
+=item 3 bp_fast_load_gff.pl
+
+This will incrementally load a database.  On UNIX systems, it will
+activate a fast loader that makes the speed almost the same as
+the bulk loader.  Be careful, though, because this is an experimental
+piece of software.
+
+=back
+
+You will find these scripts in the Bioperl distribution, in the
+subdirectory scripts/Bio-DB-GFF.  Earlier versions of the
+distribution will have these files directly in the scripts/
+subdirectory.  
+
+For testing purposes, this distribution includes a GFF file with yeast
+genome annotations.  The file can be found in the test_data
+subdirectory.  If the load is successful, you should see a message
+indicating that 13298 features were successfully loaded.
+
+Provided that the yeast load was successful, you may now run "make
+test".  This invokes a small test script that tests that the database
+is accessible by the "nobody" user and that the basic feature
+retrieval functions are working.
+
+You may also wish to load the yeast DNA, so that you can test the
+three-frame translation and GC content features of the browser.
+Because of its size, the file containing the complete yeast genome is
+distributed separately and can be downloaded from:
+
+  http://prdownloads.sourceforge.net/gmod/yeast.fasta.gz?download
+
+Load the file with this command:
+
+  bp_load_gff.pl -d yeast -fasta yeast.fasta.gz </dev/null
+
+(or, if you are on a windows system:
+
+  bp_load_gff.pl -d yeast -fasta yeast.fasta.gz
+
+and hit ^Z when the script pauses.)
+
+You should now be able to browse the yeast genome.  Type the following
+URL into your favorite browser:
+
+  http://name.of.your.host/cgi-bin/gbrowse/yeast
+
+This will display the genome browser instructions and a search field.
+Type in "III" to start searching chromosome III, or search for
+"glucose" to find a bunch of genes that are involved in glucose
+metabolism.
+
+*IF YOU GET AN ERROR* examine the Apache server error log (depending
+on how Apache was installed, it may be located in
+/usr/local/apache/logs/, /var/log/httpd/, /var/log/apache, or
+elsewhere).  Usually there will be an informative error message in the
+error log.  The most common problem is MySQL password or permissions
+problems.
+
+=head2 7. LOADING OTHER DATA SETS
+
+Genome feature tables for the major model organisms and human can be
+found at www.gmod.org in the downloads section, but these files are
+not guaranteed to be up to date.
+
+Each model organism database has its own flat file format for
+representing the data.  For the most up to date information, you
+should download these files and process them into GFF format.
+Currently, all of the model organism databases require some tweaking
+of the flat files, but the bioperl distribution includes several small
+perl scripts to make this easier.  These scripts are optionally
+installed when you install Bioperl.  You'll find them in the bioperl
+scripts/Bio-DB-GFF directory if you didn't install them directly.
+
+They are:
+
+  process_gadfly.pl     For FlyBase D. melanogaster flat files
+  process_sgd.pl        For SGD S. cerevisiae flat files
+  process_wormbase.pl   For WormBase C. elegans flat files
+
+In Bioperl 1.3, these scripts are named bp_process_gadfly.pl, and so forth.
+
+Run the script with the -h option to get some data-specific help:
+
+  % process_gadfly.pl -h
+
+The bp_process_wormbase.pl script requires the AcePerl package, which
+is available from CPAN.  It is not strictly necessary to run this
+script because the unaltered GFF files distributed from WormBase are
+compatible with GBrowse.  process_wormbase.pl supplements the
+information with the physical positions of genetic markers, GenBank
+accession numbers and functional descriptions of gene products.
+
+For configuration files that will work with each of these databases,
+look in contrib/conf_files (or in
+http://localhost/gbrowse/contrib/conf_files).  Simply copy the
+appropriate configuration file into your gbrowse.conf directory, and
+edit the database name as appropriate.
+
+You might also be interested in the load_genbank.pl script, which is
+installed when you install GBrowse.  You can give this script a list
+of Genbank or EMBL accession numbers and it will automatically
+download the indicated entries and load them into a MySQL
+database. You can also load flat files in Genbank or EMBL format.
+
+For human gene models, we suggest you use the ucsc_genes2gff.pl script,
+which operates on the files downloadable from the UCSC genome browser.
+
+The sample configuration file 08.genbank.conf (located in
+contrib/conf_files) is appropriate for data loaded with
+load_genbank.pl.
+
+=head2 8. LOADING DNA
+
+To display the DNA sequence and to run sequence-dependent glyphs such
+as the three-frame translation, you will need to load the DNA as well
+as the annotations.  The DNA must be formatted as a series of one or
+more FASTA-format files in which each entry in the file corresponds to
+a top-level sequence such as a chromosome pseudomolecule.  You can
+then run the bp_load_gff.pl or bp_bulk_load_gff.pl script using the -fasta
+argument.  For example, if the yeast genome is contained in a FASTA
+file named yeast.fa, you would run the command:
+
+  bp_bulk_load_gff.pl -d yeast -fasta yeast.fa sample/yeast_data.gff
+
+Alternatively, you may put several FASTA files into a directory, and
+provide the directory name as the argument to -fasta.
+
+(The yeast DNA is too large to be included in this distribution, but
+you can get a copy of it from
+ftp://genome-ftp.stanford.edu/pub/yeast/)
+
+Run "bp_bulk_load_gff.pl -h" to see usage instructions.
+
+                                                                                
+Newer versions of GFF (the so-called "GFF2.5" and "GFF3" formats) include
+the DNA at the bottom of the file, following the sequence annotations.
+If you are loading one of these GFF files, the DNA will be recognized
+automatically and loaded by any of the loaders.
+
+=head2 9. CREATING YOUR OWN GENOME DATABASE
+
+See the file doc/pod/CONFIGURE_HOWTO.pod for information on how to
+create new databases from scratch, add new browser tracks, and how to
+get the browser to dump the DNA from the region currently under
+display.
+
+=head2 10. MAKING THE BROWSER RUN FASTER
+
+Three factors are major contributors to the length of time it takes to
+load a gbrowse page:
+
+=over
+
+=item 1
+
+Loading the Perl interpreter and parsing BioPerl and all the 
+other Perl libraries that gbrowse uses.
+
+=item 2
+
+Query speed on the database
+
+=item 3
+
+The conversion at the Perl layer of database data into BioPerl
+objects for rendering.
+
+=back
+
+To improve (1), I recommend that you install the mod_perl module for
+Apache. (L<http://perl.apache.org>).  By configuring an Apache::Registry
+directory and placing gbrowse inside it (rather than in the default
+cgi-bin directory). The overhead for loading Perl and its libraries
+are eliminated, thereby increasing the performance of the script
+noticeably.
+
+Be aware that there is a bad interaction between the Apache::DBI
+module (often used to speed up database accesses) and Bio::DB::GFF.
+This will cause the GFF dumper plugin to fail intermittently.  GBrowse
+does not need Apache::DBI to achieve performance increases under
+mod_perl and it is suggested that you disable Apache::DBI.  If you
+cannot do this, then you should remove the file GFFDumper.pm from the
+gbrowse.conf/plugins directory.
+
+Database query performance (2) is also a major factor.  If you are
+using MySQL as the backend, you will see dramatic performance
+increases by increasing the amount of memory available to the key
+buffer, sort buffer, table cache and other in-memory data structures.
+I suggest that you replace the default MySQL configuration file
+(usually stored in /etc/my.cnf) with one of the large-memory sample
+configuration files provided in the support-files subdirectory of the
+MySQL distribution.  Of course, if you tell MySQL to use more memory
+than you have, then performance will degrade again.
+
+Finally, there is a slowdown when gbrowse converts the results of
+database SQL queries into renderable biological objects.  This becomes
+particularly noticeable when there are lots of multi-segment objects
+to be displayed.  You can work around this slowdown by using semantic
+zooming (see L<CONFIGURE_HOWTO>).  Otherwise, there's not much
+that can be done about this short of buying a faster machine.
+The GMOD team is working hard to reduce this performance hit.
+
+=head2 11. MAKING THE SERVER RUN SAFER
+
+Whenever you are running a server-side Web script using information
+provided by a web client, there is a risk that maliciously-formatted
+data provided by the use will trick the server-side script into
+performing some unintentional action, such as modifying a file on the
+server.  Perl's "taint" checks are designed to catch places in the
+code where such malicious data could cause harm, and GBrowse has been
+tested extensively with these taint checks activated.  
+
+Because of taint checks' noticeable impact on performance, they have
+been turned off in the distributed version of gbrowse.  If you wish to
+reactivate the extra checking (at the expense of a performance hit),
+go to the file "gbrowse" located in the Web scripts directory and edit
+the top line of the file to read:
+
+  #!/usr/bin/perl -w -T
+
+The -T switch turns on taint checks.
+
+If you are running GBrowse under mod_perl, add the following line to
+the httpd.conf configuration file:
+
+  PerlTaintCheck  On
+
+This will affect all mod_perl scripts globally.
+
+=head2 12. BIOPERL VERSIONS
+
+GBrowse is evolving quickly, and some of its features are dependent on
+new features in Bioperl 1.4.0.  If you are having trouble making
+GBrowse run, make sure you are using Bioperl 1.4.0!
+
+=head2 13. THE GBROWSE_IMG SCRIPT
+
+The gbrowse_img CGI script (a new feature as of version 1.41), is a
+stripped-down version of gbrowse which just generates images.  It is
+suitable for incorporating into <img> tags in order to make a
+thumbnail of a region of interest.  The thumbnail can then be linked
+to the full-featured gbrowse.  Here is an example of how this works
+using the WormBase site:
+
+  <a href="http://www.wormbase.org/db/seq/gbrowse/wormbase?name=mec-3">
+    <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=200">
+  </a>
+
+This will generate a 200-pixel inline image of the region.  Clicking
+on the image will link to the fully-navigable gbrowse script.
+
+You can also use gbrowse_img to superimpose temporary features (like
+BLAST hits) on the existing genome features.
+
+Read docs/gbrowse_img.txt B<DOES NOT EXIST> for the CGI parameters and other
+instructions. A copy of these instructions in HTML form will be
+generated when gbrowse_img is called without any arguments.  Type
+http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
+
+=head2 14. PLUGINS
+
+Gbrowse has a plugin architecture which makes it easy for third-party
+developers to expand its functionality.  The plugins are Perl .pm
+files located in the directory gbrowse.conf/plugins/.  To install
+plugins, simply copy them into this directory.  To uninstall, remove
+them.
+
+If you wish to install your own or third party plugins, it is
+suggested that you create a separate directory outside the
+gbrowse.conf/ hierarchy in which to store them and then to indicate
+the location of these plugins using the plugin_path setting:
+
+  plugin_path = /usr/local/gbrowse_plugins
+
+This setting should be somewhere in the [GENERAL] section of the
+relevant gbrowse configuration file.
+
+=head2 15. THE GENBANK/EMBL PROXY
+
+Sample configuration number 5 ("05.embl.conf") corresponds to an
+experimental pass-through proxy for Genbank.  At least in theory, if
+you enter a landmark that isn't recognized, gbrowse will go to EMBL
+using the bioperl BioFetch facility, parse the record, and enter it
+into the local database.  This allows you to browse arbitrary
+Genbank/EMBL/Refseq entries.
+
+You are free to experiment with this, but don't expect it to be
+entirely reliable.  To get it to work, you must:
+
+=over
+
+=item 1
+
+Make sure you are using Bioperl 1.02 (or a patched version of 1.01)
+
+=item 2
+
+Create a local database named "embl" and initialize it this way:
+
+=item 3
+
+Set up permissions for this database so that "nobody@localhost" has
+SELECT, INSERT, UPDATE and DELETE privileges
+
+=item 4
+
+Initialize the database for use with this command:
+
+  % bp_load_gff.pl -c -d embl </dev/null
+
+(if you are on a windows system, just leave out the </dev/null)
+
+=item 5
+
+If you need to use a proxy to access remote web sites, uncomment the
+-proxy line in the conf file, and adjust the URL of the proxy as appropriate.
+
+=item 6
+
+Go to http://localhost/cgi-bin/gbrowse/embl.
+Search for a Genbank or embl accession number, such as CEF58D5
+
+=back
+
+
+=head2 16. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
+
+When updating GBrowse to a new version of the software, you can
+configure it using your preferred directory settings by making a
+backup copy of the file GGB.def that was generated the first time you
+installed GBrowse and using `cat GGB.def` as the argument to
+Makefile.PL.  Here is the recipe:
+
+  cp Generic-Genome-Browser-1.40/GGB.def Generic-Genome-Browser-1.41/GGB.def
+  cd Generic-Genome-Browser-1.41/
+  perl Makefile.PL `cat GGB.def`
+  make
+  make install
+
+=head2 17. REMOVING OUT-OF-DATE IMAGE FILES
+
+As GBrowse runs, it creates temporary image files in the gbrowse tmp
+directory (typically /usr/local/apache/htdocs/gbrowse/tmp).  These
+image files are relatively small, but if you run GBrowse for a long
+time they may begin consuming significant amounts of disk space.
+The following Unix shell commands will remove old image files:
+
+  cd /usr/local/apache/htdocs/gbrowse/tmp
+  find . -type f -atime +20 -print -exec rm {} \;
+
+You might want to run this command under cron, but be aware that
+since the image files are owned by user "nobody", you must install
+this command in the cron script for "nobody" or "root."
+
+=head2 18. KNOWN BUGS
+
+Currently there is one known bug.  The navigation buttons do not
+operate properly when the client is using Internet Explorer 5.1 on a
+Macintosh and accessing gbrowse running on a MacOS X server running
+Apache.  Other combinations of clients and servers work properly.
+
+=head2 19. FEATURE WISH LIST (updated April, 2004)
+
+  - Configure data sources on a track-by-track basis.
+  - A configurable synteny viewer.
+
+If you are interested in working on any of these features, please
+contact the developers at the address given in the next section.
+
+=head2 20. SUPPORT AND BUG REPORTS
+
+Please send requests for help to gmod-gbrowse@lists.sourceforge.net.
+There is also a formal bug tracking and feature request system in
+place at L<http://www.gmod.org/>
+
+
+Have fun!
+
+Lincoln Stein & the GMOD team
+lstein@cshl.org

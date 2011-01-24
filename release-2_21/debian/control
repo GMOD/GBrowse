@@ -1,0 +1,16 @@
+Source: generic-genome-browser
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 5.0.0), libmodule-build-perl, perl (>= 5.8.8-12)
+Maintainer: Lincoln Stein (CPAN signing key) <lstein@cshl.edu>
+Standards-Version: 3.7.2
+Homepage: http://search.cpan.org/dist/GBrowse/
+
+Package: generic-genome-browser
+Architecture: any
+Depends: apache2, libgd2-noxpm-dev, libgd-gd2-noxpm-perl, libmodule-build-perl, libio-string-perl, libcgi-session-perl, libwww-perl, libjson-perl, libjson-any-perl, libsvg-perl, bioperl (>= 1.5.2.102)
+Recommends: mysql-server, mysql-client, libdbd-mysql-perl, libapache2-mod-perl2, inkscape
+Description: The GMOD Generic Genome Browser
+ This package provides a flexible and powerful web-based genome
+ browser. It is part of the GMOD suite of model organism database
+ tools (http://www.gmod.org).

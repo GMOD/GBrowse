@@ -1,0 +1,10 @@
+
+    [%- SET header_template = config.header_template -%]
+    [%- IF header_template -%]
+      [% PROCESS $header_template %]
+    [%- END -%]
+
+    <!-- Print "header" defined in the config file (this is for backwards compatibility) -->
+    [% config.header %]
+
+

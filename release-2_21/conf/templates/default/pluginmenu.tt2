@@ -1,0 +1,10 @@
+<b>[% config.tr('dumps') %]:</b><br/>
+<select name="plugin">
+[% FOREACH plugin = plugins %]
+  <option value="[% plugin %]" [% IF(plugin == page_settings.plugin) ; 'selected="selected"' ; END %]>[% plugin_labels.$plugin %]</option>
+[% END %]
+</select>
+&nbsp;
+<input type="submit" name="plugin_action" value="[% config.tr('Configure') %]" />
+&nbsp;
+<b><input type="submit" name="plugin_action" value="Go" /></b>

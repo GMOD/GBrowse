@@ -1,0 +1,4 @@
+<input type="hidden" id="keep1" name="display_banner"       value="[% page_settings.display_banner %]"/>
+<input type="hidden" id="keep2" name="display_instructions" value="[% page_settings.display_instructions %]"/>
+<input type="hidden" id="keep3" name="display_tracks"       value="[% page_settings.display_tracks %]"/>
+<input type="hidden" id="keep4" name="display_image"        value="[% page_settings.display_image %]"/>

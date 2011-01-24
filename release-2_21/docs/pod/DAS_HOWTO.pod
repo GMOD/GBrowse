@@ -1,0 +1,182 @@
+=head1 USING GBROWSE AS A DAS SERVER & CLIENT
+
+The Distributed Annotation System (DAS; www.biodas.org) is a simple
+protocol for sharing and integrating genomic annotations.  GBrowse can
+act both as a DAS front end for visualization and as a DAS server for
+sharing your annotations.
+
+For a good introduction to the DAS features of GBrowse, see the online
+tutorial at http://www.gmod.org/ggb/tutorial/tutorial.html#DAS.  This
+document is a concise reference to the DAS integration features.
+
+You will need to install the Perl Bio::Das module before you can use
+any of the DAS features.  This module is available from CPAN
+( http://www.cpan.org ), or via the ActiveState PPM tool in the
+repository http://www.gmod.org/ggb/ppm .
+
+=head2 CONFIGURING GBROWSE TO BE A DAS SERVER
+
+At installation time, the "das" CGI script was installed in your
+CGI-BIN directory.  This script is the core of the GBrowse DAS server.
+None of the GBrowse databases on your system are initially available
+as DAS sources until you explicitly activate them by adding the "das
+mapmaster" option to the configuration file.  Similarly, none of the
+tracks in a given database are exported as DAS-available tracks until
+you explicitly add a "das category" option to the track configuration
+stanza.  Together these two features allow you to select which
+databases will be exported as DAS-accessible databases, and which
+tracks within a DAS-accessible database will be visible to the outside
+world.
+
+The following DAS-specific options are recognized:
+
+=over 4
+
+=item das mapmaster
+
+This option, which should appear somewhere in the [GENERAL] section,
+indicates that the database should be made available as a DAS source.
+The value of the option corresponds to the URL of the DAS reference
+server for this data source, or "SELF" if this database is its own
+reference server.  (See http://www.biodas.org/ for an explanation of
+what reference servers are.)
+
+Examples:
+
+	das mapmaster = SELF
+
+	das mapmaster = http://www.wormbase.org/db/das/elegans
+
+=item das category
+
+This option must appear in each of the track configuration stanzas
+that you wish to export as DAS-accessible data.  Note that it is not
+sufficient to define a das category in the [TRACK DEFAULTS] section.
+The value of this option should be one of:
+
+    repeat
+    transcription
+    translation
+    variation
+    experimental
+    structural
+    miscellaneous
+
+which correspond to "DAS annotation type categories" as explained on
+the DAS web site.
+
+=item das landmark
+
+If this option appears in a track configuration stanza and is set to a
+true value (any non-zero value) then the DAS server will treat the
+features in this track as landmarks and allow remote users to search
+for these features by using their class and name.
+
+=item das subparts
+
+If this option appears in a track configuration stanza and is set to a
+true (non-zero) value, then the DAS server will indicate that features
+of this type contain subparts of a genome assembly.  This relationship
+can be used to indicate that a contig contains reads, for example.
+This option is only used for reference servers that serve genomic
+assemblies and B<is not well tested> so should probably be avoided for
+now.
+
+=item das superparts
+
+If this option appears in a track configuration stanza and is set to a
+true (non-zero) value, then the DAS server will indicate that features
+of this type are themselves superparts of a genome assembly.  This
+relationship can be used to indicate that a read feature is contained
+in a contig.  This option is only used for reference servers that
+serve genomic assemblies and B<is not well tested> so should probably
+be avoided for now.
+
+=back
+
+
+=head2 CONFIGURING GBROWSE TO BE A DAS CLIENT
+
+GBrowse can run as a DAS client as well, either on a track-by-track
+basis, or by configuring GBrowse to run entirely off a DAS
+source. However, because of a poorly characterized interaction between
+the Bio::Das module and Perl 5.6, it is recommended that you use Perl
+5.8.1 or higher for this. Otherwise you may experience out of memory
+errors.
+
+You can display individual DAS tracks in GBrowse just by typing in the
+URL of a DAS server in the "Add remote annotations" section of the
+GBrowse main web page.  The syntax of the URL is simple:
+
+=over 4
+
+=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16
+
+Insert all features defined in database hg16 (human genome release
+from July 2003) from the DAS server located at genome.cse.ucsc.edu.
+
+=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16?type=genscan
+
+Insert all features of type "genscan" from the UCSC database.
+
+=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16?type=genscan;type=mgcFullMrna
+
+Insert all features of type "genscan" and of type "mgcFullMrna."
+
+=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16?category=variation
+
+Insert all features of category "variation."
+
+=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16?category=variation;type=genscan
+
+Insert all features of category "variation" or of type "genscan."
+
+=back
+
+You may wish to use the "remote sources" option to preconfigure a
+popup menu of remote DAS servers that users access frequently.
+
+Alternatively, you can configure GBrowse so that it runs entirely off
+a DAS server.  To do this, simply set the db_adaptor and db_args
+options to use the Bio::Das data adaptor.  For example:
+
+ [GENERAL]
+ description   = Human July 2003 Genome at UCSC
+ db_adaptor    = Bio::Das
+ db_args       = -source http://genome.cse.ucsc.edu/cgi-bin/das
+	         -dsn    hg16
+
+The db_args option expects a -source argument that points to the base
+of the DAS server, and a -dsn argument that points to the data source
+name.
+
+You will also need to configure a track for each of the feature types
+served by the remote DAS server. You can get a list of such feature
+types simply by fetching the following form of DAS URL:
+
+      http://genome.cse.ucsc.edu/cgi-bin/das/hg16/types
+
+Alternatively, to make your life more convenient, GBrowse comes with a
+utility script called make_das_conf.pl that will create a
+rough-and-ready configuration file for you, given the URL and data
+source name of a DAS server.  Instructions on using make_das_conf.pl
+can be found using the "perldoc" command:
+
+   % perldoc make_das_conf.pl
+
+After generating the config file, you will probably want to customize
+it.  Particularly in need of customization are typically the glyphs
+used in the track definitions, and the aggregators.
+
+=head1 SUPPORT
+
+For further information, bug reports, etc, please consult the mailing
+lists at www.gmod.org.  The main mailing list for gbrowse support is
+gmod-gbrowse@lists.sourceforge.net.
+
+For support with DAS, please subscribe to the biodas mailing list.
+Details can be found at http://www.biodas.org/
+
+=head1 AUTHOR
+
+Lincoln D. Stein, lstein@cshl.edu

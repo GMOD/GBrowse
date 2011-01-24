@@ -1,0 +1,35 @@
+This directory contains various individuals' contributions to the
+gbrowse project, as well as some optional packages.
+
+Coverage    Marco Valtas' plugin for displaying clone coverage.
+
+GeneFinder  A plugin for Phil Green's GeneFinder Program
+
+TextDumper  Don Jackson's plugin for dumping out current region of
+		interest as a tab-delimited table.
+
+bulk_load_win.pl, pg_bulk_load_gff.PLS
+	    Early versions of windows and PostGres loaders.
+
+install_macosx
+	    Scripts that streamline the installation of GBrowse
+            and its dependencies on Mac OS X. Contributed by Todd
+            Harris.
+
+import_ncbi_mv_hs.pl
+	    Scott Saccone's script for importing NCBI gene builds
+	    into GFF format.
+
+blast2gff.pl
+	    Justin Reese's script for formatting BLAST output into
+	    loadable GFF files.
+
+conf_files  Configuration files for:
+ 01.yeast.conf		yeast data
+ 02.wormbase.conf	c. elegans data
+ 03.fly.conf		fly data
+ 04.human.conf		human data
+ 05.embl.conf		data automatically loaded from Genbank/EMBL
+ 06.biosql.conf         biosql database schema
+ 07.chado.conf		chado database schema
+ 08.genbank.conf	data manually loaded from Genbank/EMBL

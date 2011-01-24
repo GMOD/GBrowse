@@ -1,0 +1,7 @@
+This is the debian package for the GBrowse module.
+It was created by Lincoln Stein <lincoln.stein@gmail.com> 
+using dh-make-perl.
+
+Copyright 2008, Lincoln D. Stein <lincoln.stein@gmail.com> and Ontario
+Institute for Cancer Research. The module and debian packaging are
+distributed under the Perl Artistic License 2.

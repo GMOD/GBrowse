@@ -560,17 +560,14 @@ sub wrap_rendered_track {
     $self->select_features_menu($label,\$title);
 
     my $titlebar = 
- if (CGI->user_agent =~ /Mobile.+Safari/i){
-
-      alert (test);
-    }else{
+ 
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title"
 		},
 	    @images,
 	    span({-class => 'drag_region'},$title)
-	  }
+	
 	);
    
       

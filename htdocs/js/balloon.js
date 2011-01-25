@@ -347,7 +347,7 @@ Balloon.prototype.doShowTooltip = function() {
   self.contents.appendChild(wrapper);
   
   if ('createTouch' in document){
-      wrapper.innerHTML = helpText + "\n Tap feature again to view Details ";
+      wrapper.innerHTML = helpText + Controller.translate('IPAD_BALLOON');
   }else {
 
   wrapper.innerHTML = helpText ;

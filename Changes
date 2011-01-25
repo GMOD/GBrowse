@@ -1,3 +1,6 @@
+2.22
+   * Fixed gbrowse_img to allow documented ability to list multiple tracks with t=track1+track2+track3
+
 2.21
    * Fix all references to File::Path 'remove_tree" to "rm_tree" in order to work
    with older versions of File::Path.

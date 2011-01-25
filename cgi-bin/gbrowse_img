@@ -41,9 +41,7 @@ if ($fcgi) {
 
     my %sys_env = %ENV;
     while (!$FCGI_DONE) {
-	warn "waiting to accept";
 	my $status = $fcgi->Accept;
-	warn "accepted";
 	next unless $status >= 0;
         %ENV = ( %sys_env, %ENV );
 	my $globals = Bio::Graphics::Browser2->open_globals;
@@ -69,6 +67,7 @@ use CGI qw(param start_html end_html
 	   p h1 path_info escape img);
 use File::Spec;
 use File::Temp 'tmpnam','tempfile','tempdir';
+use Bio::Graphics::Browser2::Shellwords;
 
 use constant DEBUG => 0;
 
@@ -285,9 +284,10 @@ sub render_tracks {
     my @labels   = $render->expand_track_names($render->detail_tracks);
 
     warn "labels = ",join ',',@labels if DEBUG;
-    my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
-                          map { split /[+-]/ }
-			  (param('type'));
+#    my @types           = (param('t'),param('type'),param('track'));
+#    my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
+#                          map { split /[ +-]/ } @types;
+    my @track_types      = map {shellwords($_)} (param('t'),param('type'),param('track'));
 
     # If no tracks specified, we want to see all tracks with this feature
     if (!@track_types) { @track_types = @labels; } 
@@ -639,7 +639,7 @@ lengths.
       image showing the position of each landmark.  The alias "q" can be used to
       shorten the length of the URL.
       <p>
-  <dt><b>type</b> (Alias: <b>t</b>)
+  <dt><b>type</b> (Aliases: <b>t</b>, <b>track</b>)
   <dd>This argument lists the feature types to display.  The value of this argument is
       a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
       <p>

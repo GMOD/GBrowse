@@ -1,5 +1,7 @@
 2.22
-   * Fixed gbrowse_img to allow documented ability to list multiple tracks with t=track1+track2+track3
+   * Fixed gbrowse_img to reactivate documented ability to list multiple tracks with t=track1+track2+track3
+   * Fixed startup to avoid Javascript crashing on autocomplete initiation when user accounts turned off. This
+     had caused the "eurl" param (used to import external data tracks via URL) to fail.
 
 2.21
    * Fix all references to File::Path 'remove_tree" to "rm_tree" in order to work

@@ -1,3 +1,6 @@
+2.23
+   * Fixed missing "registration" link in login dialog. This occurred when openid was unavailable.
+
 2.22
    * Fixed gbrowse_img to reactivate documented ability to list multiple tracks with t=track1+track2+track3
    * Fixed startup to avoid Javascript crashing on autocomplete initiation when user accounts turned off. This

@@ -463,7 +463,7 @@ sub render_js_controller_settings {
     my $scripts = "Controller.set_globals( $controller_globals );";
     
     if ($globals->user_accounts) {
-	my $userdb = $self->userdb;
+	my $userdb   = $self->userdb;
         my $openid   = ($userdb->can_openid   && $self->globals->user_accounts_allow_openid)      ||0;
         my $register = ($userdb->can_register && $self->globals->user_accounts_allow_registration)||0;
         $scripts .= "Controller.can_openid  = $openid;";

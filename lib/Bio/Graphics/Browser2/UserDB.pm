@@ -11,8 +11,8 @@ use Text::ParseWords 'quotewords';
 use Digest::MD5 qw(md5_hex);
 use Carp qw(confess cluck croak);
 
-use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; require LWP::UserAgent; 1";
-use constant HAVE_SMTP   => eval "require Net::SMTP;1";
+use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; require LWP::UserAgent; 1" || 0;
+use constant HAVE_SMTP   => eval "require Net::SMTP;1" || 0;
 
 # SOME CLARIFICATION ON TERMINOLOGY
 # "userid"    -- internal dbm ID for a user; a short integer
@@ -33,8 +33,8 @@ sub new {
   }
 
   my $self = bless {
-      dbi => $login,
-      globals => $globals,
+      dbi      => $login,
+      globals  => $globals,
       openid   => HAVE_OPENID,
       register => HAVE_SMTP,
   }, ref $class || $class;

@@ -1,5 +1,4 @@
 package Bio::Graphics::Browser2::RenderPanels;
-
 use strict;
 use warnings;
 
@@ -489,7 +488,10 @@ sub wrap_rendered_track {
     }
 
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
-    my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
+    my $help_click     = "GBox.showTooltip(event,'$help_url',1)"; 
+
+    my $ipad_menu_url = "url:?action=ipad_menu;track=$escaped_label:";
+    my $ipad_menu_click = "GBox.showTooltip(event,'$ipad_menu_url',true)"; 
 
     my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
@@ -554,23 +556,29 @@ sub wrap_rendered_track {
                 $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$about_this_track')"),
             }
         )
+
 	);
 
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
 
     my $titlebar = 
- 
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
-		    -id => "${label}_title"
+		    -id => "${label}_title",
+      $self->if_not_ipad(-onMouseOver =>"GBox.showTooltip(event,'hello',
+@images,
+
+
+
+true)"
+			),	
+		
 		},
 	    @images,
 	    span({-class => 'drag_region'},$title)
-	
 	);
-   
-      
+
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
     my $is_scalebar = $label =~ /scale/i;

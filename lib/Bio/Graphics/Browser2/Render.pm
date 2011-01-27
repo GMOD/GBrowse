@@ -342,6 +342,9 @@ sub run_asynchronous_event {
 
     warn "[$$] asynchronous event returning status=$status, mime-type=$mime_type" if DEBUG;
 
+    # add the cookies!
+    $headers{-cookie} = [$self->state_cookie,$self->auth_cookie];
+
     if ($status == 204) { # no content
 		print CGI::header( -status => '204 No Content', %headers );
     } elsif ($status == 302) { # redirect

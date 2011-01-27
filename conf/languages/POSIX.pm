@@ -204,9 +204,9 @@ END
 
    REMOTE_TITLE => 'Add remote annotations',
 
-   #ipad
-   IPAD_BALLOON => '<b><br>Tap feature again to see more details</b> ',
-   #
+   ###ipad 
+   IPAD_BALLOON => '<b><br>Tap feature again for more details </b>',	
+   ###
 
    REMOTE_URL   => 'Enter remote track URL',
 
@@ -445,11 +445,11 @@ END
 
  SHOW_OR_HIDE_TRACK => '<b>Show or hide this track</b>',
 
- KILL_THIS_TRACK    => '<b>Turn off this track Test</b>',
+ KILL_THIS_TRACK    => '<b>Turn off this track</b>',
 
  CONFIGURE_THIS_TRACK   => '<b>Configure this track</b>',
 
- DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
+ DOWNLOAD_THIS_TRACK   => '<b>Download this track</b>',
 
  ABOUT_THIS_TRACK   => '<b>About this track</b>',
 

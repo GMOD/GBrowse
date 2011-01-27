@@ -67,7 +67,6 @@ Your request timed out.  You may have selected a region that is too large to dis
 Either turn off some tracks or try a smaller region.  If you are experiencing persistent
 timeouts, please press the red "Reset" button.
 END
-   IPAD_BALLOON => '<b><br>Tap feature again for more details</b>',
 
    GO       => 'Go',
 
@@ -205,9 +204,7 @@ END
 
    REMOTE_TITLE => 'Add remote annotations',
 
- #ipad
-   IPAD_BALLOON => '\nTap feature again to see more details '
-   #
+ IPAD_BALLOON => '<b><br>Tap feature again for more details </b>',
 
    REMOTE_URL   => 'Enter remote track URL',
 
@@ -444,11 +441,11 @@ END
 
  SHOW_OR_HIDE_TRACK => '<b>Show or hide this track</b>',
 
- KILL_THIS_TRACK    => '<b>Turn off this track test</b>',
+ KILL_THIS_TRACK    => '<b>Turn off this track</b>',
 
  CONFIGURE_THIS_TRACK   => '<b>Configure this track</b>',
 
- DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
+ DOWNLOAD_THIS_TRACK   => '<b>Download this track</b>',
 
  ABOUT_THIS_TRACK   => '<b>About this track</b>',
 

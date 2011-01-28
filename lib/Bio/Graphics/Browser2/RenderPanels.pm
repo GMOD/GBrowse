@@ -248,6 +248,7 @@ sub make_requests {
     my $self   = shift;
     my $args   = shift;
     my $source = $self->source;
+    
     my $settings=$self->settings;
 
     my $feature_files  = $args->{external_features};
@@ -430,7 +431,7 @@ sub wrap_rendered_track {
     # Work around bug in google chrome which is manifested by the <area> link information
     # on all EVEN reloads of the element by ajax calls. Weird.
     my $agent  = CGI->user_agent || '';
-    $map_id   .= "_".int(rand(1000)) ;#if $agent =~ /chrome/i || $agent=~ /safari/i;   
+    $map_id   .= "_".int(rand(1000)) if $agent =~ /chrome/i;  
 
     my $img = img(
         {   -src    => $url,
@@ -441,7 +442,6 @@ sub wrap_rendered_track {
             -border => 0,
             -name   => $label,
             -style  => $img_style
-	    
         }
     );
 
@@ -516,42 +516,44 @@ sub wrap_rendered_track {
                 -id          => "${label}_icon",
                 -onClick     => "collapse('$label')",
                 -style       => 'cursor:pointer',
-		$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')"),
+                -onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')",
             }
         ),
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
 		-onClick     => "ShowHideTrack('$label',false)",
                 -style       => 'cursor:pointer',
-                $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
+                -onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')",
             }
         ),
         img({   -src   => $share,
                 -style => 'cursor:pointer',
-		-onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
-                $self->if_not_ipad(-onMouseOver =>
-                    "$balloon_style.showTooltip(event,'$share_this_track')"),
+                -onMouseOver =>
+                    "$balloon_style.showTooltip(event,'$share_this_track')",
+		    -onMousedown =>
+                    "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
             }
         ),
 
         $config_click ? img({   -src         => $configure,
 				-style       => 'cursor:pointer',
 				-onmousedown => $config_click,
-				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
+				-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')",
 			    })
 	              : '',
         $download_click ? img({   -src         => $download,
 				  -style       => 'cursor:pointer',
 				  -onmousedown => $download_click,
-				  $self->if_not_ipad(-onMouseOver =>
-						     "$balloon_style.showTooltip(event,'$download_this_track')"),
+				  -onMouseOver =>
+				      "$balloon_style.showTooltip(event,'$download_this_track')",
 			      })
 	                 : '',
 
         img({   -src         => $help,
                 -style       => 'cursor:pointer',
                 -onmousedown => $help_click,
-                $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$about_this_track')"),
+                -onMouseOver =>
+	    "$balloon_style.showTooltip(event,'$about_this_track')",
             }
         )
 	);
@@ -559,14 +561,13 @@ sub wrap_rendered_track {
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
 
-    my $titlebar = 
-	span(
-		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
-		    -id => "${label}_title"
-		},
-	    @images,
-	    span({-class => 'drag_region'},$title)
-	);
+    my $titlebar = span(
+        {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
+            -id => "${label}_title"
+        },
+	@images,
+	$title
+    );
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
@@ -598,6 +599,8 @@ sub wrap_rendered_track {
     # Add arrows for panning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
+# works with IE7, but looks awful. IE8 should support standard css opacity.
+#	$style      .= ';filter:alpha(opacity=30);moz-opacity:0.35';
         my $pan_left   =  img({
 	    -style   => $style . ';left:5px',
 	    -class   => 'panleft',
@@ -629,15 +632,6 @@ sub wrap_rendered_track {
 		},
                 ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
     return $html;
-}
-
-sub if_not_ipad {
-    my $self = shift;
-    my @args = @_;
-    my $agent = CGI->user_agent || '';
-    my $probably_ipad = $agent =~ /Mobile.+Safari/i;
-    return if $probably_ipad;
-    return @args;
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 
@@ -1988,7 +1982,7 @@ sub create_track_args {
   my ($label,$args) = @_;
 
   my $segment         = $self->segment;
-  my $length          = $segment->length;
+  my $length          = $self->vis_length; 
   my $source          = $self->source;
   my $lang            = $self->language;
 
@@ -2076,7 +2070,7 @@ sub vis_length {
     my $self = shift;
     my $segment = $self->segment;
     my $length  = $segment->length;
-    return $length/$self->details_mult;
+    return int($length/$self->details_mult);
 }
 
 sub subtrack_manager {

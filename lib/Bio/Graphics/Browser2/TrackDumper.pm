@@ -799,8 +799,7 @@ sub get_scan {
 	next if $l =~ /^_/;
 	next if $l =~ /:\w+/;
 	next unless    $config->fallback_setting($l => 'discoverable');
-# why were we skipping global feature tracks here?
-#	next if        $config->code_setting($l=>'global feature');
+	next if        $config->code_setting($l=>'global feature');
 	my $key      = $config->code_setting($l => 'key') || $l;
 	my $citation = $config->code_setting($l => 'citation');
 	my $data_source  = $config->code_setting($l => 'data source');
@@ -814,7 +813,7 @@ END
     $result .=  "select   = @$subtracks\n" if $subtracks;
     $result .=  "citation = $citation\n"   if $citation;
     $result .=  "data source = $data_source\n"   if $data_source;
-    $result .=  "track source = $data_source\n"   if $track_source;
+    $result .=  "track source = $track_source\n"   if $track_source;
     $result .=  "\n";
     }
 return $result;

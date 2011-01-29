@@ -286,7 +286,7 @@ sub search_features {
     my $self        = shift;
     my $args        = shift;
     my $state       = $self->state;
-    $args          ||= {};
+    $args         ||= {};
 
     if ($args && !ref($args)) {
 	$args = {-search_term=>$args};  #adjust for changed API

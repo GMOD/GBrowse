@@ -456,8 +456,8 @@ sub mirror_url {
     };
 
     if ($@ =~ /cancelled/) {
-		$self->delete_file($file);
-		return (0,'Upload process terminated',[]);
+	$self->delete_file($file);
+	return (0,'Upload process terminated',[]);
     }
 
     my $msg = $@;

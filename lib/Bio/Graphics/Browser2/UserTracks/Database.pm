@@ -303,8 +303,6 @@ sub share {
     my $file = shift or confess "No input or invalid input given to share()";
     my $name_or_id = shift;
 
-    warn "share($file,$name_or_id)";
-    
     # If we've been passed a user ID, use that. If we've been passed a username, get the ID. 
     # If we haven't been passed anything, use the session user ID.
     my $userid;
@@ -331,8 +329,6 @@ sub share {
 	($self->is_mine($file) && ($sharing_policy =~ /group/))) {
         my $public_flag = ($sharing_policy=~ /public/) ? 1 : 0;
         my $uploadsdb = $self->{uploadsdb};
-
-	warn "($file,$userid,$public_flag)";
 
         # Get the current users.
         return if $uploadsdb->selectrow_array("SELECT trackid FROM sharing WHERE trackid = ? AND userid = ? AND public = ?", 

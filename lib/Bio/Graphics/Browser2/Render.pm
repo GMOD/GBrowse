@@ -259,7 +259,7 @@ sub run {
   warn "[$$] testing for asynchronous event()" if $debug;
   if ($self->run_asynchronous_event) {
       warn "[$$] asynchronous exit" if $debug;
-      $self->session->flush;
+      $self->session->unlock;
       return ;
   }
   
@@ -1531,9 +1531,9 @@ sub delete_uploads {
     my $userdata = $self->user_tracks;
     my @files  = $userdata->tracks;
     for my $file (@files) {
-		my @tracks = $userdata->labels($file);
-		$userdata->delete_file($file);
-		$self->remove_track_from_state($_) foreach @tracks;
+	my @tracks = $userdata->labels($file);
+	$userdata->delete_file($file);
+	$self->remove_track_from_state($_) foreach @tracks;
     }
     $self->data_source->clear_usertracks();
 }
@@ -1798,6 +1798,7 @@ sub force_authentication {
     # asynchronous event -- only allow the ones needed for authentication
     if (Bio::Graphics::Browser2::Action->is_authentication_event) {
 	$self->run_asynchronous_event;
+	$self->session->unlock;
 	return;
     }
 
@@ -3671,7 +3672,6 @@ sub add_user_tracks {
     my $userdata    = $self->user_tracks;
     my @user_tracks = $userdata->tracks;
 
-#    warn "adding usertracks for $uuid, getting @user_tracks";
     for my $track (@user_tracks) {
 	my $config_path = $userdata->track_conf($track);
 	eval {$data_source->parse_user_file($config_path)};

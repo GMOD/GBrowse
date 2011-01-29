@@ -25,6 +25,17 @@ my $conf      = Bio::Graphics::Browser2->new(File::Spec->catfile($conf_dir,$conf
     or die "Couldn't read globals";
 
 my $fcgi = Bio::Graphics::Browser2::Render->fcgi_request;
+my $modperl = $ENV{MOD_PERL};
+my $init;
+
+if ($modperl && !$init++) {
+    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+	my $sig  = shift;
+	my $time = localtime;
+	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+	CORE::exit 0
+    };
+}
 
 if ($fcgi) {
 

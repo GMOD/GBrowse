@@ -1,6 +1,11 @@
 2.23
    * Fixed missing "registration" link in login dialog. This occurred when openid was unavailable.
    * Fixed popup dialogs in the "Help" menu so that they appear again.
+   * Fixed file upload status display to prevent upload details section from disappearing when
+     uploading very small files.
+   * Tinkered with session settings to minimize session lock timeouts.
+   * Removed some dangling warnings in the track sharing module.
+   * Made SQLite the default user account database.
 
 2.22
    * Fixed gbrowse_img to reactivate documented ability to list multiple tracks with t=track1+track2+track3

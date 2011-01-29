@@ -1,4 +1,4 @@
- package Bio::Graphics::Browser2::Session;
+package Bio::Graphics::Browser2::Session;
 
 # $Id$
 
@@ -12,6 +12,8 @@ use File::Spec;
 use File::Path 'mkpath';
 use Digest::MD5 'md5_hex';
 use Carp 'carp';
+use constant LOCK_TIMEOUT => 10;
+eval "require Time::HiRes;";
 
 my $HAS_NFSLOCK;
 my $HAS_MYSQL;
@@ -44,9 +46,9 @@ sub new {
 	    lockdir  => $lockdir,
 	    locktype => $locktype,
 	},$class;
-	$self->lock_ex($id) if $id;
 
-	$self->{session}    = CGI::Session->new($driver,$id,$session_args);
+	$self->session_argv($driver,$id,$session_args);
+	$self->{session} = $self->lock_ex($id);
 
 	warn "CGI::Session->new($driver,$id,$session_args)=>",$self->{session}->id if DEBUG;
 
@@ -61,6 +63,12 @@ sub new {
 	$self;
 }
 
+sub load_session {
+    my $self = shift;
+    $self->session_argv(@_);
+    return CGI::Session->new($self->session_argv);
+}
+
 sub session_argv {
     my $self = shift;
     if (@_) {
@@ -69,6 +77,13 @@ sub session_argv {
 	return unless $self->{session_argv};
 	return @{$self->{session_argv}};
     }
+}
+
+sub locktime {
+    my $self = shift;
+    my $d = $self->{locktime};
+    $self->{locktime} = shift if @_;
+    return $d; 
 }
 
 sub locktype {
@@ -85,17 +100,27 @@ sub locktype {
 sub lock {
     my $self    = shift;
     my $type    = shift;
-    my $id      = shift || $self->id;
+    my $id      = shift;
+    
+    # no id, so we have to create a session and get an id
+    # otherwise we lock before we make the session
+    unless ($id) {
+	$self->{session} ||= $self->load_session();
+	$id = $self->id;
+    }
 
+    return if $self->lockobj; # don't double lock
     my $locktype = $self->locktype;
+    my $start_time = $self->time();
 
-    warn "[$$] waiting on session lock..." if DEBUG_LOCK;
+    warn "[$$] waiting on $type session lock...\n" if DEBUG_LOCK;
 
     eval {
 	local $SIG{ALRM} = sub {die "timeout\n"};
 	# timeout lock to avoid some process from keeping process open
-	# 1 sec is probably too short for some database searches
-	alarm(1); 
+	# you may see some lock timeouts if a process is taking too long
+	# to release its session.
+	alarm(LOCK_TIMEOUT); 
 
 	if ($locktype eq 'flock') {
 	    $self->lock_flock($type,$id);
@@ -111,14 +136,18 @@ sub lock {
 	}
 	alarm(0);
     };
+    my $elapsed = sprintf("%5.3fs",$self->time()-$start_time);
     if ($@) {
 	die $@ unless $@ eq "timeout\n";
-	warn ("[$$] session lock timed out on request: ",
+	warn ("[$$] session lock timed out on request after $elapsed\n",
 	      CGI::request_method(),': ',
 	      CGI::url(-path=>1),' ',
 	      CGI::query_string());
+    } else {
+	warn "[$$] ...$type lock obtained after $elapsed" if DEBUG;
     }
-    warn "[$$] ...got session lock" if DEBUG_LOCK;
+    $self->locktime($self->time());
+    return $self->{session} ||= $self->load_session();
 }
 
 sub lock_flock {
@@ -127,12 +156,13 @@ sub lock_flock {
 
     my $mode  = $type eq 'exclusive' ? LOCK_EX : LOCK_SH;
 
-    my ($lockdir,$lockfile)
-	= $self->lockfile($id);
+    my ($lockdir,$lockfile) = $self->lockfile($id);
 
     mkpath($lockdir) unless -e $lockdir;
     my $lockpath = File::Spec->catfile($lockdir,$lockfile);
-    my $o_mode   = -e $lockpath ? "<" : ">";
+    my $o_mode   = $mode eq 'exclusive' ? '>'
+	          :-e $lockpath ? "<" 
+		  : ">";
 
     open my $fh,$o_mode,$lockpath 
 	or die "Couldn't open lockfile $lockpath: $!";
@@ -149,10 +179,11 @@ sub lock_nfs {
     my $lock     = File::NFSLock->new(
 	{file               => $lockpath,
 	 lock_type          => $type eq 'exclusive' ? LOCK_EX : LOCK_SH,
-	 blocking_timeout   => 5,  # 5 sec
+	 blocking_timeout   => LOCK_TIMEOUT,  # 2 sec
 	 stale_lock_timeout => 60, # 1 min
 	});
-    warn  "[$$] ...timeout waiting for lock" unless $lock;
+    warn  "[$$] ...timeout waiting for lock after ",sprintf("%5.3fs",LOCK_TIMEOUT)
+	unless $lock;
     $self->lockobj($lock);
 }
 
@@ -187,6 +218,8 @@ sub unlock {
 	unlink File::Spec->catfile($self->lockfile($self->id))
 	    if $self->locktype eq 'flock';
     }
+    $self->lockobj(undef);
+    warn "[$$] lock released after ",sprintf("%2.1f",$self->time() - $self->locktime)," s" if DEBUG;
 }
 
 sub lockfile {
@@ -212,11 +245,15 @@ sub delete {
 sub flush {
   my $self = shift;
   return unless $$ == $self->{pid};
-  carp "[$$] session flush for ",$self->id, " ($self)" if DEBUG;
+  carp "[$$] session flush" if DEBUG;
   $self->{session}->flush if $self->{session};
   $self->unlock;
   warn "[$$] SESSION FLUSH ERROR: ",$self->{session}->errstr 
       if $self->{session}->errstr;
+}
+
+sub time {
+    return defined &Time::HiRes::time ? Time::HiRes::time() : time();
 }
 
 sub modified {
@@ -232,7 +269,7 @@ sub lockobj {
 }
 
 sub id {
-  shift->{session}->id;
+    shift->{session}->id;
 }
 
 sub session { shift->{session} }
@@ -240,8 +277,8 @@ sub session { shift->{session} }
 sub page_settings {
   my $self        = shift;
   my $hash        = $self->config_hash;
-  $hash->{page_settings} ||= {};
-  $hash->{page_settings}{userid} = $self->id;     # store the id in our state
+  $hash->{page_settings}         ||= {};
+  $hash->{page_settings}{userid} ||= $self->id;     # store the id in our state
   return $hash->{page_settings};
 }
 

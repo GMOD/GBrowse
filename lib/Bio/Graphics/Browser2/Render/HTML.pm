@@ -970,10 +970,13 @@ sub render_track_table {
       $settings->{sk} ||= 'sorted'; # get rid of annoying warning
 
       # if these tracks are in a grid, then don't sort them
-      @track_labels = sort {lc ($labels{$a}) cmp lc ($labels{$b})} @track_labels
-	  if $settings->{sk} eq 'sorted' && !defined $category_table_labels->{$category};
-
-      my %ids        = map {$_=>{id=>"${_}_check"}} @track_labels;
+      my %ids;
+    BLOCK: {
+	no warnings;  # kill annoying uninit warnings under modperl
+	@track_labels = sort {lc ($labels{$a}) cmp lc ($labels{$b})} @track_labels
+	    if $settings->{sk} eq 'sorted' && !defined $category_table_labels->{$category};
+	%ids        = map {$_=>{id=>"${_}_check"}} @track_labels;
+      }
 
       my @checkboxes = checkbox_group(-name       => 'l',
 				      -values     => \@track_labels,
@@ -1422,7 +1425,9 @@ END
 	
 	# Add the results
 	if ($search || $offset) {
-		$html .= @requested_tracks? $self->list_tracks("public", @requested_tracks) : p($self->translate('NO_PUBLIC_RESULTS', $search));
+		$html .= @requested_tracks 
+		    ? $self->list_tracks("public", @requested_tracks) 
+		    : p($self->translate('NO_PUBLIC_RESULTS', $search));
 	} else {
 		$html .= $self->list_tracks("public");
 	}
@@ -1433,13 +1438,13 @@ END
 sub render_custom_track_listing {
 	my $self = shift;
 	my $html = h1($self->translate('UPLOADED_TRACKS'));
-	
+
 	$html .= a( {
-					-href => $self->annotation_help.'#remote',
-					-target => '_blank'
-				},
-				i('['.$self->translate('HELP_FORMAT_UPLOAD').']')
-			);
+	    -href => $self->annotation_help.'#remote',
+	    -target => '_blank'
+		    },
+		    i('['.$self->translate('HELP_FORMAT_UPLOAD').']')
+	    );
 	$html .= $self->list_tracks;
 	return $html;
 }
@@ -1449,7 +1454,8 @@ sub list_tracks {
     my $self = shift;
     my $userdata = $self->user_tracks;
     my $listing_type = shift || "";
-    # If we've been given input, use the input. If we've been given the public type, use that, or default to all of the current user's tracks.
+    # If we've been given input, use the input. 
+    # If we've been given the public type, use that, or default to all of the current user's tracks.
     my @tracks = @_? @_ 
 	: (($listing_type =~ /public/)  && ($userdata->database == 1))
 	? $userdata->get_public_files 

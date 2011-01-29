@@ -112,6 +112,7 @@ sub ACTION_navigate {
 	region_scale_bar   => $region_scale_return_object,
 	detail_scale_bar   => $detail_scale_return_object,
     };
+    $self->session->flush;
     return (200,'application/json',$return_object);
 }
 
@@ -128,6 +129,7 @@ sub ACTION_update_sections {
     my $section_html = $render->asynchronous_update_sections(\@section_names, $keyword, $offset);
 
     my $return_object = { section_html => $section_html, };
+    $self->session->flush;
     return ( 200, 'application/json', $return_object );
 }
 
@@ -143,12 +145,14 @@ sub ACTION_configure_track {
 	if $track_name =~/^(plugin|file|http|ftp)/; 
 
     my $html = $self->render->track_config($track_name,$revert);
+    $self->session->flush;
     return ( 200, 'text/html', $html );
 }
 
 sub ACTION_cite_track {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
 
     my $track_name = $q->param('track') or croak;
 
@@ -159,6 +163,8 @@ sub ACTION_cite_track {
 sub ACTION_download_track_menu {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
+
     my $track_name = $q->param('track') or croak;
     my $view_start = $q->param('view_start');
     my $view_stop  = $q->param('view_stop');
@@ -170,6 +176,8 @@ sub ACTION_download_track_menu {
 sub ACTION_scan {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
+
     my $dumper = Bio::Graphics::Browser2::TrackDumper->new(
         -data_source => $self->data_source(),
     );
@@ -183,12 +191,14 @@ sub ACTION_reconfigure_track {
     my $track_name     = $q->param('track') or croak;
     my $semantic_label = $q->param('semantic_label');
     $self->render->reconfigure_track($track_name,$semantic_label);
+    $self->session->flush;
     return ( 200, 'application/json', {} );
 }
 
 sub ACTION_share_track {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
 
     my $track_name = $q->param('track') or croak;
     my $html = $self->render->share_track($track_name);
@@ -198,6 +208,7 @@ sub ACTION_share_track {
 sub ACTION_retrieve_multiple {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
 
     my $render = $self->render;
 
@@ -232,7 +243,7 @@ sub ACTION_add_tracks {
     $render->init_plugins();
     my $track_data = $render->add_tracks(\@track_names);
     my $return_object = { track_data => $track_data, };
-
+    $self->session->flush;
     return ( 200, 'application/json', $return_object );
 }
 
@@ -254,6 +265,7 @@ sub ACTION_set_track_visibility {
 	$render->remove_track_from_state($track_name);
     }
 
+    $self->session->flush;
     return (204,'text/plain',undef);
 }
 
@@ -263,12 +275,14 @@ sub ACTION_reconfigure_plugin {
     my $plugin = $q->param('plugin');
     # currently we reinit all plugins, not just the one involved
     $self->render->init_plugins();
+    $self->session->flush;
     return (204,'text/plain',undef);
 }
 
 sub ACTION_rerender_track {
     my $self  = shift;
     my $q     = shift;
+    $self->session->unlock;
 
     my $render   = $self->render;
     my $track_id = $q->param('track_id');
@@ -299,7 +313,7 @@ sub ACTION_show_hide_section {
     my $settings = $self->state;
     $settings->{section_visible}{$_} = 0 foreach @hide;
     $settings->{section_visible}{$_} = 1 foreach @show;
-
+    $self->session->flush;
     return (204,'text/plain',undef);
 }
 
@@ -313,7 +327,7 @@ sub ACTION_open_collapse_track {
     my $settings = $self->state;
     $settings->{track_collapsed}{$_} = 1 foreach @collapse;
     $settings->{track_collapsed}{$_} = 0 foreach @open;
-
+    $self->session->flush;
     return (204,'text/plain',undef);
 }
 
@@ -332,6 +346,8 @@ sub ACTION_change_track_order {
     my %seen;
     @{ $settings->{tracks} } = grep { length() > 0 && !$seen{$_}++ }
     ( @labels, @{ $settings->{tracks} } );
+
+    $self->session->flush;
     return (204,'text/plain',undef);    
 }
 
@@ -341,11 +357,13 @@ sub ACTION_set_display_option {
     # this is a little bogus because update_options() is going to
     # read from the CGI parameter list directly.
     $self->render->update_options;  
+    $self->session->flush;
     return (204,'text/plain',undef);        
 }
 
 sub ACTION_bookmark {
     my $self = shift;
+    $self->session->unlock;
     my $q    = shift;
     $self->state->{start} = $q->param('view_start') || $self->state->{start};
     $self->state->{stop}  = $q->param('view_stop')  || $self->state->{stop};
@@ -356,6 +374,7 @@ sub ACTION_autocomplete {
     my $self   = shift;
     my $q      = shift;
     my $render = $self->render;
+    $self->session->unlock;
 
     my $match  = $q->param('prefix') or croak;
 
@@ -372,6 +391,8 @@ sub ACTION_autocomplete {
 sub ACTION_autocomplete_upload_search {
     my $self   = shift;
     my $q      = shift;
+    $self->session->unlock;
+
     my $render = $self->render;
     warn "prefix search...";
 
@@ -386,6 +407,7 @@ sub ACTION_autocomplete_user_search {
     my $self   = shift;
     my $q      = shift;
     my $render = $self->render;
+    $self->session->unlock;
 
     my $match  = $q->param('prefix') or croak;
     my $usertracks = $render->user_tracks;
@@ -397,6 +419,7 @@ sub ACTION_autocomplete_user_search {
 sub ACTION_reset_dsn {
     my $self = shift;
     $self->data_source->clear_cached_config();
+    $self->session->flush;
     return (204,'text/plain',undef);
 }
 
@@ -404,9 +427,10 @@ sub ACTION_reset_dsn {
 sub ACTION_gbrowse_login {
     my $self   = shift;
     my $q      = shift;
+    $self->session->unlock();
+
     my $render = $self->render;
     my $login  = $render->login_manager;
-    $self->session->unlock();
     return $login->run_asynchronous_request($q);
 }
 
@@ -420,6 +444,7 @@ sub ACTION_authorize_login {
 
     my ($sessionid,$nonce) = $self->render->authorize_user($username, $session, $remember, $openid);
     $sessionid or return(403,'application/txt','unknown user');
+    $self->session->flush;
     return (200,'application/json',{id=>$sessionid,authority=>$nonce});
 }
 
@@ -431,9 +456,9 @@ sub ACTION_register_upload {
     my $userdata = $self->render->usertracks;
 
     if ($id && $name) {
-		$self->state->{uploads}{$id} = [$userdata->escape_url($name), 0];
+	$self->state->{uploads}{$id} = [$userdata->escape_url($name), 0];
     }
-
+    $self->session->flush;
     return (204,'text/plain',undef);
 }
 
@@ -470,7 +495,6 @@ sub ACTION_upload_file {
 
     $state->{uploads}{$upload_id} = [$track_name,$$];
     $session->flush();
-    $session->unlock();
 
     my ($result,$msg,$tracks,$pid);
     # in case user pasted the "share link" into the upload field.
@@ -485,10 +509,9 @@ sub ACTION_upload_file {
                                                : $usertracks->upload_file($track_name, $fh, $content_type, $overwrite);
     }
 
-    $session->lock('exclusive');
-    delete $state->{uploads}{$upload_id};
+    $session->lock_ex;
+    delete $self->state->{uploads}{$upload_id};
     $session->flush();
-    $session->unlock();
 
     # simplify the message if it is coming from BioPerl
     $msg = $1 if $msg =~ /MSG:\s+(.+?)\nSTACK/s;
@@ -530,13 +553,11 @@ sub ACTION_import_track {
     (my $track_name = $url) =~ tr!a-zA-Z0-9_%^@.!_!cs;
     $state->{uploads}{$upload_id} = [$track_name, $$];
     $session->flush;
-    $session->unlock;
     
     my ($result, $msg, $tracks) = $usertracks->import_url($url);
-    $session->lock('exclusive');
-    delete $state->{uploads}{$upload_id};
+    $session->lock_ex;
+    delete $self->state->{uploads}{$upload_id};
     $session->flush;
-    $session->unlock;
     
     my $return_object = {
     		success   => $result || 0,
@@ -560,12 +581,13 @@ sub ACTION_delete_upload {
     my @tracks     = $usertracks->labels($file);
     
     foreach (@tracks) {
-		my (undef,@db_args) = $self->data_source->db_settings($_);
-		Bio::Graphics::Browser2::DataBase->delete_database(@db_args);
-		$render->remove_track_from_state($_);
+	my (undef,@db_args) = $self->data_source->db_settings($_);
+	Bio::Graphics::Browser2::DataBase->delete_database(@db_args);
+	$render->remove_track_from_state($_);
     }
     $usertracks->delete_file($file);
-    
+    $self->render->data_source->clear_cached_config;
+    $self->session->flush;
     return (200, 'text/html', JSON::to_json({tracks => \@tracks}));
     #return (200, 'application/json', {tracks => \@tracks});
 }
@@ -573,6 +595,7 @@ sub ACTION_delete_upload {
 sub ACTION_upload_status {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
 
     my $upload_id = $q->param('upload_id');
 
@@ -600,12 +623,13 @@ sub ACTION_cancel_upload {
 
     my $state      = $self->state;
     my $render     = $self->render;
-	my $usertracks = $render->user_tracks;
+    my $usertracks = $render->user_tracks;
     if ($state->{uploads}{$upload_id} && (my ($file_name, $pid) = @{$state->{uploads}{$upload_id}})) {
 	kill TERM=>$pid;
 	my $file = ($usertracks =~ /database/)? $usertracks->get_file_id($file_name) : $file_name;
 	$usertracks->delete_file($file);
 	delete $state->{uploads}{$upload_id};
+	$self->session->flush;
 	return (200,'text/html',"<b>$file_name:</b> <i>" . $self->render->translate('CANCELLING') . "</i>");
     } else {
 	return (200,'text/html',"<i>" . $self->render->translate('NOT_FOUND') . "</i>");
@@ -629,6 +653,7 @@ sub ACTION_set_upload_description {
 sub ACTION_set_upload_title {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
 
     my $state       = $self->state;
     my $render      = $self->render;
@@ -645,6 +670,7 @@ sub ACTION_share_file {
     my $q = shift;
     my $render = $self->render;
     $render->session->unlock(); # session manipulation happening here
+
     my $fileid = $q->param('fileid') or confess "No file ID given to share_file.";
     my $userid = $q->param('userid'); #Will use defailt (logged-in user) if not given.
     if ($userid =~ /\(([^\)]+)\)/) {
@@ -660,6 +686,8 @@ sub ACTION_share_file {
 sub ACTION_unshare_file {
     my $self = shift;
     my $q = shift;
+    $self->session->unlock;
+
     my $render = $self->render;
     $render->session->unlock(); # will need this
     my $fileid = $q->param('fileid') or confess "No file ID given to unshare_file.";
@@ -674,6 +702,8 @@ sub ACTION_unshare_file {
 sub ACTION_change_permissions {
     my $self = shift;
     my $q = shift;
+    $self->session->unlock;
+
     my $render = $self->render;
     my $fileid = $q->param('fileid') or confess "No file ID given to change_permissions.";
     my $new_policy = $q->param('sharing_policy') or confess "No new sharing policy given to change_permissions.";
@@ -687,7 +717,7 @@ sub ACTION_modifyUserData {
     my $self = shift;
     my $q    = shift;
     my $ftype     = $q->param('sourceFile');
-    my $file     = $q->param('file');
+    my $file      = $q->param('file');
     my $text      = $q->param('data');
     my $upload_id = $q->param('upload_id');
 
@@ -704,12 +734,16 @@ sub ACTION_modifyUserData {
     delete $state->{uploads}{$upload_id};
     my @tracks     = $userdata->labels($file);
     $self->render->track_config($_,'revert') foreach @tracks;
+    $self->session->flush;
+
     return (200,'application/json',{tracks=>\@tracks});
 }
 
 sub ACTION_show_subtracks {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
+
     my $track_name = $q->param('track') or croak 'provide "track" argument';
     my $stt = $self->render->create_subtrack_manager($track_name)
 	or return (204,'text/plain','');
@@ -719,6 +753,7 @@ sub ACTION_show_subtracks {
 sub ACTION_select_subtracks {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
     my $label= $q->param('track') or return (200,'text/plain','Programming error');
     my $html = $self->render->subtrack_table($label);
     return (200,'text/html',$html);
@@ -731,12 +766,14 @@ sub ACTION_set_subtracks {
     my $subtracks = JSON::from_json($q->param('subtracks'));
     my $settings  = $self->state;
     $self->state->{subtracks}{$label} = $subtracks;
+    $self->session->flush;
     return (204,'text/plain',undef);
 }
 
 sub ACTION_chrom_sizes {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
     my $loader = Bio::Graphics::Browser2::DataLoader->new(undef,undef,undef,
 							  $self->data_source,
 							  undef);
@@ -763,6 +800,7 @@ sub ACTION_chrom_sizes {
 sub ACTION_about_gbrowse {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
 
     my $html = $q->div(
 	$q->img({-src=>'http://phenomics.cs.ucla.edu/GObase/images/gmod.gif',
@@ -777,6 +815,7 @@ sub ACTION_about_gbrowse {
 sub ACTION_about_dsn {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
 
     my $source = $self->data_source;
     my $html;
@@ -832,16 +871,36 @@ sub ACTION_about_dsn {
 sub ACTION_about_me {
     my $self = shift;
     my $q    = shift;
+
     my $state = $self->state;
-    my $session=$self->render->session;
+    my $session=$self->session;
+    $session->unlock;
 
     my $html = $q->div($self->render->translate('ABOUT_ME_TEXT',$session->username||'anonymous user',$session->id,$session->uploadsid));
     return (200,'text/html',$html);
 }
 
+sub ACTION_get_ids {
+    my $self = shift;
+    my $q    = shift;
+    my $state = $self->state;
+    my $session=$self->session;
+    $session->unlock;
+
+    my $sessionid = $session->id;
+    my $uploadid  = $session->uploadsid;
+    my $result = <<END;
+Session ID: $sessionid
+Upload ID:  $uploadid
+END
+    return (200,'text/plain',$result);
+}
+
 sub ACTION_list {
     my $self = shift;
     my $q    = shift;
+    $self->session->unlock;
+
     my $globals = $self->render->globals;
     my $username = eval {$self->session->username};
     my @sources = grep {$globals->data_source_show($_,$username)} $globals->data_sources;
@@ -874,6 +933,7 @@ sub ACTION_list {
 sub ACTION_get_translation_tables {
     my $self = shift;
     my $render   = $self->render;
+    $self->session->unlock;
     
     my $lang = $render->language;
 
@@ -896,6 +956,7 @@ sub ACTION_plugin_login {
     my $plugin = eval{$render->plugins->auth_plugin} 
       or return (204,'text/plain','no authenticator defined');
     my $html = $render->login_manager->wrap_login_form($plugin);
+    $self->session->flush;
     return (200,'text/html',$html);
 }
 

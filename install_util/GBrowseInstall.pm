@@ -710,11 +710,11 @@ sub has_openid {
 
 sub guess_user_account_db {
     my $self = shift;
-    if (eval "require DBD::mysql; 1") {
-	return 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse';
-    } elsif (eval "require DBD::SQLite; 1") {
-	my $databases = $self->install_path->{'databases'};
+    if (eval "require DBD::SQLite; 1") {
+	my $databases = $self->config_data('databases');
 	return "DBI:SQLite:$databases/users.sqlite";
+    } elsif (eval "require DBD::mysql; 1") {
+	return 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse';
     } else {
 	return "no database defined # please correct this";
     }

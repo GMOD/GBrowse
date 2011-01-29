@@ -119,7 +119,7 @@ sub delete_file {
     $loader->drop_databases($self->track_conf($file));
     rmtree($self->track_path($file));
 }
-
+sub clone_database() { } # do nothing
 sub get_added_public_files { return }
 sub get_shared_files {
     my $self = shift;

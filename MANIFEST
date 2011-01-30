@@ -213,6 +213,12 @@ htdocs/css/subtracktable.css
 htdocs/css/titlebar-default.css
 htdocs/css/titlebar-safari.css
 htdocs/css/tracks.css
+htdocs/example_scripts/gbrowse_get_sessionid.pl
+htdocs/example_scripts/gbrowse_new_sessionid.pl
+htdocs/example_scripts/gbrowse_upload_data.pl
+htdocs/example_scripts/gbrowse_upload_file.pl
+htdocs/example_scripts/README
+htdocs/example_scripts/test_file.bed
 htdocs/gbrowse_karyotype_help.html
 htdocs/gbrowse_syn_help.html
 htdocs/general_help.html
@@ -514,6 +520,7 @@ install_util/InstallUtil.pm
 install_util/make_clean_add.pl
 install_util/pod2docs.pl
 install_util/sync-bioperl.sh
+install_util/tag.pl
 lib/Bio/DB/GFF/Aggregator/match_gap.pm
 lib/Bio/DB/GFF/Aggregator/reftranscript.pm
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm

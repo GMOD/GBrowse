@@ -1,4 +1,7 @@
 2.23
+   * Added an "example_scripts" directory that contains a perl scripts that show how to manipulate
+     sessions, upload custom tracks, and get basic information about services. This directory accompanies
+     new REST API documentation located at http://gmod.oicr.on.ca/wiki/GBrowse2_REST_API.
    * Fixed missing "registration" link in login dialog. This occurred when openid was unavailable.
    * Fixed popup dialogs in the "Help" menu so that they appear again.
    * Fixed file upload status display to prevent upload details section from disappearing when
@@ -6,6 +9,8 @@
    * Tinkered with session settings to minimize session lock timeouts.
    * Removed some dangling warnings in the track sharing module.
    * Made SQLite the default user account database.
+   * Fixed default SQLite user account database to be created in /var/www/gbrowse2/databases rather
+     than in / (root) directory.
 
 2.22
    * Fixed gbrowse_img to reactivate documented ability to list multiple tracks with t=track1+track2+track3

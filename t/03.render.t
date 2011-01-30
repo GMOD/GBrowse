@@ -113,10 +113,6 @@ ok(my $plugins = $render->plugins);
 my @plugins    = $plugins->plugins;
 ok(scalar @plugins,4);
 
-# ok($render->init_remote_sources);
-# ok(!$render->uploaded_sources->files);
-# ok(!$render->remote_sources->sources);
-
 ############### testing update code #############
 $render->default_state;
 ok($render->state->{width},800);
@@ -490,20 +486,20 @@ ok(-e $conf);
     ok ($configured_types, $escaped_url);
     ok ($f->setting($escaped_url=>'remote feature'), $url);
     ok ($f->setting($escaped_url=>'category'), 'My Tracks:Remote Tracks');
+
+    ok($usertracks->filename($file), $escaped_url);
+    ok($usertracks->get_file_id($escaped_url), $file);
+    ok($usertracks->title($file), $escaped_url);
+    ok($usertracks->description($file, "This is a test description"));
+    ok($usertracks->description($file), "This is a test description");
+    ok($usertracks->file_type($file), "imported");
+    ok($usertracks->created($file));
+    ok($usertracks->modified($file));
+    
+    $usertracks->delete_file($file);
+    ok(!-e $conf);
+    ok($usertracks->tracks+0,0);
 }
-
-ok($usertracks->filename($file), $escaped_url);
-ok($usertracks->get_file_id($escaped_url), $file);
-ok($usertracks->title($file), $escaped_url);
-ok($usertracks->description($file, "This is a test description"));
-ok($usertracks->description($file), "This is a test description");
-ok($usertracks->file_type($file), "imported");
-ok($usertracks->created($file));
-ok($usertracks->modified($file));
-
-$usertracks->delete_file($file);
-ok(!-e $conf);
-ok($usertracks->tracks+0,0);
 
 exit 0;
 

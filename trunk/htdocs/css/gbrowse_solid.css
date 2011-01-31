@@ -1,0 +1,129 @@
+@import url('gbrowse.css');
+
+/* These are frequently-changed options that provide a buttoned-down
+   "gray" look */
+
+.datatitle        { background-color: khaki; }
+.databody         { background-color: lightgoldenrodyellow; }
+.multiplechoicetitle  { background-color: lightblue;
+		        font-size: small;
+}
+.searchtitle      { background-color: #E6EBF0;
+	            font-size: small;
+		    margin-left: 1em
+;		    margin-right: 1em;
+}
+.searchbody       { background-color: #E6EBF0;
+	            font-size: small;
+		    margin-left: 1em;
+		    margin-right: 1em;
+		    margin-bottom: 3px;
+}
+.settingstitle    { background-color: #E6EBF0;
+	            font-size: small;
+		    margin-left: 1em;
+}
+.settingsbody     { background-color: #F2F6FA;
+	            font-size: small;
+		    margin-left: 1em;
+}
+.uploadtitle      { background-color: #E6EBF0;
+	            font-size: small;
+		    margin-left: 1em;
+}
+.uploadbody       { background-color: #F2F6FA;
+	            font-size: small;
+		    margin-left: 1em;
+}
+.tabmenu_active   { cursor: pointer;
+		    color: black;
+		    background-color: #D0D0D0;
+		    font-size: 10pt;
+		    font-weight: bold;
+                    font-family: sans-serif;
+		    padding-top: 5px;
+		    padding-left: 5px;
+		    padding-right: 5px
+	     }
+.tabmenu_inactive { cursor: pointer;
+		    color: blue;
+		    font-size: 10pt;
+		    background-color: #F0F0F0;
+		    font-weight: bold;
+                    font-family: sans-serif;
+		    padding-left: 5px;
+		    padding-right: 5px
+		      }
+.tabmenu_inactive:hover {
+    text-decoration: underline;
+}
+.tabbed {
+    background-color: transparent;
+}
+.tabmenu {
+    background-color: #F0F0F0;
+}
+.tabbody {
+    background-color: #D0D0D0;
+    padding-top: 5px;
+}
+.custom_track {
+    padding: 0.25em;
+    min-height: 2em;
+    height: auto !important;
+    height: 2em;
+    background-color: lightblue;
+}
+.custom_track span.source_note {
+    float: right;
+    font-size: 16pt;
+    font-family: Helvetica, Arial, Verdana, sans-serif;
+}
+.uploaded_odd {
+    background-color: lightblue;
+}
+.uploaded_odd span.source_note {
+    color: #8AADB8;
+}
+.uploaded_even {
+    background-color: paleturquoise;
+}
+.uploaded_even span.source_note {
+    color: #8CBEBE;
+}
+.imported_odd {
+    background-color: palegreen;
+}
+.imported_odd span.source_note {
+    color: #7AC97A;
+}
+.imported_even {
+    background-color: lightgreen;
+}
+.imported_even span.source_note {
+    color: #73BE73;
+}
+.shared_even {
+    background-color: #FF9999;
+}
+.shared_even span.source_note {
+    color: #CC8888;
+}
+.shared_odd {
+    background-color: #FF7777;
+}
+.shared_odd span.source_note {
+    color: #FF5555;
+}
+.public_odd {
+    background-color: #AAAAAA;
+}
+.public_odd span.source_note {
+    color: #777777;
+}
+.public_even {
+    background-color: #CCCCCC;
+}
+.public_even span.source_note {
+    color: #999999;
+}

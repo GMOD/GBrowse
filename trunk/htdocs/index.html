@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Generic Genome Browser</title>
+<link rel="stylesheet" href="tutorial/tutorial.css">
+</head>
+
+<body>
+<h1>Generic Genome Browser, v2</h1>
+
+<a href="http://www.gmod.org/"><img src="gmod_cog.jpeg" border="0" align="RIGHT"></a>
+
+<p>
+
+Welcome to the Generic Genome Browser!
+
+<h2>Documentation</h2>
+
+<dl>
+  <dt><b>Online tutorial and sample data files</b></dt>
+  <dd><a href="tutorial/tutorial.html">$HTDOCS/tutorial<a>.</dd>
+  <dt>Installation and configuration manual</dt>
+  <dd><b><a href="http://gmod.org/wiki/GBrowse_2.0_HOWTO">GBrowse 2.0 HOWTO</a></b></dd>
+  <dt><b>Example scripts to control GBrowse from the command line</b></dt>
+  <dd><a href="example_scripts">$HTDOCS/example_scripts</a></dd>
+</dl>
+
+<h2>Example Databases</h2>
+
+<p>
+
+Example in-memory databases from yeast chromosomes 1 and 2 have been
+installed for you.  Try them at these URL:
+
+<ul>
+<li><a href="$CGIURL/gbrowse/yeast">http://your.host/cgi-bin/gb2/gbrowse/yeast</a> (simple example)</li>
+<li><a href="$CGIURL/gbrowse/yeast_advanced">http://your.host/cgi-bin/gb2/gbrowse/yeast_advanced</a> (advanced example)</li>
+<li><a href="$CGIURL/gbrowse/yeast_renderfarm">http://your.host/cgi-bin/gb2/gbrowse/yeast_renderfarm</a> (yeast_renderfarm example)</li>
+</ul>
+
+<p>
+The "yeast_renderfarm" example will only work if a local gbrowse_slave
+render slave daemon is running. To launch the daemon, run this command
+as the root user:
+
+<pre>
+% /etc/init.d/gbrowse-slave start
+</pre>
+
+<h3>Alternative URLs</h3>
+
+If you allowed the install process to adjust your Apache
+configuration, you can use the alias /gb2 as an alternative to
+/cgi-bin/gb2:
+
+<ul>
+<li><a href="/gb2/gbrowse/yeast">http://your.host/gb2/gbrowse/yeast</a></li>
+<li><a href="/gb2/gbrowse/yeast_advanced">http://your.host/gb2/gbrowse/yeast_advanced</a></li>
+<li><a href="/gb2/gbrowse/yeast_renderfarm">http://your.host/gb2/gbrowse/yeast_renderfarm</a></li>
+<li><a href="/gb2/gbrowse/pop_demo">http://your.host/gb2/gbrowse/pop_demo</a> (demo of embedded population allele frequency maps -- requires Template module to be installed)</li>
+</ul>
+
+<h3>Accelerated Demos</h3>
+
+If you have FastCGI and/or ModPerl installed, you will have access to
+accelerated versions of gbrowse a these URLs:
+
+<ul>
+  <li>FastCGI
+      <ul>
+	<li><a href="/fgb2/gbrowse/yeast">http://your.host/fgb2/gbrowse/yeast</a></li>
+	<li><a href="/fgb2/gbrowse/yeast_advanced">http://your.host/fgb2/gbrowse/yeast_advanced</a></li>
+	<li><a href="/fgb2/gbrowse/yeast_renderfarm">http://your.host/fgb2/gbrowse/yeast_renderfarm</a></li>
+      </ul>
+  </li>
+  <li>ModPerl
+      <ul>
+	<li><a href="/mgb2/gbrowse/yeast">http://your.host/mgb2/gbrowse/yeast</a></li>
+	<li><a href="/mgb2/gbrowse/yeast_advanced">http://your.host/mgb2/gbrowse/yeast_advanced</a></li>
+	<li><a href="/mgb2/gbrowse/yeast_renderfarm">http://your.host/mgb2/gbrowse/yeast_renderfarm</a></li>
+      </ul>
+  </li>
+</ul>
+
+
+<h2>Directory Paths</h2>
+
+<p>
+
+For future reference, here is where you've installed GBrowse's various
+components:
+
+<dl>
+  <dt>GBrowse documentation, stylesheets and in-memory databases.
+  <dd><b>$HTDOCS</b>
+      <p>
+  <dt>GBrowse configuration files
+  <dd><b>$CONF/GBrowse.conf</b>
+      <p>
+  <dt>Preinstalled sample database(s)
+  <dd><b>$DATABASES</b>
+      <p>
+  <dt>GBrowse CGI (web) scripts
+  <dd><ul>
+          <li><b>$CGIBIN/gbrowse</b>
+          <li><b>$CGIBIN/gbrowse_img</b>
+          <li><b>$CGIBIN/gbrowse_details</b>
+      </ul>
+      <p>
+  <dt>Temporary directories for cached images and sessions.
+  <dd><b>$TMP</b>
+</dl>
+
+<p>
+
+<h2>Learning More</h2>
+
+<p>
+
+To find out more about Gbrowse, try the:
+
+<ul>
+  <li><a href="http://gmod.org/wiki/GBrowse_2.0_HOWTO">GBrowse 2.0 HOWTO</a>
+  <li><a href="tutorial/tutorial.html">GBrowse Tutorial</a>
+ <!-- <li><a href="contrib/conf_files">Sample Configuration Files</a> -->
+</ul>
+
+
+<hr>
+<address>Lincoln D. Stein, lstein@cshl.org<br>
+<a href="http://www.cshl.org/">Cold Spring Harbor Laboratory</a></address>
+<!-- hhmts start -->
+Last modified: Thu Mar 18 18:59:16 PDT 2010
+<!-- hhmts end -->
+</body> </html>

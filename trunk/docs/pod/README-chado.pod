@@ -1,0 +1,108 @@
+=head1 Support for the Chado database schema
+
+The Chado schema (L<http://gmod.org/Chado>) is a comprehensive 
+database schema developed largely by developers at UC Berkeley and 
+Harvard working on FlyBase.  It is intended to be a generic database 
+schema for model organism use.  Its use with GBrowse is supported via 
+a limited implementation of the Das interface from BioPerl.  It is 
+limited in that it implements only parts of Bio::DasI interface that 
+is required to make GBrowse work.
+
+The Chado adaptor works through three perl modules that are part of a
+separate distribution that can be obtained from CPAN:
+
+  cpan> install Bio::DB::Das::Chado 
+
+In addition to the standard Chado schema, this adaptor requires a few
+additional views and functions.  These are found in two files in the
+Chado CVS or in a gmod distribution.  These are:
+
+  schema/Chado/modules/sequence/gff-bridge/sequence-gff-views.sql
+  schema/Chado/modules/sequence/gff-bridge/sequence-gff-funcs.plpgsql
+
+It is currently included in the default Chado schema that can be
+obtained as part of the gmod distribution.
+
+If you already have a Chado instance and want to add these items,
+the easiest way to do that is to cat the files
+to stdout and pipe that to a psql command:
+
+  % cat sequence-gff-views.sql   | psql <Chado-database-name>
+  % cat sequence-gff-funcs.pgsql | psql <Chado-database-name>
+
+A sample Chado configuration file is included in contrib/conf_files/.  
+Since Chado uses the Sequence Ontology for its controlled vocabulary, it
+is quite likely that this configuration file should work for any
+instance of Chado once the database-specific parameters are set.
+Also, depending on what the "reference type" is (usually something
+like 'chromosome' or 'contig'), the line in the configuration for 
+reference class will need to be modified to agree with your data.
+
+After the tables are created, the user that is running Apache must
+be granted privileges to select on several tables.  Usually that
+user is 'nobody', although on RedHat systems using RPM installed Apache
+the user is 'apache'.  First create that user in Postgres, then in the
+psql shell grant select permissions:
+
+  CREATE USER nobody;
+  GRANT SELECT ON feature_synonym      TO nobody;
+  GRANT SELECT ON synonym              TO nobody;
+  GRANT SELECT ON feature_dbxref       TO nobody;
+  GRANT SELECT ON dbxref               TO nobody;
+  GRANT SELECT ON feature              TO nobody;
+  GRANT SELECT ON featureloc           TO nobody;
+  GRANT SELECT ON cvterm               TO nobody;
+  GRANT SELECT ON feature_relationship TO nobody;
+  GRANT SELECT ON cv                   TO nobody;
+  GRANT SELECT ON feature_cvterm       TO nobody;
+  GRANT SELECT ON featureprop          TO nobody;
+  GRANT SELECT ON pub                  TO nobody;
+  GRANT SELECT ON feature_pub          TO nobody;
+  GRANT SELECT ON db                   TO nobody;
+
+=head1 Creating a configuration file
+
+The GBrowse configuration file for a Chado database is the same format
+as for any other data source, but there are a few notes specific to
+Chado for GBrowse configuration files.  A sample configuration file
+called 07.Chado.conf is included in the contrib/conf_files directory
+of this distribution, and is installed in $HTDOCS/gbrowse/contrib/conf_files.
+
+Two items specific to Chado that must go into the configuration file:
+
+=over
+
+=item Reference class
+
+The reference class in configuration file must be the Sequence Ontology-
+Feature Annotation (SOFA) type that is the feature type in Chado that
+is the foundation type, like 'chromosome', 'region' or 'contig', the 
+the other features in the database are on.
+
+=item Aggregators
+
+Aggregators must not be used with the Chado adaptor, as they are not needed
+and do not make sense in this context.  They are used in Bio::DB::GFF
+to construct complex biological objects out of the flat data in
+GFF files, for example, attaching exons to their mRNA.  In Chado, this
+is not necessary since the relationship between features is clearly
+defined in the feature_relationship table, and that information
+is automatically obtained by the Chado adaptor.
+
+=item URL
+
+Once you are properly configured you should be able to use GBrowse 
+with an URL like http://localhost/cgi-bin/gbrowse/chado/.
+
+=back
+
+=head2 Bugs
+
+If you encounter any bugs or problems with this Chado adaptor, please
+contact the gmod-schema or gmod-gbrowse mailing lists 
+(http://sourceforge.net/mail/?group_id=27707).
+
+Scott Cain
+scain@cpan.org
+2009/05/08
+

@@ -1,0 +1,15 @@
+<html>
+<head>
+  <title>GBrowse Error</title>
+</head>
+<body>
+  <h2 class="error">GBrowse Error</h2>
+  <p  class="error">[% error_message %]</p>
+  <p>Please Contact this site's
+    [% IF server_admin %]
+      maintainer, <a href="mailto:[% server_admin %]">[% server_admin %]</a>
+    [% ELSE %]
+      maintainer
+    [% END %]
+</body>
+</html>

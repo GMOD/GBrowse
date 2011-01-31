@@ -1,0 +1,29 @@
+[%- IF vis_default == 1 -%]
+    [%- IF vis_value != 0 -%]
+        [%- IF opposite_of_value == 1 -%]
+            style="display:none"
+        [%- ELSE -%]
+            style="display:inline"
+        [%- END -%]
+    [%- ELSE -%]
+        [%- IF opposite_of_value == 1 -%]
+            style="display:inline"
+        [%- ELSE -%]
+            style="display:none"
+        [%- END -%]
+    [%- END -%]
+[%- ELSE -%]
+    [%- IF vis_value != 1 -%]
+        [%- IF opposite_of_value == 1 -%]
+            style="display:none"
+        [%- ELSE -%]
+            style="display:inline"
+        [%- END -%]
+    [%- ELSE -%]
+        [%- IF opposite_of_value == 1 -%]
+            style="display:inline"
+        [%- ELSE -%]
+            style="display:none"
+        [%- END -%]
+    [%- END -%]
+[%- END -%]

@@ -1,0 +1,46 @@
+[%- PROCESS 'start_section.tt2' name='upload' title='add_your_own_tracks' -%]
+
+<table border="0" width="100%">
+  <tr>
+    <th class="uploadtitle" colspan="4" align="left">[% config.tr('upload_title') %]:
+      <a href="?help=annotation" target="help">[[% config.tr('help') %]]</a>
+    </th>
+  </tr>
+
+  [% FOREACH filename = page_settings.tracks %]
+    [% NEXT UNLESS filename.match('^file:') # && $feature_files->{$filename} %]
+    [% file = filename %]
+    [% file = file | replace('^file:','') %]
+    [% name = file | uri %]
+
+    <tr class="uploadbody">
+      <th><a href="?[% config.tr('download_file') | uri %]=[% name %]">[[% name %]]</a></th>
+      <td colspan="3">
+        <input type="submit" name="modify.[% file %]" value="[% config.tr('edit') %]">&nbsp;
+        <input type="submit" name="modify.[% file %]" value="[% config.tr('download_file') %]">&nbsp;
+        <input type="submit" name="modify.[% file %]" value="[% config.tr('delete') %]">&nbsp;
+      </td>
+    </tr>
+    <tr class="uploadbody">
+      <td>&nbsp</td><td colspan="3">
+        [% PROCESS 'uploadedfiles.tt2'
+            feature_file = feature_files.$filename
+            display_file = page_settings.features.$filename.visible
+        %]
+      </td>
+    </tr>
+  [% END %]
+
+  <tr class="uploadbody">
+    <th align="right">[% config.tr('upload_file') %]</th>
+    <td colspan="3">
+      <input type="file" name="upload_annotations" size="40" />&nbsp;
+      <input type="submit" name="Upload" value="[% config.tr('upload') %]"/>&nbsp;
+      <input type="submit" name="new_upload" value="[% config.tr('new') %]"/>&nbsp;
+    </td>
+  </tr>
+</table>
+
+[% PROCESS 'dastable.tt2' %]
+
+[%- PROCESS 'end_section.tt2' -%]

@@ -1,0 +1,74 @@
+=head1 CONFIGURATION OF Bio::DB::Das::BioSQL, THE ADAPTER CODE TO BIOPERL-DB
+
+BioSQL is a Bioperl-based system for storing record-oriented
+biological objects, including GenBank/EMBL sequences and PubMed
+records, in a relational database. GBrowse provides support for
+viewing sequence annotation data stored in BioSQL. The support is
+functional, but not heavily tested, so it may still contain bugs.
+
+=head2 1. PREREQUISITES
+
+=over 4
+
+=item A) GBrowse -- L<http://www.gmod.org/>
+
+Make sure that Gbrowse is correctly installed.
+
+=item B) Bioperl-db -- L<http://cvs.bioperl.org/cgi-bin/viewcvs/viewcvs.cgi/bioperl-db/?cvsroot=bioperl>
+
+Make sure that you have the latest version of Bioperl-db.
+
+=item C) Biosql-schema -- L<http://cvs.bioperl.org/cgi-bin/viewcvs/viewcvs.cgi/biosql-schema/?cvsroot=bioperl>
+
+Make sure that you have the latest version of Bioperl-schema.
+
+=item D) Database 
+
+You need to have a database (MySQL, Postgresql, Oracle) that is supported by the Perl DBI interface.
+
+=back
+
+=head2 2. CONFIGURING YOUR SYSTEM
+
+=over 4
+
+=item A) Create a bioperl database 
+
+If you plan to use MySQL, run create_mysql_db.pl (it is included in
+the bioperl-schema distribution). Other databases would use similar
+SQL commands.
+
+=item B) Load data into your bioperl database 
+
+Take a Genbank file and call the script load_seqdatabase.pl from the
+bioperl distribution to load the data. For example,
+
+   load_seqdatabase.pl --host somewhere.edu --dbname biosql \
+                       --namespace bioperl --format genbank \
+                       your_genbank_file
+
+The value of "namespace" is arbitrary.
+
+=item C) Configure gbrowse to use bioperl-db
+
+Point a gbrowse configuration file to this database. See include
+06.biosql.conf for an example. The only nontrivial parameters in it
+are "namespace" and "version". For namespace, use the same value that
+you specified when you uploaded data. The version number is contained
+in the Genbank file.
+
+=item D) Install the Bio::DB::BioSQL files.
+
+Until these files are uploaded into the bioperl CVS, put the attached
+files on your system in a directory accessible to Perl, for example,
+into /usr/lib/perl5/site_perl/5.8.1/
+
+=back
+
+=head2 3. SUPPORT AND BUG REPORTS
+
+Please send requests for help to simonf@cshl.edu
+
+
+Vsevolod (Simon) Ilyushchenko
+simonf@cshl.edu

@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+
+=pod
+
+=head1 GBrowse on Mac OS X
+
+=head2 Description
+
+These scripts simplify the installation of GBrowse on Mac OS X.
+
+=head2 Prerequisites:
+
+=over 4
+
+=item 1. The CPANPLUS module
+
+This module automates the installation of a variety of Perl modules.
+
+=item 2. December 2002 (or greater) Developer Tools
+
+     http://www.apple.com/developer
+
+=item 3. root access
+
+If you do not, you may still install GBrowse and its dependencies in
+non-standard paths.  See the documentation below on "Installing
+GBrowse in non-standard paths".  
+
+The Fink package manager is *not* required; instead, all packages are
+built from source.
+
+=back
+
+=head2 Quick start:
+
+=over 4
+
+=item 1. Build the libraries and dependencies of GBrowse
+
+   % make libraries
+
+=item 2. Build GBrowse proper
+
+   % make gbrowse
+
+=back
+
+=head2 Additional Information
+
+See the full documentation for installing and using GBrowse on Mac OS
+X in
+
+     docs/INSTALL.MacOSX.pod
+
+For additional information and configuration options, try
+
+    % perldoc scripts/build-libraries.pl 
+    % perldoc scripts/build-gbrowse.pl
+    
+=head2 Versions and URLs
+
+Due to inconsistent naming and distribution of dependencies, these
+scripts rely on a Perl package (BuildConfig.pm) that stores the
+versions and URLs of dependencies known to work with GBrowse. If you
+wish to use a newer version of a library, simply edit the
+BuildConfig.pm file (and drop me a line concerning your results).
+
+=head2 Author
+
+ Todd Harris (harris@cshl.org)
+ Copyright @ 2003 Cold Spring Harbor Laboratory
+
+=cut
+
+
+

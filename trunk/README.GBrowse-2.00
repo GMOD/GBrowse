@@ -1,0 +1,56 @@
+I suggest you test GBrowse from its development directory rather than
+doing "make install". The reason for this is that the installation
+scripts haven't been updated in a while, and probably won't work!
+
+Assuming that you have unpacked GBrowse into
+/home/fred/src/Generic-Genome-Browser, here is a template Apache
+configuration devoted to GBrowse testing:
+
+   Listen 8080
+   NameVirtualHost *:8080
+   <VirtualHost *:8080>
+        ServerAdmin webmaster@localhost
+
+	DocumentRoot /home/fred/src/Generic-Genome-Browser/htdocs/
+	<Directory />
+		Options FollowSymLinks
+		AllowOverride None
+	</Directory>
+
+	<Directory /home/fred/src/Generic-Genome-Browser/htdocs/>
+		Options Indexes FollowSymLinks MultiViews
+		AllowOverride None
+		Order allow,deny
+		allow from all
+	</Directory>
+
+	ScriptAlias /cgi-bin/ /home/fred/src/Generic-Genome-Browser/cgi-bin/
+	<Directory "/home/fred/src/Generic-Genome-Browser/cgi-bin/">
+		SetEnv PERL5LIB /home/fred/src/Generic-Genome-Browser/libnew:/home/fred/src/bioperl-live
+		SetEnv GBROWSE_MASTER GBrowse.conf
+                SetEnv GBROWSE_CONF   /home/fred/src/Generic-Genome-Browser/conf
+                SetEnv GBROWSE_DOCS   /home/fred/src/Generic-Genome-Browser/htdocs
+                SetEnv GBROWSE_ROOT   /
+	        AllowOverride None
+                Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        ErrorLog /var/log/apache2/error.log
+	LogLevel warn
+	CustomLog /var/log/apache2/access.log combined
+	ServerSignature On
+   </VirtualHost>
+
+This will create a virtual host listening on port 8080.
+
+Please make note of all occurrences of
+/home/fred/src/Generic-Genome-Browser. This will need to be replaced
+with the path in which you unpacked GBrowse. Also be sure to replace
+/var/log/apache2/ with the location of your error logs and
+/home/fred/src/bioperl-live with the location of bioperl-live, if you
+have not installed it.
+
+Lincoln Stein
+August 2008

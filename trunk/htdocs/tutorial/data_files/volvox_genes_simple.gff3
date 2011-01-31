@@ -1,0 +1,18 @@
+##gff-version 3
+
+# Simpler representations of a gene
+
+# single exon gene - one CDS only
+ctgA	predicted	CDS	10000	11500	.	+	0	Name=Apple1
+
+# multi-exon gene - several linked CDSs
+ctgA	predicted	CDS	13000	13800	.	+	0	ID=cds-Apple2;Name=Apple2
+ctgA	predicted	CDS	15000	15500	.	+	1	ID=cds-Apple2;Name=Apple2
+ctgA	predicted	CDS	17000	17200	.	+	2	ID=cds-Apple2;Name=Apple2
+
+ctgA	exonerate	mRNA	17400	23000	.	+	.	ID=rna-Apple3;Name=Apple3;Note=Predicted
+ctgA	exonerate	UTR	17400	17999	.	+	.	Parent=rna-Apple3
+ctgA	exonerate	CDS	18000	18800	.	+	0	Parent=rna-Apple3
+ctgA	exonerate	CDS	19000	19500	.	+	1	Parent=rna-Apple3
+ctgA	exonerate	CDS	21000	21200	.	+	2	Parent=rna-Apple3
+ctgA	exonerate	UTR	21201	23000	.	+	.	Parent=rna-Apple3

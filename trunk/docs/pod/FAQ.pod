@@ -1,0 +1,218 @@
+=head1 GBROWSE FAQ
+
+Frequently asked questions - with answers.
+
+=head1 GENERAL
+
+=over 4
+
+=item How do I get the most recent version of this FAQ?
+
+The most recent version of this FAQ can be downloaded at
+L<http://www.gmod.org/ggb/FAQ.html> and
+L<http://www.gmod.org/ggb/FAQ.pod>.
+
+=item What is GBrowse good for?
+
+GBrowse was designed to view genomes. It displays a graphical
+representation of a section of a genome, and shows the positions of
+genes and other functional elements. It can be configured to show both
+qualitative data such as the splicing structure of a gene, and
+quantitative data such as microarray expression levels.
+
+Another good way to get an overview of the features GBrowse offers is
+to read the online tutorial at
+L<http://www.gmod.org/ggb/tutorial/tutorial.html>.
+
+=item What platforms does GBrowse run on?
+
+GBrowse is a web-server application that is implemented in the Perl
+programming language. It will run on any machine that runs Perl,
+including Windows, Macintosh OS X, and most versions of Linux and
+UNIX.
+
+=item How is GBrowse distributed?
+
+GBrowse is distributed as source code for Macintosh OS X, UNIX and
+Linux platforms, and as pre-packaged binaries for Windows machines.
+
+=item What are the terms of use for GBrowse?
+
+GBrowse is distributed under the Perl Artistic License, which allows
+for unrestricted use and distribution, including commercial use and
+resale. You may modify and distribute modified versions of GBrowse
+provided that you credit the original authors for their contribution.
+
+=item I have a problem. What do I do?
+
+First consult the mailing lists at
+L<http://sourceforge.net/mailarchive/forum.php?forum_id=31947>. Your
+problem may already have been reported and discussed. If you find no
+help there, then send email to
+E<gmod-gbrowse@lists.sourceforge.net>. If you are pretty
+certain you have found a bug, please report it to the bug report
+tracking system at
+L<http://sourceforge.net/tracker/?func=add&group_id=27707&atid=511474>.
+
+=back
+
+
+=head1 INSTALLATION
+
+=over 4
+
+=item Where do I download GBrowse?
+
+From
+L<http://sourceforge.net/project/showfiles.php?group_id=27707>. If you
+want to live on the bleeding edge, you may try the development version
+of GBrowse. Instructions for accessing the development version of
+GBrowse can be found at L<http://www.gmod.org/cvs.shtml>.
+
+=item How do I install GBrowse?
+
+After you unpack GBrowse, detailed installation instructions will be
+found in the top level directory, in the file INSTALL. An online
+version of this document can be found at
+L<http://www.gmod.org/ggb/install.txt>.
+
+=back
+
+
+=head1 CONFIGURATION
+
+=over 4
+
+=item When I search, why doesn't GBrowse find my 3-letter gene name?
+
+If you are using the MySQL GFF adaptor and are storing gene names
+inside Note attributes, then you may bump up against MySQL's default
+four-letter limit on full text searches. To fix this, either:
+
+  1. Put the gene name in an Alias attribute, e.g. "Alias LEP"
+
+or
+
+  2. Change MySQL to allow searches on 3-character words.
+
+The latter solution is a multi-step process:
+
+  1. Open /etc/my.cnf and add the following configuration line
+     to the [mysqld] stanza:
+
+         ft_min_word_len=3
+
+  2. Restart the mysql server.
+
+  3. Connect to your database using the mysql command-line client
+     and run the command:
+
+         mysql> repair table fattribute_to_feature quick;
+
+=item How do I use semantic zooming to hide a track completely?
+
+If you wish to turn off a track entirely, you can use the "hide" flag
+to hide the track when the display exceeds a certain size:
+
+  [6_frame_translation:50000]
+  hide = 1
+
+=item I have a multi-segmented feature (such as a multi-exon transcript). It looks fine at low power, but when I zoom in the connecting lines between segments disappear. Help!
+
+You need to structure the feature in such a way that it has a single
+parent part that spans the whole feature from end to end, and then use
+the appropriate aggregator. For example, the "match" aggregator looks
+for a parent feature of type "match" and subpart features of type
+"HSP." So the GFF file you load should look like this:
+
+  Chr1 . match  1  1000 . . . ID=Hit27
+  Chr1 . HSP    1   200 . . . Parent=Hit27
+  Chr1 . HSP  500   600 . . . Parent=Hit27
+  Chr1 . HSP  900  1000 . . . Parent=Hit27
+
+In GFF2 format, the example will look like this:
+
+  Chr1 . match  1  1000 . . . Hit Hit27
+  Chr1 . HSP    1   200 . . . Hit Hit27
+  Chr1 . HSP  500   600 . . . Hit Hit27
+  Chr1 . HSP  900  1000 . . . Hit Hit27
+
+For transcripts, use the "processed_transcript" aggregator and create
+features with a main part of "mRNA" and subparts of "CDS", "exon",
+and/or various types of UTRs.
+
+=item I'm using the GFF database adaptor. Is it better to load it using GFF2 or GFF3?
+
+GFF2, described in the GBrowse tutorial, is the older version of the
+GFF feature annotation format. Its main limitation is that it cannot
+represent features that have more than one level of nested
+subparts. For example, you cannot represent the relationship between a
+gene, two alternatively spliced transcripts, and the exons inside the
+transcripts. GFF3 (L<http://song.sourceforge.net>) corrects this
+problem as well as a number of other deficiencies.
+
+You can load a BioPerl GFF database using either GFF2 or GFF3
+format. However, the BioPerl GFF database schema has not yet been
+updated to handle the new features of GFF3. Therefore you will not
+benefit from most of GFF3's features. In particular, BioPerl will use
+the GFF3 ID as the name of the feature, rather than NAME (the provided
+name will be recognizeed as a synonym). In addition, BioPerl allows
+only one level of feature nesting.
+
+The bottom line is that you might want to use GFF3 in order to have
+forward-compatiility with new versions of Bio::DB::GFF. Otherwise GFF2
+will work perfectly well.
+
+=item How do I pass parameters into functions of init_code?
+
+You want to define a function in the init_code section which will then
+be called within callbacks.
+
+The answer is to do something like this:
+
+ [GENERAL]
+ init_code = sub round {
+                 my $a = shift;
+                 return int($a + 0.5);
+             }
+
+ [TRACKS]
+ label    = sub { 
+           my $feature = shift;
+	   my $score   = $feature->score;
+           return "score = ",round($score);
+	   }
+
+Note that you'll need GBrowse version 1.63 or higher for this to work.
+
+=item How do I show circular genomes?
+
+GBrowse was designed for linear genomes. In order to represent
+circular genomes, you'll need to break the circle open at a convenient
+spot (preferably a spot that is not spanned by any genes). If you do
+need to break a gene, you'll have to put two entries for it in the GFF
+load file:
+
+  -----------------------------------------------------------
+  ====>                                           >==========
+  second half                                      first half
+
+You may have to give the two halves different names in order to
+prevent GBrowse from trying to join the two halves. This is nonoptimal
+and will be fixed in a later release.
+
+=back
+
+=head1 OTHER
+
+=over
+
+=item Why are there so few questions in the FAQ?
+
+Because I just started this document.
+
+=back
+
+$Id: FAQ.pod,v 1.2 2005-12-09 22:19:09 mwz444 Exp $
+
+

@@ -1,0 +1,12 @@
+<tr class="searchtitle">
+    <td align="center" colspan="3">
+        <input type="reset" name="Undo Changes" value="Undo Changes" />
+        <input type="submit" name="revert" value="Revert to Defaults" />
+        <input type="submit" name="refresh" value="Refresh" />
+        
+    </td>
+    <td align="center" colspan="3">
+        <input type="submit" name="Cancel" value="Cancel Changes and Return..." />
+        <b><input type="submit" name="Redisplay" value="Accept Changes and Return..." /></b>
+    </td>
+</tr>

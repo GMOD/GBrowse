@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="[% config.tr('CHARSET') %]"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- FIXME is EN a language code above? -->
+<html>
+<head>
+<title>[% title %]</title>
+<link rel="stylesheet" type="text/css" href="[% config.setting('stylesheet') %]"/>
+[% PROCESS "script.tt2" %]
+</head>
+
+<body>
+
+<!-- Process header template defined in config file -->
+[% PROCESS 'header_wrapper.tt2' %]
+
+<h1>[% title %]</h1>
+<form method="post" action="[% referer %]"  enctype="multipart/form-data">
+[% IF config_html %]
+  [% config_html %]
+  <p>
+  [%- FOREACH action_label=action_labels %]
+    <input type="submit" name="plugin_action" value="[% action_label %]" />&nbsp;
+  [% END -%]
+  </p>
+  
+  <!-- This hidden field is an insurance policy in case user hits return in text
+       field in which case the plugin_action is not going to be defined.  
+  -->
+  <input type="hidden" name="plugin_action" value="[% action_labels.-1 %]" />
+[% ELSE %]
+  [% config.tr('Boring_plugin') %]
+  <p>
+  <input type="submit" name="[% config.tr("Back_to_Browser") %]" value="[% config.tr("Back_to_Browser") %]" />
+  <input type="hidden" name="plugin_action" value="1" />
+  <input type="hidden" name="plugin" value="[% plugin %]" />
+  </p>
+
+[% END %]
+
+</form>
+<!-- Process footer template defined in config file -->
+[% PROCESS 'footer_wrapper.tt2' %]

@@ -1,0 +1,6 @@
+<b>[% config.tr('data_source') %]</b><br/>
+<select name="source" onchange="document.mainform.submit()" >
+[% FOREACH source = config.sources %]
+  <option value="[% source %]" [% IF config.source==source; %]selected="selected"[% END %]>[% config.description(source) %]</option>
+[% END %]
+</select>

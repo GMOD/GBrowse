@@ -1,0 +1,12 @@
+If you got an svn checkout of GBrowse and it isn't working, it is probably 
+because you checked out from the svn HEAD, which is the main development 
+branch.  Unfortunately, that branch is often unstable due to some 
+major reworking which will make GBrowse much better.  In the mean time
+(that is, until this README disappears), please check out from the
+stable branch.  You can use almost the same svn command:
+
+svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/branches/stable Generic-Genome-Browser
+
+Thanks,
+Scott Cain
+cain@cshl.edu 

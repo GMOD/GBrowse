@@ -1,0 +1,841 @@
+#!/usr/bin/perl -w
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
+# $Id: gbrowse_img,v 1.7 2009-08-31 19:46:38 lstein Exp $
+
+use strict;
+
+use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::Render::HTML;
+use Bio::Graphics::Browser2::Util;
+use Bio::Graphics::Karyotype;
+use Digest::MD5 'md5_hex';
+
+# call with following arguments:
+# source    database source
+# type      list of feature mnemonics
+# options   track options, in format mnemonic+option+mnemonic+option...
+# name      landmark or range to display, in format Name:start..stop
+# width     desired width of image, in pixels (height cannot be set)
+# add       a feature to superimpose on top of the image
+#             in format: reference+type+name+start..stop,start..stop,start..stop
+#           multiple "add" arguments are allowed
+# style     stylesheet for added features
+# h_region  region(s) to hilight
+# h_feat    feature(s) to hilight
+
+umask 022;
+
+my $fcgi = Bio::Graphics::Browser2::Render->fcgi_request;
+my $modperl = $ENV{MOD_PERL};
+my $init;
+
+if ($modperl && !$init++) {
+    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+	my $sig  = shift;
+	my $time = localtime;
+	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+	CORE::exit 0
+    };
+}
+
+if ($fcgi) {
+
+    my $FCGI_DONE = 0;
+    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+	my $sig  = shift;
+	my $time = localtime;
+	print STDERR "[$time] [notice] gbrowse_img FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+	$FCGI_DONE = 1;
+    };
+
+    my %sys_env = %ENV;
+    while (!$FCGI_DONE) {
+	my $status = $fcgi->Accept;
+	next unless $status >= 0;
+        %ENV = ( %sys_env, %ENV );
+	my $globals = Bio::Graphics::Browser2->open_globals;
+	CGI->initialize_globals();
+	my $gbi = GBrowse_img->new($globals);
+	$gbi->run();
+	$gbi->destroy;
+#	$fcgi->Finish();
+    }
+}
+
+else {
+    my $globals = Bio::Graphics::Browser2->open_globals;
+    GBrowse_img->new($globals)->run();    
+}
+
+
+exit 0;
+
+package GBrowse_img;
+
+use CGI qw(param start_html end_html
+	   p h1 path_info escape img);
+use File::Spec;
+use File::Temp 'tmpnam','tempfile','tempdir';
+use Bio::Graphics::Browser2::Shellwords;
+
+use constant DEBUG => 0;
+
+use constant MAX_SEGMENT       => 1_000_000;
+use constant TOO_MANY_SEGMENTS => 500;
+use constant PANEL_GAP         => 3;
+
+sub new {
+    my $class   = shift;
+    my $globals = shift;
+    my $render  = Bio::Graphics::Browser2::Render::HTML->new($globals);
+    return bless {render => $render},ref $class || $class;
+}
+
+sub run {
+    my $self   = shift;
+    my $render = $self->render;
+    $render->set_details_multiplier(1);
+
+    unless (param()) {
+	print $self->header();
+	print $self->usage();
+	return;
+    }
+
+    $render->set_source() && exit;  # may cause a redirect and exit 
+    $render->init();
+
+    if ($render->data_source->must_authenticate 
+	&& !$self->session->private) {
+	my $base = $render->globals->gbrowse_url;
+	print $self->header();
+	print CGI->h1('Authentication required. Please log into',CGI->a({-href=>$base},'GBrowse'),'from this computer.');
+	return;
+    }
+
+    $render->add_user_tracks($render->data_source);
+    $render->update_state();
+
+    warn join ' ',$render->potential_tracks if DEBUG;
+
+    # self-documentation feature: dump out tab-delimited list of mnemonics and keys
+    if (param('list')) {
+	$self->dump_sources($render) if param('list') eq 'sources';
+	$self->dump_types($render)   if param('list') eq 'types';
+	return;
+    }
+
+    if (param('debug')) {
+	$self->dump_state($render);
+	return;
+    }
+
+    $self->render_image();
+    return;
+}
+
+
+sub render  { shift->{render}               }
+sub session { shift->render->session        }
+sub cookie  { shift->render->create_cookie  }
+sub source  { shift->render->data_source    }
+
+sub destroy { my $self = shift;
+	      $self->{render}->destroy;
+	      undef $self->{render};
+}
+
+sub header {
+    my $self   = shift;
+    if (@_ == 1) {
+	unshift @_,'-type';
+    }
+    my $cookie = $self->cookie();
+    return CGI::header(-cookie => $cookie,
+		       @_);
+}
+
+sub dump_sources {
+    my $self = shift;
+    my $source = $self->source;
+    print $self->header('text/plain');
+    print "## Sources\n";
+    print join "\n",$source->globals->data_sources,"\n";
+}
+
+sub dump_types {
+    my $self = shift;
+    my $render = $self->render;
+    my $source = $self->source;
+
+    print $self->header('text/plain');
+
+    print "## Feature types for source ",$source->name,"\n";
+    my @labels  =  grep {!/:/ and !/^_/} $source->labels;
+    my %default = map {$_=>1} $source->default_labels;
+    for my $l (@labels) {
+	my $d = $default{$l} ? 'default' : '';
+	my $key = $render->setting($l=>'key')||'';
+	print join("\t",$l,$key,$d),"\n";
+    }
+}
+
+sub dump_state {
+    my $self   = shift;
+    my $render = $self->render;
+    print $self->header('text/plain');
+    print "## Current state for debugging\n";
+    print "Source: ",$self->source->name,"\n";
+    print "Segment: ",$render->segment,"\n";
+    print "Labels: ",join(' ',$render->detail_tracks),"\n";
+}
+
+sub render_image {
+    my $self     = shift;
+    my $render   = $self->render;
+    my $renderer = $render->get_panel_renderer;
+
+    my $format   = param('format') || 'GD';
+    my $flip     = param('flip')   || 0;
+    my $embed    = param('embed');
+
+    my $convert_to_pdf;
+    if ($format eq 'PDF' && `which inkscape`) {
+	$convert_to_pdf++;
+	$format = 'GD::SVG';
+    }
+
+    $format = 'GD::SVG' if $format eq 'SVG';
+    $format      = 'GD' if $embed;
+
+    my ($img_data,$map) = $render->region->feature_count > 1 
+                                 ? $self->render_multiple($renderer,$format,$flip,$embed)
+	                         : $self->render_tracks  ($renderer,$format,$flip,$embed);
+
+ 
+    my $seg   = $render->segment;
+    my $fname = $seg ? $seg->seq_id.':'.$seg->start.'..'.$seg->end : "NA";
+
+    if ($embed) {
+        my $url    = $renderer->source->generate_image($img_data);
+	my $js = $render->data_source->globals->js_url;
+	my @scripts = map { {src=>"$js/$_"} }
+	                  qw(balloon.js balloon.config.js yahoo-dom-event.js);
+	print $self->header(-type=>'text/html');
+	print start_html(-script=>\@scripts),
+	      $render->render_balloon_settings,
+	      img(
+		  {
+		      -src    => $url,
+		      -usemap => "#gbrowse2_img_map"}
+		  ),
+	      $map,
+	      end_html();
+    }
+
+    elsif ($format eq 'GD') {
+	print $self->header(-type=>'image/png',
+			    -content_disposition => "filename=$fname.png");	
+	print $img_data->png;
+    } 
+    elsif ($format eq 'GD::SVG' && $convert_to_pdf) {
+	print $self->header(-type=>'application/pdf',
+			    -content_disposition => "filename=$fname.pdf");
+
+	my ($infh,$in)   = tempfile(UNLINK=>0,SUFFIX=>'.svg');
+	my ($outfh,$out) = tempfile(UNLINK=>0,SUFFIX=>'.pdf');
+
+	print $infh $img_data or die "$in: $!";
+	close $infh;
+
+	system "inkscape -z --without-gui --export-pdf=$out $in 3<&1 1>&2 2>&3 | grep -v GDK_IS_DISPLAY";
+	open (my $fh,'<',$out) or die "$out: $!";
+	while (<$fh>) {print $_}
+	close $fh;
+	unlink $in,$out;
+    }
+    elsif ($format eq 'GD::SVG') {
+	print $self->header(-type => 'image/svg+xml',
+			    -content_disposition => "filename=$fname.svg");
+	print $img_data;
+    } 
+    else { 
+	print $self->header('text/plain');
+	print "unknown format $format\n";
+    }
+}
+
+sub render_multiple {
+    my $self = shift;
+    my ($renderer,$format,$flip,$embed) = @_;
+    my $features = $self->render->region->features;
+    my $karyotype = Bio::Graphics::Karyotype->new(source   => $self->render->data_source,
+						  language => $self->render->language);
+    $karyotype->add_hits($features);
+    my $panels = $karyotype->generate_panels($format);
+    my (@gds,@seqids);
+    for my $seqid (keys %$panels) {
+	push @gds,$panels->{$seqid}{panel}->gd;
+	push @seqids,$seqid;
+    }
+    my $img_data = $self->consolidate_images(\@gds,undef,undef,'horizontal',\@seqids);
+    return ($img_data,undef);
+}
+
+sub render_tracks {
+    my $self = shift;
+    my ($renderer,$format,$flip,$embed) = @_;
+
+    my $render   = $self->render;
+
+    my $external = $render->external_data;
+    warn 'visible = ',join ' ',$render->visible_tracks if DEBUG;
+    my @labels   = $render->expand_track_names($render->detail_tracks);
+
+    warn "labels = ",join ',',@labels if DEBUG;
+#    my @types           = (param('t'),param('type'),param('track'));
+#    my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
+#                          map { split /[ +-]/ } @types;
+    my @track_types      = map {shellwords($_)} (param('t'),param('type'),param('track'));
+
+    # If no tracks specified, we want to see all tracks with this feature
+    if (!@track_types) { @track_types = @labels; } 
+    unshift @track_types,'_scale';
+
+    my $result   = $renderer->render_track_images(
+						  {
+						      labels            => \@track_types,
+						      external_features => $external,
+						      section           => 'detail',
+						      cache_extra       => [$format],
+						      image_class       => $format,
+						      flip              => $flip,
+						      -key_style        => 'between',
+						      -suppress_key     => 0,
+						      }
+						  );
+    
+    warn "returned labels = ",join ',',%$result if DEBUG;
+
+    # Previously - @labels (caused drawing more tracks than asked for)
+    my @image_data      = @{$result}{grep {$result->{$_}} @track_types};
+    my @gds             = map {$_->{gd} } @image_data;
+    my @map_data        = map {$_->{map}} @image_data;
+
+    my $img_data  = $self->consolidate_images(\@gds);
+    my $map       = $self->consolidate_maps  (\@map_data, \@gds) if $embed;
+
+    return ($img_data,$map);
+
+}
+
+sub calculate_composite_bounds {
+    my $self = shift;
+    my ($gds,$orientation)  = @_;
+
+    warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
+
+    my $height = 0;
+    my $width  = 0;
+    if ($orientation eq 'vertical') {
+	for my $g (@$gds) {
+	    warn "g=$g" if DEBUG;
+	    next unless $g;
+	    $height +=   ($g->getBounds)[1];  # because GD::SVG is missing the width() and height() methods
+	    $width   ||= ($g->getBounds)[0];
+	}
+    } elsif ($orientation eq 'horizontal') {
+	for my $g (@$gds) {
+	    warn "g=$g" if DEBUG;
+	    next unless $g;
+	    $height    = ($g->getBounds)[1] if $height < ($g->getBounds)[1];
+	    $width    += ($g->getBounds)[0];
+	}
+    }
+    
+    return ($width,$height);
+}
+
+sub consolidate_images {
+    my $self = shift;
+    my ($gds,$width,$height,$orientation,$labels) = @_;
+    $orientation ||= 'vertical';
+
+    ($width,$height) = $self->calculate_composite_bounds($gds,$orientation) 
+	unless defined $width && defined $height;
+
+    warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
+
+    my $format = ref($gds->[0]);
+    warn "format = $format" if DEBUG;
+
+    return $format =~ /^GD::SVG/ ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
+                                 : $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
+}
+
+sub _consolidate_gd {
+    my $self = shift;
+    my ($width,$height,$gds,$orientation,$labels) = @_;
+
+    my $class     = ref($gds->[0]);
+    (my $fontclass = $class)=~s/::Image//;
+
+    my $lineheight = $fontclass->gdMediumBoldFont->height;
+    my $charwidth  = $fontclass->gdMediumBoldFont->width;
+    $height += $lineheight if $orientation eq 'horizontal';
+
+    my $gd = $class->new($width,$height);
+    my $white = $gd->colorAllocate(255,255,255);
+    my $black = $gd->colorAllocate(0,0,0);
+
+    eval {
+	my $bg = $gds->[0]->getPixel(0,0);
+	my @bg = $gds->[0]->rgb($bg);
+	my $i  = $gd->colorAllocate(@bg);
+	$gd->filledRectangle(0,0,$width,$height,$i);
+    };
+
+    my $offset = 0;
+    if ($orientation eq 'vertical') {
+	for my $g (@$gds) {
+	    next unless $g;
+	    $gd->copy($g,0,$offset,0,0,$g->getBounds);
+	    $offset += ($g->getBounds)[1];
+	}
+    } else {
+	for my $g (@$gds) {
+	    next unless $g;
+	    $gd->copy($g,$offset,$height-($g->getBounds)[1]-$lineheight,0,0,$g->getBounds);
+	    if ($labels) {
+		my $l = shift @$labels;
+		$gd->string($fontclass->gdMediumBoldFont,
+			    $offset+(($g->getBounds)[0]-$charwidth*length $l)/2,
+			    $height-$lineheight,$l,$black);
+	    }
+	    $offset += ($g->getBounds)[0];
+	}
+    }
+
+    return $gd;
+}
+
+# because the GD::SVG copy() method is broken
+sub _consolidate_svg {
+    my $self = shift;
+    my ($width,$height,$gds,$orientation,$labels) = @_;
+
+    my $image_height = $height;
+
+    if ($labels) {
+	my $font = GD::SVG->gdMediumBoldFont;
+	my $charwidth = $font->width;
+	my $lineheight=$font->height;
+	$image_height += $lineheight;
+	for my $gd (@$gds) {
+	    my $l     = shift @$labels;
+	    my $black = $gd->colorAllocate(0,0,0);
+	    $gd->string($font,
+			(($gd->getBounds)[0]-$charwidth*length $l)/2,
+			($gd->getBounds)[1],
+			$l,$black);
+	}
+    }
+
+    my $svg = qq(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n\n);
+    $svg   .= qq(<svg height="$image_height" width="$width" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n);
+
+    if ($orientation eq 'vertical') {
+	my $offset = 0;
+	for my $g (@$gds) {
+	    my $s              = $g->svg;
+	    my $current_height = 0;
+	    foreach (split "\n",$s) {
+		if (m!</svg>!) {
+		    last;
+		}
+		elsif (/<svg.+height="([\d.]+)"/) {
+		    $current_height = int($1+0.5);
+		    $svg .= qq(<g transform="translate(0,$offset)">\n);
+		}
+		elsif ($current_height) {
+		    $svg .= "$_\n";
+		}
+	    }
+	    $svg .= "</g>\n" if $current_height;
+	    $offset += $current_height;
+	}
+	$svg   .= qq(</svg>\n);
+ 
+
+   } else {
+	my $offset = 0;
+	for my $g (@$gds) {
+	    my $s              = $g->svg;
+	    my $current_width = 0;
+	    foreach (split "\n",$s) {
+		if (m!</svg>!) {
+		    last;
+		}
+		elsif (/<svg.+width="([\d.]+)"/) {
+		    $current_width = int($1+0.5);
+		    my $height     = $height - ($g->getBounds)[1];
+		    $svg .= qq(<g transform="translate($offset,$height)">\n);
+		}
+		elsif ($current_width) {
+		    $svg .= "$_\n";
+		}
+	    }
+	    $svg .= "</g>\n" if $current_width;
+	    $offset += $current_width;
+	}
+	$svg   .= qq(</svg>\n);
+    }
+
+    # munge fonts slightly for systems that don't have Helvetica installed
+    $svg    =~ s/font="Helvetica"/font="san-serif"/gi;
+    $svg    =~ s/font-size="11"/font-size="9"/gi;  
+    $svg    =~ s/font-size="13"/font-size="12"/gi;  
+    return $svg;
+}
+
+sub consolidate_maps {
+    my $self = shift;
+    my ($maps,$gds) = @_;
+
+    my $offset = 0;
+    my @integrated_list = 'gbrowse2_img';
+    for (my $i=0;$i<@$maps;$i++) {
+	my $data = $maps->[$i];
+	shift @$data;
+	for (@$data) {
+	    my ($name,$x1,$y1,$x2,$y2,@rest) = split "\t";
+	    $y1 += $offset;
+	    $y2 += $offset;
+	    push @integrated_list,join "\t",($name,$x1,$y1,$x2,$y2,@rest);
+	}
+	$offset += ($gds->[$i]->getBounds)[1];
+    }
+
+    return Bio::Graphics::Browser2::RenderPanels->map_html(\@integrated_list);
+}
+
+sub usage {
+    return <<'END';
+
+<html>
+<h1>gbrowse_img - CGI script to generate genome images via the Generic Genome Browser</h1>
+
+<h2>SYNOPSIS</h2>
+
+<pre>
+
+  &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
+<blockquote>
+  <i>Will generate this picture:</i>
+ <img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;width=400">
+</blockquote>
+
+  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
+<blockquote>
+  <i>Will return this document:</i>
+  ## Sources
+  b_malayi
+  c_brenneri
+  c_briggsae_cb25
+  c_briggsae
+  c_elegans
+  c_elegans_gmap
+  c_elegans_pmap
+  ws77
+  c_japonica
+  c_remanei
+  c_remanei_nGASP
+  nGASP_submissions
+  nGASP
+  Gbrowse_karyotype
+  p_pacificus
+  yeast
+</blockquote>
+
+  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
+<blockquote>
+  <i>Will return this document:</i>
+  ## Feature types for source c_elegans
+  LOCI:overview	Landmarks	default
+  RNAZ	RNAz non-coding RNA genes	
+  CG	Gene Models	default
+  CDS	Coding Segments	
+  RNA	Predicted non-coding RNAs	
+  HISTORICAL	Obsolete gene models	
+  GENEFINDER	GeneFinder Predictions	
+  TWINSCAN	Twinscan Predictions	
+  GENEMARKHMM	GeneMarkHMM Predictions	
+  mSPLICER_TRANSCRIPT	mSplicer
+  ...
+</blockquote>
+
+</pre>
+
+<h2>DESCRIPTION</h2>
+
+<p>
+This CGI script is an interface to the Generic Genome Browser for the
+purpose of retrieving dynamic images of a region of the genome.  It
+can be used as the destination of an &lt;img&gt; tag like this:
+</p>
+
+<blockquote><pre>
+&lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=III:1..1000"&gt;
+</pre></blockquote>
+
+<p>
+
+The script can also be used to superimpose one or more external
+features onto the display, for example for the purpose of displaying
+BLAST hits, an STS or a knockout in the context of the genome.
+
+</p>
+
+<h2>CGI arguments</h2>
+
+<p>
+
+The script recognizes the following CGI arguments, which can be passed
+either as GET or POST argument=value pairs.  Argument pairs must be
+separated by semicolons (preferred) or by ampersands.  Many of the
+options have one-letter aliases that can be used to reduce URL
+lengths.
+</p>
+
+<table border="1">
+<tr><th>Argument</th><th>Alias</th><th>Description</th></tr>
+<tr> <td>name</td>    <td>q</td>   <td>genomic landmark or range</td></tr>
+<tr> <td>type</td>    <td>t</td>   <td>tracks to include in image</td></tr>
+<tr> <td>width</td>   <td>w</td>   <td>desired width of image</td></tr>
+<tr> <td>options</td> <td>o</td>   <td>list of track options (compact, labeled, etc)</td></tr>
+<tr> <td>abs</td>     <td>b</td>   <td>display position in absolute coordinates</td></tr>
+<tr> <td>add</td>     <td>a</td>   <td>added feature(s) to superimpose on the image</td></tr>
+<tr> <td>style</td>   <td>s</td>   <td>stylesheet for additional features</td></tr>
+<tr> <td>keystyle</td><td>k</td>   <td>where to place the image key</td></tr>
+<tr> <td>overview</td><td>&nbsp;</td>   <td>force an overview-style display</td></tr>
+<tr> <td>flip</td>    <td>f</td>   <td>flip image left to right</td></tr>
+<tr> <td>grid</td>    <td>&nbsp;</td>   <td>turn grid on (1) or off (0)</td></tr>
+<tr> <td>embed</td>   <td>&nbsp;</td>   <td>generate full HTML for image and imagemap for use in an embedded frame</td></tr>
+<tr> <td>format</td>  <td>&nbsp;</td>   <td>format for the image (use "SVG" for scaleable vector graphics)</td></tr>
+<tr> <td>list</td>    <td>&nbsp;</td>    <td>get certain types of configuration information</td></tr>
+<tr> <td>source</td>  <td>&nbsp;</td>    <td>database name</td></tr>
+</table>
+
+<p>The arguments are explained in more detail here</p>
+
+<dl>
+  <dt><b>name</b>  (Alias: <b>q</b>)
+  <dd>This argument specifies the region of the genome to be displayed.  Several
+      forms are recognized:
+      <ul>
+	<li><i>name=Landmark</i>  Display the landmark named "Landmark".  Valid landmark
+	    names include chromosomes, contigs, clones, STSs, predicted genes, and any other
+	    landmark that the administrator has designated.  Be careful when fetching large
+	    landmarks such as whole chromosomes!
+	<li><i>name=Landmark:start..end</i>  Display the region between <i>start</i> and <i>end</i>
+	    relative to "Landmark".
+	<li><i>name=Class:Landmark</i>  Display "Landmark", restricting to a particular class, such
+	    as "PCR_Product".  The list of classes is under the control of the database administrator
+	    and is not yet available through this interface.
+	<li><i>name=Class:Landmark:start..end</i>  As above, but restricted to the designated range.
+      </ul>
+      If you use multiple <b>name</b> options, then this script will generate an overview
+      image showing the position of each landmark.  The alias "q" can be used to
+      shorten the length of the URL.
+      <p>
+  <dt><b>type</b> (Aliases: <b>t</b>, <b>track</b>)
+  <dd>This argument lists the feature types to display.  The value of this argument is
+      a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
+      <p>
+      <pre>
+      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;
+                   type=tRNA+NG+WABA+CG+ESTB"&gt;
+      </pre>
+      Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
+      The alias "t" can be used to shorten the length of the URL.
+      <p>
+      If the track name has a space in it, put quotes around the name:
+      <pre>
+            type="microbe tRNA"+NG+WABA+CG+ESTB
+      </pre>
+      <p>
+  <dt><b>width</b> (Alias: <b>w</b>)
+  <dd>Width of the desired image, in pixels.
+       <p>
+  <dt><b>options</b> (Alias: <b>o</b>)
+  <dd>A space-delimited list ("+" characters when URL-escaped) of mnemonic/option
+      pairs describing how features should be
+      formatted. Options are integers from 0 to 3, where
+      0=auto, 1=compact, 2=expanded, 3=expanded and labeled.  For example, to specify that
+      the tRNA and NG tracks should always be expanded and labeled, but that the WABA
+      track should be compact, use:
+      <p>
+      <pre>
+      options=tRNA+3+NG+3+WABA+1
+      </pre>
+      <p>
+       The alias "o" can be used to shorten the length of the URL.
+      <p>
+  <dt><b>add</b> (Alias: <b>a</b>)
+  <dd>Superimpose one or more additional features on top of the view.  Features are specified
+      as space ("+") delimited lists in the following format:
+      <p>
+      <pre>
+      add=Landmark+Type+Name+start..end,start..end,start..end
+      </pre>
+      "Landmark" is the landmark name, "Type" is a descriptive type that will be printed
+      in the image caption, "Name" is a name for the feature to be printed above it,
+      and start..end is a comma-delimited list of ranges for discontinuous feature.
+      Names that contain white space must be quoted, for example "BLAST hit".
+      Note that this all has to be URL-escaped, so an additional
+      feature named "Your Sequence", type "Blast Hit", that is located on chromosome III
+      in a gapped range between 20000 and 22000, will be formatted as:
+      <p>
+      <pre>
+      add=III+%22Blast%20Hit%22+%22Your%20Sequence%22+20000..21000,21550..22000
+      </pre>
+      <p>
+      One or both of the type and name can be omitted.  If omitted, type will
+      default to "Your Features" and the name will default to "Feature XX" where
+      XX is an integer.  This allows for a very simple feature line:
+      <pre>
+      add=III+20000..21000,21550..22000
+      </pre>
+      <p>
+      Multiple <i>add=</i> arguments are allowed. The alias "a" can be used to
+      shorten the length of the URL.
+      <p>
+  <dt><b>style</b>
+  <dd>The style argument can be used to control the rendering of additional features added
+      with "add".  It is a flattened version of the style configuration sections described
+      in <a href="http://www.wormbase.org/db/seq/gbrowse?help=annotation">this document</a>
+      For example, if you have added a "Blast Hit" annotation, then you can tell the
+      renderer to use a red arrow for this glyph in this way:
+      style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
+      <p>
+  <dt><b>keystyle</b> (Alias: <b>k</b>)
+  <dd>Controls the positioning of the track key. One of "right", "left", "between" (default) 
+      or "bottom"
+      <p>
+  <dt><b>overview</b>
+  <dd>Ordinarily the image will show the detail panel if the query region corresponds to
+       a single region, and the overview panel if multiple regions match (or if a region
+       that is too large to show matches).  Setting overview=1 will force the overview
+       to be shown in all cases.
+      <p>
+  <dt><b>flip</b> (Alias: <b>f</b>)
+  <dd>Flip the image left to right.  Arguments are 0=don't flip (default), and 1=flip.
+     <p>
+  <dt><b>embed</b>
+  <dd>Generate image and a corresponding HTML imagemap in a form suitable for embedding
+      into a frame.
+     <p>
+  <dt><b>format</b>
+  <dd>Specify the format for the image file.  Either "GD" (the default) or
+      "GD::SVG" for scaleable vector graphics.
+     <p>
+  <dt><b>list</b>
+  <dd>If this argument is present, it will cause the script to dump
+      out various types of information in plain text form.  Currently the two
+      values for this argument are <i>sources</i>, to dump out the list of
+      data sources, and <i>types</i>, to dump out the list of configured
+      types.  For <i>list=sources</i>, the script will return a simple
+      text list of the data source names.  For <i>list=types</i>, the
+      script will return a three-column tab-delimited list giving the
+      track names and feature types corresponding to the currently-selected
+      data source.  The format is as follows:
+      </p>
+      <blockquote>
+      <pre>
+      Mnemonic &lt;tab&gt; Full description of feature &lt;tab&gt; [default]
+      </pre>
+      </blockquote>
+      <p>
+      The third column contains the word "default" if the track will be shown
+      by default when no <i>type</i> argument is provided.
+      <p>
+  <dt><b>source</b>
+  <dd>This argument specifies the database for the images.  The list of sources
+      can be found using <i>list=sources</i>.
+      <p>
+  <dt><b>h_feat</b>
+  <dd>The name of a feature to highlight in the format <i>feature_name</i>@<i>color_name</i>".
+       Example:
+       <blockquote></pre>
+        h_feat=SKT5@blue
+        </pre></blockquote>
+        You may omit "@color", in which case the highlight will default to
+        yellow. You can specify multiple h_feat arguments in order to
+        highlight several features with distinct colors.
+  <dt><b>h_region</b>
+  <dd>The name of a region to highlight in a solid background color, in the
+      format <i>sequence_name</i>:<i>start</i>..<i>end</i>@<i>color_name</i>".
+       Example:
+       <blockquote></pre>
+        h_region=Chr3:200000..250000@wheat
+        </pre></blockquote>
+        You may omit "@color", in which case the highlighted region 
+        will default to
+        lightgrey. You can specify multiple h_region arguments in order to
+        highlight several regions with distinct colors.
+</dl>
+<p>
+Putting it all together, here's a working (very long) URL:
+<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
+</pre>
+
+<p>
+
+If you wish to associate the image with an imagemap so that clicking
+on a feature takes the user to the destination configured in the
+gbrowse config file, you may do so by placing the URL in an
+&lt;iframe&gt; section and using the <b>embed=1</b> flag:
+</p>
+
+<pre>
+&lt;iframe src="http://localhost/cgi-bin/gbrowse_img/c_elegans?name=B0001;embed=1" width="100%" height="250"&gt;
+   &lt;img src="http://localhost/cgi-bin/gbrowse_img/c_elegans?name=B0001"/&gt;
+&lt;/iframe&gt;
+</pre>
+
+<p>
+
+Placing an &lt;img&gt; tag inside the &lt;iframe&gt; tag arranges for
+older browsers that don't know about iframes to display the static
+image instead.  You may need to adjust the width and height attributes
+in order to avoid browsers placing scrollbars around the frame.
+
+<h2>KNOWN BUGS</h2>
+
+<p> The cookie that stores the configuration options for plugins does
+not transfer from gbrowse to gbrowse_img, so tracks generated by
+annotation plugins, such as the Restriction site annotator, will not
+display correctly when the image URL is generated on one machine and
+then viewed on another. Uploaded files will transfer correctly,
+however.</p>
+
+<h2>AUTHOR</h2>
+
+<p>Lincoln Stein <a href="mailto:lstein@cshl.org">lstein@cshl.org</a>
+<p>
+Copyright (c) 2002-2004 Cold Spring Harbor Laboratory
+<p>
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+<p>
+
+For additional help, see <a href="http://www.gmod.org">The GMOD Project</a> pages.
+
+END
+;
+}
+
+__END__

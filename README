@@ -20,7 +20,6 @@ or via SVN here:
 
 svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/branches/stable Generic-Genome-Browser
 
-
 **************************
 
 SYNOPSIS:
@@ -89,9 +88,11 @@ that. What follows here is a brief synopsis.
 
      perl -I /home/fred/build/bioperl-live Build.PL
 
-   To install in a custom location, pass the --install_base argument:
+   To install in a custom location, pass the --install_base (preferred) or
+   --prefix argument (deprecated):
 
-     perl Build.PL --install_base=/home/fred/software
+     perl Build.PL --install_base=/home/fred/gbrowse
+     perl Build.PL --prefix=/home/fred/gbrowse
 
 3) Run the command:
 

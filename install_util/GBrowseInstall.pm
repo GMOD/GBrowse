@@ -215,7 +215,8 @@ sub ACTION_config {
     my $self  = shift;
     local $^W = 0;
 
-    my $prefix = $self->prefix || $self->install_base || '/';
+    my $prefix = $self->install_base || $self->prefix || '';
+    GBrowseGuessDirectories->prefix($prefix);
 
     # $self->depends_on('build');
     return if $self->config_done;
@@ -239,7 +240,7 @@ sub ACTION_config {
 			     $opts{$key} ||
 			     ($conf_dir 
 			     ? File::Spec->canonpath(
-				 File::Spec->catfile($prefix,GBrowseGuessDirectories->$key($opts{apache})))
+				 File::Spec->catfile(GBrowseGuessDirectories->$key($opts{apache})))
 			     : GBrowseGuessDirectories->$key($opts{apache})));
 	if ($conf_dir) {
 	    my ($volume,$dir) = File::Spec->splitdir($opts{$key});
@@ -334,6 +335,7 @@ sub apache_conf {
     my $tmp     = $self->config_data('tmp');
     my $cgiroot = basename($cgibin);
     my $perl5lib= $self->added_to_INC;
+    warn $perl5lib;
     my $inc      = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
     my $fcgi_inc = $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
     my $fcgid_inc= $perl5lib ? "DefaultInitEnv PERL5LIB $perl5lib"        : '';
@@ -403,23 +405,23 @@ END
 
 sub ACTION_install {
     my $self = shift;
-    my $prefix = $self->prefix || $self->install_base || '';
+    my $prefix = $self->install_base || $self->prefix || '';
+    GBrowseGuessDirectories->prefix($prefix);
 
     $self->depends_on('config_data');
     $self->install_path->{conf} 
-        ||= $self->config_data('conf')
-	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->conf);
+        ||= $self->config_data('conf') || GBrowseGuessDirectories->conf;
     $self->install_path->{htdocs}
         ||= $self->config_data('htdocs')
-	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->htdocs);
+	    || GBrowseGuessDirectories->htdocs;
     $self->install_path->{'cgi-bin'} 
         ||= $self->config_data('cgibin')
-	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->cgibin);
+	    || GBrowseGuessDirectories->cgibin;
     $self->install_path->{'etc'} 
-        ||= File::Spec->catfile($prefix,GBrowseGuessDirectories->etc);
+        ||= GBrowseGuessDirectories->etc;
     $self->install_path->{'databases'} 
         ||= $self->config_data('databases')
-	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->databases);
+	    || GBrowseGuessDirectories->databases;
     
     $self->SUPER::ACTION_install();
 
@@ -464,7 +466,9 @@ sub ACTION_install {
     # Configure the databases, if needed.
     print STDERR "Updating user account database...\n";
     my $metadb_script = File::Spec->catfile("bin", "gbrowse_metadb_config.pl");
-    system 'perl',$metadb_script;
+    my $perl          = $self->perl;
+    my @inc           = map{"-I$_"} split ':',$self->added_to_INC;
+    system $perl,@inc,$metadb_script;
 
     if (Module::Build->y_n(
 	    "It is recommended that you restart Apache. Shall I try this for you?",'y'
@@ -479,8 +483,9 @@ sub ACTION_install {
 
 sub ACTION_install_slave {
     my $self = shift;
-    $self->install_path->{'etc'} 
-        ||= File::Spec->catfile($self->prefix||'',GBrowseGuessDirectories->etc);
+    my $prefix = $self->install_base || $self->prefix ||'';
+    GBrowseGuessDirectories->prefix($prefix);
+    $self->install_path->{'etc'} ||= GBrowseGuessDirectories->etc;
     $self->SUPER::ACTION_install();
 }
 
@@ -511,9 +516,9 @@ sub process_conf_files {
     my $self = shift;
     my $f    = IO::File->new('MANIFEST');
 
-    my $prefix = $self->prefix || $self->install_base || '';
-    my $install_path = $self->config_data('conf')
-	|| File::Spec->catfile($prefix,GBrowseGuessDirectories->conf);
+    my $prefix = $self->install_base || $self->prefix || '';
+    GBrowseGuessDirectories->prefix($prefix);
+    my $install_path = $self->config_data('conf') || GBrowseGuessDirectories->conf;
     my $skip;
 
     while (<$f>) {
@@ -572,8 +577,9 @@ sub process_cgibin_files {
 sub process_etc_files {
     my $self = shift;
 
-    my $prefix = $self->prefix || $self->install_base || '';
-    my $install_path = File::Spec->catfile($prefix,GBrowseGuessDirectories->etc);
+    my $prefix = $self->install_base || $self->prefix || '';
+    GBrowseGuessDirectories->prefix($prefix);
+    my $install_path = GBrowseGuessDirectories->etc;
 
     my $skip;
 
@@ -876,8 +882,10 @@ sub added_to_INC {
     my $self       = shift;
     my @inc        = grep {!/install_util/} eval {$self->_added_to_INC};  # not in published API
     my $lib_base   = $self->install_destination('lib');
+    my $arch_base  = $self->install_destination('arch');
     my %standard   = map {$_=>1} @INC;
-    push @inc,$lib_base unless $standard{$lib_base};
+    push @inc,$lib_base  unless $standard{$lib_base};
+    push @inc,$arch_base unless $standard{$arch_base};
     return @inc ? join(':',@inc) : '';
 }
 
@@ -899,7 +907,8 @@ sub scriptdir {
 sub ownership_warning {
     my $self = shift;
     my ($path,$owner) = @_;
-    warn "*** WARNING: Could not change ownership of $path to '$owner'.\n\tPlease change manually using 'sudo chown -R $owner $path' ***\n";
+    warn "*** WARNING: Using sudo to change ownership of $path to '$owner'. You may be prompted for your login password ***\n";
+    system "sudo chown -R $owner $path";
 }
 
 sub cgiurl {

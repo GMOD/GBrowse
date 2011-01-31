@@ -44,9 +44,15 @@ EOF
 
 my $www_user       = GBrowse::ConfigData->config('wwwuser');
 my ($current_user) = getpwuid($<);
-unless ($< == 0) {
-    print STDERR "For this script to work properly, it must be run as the 'root' user.\n";
-    print STDERR "Trying to invoke sudo to change permissions now. You may be prompted for your password.\n";
+
+unless ($www_user eq $current_user or $< == 0) {
+    print STDERR <<END;
+For user account installation to work properly, this script must be able to
+create directories owned by the Apache server account ($www_user).
+This script will now invoke sudo to become the 'root' user temporarily.
+You may be prompted for your login password now.
+END
+;
     exec 'sudo','-u','root',$0,@argv;
 }
 
@@ -484,8 +490,17 @@ sub fix_sqlite_permissions {
     my $group   = get_group_from_user($user);
 
     my $dir = dirname($path);
-    my $file_owner = getpwuid((stat($path))[4]);
-    my $dir_owner  = getpwuid((stat($dir))[4]);
+    unless (-e $dir) {
+	my $parent = dirname($dir);
+	if (-w $parent) {
+	    mkdir $parent;
+	} else {
+	    print STDERR "Using sudo to create $parent directory. You may be prompted for your login password now.\n";
+	    system "sudo mkdir $parent";
+	}
+    }
+    my $file_owner = -e $path ? getpwuid((stat($path))[4]) : '';
+    my $dir_owner  = -e $dir  ? getpwuid((stat($dir))[4])  : '';
 
     # Check if we need to, to avoid unnecessary printing/sudos.
     unless ($group) {

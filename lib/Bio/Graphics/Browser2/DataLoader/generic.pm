@@ -71,6 +71,7 @@ sub finish_load {
 db_adaptor = Bio::DB::SeqFeature::Store
 db_args    = -adaptor $backend
              -dsn     $dsn
+search options = default +wildcard +stem
 
 #>>>>>>>>>> cut here <<<<<<<<
 END

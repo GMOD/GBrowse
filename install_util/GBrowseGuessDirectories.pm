@@ -3,9 +3,20 @@ package GBrowseGuessDirectories;
 use IO::Socket::INET;
 use File::Spec;
 
+my $PREFIX;
+
+sub prefix {
+    my $self = shift;
+    my $d    = $PREFIX;
+    $PREFIX  = shift if @_;
+    return $d;
+}
+
 # this package never gets installed - it's just used by Makefile.PL
 sub conf {
-  shift;
+  my $self = shift;
+  return File::Spec->catfile($PREFIX,'etc','gbrowse2') if $PREFIX;
+
   if ($^O =~ /mswin/i) {  # windows system
       return File::Spec->catfile('C:','Program Files','GBrowse2','conf');
   } else {
@@ -17,16 +28,18 @@ sub conf {
 	  return File::Spec->catfile($_,'gbrowse2') if -d $_;
       }
   }
-  return File::Spec->catfile('/usr/local/etc','gbrowse2');   # fallback
+  return File::Spec->catfile($self->prefix || '/usr/local/etc','gbrowse2');   # fallback
 }
 
 sub etc {
     shift;
+    return File::Spec->catfile($PREFIX,'etc') if $PREFIX;
     return '/etc';  # no exceptions
 }
 
 sub tmp {
     my $self = shift;
+    return File::Spec->catfile($PREFIX,'tmp','gbrowse2') if $PREFIX;
     return '/srv/gbrowse2/tmp'   if $ENV{DEB_BUILD_ARCH}; # FHS system
     return '/var/tmp/gbrowse2'   if -d '/var/tmp';
     return File::Spec->catfile(File::Spec->tmpdir,'gbrowse2');
@@ -34,6 +47,7 @@ sub tmp {
 
 sub databases {
     my $self = shift;
+    return File::Spec->catfile($self->htdocs,'databases') if $PREFIX;
     return '/srv/gbrowse2/databases'             if $ENV{DEB_BUILD_ARCH}; # FHS system
     return File::Spec->catfile($self->htdocs,'databases');
 }
@@ -76,8 +90,9 @@ sub apache_root {
 sub htdocs {
     my $self = shift;
     local $^W = 0;
-    return '/srv/gbrowse2/htdocs' if $ENV{DEB_BUILD_ARCH};
+    return File::Spec->catfile($PREFIX,'htdocs') if $PREFIX;
 
+    return '/srv/gbrowse2/htdocs' if $ENV{DEB_BUILD_ARCH};
     my $root = $self->apache_root;
     foreach ('htdocs','html') {
 	return File::Spec->catfile($root,$_) 

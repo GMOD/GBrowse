@@ -1,3 +1,8 @@
+2.25
+   * Made it easier to install GBrowse as an unprivileged user.
+   * Allow searching for features with pipe symbols in their names.
+   * Allow searching for features defined in uploaded tracks.
+
 2.24
    * Fixed gbrowse_metadb_config.pl script so that it no longer fails when creating a user database
      from scratch.

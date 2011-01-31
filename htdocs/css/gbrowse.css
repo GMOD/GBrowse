@@ -135,3 +135,18 @@ span.show {
 span.hide {
     font-weight: normal;
 }
+
+div.ipadcollapsed:active  
+		{
+		background-color: #00008B;
+		color: #FFF8F8;
+		 /*"collapse('$label')",*/
+	
+		}
+div.ipadtitle
+		{
+		background-color: #00008B;
+		color: #FFF8F8;
+		 /*"collapse('$label')",*/
+	
+		}

@@ -160,10 +160,14 @@ function startAjaxUpload(upload_id) {
 			},
 			onSuccess: function(transport) {
 				// If it's worked, stop the PeriodicalUpdater stored in the hash and update the screen.
-			if (transport.responseText.match(/complete/)) {
-			    Ajax_Status_Updater.get(upload_id).stop();
+				if (transport.responseText.match(/complete/)) {
+					Ajax_Status_Updater.get(upload_id).stop();
+					var sections = new Array(custom_tracks_id, track_listing_id);
+					if (using_database())
+						sections.push(community_tracks_id);
+					Controller.update_sections(sections);
+				}
 			}
-		    }
 		}
 	);
 	// Add the PeriodicalUpdater object to the Ajax_Status_Updater hash, so it can be found by onSuccess once it's done.
@@ -187,15 +191,28 @@ function completeAjaxUpload(response, upload_id, field_type) {
     }
     
 	if (r.success) {
+		var fields = new Array(track_listing_id, custom_tracks_id)
+		if (using_database())
+			fields.push(community_tracks_id);
 		// Add any tracks returned to the Controller.
 		if (r.tracks != null && r.tracks.length > 0) {
-
-		    var fields = new Array(track_listing_id, custom_tracks_id);
-		    if (using_database()) fields.push(community_tracks_id);
-		    if (updater != null) updater.stop();
-		    cleanRemove($(upload_id));
-		    var onComplete = function () { Controller.update_sections(fields) };
-		    Controller.add_tracks(r.tracks,onComplete,false,true);
+			Controller.add_tracks(
+				r.tracks,
+				function() { 
+					Controller.update_sections(
+						fields,
+						'',
+						false,
+						false,
+						function() {
+							var updater = Ajax_Status_Updater.get(upload_id);
+							if (updater != null)
+								updater.stop()
+							cleanRemove($(upload_id));
+						}
+					)
+				}
+			);
 		} else {
 			// If no tracks were returned, just stop the updater & remove the upload field.
 			var updater = Ajax_Status_Updater.get(upload_id);

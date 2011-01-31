@@ -204,6 +204,10 @@ END
 
    REMOTE_TITLE => 'Add remote annotations',
 
+   #ipad
+   IPAD_BALLOON => '\nTap feature again to see more details '
+   #
+
    REMOTE_URL   => 'Enter remote track URL',
 
    UPDATE_URLS  => 'Update',
@@ -445,7 +449,7 @@ END
 
  CONFIGURE_THIS_TRACK   => '<b>Configure this track</b>',
 
- DOWNLOAD_THIS_TRACK   => '<b>Download this track</b>',
+ DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
 
  ABOUT_THIS_TRACK   => '<b>About this track</b>',
 

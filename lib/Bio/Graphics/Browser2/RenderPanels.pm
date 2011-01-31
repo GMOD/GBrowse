@@ -1,5 +1,4 @@
 package Bio::Graphics::Browser2::RenderPanels;
-
 use strict;
 use warnings;
 
@@ -248,7 +247,6 @@ sub make_requests {
     my $self   = shift;
     my $args   = shift;
     my $source = $self->source;
-    
     my $settings=$self->settings;
 
     my $feature_files  = $args->{external_features};
@@ -431,7 +429,7 @@ sub wrap_rendered_track {
     # Work around bug in google chrome which is manifested by the <area> link information
     # on all EVEN reloads of the element by ajax calls. Weird.
     my $agent  = CGI->user_agent || '';
-    $map_id   .= "_".int(rand(1000)) if $agent =~ /chrome/i;  
+    $map_id   .= "_".int(rand(1000)) ;#if $agent =~ /chrome/i || $agent=~ /safari/i;   
 
     my $img = img(
         {   -src    => $url,
@@ -442,6 +440,7 @@ sub wrap_rendered_track {
             -border => 0,
             -name   => $label,
             -style  => $img_style
+	    
         }
     );
 
@@ -489,7 +488,10 @@ sub wrap_rendered_track {
     }
 
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
-    my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
+    my $help_click     = "GBox.showTooltip(event,'$help_url',1)"; 
+
+    my $ipad_menu_url = "url:?action=ipad_menu;track=$escaped_label:";
+    my $ipad_menu_click = "GBox.showTooltip(event,'$ipad_menu_url',true)"; 
 
     my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
@@ -510,64 +512,97 @@ sub wrap_rendered_track {
     }
     $title =~ s/:(overview|region|detail)$//;
 
+
+
+    my $ipadcollapse =  "collapse('$label')";
+    my $ipadkill = "ShowHideTrack('$label',false)";
+
+
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
     my @images = (
 	img({   -src         => $icon,
                 -id          => "${label}_icon",
-                -onClick     => "collapse('$label')",
+                -onClick     => $ipadcollapse,
                 -style       => 'cursor:pointer',
-                -onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')",
+		$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')"),
             }
         ),
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
 		-onClick     => "ShowHideTrack('$label',false)",
                 -style       => 'cursor:pointer',
-                -onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')",
+                $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
             }
         ),
         img({   -src   => $share,
                 -style => 'cursor:pointer',
-                -onMouseOver =>
-                    "$balloon_style.showTooltip(event,'$share_this_track')",
-		    -onMousedown =>
-                    "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
+		-onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
+                $self->if_not_ipad(-onMouseOver =>
+                    "$balloon_style.showTooltip(event,'$share_this_track')"),
             }
         ),
 
         $config_click ? img({   -src         => $configure,
 				-style       => 'cursor:pointer',
 				-onmousedown => $config_click,
-				-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')",
+				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
 			    })
 	              : '',
         $download_click ? img({   -src         => $download,
 				  -style       => 'cursor:pointer',
 				  -onmousedown => $download_click,
-				  -onMouseOver =>
-				      "$balloon_style.showTooltip(event,'$download_this_track')",
+				  $self->if_not_ipad(-onMouseOver =>
+						     "$balloon_style.showTooltip(event,'$download_this_track')"),
 			      })
 	                 : '',
 
         img({   -src         => $help,
                 -style       => 'cursor:pointer',
                 -onmousedown => $help_click,
-                -onMouseOver =>
-	    "$balloon_style.showTooltip(event,'$about_this_track')",
+                $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$about_this_track')"),
             }
         )
-	);
 
+	);
+   my $collapse = '<br>Collapse';
+  my $cancel = 'Cancel';
+  my $share_ipad = 'Share';
+  my $configure_ipad = 'Configure';
+  my $download_ipad = 'Download';
+  my $about = 'About track';
+ 
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
+    my $popmenu = div({-id =>'popmenu', -style => 'display:none'},
 
-    my $titlebar = span(
-        {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
-            -id => "${label}_title"
-        },
-	@images,
-	$title
-    );
+	   div({-class => 'ipadtitle', -id => "${label}_title",},$label ),
+	   div({-class => 'ipadcollapsed', 
+                -id    => "${label}_icon", 
+		-onClick => $ipadcollapse,},
+					    $collapse),
+	    div({-class => 'ipadcollapsed',
+		 -id => "${label}_kill",
+		 -onClick     => $ipadkill,
+					  },
+					    $cancel),
+	     div({-class => 'ipadcollapsed'},$share_ipad),
+	     div({-class => 'ipadcollapsed'},$configure_ipad),
+	     div({-class => 'ipadcollapsed'},$download_ipad),
+	     div({-class => 'ipadcollapsed'},$about),
+
+		  );
+    my $titlebar = 
+	span(
+		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
+		    -id => "${label}_title",
+		    -onClick=> "GBox.showTooltip(event,'load:popmenu',true)",
+				
+# # 		<div id = \"ipadtitle\">$label<br></div><br><div id = \"ipadcollapsed\">Collapse<br></div><div id = \"ipadcollapsed\";>Cancel<br></div><div id = \"ipadcollapsed\";>Share<br></div><div id = \"ipadcollapsed\";>Configure<br></div><div id = \"ipadcollapsed\";>Download<br></div><div id = \"ipadcollapsed\";>About<br></div>'
+		},
+	    'Menu |',
+# 	    @images,
+	    span({-class => 'drag_region'},$title)
+	);
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
@@ -587,7 +622,7 @@ sub wrap_rendered_track {
     my $pad_img = img(
         {   -src    => $pad_url,
             -width  => $pad->width,
-            -height => $pad->height,
+#             -height => $pad->height,
             -border => 0,
             -id     => "${label}_pad",
             -style  => $collapsed ? "display:inline" : "display:none",
@@ -599,8 +634,6 @@ sub wrap_rendered_track {
     # Add arrows for panning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
-# works with IE7, but looks awful. IE8 should support standard css opacity.
-#	$style      .= ';filter:alpha(opacity=30);moz-opacity:0.35';
         my $pan_left   =  img({
 	    -style   => $style . ';left:5px',
 	    -class   => 'panleft',
@@ -630,8 +663,17 @@ sub wrap_rendered_track {
     my $html = div({-class=>'centered_block',
 		 -style=>"position:relative;overflow:hidden"
 		},
-                ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
+                ( $show_titlebar ? $titlebar : '' ) . $popmenu . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
     return $html;
+}
+
+sub if_not_ipad {
+    my $self = shift;
+    my @args = @_;
+    my $agent = CGI->user_agent || '';
+    my $probably_ipad = $agent =~ /Mobile.+Safari/i;
+    return if $probably_ipad;
+    return @args;
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 
@@ -1982,7 +2024,7 @@ sub create_track_args {
   my ($label,$args) = @_;
 
   my $segment         = $self->segment;
-  my $length          = $self->vis_length; 
+  my $length          = $segment->length;
   my $source          = $self->source;
   my $lang            = $self->language;
 
@@ -2070,7 +2112,7 @@ sub vis_length {
     my $self = shift;
     my $segment = $self->segment;
     my $length  = $segment->length;
-    return int($length/$self->details_mult);
+    return $length/$self->details_mult;
 }
 
 sub subtrack_manager {

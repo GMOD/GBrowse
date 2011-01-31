@@ -1,3 +1,7 @@
+2.24
+   * Fixed gbrowse_metadb_config.pl script so that it no longer fails when creating a user database
+     from scratch.
+
 2.23
    * Added an "example_scripts" directory that contains a perl scripts that show how to manipulate
      sessions, upload custom tracks, and get basic information about services. This directory accompanies

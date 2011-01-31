@@ -615,6 +615,19 @@ sub get_group_from_user {
 
 sub upgrade_schema {
     my $new_version   = shift;
+
+    # probe whether this is a completely empty database
+    {
+	local $database->{PrintWarn}  = 0;
+	local $database->{PrintError} = 0;
+	my ($count) = $database->selectrow_array('select count(*) from users');
+	if (!defined $count) {
+	    check_table('dbinfo',$dbinfo_columns);
+	    set_schema_version('dbinfo',$new_version);
+	    return;
+	}
+    }
+
     my ($old_version) = $database->selectrow_array('SELECT MAX(schema_version) FROM dbinfo LIMIT 1');
     unless ($old_version) {
 	# table is missing, so add it

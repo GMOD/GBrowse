@@ -572,10 +572,12 @@ sub wrap_rendered_track {
   my $about = 'About track';
  
     # modify the title if it is a track with subtracks
-    $self->select_features_menu($label,\$title);
+#     s$self->select_features_menu($label,\$title);
+    
+  
     my $popmenu = div({-id =>'popmenu', -style => 'display:none'},
 
-	   div({-class => 'ipadtitle', -id => "${label}_title",},$label ),
+	   div({-class => 'ipadtitle', -id => "${title}_title",},$label ),
 	   div({-class => 'ipadcollapsed', 
                 -id    => "${label}_icon", 
 		-onClick => $ipadcollapse,},
@@ -585,10 +587,11 @@ sub wrap_rendered_track {
 		 -onClick     => $ipadkill,
 					  },
 					    $cancel),
-	     div({-class => 'ipadcollapsed'},$share_ipad),
-	     div({-class => 'ipadcollapsed'},$configure_ipad),
-	     div({-class => 'ipadcollapsed'},$download_ipad),
-	     div({-class => 'ipadcollapsed'},$about),
+	     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",},$share_ipad),
+	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,},$configure_ipad),
+	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,},$download_ipad),
+	     div({-class => 'ipadcollapsed',  -onmousedown => $help_click,},$about),
+	    
 
 		  );
     my $titlebar = 

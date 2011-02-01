@@ -490,8 +490,7 @@ sub wrap_rendered_track {
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
     my $help_click     = "GBox.showTooltip(event,'$help_url',1)"; 
 
-    my $ipad_menu_url = "url:?action=ipad_menu;track=$escaped_label:";
-    my $ipad_menu_click = "GBox.showTooltip(event,'$ipad_menu_url',true)"; 
+
 
     my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
@@ -512,17 +511,13 @@ sub wrap_rendered_track {
     }
     $title =~ s/:(overview|region|detail)$//;
 
-
-
-    my $ipadcollapse =  "collapse('$label')";
-    my $ipadkill = "ShowHideTrack('$label',false)";
-
+    
 
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
     my @images = (
 	img({   -src         => $icon,
                 -id          => "${label}_icon",
-                -onClick     => $ipadcollapse,
+                -onClick     =>  "collapse('$label')",
                 -style       => 'cursor:pointer',
 		$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')"),
             }
@@ -564,47 +559,50 @@ sub wrap_rendered_track {
         )
 
 	);
-   my $collapse = '<br>Collapse';
-  my $cancel = 'Cancel';
+   my $collapse_ipad = '<br>Collapse';
+  my $cancel_ipad = 'Cancel';
   my $share_ipad = 'Share';
   my $configure_ipad = 'Configure';
   my $download_ipad = 'Download';
-  my $about = 'About track';
- 
-    # modify the title if it is a track with subtracks
-#     s$self->select_features_menu($label,\$title);
-    
+  my $about_ipad = 'About track';
+  
+# 
   
     my $popmenu = div({-id =>'popmenu', -style => 'display:none'},
 
-	   div({-class => 'ipadtitle', -id => "${title}_title",},$label ),
+	   div({-class => 'ipadtitle', -id => "${label}_title",}, $label ),
 	   div({-class => 'ipadcollapsed', 
                 -id    => "${label}_icon", 
-		-onClick => $ipadcollapse,},
-					    $collapse),
+		-onClick =>  "collapse('$label')",},
+					    $collapse_ipad),
 	    div({-class => 'ipadcollapsed',
 		 -id => "${label}_kill",
-		 -onClick     => $ipadkill,
+		 -onClick     => "ShowHideTrack('$label',false)",
 					  },
-					    $cancel),
+					    $cancel_ipad),
 	     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",},$share_ipad),
 	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,},$configure_ipad),
 	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,},$download_ipad),
-	     div({-class => 'ipadcollapsed',  -onmousedown => $help_click,},$about),
+	     div({-class => 'ipadcollapsed',  -onmousedown => $help_click,},$about_ipad),
 	    
 
 		  );
+    # modify the title if it is a track with subtracks
+    $self->select_features_menu($label,\$title);
+
+
     my $titlebar = 
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title",
-		    -onClick=> "GBox.showTooltip(event,'load:popmenu',true)",
+		   
 				
 # # 		<div id = \"ipadtitle\">$label<br></div><br><div id = \"ipadcollapsed\">Collapse<br></div><div id = \"ipadcollapsed\";>Cancel<br></div><div id = \"ipadcollapsed\";>Share<br></div><div id = \"ipadcollapsed\";>Configure<br></div><div id = \"ipadcollapsed\";>Download<br></div><div id = \"ipadcollapsed\";>About<br></div>'
 		},
-	    'Menu |',
+ 	    span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu',true)"}, 'Menu |'),
 # 	    @images,
-	    span({-class => 'drag_region'},$title)
+	    span({-class => 'drag_region',},$title)
+
 	);
 
     my $show_titlebar
@@ -666,7 +664,7 @@ sub wrap_rendered_track {
     my $html = div({-class=>'centered_block',
 		 -style=>"position:relative;overflow:hidden"
 		},
-                ( $show_titlebar ? $titlebar : '' ) . $popmenu . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
+                ( $show_titlebar ? $titlebar : '' ) . $popmenu .  $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
     return $html;
 }
 

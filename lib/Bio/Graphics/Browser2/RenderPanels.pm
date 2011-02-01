@@ -566,9 +566,11 @@ sub wrap_rendered_track {
   my $download_ipad = 'Download';
   my $about_ipad = 'About track';
   
-# 
+
   
-    my $popmenu = div({-id =>'popmenu', -style => 'display:none'},
+    my $popmenu = div({-id =>"popmenu_${label}", -style => 'display:none'},
+	
+	   
 
 	   div({-class => 'ipadtitle', -id => "${label}_title",}, $label ),
 	   div({-class => 'ipadcollapsed', 
@@ -589,8 +591,7 @@ sub wrap_rendered_track {
 		  );
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
-
-
+   
     my $titlebar = 
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
@@ -599,8 +600,16 @@ sub wrap_rendered_track {
 				
 # # 		<div id = \"ipadtitle\">$label<br></div><br><div id = \"ipadcollapsed\">Collapse<br></div><div id = \"ipadcollapsed\";>Cancel<br></div><div id = \"ipadcollapsed\";>Share<br></div><div id = \"ipadcollapsed\";>Configure<br></div><div id = \"ipadcollapsed\";>Download<br></div><div id = \"ipadcollapsed\";>About<br></div>'
 		},
- 	    span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu',true)"}, 'Menu |'),
-# 	    @images,
+
+	   
+		  
+		 
+
+	    $self->if_not_ipad(@images,),
+	  $self->if_ipad(span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, 'Menu |'),),		
+	 
+ 	  
+	   
 	    span({-class => 'drag_region',},$title)
 
 	);
@@ -664,7 +673,7 @@ sub wrap_rendered_track {
     my $html = div({-class=>'centered_block',
 		 -style=>"position:relative;overflow:hidden"
 		},
-                ( $show_titlebar ? $titlebar : '' ) . $popmenu .  $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
+                ( $show_titlebar ? $titlebar : '' )  .  $subtrack_labels . $inner_div . $overlay_div . $popmenu) . ( $map_html || '' );
     return $html;
 }
 
@@ -677,6 +686,14 @@ sub if_not_ipad {
     return @args;
 }
 
+sub if_ipad {
+    my $self = shift;
+    my @args = @_;
+    my $agent = CGI->user_agent || '';
+    my $probably_ipad = $agent =~ /Mobile.+Safari/i;
+    return  if !$probably_ipad;
+    return @args;
+}
 # This routine is called to hand off the rendering to a remote renderer. 
 # The remote processor does not have to have a copy of the config file installed;
 # the entire DataSource object is sent to it in serialized form via

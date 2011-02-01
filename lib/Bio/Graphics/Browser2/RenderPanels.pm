@@ -567,28 +567,28 @@ sub wrap_rendered_track {
   my $about_ipad = 'About track';
   
 
-  
-    my $popmenu = div({-id =>"popmenu_${label}", -style => 'display:none'},
-	
-	   
-
-	   div({-class => 'ipadtitle', -id => "${label}_title",}, $label ),
-	   div({-class => 'ipadcollapsed', 
+   
+     my $popmenu = div({-id =>"popmenu_${label}", -style => 'display:none'},
+ 	
+ 	   
+ 
+ 	   div({-class => 'ipadtitle', -id => "${label}_title",}, $label ),
+ 	   div({-class => 'ipadcollapsed', 
                 -id    => "${label}_icon", 
-		-onClick =>  "collapse('$label')",},
-					    $collapse_ipad),
-	    div({-class => 'ipadcollapsed',
-		 -id => "${label}_kill",
-		 -onClick     => "ShowHideTrack('$label',false)",
+ 		-onClick =>  "collapse('$label')",},
+ 					    $collapse_ipad),
+ 	    div({-class => 'ipadcollapsed',
+ 		 -id => "${label}_kill",
+ 		 -onClick     => "ShowHideTrack('$label',false)",
 					  },
-					    $cancel_ipad),
-	     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",},$share_ipad),
-	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,},$configure_ipad),
-	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,},$download_ipad),
-	     div({-class => 'ipadcollapsed',  -onmousedown => $help_click,},$about_ipad),
-	    
-
-		  );
+ 					    $cancel_ipad),
+     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",},$share_ipad),
+ 	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,},$configure_ipad),
+ 	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,},$download_ipad),
+ 	     div({-class => 'ipadcollapsed',  -onmousedown => $help_click,},$about_ipad),
+ 	    
+ 
+ 		  );
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
    

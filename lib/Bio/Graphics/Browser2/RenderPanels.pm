@@ -559,7 +559,7 @@ sub wrap_rendered_track {
         )
 
 	);
-   my $collapse_ipad = '<br>Collapse';
+   my $collapse_ipad = $collapsed ? '<br>Expand' : '<br>Collapse';
   my $cancel_ipad = 'Cancel';
   my $share_ipad = 'Share';
   my $configure_ipad = 'Configure';

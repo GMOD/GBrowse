@@ -348,7 +348,7 @@ sub run_asynchronous_event {
     if ($status == 204) { # no content
 		print CGI::header( -status => '204 No Content', %headers );
     } elsif ($status == 302) { # redirect
-	print CGI::redirect($data, %headers);
+	print CGI::redirect($data);
     } elsif ($mime_type eq 'application/json') {
 		print CGI::header(
 			-status			=> $status,

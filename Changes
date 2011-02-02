@@ -1,4 +1,5 @@
 2.25
+   * Fixed broken image generation.
    * Made it easier to install GBrowse as an unprivileged user.
    * Allow searching for features with pipe symbols in their names.
    * Allow searching for features defined in uploaded tracks.

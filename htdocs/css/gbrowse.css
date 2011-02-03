@@ -136,17 +136,53 @@ span.hide {
     font-weight: normal;
 }
 
-div.ipadcollapsed:active  
+div.ipadcollapsed 
 		{
-		background-color: #00008B;
-		color: #FFF8F8;
+/* 		background-image: url(object_13.png);  */
+		background-repeat:no-repeat;
+		/*background-color: #000F86;*/
+		background-position: 0% 50%;
+		color: white;
+		font-size: 16pt;
+		text-align :center; 
+		border-style:solid; 
+		border-color:white; 
 		 /*"collapse('$label')",*/
 	
 		}
+
+div.ipadcollapsed:active  
+		{
+		/*background-image: url('menulinkactive.png');*/
+		color:black;
+		/*color: #FFF8F8;
+		font-size: 16pt;
+		text-decoration: underline;
+		text-align :center; */
+		 /*"collapse('$label')",*/
+	
+		}
+
+div.linkbg {
+		background-image: url('menulink.png');
+		background-repeat: no-repeat;
+		background-position: 50% 0%;
+		}
+div.linkbg:active {
+		background-image: url('menulinkactive.png');
+		background-repeat: no-repeat;
+		background-position: 50% 0%;
+		}
 div.ipadtitle
 		{
-		background-color: #00008B;
-		color: #FFF8F8;
+		border-bottom: solid black;
+		border-top: solid black;
+		color: black;
+		font-size: 16pt;
+		text-align :center;
+/*  		border-style:solid; */ 
+/* 		border-color:black; */
+	
 		 /*"collapse('$label')",*/
 	
 		}

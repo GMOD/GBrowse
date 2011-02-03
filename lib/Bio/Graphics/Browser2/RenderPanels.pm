@@ -416,6 +416,7 @@ sub wrap_rendered_track {
     my $help     = "$buttons/query.png";
     my $download = "$buttons/download.png";
     my $configure= "$buttons/tools.png";
+    my $menu = "$buttons/arrow_right_up.png";
 
     my $settings = $self->settings;
     my $source   = $self->source;
@@ -559,8 +560,8 @@ sub wrap_rendered_track {
         )
 
 	);
-   my $collapse_ipad = $collapsed ? '<br>Expand' : '<br>Collapse';
-  my $cancel_ipad = 'Cancel';
+   my $collapse_ipad = 'Collapse';
+  my $cancel_ipad = 'Delete';
   my $share_ipad = 'Share';
   my $configure_ipad = 'Configure';
   my $download_ipad = 'Download';
@@ -575,17 +576,19 @@ sub wrap_rendered_track {
  	   div({-class => 'ipadtitle', -id => "${label}_title",}, $label ),
  	   div({-class => 'ipadcollapsed', 
                 -id    => "${label}_icon", 
- 		-onClick =>  "collapse('$label')",},
- 					    $collapse_ipad),
+ 		-onClick =>  "collapse('$label')",
+		
+		},
+ 		 div({-class => 'linkbg',},$collapse_ipad)),
  	    div({-class => 'ipadcollapsed',
  		 -id => "${label}_kill",
  		 -onClick     => "ShowHideTrack('$label',false)",
-					  },
- 					    $cancel_ipad),
-     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",},$share_ipad),
- 	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,},$configure_ipad),
- 	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,},$download_ipad),
- 	     div({-class => 'ipadcollapsed',  -onmousedown => $help_click,},$about_ipad),
+					  }, div({-class => 'linkbg',},
+ 					    $cancel_ipad)),
+     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, div({-class => 'linkbg',},$share_ipad)),
+ 	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
+ 	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,}, div({-class => 'linkbg',},$download_ipad)),
+ 	     div({-class => 'ipadcollapsed', -style => 'width:200px',  -onmousedown => $help_click,}, div({-class => 'linkbg',},$about_ipad)),
  	    
  
  		  );
@@ -605,10 +608,10 @@ sub wrap_rendered_track {
 		  
 		 
 
-	    $self->if_not_ipad(@images,),
-	  $self->if_ipad(span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, 'Menu |'),),		
+ 	    $self->if_not_ipad(@images,),
+	$self->if_ipad( span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, 'Menu |')),		
 	 
- 	  
+#  	   
 	   
 	    span({-class => 'drag_region',},$title)
 

@@ -560,7 +560,7 @@ sub wrap_rendered_track {
         )
 
 	);
-   my $collapse_ipad = 'Collapse';
+   my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
   my $cancel_ipad = 'Delete';
   my $share_ipad = 'Share';
   my $configure_ipad = 'Configure';
@@ -579,7 +579,7 @@ sub wrap_rendered_track {
  		-onClick =>  "collapse('$label')",
 		
 		},
- 		 div({-class => 'linkbg',},$collapse_ipad)),
+ 		 div({-class => 'linkbg',},$ipad_collapse)),
  	    div({-class => 'ipadcollapsed',
  		 -id => "${label}_kill",
  		 -onClick     => "ShowHideTrack('$label',false)",
@@ -608,12 +608,12 @@ sub wrap_rendered_track {
 		  
 		 
 
- 	    $self->if_not_ipad(@images,),
-	$self->if_ipad( span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, 'Menu |')),		
+#  	    $self->if_not_ipad(@images,),
+	span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, 'Menu |'),		
 	 
-#  	   
+#  	   $self->if_ipad( )
 	   
-	    span({-class => 'drag_region',},$title)
+	    span({-class => 'drag_region',},$title),
 
 	);
 

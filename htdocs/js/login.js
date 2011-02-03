@@ -478,11 +478,11 @@ function add_user() {
 	    $('loginBusy').hide();
             var results = transport.responseText;
 
-            if(results == '') {
+            if (results == 'Mail Error') {
                 $('loginWarning').innerHTML = Controller.translate('CANNOT_CONNECT_MAIL');
             }
 
-            if(results=='Session Error' || results == 'E-mail in use' || results=='Message Already Sent') {
+            if (results=='Session Error' || results == 'E-mail in use' || results=='Message Already Sent') {
                 login_loading(false);
                 $('loginCancel').value = Controller.translate('BACK');
 
@@ -502,6 +502,7 @@ function add_user() {
                     var link2 = '<a href=#remove onClick="edit_confirmation(0);return false;">' 
 			+ Controller.translate('DELETE_UNCONFIRMED')   + '</a>';
                     $('loginWarning').innerHTML = Controller.translate('MESSAGE_ALREADY_SENT', link1, link2);
+		    
                 }
 
                 $('loginURow').hide(); $('loginBreak').hide();
@@ -528,6 +529,13 @@ function ask_resend_confirmation (email) {
     var link2 = '<a href=#remove onClick="edit_confirmation(0);return false;">' 
 	+ Controller.translate('DELETE_UNCONFIRMED')   + '</a>';
     $('loginWarning').innerHTML = Controller.translate('MESSAGE_ALREADY_SENT', link1, link2);
+    // duplicated code here - please clean up
+    $('loginURow').hide(); $('loginBreak').hide();
+    $('loginPRow').hide(); $('loginSubmit').hide();
+    $('loginERow').hide(); $('loginWarning').show();
+    $('loginFRow').hide(); $('loginP2Row').hide();
+    $('loginButtons').hide(); $('loginOpenID').hide();
+    $('loginOpts').hide();
 }
 
 //Resends or simply deletes an existing unconfirmed account if the same e-mail is used for a new account
@@ -552,8 +560,13 @@ function edit_confirmation(resend) {
                      },
         onSuccess: function (transport) {
 		$('loginCancel').value        = Controller.translate('BACK');
-		$('loginWarning').style.color = 'blue';
-		$('loginWarning').innerHTML   = Controller.translate('CONFIRMATION_EMAIL_SENT');
+		if(transport.responseText == 'Mail Error') {
+		    $('loginWarning').style.color = 'red';
+		    $('loginWarning').innerHTML = Controller.translate('CANNOT_CONNECT_MAIL');
+		} else {
+		    $('loginWarning').style.color = 'blue';
+		    $('loginWarning').innerHTML   = Controller.translate('CONFIRMATION_EMAIL_SENT');
+		}
 		$('loginURow').hide(); $('loginERow').hide();  $('loginBreak').hide();
 		$('loginPRow').hide(); $('loginP2Row').hide(); $('loginSubmit').hide();
 		$('loginFRow').hide()
@@ -1381,6 +1394,7 @@ function confirm_screen(confirm) {
     var html = '<div style=border-bottom-style:solid;border-width:1px;' +
                  'padding-left:3px;padding-top:8px><b>' + Controller.translate('ACCOUNT_CREATION_CONF') + '</b></div>' +
                '<form id=loginMain method=post onSubmit=\'return false;\'>' +
+	       '<div id=loginTableContainer>' +
                '<table id=loginTable cellspacing=0 cellpadding=3 align=center width=100%>' +
                  '<tr><td id=loginError colspan=3 align=center style=color:red;' +
                    'padding-bottom:3px>&nbsp; &nbsp;</td>' +
@@ -1395,10 +1409,10 @@ function confirm_screen(confirm) {
                        'id=loginUser type=text style=font-size:9pt size=30></td>' +
                    '<td align=center padding-top:3px>' +
                      '<input id=loginSubmit style=font-size:90% type=button value=\'' + Controller.translate('CONTINUE') + '\'' +
-                       'onClick=this.disabled=true;' +
+	               'onClick=this.disabled=true;' +
                        'confirm_update($(\'loginUser\').getValue(),\'' + confirm + '\'); />' +
                  '</td></tr>' +
-               '</table></font>' +
+               '</table></div>' +
                '<img id="loginBusy" src="'+Controller.button_url('spinner.gif') + '" style="display:none;float:left" />' +
 	       '</form>';
 
@@ -1439,12 +1453,9 @@ function confirm_check(username,session) {
         $('loginError').show();
         $('loginSubmit').disabled = false;
     } else if(session.indexOf('Already Active')!=-1) {
-        $('loginTable').innerHTML = '<tr><td id=loginError colspan=3 align=center style=color:red;' +
-            'padding-bottom:3px><br><br>' + Controller.translate('INCORRECT_LINK') + '<br><br></td></tr>' +
-            '<tr><td align=center padding-top:3px>' +
-                '<input style=font-size:90% type=button value=\'' + Controller.translate('CONTINUE') + '\'' +
-                    'onClick=this.disabled=true;reload_login_script(); />' +
-            '</td></tr>';
+        $('loginTableContainer').innerHTML = '<p style="color:red">' + Controller.translate('INCORRECT_LINK') +
+	    '</p>' + '<input type="submit" value="'+Controller.translate('CONTINUE') + '"' +
+	    'onClick=this.disabled=true;reload_login_script(); />';
     } else {
         login_get_account(username,session,0,false);
     }
@@ -1501,10 +1512,10 @@ function login_delete_user(username,pass) {
 
 //Adapted from http://www.hunlock.com/blogs/Snippets:_Howto_Grey-Out_The_Screen
 function login_blackout(turnOn,text) {
-    //    if (Prototype.Browser.IE) return;
+    // if (Prototype.Browser.IE) return;
     var html    = text;
     var screen  = document.getElementById('loginConfirmScreen');
-    var text    = document.getElementById('loginConfirmText');
+    text        = document.getElementById('loginConfirmText');
     if(!screen) {
         var contents = document.getElementsByTagName('body')[0];
         var div      = document.createElement('div');
@@ -1520,7 +1531,7 @@ function login_blackout(turnOn,text) {
             div.style.position        = 'absolute';
             div.style.top             = '0px';
             div.style.width           = '100%';
-	    //            div.style.zIndex          = '50';
+	    div.style.zIndex          = '50';
 
         var msg = document.createElement('div');
             msg.id                    = 'loginConfirmText';
@@ -1537,7 +1548,7 @@ function login_blackout(turnOn,text) {
             msg.style.textAlign       = 'center';
             msg.style.top             = '0px';
             msg.style.width           = '380px';
-	    //            msg.style.zIndex          = '60';
+	    msg.style.zIndex          = '10000';
 
         contents.appendChild(msg);
         contents.appendChild(div);

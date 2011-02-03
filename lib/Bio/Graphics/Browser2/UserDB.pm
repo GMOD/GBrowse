@@ -189,6 +189,8 @@ sub do_sendmail {
   my $args = shift;
   my $globals = $self->{globals};
 
+  warn "DO SENDMAIL";
+
   eval {
 	  $globals->smtp or die "No SMTP server found in globals";
 
@@ -203,25 +205,27 @@ sub do_sendmail {
 
 	  my $smtp_sender;
 	  if ($protocol eq 'plain') {
-      eval "require Net::SMTP" unless Net::SMTP->can('new');
-      $smtp_sender = 'Net::SMTP';
+	      eval "require Net::SMTP" unless Net::SMTP->can('new');
+	      $smtp_sender = 'Net::SMTP';
 	  } else {
-      eval "require Net::SMTP::SSL" unless Net::SMTP::SSL->can('new');
-      $smtp_sender = 'Net::SMTP::SSL';
+	      eval "require Net::SMTP::SSL" unless Net::SMTP::SSL->can('new');
+	      $smtp_sender = 'Net::SMTP::SSL';
 	  }
 
 	  my $smtp_obj = $smtp_sender->new(
-	    $server,
-      Port    => $port,
-      Debug   => 0,
-    )
-    or die "Could not connect to outgoing mail server $server";
+	      $server,
+	      Port    => $port,
+	      Debug   => 1,
+	      )
+	      or die "Could not connect to outgoing mail server $server";
+	  
+	  warn "HERE I AM";
 
 	  if ($username) {
-      $smtp_obj->auth($username, $password) 
+	      $smtp_obj->auth($username, $password) 
 		  or die "Could not authenticate with outgoing mail server $server"
 	  }
-
+	  
 	  $smtp_obj->mail("$smtp_from\n")                    or die $smtp_obj->message;
 	  $smtp_obj->to("$args->{to}\n")                     or die $smtp_obj->message;
 	  $smtp_obj->data()                                  or die $smtp_obj->message;
@@ -236,6 +240,7 @@ sub do_sendmail {
 	  $smtp_obj->dataend()                               or die $smtp_obj->message;
 	  $smtp_obj->quit();
   };
+  warn $@ if $@;
   return (0, $@) if $@;
   return (1,'');
 }
@@ -758,8 +763,7 @@ END
   }
   
   else {
-      $self->do_send_confirmation($email,$confirm,$user,$pass);
-      return $self->string_result("Success");
+      return $self->do_send_confirmation($email,$confirm,$user,$pass);
   }
 
     return $self->programmer_error;
@@ -786,7 +790,8 @@ sub do_send_confirmation {
      msg        => $message
   });
   unless ($status) {
-      return $self->string_result($err);
+      warn $err;
+       return $self->string_result('Mail Error');
   }
   return (204,'text/plain','');
 }
@@ -826,8 +831,8 @@ END
 
   elsif ($option == 1) {
       my $pass = '';
-      $self->do_send_confirmation($email,$confirm,$userid,$pass);
-      return $self->string_result("Success");
+      return $self->do_send_confirmation($email,$confirm,$userid,$pass);
+      # return $self->string_result("Success");
   }
 
   return $self->programmer_error;

@@ -644,7 +644,7 @@ END
                                 '<br><br>To complete the account creation process and to log into your %s ' .
                                 'account, please type in your username and click the "Continue" button below.',
    MUST_TYPE_USERNAME        => 'You must type in your username to continue.',
-   INCORRECT_LINK            => 'The link provided is either incorrect or expired.<br> Please click continue to exit.',
+   INCORRECT_LINK            => 'The confirmation code provided is either incorrect or expired.<br> Please click continue to exit.',
    PENDING                   => 'pending',
    
    WELCOME                   => 'Welcome, %s',

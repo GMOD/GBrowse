@@ -192,23 +192,41 @@ function visibility (element_name,is_visible) {
    return false;
 }
 
+// for ipad, function to make collapse and expand toggle when button is touched 
+function swap(me,main,alt) {
+me.innerHTML = (me.innerHTML == main) ? alt : main;
+}
+
+
+
+
+
+
+
 function collapse(element_name) {
    var control = document.getElementById(element_name+"_title");
+//    var menuitem = document.getElementById("popmenu_"+element_name);
    var icon    = document.getElementById(element_name+"_icon");
    var body    = document.getElementById(element_name+"_image");
    var pad     = document.getElementById(element_name+"_pad");
    var closeit = body.style.display != "none";
    var src     = new String(icon.src);
+//    var text    = new String('');
+
    if (closeit) {
      icon.src = src.replace(/minus/,'plus');
+//      menuitem.text = text.replace(/Collapse/,'Expand');
      body.style.display = 'none';
      pad.style.display = 'inline';
      control.className = 'titlebar_inactive';
+     
    } else {
      icon.src = src.replace(/plus/,'minus');
+//      menuitem.text = text.replace(/Expand/,'Collapse');
      body.style.display = 'inline';
      pad.style.display = 'none';
      control.className = 'titlebar';
+     
    }
    
    var direction = closeit ? 'collapse' : 'open';

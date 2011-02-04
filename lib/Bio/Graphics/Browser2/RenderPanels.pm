@@ -416,7 +416,8 @@ sub wrap_rendered_track {
     my $help     = "$buttons/query.png";
     my $download = "$buttons/download.png";
     my $configure= "$buttons/tools.png";
-    my $menu = "$buttons/arrow_right_up.png";
+    my $menu = "$buttons/menu.png";
+    
 
     my $settings = $self->settings;
     my $source   = $self->source;
@@ -568,7 +569,7 @@ sub wrap_rendered_track {
   my $download_ipad = 'Download';
   my $about_ipad = 'About track';
   
-
+    my $menuicon = img ({-src => $menu}),
    
      my $popmenu = div({-id =>"popmenu_${label}", -style => 'display:none'},
  	
@@ -609,10 +610,10 @@ sub wrap_rendered_track {
 		  
 		 
 
-	    $self->if_not_ipad(@images,),
-	$self->if_ipad(span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, 'Menu |')),		
+# 	    $self->if_not_ipad(@images,),
+span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, $menuicon,),		
 	 
-#  	 
+#  	 	$self->if_ipad()
 	   
 	    span({-class => 'drag_region',},$title),
 

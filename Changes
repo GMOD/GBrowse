@@ -2,6 +2,9 @@
    * Fixed account registration confirmation screen, which was blacked out on all
      platforms.
    * Fixed account registration error messages to be more informative.
+   * Removed Ace as a recommended library. Was only used for process_wormbase.pl,
+   which is no relevant anyway.
+   * Fixed problem calculating maximum length of displayed segment when details_multiplier>1.
 
 2.25
    * Fixed broken image generation.

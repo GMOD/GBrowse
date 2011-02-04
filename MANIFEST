@@ -18,7 +18,6 @@ bin/process_bamfiles.pl
 bin/process_gadfly.pl
 bin/process_ncbi_human.pl
 bin/process_sgd.pl
-bin/process_wormbase.pl
 bin/report_missing_language_tags.pl
 bin/scan_gbrowse.pl
 bin/ucsc_genes2gff.pl

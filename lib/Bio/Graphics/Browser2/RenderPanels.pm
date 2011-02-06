@@ -569,7 +569,8 @@ sub wrap_rendered_track {
   my $download_ipad = 'Download';
   my $about_ipad = 'About track';
   
-    my $menuicon = img ({-src => $menu}),
+    my $menuicon = img ({-src => $menu, 
+			 -style => 'height:20px; float:left;  position:relative; right:5px;  zIndex:100;',},),
    
      my $popmenu = div({-id =>"popmenu_${label}", -style => 'display:none'},
  	
@@ -590,7 +591,7 @@ sub wrap_rendered_track {
      div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, div({-class => 'linkbg',},$share_ipad)),
  	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
  	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,}, div({-class => 'linkbg',},$download_ipad)),
- 	     div({-class => 'ipadcollapsed', -style => 'width:200px',  -onmousedown => $help_click,}, div({-class => 'linkbg',},$about_ipad)),
+ 	     div({-class => 'ipadcollapsed', -style => 'width:200px',  -onmousedown => $help_click,}, div({-class => 'linkbg', -style =>'position:relative; left:20px;',},$about_ipad)),
  	    
  
  		  );
@@ -601,6 +602,8 @@ sub wrap_rendered_track {
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title",
+		    -style => 'position: relative; left : 5px;',
+		  
 		   
 				
 # # 		<div id = \"ipadtitle\">$label<br></div><br><div id = \"ipadcollapsed\">Collapse<br></div><div id = \"ipadcollapsed\";>Cancel<br></div><div id = \"ipadcollapsed\";>Share<br></div><div id = \"ipadcollapsed\";>Configure<br></div><div id = \"ipadcollapsed\";>Download<br></div><div id = \"ipadcollapsed\";>About<br></div>'
@@ -611,7 +614,7 @@ sub wrap_rendered_track {
 		 
 
  	    $self->if_not_ipad(@images,),
-$self->if_ipad(span({-class => 'menuclick', -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, $menuicon,),),	
+$self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, $menuicon,),),	
 	 
 #  	 	
 	   

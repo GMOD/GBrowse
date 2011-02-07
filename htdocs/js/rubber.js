@@ -503,11 +503,11 @@ SelectArea.prototype.showMenu = function(event) {
   
   if ('createTouch' in document){
   var left = lefttemp;
-  var top = 360;
+  var top = 450;
   } else {
-  var left = self.eventLocation(event,'x') + 5;
+  var left = self.eventLocation(event,'x') + 20;
   if ((left+menuWidth) > pageWidth) left -= menuWidth + 10;
-  var top  = self.eventLocation(event,'y') - menuYHalf;
+  var top  = self.eventLocation(event,'y')+30;
   }
   menu = Element.extend(menu);
   menu.setStyle({ top:  top+'px' }); 

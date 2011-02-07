@@ -204,6 +204,10 @@ END
 
    REMOTE_TITLE => 'Add remote annotations',
 
+   #ipad
+   IPAD_BALLOON => '\nTap feature again to see more details '
+   #
+
    REMOTE_URL   => 'Enter remote track URL',
 
    UPDATE_URLS  => 'Update',
@@ -372,6 +376,8 @@ END
  ADD_YOUR_OWN_TRACKS => 'Add custom tracks',
 
  ADD_DESCRIPTION    => 'Click to add a description',
+ ADD_TITLE          => 'Click to edit the title',
+ NO_DESCRIPTION     => 'No description',
 
  CONFIGURATION     => 'Configuration',
 
@@ -404,6 +410,8 @@ END
  WHISKER_MAX_COLOR    => 'Color from stdev to min/max value',
 
  AUTOSCALING      => 'Y-axis scaling',
+
+ SD_MULTIPLES     => 'Number of standard deviations (SD) to show',
 
  SCALING          => 'Fixed Y-axis range',
 
@@ -441,7 +449,7 @@ END
 
  CONFIGURE_THIS_TRACK   => '<b>Configure this track</b>',
 
- DOWNLOAD_THIS_TRACK   => '<b>Download this track</b>',
+ DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
 
  ABOUT_THIS_TRACK   => '<b>About this track</b>',
 
@@ -491,6 +499,54 @@ other browser and enter it as a new DAS source. <i>Quantitative tracks
 ("wiggle" files) and uploaded files can not be shared using DAS.</i>
 END
 
+ SHARE_CUSTOM_TRACK_NO_CHANGE => <<END,
+This is a track from one of your custom uploads, it is using <b>%s</b>
+permissions, so it can be shared.
+END
+
+ SHARE_CUSTOM_TRACK_CHANGED => <<END,
+This is a track from one of your custom uploads, its permissions have
+been changed to <b>%s</b>, so it can now be shared.
+END
+
+ SHARE_SHARED_TRACK => <<END,
+This track is another user\'s custom uploads; it is shared under a <b>%s</b>
+policy, so you are free to send the link to other users.
+END
+
+ SHARE_GROUP_EMAIL_SUBJECT => <<END,
+Track sharing notification from the %s browser
+END
+
+ SHARE_GROUP_EMAIL => <<END,
+The user named %s has shared some tracks with you. They will appear in your "Custom Tracks" section the next time you log into %s. To see the shared track(s) now, click on %s.
+
+Additional information about the shared tracks follows:
+
+  Upload name:        %s
+  Upload description: %s
+  Track names:        %s
+
+If you wish to remove these tracks from your session, go to "Custom Tracks" and click on the '[X]' next to the upload name. To add it back to your session, click on %s.
+END
+
+ OTHER_SHARE_METHODS => <<END,
+You can also share it with another user by setting its permissions to
+<b>public</b> and giving them this link or letting them search for the
+track by name, or by changing its permissions to <b>group</b> and adding
+the user you want by username. To do this, select the "Custom Tracks"
+page and choose the sharing policy you want with the drop-down menu in
+the "sharing" section, then type the user's name or ID in the input
+field provided.
+END
+
+ CANT_SHARE     => <<END,
+Sorry, this track is owned by another user who has only allowed access to
+a limited group of other users. Since it's not yours, you can't share it
+with anyone else. In order to share this track, you'll have to ask them
+for permission.
+END
+
     MAIN_PAGE             => 'Browser',
     CUSTOM_TRACKS_PAGE    => 'Custom Tracks',
     COMMUNITY_TRACKS_PAGE => 'Community Tracks',
@@ -506,16 +562,19 @@ END
 
    FORGOT_MY_PASSWORD        => 'Forgot my password',
    EMAIL_MY_PASSWORD         => 'E-mail my password',
-   EDIT_ACCOUNT_DETAILS      => 'Edit account details',
+   EDIT_ACCOUNT_DETAILS      => '%s: Edit account details',
    CONTINUE                  => 'Continue',
    HAVE_OPENID               => 'Have an OpenID?',
-   SIGN_IN                   => 'Sign In.',
+   WITH_OPENID               => 'with your OpenID',
+   SIGN_IN                   => 'Sign in',
+   OPENID_PROMPT             => "Select your OpenID provider's icon from the list below, or type your OpenID into the text box.",
    DONT_HAVE_OPENID          => 'Don\'t have an OpenID?',
    GO_BACK                   => 'Go Back.',
    ALL_FIELDS_REQUIRED       => 'All fields are required.',
    PASSWORDS_DO_NOT_MATCH    => 'Passwords do not match.',
    LOG_IN                    => 'Log In',
    CHANGE_MY_EMAIL           => 'Change my E-mail',
+   CHANGE_MY_NAME            => 'Change my Full Name',
    CHANGE_MY_PASSWORD        => 'Change my Password',
    ADD_OPENID                => 'Add OpenID to Account',
    REMOVE_OPENID             => 'Remove OpenId from Account',
@@ -523,12 +582,14 @@ END
    NEED_OPENID_TO_ACCESS     => 'Sorry, but you need at least one active OpenID associated with this account in order to access %s.',
    DELETE_MY_ACCOUNT         => 'Delete My Account',
    USERNAME                  => 'Username:',
+   REALNAME                  => 'Your full name (optional):',
    EMAIL_TO_VALIDATE         => 'E-mail (to validate your registration):',
    PASSWORD                  => 'Password:',
    RETYPE_PASSWORD           => 'Retype Password:',
    CURRENT_EMAIL             => 'Current E-mail:',
    NEW_EMAIL                 => 'New E-mail:',
    RETYPE_NEW_EMAIL          => 'Retype New E-mail:',
+   NEW_REALNAME              => 'Your full name:',
    CURRENT_PASSWORD          => 'Current Password:',
    NEW_PASSWORD              => 'New Password:',
    RETYPE_NEW_PASSWORD       => 'Retype New Password:',
@@ -558,7 +619,6 @@ END
    ANOTHER_ACCOUNT_IN_USE    => 'Another account is currently in use, please reload the page and log out before attempting to sign in.',
    CANNOT_CONNECT_NOT_SENT   => 'Error: Cannot connect to mail server, your information has not been sent.',
    PROFILE_EMAIL_SENT        => 'A message has been sent to your e-mail address with your profile information.<br><br>Please follow the instructions provided to retrieve your account.',
-   EDIT_ACCOUNT_DETAILS      => 'Edit account details',
    CONFIRM_ACCOUNT_PASSWORD  => 'Confirm Account Password',
    ARE_YOU_SURE              => 'Are you sure?',
    WARNING_DELETE_OPENID     => 'Warning: Deleting your %s Account will remove all user information including any saved data or uploaded tracks. Once deleted, you will no longer have access to this %s Account or any of the information associated with it. Are you sure you wish to perform this action?',
@@ -574,10 +634,11 @@ END
    PASSWORD_CHANGE_SUCCESS   => 'Your password has been changed successfully.',
    OPENID_ADD_SUCCESS        => 'Your OpenID has been added successfully.',
    OPENID_REMOVE_SUCCESS     => 'Your OpenID has been removed successfully.',
+   OPENID_ADD_FAILED         => 'The OpenID could not be added: %s',
    OPERATION_SUCCESS         => 'Operation completed successfully.', 
    BACK                      => 'Back',
    CREATE_ACCOUNT            => 'Create Account',
-   OPENID_NOT_ASSOC          => 'The OpenID provided is not associated with any active %s Account. If you would like to create an account now, please type a username to identify yourself below.',
+   OPENID_NOT_ASSOC          => 'The OpenID provided is not associated with any active %s Account. If you would like to create an account now, please confirm or edit the information to set up your account below.',
    SUCCESS                   => 'Success',
    LOADING                   => 'Loading...',
    NO_OPENIDS_ASSOCIATED     => 'There are no OpenIDs currently associated with this %s Account.',
@@ -588,13 +649,17 @@ END
                                 'account, please type in your username and click the "Continue" button below.',
    MUST_TYPE_USERNAME        => 'You must type in your username to continue.',
    INCORRECT_LINK            => 'The link provided is either incorrect or expired.<br> Please click continue to exit.',
+   PENDING                   => 'pending',
    
    WELCOME                   => 'Welcome, %s',
    LOG_OUT_DESC              => 'Click here to log out from %s',
    LOG_OUT                   => 'Log Out',
    CHANGE_SETTINGS_DESC      => 'Click here to change your account settings',
    LOGIN_CREATE_DESC         => 'Click here to log in or create a new account. This will allow you to access your settings and uploaded tracks from multiple computers.',
+   LOGIN_REQUEST             => 'Please log in %s',
+   LOGIN                     => 'Log in',
    LOGIN_CREATE              => 'Log in / create account',
+   LOGIN_REQUIRED            => 'You must log in to access this data source',
 
    #------------
    # USER TRACKS
@@ -615,20 +680,24 @@ END
    INTERRUPTED_RESUME        => 'Interrupted [Resume]',
    SHARING                   => 'Sharing:',
    TRACK_IS                  => 'Track is',
-   SHARED_WITH_YOU           => '<b>shared</b> with you.',
+   SHARED_WITH_YOU           => '<b>shared</b> with you',
+   SHARING_ADD_USER          => 'Add',
    SHARING_PRIVATE           => 'Private',
    SHARING_CASUAL            => 'Casual',
    SHARING_GROUP             => 'Group',
    SHARING_PUBLIC            => 'Public',
    SHARING_HELP              => '<b>Private</b> - Visible only to me.<br>'.
 		                        '<b>Casual</b> - Visible to me and anyone I send a link to, but not visible as a public track.<br>'.
-		                        '<b>Group</b> - Visible to and anyone I add to the sharing group.<br>'.
+		                        '<b>Group</b> - Visible to me and anyone I add to the sharing group. Search for users by typing a portion of their name or email address in the box to a right and click [Add]. An email will be sent to alert them that the track has been shared.<br>'.
 		                        '<b>Public</b> - Visible to anyone.',
+   UPLOADED_TRACKS_CATEGORY  => 'Custom Tracks:Uploaded Tracks',
+   SHARED_WITH_ME_CATEGORY   => 'Custom Tracks:Shared with me',
    SHARE_WITH_THIS_LINK      => 'Share with this link: ',
-   USERS                     => 'users',
+   USERS                     => 'user(s)',
    USED_BY                   => 'used by',
    PUBLIC_TRACKS             => 'Public Tracks',
    COMMUNITY_TRACKS          => 'Community Tracks',
+   THERE_ARE_NO_AVAILABLE_TRACKS => 'There are no available unused %s tracks. Select "Custom Tracks" to see ones you\'ve already added to your session.',
    THERE_ARE_NO_TRACKS_YET   => 'There are no %s tracks yet.',
    NO_PUBLIC_RESULTS         => 'There are no community tracks that match "%s"',
    TOGGLE_DETAILS            => 'Toggle Details',
@@ -684,12 +753,10 @@ END
    CREATED                   => 'Created %s',
    MODIFIED                  => 'Modified %s',
    NO_FURTHER_INFO_AVAILABLE => 'No further information on <b>%s</b> is available.',
-   ABOUT_ME_TEXT             => '<h2>Session IDs</h2>'.
-                                '<p>If you wish to use a script to upload or download browser data from this session'.
-                                'you will need the user and/or upload IDs for the currently active session.</p>'.
-                                '<p>Your   userID is <b>%s</b></p>'.
-                                '<p>Your uploadID is <b>%s</b></p>',
-
+   ABOUT_ME_TEXT             => '<h2>User IDs</h2>'.
+                                '<p>Your    userID is <b>%s</b></p>'.
+                                '<p>Your sessionID is <b>%s</b></p>'.
+                                '<p>Your  uploadID is <b>%s</b></p>',
    CLICK_MODIFY_SUBTRACK_SEL => 'Click to modify subtrack selections.',
    CLICK_FOR_MORE            => 'Click for more',
    PLUGIN_BASE_CLASS_DUMP    => "This is the base class for all GBrowse plugins.\n".
@@ -703,6 +770,8 @@ END
    CHROM_NOT_FOUND_DETAILS   => 'Cannot display %s because the chromosome/contig named %s is not defined in the database.',
    NOT_RECOGNIZED_PLUGIN     => '%s is not a recognized plugin',
    NO_PLUGIN_SPECIFIED       => 'No plugin was specified.',
+
+   RULER_TOGGLE_TOOLTIP      => 'Click to enable the ruler. Or, click and drag to reposition.',
    
 
 

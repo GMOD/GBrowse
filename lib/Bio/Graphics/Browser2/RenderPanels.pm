@@ -570,13 +570,13 @@ sub wrap_rendered_track {
   my $about_ipad = 'About track';
   
     my $menuicon = img ({-src => $menu, 
-			 -style => 'height:20px; float:left;  position:relative; right:5px;  zIndex:100;',},),
+			 -style => 'height:20px; float:left;  position:relative; right:5px;',},),
    
-     my $popmenu = div({-id =>"popmenu_${label}", -style => 'display:none'},
+    my $popmenu = div({-id =>"popmenu_${title}", -style => 'display:none'},
  	
  	   
  
- 	   div({-class => 'ipadtitle', -id => "${label}_title",}, $label ),
+ 	   div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
  	   div({-class => 'ipadcollapsed', 
                 -id    => "${label}_icon", 
  		-onClick =>  "collapse('$label')",
@@ -613,10 +613,10 @@ sub wrap_rendered_track {
 		  
 		 
 
- 	    $self->if_not_ipad(@images,),
-$self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${label}')"}, $menuicon,),),	
+#  	    $self->if_not_ipad(@images,),
+span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),	
 	 
-#  	 	
+#  $self->if_ipad(,)	 	
 	   
 	    span({-class => 'drag_region',},$title),
 

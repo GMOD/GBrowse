@@ -613,10 +613,10 @@ sub wrap_rendered_track {
 		  
 		 
 
-#  	    $self->if_not_ipad(@images,),
-span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),	
+ 	    $self->if_not_ipad(@images,),
+ $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
 	 
-#  $self->if_ipad(,)	 	
+# 	 	
 	   
 	    span({-class => 'drag_region',},$title),
 

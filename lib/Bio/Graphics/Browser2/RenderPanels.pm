@@ -570,7 +570,7 @@ sub wrap_rendered_track {
   my $about_ipad = 'About track';
   
     my $menuicon = img ({-src => $menu, 
-			 -style => 'height:20px; float:left;  position:relative; right:5px;',},),
+			 -style => 'height:22px; float:left;  position:relative; right:5px;',},),
    
     my $popmenu = div({-id =>"popmenu_${title}", -style => 'display:none'},
  	

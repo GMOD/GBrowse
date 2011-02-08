@@ -126,6 +126,8 @@ END
 
    ABOUT_NAME   => 'About <i>%s</i>...',
 
+   IPAD_BALLOON =>'<br><b>Tap feature again for more details</b>',
+
    REDISPLAY   => 'Redisplay',
 
    CONFIGURE   => 'Configure...',

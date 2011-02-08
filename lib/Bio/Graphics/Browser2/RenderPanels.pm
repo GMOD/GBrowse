@@ -591,7 +591,7 @@ sub wrap_rendered_track {
      div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, div({-class => 'linkbg',},$share_ipad)),
  	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
  	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,}, div({-class => 'linkbg',},$download_ipad)),
- 	     div({-class => 'ipadcollapsed', -style => 'width:200px',  -onmousedown => $help_click,}, div({-class => 'linkbg',},$about_ipad)),
+ 	     div({-class => 'ipadcollapsed', -style => 'width:200px',  -onmousedown => $help_click,}, div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
  	    
  
  		  );

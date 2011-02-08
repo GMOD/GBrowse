@@ -102,6 +102,8 @@ END
 
    EXTERNAL_TRACKS => '<i>External tracks italicized</i>',
 
+   IPAD_BALLOON =>'<br><b>Tap feature again for more details</b>',
+
    OVERVIEW_TRACKS => '<sup>*</sup>Overview track',
 
    REGION_TRACKS => '<sup>**</sup>Region track',

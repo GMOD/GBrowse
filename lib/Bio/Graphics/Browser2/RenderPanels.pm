@@ -563,7 +563,7 @@ sub wrap_rendered_track {
 	);
    my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
  
-  my $cancel_ipad = 'Hide';
+  my $cancel_ipad = 'Turn off';
   my $share_ipad = 'Share';
   my $configure_ipad = 'Configure';
   my $download_ipad = 'Download';
@@ -597,7 +597,7 @@ sub wrap_rendered_track {
  		  );
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
-   
+    
     my $titlebar = 
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
@@ -614,8 +614,8 @@ sub wrap_rendered_track {
 		 
 
  	    $self->if_not_ipad(@images,),
-	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
-	 
+	    $self->if_ipad(div({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
+	    
 # 	 	
 	   
 	    span({-class => 'drag_region',},$title),

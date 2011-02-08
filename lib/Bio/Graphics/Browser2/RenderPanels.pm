@@ -602,12 +602,9 @@ sub wrap_rendered_track {
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title",
-# 		    -style => 'position: relative; left : 5px; ',
 		  
 		   
-				
-# # 		<div id = \"ipadtitle\">$label<br></div><br><div id = \"ipadcollapsed\">Collapse<br></div><div id = \"ipadcollapsed\";>Cancel<br></div><div id = \"ipadcollapsed\";>Share<br></div><div id = \"ipadcollapsed\";>Configure<br></div><div id = \"ipadcollapsed\";>Download<br></div><div id = \"ipadcollapsed\";>About<br></div>'
-		},
+				},
 
 	   
 		  

@@ -562,7 +562,7 @@ sub wrap_rendered_track {
 
 	);
    my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
-   my $ipad_expand = $collapsed ? 'Expand':'Collapse';
+ 
   my $cancel_ipad = 'Hide';
   my $share_ipad = 'Share';
   my $configure_ipad = 'Configure';
@@ -570,7 +570,7 @@ sub wrap_rendered_track {
   my $about_ipad = 'About track';
   
     my $menuicon = img ({-src => $menu, 
-			 -style => 'padding-right:10px;',},),
+			 -style => 'padding-right:15px;',},),
    
     my $popmenu = div({-id =>"popmenu_${title}", -style => 'display:none'},
  	

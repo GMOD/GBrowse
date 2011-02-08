@@ -503,7 +503,7 @@ SelectArea.prototype.showMenu = function(event) {
   
   if ('createTouch' in document){
   var left = lefttemp+50;
-  var top = 540;
+  var top = 440;
   } else {
   var left = self.eventLocation(event,'x') + 20;
   if ((left+menuWidth) > pageWidth) left -= menuWidth + 10;

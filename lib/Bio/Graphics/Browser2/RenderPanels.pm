@@ -431,7 +431,7 @@ sub wrap_rendered_track {
     # Work around bug in google chrome which is manifested by the <area> link information
     # on all EVEN reloads of the element by ajax calls. Weird.
     my $agent  = CGI->user_agent || '';
-    $map_id   .= "_".int(rand(1000)) ;#if $agent =~ /chrome/i || $agent=~ /safari/i;   
+    $map_id   .= "_".int(rand(1000)) ;
 
     my $img = img(
         {   -src    => $url,
@@ -570,7 +570,7 @@ sub wrap_rendered_track {
   my $about_ipad = 'About track';
   
     my $menuicon = img ({-src => $menu, 
-			 -style => 'height:22px; float:left;  position:relative; right:5px;',},),
+			 -style => 'padding-right:10px;',},),
    
     my $popmenu = div({-id =>"popmenu_${title}", -style => 'display:none'},
  	
@@ -602,7 +602,7 @@ sub wrap_rendered_track {
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title",
-		    -style => 'position: relative; left : 5px;',
+# 		    -style => 'position: relative; left : 5px; ',
 		  
 		   
 				
@@ -614,7 +614,7 @@ sub wrap_rendered_track {
 		 
 
  	    $self->if_not_ipad(@images,),
- $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
+	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
 	 
 # 	 	
 	   
@@ -640,7 +640,7 @@ sub wrap_rendered_track {
     my $pad_img = img(
         {   -src    => $pad_url,
             -width  => $pad->width,
-#             -height => $pad->height,
+#             -height => $pad->height;
             -border => 0,
             -id     => "${label}_pad",
             -style  => $collapsed ? "display:inline" : "display:none",
@@ -681,7 +681,7 @@ sub wrap_rendered_track {
     my $html = div({-class=>'centered_block',
 		 -style=>"position:relative;overflow:hidden"
 		},
-                ( $show_titlebar ? $titlebar : '' )  .  $subtrack_labels . $inner_div . $overlay_div . $popmenu) . ( $map_html || '' );
+                ( $show_titlebar ? $titlebar : '' ) . $popmenu .  $subtrack_labels . $inner_div . $overlay_div ) . ( $map_html || '' );
     return $html;
 }
 

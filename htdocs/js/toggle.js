@@ -5,6 +5,56 @@ function setVisState (element_name,is_visible) {
   new Ajax.Request(document.URL,{method:'post',postBody:postData});
 }
 
+
+function togglestars(imgID)
+{
+  
+  var imgTag = document.getElementById(imgID);
+  var fullPathName = imgTag.src;
+  var pathSplit = fullPathName.split("/");
+  var getfileNameExt = pathSplit.length - 1;
+  var fullFilePath = ''; 
+ 
+  if (pathSplit.length == 0)
+  {
+    fullFilePath = ''; 
+  }
+  else if (pathSplit.length > 0)
+  {
+    fullFilePath = fullPathName.replace(pathSplit[getfileNameExt], ''); 
+  }
+ 
+  var fileNameExt = pathSplit[getfileNameExt]; 
+  var fileNameSpilt = fileNameExt.split("."); 
+  var fileName = fileNameSpilt[0]; // just the file name
+  var fileExt = fileNameSpilt[1]; // just the file extention
+  var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
+  var imgName ='';
+ 
+ 
+  if (fileNameMainSpilt.length > 1)
+  {
+   
+    var fileNameMain = fileNameMainSpilt.length - 1;
+    fileNameMain = fileNameMainSpilt[fileNameMain]; 
+    if (fileNameMain == 2)
+    {
+      imgName = fileNameMainSpilt[0] + '.' + fileExt;
+    }
+    else
+    {
+      imgName = fileName + '_2.' + fileExt;
+    }
+  }
+  else
+  {
+    imgName = fileName + '_2.' + fileExt;
+  }
+ 
+  var finalFile = fullFilePath + imgName;
+  imgTag.src = finalFile;
+}
+
 // checkSummaries makes sure any collapsed nodes have their summaries visible upon page load.
 function checkSummaries() {
   var tf = $('trackform');

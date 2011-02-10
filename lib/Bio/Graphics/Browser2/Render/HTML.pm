@@ -641,9 +641,13 @@ sub render_instructions {
   : '';
 }
 
+
+
+
 # Renders the HTML for the spinning "busy" signal on the top-left corner of the page.
 sub render_busy_signal {
     my $self = shift;
+    
     return img({
         -id    => 'busy_indicator',
         -src   => $self->data_source->button_url.'/spinner.gif',
@@ -788,6 +792,7 @@ sub galaxy_form {
 }
 
 sub render_track_filter {
+ 
     my $self   = shift;
     my $plugin = shift;
 
@@ -838,6 +843,8 @@ sub render_track_table {
   my $settings = $self->state;
   my $source   = $self->data_source;
 
+  
+
   # read category table information
   my $category_table_labels = $self->category_table();
 
@@ -885,20 +892,25 @@ sub render_track_table {
    
    my $balloon = $source->setting('balloon style') || 'GBubble';
    
-   my @args = ( -href => $link, -target => 'citation');
+    my @args = ( -href => $link, -target => 'citation', -style => 'cursor:pointer');
    push @args, -style => 'Font-style: italic' if $label =~ /^(http|ftp|file):/;
    push @args, -onmouseover => "$balloon.showTooltip(event,'$mouseover')" if $mouseover;
+
 
    # add hilighting if requested
    for my $h (@hilite) {
        $key =~ s!($h)!<span style="background-color:yellow">$1</span>!gi;
    }
-   
-   $labels{$label} = a({@args},$key);
-
+my $showicon =  img({ -id =>"ficonpic_${label}", -name => 'example',-onClick => "togglestars('ficonpic_${label}')", -src   => $self->data_source->button_url."/ficon.png",},);
+#   my $showiconactive =  img({ -id =>'ficonpic', -src   => $self->data_source->button_url.'/ficonactive.png',},);
+  my $favoriteicon = span({-href => '#', -id => 'favclick', -style => 'cursor:pointer;'},$showicon,);
+#     
+    $labels{$label} = span({-class => 'selectrackname'}, a({@args},$key),  span({-style => 'position:relative; left:30px;'},$favoriteicon,));
+ 
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
        my $escaped_label = CGI::escape($label);
        $labels{$label} .= ' ['. span({-class       =>'clickable',
+				      
 				      -onMouseOver  => "GBubble.showTooltip(event,'".$self->translate('CLICK_MODIFY_SUBTRACK_SEL')."')",
 				      -onClick      => "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
 				     },i($self->translate('SELECT_SUBTRACKS',$selected,$total))).']';
@@ -953,7 +965,7 @@ sub render_track_table {
     next if $seenit{$category}++;
     my $id = "${category}_section";
     my $category_title   = (split m/(?<!\\):/,$category)[-1];
-    $category_title      =~ s/\\//g;
+#     $category_title      =~ s/\\//g;
     $category_title      =~ s!($_)!<span style="background-color:yellow">$1</span>!gi foreach @hilite;    
 
     
@@ -978,13 +990,17 @@ sub render_track_table {
 	%ids        = map {$_=>{id=>"${_}_check"}} @track_labels;
       }
 
+
+
       my @checkboxes = checkbox_group(-name       => 'l',
 				      -values     => \@track_labels,
+						   
 				      -labels     => \%labels,
 				      -defaults   => \@defaults,
 				      -onClick    => "gbTurnOff('$id');gbToggleTrack(this)",
 				      -attributes => \%ids,
 				      -override   => 1,
+				      
 				     );
       my $table      = $self->tableize(\@checkboxes,$category);
 
@@ -1151,7 +1167,9 @@ sub render_global_config {
         . div(
 	       table ({-border => 0, -cellspacing=>0, -width=>'100%'},
 		      TR(
+			  
 			  td( b(  checkbox(
+				      
 				      -name     => 'grid',
 				      -label    => $self->translate('SHOW_GRID'),
 				      -override => 1,
@@ -1899,13 +1917,13 @@ sub tableize {
   }
 
   my $cwidth = int(100/$columns+0.5) . '%';
-
+ 
   my $html = start_table({-border=>0,-width=>'100%'});
 
   if (@column_labels) {
       $html.="<tr><td></td>";
       for (my $column=0;$column<$columns;$column++) {
-	  $html .= "<td><b>$column_labels[$column]</b></td>";
+	  $html .= "<td><b>$column_labels[$column]</b> </td>";
       }
       $html.="</tr>";
   }
@@ -1913,14 +1931,17 @@ sub tableize {
   for (my $row=0;$row<$rows;$row++) {
     # do table headers
     $html .= qq(<tr class="searchtitle">);
-    $html .= "<td><b>$row_labels[$row]</b></td>" if @row_labels;
+    $html .= "<td><b>$row_labels[$row]</b> hello</td>" if @row_labels;
     for (my $column=0;$column<$columns;$column++) {
       my $checkbox = $array->[$column*$rows + $row] || '&nbsp;';
 
       # de-couple the checkbox and label click behaviors
       $checkbox =~ s/\<\/?label\>//gi;
-
+    
       $html .= td({-width=>$cwidth},$checkbox);
+
+      
+# 
     }
     $html .= "</tr>\n";
   }

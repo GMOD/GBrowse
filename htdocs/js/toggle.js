@@ -8,7 +8,7 @@ function setVisState (element_name,is_visible) {
 
 function togglestars(imgID)
 {
-  
+
   var imgTag = document.getElementById(imgID);
   var fullPathName = imgTag.src;
   var pathSplit = fullPathName.split("/");
@@ -30,7 +30,7 @@ function togglestars(imgID)
   var fileExt = fileNameSpilt[1]; // just the file extention
   var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
   var imgName ='';
- 
+
  
   if (fileNameMainSpilt.length > 1)
   {

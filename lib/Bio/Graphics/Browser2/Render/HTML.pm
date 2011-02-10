@@ -901,6 +901,7 @@ sub render_track_table {
    for my $h (@hilite) {
        $key =~ s!($h)!<span style="background-color:yellow">$1</span>!gi;
    }
+
 my $showicon =  img({ -id =>"ficonpic_${label}", -name => 'example',-onClick => "togglestars('ficonpic_${label}')", -src   => $self->data_source->button_url."/ficon.png",},);
 #   my $showiconactive =  img({ -id =>'ficonpic', -src   => $self->data_source->button_url.'/ficonactive.png',},);
   my $favoriteicon = span({-href => '#', -id => 'favclick', -style => 'cursor:pointer;'},$showicon,);

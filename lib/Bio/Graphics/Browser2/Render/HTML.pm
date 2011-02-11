@@ -902,9 +902,9 @@ sub render_track_table {
        $key =~ s!($h)!<span style="background-color:yellow">$1</span>!gi;
    }
 
-my $showicon =  img({ -id =>"ficonpic_${label}", 
+my $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${label}')", 
+		      -onClick => "togglestars('ficonpic_${key}')", 
 		      -src   => $self->data_source->button_url."/ficon.png",},);
 
 

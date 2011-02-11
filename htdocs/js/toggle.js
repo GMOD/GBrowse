@@ -8,12 +8,16 @@ function setVisState (element_name,is_visible) {
 
 function togglestars(imgID)
 {
+  
 
   var imgTag = document.getElementById(imgID);
   var fullPathName = imgTag.src;
   var pathSplit = fullPathName.split("/");
   var getfileNameExt = pathSplit.length - 1;
-  var fullFilePath = ''; 
+  var fullFilePath = '';
+  var str = imgID.replace("ficonpic_"," ");
+  
+
 
   if (pathSplit.length == 0)
   {
@@ -40,18 +44,18 @@ function togglestars(imgID)
     if (fileNameMain == 2)
     {
       imgName = fileNameMainSpilt[0] + '.' + fileExt;
-       GBubble.showTooltip(event,'This track has been removed from your list of favorites');
+       GBubble.showTooltip(event, str+' has been removed from your list of favorites');
     }
     else
     {
       imgName = fileName + '_2.' + fileExt;
-       GBubble.showTooltip(event,'This track has been added to your list of favorites');
+       GBubble.showTooltip(event, str+' has been added to your list of favorites');
     }
   }
   else
   {
     imgName = fileName + '_2.' + fileExt;
-     GBubble.showTooltip(event,'This track has been added to your list of favorites');
+     GBubble.showTooltip(event,str+' has been added to your list of favorites');
   }
  
   var finalFile = fullFilePath + imgName;

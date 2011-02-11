@@ -240,7 +240,7 @@ background-image: url('ficonactive.png');
 		right:2px;
 		border:1px solid #000;
 		color:#000;
-		font-size:0.8em;				
+		font-size:1.2em;				
 	}
 	#dhtmlgoodies_leftPanel .closeLink:hover{	/* Close link text  - mouseover effect*/
 		color:#FFF;

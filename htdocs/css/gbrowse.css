@@ -215,8 +215,8 @@ background-image: url('ficonactive.png');
 	
 	#dhtmlgoodies_leftPanel{	/* Styling the help panel */
 		
-		background-color:#ECF1EF;	/* Blue background color */
-		color:#FFF;	/* White text color */
+		background-color: #FAFAD2;	
+		color:#000000;	/* White text color */
 		font-family: Trebuchet MS, Lucida Sans Unicode, Arial, sans-serif;	/* Which font to use */
 		
 		/* You shouldn't change these 5 options unless you need to */		
@@ -225,7 +225,7 @@ background-image: url('ficonactive.png');
 		z-index:10;
 		position:absolute;
 		display:none;
-/* 		opacity:0.6; */
+ 		 
 	}
 	
 	#dhtmlgoodies_leftPanel #leftPanelContent{
@@ -247,4 +247,8 @@ background-image: url('ficonactive.png');
 		background-color:#000;
 	}	
 	
+	div.normal{
+		font-style:normal;
+		    }
+
   

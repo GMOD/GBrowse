@@ -307,12 +307,12 @@ function enable_keypos (checkbox) {
 	*/
 	
 		var panelWidth =250;	// Width of help panel	
-	var slideSpeed = 15;		// Higher = quicker slide
+	var slideSpeed = 50;		// Higher = quicker slide
 	var slideTimer = 10;	// Lower = quicker slide
 	var slideActive = true;	// Slide active ?
 	var initBodyMargin = 0;	// Left or top margin of your <body> tag (left if panel is at the left, top if panel is on the top)
 	var pushMainContentOnSlide = true;	// Push your main content to the right when sliding
-	var panelPosition = 0; 	// 0 = left , 1 = top
+	var panelPosition = 1; 	// 0 = left , 1 = top
 	
 	/*	Don't change these values */
 	var slideLeftPanelObj=false;

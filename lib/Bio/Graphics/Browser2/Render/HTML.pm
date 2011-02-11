@@ -831,6 +831,21 @@ sub render_toggle_track_table {
 							    style=>"text-indent:2em;padding-top:8px"},
 							   $self->render_track_filter($filter)));
   }
+$html .= $self->toggle('Favorites',
+
+a({-href=>'#',
+				-style=>'position:relative; left:25px',
+				-onClick=>"initSlideLeftPanel();return false;",
+			},'<b>All Favorites</b>'),
+			  div ({-id =>'dhtmlgoodies_leftPanel'}, 
+		  a({-class=> "closeLink", -href => '#', -onClick => "initSlideLeftPanel();return false "},'Close'),
+		  div ({-id=>"leftPanelContent"},
+			div({-class=> "normal",-id =>'paneltitle', -style=> 'color:#0000CD; font-size:2.5em; '},'+ <b>Favorites</b>'),
+		  ),
+		      ),
+$self->render_track_table);
+  $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));	     
+		  
   $html .= $self->toggle('Tracks',$self->render_track_table);
   $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));
 
@@ -1030,18 +1045,7 @@ my $showicon =  img({ -id =>"ficonpic_${key}",
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
 				      -label=>$all_on,-onClick=>"gbCheck(this,1);"),
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
-				      -label=>$all_off,-onClick=>"gbCheck(this,0);"),
-
-			     a({-href=>'#',
-				-style=>'position:relative; left:25px',
-				-onClick=>"initSlideLeftPanel();return false;",
-			},'<b>View Favorites</b>'),
-			  div ({-id =>'dhtmlgoodies_leftPanel'}, 
-		  a({-class=> "closeLink", -href => '#', -onClick => "initSlideLeftPanel();return false "},'Close'),
-		  div ({-id=>"leftPanelContent"},	
-		  div ({},'hello'),
-		      ),
-		  )
+				      -label=>$all_off,-onClick=>"gbCheck(this,0);")
 			    )."&nbsp;".span({-class => "list",
 			            -id => "${id}_list",
 			            -style => "display: " . ($visible? "none" : "inline") . ";"},"")

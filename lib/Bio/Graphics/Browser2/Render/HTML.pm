@@ -902,11 +902,22 @@ sub render_track_table {
        $key =~ s!($h)!<span style="background-color:yellow">$1</span>!gi;
    }
 
-my $showicon =  img({ -id =>"ficonpic_${label}", -name => 'example',-onClick => "togglestars('ficonpic_${label}')", -src   => $self->data_source->button_url."/ficon.png",},);
-#   my $showiconactive =  img({ -id =>'ficonpic', -src   => $self->data_source->button_url.'/ficonactive.png',},);
-  my $favoriteicon = span({-href => '#', -id => 'favclick', -style => 'cursor:pointer;'},$showicon,);
+my $showicon =  img({ -id =>"ficonpic_${label}", 
+		      -name => 'example',
+		      -onClick => "togglestars('ficonpic_${label}')", 
+		      -src   => $self->data_source->button_url."/ficon.png",},);
+
+
+ my $favoriteicon = span({-href => '#', 
+			  -id => 'favclick', 
+			  -style => 'cursor:pointer;'},
+			  $showicon,);
 #     
-    $labels{$label} = span({-class => 'selectrackname'}, a({@args},$key),  span({-style => 'position:relative; left:30px;'},$favoriteicon,));
+    $labels{$label} = span({-class => 'selectrackname'}, 
+		      a({@args},$key),  
+		      span({-style => 'position:relative; left:30px;'},
+		      span({-id =>"initslideout"}, $favoriteicon,),
+		   ));
  
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
        my $escaped_label = CGI::escape($label);
@@ -1019,12 +1030,26 @@ my $showicon =  img({ -id =>"ficonpic_${label}", -name => 'example',-onClick => 
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
 				      -label=>$all_on,-onClick=>"gbCheck(this,1);"),
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
-				      -label=>$all_off,-onClick=>"gbCheck(this,0);")
+				      -label=>$all_off,-onClick=>"gbCheck(this,0);"),
+
+			     a({-href=>'#',
+				-style=>'position:relative; left:25px',
+				-onClick=>"initSlideLeftPanel();return false;",
+			},'<b>View Favorites</b>'),
+			  div ({-id =>'dhtmlgoodies_leftPanel'}, 
+		  a({-class=> "closeLink", -href => '#', -onClick => "initSlideLeftPanel();return false "},'Close'),
+		  div ({-id=>"leftPanelContent"},	
+		  div ({},'hello'),
+		      ),
+		  )
 			    )."&nbsp;".span({-class => "list",
 			            -id => "${id}_list",
 			            -style => "display: " . ($visible? "none" : "inline") . ";"},"")
 			    .br()   if exists $track_groups{$category};
       $section_contents{$category} = div($control.$section);
+
+
+ 
     }
 
     else {
@@ -1278,7 +1303,10 @@ sub render_global_config {
 		      )
 	       )
 	) . end_form();
+
+
     return div($content);
+
 }
 
 # Clear Hilights - Returns the HTML for the "Clear Highligting" link.
@@ -1305,13 +1333,15 @@ sub render_select_track_link {
 sub render_select_browser_link {
     my $self  = shift;
     my $style  = shift || 'button';
-
+ 
     my $title = $self->translate('BACK_TO_BROWSER');
     if ($style eq 'button') {
 	    return button({-name=>$title,
 		           -onClick => "Controller.select_tab('main_page')"
 		          }
+	   
 	        );
+	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
 		      -onClick => "Controller.select_tab('main_page')"},

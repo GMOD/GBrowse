@@ -93,6 +93,8 @@ END
    DISPLAY_SETTINGS => 'Display Settings',
 
    TRACKS   => 'Tracks',
+   
+   FAVORITES => 'Favorites',
 
    SELECT_TRACKS   => 'Select Tracks',
 

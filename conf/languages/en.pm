@@ -95,6 +95,8 @@ END
 
    TRACKS   => 'Tracks',
 
+   FAVORITES => 'Favorites',
+
    SELECT_TRACKS   => 'Select Tracks',
 
    TRACK_SELECT   => 'Search for Specific Tracks',

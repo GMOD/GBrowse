@@ -831,24 +831,32 @@ sub render_toggle_track_table {
 							    style=>"text-indent:2em;padding-top:8px"},
 							   $self->render_track_filter($filter)));
   }
-$html .= $self->toggle('Favorites',
+# 
+# my $favlink = a({-href=>'#',
+# 				-style=>'position:relative; left:25px',
+# 				-onClick=>"initSlideLeftPanel();return false;",
+# 			},'<b>All Favorites</b>');
+# my $favorite = span({-name=>'Favorites'},'Favorites');
+# 
+# my $panel = div ({-id =>'dhtmlgoodies_leftPanel'}, 
+# 		  a({-class=> "closeLink", -href => '#', -onClick => "initSlideLeftPanel();return false "},'Close'),
+# 		  div ({-id=>"leftPanelContent"},
+# 			div({-class=> "normal",-id =>'paneltitle', -style=> 'color:#0000CD; font-size:2.5em; '},'+ <b>Favorites</b>'),
+# 		  ),
+# 		      );
+# 
+# 
+# $html .= $self->toggle($favorite, $favlink, $panel
+# 
+# 
+# 			  
+# );
 
-a({-href=>'#',
-				-style=>'position:relative; left:25px',
-				-onClick=>"initSlideLeftPanel();return false;",
-			},'<b>All Favorites</b>'),
-			  div ({-id =>'dhtmlgoodies_leftPanel'}, 
-		  a({-class=> "closeLink", -href => '#', -onClick => "initSlideLeftPanel();return false "},'Close'),
-		  div ({-id=>"leftPanelContent"},
-			div({-class=> "normal",-id =>'paneltitle', -style=> 'color:#0000CD; font-size:2.5em; '},'+ <b>Favorites</b>'),
-		  ),
-		      ),
-$self->render_track_table);
-  $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));	     
-		  
-  $html .= $self->toggle('Tracks',$self->render_track_table);
+
+
+
+ $html .= $self->toggle('Tracks',$self->render_track_table);
   $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));
-
   return $html;
 }
 
@@ -919,20 +927,22 @@ sub render_track_table {
 
 my $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${key}')", 
+		      -onClick => "togglestars('ficonpic_${key}')",
+		      -style => 'cursor:pointer;',
+		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);
 
 
  my $favoriteicon = span({-href => '#', 
 			  -id => 'favclick', 
-			  -style => 'cursor:pointer;'},
+			 },
 			  $showicon,);
 #     
     $labels{$label} = span({-class => 'selectrackname'}, 
 		      a({@args},$key),  
-		      span({-style => 'position:relative; left:30px;'},
-		      span({-id =>"initslideout"}, $favoriteicon,),
-		   ));
+		     
+		      span({-style => 'float:left'}, $favoriteicon,)
+		   );
  
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
        my $escaped_label = CGI::escape($label);

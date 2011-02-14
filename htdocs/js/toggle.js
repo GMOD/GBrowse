@@ -44,18 +44,19 @@ function togglestars(imgID)
     if (fileNameMain == 2)
     {
       imgName = fileNameMainSpilt[0] + '.' + fileExt;
-       GBubble.showTooltip(event, str+' has been removed from your list of favorites');
+     
+      
     }
     else
     {
       imgName = fileName + '_2.' + fileExt;
-       GBubble.showTooltip(event, str+' has been added to your list of favorites');
+
     }
   }
   else
   {
     imgName = fileName + '_2.' + fileExt;
-     GBubble.showTooltip(event,str+' has been added to your list of favorites');
+   
   }
  
   var finalFile = fullFilePath + imgName;

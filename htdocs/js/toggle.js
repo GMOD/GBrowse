@@ -16,8 +16,8 @@ function togglestars(imgID, txtID)
   var getfileNameExt = pathSplit.length - 1;
   var fullFilePath = '';
   var str = imgID.replace("ficonpic_"," ");
+  var favorite;
   
-
 
   if (pathSplit.length == 0)
   {
@@ -45,19 +45,20 @@ function togglestars(imgID, txtID)
     {
       imgName = fileNameMainSpilt[0] + '.' + fileExt;
      txtTag.style.fontWeight = "normal";
-      
+      favorite = false;
     }
     else
     {
       imgName = fileName + '_2.' + fileExt;
-      txtTag.style.fontWeight = "bold";
+      txtTag.style.fontWeight = "900";
+      favorite = true;
     }
   }
   else
   {
     imgName = fileName + '_2.' + fileExt;
-    txtTag.style.fontWeight = "bold";
-   
+    txtTag.style.fontWeight = "900";
+    favorite = true; 
   }
  
   var finalFile = fullFilePath + imgName;

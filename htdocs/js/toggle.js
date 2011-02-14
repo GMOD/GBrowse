@@ -6,10 +6,10 @@ function setVisState (element_name,is_visible) {
 }
 
 
-function togglestars(imgID)
+function togglestars(imgID, txtID)
 {
   
-
+  var txtTag = document.getElementById(txtID);
   var imgTag = document.getElementById(imgID);
   var fullPathName = imgTag.src;
   var pathSplit = fullPathName.split("/");
@@ -44,18 +44,19 @@ function togglestars(imgID)
     if (fileNameMain == 2)
     {
       imgName = fileNameMainSpilt[0] + '.' + fileExt;
-     
+     txtTag.style.fontWeight = "normal";
       
     }
     else
     {
       imgName = fileName + '_2.' + fileExt;
-
+      txtTag.style.fontWeight = "bold";
     }
   }
   else
   {
     imgName = fileName + '_2.' + fileExt;
+    txtTag.style.fontWeight = "bold";
    
   }
  

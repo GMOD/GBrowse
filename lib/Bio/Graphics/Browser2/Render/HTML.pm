@@ -927,7 +927,7 @@ sub render_track_table {
 
 my $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${key}')",
+		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}')",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);
@@ -935,10 +935,11 @@ my $showicon =  img({ -id =>"ficonpic_${key}",
 
  my $favoriteicon = span({-href => '#', 
 			  -id => 'favclick', 
+			  
 			 },
 			  $showicon,);
 #     
-    $labels{$label} = span({-class => 'selectrackname'}, 
+    $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}"}, 
 		      a({@args},$key),  
 		     
 		      span({-style => 'float:left'}, $favoriteicon,)

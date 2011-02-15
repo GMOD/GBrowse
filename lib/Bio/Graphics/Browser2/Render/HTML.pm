@@ -822,9 +822,26 @@ sub render_track_filter {
 # This surrounds the track table with a toggle
 sub render_toggle_track_table {
   my $self     = shift;
-  my $html;
+
+## adding javascript array at the top so we can pass it into a js array -- ugly but it works
+  my $html = "<script>var favoritearray = []; </script>" ;
+  
+
+my $showicon =  img({
+		      -style => 'cursor:pointer; float:left;',
+		      
+		      -src   => $self->data_source->button_url."/ficon_2.png",},);
+
+
+ my $favoriteicon = span({-href => '#', 
+			  -id => 'favclick', 
+			  
+			 },
+			  $showicon,);
 
   $html .= div({-style=>'font-weight:bold'},'<<',$self->render_select_browser_link('link'));
+ $html .= div({-id => 'showfavoritestext',-style=>'font-weight:bold;'},span({-id =>'showfavorites', -onClick => "showfavorites(favorites)"},
+								      $favoriteicon),$self->render_select_browser_link('link'));
 
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
@@ -927,11 +944,10 @@ sub render_track_table {
 
 my $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}')",
+		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray );",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);
-
 
  my $favoriteicon = span({-href => '#', 
 			  -id => 'favclick', 
@@ -1344,12 +1360,37 @@ sub render_select_track_link {
 	  );
 }
 
+sub render_select_favorites_link {
+    my $self  = shift;
+    my $style  = shift || 'button';
+ 
+    my $title = $self->translate('FAVORITES');
+
+    
+    if ($style eq 'button') {
+	    return button({-name=>$title,
+#   		          -onClick => "showfavorites(favorites)"
+		          },
+	   
+	        );
+	   
+    } elsif ($style eq 'link') {
+	    return a({-href=>'javascript:void(0)',
+#  		      -onClick => "showfavorites(favorites)"},
+		      },
+		     $title);
+    }
+}
+
+
 # Render Select Browser Link - Returns the HTML for the "Back to Browser" button/link.
 sub render_select_browser_link {
     my $self  = shift;
     my $style  = shift || 'button';
  
     my $title = $self->translate('BACK_TO_BROWSER');
+
+    
     if ($style eq 'button') {
 	    return button({-name=>$title,
 		           -onClick => "Controller.select_tab('main_page')"

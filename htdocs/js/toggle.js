@@ -6,9 +6,9 @@ function setVisState (element_name,is_visible) {
 }
 
 
-function togglestars(imgID, txtID)
+function togglestars(imgID, txtID, favorites)
 {
-  
+
   var txtTag = document.getElementById(txtID);
   var imgTag = document.getElementById(imgID);
   var fullPathName = imgTag.src;
@@ -16,7 +16,9 @@ function togglestars(imgID, txtID)
   var getfileNameExt = pathSplit.length - 1;
   var fullFilePath = '';
   var str = imgID.replace("ficonpic_"," ");
-  var favorite;
+
+ 
+  
   
 
   if (pathSplit.length == 0)
@@ -45,25 +47,40 @@ function togglestars(imgID, txtID)
     {
       imgName = fileNameMainSpilt[0] + '.' + fileExt;
      txtTag.style.fontWeight = "normal";
-      favorite = false;
+   
+       favorite = false;
     }
     else
     {
       imgName = fileName + '_2.' + fileExt;
       txtTag.style.fontWeight = "900";
+  
       favorite = true;
+//        favorites.push(str);
     }
   }
   else
   {
     imgName = fileName + '_2.' + fileExt;
     txtTag.style.fontWeight = "900";
+
     favorite = true; 
+//      favorites.push(str);
   }
- 
+  if (favorite == true) {
+    favorites.push(str)
+  };
+  
+  alert(favorites);   
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
+  
+ 
+
+
 }
+
+
 
 // checkSummaries makes sure any collapsed nodes have their summaries visible upon page load.
 function checkSummaries() {
@@ -504,3 +521,14 @@ function enable_keypos (checkbox) {
 	}
 	if(!document.all)document.documentElement.onkeypress = leftPanelKeyboardEvent;
 	document.documentElement.onhelp  = keyboardShowLeftPanel;
+	
+	
+// 	
+
+
+	
+	
+	
+	
+	
+	

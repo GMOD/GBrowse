@@ -94,7 +94,7 @@ END
 
    TRACKS   => 'Tracks',
    
-   FAVORITES => 'Favorites',
+   FAVORITES => 'Show Favorites',
 
    SELECT_TRACKS   => 'Select Tracks',
 

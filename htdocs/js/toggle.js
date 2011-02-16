@@ -1,3 +1,17 @@
+///create getelementbyclassnames function
+document.getElementsByClassName = function(cl) {
+var retnode = [];
+var myclass = new RegExp('\\b'+cl+'\\b');
+var elem = this.getElementsByTagName('*');
+for (var i = 0; i < elem.length; i++) {
+var classes = elem[i].className;
+if (myclass.test(classes)) retnode.push(elem[i]);
+}
+return retnode;
+};
+
+
+
 // setVisState sends the visibility state to the server.
 function setVisState (element_name,is_visible) {
   var visibility = is_visible ? 'show' : 'hide';
@@ -6,9 +20,22 @@ function setVisState (element_name,is_visible) {
 }
 
 
+function toggleDiv(id){
+// alert(id);
+  var elements = document.getElementsByClassName(id);
+  alert(elements);
+    for(var i = 0, length = elements.length; i < length; i++) {
+       if( elements[i].textContent == ''){
+          elements[i].style.display = 'none';
+       } 
+    }
+
+  }
+
+
 function togglestars(imgID, txtID, favorites)
 {
-
+ 
   var txtTag = document.getElementById(txtID);
   var imgTag = document.getElementById(imgID);
   var fullPathName = imgTag.src;
@@ -68,17 +95,20 @@ function togglestars(imgID, txtID, favorites)
 //      favorites.push(str);
   }
   if (favorite == true) {
-    favorites.push(str)
-  };
-  
-  alert(favorites);   
+    favorites.push(str);
+// //     alert(txtTag.className);
+    txtTag.className= 'favoritelist';
+//     alert(txtTag.className); 
+
+  }
+  else if (favorite == false){
+     txtTag.className = 'inactive';
+   };
+   
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
   
- 
-
-
-}
+  }
 
 
 

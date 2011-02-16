@@ -22,7 +22,7 @@ use constant DEBUG => 0;
 
 use constant HAVE_SVG => eval "require GD::SVG; 1";
 our $CAN_PDF;
-
+our $favoritelabel ;
 # Render HTML Start - Returns the HTML for the browser's <head> section.
 sub render_html_start {
   my $self  = shift;
@@ -795,7 +795,7 @@ sub render_track_filter {
  
     my $self   = shift;
     my $plugin = shift;
-
+    
     my $form         = $plugin->configure_form();
     my $plugin_type  = $plugin->type;
     my $action       = $self->translate('Configure_plugin');
@@ -822,7 +822,8 @@ sub render_track_filter {
 # This surrounds the track table with a toggle
 sub render_toggle_track_table {
   my $self     = shift;
-
+ my $source   = $self->data_source;
+  my $filter = $self->track_filter_plugin;
 ## adding javascript array at the top so we can pass it into a js array -- ugly but it works
   my $html = "<script>var favoritearray = []; </script>" ;
   
@@ -839,36 +840,16 @@ my $showicon =  img({
 			 },
 			  $showicon,);
 
+ 
   $html .= div({-style=>'font-weight:bold'},'<<',$self->render_select_browser_link('link'));
- $html .= div({-id => 'showfavoritestext',-style=>'font-weight:bold;'},span({-id =>'showfavorites', -onClick => "showfavorites(favorites)"},
-								      $favoriteicon),$self->render_select_browser_link('link'));
+ $html .= div({-id => 'showfavoritestext',-style=>'font-weight:bold;'},span({-id =>'showfavorites'},
+								      $favoriteicon),$self->render_select_favorites_link('link'));
 
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
-							    style=>"text-indent:2em;padding-top:8px"},
+							    style=>"text-indent:2em;padding-top:8px; display:block;"},
 							   $self->render_track_filter($filter)));
   }
-# 
-# my $favlink = a({-href=>'#',
-# 				-style=>'position:relative; left:25px',
-# 				-onClick=>"initSlideLeftPanel();return false;",
-# 			},'<b>All Favorites</b>');
-# my $favorite = span({-name=>'Favorites'},'Favorites');
-# 
-# my $panel = div ({-id =>'dhtmlgoodies_leftPanel'}, 
-# 		  a({-class=> "closeLink", -href => '#', -onClick => "initSlideLeftPanel();return false "},'Close'),
-# 		  div ({-id=>"leftPanelContent"},
-# 			div({-class=> "normal",-id =>'paneltitle', -style=> 'color:#0000CD; font-size:2.5em; '},'+ <b>Favorites</b>'),
-# 		  ),
-# 		      );
-# 
-# 
-# $html .= $self->toggle($favorite, $favlink, $panel
-# 
-# 
-# 			  
-# );
-
 
 
 
@@ -949,13 +930,18 @@ my $showicon =  img({ -id =>"ficonpic_${key}",
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);
 
+
+
+ 
+   $favoritelabel = "selectrackname_${label}";
+
  my $favoriteicon = span({-href => '#', 
 			  -id => 'favclick', 
 			  
 			 },
 			  $showicon,);
 #     
-    $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}"}, 
+    $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline"}, 
 		      a({@args},$key),  
 		     
 		      span({-style => 'float:left'}, $favoriteicon,)
@@ -1363,20 +1349,20 @@ sub render_select_track_link {
 sub render_select_favorites_link {
     my $self  = shift;
     my $style  = shift || 'button';
- 
+    my $favoritelist = 'favoritelist';
     my $title = $self->translate('FAVORITES');
 
     
     if ($style eq 'button') {
 	    return button({-name=>$title,
-#   		          -onClick => "showfavorites(favorites)"
+  		          -onClick => "toggleDiv('favoritelist');",
 		          },
 	   
 	        );
 	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
-#  		      -onClick => "showfavorites(favorites)"},
+   		      -onClick => "toggleDiv('favoritelist');",
 		      },
 		     $title);
     }
@@ -2017,7 +2003,7 @@ sub tableize {
 
   for (my $row=0;$row<$rows;$row++) {
     # do table headers
-    $html .= qq(<tr class="searchtitle">);
+    $html .= qq(<tr class="searchtitle";display=block>);
     $html .= "<td><b>$row_labels[$row]</b> hello</td>" if @row_labels;
     for (my $column=0;$column<$columns;$column++) {
       my $checkbox = $array->[$column*$rows + $row] || '&nbsp;';
@@ -2025,7 +2011,7 @@ sub tableize {
       # de-couple the checkbox and label click behaviors
       $checkbox =~ s/\<\/?label\>//gi;
     
-      $html .= td({-width=>$cwidth},$checkbox);
+      $html .= td({-width=>$cwidth, -class => 'datacell',-style => 'visibility:visible'},$checkbox);
 
       
 # 

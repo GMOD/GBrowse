@@ -21,21 +21,21 @@ function setVisState (element_name,is_visible) {
 
 
 function toggleDiv(id){
-// alert(id);
-  var elements = document.getElementsByClassName(id);
-  alert(elements);
-    for(var i = 0, length = elements.length; i < length; i++) {
-       if( elements[i].textContent == ''){
-          elements[i].style.display = 'none';
-       } 
+var spans = document.getElementsByTagName('td');
+
+
+    for (var i = spans.length; i--;) {
+        var element = spans[i];
+        if (element.className.match(RegExp('\\b' + id + '\\b'))) {
+            element.style.display = (element.style.display === 'none') ? '' : 'none';
+        }
     }
+}
 
-  }
-
-
-function togglestars(imgID, txtID, favorites)
+function togglestars(imgID, txtID, favorites,cellid)
 {
- 
+  alert(cellid);
+  var celltag = document.getElementsByClassName(cellid);
   var txtTag = document.getElementById(txtID);
   var imgTag = document.getElementById(imgID);
   var fullPathName = imgTag.src;
@@ -44,7 +44,7 @@ function togglestars(imgID, txtID, favorites)
   var fullFilePath = '';
   var str = imgID.replace("ficonpic_"," ");
 
- 
+
   
   
 
@@ -83,7 +83,6 @@ function togglestars(imgID, txtID, favorites)
       txtTag.style.fontWeight = "900";
   
       favorite = true;
-//        favorites.push(str);
     }
   }
   else
@@ -92,22 +91,22 @@ function togglestars(imgID, txtID, favorites)
     txtTag.style.fontWeight = "900";
 
     favorite = true; 
-//      favorites.push(str);
   }
   if (favorite == true) {
-    favorites.push(str);
-// //     alert(txtTag.className);
-    txtTag.className= 'favoritelist';
-//     alert(txtTag.className); 
+    favorites.push(imgID);
 
+//      txtTag.className= 'favoritelist';
+     cellid.className = 'favoritelist';
   }
   else if (favorite == false){
-     txtTag.className = 'inactive';
+//       txtTag.className = 'selectrackname';
+      cellid.className = 'selectrackname';
    };
    
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
-  
+
+
   }
 
 

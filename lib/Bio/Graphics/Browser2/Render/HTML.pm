@@ -22,7 +22,7 @@ use constant DEBUG => 0;
 
 use constant HAVE_SVG => eval "require GD::SVG; 1";
 our $CAN_PDF;
-our $favoritelabel ;
+
 # Render HTML Start - Returns the HTML for the browser's <head> section.
 sub render_html_start {
   my $self  = shift;
@@ -912,7 +912,7 @@ sub render_track_table {
    }
    
    my $balloon = $source->setting('balloon style') || 'GBubble';
-   
+   my $cellid = 'datacell';
     my @args = ( -href => $link, -target => 'citation', -style => 'cursor:pointer');
    push @args, -style => 'Font-style: italic' if $label =~ /^(http|ftp|file):/;
    push @args, -onmouseover => "$balloon.showTooltip(event,'$mouseover')" if $mouseover;
@@ -923,17 +923,18 @@ sub render_track_table {
        $key =~ s!($h)!<span style="background-color:yellow">$1</span>!gi;
    }
 
+my $selectrackname = 'selectrackname';
+
 my $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray );",
+		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$selectrackname');",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);
 
 
 
- 
-   $favoritelabel = "selectrackname_${label}";
+
 
  my $favoriteicon = span({-href => '#', 
 			  -id => 'favclick', 
@@ -1355,14 +1356,14 @@ sub render_select_favorites_link {
     
     if ($style eq 'button') {
 	    return button({-name=>$title,
-  		          -onClick => "toggleDiv('favoritelist');",
+  		          -onClick => "Effect.toggle('favoritelist');",
 		          },
 	   
 	        );
 	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
-   		      -onClick => "toggleDiv('favoritelist');",
+ 		      -onClick => "toggleDiv('selectrackname');",
 		      },
 		     $title);
     }
@@ -2011,8 +2012,8 @@ sub tableize {
       # de-couple the checkbox and label click behaviors
       $checkbox =~ s/\<\/?label\>//gi;
     
-      $html .= td({-width=>$cwidth, -class => 'datacell',-style => 'visibility:visible'},$checkbox);
-
+      $html .=td({-width=>$cwidth, -class => 'selectrackname',-style => 'visibility:visible'},$checkbox);
+ 
       
 # 
     }

@@ -21,7 +21,7 @@ function setVisState (element_name,is_visible) {
 
 
 function toggleDiv(id){
-var spans = document.getElementsByTagName('td');
+var spans = document.getElementsByTagName('span');
 
 
     for (var i = spans.length; i--;) {
@@ -34,8 +34,10 @@ var spans = document.getElementsByTagName('td');
 
 function togglestars(imgID, txtID, favorites,cellid)
 {
-  alert(cellid);
-  var celltag = document.getElementsByClassName(cellid);
+//    alerst(cellid);
+//   var cells = document.getElementsByTagName('td';
+ 
+  var cellTag = document.getElementById(cellid);
   var txtTag = document.getElementById(txtID);
   var imgTag = document.getElementById(imgID);
   var fullPathName = imgTag.src;
@@ -46,7 +48,7 @@ function togglestars(imgID, txtID, favorites,cellid)
 
 
   
-  
+
 
   if (pathSplit.length == 0)
   {
@@ -92,21 +94,29 @@ function togglestars(imgID, txtID, favorites,cellid)
 
     favorite = true; 
   }
+  
   if (favorite == true) {
     favorites.push(imgID);
+      txtTag.className= 'favoritelist';
 
-//      txtTag.className= 'favoritelist';
-     cellid.className = 'favoritelist';
+      cellTag.className= 'favoritelist';
+
+
   }
+     
+  
   else if (favorite == false){
-//       txtTag.className = 'selectrackname';
-      cellid.className = 'selectrackname';
-   };
+      txtTag.className = 'notselected';
+      cellTag.className = 'notselected';
+
+  }
+
+
    
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
-
-
+//   alert(celltag);
+// alert(cellTag.className);
   }
 
 

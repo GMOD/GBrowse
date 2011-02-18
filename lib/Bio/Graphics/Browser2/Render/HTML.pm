@@ -923,11 +923,11 @@ sub render_track_table {
        $key =~ s!($h)!<span style="background-color:yellow">$1</span>!gi;
    }
 
-my $selectrackname = 'selectrackname';
+my $checkid = "notselectedcheck_${label}";
 
 my $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$selectrackname');",
+		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid');",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);
@@ -1043,7 +1043,7 @@ my $showicon =  img({ -id =>"ficonpic_${key}",
 				      -override   => 1,
 				      
 				     );
-      my $table      = $self->tableize(\@checkboxes,$category);
+      my $table      = $self->tableize(\@checkboxes,$category,undef, \@track_labels);
 
       my $visible =  $filter_active                            ? 1
                    : exists $settings->{section_visible}{$id}  ? $settings->{section_visible}{$id} 
@@ -1363,7 +1363,7 @@ sub render_select_favorites_link {
 	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
- 		      -onClick => "toggleDiv('selectrackname');",
+		      -onClick => "toggleDiv('notselected');",
 		      },
 		     $title);
     }
@@ -1973,7 +1973,7 @@ sub segment2link {
 
 sub tableize {
   my $self              = shift;
-  my ($array,$category,$cols) = @_;
+   my ($array,$category,$cols,$labelnames) = @_;
   return unless @$array;
 
   my $columns = $cols || 
@@ -2005,14 +2005,18 @@ sub tableize {
   for (my $row=0;$row<$rows;$row++) {
     # do table headers
     $html .= qq(<tr class="searchtitle";display=block>);
-    $html .= "<td><b>$row_labels[$row]</b> hello</td>" if @row_labels;
+    $html .= "<td><b>$row_labels[$row]</b></td>" if @row_labels;
     for (my $column=0;$column<$columns;$column++) {
       my $checkbox = $array->[$column*$rows + $row] || '&nbsp;';
-
+  
       # de-couple the checkbox and label click behaviors
       $checkbox =~ s/\<\/?label\>//gi;
-    
-      $html .=td({-width=>$cwidth, -class => 'selectrackname',-style => 'visibility:visible'},$checkbox);
+	  
+      my $label    = $labelnames->[$column*$rows + $row];
+
+
+
+      $html .=td({-width=>$cwidth,-style => 'visibility:visible'},span({ -id => "notselectedcheck_$label", -class => 'notselected'},$checkbox));
  
       
 # 

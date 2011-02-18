@@ -3807,6 +3807,7 @@ sub image_link {
     my $width    = param('view_width') || $settings->{width};
     my $start    = param('view_start') || $settings->{view_start};
     my $stop     = param('view_stop')  || $settings->{view_stop};
+    $stop++;
     my $name     = "$settings->{ref}:$start..$stop";
     my $selected = $self->join_selected_tracks;
     my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}

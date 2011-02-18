@@ -79,7 +79,7 @@ sub filter_tracks {
   for my $l (@$track_labels) {
       do {push @result,$l; next LABEL} if $l =~ /^(plugin|file|http|das)/;
 
-      my $aggregate_text = join ' ',map {$source->code_setting($l=>$_)} qw(key citation keywords select);
+      my $aggregate_text = join ' ',map {$source->code_setting($l=>$_)} qw(key keywords select);
       $aggregate_text   ||= $l;
       my $labels         = $source->subtrack_scan_list($l);
       $aggregate_text   .= " @$labels" if $labels && @$labels;

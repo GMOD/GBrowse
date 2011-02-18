@@ -1918,6 +1918,7 @@ sub create_panel_args {
 	      -postgrid     => $postgrid,
 	      -background   => $args->{background} || '',
 	      -truecolor    => $source->global_setting('truecolor') || 0,
+	      -map_fonts_to_truetype    => $source->global_setting('truetype') || 0,
 	      -extend_grid  => 1,
               -gridcolor    => $source->global_setting('grid color') || 'lightcyan',
               -gridmajorcolor    => $source->global_setting('grid major color') || 'cyan',

@@ -173,7 +173,6 @@ provides:
   MyFeatureFileLoader:
     file: lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
 recommends:
-  Ace: 0
   Bio::DB::BigFile: 1
   Bio::DB::Sam: 1.2
   Bio::Das: 0

@@ -369,10 +369,8 @@ sub consolidate_images {
 
     warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
 
-    my $format = ref($gds->[0]);
-    warn "format = $format" if DEBUG;
-
-    return $format =~ /^GD::SVG/ ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
+    return $gds->[0]->isa('GD::SVG::Image') 
+	                         ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
                                  : $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
 }
 
@@ -387,7 +385,7 @@ sub _consolidate_gd {
     my $charwidth  = $fontclass->gdMediumBoldFont->width;
     $height += $lineheight if $orientation eq 'horizontal';
 
-    my $gd = $class->new($width,$height);
+    my $gd = $class->new($width,$height,1);
     my $white = $gd->colorAllocate(255,255,255);
     my $black = $gd->colorAllocate(0,0,0);
 

@@ -365,6 +365,7 @@ sub render_html_head {
       track_pan.js
       ruler.js
       controller.js
+
     );
 
   # add scripts needed by plugins. Looks in /js folder unless specified.

@@ -19,7 +19,14 @@ function setVisState (element_name,is_visible) {
   new Ajax.Request(document.URL,{method:'post',postBody:postData});
 }
 
+/*function removeSpaces(string) {
+var tmp =  string.split(' ').join('');
+return tmp.replace("/","");*/
+//}
 
+function set_favorites(favorites){
+
+}
 function toggleDiv(id){
 var spans = document.getElementsByTagName('span');
 
@@ -31,6 +38,17 @@ var spans = document.getElementsByTagName('span');
         }
     }
 }
+
+function removeByElement(arrayName,arrayElement)
+ {
+    for(var i=0; i<arrayName.length;i++ )
+      
+     { 
+        if(arrayName[i]==arrayElement)
+            arrayName.splice(i,1);
+	 ;
+      } 
+  }
 
 function togglestars(imgID, txtID, favorites,cellid)
 {
@@ -45,7 +63,6 @@ function togglestars(imgID, txtID, favorites,cellid)
   var getfileNameExt = pathSplit.length - 1;
   var fullFilePath = '';
   var str = imgID.replace("ficonpic_"," ");
-
 
   
 
@@ -96,18 +113,20 @@ function togglestars(imgID, txtID, favorites,cellid)
   }
   
   if (favorite == true) {
-    favorites.push(imgID);
+      favorites.push(cellTag.id);
       txtTag.className= 'favoritelist';
 
       cellTag.className= 'favoritelist';
-
+   
 
   }
      
   
   else if (favorite == false){
+      removeByElement(favorites,cellTag.id);
       txtTag.className = 'notselected';
       cellTag.className = 'notselected';
+      alert(favorites.length);
 
   }
 

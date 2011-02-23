@@ -365,7 +365,6 @@ sub render_html_head {
       track_pan.js
       ruler.js
       controller.js
-
     );
 
   # add scripts needed by plugins. Looks in /js folder unless specified.
@@ -2014,10 +2013,10 @@ sub tableize {
       $checkbox =~ s/\<\/?label\>//gi;
 	  
       my $label    = $labelnames->[$column*$rows + $row];
+       $label = '' unless defined $label;
 
 
-
-      $html .=td({-width=>$cwidth,-style => 'visibility:visible'},span({ -id => "notselectedcheck_$label", -class => 'notselected'},$checkbox));
+      $html .=td({-width=>$cwidth,-style => 'visibility:visible'},span({ -id => "notselectedcheck_${label}", -class => 'notselected'},$checkbox));
  
       
 # 

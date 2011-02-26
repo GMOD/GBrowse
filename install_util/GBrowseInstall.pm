@@ -329,10 +329,11 @@ END
 
 sub apache_conf {
     my $self = shift;
-    my $dir     = $self->config_data('htdocs');
-    my $conf    = $self->config_data('conf');
-    my $cgibin  = $self->config_data('cgibin');
-    my $tmp     = $self->config_data('tmp');
+    my $dir       = $self->config_data('htdocs');
+    my $conf      = $self->config_data('conf');
+    my $cgibin    = $self->config_data('cgibin');
+    my $tmp       = $self->config_data('tmp');
+    my $databases = $self->config_data('databases');
     my $cgiroot = basename($cgibin);
     my $perl5lib= $self->added_to_INC;
     warn $perl5lib;
@@ -358,6 +359,11 @@ ScriptAlias  "/gb2"      "$cgibin"
 <Directory "$tmp/images/">
   Order allow,deny
   Allow from all
+</Directory>
+
+<Directory "$databases">
+  Order allow,deny
+  Deny from all
 </Directory>
 
 <Directory "$cgibin">

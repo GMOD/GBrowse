@@ -158,7 +158,9 @@ sub tmpdir {
 sub user_dir {
     my $self       = shift;
     my @components = @_;
-    return $self->tmpdir('userdata',@components);
+    my $base       = $self->setting(general=>'userdata_base');
+    $base        ||= File::Spec->catfile($self->db_base,'userdata');
+    return File::Spec->catfile($base,@components);
 }
 
 sub admin_dir {

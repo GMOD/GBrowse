@@ -18,6 +18,7 @@ use CGI 'pre';
 my %CONFIG_CACHE; # cache parsed config files
 my %DB_SETTINGS;  # cache database settings
 my %LOADED_GLYPHS;
+my $SQLITE_FIXED;
 
 BEGIN {
     if( $ENV{MOD_PERL} &&
@@ -927,6 +928,7 @@ sub open_database {
 
   my ($dbid,$adaptor,@argv) = $self->db_settings($track,$length);
   my $db                    = Bio::Graphics::Browser2::DataBase->open_database($adaptor,@argv);
+  $self->fix_sqlite if $adaptor eq 'Bio::DB::SeqFeature::Store' && "@argv" =~ /SQLite/;  # work around broken bioperl
   
   # do a little extra stuff the first time we see a new database
   unless ($self->{databases_seen}{$db}++) {
@@ -1263,6 +1265,12 @@ sub subtrack_scan_list {
     my $stt   = Bio::Graphics::Browser2::Render->create_subtrack_manager($label,$self,{}) or return;
     my @ids   = keys %{$stt->elements};
     return \@ids;
+}
+
+sub fix_sqlite {
+    return if $SQLITE_FIXED++;
+    no warnings;
+    *Bio::DB::SeqFeature::Store::DBI::SQLite::_has_spatial_index = sub { return };
 }
 
 1;

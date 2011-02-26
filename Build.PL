@@ -17,7 +17,7 @@ my $build = GBrowseInstall->new(
 
     requires     => {
 	'perl'                => '5.008',
-	'Bio::Root::Version'  => '1.005009001',
+	'Bio::Root::Version'  => '1.0069',
 	'Bio::Graphics'       => '2.09',
 	'CGI::Session'        => '4.02',
 	'Digest::MD5'         => 0,	

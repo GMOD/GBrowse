@@ -336,10 +336,10 @@ sub ACTION_store_favorites {
 
     my $self = shift;
     my $q    = shift;
-#     my $direction= $q->param('direction');
+    my $label= $q->param('label');
     my @favorites = JSON::from_json($q->param('favorites'));
     my $settings  = $self->state;
-    $self->state->{favorites}{@favorites} = @favorites;
+    $self->state->{favorites}{$label} = @favorites;
     $self->session->flush;
     return (204,'text/plain',undef);
 }

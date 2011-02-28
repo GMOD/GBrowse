@@ -1359,7 +1359,7 @@ sub render_select_favorites_link {
     my $self  = shift;
     my $style  = shift || 'button';
 #     
-    my @favorites = JSON::from_json('favorites');
+#     my @favorites = JSON::from_json('favorites');
     my $title = $self->translate('FAVORITES');
 
     
@@ -1372,7 +1372,7 @@ sub render_select_favorites_link {
 	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
-		      -onClick => "Controller.update_sections(new Array('@favorites'));",
+		      -onClick => "Controller.update_sections(new Array('hello'));",
 		      },
 		     $title);
     }

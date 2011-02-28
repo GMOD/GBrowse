@@ -144,16 +144,16 @@ function togglestars(imgID, txtID, favorites,cellid)
    
 //    var direction = favorite ? 'false' : 'true';
 
-   new Ajax.Request(document.URL, {
+new Ajax.Request(document.URL, {
 	          method: 'post',
 		  asynchronous: false,
 		  parameters: {
 		        action:    'store_favorites',
-			'direction':   direction,
-			favorites: Object.toJSON(favorites);
+			'label':   favorite,
+			favorites: Object.toJSON(favorites)
 	          }});
 	 
-
+return false;
 //   alert(celltag);
 // alert(cellTag.className);
   }

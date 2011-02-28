@@ -64,7 +64,7 @@ function togglestars(imgID, txtID, favorites,cellid)
   var getfileNameExt = pathSplit.length - 1;
   var fullFilePath = '';
   var str = imgID.replace("ficonpic_"," ");
-
+  var jsonfavstr;
   
 
 
@@ -84,6 +84,7 @@ function togglestars(imgID, txtID, favorites,cellid)
   var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
   var imgName ='';
 
+
  
   if (fileNameMainSpilt.length > 1)
   {
@@ -96,6 +97,7 @@ function togglestars(imgID, txtID, favorites,cellid)
      txtTag.style.fontWeight = "normal";
    
        favorite = false;
+   ;
     }
     else
     {
@@ -103,6 +105,7 @@ function togglestars(imgID, txtID, favorites,cellid)
       txtTag.style.fontWeight = "900";
   
       favorite = true;
+      
     }
   }
   else
@@ -118,6 +121,7 @@ function togglestars(imgID, txtID, favorites,cellid)
       txtTag.className= 'favoritelist';
 
       cellTag.className= 'favoritelist';
+      
    
 
   }
@@ -127,7 +131,7 @@ function togglestars(imgID, txtID, favorites,cellid)
       removeByElement(favorites,cellTag.id);
       txtTag.className = 'notselected';
       cellTag.className = 'notselected';
-      alert(favorites.length);
+//       /*alert*/(favorites.length);
 
   }
 
@@ -135,6 +139,21 @@ function togglestars(imgID, txtID, favorites,cellid)
    
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
+  
+//    jsonfavstr = JSON.stringify(favorites);
+   
+//    var direction = favorite ? 'false' : 'true';
+
+   new Ajax.Request(document.URL, {
+	          method: 'post',
+		  asynchronous: false,
+		  parameters: {
+		        action:    'store_favorites',
+			'direction':   direction,
+			favorites: Object.toJSON(favorites);
+	          }});
+	 
+
 //   alert(celltag);
 // alert(cellTag.className);
   }

@@ -31,8 +31,8 @@ use constant DEBUG_LOCK => DEBUG || 0;
 sub new {
 	my $class    = shift;
 	my %args     = @_;
-	my ($driver,$id,$session_args,$default_source,$lockdir,$locktype,$expire_time,$favorites) 
-	  = @args{'driver','id','args','source','lockdir','locktype','expires','favorites'};
+	my ($driver,$id,$session_args,$default_source,$lockdir,$locktype,$expire_time) 
+	  = @args{'driver','id','args','source','lockdir','locktype','expires',};
 
 	$CGI::Session::NAME = 'gbrowse_sess';     # custom cookie
 	$CGI::Session::Driver::file::NoFlock = 1; # flocking unnecessary because we roll our own

@@ -712,6 +712,12 @@ sub do_add_user_check {
 sub do_add_user {
   my $self = shift;
   my ($user,$email,$fullname,$pass,$sessionid,$allow_admin) = @_;
+
+  # for debugging front end, uncomment as needed
+#  return $self->string_result('Session Error');
+#  return $self->string_result('Username already in use, please try another.');
+#    return $self->string_result("Invalid e-mail address (",$email,") provided.");
+#  return $self->string_result('Success');
   
   my $userdb = $self->dbi;
   
@@ -773,8 +779,9 @@ END
 sub do_send_confirmation {
   my $self = shift;
   my ($email,$confirm,$user,$pass) = @_;
+
   my $globals = $self->{globals};
-  my $link = $globals->gbrowse_url()."?confirm=1;code=$confirm";
+  my $link = $globals->gbrowse_url()."/?confirm=1;code=$confirm";
 
   my $message  = $self->get_header();
      $message .= "\n\n    Username: $user\n    Password: $pass\n    E-mail:   $email\n\n";
@@ -793,7 +800,7 @@ sub do_send_confirmation {
       warn $err;
        return $self->string_result('Mail Error');
   }
-  return (204,'text/plain','');
+  return $self->string_result('Success');
 }
 
 # Edit Confirmation - Deletes or resends unconfirmed information based on "option"

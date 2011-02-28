@@ -482,7 +482,7 @@ function add_user() {
                 $('loginWarning').innerHTML = Controller.translate('CANNOT_CONNECT_MAIL');
             }
 
-            if (results=='Session Error' || results == 'E-mail in use' || results=='Message Already Sent') {
+            else if (results=='Session Error' || results == 'E-mail in use' || results=='Message Already Sent') {
                 login_loading(false);
                 $('loginCancel').value = Controller.translate('BACK');
 
@@ -505,16 +505,20 @@ function add_user() {
 		    
                 }
 
-                $('loginURow').hide(); $('loginBreak').hide();
-                $('loginPRow').hide(); $('loginSubmit').hide();
-                $('loginERow').hide(); $('loginWarning').show();
-		$('loginFRow').hide();
-                $('loginP2Row').hide();
+	    } else if (results == 'Success') {
+		$('loginWarning').innerHTML = Controller.translate('CONFIRMATION_EMAIL_SENT');
+                UsingOpenID = false;
+                login_user(username);
             } else {
                 $('loginWarning').innerHTML = results;
                 UsingOpenID = false;
                 login_user(username);
             }
+        $('loginURow').hide(); $('loginBreak').hide();
+        $('loginPRow').hide(); $('loginSubmit').hide();
+        $('loginERow').hide(); $('loginWarning').show();
+	$('loginFRow').hide();
+        $('loginP2Row').hide();
         }
     });
     return;

@@ -8,6 +8,7 @@
      userdata to this location, or use symbolic links.
    * The apache configuration file, /etc/apache2/conf.d/gbrowse2.conf, now contains a stanza that
      makes the databases directory inaccessible to the web server unless explicitly enabled.
+   * Fixed account registration confirm code URL so that it doesn't get mangled by GBrowse redirection.
 
 2.26
    * Fixed account registration confirmation screen, which was blacked out on all

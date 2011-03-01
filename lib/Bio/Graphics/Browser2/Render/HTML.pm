@@ -1357,12 +1357,12 @@ sub render_select_track_link {
 
 sub render_select_favorites_link {
     my $self  = shift;
-    my $style  = shift || 'button';
-#     
-#     my @favorites = JSON::from_json('favorites');
-    my $title = $self->translate('FAVORITES');
+    my $style  = shift || 'button';     
 
-    
+    my $title = $self->translate('FAVORITES');
+   eval "require Bio::Graphics::Browser2::Action; 1";
+        my @favorites = qw(ACTION_store_favorites->@favorites);
+
     if ($style eq 'button') {
 	    return button({-name=>$title,
   		          -onClick => "Effect.toggle('favoritelist');",
@@ -1372,7 +1372,7 @@ sub render_select_favorites_link {
 	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
-		      -onClick => "Controller.update_sections(new Array('hello'));",
+		      -onClick => "Controller.update_sections(new Array('@favorites'));",
 		      },
 		     $title);
     }

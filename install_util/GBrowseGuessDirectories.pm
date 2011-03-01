@@ -41,15 +41,19 @@ sub tmp {
     my $self = shift;
     return File::Spec->catfile($PREFIX,'tmp','gbrowse2') if $PREFIX;
     return '/srv/gbrowse2/tmp'   if $ENV{DEB_BUILD_ARCH}; # FHS system
-    return '/var/tmp/gbrowse2'   if -d '/var/tmp';
     return File::Spec->catfile(File::Spec->tmpdir,'gbrowse2');
+}
+
+sub persistent {
+    my $self = shift;
+    return '/srv/gbrowse2'   if $ENV{DEB_BUILD_ARCH}; # FHS system
+    my $prefix = $self->prefix || '/var';
+    return File::Spec->catfile($prefix,'lib','gbrowse2');
 }
 
 sub databases {
     my $self = shift;
-    return File::Spec->catfile($self->htdocs,'databases') if $PREFIX;
-    return '/srv/gbrowse2/databases'             if $ENV{DEB_BUILD_ARCH}; # FHS system
-    return File::Spec->catfile($self->htdocs,'databases');
+    return File::Spec->catfile($self->persistent,'databases');
 }
 
 sub apache {

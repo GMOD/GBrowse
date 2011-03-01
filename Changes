@@ -3,19 +3,22 @@
      BioPerl 1.069 is available from http://github.com/bioperl/bioperl-live/tarball/master.
      To download from the command line use: 
      wget --no-check-certificate http://github.com/bioperl/bioperl-live/tarball/master -O bioperl.tar.gz
-   * THE DEFAULT LOCATION OF UPLOADED USERDATA HAS CHANGED TO /var/www/gbrowse2/databases/userdata. This
+   * Fixed account registration confirm code URL so that it doesn't get mangled by GBrowse redirection.
+   * Fixed the "restrict" argument so that you can restrict access to a track even if the datasource
+     as a whole does not require authentication.
+   * Changed default location of uploaded userdata to /var/lib/gbrowse2/userdata. This
      avoids destruction of userdata on systems that clear /tmp on reboots. You may wish to copy existing
      userdata to this location, or use symbolic links.
    * The apache configuration file, /etc/apache2/conf.d/gbrowse2.conf, now contains a stanza that
      makes the databases directory inaccessible to the web server unless explicitly enabled.
-   * Fixed account registration confirm code URL so that it doesn't get mangled by GBrowse redirection.
+   * All newly-added tracks now appear at top of panel rather than at bottom, as per user request.
 
 2.26
    * Fixed account registration confirmation screen, which was blacked out on all
      platforms.
    * Fixed account registration error messages to be more informative.
    * Removed Ace as a recommended library. Was only used for process_wormbase.pl,
-   which is no relevant anyway.
+   which is no longer relevant anyway.
    * Fixed problem calculating maximum length of displayed segment when details_multiplier>1.
 
 2.25

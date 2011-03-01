@@ -7,7 +7,7 @@ use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::UserDB;
 use DBI;
 use Digest::MD5 qw(md5_hex);
-use CGI qw(param url);
+use CGI qw(param url header());
 use Carp qw(confess cluck);
 use File::Path qw(rmtree);
 
@@ -21,8 +21,8 @@ sub _new {
     my $uploadsdb   = DBI->connect($credentials);
     unless ($uploadsdb) {
         print header();
-        print "Error: Could not open uploads database.";
-        die "Could not open uploads database with $credentials";
+        print "Error: Could not open use account database.";
+        die "Could not open user account database with $credentials";
     }
     $self->uploadsdb($uploadsdb);
     

@@ -21,6 +21,7 @@ use constant REGISTRATION_SERVER => 'http://modencode.oicr.on.ca/cgi-bin/gbrowse
 my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
 		htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
 		tmp           => 'Directory for GBrowse\'s temporary data',
+		persistent    => 'Directory for GBrowse\'s sessions, uploaded tracks and other persistent data',
 		databases     => 'Directory for GBrowse\'s example databases',
 		cgibin        => 'Directory for GBrowse\'s CGI script executables?',
 		portdemo      => 'Internet port to run demo web site on (for demo)?',
@@ -46,7 +47,10 @@ sub ACTION_demo {
 	|| GBrowseGuessDirectories->portdemo();
     my $modules = $self->config_data('apachemodules')
 	|| GBrowseGuessDirectories->apachemodules;
+    my $db      = $self->config_data('databases')
+	|| GBrowseGuessDirectories->databases;
     my $cgiurl  = $self->cgiurl;
+    my $persistent = $self->config_data('persistent');
 
     mkdir "$dir/conf";
     mkdir "$dir/htdocs";
@@ -91,6 +95,7 @@ sub ACTION_demo {
 	    s!\$CONF!$dir/conf!g;
 	    s!\$HTDOCS!$dir/htdocs!g;
 	    s!\$DATABASES!$dir/htdocs/databases!g;
+	    s!\$PERSISTENT!$dir/$persistent!g;
 	    s!\$TMP!$dir/tmp!g;
 	    s/\$CGIURL/$cgiurl/g;
 	    s!\$VERSION!$self->dist_version!eg;
@@ -100,6 +105,7 @@ sub ACTION_demo {
 	    s/\$USER_ACCOUNT_DB/$self->guess_user_account_db/eg;
 	    s/\$SMTP_GATEWAY/$self->guess_smtp_gateway/eg;
 	    s!^url_base\s*=.+!url_base               = /!g;
+	    s!^user_accounts[^=]+=.*!user_accounts = 0!;
 	    $out->print($_);
 	}
 	close $out;
@@ -675,6 +681,7 @@ sub substitute_in_place {
     my $htdocs     = $self->config_data('htdocs');
     my $conf       = $self->config_data('conf');
     my $cgibin     = $self->config_data('cgibin');
+    my $persistent = $self->config_data('persistent');
     my $databases  = $self->config_data('databases');
     my $tmp        = $self->config_data('tmp');
     my $wwwuser  = $self->config_data('wwwuser');
@@ -691,6 +698,7 @@ sub substitute_in_place {
 	s/\$CGIURL/$cgiurl/g;
 	s/\$WWWUSER/$wwwuser/g;
 	s/\$DATABASES/$databases/g;
+	s/\$PERSISTENT/$persistent/g;
 	s/\$VERSION/$self->dist_version/eg;
 	s/\$CAN_USER_ACCOUNTS_OPENID/$self->has_openid/eg;
 	s/\$CAN_USER_ACCOUNTS_REG/$self->has_smtp/eg;

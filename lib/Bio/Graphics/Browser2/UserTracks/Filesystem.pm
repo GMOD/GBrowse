@@ -24,15 +24,16 @@ use Carp "cluck",'croak';
 sub get_uploaded_files {
     my $self = shift;
     return unless $self->{uploadsid};
-    my $path = $self->path;	
-	my @result;
-	opendir D, $path;
-	while (my $dir = readdir(D)) {
-		next if $dir =~ /^\.+$/;
-		next if ($self->is_imported($dir) == 1);
-		push @result, $dir;
-	}
-	return @result;
+    my $path = $self->path;
+    return unless -e $path;
+    my @result;
+    opendir D, $path;
+    while (my $dir = readdir(D)) {
+	next if $dir =~ /^\.+$/;
+	next if ($self->is_imported($dir) == 1);
+	push @result, $dir;
+    }
+    return @result;
 }
 
 # Get Imported Files (User) - Returns an array of files imported by a user.
@@ -40,6 +41,7 @@ sub get_imported_files {
 	my $self = shift;
 	return unless $self->{uploadsid};
 	my $path = $self->path;
+	return unless -e $path;
 	my @result;
 	opendir D, $path;
 	while (my $dir = readdir(D)) {

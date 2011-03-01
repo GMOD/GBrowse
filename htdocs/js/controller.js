@@ -499,7 +499,9 @@ var GBrowseController = Class.create({
                     var html           = this_track_data.track_html;
                     var panel_id       = this_track_data.panel_id;
 
-                    Controller.append_child_from_html(html,$(panel_id),onTop);
+                    //Controller.append_child_from_html(html,$(panel_id),onTop);
+		    // force true - experimental
+		    Controller.append_child_from_html(html,$(panel_id),true);
 
                     if (this_track_data.display_details == 0) {
                         $(ret_gbtrack.track_image_id).setOpacity(0);

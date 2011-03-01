@@ -236,19 +236,20 @@ sub run {
 
   $self->set_source() && return;
 
-  warn "private session = ",$self->session->private  if $debug;
-  warn "username = ",       $self->session->username if $debug;
+  my $session = $self->session;
+  my $source  = $self->data_source;
+  $source->set_username($session->username) if $session->private;
 
-  if ($self->data_source->must_authenticate) {
-      if ($self->session->private && 
-	  $self->user_authorized_for_source($self->session->username))
+  if ($source->must_authenticate) {
+      if ($session->private && 
+	  $self->user_authorized_for_source($session->username))
       {
 	  # login session - make sure that the data source has the information needed
 	  # to restrict tracks according to policy
       } else {
 	  # authentication required, but not a login session, so initiate authentication request
 	  $self->force_authentication;
-	  $self->session->flush;
+	  $session->flush;
 	  return;
       }
   }
@@ -2014,8 +2015,12 @@ sub add_track_to_state {
   warn "invalid track $label" if DEBUG && !$potential_tracks{$label};
   return unless $potential_tracks{$label};
 
-  my %current = map {$_=> 1} @{$state->{tracks}};
-  unshift @{$state->{tracks}},$label unless $current{$label}; # on top (better)
+#  my %current = map {$_=> 1} @{$state->{tracks}};
+#  unshift @{$state->{tracks}},$label unless $current{$label}; # on top (better)
+
+  # experimental -- force track to go to top
+  @{$state->{tracks}} = grep {$_ ne $label} @{$state->{tracks}};
+  unshift @{$state->{tracks}},$label;
 
   warn "[$$]ADD TRACK TO STATE WAS: ",
     join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n" if DEBUG;

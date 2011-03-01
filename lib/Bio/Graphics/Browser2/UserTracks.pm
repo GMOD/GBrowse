@@ -168,7 +168,8 @@ sub path {
     my $self = shift;
     my $uploadsid = $self->uploadsid;
     my $source    = $self->data_source;
-    return $self->is_admin ? $source->admindata() : $source->userdata($uploadsid);
+    my $path = $self->is_admin ? $source->admindata() : $source->userdata($uploadsid);
+    return $path;
 }
 
 # Track Path (File) - Returns a verified path to the folder holding a track.

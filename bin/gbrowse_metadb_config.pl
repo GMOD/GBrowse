@@ -320,6 +320,10 @@ sub check_data_sources {
     # Since we can't access the Database.pm access without the data source, we'll have to go in the back door,
     # and manually get the uploads ID, file path, and data source from the userdata folder.
     my $userdata_folder = $globals->user_dir;
+    unless (-e $userdata_folder) {
+	print STDERR "No files, no checks needed.\n";
+	return;
+    }
     my @data_sources;
 	opendir U, $userdata_folder;
 	while (my $dir = readdir(U)) {
@@ -379,6 +383,10 @@ sub check_all_files {
     $line_counter = 0;
     # Get all data sources
     my $userdata_folder = $globals->user_dir;
+    unless (-e $userdata_folder) {
+	print STDERR "no uploaded files to check.\n";
+	return;
+    }
     my @data_sources;
     opendir U, $userdata_folder;
     while (my $dir = readdir(U)) {

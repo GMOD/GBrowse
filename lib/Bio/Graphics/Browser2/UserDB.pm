@@ -447,7 +447,7 @@ sub accountinfo_from_username {
     my $self     = shift;
     my $username = shift;
     my $userdb = $self->dbi;
-    return $userdb->selectrow_array('SELECT a.gecos,a.email FROM users as a,session as b WHERE a.userid=b.userid AND b.username=?',
+    return $userdb->selectrow_array('SELECT a.gecos,a.email FROM users as a.session as b WHERE a.userid=b.userid AND b.username=?',
 				    undef,$username);
 }
 
@@ -1438,7 +1438,7 @@ CREATE TABLE openid_users (
     openid_url varchar(128) not null PRIMARY key, 
     userid varchar(32) not null, 
     username varchar(32) not null
-);
+ );
 
 CREATE TABLE "uploads" (
     trackid varchar(32) not null PRIMARY key, 
@@ -1455,4 +1455,3 @@ CREATE TABLE "uploads" (
     title text, 
     imported boolean not null
 );
-

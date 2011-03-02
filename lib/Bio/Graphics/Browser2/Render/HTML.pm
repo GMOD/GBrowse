@@ -13,7 +13,7 @@ use Carp qw(croak cluck);
 use CGI qw(:standard escape start_table end_table);
 use Text::Tabs;
 use POSIX qw(floor);
-use DBI;
+
 use constant JS    => '/gbrowse2/js';
 use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
@@ -827,6 +827,7 @@ sub render_toggle_track_table {
   my $filter = $self->track_filter_plugin;
 ## adding javascript array at the top so we can pass it into a js array -- ugly but it works
   my $html = "<script>var favoritearray = []; </script>" ;
+  
 
 my $showicon =  img({
 		      -style => 'cursor:pointer; float:left;',
@@ -843,7 +844,7 @@ my $showicon =  img({
  
   $html .= div({-style=>'font-weight:bold'},'<<',$self->render_select_browser_link('link'));
  $html .= div({-id => 'showfavoritestext',-style=>'font-weight:bold;'},span({-id =>'showfavorites'},
-								      $favoriteicon),$self->render_select_favorites_link('link'));
+								      $favoriteicon),$self->render_select_favorites_link('link',"favoritearray"));
 
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
@@ -863,7 +864,9 @@ sub render_track_table {
   my $self     = shift;
   my $settings = $self->state;
   my $source   = $self->data_source;
+
   
+
 
   # read category table information
   my $category_table_labels = $self->category_table();
@@ -871,7 +874,7 @@ sub render_track_table {
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
   my @labels     = $self->potential_tracks;
-#   my @favorited = JSON::from_json('jsonfavstr');
+
   warn "potential tracks = @labels" if DEBUG;
 
   my ($filter_active,@hilite);
@@ -879,8 +882,6 @@ sub render_track_table {
       $filter_active++;
       eval {@labels    = $filter->filter_tracks(\@labels,$source)};
       warn $@ if $@;
-#        eval {@favorited   = $filter->filter_tracks(\@favorited,$source)};
-#       warn $@ if $@;
       eval {@hilite    = $filter->hilite_terms};
       warn $@ if $@;
   }
@@ -932,17 +933,10 @@ my $showicon =  img({ -id =>"ficonpic_${key}",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);
-# my $sql = 'INSERT INTO favorites (favorites) VALUES (favoritearray)';
-# 
-#  my $sth = $dbh->prepare($sql);
-# 
-# while (<DATA>) {
-# chomp;
-# my @vals = split /\s+/, $_;
-# 
-#     $sth->execute(@vals);
-# };
-# $dbh->disconnect();
+
+
+
+
 
  my $favoriteicon = span({-href => '#', 
 			  -id => 'favclick', 
@@ -1357,12 +1351,11 @@ sub render_select_track_link {
 
 sub render_select_favorites_link {
     my $self  = shift;
-    my $style  = shift || 'button';     
-
+    my $style  = shift || 'button';
+    my $favoritelist = 'favoritelist';
     my $title = $self->translate('FAVORITES');
-   eval "require Bio::Graphics::Browser2::Action; 1";
-        my @favorites = qw(ACTION_store_favorites->@favorites);
 
+    
     if ($style eq 'button') {
 	    return button({-name=>$title,
   		          -onClick => "Effect.toggle('favoritelist');",
@@ -1372,7 +1365,7 @@ sub render_select_favorites_link {
 	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
-		      -onClick => "Controller.update_sections(new Array('@favorites'));",
+		      -onClick => "Controller.update_sections('notselected','',1,false);",
 		      },
 		     $title);
     }
@@ -2016,12 +2009,13 @@ sub tableize {
     $html .= qq(<tr class="searchtitle";display=block>);
     $html .= "<td><b>$row_labels[$row]</b></td>" if @row_labels;
     for (my $column=0;$column<$columns;$column++) {
+ my $label    = $labelnames->[$column*$rows + $row] || '&nbsp;';
       my $checkbox = $array->[$column*$rows + $row] || '&nbsp;';
-     my $label    = $labelnames->[$column*$rows + $row];
+  
       # de-couple the checkbox and label click behaviors
       $checkbox =~ s/\<\/?label\>//gi;
 	  
-   
+     
 
 
 

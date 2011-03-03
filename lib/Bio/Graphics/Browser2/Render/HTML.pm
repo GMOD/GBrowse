@@ -3232,7 +3232,7 @@ sub can_generate_pdf {
     # see whether we have the needed .inkscape and .gnome2 directories
     my $home = (getpwuid($<))[7];
     my $user = (getpwuid($<))[0];
-    my $inkscape_dir = File::Spec->catfile($home,'.inkscape');
+    my $inkscape_dir = File::Spec->catfile($home,'.config','inkscape');
     my $gnome2_dir   = File::Spec->catfile($home,'.gnome2');
     if (-e $inkscape_dir && -w $inkscape_dir
 	&&  -e $gnome2_dir   && -w $gnome2_dir) {
@@ -3242,8 +3242,8 @@ sub can_generate_pdf {
 	    join(' ',
 		 qq(GBROWSE NOTICE: To enable PDF generation, please enter the directory "$home"),
 		 qq(and run the commands:),
-		 qq("sudo mkdir .inkscape .gnome2"),
-		 qq(and "sudo chown $user .inkscape .gnome2". ),
+		 qq("sudo mkdir -p .config/inkscape .gnome2"),
+		 qq(and "sudo chown $user .config/inkscape .gnome2". ),
 		 qq(To turn off this message add "generate pdf = 0"),
 		 qq(to the [GENERAL] section of your GBrowse.conf configuration file.)
 	    );

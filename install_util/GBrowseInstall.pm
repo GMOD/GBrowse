@@ -361,6 +361,10 @@ ScriptAlias  "/gb2"      "$cgibin"
   Allow from all
 </Directory>
 
+<Directory "$dir/tutorial">
+  Options +Indexes
+</Directory>
+
 <Directory "$tmp/images/">
   Order allow,deny
   Allow from all
@@ -373,6 +377,7 @@ ScriptAlias  "/gb2"      "$cgibin"
 
 <Directory "$cgibin">
   ${inc}
+  Options ExecCGI
   SetEnv GBROWSE_CONF   "$conf"
 </Directory>
 
@@ -380,7 +385,6 @@ ScriptAlias  "/gb2"      "$cgibin"
   Alias /fgb2 "$cgibin"
   <Location /fgb2>
     SetHandler   fcgid-script
-    Options      ExecCGI
   </Location>
   DefaultInitEnv GBROWSE_CONF $conf
   # these directives prevent idle/busy timeouts and may need to be
@@ -395,7 +399,6 @@ ScriptAlias  "/gb2"      "$cgibin"
   Alias /fgb2 "$cgibin"
   <Location /fgb2>
     SetHandler   fastcgi-script
-    Options      ExecCGI
   </Location>
   # Note: you may need to increase -idle-timeout if file uploads are timing out and returning server
   # errors.

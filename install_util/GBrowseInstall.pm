@@ -434,6 +434,9 @@ sub ACTION_install {
     $self->install_path->{'databases'} 
         ||= $self->config_data('databases')
 	    || GBrowseGuessDirectories->databases;
+    $self->install_path->{'persistent'} 
+        ||= $self->config_data('persistent')
+	    || GBrowseGuessDirectories->persistent;
     
     $self->SUPER::ACTION_install();
 
@@ -463,6 +466,12 @@ sub ACTION_install {
 	symlink($images,$htdocs_i);  # so symlinkifowner match works!
     }
     chown $>,-1,$self->install_path->{htdocs};
+
+    my $persistent = $self->install_path->{'persistent'};
+    my $sessions   = File::Spec->catfile($persistent,'sessions');
+    my $userdata   = File::Spec->catfile($persistent,'userdata');
+    mkpath([$sessions,$userdata],0711);
+    chown $uid,$gid,$userdata,$sessions;
 
     my $databases = $self->install_path->{'databases'};
     

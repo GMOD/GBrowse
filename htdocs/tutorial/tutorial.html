@@ -128,7 +128,7 @@ which allows GBrowse to run directly off text files.  To prepare this
 database for use, find the GBrowse databases directory which was
 created in your Apache web server directory at the time of
 installation.  It should be located at
-<b>$HTDOCS/databases</b>, but check to make sure.
+<b>$PERSISTENT/databases</b>, but check to make sure.
 
 <p>
 
@@ -147,7 +147,7 @@ ignore this step.
 <blockquote class="example"><pre>
 % <b>su</b>
 Password: <b>*********</b>
-# <b>chown my_user_name $HTDOCS/databases</b>
+# <b>chown my_user_name $PERSISTENT/databases</b>
 # <b>chown my_user_name $CONF</b>
 # <b>exit</b>
 %
@@ -169,7 +169,7 @@ You will create an empty volvox subdirectory, and make it world
 writable.  On Unix systems:
 
 <blockquote class="example"><pre>
-% <b>cd $HTDOCS/databases</b>
+% <b>cd $PERSISTENT/databases</b>
 % <b>mkdir volvox</b>
 % <b>chmod go+rwx volvox</b>
 </pre></blockquote>
@@ -267,7 +267,7 @@ database directory in this section is correct:
 [GENERAL]
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor memory
-		-dir     '$HTDOCS/databases/volvox'
+		-dir     '$PERSISTENT/databases/volvox'
 </pre>
 
 <p>
@@ -472,7 +472,7 @@ volvox.conf example:
 [GENERAL]
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor memory
-		-dir '$HTDOCS/databases/volvox'
+		-dir '$PERSISTENT/databases/volvox'
 
 # just the basic track dumper plugin
 plugins     = TrackDumper
@@ -620,7 +620,7 @@ The attribute named <i>Note</i> is automatically displayed and made
 searchable.  To see this work, add <a
 href="data_files/volvox_domains.gff3">volvox_domains.gff3</a> to the volvox database
 directory.  You can do this just by copying the file into
-<b>$HTDOCS/databases/volvox</b> so that the directory contains both
+<b>$PERSISTENT/databases/volvox</b> so that the directory contains both
 the original volvox_remarks.gff3 and the new volvox_domains.gff3 files.
 
 <p>
@@ -1722,7 +1722,7 @@ We want it to live in the volvox database directory, so we
 have to specify this path when creating it:
 
 <blockquote class="example"><pre>
-% wiggle2gff3.pl --path=$HTDOCS/databases/volvox volvox_microarray.wig \
+% wiggle2gff3.pl --path=$PERSISTENT/databases/volvox volvox_microarray.wig \
                  > volvox_microarray.gff3
 </pre></blockquote>
 
@@ -1735,7 +1735,7 @@ we save to volvox_microarray.gff3. This file will look like this:
 <blockquote class="example"><pre>
 ##gff-version 3
 
-ctgA . microarray_oligo 1 50000 . . . Name=example;Note=20%20degrees%2C%202%20hr;wigfile=$HTDOCS/databases/volvox/track001.ctgA.1200440492.wig
+ctgA . microarray_oligo 1 50000 . . . Name=example;Note=20%20degrees%2C%202%20hr;wigfile=$PERSISTENT/databases/volvox/track001.ctgA.1200440492.wig
 </pre></blockquote>
 
 <p>
@@ -1833,7 +1833,7 @@ unix systems, or "dir/w" on Windows systems) it should look like
 this:
 
 <blockquote class="example"><pre>
-% <b>ls $HTDOCS/databases/volvox/</b>
+% <b>ls $PERSISTENT/databases/volvox/</b>
 track001.ctgA.1202327456.wig  volvox_domains.gff3   volvox_genes.gff3  volvox.fa
 volvox_remarks.gff3		      volvox_matches.gff3   volvox_bacs.gff3  
 volvox2b.gff3		      volvox_genes_simple.gff3  volvox_est.gff3
@@ -2322,7 +2322,7 @@ modification date.  This tells GBrowse that it is new and needs to be
 reindexed.  In Unix:
 
 <blockquote class="example"><pre>
-% <b>touch $HTDOCS/databases/volvox/ests.fa</b>
+% <b>touch $PERSISTENT/databases/volvox/ests.fa</b>
 </pre></blockquote>
 
 <p>If you are still having problems, remove the directory.index file
@@ -3769,7 +3769,7 @@ data.  This new database will be used as a DAS source.
 <p>
 
 Create a new database directory called <i>elegans_extra</i> in the
-"$HTDOCS/databases" directory, and add to it a copy of the
+"$PERSISTENT/databases" directory, and add to it a copy of the
 file <a href="data_files/elegans_extra.gff3">elegans_extra.gff3</a>.
 This GFF file is simply the result of concatenating together the
 individual annotation files we looked at earlier (elegans_sts.gff3,
@@ -4196,7 +4196,7 @@ this:</p>
 description   = Volvox Berkeleydb Database
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor berkeleydb
-	        -dir     '$HTDOCS/databases/volvox'
+	        -dir     '$PERSISTENT/databases/volvox'
 </pre></blockquote>
 
 <p> We made just two changes. First, we changed the description of the
@@ -4244,11 +4244,11 @@ in more detail in <a href="#mysql">The MySQL Backend</a>. It
 takes as its input a series of GFF and FASTA files and creates the
 appropriate database files. To see how to use it, we will create a
 fresh database directory. Go to the GBrowse database located at
-<b>$HTDOCS/databases</b> and create a new subdirectory called
+<b>$PERSISTENT/databases</b> and create a new subdirectory called
 "volvox_bdb:"</p>
 
 <blockquote class="example"><pre>
- % cd $HTDOCS/databases
+ % cd $PERSISTENT/databases
  % mkdir volvox_berkeley
 </pre></blockquote>
 
@@ -4266,7 +4266,7 @@ as. Now enter the tutorial data files directory
 files using the following command:</p>
 
 <blockquote class="example"><pre>
-<b>% bp_seqfeature_load.pl -c -a berkeleydb -f -d $HTDOCS/databases/volvox_berkeley volvox_all.fa volvox_all.gff3</b>
+<b>% bp_seqfeature_load.pl -c -a berkeleydb -f -d $PERSISTENT/databases/volvox_berkeley volvox_all.fa volvox_all.gff3</b>
 loading volvox_all.fa...
                                                                                 
 Building object tree... 0.00s
@@ -4295,7 +4295,7 @@ The arguments to <i>bp_load_gff.pl</i> are:
     <td>use the <b>f</b>ast loading option
   </tr>
   <tr>
-    <td><b>-d $HTDOCS/databases/volvox_berkeley</b></td>
+    <td><b>-d $PERSISTENT/databases/volvox_berkeley</b></td>
     <td>Load the data into the indicated <b>d</b>atabase directory.
   </tr>
   <tr>
@@ -4305,7 +4305,7 @@ The arguments to <i>bp_load_gff.pl</i> are:
 </table>
 
 <p> If all goes well, this will create the index files in
-<tt>$HTDOCS/databases/volvox_bdb</tt>. If you look in that
+<tt>$PERSISTENT/databases/volvox_bdb</tt>. If you look in that
 directory now, you'll see a series of index files.</p>
 
 <p>
@@ -4319,7 +4319,7 @@ looks like this:
 description   = Volvox Berkeleydb Database
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor berkeleydb
-	        -dsn    '$HTDOCS/databases/volvox_berkeley'
+	        -dsn    '$PERSISTENT/databases/volvox_berkeley'
 </pre></blockquote>
 
 <p>The change here is to replace the <b>-dir</b> argument with
@@ -4397,11 +4397,11 @@ href="data_files/volvox_all.gff3">volvox_all.gff3</a> and <a
 href="data_files/volvox_all.fa">volvox_all.fa</a> to some convenient
 place. Now choose a location for the database on the local
 filesystem. In this example we will use
-$HTDOCS/databases/Volvox.sqlite. Then run the following command from
+$PERSISTENT/databases/Volvox.sqlite. Then run the following command from
 the command line:
 
 <blockquote class="example"><pre>
-% <b>bp_seqfeature_load.pl -a DBI::SQLite -c -f -d $HTDOCS/databases/Volvox.sqlite volvox_all.fa volvox_all.gff3</b>
+% <b>bp_seqfeature_load.pl -a DBI::SQLite -c -f -d $PERSISTENT/databases/Volvox.sqlite volvox_all.fa volvox_all.gff3</b>
 loading volvox_all.fa...
                                                                                 
 Building object tree... 0.00s
@@ -4424,7 +4424,7 @@ The arguments to <i>bp_seqfeature_load.pl</i> are:
     <td><b>c</b>lear (initialize) the database
   </tr>
   <tr>
-    <td><b>-d $HTDOCS/databases/Volvox.sqlite</b></td>
+    <td><b>-d $PERSISTENT/databases/Volvox.sqlite</b></td>
     <td>Load into the <b>d</b>atabase at the given path
   </tr>
   <tr>
@@ -4449,7 +4449,7 @@ this:
 description   = Volvox Example Database
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor DBI::SQLite
-	        -dsn     $HTDOCS/databases/Volvox.sqlite
+	        -dsn     $PERSISTENT/databases/Volvox.sqlite
 </pre></blockquote>
 
 <p>
@@ -4670,7 +4670,7 @@ extra syntax in the configuration file.
 
 We will illustrate using the in-memory adaptor. (In real life, you
 will most likely want to do this with database backends such as
-SQLite.) In $HTDOCS/databases, create three new directories named
+SQLite.) In $PERSISTENT/databases, create three new directories named
 "volvox_scaffold", "volvox_alignments" and "volvox_genes". Make them
 writable by the web user, as usual. Distribute the various volvox
 database files among them as follows:
@@ -4744,22 +4744,22 @@ them:
 [basic:database]
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor memory
-		-dir '$HTDOCS/databases/volvox_basic'
+		-dir '$PERSISTENT/databases/volvox_basic'
 
 [genes:database]
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor memory
-		-dir '$HTDOCS/databases/volvox_genes'
+		-dir '$PERSISTENT/databases/volvox_genes'
 
 [alignments:database]
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor memory
-		-dir '$HTDOCS/databases/volvox_alignments'
+		-dir '$PERSISTENT/databases/volvox_alignments'
 
 [expression:database]
 db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor memory
-		-dir '$HTDOCS/databases/volvox_expression'
+		-dir '$PERSISTENT/databases/volvox_expression'
 </pre></blockquote>
 
 Each section begins with a stanza header of the form

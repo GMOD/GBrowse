@@ -342,7 +342,6 @@ sub apache_conf {
     my $databases = $self->config_data('databases');
     my $cgiroot = basename($cgibin);
     my $perl5lib= $self->added_to_INC;
-    warn $perl5lib;
     my $inc      = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
     my $fcgi_inc = $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
     my $fcgid_inc= $perl5lib ? "DefaultInitEnv PERL5LIB $perl5lib"        : '';
@@ -471,7 +470,7 @@ sub ACTION_install {
     my $sessions   = File::Spec->catfile($persistent,'sessions');
     my $userdata   = File::Spec->catfile($persistent,'userdata');
     mkpath([$sessions,$userdata],0711);
-    chown $uid,$gid,$userdata,$sessions;
+    system 'sudo','chown','-R',"$uid.$gid",$sessions,$userdata;
 
     my $databases = $self->install_path->{'databases'};
     

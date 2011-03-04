@@ -299,7 +299,7 @@ sub ACTION_show_favorites {
     my $self = shift;
     my $q     = shift;
     my $show  = $q->param('show')  or croak "call me with the 'show' argument";
-    warn "showt_favorites($show)";
+    warn "show_favorites($show)";
     my $settings = $self->state;
     $settings->{show_favorites} = $show;
     $self->session->flush;

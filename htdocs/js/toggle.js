@@ -66,16 +66,33 @@ function removeByElement(arrayName,arrayElement)
 
 function updatewrapper(updateid)
 {
+  var ison = 0; 
   idtoarray(updateid);
- var favorites = idArray;
-
-  var fields = new Array(favorites,track_listing_id);
-          var e = $(track_listing_id);
+  var favorites = idArray;
+  
+  
+//   if(ison == false)
+//   {
+//     ison = true
+//   }
+//   else{
+//     ison=false
+//   };
+    
+  var e = $(track_listing_id);
                      e.hide();
                      e.setOpacity(0.3);
  		    e.show();
+		    
+ 	new Ajax.Request(document.URL, {
+  	          method: 'post',
+  		  asynchronous:false,
+  		  parameters: {
+  		        action:    'show_favorites',
+ 			show:     ison,
+  	          }});
  		   
-                    Controller.update_sections( favorites,'',1,toggleDiv('notselected_check'));
+                    Controller.update_sections(track_listing_id,'',1,false);
 		    
  
 }
@@ -93,8 +110,8 @@ function togglestars(imgID, txtID, favorites,cellid)
   var getfileNameExt = pathSplit.length - 1;
   var fullFilePath = '';
   var str = imgID.replace("ficonpic_"," ");
-  var jsonfavstr;
-  
+
+
 
 
   if (pathSplit.length == 0)
@@ -126,7 +143,7 @@ function togglestars(imgID, txtID, favorites,cellid)
      txtTag.style.fontWeight = "normal";
    
        favorite = false;
-   ;
+    
     }
     else
     {
@@ -169,22 +186,21 @@ function togglestars(imgID, txtID, favorites,cellid)
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
   
-//    jsonfavstr = JSON.stringify(favorites);
+    jsonfavstr = JSON.stringify(favorites);
    
-//    var direction = favorite ? 'false' : 'true';
+    var direction = favorite ? 'false' : 'true';
 
-// new Ajax.Request(document.URL, {
-// 	          method: 'post',
-// 		  asynchronous: false,
-// 		  parameters: {
-// 		        action:    'store_favorites',
-// 			'favorite':   favorite,
-// 			favorites: Object.toJSON(favorites)
-// 	          }});
+  new Ajax.Request(document.URL, {
+  	          method: 'post',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'set_favorite',
+  			label:   str,
+ 			favorite: favorite,
+  	          }});
 	 
 return false;
-//   alert(celltag);
-// alert(cellTag.className);
+
   }
 
 

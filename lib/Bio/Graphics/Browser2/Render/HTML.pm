@@ -870,11 +870,17 @@ sub render_track_table {
 
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
-  my @labels     = $self->potential_tracks;
-  @labels        = grep {$settings->{favorites}{$_}} @labels 
-      if $settings->{show_favorites};
 
-  warn "potential tracks = @labels" if DEBUG;
+  my @labels     = $self->potential_tracks;
+
+
+#    @labels        = grep {$settings->{favorite}{$_}} @labels 
+#         if $settings->{show_favorites};
+
+  warn "potential tracks = @labels";
+use Data::Dumper;
+
+print Dumper(\@labels);
 
   my ($filter_active,@hilite);
   if (my $filter = $self->track_filter_plugin) {

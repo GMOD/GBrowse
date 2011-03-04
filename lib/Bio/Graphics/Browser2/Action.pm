@@ -269,6 +269,43 @@ sub ACTION_set_track_visibility {
     return (204,'text/plain',undef);
 }
 
+# This is for Sonu to review and modify as necessary
+# parameters:
+#       method: 'post',
+#       parameters: {
+#           action:    'set_favorite',
+#           label:     track_id,
+#           favorite:  true_or_false,
+#       }
+sub ACTION_set_favorite {
+    my $self = shift;
+    my $q    = shift;
+    my $label        = $q->param('label')     or croak "call me with the 'label' argument";
+    my $is_favorite  = $q->param('favorite')  or croak "call me with the 'favorite' argument";
+    warn "set_favorite($label,$is_favorite)";
+    my $settings = $self->state;
+    $settings->{favorites}{$label} = $is_favorite;
+    $self->session->flush;
+    return (204,'text/plain',undef);
+}
+
+# parameters:
+#       method: 'post',
+#       parameters: {
+#           action:    'show_favorites',
+#           show:      true_or_false,
+#       }
+sub ACTION_show_favorites {
+    my $self = shift;
+    my $q     = shift;
+    my $show  = $q->param('show')  or croak "call me with the 'show' argument";
+    warn "showt_favorites($show)";
+    my $settings = $self->state;
+    $settings->{show_favorites} = $show;
+    $self->session->flush;
+    return (204,'text/plain',undef);
+}
+
 sub ACTION_reconfigure_plugin {
     my $self   = shift;
     my $q      = shift;

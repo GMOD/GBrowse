@@ -865,15 +865,14 @@ sub render_track_table {
   my $settings = $self->state;
   my $source   = $self->data_source;
 
-  
-
-
   # read category table information
   my $category_table_labels = $self->category_table();
 
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
   my @labels     = $self->potential_tracks;
+  @labels        = grep {$settings->{favorites}{$_}} @labels 
+      if $setting->{show_favorites};
 
   warn "potential tracks = @labels" if DEBUG;
 

@@ -1,4 +1,8 @@
+var track_listing_id        = 'tracks_panel'; 
+
+
 ///create getelementbyclassnames function
+
 document.getElementsByClassName = function(cl) {
 var retnode = [];
 var myclass = new RegExp('\\b'+cl+'\\b');
@@ -23,10 +27,19 @@ function setVisState (element_name,is_visible) {
 var tmp =  string.split(' ').join('');
 return tmp.replace("/","");*/
 //}
-
-function set_favorites(favorites){
-
+function idtoarray(class_name){
+spans = document.getElementsByTagName("span");
+idArray = new Array();
+ 
+    for (x=0; x<spans.length; x++) {
+        if (spans[x].className==class_name) {
+        idArray.push(spans[x].id)
+        }
+    }
+    return idArray;
 }
+
+
 function toggleDiv(id){
 var spans = document.getElementsByTagName('span');
 
@@ -49,6 +62,23 @@ function removeByElement(arrayName,arrayElement)
 	 ;
       } 
   }
+  
+
+function updatewrapper(updateid)
+{
+  idtoarray(updateid);
+ var favorites = idArray;
+
+  var fields = new Array(favorites,track_listing_id);
+          var e = $(track_listing_id);
+                     e.hide();
+                     e.setOpacity(0.3);
+ 		    e.show();
+ 		   
+                    Controller.update_sections( favorites,'',1,toggleDiv('notselected_check'));
+		    
+ 
+}
 
 function togglestars(imgID, txtID, favorites,cellid)
 {
@@ -58,7 +88,6 @@ function togglestars(imgID, txtID, favorites,cellid)
   var cellTag = document.getElementById(cellid);
    
   var txtTag = document.getElementById(txtID);
-
   var fullPathName = imgTag.src;
   var pathSplit = fullPathName.split("/");
   var getfileNameExt = pathSplit.length - 1;
@@ -120,7 +149,7 @@ function togglestars(imgID, txtID, favorites,cellid)
       favorites.push(cellTag.id);
       txtTag.className= 'favoritelist';
 
-      cellTag.className= 'favoritelist';
+       cellTag.className= 'favoritelist_check';
       
    
 
@@ -130,7 +159,7 @@ function togglestars(imgID, txtID, favorites,cellid)
   else if (favorite == false){
       removeByElement(favorites,cellTag.id);
       txtTag.className = 'notselected';
-      cellTag.className = 'notselected';
+       cellTag.className = 'notselected_check';
 //       /*alert*/(favorites.length);
 
   }

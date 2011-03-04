@@ -1365,7 +1365,7 @@ sub render_select_favorites_link {
 	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
-		      -onClick => "Controller.update_sections('notselected','',1,false);",
+		      -onClick => "updatewrapper('notselected_check');",
 		      },
 		     $title);
     }
@@ -2019,7 +2019,7 @@ sub tableize {
 
 
 
-      $html .=td({-width=>$cwidth,-style => 'visibility:visible'},span({ -id => "notselectedcheck_${label}", -class => 'notselected'},$checkbox));
+      $html .=td({-width=>$cwidth,-style => 'visibility:visible'},span({ -id => "notselectedcheck_${label}", -class => 'notselected_check'},$checkbox));
  
       
 # 

@@ -271,6 +271,7 @@ var GBrowseController = Class.create({
     // Update Section Methods *****************************************
     update_sections:
     function(section_names, param_str, scroll_there, spin, onSuccessFunc) {
+      
         if (param_str==null){
             param_str = '';
         }

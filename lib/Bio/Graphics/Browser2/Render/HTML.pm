@@ -872,7 +872,7 @@ sub render_track_table {
   # track table.
   my @labels     = $self->potential_tracks;
   @labels        = grep {$settings->{favorites}{$_}} @labels 
-      if $setting->{show_favorites};
+      if $settings->{show_favorites};
 
   warn "potential tracks = @labels" if DEBUG;
 

@@ -64,36 +64,39 @@ function removeByElement(arrayName,arrayElement)
   }
   
 
-function updatewrapper(updateid)
+function updatewrapper()
 {
-  var ison = 0; 
-  idtoarray(updateid);
-  var favorites = idArray;
+  var ison = false; 
+//   idtoarray(updateid);
+//   var favorites = idArray;
+  var show = true;
   
-  
-//   if(ison == false)
-//   {
-//     ison = true
-//   }
-//   else{
-//     ison=false
-//   };
+
+//     if(ison == false)
+//     {
+//       show = 0;
+// // //      ison = true
+//     }
+//     else if(ison == true){
+//       show = 1;
+// // //      ison=false
+//     };
     
   var e = $(track_listing_id);
                      e.hide();
                      e.setOpacity(0.3);
  		    e.show();
-		    
+		        
  	new Ajax.Request(document.URL, {
-  	          method: 'post',
-  		  asynchronous:false,
+  	          method: 'GET',
+		  asynchronous:false,
   		  parameters: {
   		        action:    'show_favorites',
- 			show:     ison,
+ 			show:   show,
   	          }});
  		   
-                    Controller.update_sections(track_listing_id,'',1,false);
-		    
+Controller.update_sections(new Array(track_listing_id),'',1,false);
+                   
  
 }
 
@@ -129,7 +132,7 @@ function togglestars(imgID, txtID, favorites,cellid)
   var fileExt = fileNameSpilt[1]; // just the file extention
   var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
   var imgName ='';
-
+  var show;
 
  
   if (fileNameMainSpilt.length > 1)
@@ -167,8 +170,15 @@ function togglestars(imgID, txtID, favorites,cellid)
       txtTag.className= 'favoritelist';
 
        cellTag.className= 'favoritelist_check';
-      
-   
+      show = 1;
+     new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'set_favorite',
+  			label:   str,
+ 			favorite:favorite,
+  	          }});
 
   }
      
@@ -178,6 +188,15 @@ function togglestars(imgID, txtID, favorites,cellid)
       txtTag.className = 'notselected';
        cellTag.className = 'notselected_check';
 //       /*alert*/(favorites.length);
+	show =0;
+   new Ajax.Request(document.URL, {
+  	          method: 'post',
+  		  asynchronous:false,
+  		  parameters: {
+  		        action:    'set_favorite',
+  			label:   '',
+ 			favorite:favorite,
+  	          }});
 
   }
 
@@ -186,18 +205,11 @@ function togglestars(imgID, txtID, favorites,cellid)
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
   
-    jsonfavstr = JSON.stringify(favorites);
+   
    
     var direction = favorite ? 'false' : 'true';
 
-  new Ajax.Request(document.URL, {
-  	          method: 'post',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action:    'set_favorite',
-  			label:   str,
- 			favorite: favorite,
-  	          }});
+
 	 
 return false;
 

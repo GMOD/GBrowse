@@ -285,6 +285,7 @@ sub ACTION_set_favorite {
     warn "set_favorite($label,$is_favorite)";
     my $settings = $self->state;
     $settings->{favorites}{$label} = $is_favorite;
+    
     $self->session->flush;
     return (204,'text/plain',undef);
 }
@@ -302,6 +303,7 @@ sub ACTION_show_favorites {
     warn "show_favorites($show)";
     my $settings = $self->state;
     $settings->{show_favorites} = $show;
+    
     $self->session->flush;
     return (204,'text/plain',undef);
 }

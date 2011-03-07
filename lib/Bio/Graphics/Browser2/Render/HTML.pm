@@ -858,13 +858,13 @@ my $showicon =  img({
   $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));
   return $html;
 }
-
+use Data::Dumper;
 # Render Track Table - Invoked to draw the checkbox group in the "Select Tracks" tab. It creates a hyperlinked set of feature names.
 sub render_track_table {
   my $self     = shift;
   my $settings = $self->state;
   my $source   = $self->data_source;
-
+   $settings->{show_favorites}= "false";
   # read category table information
   my $category_table_labels = $self->category_table();
 
@@ -873,14 +873,16 @@ sub render_track_table {
 
   my @labels     = $self->potential_tracks;
 
+   
+     @labels= grep ({$settings->{favorites}{$_}} @labels) 
+           if( $settings->{show_favorites} eq "true");
 
-#    @labels        = grep {$settings->{favorite}{$_}} @labels 
-#         if $settings->{show_favorites};
 
+    warn "show favorites = $settings->{favorites}"; 
   warn "potential tracks = @labels";
-use Data::Dumper;
 
-print Dumper(\@labels);
+
+
 
   my ($filter_active,@hilite);
   if (my $filter = $self->track_filter_plugin) {
@@ -1370,7 +1372,7 @@ sub render_select_favorites_link {
 	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
-		      -onClick => "updatewrapper('notselected_check');",
+		      -onClick => "updatewrapper();",
 		      },
 		     $title);
     }

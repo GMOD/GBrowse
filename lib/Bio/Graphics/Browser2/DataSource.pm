@@ -352,6 +352,14 @@ sub too_many_landmarks { shift->global_setting('too many landmarks') || 100 }
 
 sub plugins          { shellwords(shift->global_setting('plugins'))      }
 
+sub remote_renderer {
+    my $self  = shift;
+    my $label = shift;
+    my $url   = $self->fallback_setting($label => 'remote renderer');
+    return $url if defined $url;
+    return $self->global_setting('remote renderer');
+}
+
 
 sub labels {
   my $self   = shift;

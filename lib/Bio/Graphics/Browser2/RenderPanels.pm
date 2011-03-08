@@ -695,7 +695,7 @@ sub run_remote_requests {
 
   my %renderers;
   for my $label (@labels_to_generate) {
-      my $url     = $source->fallback_setting($label => 'remote renderer') or next;
+      my $url     = $source->remote_renderer or next;
       my @urls    = shellwords($url);
       $url        = $slave_status->select(@urls);
       warn "label => $url (selected)" if DEBUG;
@@ -778,7 +778,7 @@ sub run_remote_requests {
 	    # right if all of the tracks there are multiple equivalent slaves for the tracks
 	    my %urls    = map {$_=>1} 
   	                    map {
-				shellwords($source->fallback_setting($_ => 'remote renderer'))
+				shellwords($source->remote_renderer)
 			    } @labels;
 	    my $alternate_url = $slave_status->select(keys %urls);
 	    if ($alternate_url) {
@@ -832,7 +832,7 @@ sub sort_local_remote {
 			      !/^(ftp|http|das):/ &&
 			      !$source->is_usertrack($_) &&
 			      !$source->is_remotetrack($_) &&
-			      (($url = $source->fallback_setting($_=>'remote renderer') ||0) &&
+			      (($url = $source->remote_renderer||0) &&
 			      ($url ne 'none') &&
 			      ($url ne 'local')))
                         } @uncached;

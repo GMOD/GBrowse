@@ -2,7 +2,7 @@
 
 export PERL5LIB=$PERL5LIB
 
-DAEMON=$PREFIX/bin/gbrowse_slave
+DAEMON=$INSTALLSCRIPT/gbrowse_slave
 USER=$WWWUSER
 PRELOAD=$CONF/slave_preload.conf
 RUNDIR=/var/run/gbrowse

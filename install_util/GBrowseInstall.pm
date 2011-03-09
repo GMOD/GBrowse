@@ -695,12 +695,14 @@ sub substitute_in_place {
     my $persistent = $self->config_data('persistent');
     my $databases  = $self->config_data('databases');
     my $tmp        = $self->config_data('tmp');
-    my $wwwuser  = $self->config_data('wwwuser');
-    my $perl5lib = $self->perl5lib || '';
-    my $installscript = $self->scriptdir;
+    my $wwwuser    = $self->config_data('wwwuser');
+    my $perl5lib   = $self->perl5lib || '';
+
+    my $installscript =  $self->install_destination('script');
     my $cgiurl        = $self->cgiurl;
 
     while (<$in>) {
+	s/\$INSTALLSCRIPT/$installscript/g;
 	s/\$INSTALLSCRIPT/$installscript/g;
 	s/\$PERL5LIB/$perl5lib/g;
 	s/\$HTDOCS/$htdocs/g;

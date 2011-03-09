@@ -12,6 +12,7 @@
    * The apache configuration file, /etc/apache2/conf.d/gbrowse2.conf, now contains a stanza that
      makes the databases directory inaccessible to the web server unless explicitly enabled.
    * All newly-added tracks now appear at top of panel rather than at bottom, as per user request.
+   * "remote renderer" option can now appear in GBrowse.conf as a global default 
 
 2.26
    * Fixed account registration confirmation screen, which was blacked out on all

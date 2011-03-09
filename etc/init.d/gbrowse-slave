@@ -24,8 +24,8 @@ PORT='8101'
 VERBOSITY=1
 NICE=0
 
-if [ -f /etc/default/gbrowse-slave ]; then
-  . /etc/default/gbrowse-slave
+if [ -f $ETC/default/gbrowse-slave ]; then
+  . $ETC/default/gbrowse-slave
 fi
 
 mkdir -p $RUNDIR

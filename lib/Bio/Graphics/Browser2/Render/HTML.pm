@@ -882,8 +882,9 @@ sub render_track_table {
 		     @labels = ();
 		    foreach $an(keys %{$settings->{favorites}})
 			  {
-# chomp($an);
+ chomp($an);
 			  warn "value =$an";
+			 warn Dumper($settings->{favorites});
 			  push @labels,$an
 			  if $settings->{favorites}->{$an};
 			 

@@ -190,7 +190,7 @@ function togglestars(imgID, txtID, favorites,cellid)
   var pathSplit = fullPathName.split("/");
   var getfileNameExt = pathSplit.length - 1;
   var fullFilePath = '';
-  var str = imgID.replace("ficonpic_"," ");
+  var str = imgID.replace("ficonpic_","");
 
 
 
@@ -268,14 +268,14 @@ function togglestars(imgID, txtID, favorites,cellid)
       txtTag.className = 'notselected';
        cellTag.className = 'notselected_check';
 //       /*alert*/(favorites.length);
-// 	show=0;
+ 	show=0;
    new Ajax.Request(document.URL, {
   	          method: 'POST',
   		  asynchronous:true,
   		  parameters: {
   		        action:    'set_favorite',
   			label:   str,
- 			favorite:'false',
+ 			favorite:show,
   	          }});
 
   }

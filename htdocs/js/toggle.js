@@ -143,7 +143,7 @@ function updatewrapper(ison)
 //   var favorites = idArray;
 // alert(ison);
   
-
+/*
       if(state == "false")
       {
 // //       show = 0;
@@ -152,8 +152,11 @@ function updatewrapper(ison)
       else if(state == "true"){
 // //        show = 1;
        state="false"
-      }else {state = "true"};
+      }else {state = "true"};*/
     
+swapvar(state,"false", "true")
+
+
   var e = $(track_listing_id);
                      e.hide();
                      e.setOpacity(0.3);
@@ -164,7 +167,7 @@ function updatewrapper(ison)
 		  asynchronous:false,
   		  parameters: {
   		        action:    'show_favorites',
- 			show:  state,
+ 			show: state,
   	          }});
  		   
 Controller.update_sections(new Array(track_listing_id),'',1,false);
@@ -481,6 +484,12 @@ function swap(me,main,alt) {
 me.innerHTML = (me.innerHTML == main) ? alt : main;
 }
 
+function swapvar (me, main,alt) {
+ alert(me);
+ if (me==false){me = true}
+ else if (me == true) { me = false};
+  alert(me);
+}
 
 
 

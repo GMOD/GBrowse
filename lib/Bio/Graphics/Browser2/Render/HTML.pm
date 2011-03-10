@@ -872,15 +872,15 @@ sub render_track_table {
   # track table.
 
   my @labels     = $self->potential_tracks;
+  warn "$settings->{show_favorites}";
 
-   
       @labels= grep {$settings->{favorites}{$_}} @labels 
            if( $settings->{show_favorites} eq "true");
-
+#     print Dumper($settings->{favorites});
 
     warn "show favorites = $settings->{favorites}"; 
   warn "potential tracks = @labels";
-# print Dumper($settings->{favorites});
+
 
   my ($filter_active,@hilite);
   if (my $filter = $self->track_filter_plugin) {
@@ -1359,24 +1359,34 @@ sub render_select_favorites_link {
     my $style  = shift || 'button';
     my $favoritelist = 'favoritelist';
     my $title = $self->translate('FAVORITES');
-    my $settings = $self->state;
-    
- $settings->{show_favorites} = 'false';
- my $ison = $settings->{show_favorites}; 
+     my $settings = $self->state;
+#     
+  $settings->{show_favorites} = ($settings->{show_favorites} == 0) ? 0 : 1;
+
+ my $ison= $settings->{show_favorites}; 
+ my $state;
+
+
+
+    if ($ison==0){
+		  $state = "false"
+		  }else
+		  {$state = "true"
+		  };
+
+ 
     if ($style eq 'button') {
 	    return button({-name=>$title,
   		          -onClick => "Effect.toggle('favoritelist');",
-		          },
-	   
-	        );
-	   
-    } elsif ($style eq 'link') {
+		          },)
+	   } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
-		      -onClick => "updatewrapper($ison);",
+		      -onClick => "updatewrapper($state);",
 # 		      -class => "ison",
 # 		      -id => "false",
 		      },
 		     $title);
+	
     }
 }
 

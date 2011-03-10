@@ -134,11 +134,11 @@ function removeByElement(arrayName,arrayElement)
 
 function updatewrapper(ison)
 {
-
- var state = ison;
+alert(ison);
+ var state = (ison==false) ? true : false;
 
  
-
+alert(state);
 //   idtoarray(updateid);
 //   var favorites = idArray;
 // alert(ison);
@@ -154,8 +154,10 @@ function updatewrapper(ison)
        state="false"
       }else {state = "true"};*/
     
-swapvar(state,"false", "true")
 
+
+// if (state == false){state= "0";}
+// else {state ="1"};
 
   var e = $(track_listing_id);
                      e.hide();

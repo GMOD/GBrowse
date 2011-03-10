@@ -864,7 +864,7 @@ sub render_track_table {
   my $self     = shift;
   my $settings = $self->state;
   my $source   = $self->data_source;
-    $settings->{show_favorites}= "false";
+
   # read category table information
   my $category_table_labels = $self->category_table();
   my $an;
@@ -1360,8 +1360,8 @@ sub render_select_favorites_link {
     my $favoritelist = 'favoritelist';
     my $title = $self->translate('FAVORITES');
      my $settings = $self->state;
-#     
-  $settings->{show_favorites} = ($settings->{show_favorites} == 0) ? 0 : 1;
+    $settings->{show_favorites}= 0;
+
 
  my $ison= $settings->{show_favorites}; 
  my $state;

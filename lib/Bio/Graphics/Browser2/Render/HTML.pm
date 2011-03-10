@@ -864,25 +864,23 @@ sub render_track_table {
   my $self     = shift;
   my $settings = $self->state;
   my $source   = $self->data_source;
-   $settings->{show_favorites}= "false";
+    $settings->{show_favorites}= "false";
   # read category table information
   my $category_table_labels = $self->category_table();
-
+  my $an;
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
 
   my @labels     = $self->potential_tracks;
 
    
-     @labels= grep ({$settings->{favorites}{$_}} @labels) 
+      @labels= grep {$settings->{favorites}{$_}} @labels 
            if( $settings->{show_favorites} eq "true");
 
 
     warn "show favorites = $settings->{favorites}"; 
   warn "potential tracks = @labels";
-
-
-
+# print Dumper($settings->{favorites});
 
   my ($filter_active,@hilite);
   if (my $filter = $self->track_filter_plugin) {
@@ -1361,8 +1359,10 @@ sub render_select_favorites_link {
     my $style  = shift || 'button';
     my $favoritelist = 'favoritelist';
     my $title = $self->translate('FAVORITES');
-
+    my $settings = $self->state;
     
+ $settings->{show_favorites} = 'false';
+ my $ison = $settings->{show_favorites}; 
     if ($style eq 'button') {
 	    return button({-name=>$title,
   		          -onClick => "Effect.toggle('favoritelist');",
@@ -1372,7 +1372,9 @@ sub render_select_favorites_link {
 	   
     } elsif ($style eq 'link') {
 	    return a({-href=>'javascript:void(0)',
-		      -onClick => "updatewrapper();",
+		      -onClick => "updatewrapper($ison);",
+# 		      -class => "ison",
+# 		      -id => "false",
 		      },
 		     $title);
     }

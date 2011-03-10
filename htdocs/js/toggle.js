@@ -3,15 +3,83 @@ var track_listing_id        = 'tracks_panel';
 
 ///create getelementbyclassnames function
 
-document.getElementsByClassName = function(cl) {
-var retnode = [];
-var myclass = new RegExp('\\b'+cl+'\\b');
-var elem = this.getElementsByTagName('*');
-for (var i = 0; i < elem.length; i++) {
-var classes = elem[i].className;
-if (myclass.test(classes)) retnode.push(elem[i]);
-}
-return retnode;
+/*
+	Developed by Robert Nyman, http://www.robertnyman.com
+	Code/licensing: http://code.google.com/p/getelementsbyclassname/
+*/
+var getElementsByClassName = function (className, tag, elm){
+	if (document.getElementsByClassName) {
+		getElementsByClassName = function (className, tag, elm) {
+			elm = elm || document;
+			var elements = elm.getElementsByClassName(className),
+				nodeName = (tag)? new RegExp("\\b" + tag + "\\b", "i") : null,
+				returnElements = [],
+				current;
+			for(var i=0, il=elements.length; i<il; i+=1){
+				current = elements[i];
+				if(!nodeName || nodeName.test(current.nodeName)) {
+					returnElements.push(current);
+				}
+			}
+			return returnElements;
+		};
+	}
+	else if (document.evaluate) {
+		getElementsByClassName = function (className, tag, elm) {
+			tag = tag || "*";
+			elm = elm || document;
+			var classes = className.split(" "),
+				classesToCheck = "",
+				xhtmlNamespace = "http://www.w3.org/1999/xhtml",
+				namespaceResolver = (document.documentElement.namespaceURI === xhtmlNamespace)? xhtmlNamespace : null,
+				returnElements = [],
+				elements,
+				node;
+			for(var j=0, jl=classes.length; j<jl; j+=1){
+				classesToCheck += "[contains(concat(' ', @class, ' '), ' " + classes[j] + " ')]";
+			}
+			try	{
+				elements = document.evaluate(".//" + tag + classesToCheck, elm, namespaceResolver, 0, null);
+			}
+			catch (e) {
+				elements = document.evaluate(".//" + tag + classesToCheck, elm, null, 0, null);
+			}
+			while ((node = elements.iterateNext())) {
+				returnElements.push(node);
+			}
+			return returnElements;
+		};
+	}
+	else {
+		getElementsByClassName = function (className, tag, elm) {
+			tag = tag || "*";
+			elm = elm || document;
+			var classes = className.split(" "),
+				classesToCheck = [],
+				elements = (tag === "*" && elm.all)? elm.all : elm.getElementsByTagName(tag),
+				current,
+				returnElements = [],
+				match;
+			for(var k=0, kl=classes.length; k<kl; k+=1){
+				classesToCheck.push(new RegExp("(^|\\s)" + classes[k] + "(\\s|$)"));
+			}
+			for(var l=0, ll=elements.length; l<ll; l+=1){
+				current = elements[l];
+				match = false;
+				for(var m=0, ml=classesToCheck.length; m<ml; m+=1){
+					match = classesToCheck[m].test(current.className);
+					if (!match) {
+						break;
+					}
+				}
+				if (match) {
+					returnElements.push(current);
+				}
+			}
+			return returnElements;
+		};
+	}
+	return getElementsByClassName(className, tag, elm);
 };
 
 
@@ -64,23 +132,27 @@ function removeByElement(arrayName,arrayElement)
   }
   
 
-function updatewrapper()
+function updatewrapper(ison)
 {
-  var ison = false; 
+
+ var state = ison;
+
+ 
+
 //   idtoarray(updateid);
 //   var favorites = idArray;
-  var show = true;
+// alert(ison);
   
 
-//     if(ison == false)
-//     {
-//       show = 0;
-// // //      ison = true
-//     }
-//     else if(ison == true){
-//       show = 1;
-// // //      ison=false
-//     };
+      if(state == "false")
+      {
+// //       show = 0;
+     state = "true"
+      }
+      else if(state == "true"){
+// //        show = 1;
+       state="false"
+      }else {state = "true"};
     
   var e = $(track_listing_id);
                      e.hide();
@@ -92,13 +164,13 @@ function updatewrapper()
 		  asynchronous:false,
   		  parameters: {
   		        action:    'show_favorites',
- 			show:   show,
+ 			show:  state,
   	          }});
  		   
 Controller.update_sections(new Array(track_listing_id),'',1,false);
                    
- 
 }
+ 
 
 function togglestars(imgID, txtID, favorites,cellid)
 {
@@ -190,11 +262,11 @@ function togglestars(imgID, txtID, favorites,cellid)
 //       /*alert*/(favorites.length);
 	show =0;
    new Ajax.Request(document.URL, {
-  	          method: 'post',
-  		  asynchronous:false,
+  	          method: 'POST',
+  		  asynchronous:true,
   		  parameters: {
   		        action:    'set_favorite',
-  			label:   '',
+  			label:   str,
  			favorite:favorite,
   	          }});
 

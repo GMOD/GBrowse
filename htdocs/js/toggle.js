@@ -134,11 +134,11 @@ function removeByElement(arrayName,arrayElement)
 
 function updatewrapper(ison)
 {
-alert(ison);
+// alert(ison);
  var state = (ison==false) ? true : false;
-
+ if (state == false) { state = 0} else{state=1};
  
-alert(state);
+// alert(state);
 //   idtoarray(updateid);
 //   var favorites = idArray;
 // alert(ison);
@@ -173,6 +173,7 @@ alert(state);
   	          }});
  		   
 Controller.update_sections(new Array(track_listing_id),'',1,false);
+
                    
 }
  
@@ -223,14 +224,15 @@ function togglestars(imgID, txtID, favorites,cellid)
      txtTag.style.fontWeight = "normal";
    
        favorite = false;
-    
+   
     }
     else
     {
       imgName = fileName + '_2.' + fileExt;
       txtTag.style.fontWeight = "900";
   
-      favorite = true;
+      favorite = true;	
+      
       
     }
   }
@@ -240,8 +242,9 @@ function togglestars(imgID, txtID, favorites,cellid)
     txtTag.style.fontWeight = "900";
 
     favorite = true; 
+    
   }
-  
+
   if (favorite == true) {
       favorites.push(cellTag.id);
       txtTag.className= 'favoritelist';
@@ -254,7 +257,7 @@ function togglestars(imgID, txtID, favorites,cellid)
   		  parameters: {
   		        action:    'set_favorite',
   			label:   str,
- 			favorite:favorite,
+ 			favorite:show,
   	          }});
 
   }
@@ -265,14 +268,14 @@ function togglestars(imgID, txtID, favorites,cellid)
       txtTag.className = 'notselected';
        cellTag.className = 'notselected_check';
 //       /*alert*/(favorites.length);
-	show =0;
+// 	show=0;
    new Ajax.Request(document.URL, {
   	          method: 'POST',
   		  asynchronous:true,
   		  parameters: {
   		        action:    'set_favorite',
   			label:   str,
- 			favorite:favorite,
+ 			favorite:'false',
   	          }});
 
   }

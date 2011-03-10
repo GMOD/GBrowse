@@ -845,7 +845,7 @@ my $showicon =  img({
   $html .= div({-style=>'font-weight:bold'},'<<',$self->render_select_browser_link('link'));
  $html .= div({-id => 'showfavoritestext',-style=>'font-weight:bold; position:relative; left: 175px; bottom : 14px'},
 											  span({-id =>'showfavorites'},
-								      $favoriteicon),$self->render_select_favorites_link('link',"favoritearray"));
+								      $favoriteicon),$self->render_select_favorites_link('link'));
 
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
@@ -872,14 +872,26 @@ sub render_track_table {
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
 
-  my @labels     = $self->potential_tracks;
-  warn "$settings->{show_favorites}";
-
-      @labels= grep {$settings->{favorites}{$_}} @labels 
-           if( $settings->{show_favorites} eq "true");
+  my @labels   = $self->potential_tracks;
+  warn "favorites = {$settings->{show_favorites}}";
+  warn "labels before =@labels";
+#       @labels= grep {$settings->{favorites}{$_}} @labels
+           if( $settings->{show_favorites} == 1)
+	     
+		  {
+		     @labels = ();
+		    foreach $an(keys %{$settings->{favorites}})
+			  {
+# chomp($an);
+			  warn "value =$an";
+			  push @labels,$an
+			  if $settings->{favorites}->{$an};
+			 
+		   }
+		    warn "label = @labels";};
 #     print Dumper($settings->{favorites});
 
-    warn "show favorites = $settings->{favorites}"; 
+    warn "show favorites = $settings->{show_favorites}"; 
   warn "potential tracks = @labels";
 
 
@@ -1361,7 +1373,7 @@ sub render_select_favorites_link {
     my $favoritelist = 'favoritelist';
     my $title = $self->translate('FAVORITES');
      my $settings = $self->state;
-    $settings->{show_favorites}= 0;
+     $settings->{show_favorites}= 0;
 
 
  my $ison= $settings->{show_favorites}; 
@@ -1374,22 +1386,26 @@ sub render_select_favorites_link {
 		  }else
 		  {$state = "true"
 		  };
-
+ 
  
     if ($style eq 'button') {
 	    return button({-name=>$title,
   		          -onClick => "Effect.toggle('favoritelist');",
 		          },)
 	   } elsif ($style eq 'link') {
+# 	    $settings->{show_favorites}= 1;
+	    warn "ison = $settings->{show_favorites}";
+             
 	    return a({-href=>'javascript:void(0)',
 		      -onClick => "updatewrapper($state);",
 # 		      -class => "ison",
 # 		      -id => "false",
 		      },
 		     $title);
+
 	
     }
- $settings->{show_favorites}= 1
+
 }
 
 

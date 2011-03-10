@@ -843,7 +843,8 @@ my $showicon =  img({
 
  
   $html .= div({-style=>'font-weight:bold'},'<<',$self->render_select_browser_link('link'));
- $html .= div({-id => 'showfavoritestext',-style=>'font-weight:bold;'},span({-id =>'showfavorites'},
+ $html .= div({-id => 'showfavoritestext',-style=>'font-weight:bold; position:relative; left: 175px; bottom : 14px'},
+											  span({-id =>'showfavorites'},
 								      $favoriteicon),$self->render_select_favorites_link('link',"favoritearray"));
 
   if (my $filter = $self->track_filter_plugin) {
@@ -1388,6 +1389,7 @@ sub render_select_favorites_link {
 		     $title);
 	
     }
+ $settings->{show_favorites}= 1
 }
 
 

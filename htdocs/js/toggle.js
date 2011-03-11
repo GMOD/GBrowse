@@ -179,7 +179,7 @@ Controller.update_sections(new Array(track_listing_id),'',1,false);
 }
  
 
-function togglestars(imgID, txtID, favorites,cellid)
+function togglestars(imgID, txtID, favorites,cellid,label)
 {
 //    alerst(cellid);
 //   var cells = document.getElementsByTagName('td';
@@ -257,7 +257,7 @@ function togglestars(imgID, txtID, favorites,cellid)
   		  asynchronous:true,
   		  parameters: {
   		        action:    'set_favorite',
-  			label:   str,
+  			label:   label,
  			favorite:show,
   	          }});
 
@@ -275,7 +275,7 @@ function togglestars(imgID, txtID, favorites,cellid)
   		  asynchronous:true,
   		  parameters: {
   		        action:    'set_favorite',
-  			label:   str,
+  			label:   label,
  			favorite:show,
   	          }});
 

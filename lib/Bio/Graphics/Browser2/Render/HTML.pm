@@ -876,17 +876,17 @@ sub render_track_table {
   warn "favorites = {$settings->{show_favorites}}";
   warn "labels before =@labels";
 #       @labels= grep {$settings->{favorites}{$_}} @labels
-           if( $settings->{show_favorites} == 1)
+           if( $settings->{show_favorites})
 	     
 		  {
 		     @labels = ();
 		    foreach $an(keys %{$settings->{favorites}})
 			  {
- chomp($an);
-			  warn "value =$an";
-			 warn Dumper($settings->{favorites});
-			  push @labels,$an
-			  if $settings->{favorites}->{$an};
+#  chomp($as);
+# 			  warn "value =$an";
+# 			 warn Dumper($settings->{favorites});
+ 			  push @labels,$an
+ 			  if $settings->{favorites}->{$an} == 1;
 			 
 		   }
 		    warn "label = @labels";};
@@ -948,10 +948,10 @@ my $checkid = "notselectedcheck_${label}";
 
 my $showicon;
 
- if($settings->{favorites}{${key}} == 1){
+ if($settings->{favorites}{${label}} == 1){
  $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid');",
+		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid','${label}');",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon_2.png",},);
@@ -960,7 +960,7 @@ my $showicon;
 }else{
  $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid');",
+		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid','${label}');",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);

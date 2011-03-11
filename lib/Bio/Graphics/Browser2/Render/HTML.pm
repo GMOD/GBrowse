@@ -946,16 +946,25 @@ sub render_track_table {
 
 my $checkid = "notselectedcheck_${label}";
 
-my $showicon =  img({ -id =>"ficonpic_${key}", 
+my $showicon;
+
+ if($settings->{favorites}{$key}==1){
+ $showicon =  img({ -id =>"ficonpic_${key}", 
+		      -name => 'example',
+		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid');",
+		      -style => 'cursor:pointer;',
+		      
+		      -src   => $self->data_source->button_url."/ficon_2.png",},);
+
+
+}else{
+ $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
 		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid');",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);
-
-
-
-
+};
 
  my $favoriteicon = span({-href => '#', 
 			  -id => 'favclick', 

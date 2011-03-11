@@ -1382,6 +1382,7 @@ sub render_select_favorites_link {
     my $style  = shift || 'button';
     my $favoritelist = 'favoritelist';
     my $title = $self->translate('FAVORITES');
+    my $titleshow = 'Show All';
      my $settings = $self->state;
      $settings->{show_favorites}= 0;
 
@@ -1411,7 +1412,8 @@ sub render_select_favorites_link {
 # 		      -class => "ison",
 # 		      -id => "false",
 		      },
-		     $title);
+		    span({-onClick => "swap(this,'Show Favorites','Show All');"},
+		    'Show Favorites'));
 
 	
     }

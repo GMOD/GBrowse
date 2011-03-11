@@ -127,7 +127,7 @@ function removeByElement(arrayName,arrayElement)
      { 
         if(arrayName[i]==arrayElement)
             arrayName.splice(i,1);
-	 ;
+	 
       } 
   }
   
@@ -135,6 +135,7 @@ function removeByElement(arrayName,arrayElement)
 function updatewrapper(ison)
 {
 // alert(ison);
+
  var state = (ison==false) ? true : false;
  if (state == false) { state = 0} else{state=1};
  
@@ -165,8 +166,8 @@ function updatewrapper(ison)
  		    e.show();
 		        
  	new Ajax.Request(document.URL, {
-  	          method: 'GET',
-		  asynchronous:false,
+  	          method: 'POST',
+		  asynchronous:true,
   		  parameters: {
   		        action:    'show_favorites',
  			show: state,

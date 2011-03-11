@@ -490,6 +490,29 @@ function swap(me,main,alt) {
 me.innerHTML = (me.innerHTML == main) ? alt : main;
 }
 
+function updatetitle(me,main,alt,ison)
+{
+  var state; 
+//   alert(ison);
+  
+  swap(me,main,alt);
+  if(me.innerHTML == "Show Favorites"){
+   state =0;
+  }else {state = 1};
+  
+    new Ajax.Request(document.URL, {
+  	          method: 'POST',
+		  asynchronous:true,
+  		  parameters: {
+  		        action:    'show_favorites',
+ 			show: state,
+  	          }});
+  
+  
+  
+};
+
+
 function swapvar (me, main,alt) {
  alert(me);
  if (me==false){me = true}

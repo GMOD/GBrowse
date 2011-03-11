@@ -305,7 +305,7 @@ sub ACTION_set_favorite {
 sub ACTION_show_favorites {
     my $self = shift;
     my $q     = shift;
-    my $show  = $q->param('show')  or croak "call me with the 'show' argument";
+    my $show  = $q->param('show');
     
     my $settings = $self->state;
     $settings->{show_favorites} = $show;

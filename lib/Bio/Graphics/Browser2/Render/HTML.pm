@@ -865,7 +865,7 @@ sub render_track_table {
   my $self     = shift;
   my $settings = $self->state;
   my $source   = $self->data_source;
-
+  my $ison= $settings->{show_favorites}; 
   # read category table information
   my $category_table_labels = $self->category_table();
   my $an;
@@ -891,7 +891,7 @@ sub render_track_table {
 		   }
 		    warn "label = @labels";};
 #     print Dumper($settings->{favorites});
-
+  
     warn "show favorites = $settings->{show_favorites}"; 
   warn "potential tracks = @labels";
 
@@ -948,7 +948,7 @@ my $checkid = "notselectedcheck_${label}";
 
 my $showicon;
 
- if($settings->{favorites}{$key}==1){
+ if($settings->{favorites}{${key}} == 1){
  $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
 		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid');",
@@ -1383,21 +1383,25 @@ sub render_select_favorites_link {
     my $favoritelist = 'favoritelist';
     my $title = $self->translate('FAVORITES');
     my $titleshow = 'Show All';
-     my $settings = $self->state;
-     $settings->{show_favorites}= 0;
+       my $settings = $self->state;
+    
 
 
  my $ison= $settings->{show_favorites}; 
+
  my $state;
 
 
 
-    if ($ison==0){
-		  $state = "false"
-		  }else
-		  {$state = "true"
-		  };
+      if ($ison==0){
+	      $state = "false"
+      } else {
+	      $state = "true"
+      };
  
+   
+    warn "ison $ison";
+    warn "settings  $settings->{show_favorites}";
  
     if ($style eq 'button') {
 	    return button({-name=>$title,
@@ -1408,11 +1412,9 @@ sub render_select_favorites_link {
 	    warn "ison = $settings->{show_favorites}";
              
 	    return a({-href=>'javascript:void(0)',
-		      -onClick => "updatewrapper($state);",
-# 		      -class => "ison",
-# 		      -id => "false",
+		      -onClick => "updatewrapper($state);"
 		      },
-		    span({-onClick => "swap(this,'Show Favorites','Show All');"},
+		    span({-onClick => "updatetitle(this,'Show Favorites','Show All', $state);"},
 		    'Show Favorites'));
 
 	
@@ -1425,10 +1427,12 @@ sub render_select_favorites_link {
 sub render_select_browser_link {
     my $self  = shift;
     my $style  = shift || 'button';
- 
+    my $settings = $self->state;
     my $title = $self->translate('BACK_TO_BROWSER');
 
-    
+
+  
+
     if ($style eq 'button') {
 	    return button({-name=>$title,
 		           -onClick => "Controller.select_tab('main_page')"

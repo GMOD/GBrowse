@@ -309,7 +309,7 @@ sub ACTION_show_favorites {
     
     my $settings = $self->state;
     $settings->{show_favorites} = $show;
-    warn "show_favorites($show)";
+    warn "show_favorites($settings->{show_favorites})";
     $self->session->flush;
     return (204,'text/plain',undef);
 }

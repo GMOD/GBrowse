@@ -825,6 +825,8 @@ sub render_toggle_track_table {
   my $self     = shift;
  my $source   = $self->data_source;
   my $filter = $self->track_filter_plugin;
+  my $settings = $self->state;
+$settings->{show_favorites} =0;
 ## adding javascript array at the top so we can pass it into a js array -- ugly but it works
   my $html = "<script>var favoritearray = []; </script>" ;
   
@@ -865,16 +867,16 @@ sub render_track_table {
   my $self     = shift;
   my $settings = $self->state;
   my $source   = $self->data_source;
-  my $ison= $settings->{show_favorites}; 
+
   # read category table information
   my $category_table_labels = $self->category_table();
   my $an;
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
-
-  my @labels   = $self->potential_tracks;
+my @labels;
+  
   warn "favorites = {$settings->{show_favorites}}";
-  warn "labels before =@labels";
+ 
 #       @labels= grep {$settings->{favorites}{$_}} @labels
            if( $settings->{show_favorites})
 	     
@@ -888,8 +890,9 @@ sub render_track_table {
  			  push @labels,$an
  			  if $settings->{favorites}->{$an} == 1;
 			 
-		   }
-		    warn "label = @labels";};
+			  }
+		    }else{@labels   = $self->potential_tracks};
+		    warn "label = @labels";
 #     print Dumper($settings->{favorites});
   
     warn "show favorites = $settings->{show_favorites}"; 
@@ -948,7 +951,7 @@ my $checkid = "notselectedcheck_${label}";
 
 my $showicon;
 
- if($settings->{favorites}{${label}} == 1){
+ if($settings->{favorites}{$label}){
  $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
 		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid','${label}');",
@@ -1386,21 +1389,12 @@ sub render_select_favorites_link {
        my $settings = $self->state;
     
 
-
  my $ison= $settings->{show_favorites}; 
 
- my $state;
 
-
-
-      if ($ison==0){
-	      $state = "false"
-      } else {
-	      $state = "true"
-      };
  
    
-    warn "ison $ison";
+ 
     warn "settings  $settings->{show_favorites}";
  
     if ($style eq 'button') {
@@ -1412,10 +1406,9 @@ sub render_select_favorites_link {
 	    warn "ison = $settings->{show_favorites}";
              
 	    return a({-href=>'javascript:void(0)',
-		      -onClick => "updatewrapper($state);"
-		      },
-		    span({-onClick => "updatetitle(this,'Show Favorites','Show All', $state);"},
-		    'Show Favorites'));
+		     
+		    -onClick => "updatetitle(this,'Show Favorites','Show All', $ison);"},
+		    'Show Favorites');
 
 	
     }

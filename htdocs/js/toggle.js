@@ -132,51 +132,7 @@ function removeByElement(arrayName,arrayElement)
   }
   
 
-function updatewrapper(ison)
-{
-// alert(ison);
 
- var state = (ison==false) ? true : false;
- if (state == false) { state = 0} else{state=1};
- 
-// alert(state);
-//   idtoarray(updateid);
-//   var favorites = idArray;
-// alert(ison);
-  
-/*
-      if(state == "false")
-      {
-// //       show = 0;
-     state = "true"
-      }
-      else if(state == "true"){
-// //        show = 1;
-       state="false"
-      }else {state = "true"};*/
-    
-
-
-// if (state == false){state= "0";}
-// else {state ="1"};
-
-  var e = $(track_listing_id);
-                     e.hide();
-                     e.setOpacity(0.3);
- 		    e.show();
-		        
- 	new Ajax.Request(document.URL, {
-  	          method: 'POST',
-		  asynchronous:true,
-  		  parameters: {
-  		        action:    'show_favorites',
- 			show: state,
-  	          }});
- 		   
-Controller.update_sections(new Array(track_listing_id),'',1,false);
-
-                   
-}
  
 
 function togglestars(imgID, txtID, favorites,cellid,label)
@@ -492,24 +448,34 @@ me.innerHTML = (me.innerHTML == main) ? alt : main;
 
 function updatetitle(me,main,alt,ison)
 {
-  var state; 
-//   alert(ison);
+
+swap(me,main,alt);
+
+//   /*alert*/(state);
   
-  swap(me,main,alt);
-  if(me.innerHTML == "Show Favorites"){
-   state =0;
-  }else {state = 1};
+//      /*aler*/t(ison);
   
-    new Ajax.Request(document.URL, {
+  
+  var e = $(track_listing_id);
+     e.setOpacity(0.3);
+                     e.hide();
+		       ison = (me.innerHTML == 'Show Favorites') ? 0 : 1;
+		       
+		  new Ajax.Request(document.URL, {
   	          method: 'POST',
-		  asynchronous:true,
+		  asynchronous:false,
   		  parameters: {
   		        action:    'show_favorites',
- 			show: state,
+ 			show: ison,
   	          }});
+                  
+ 		    e.show();
+		        
+//  alert(ison);
+ 		   
+Controller.update_sections(new Array(track_listing_id),'',1,false)
   
-  
-  
+ 
 };
 
 

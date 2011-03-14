@@ -91,22 +91,6 @@ function setVisState (element_name,is_visible) {
   new Ajax.Request(document.URL,{method:'post',postBody:postData});
 }
 
-/*function removeSpaces(string) {
-var tmp =  string.split(' ').join('');
-return tmp.replace("/","");*/
-//}
-function idtoarray(class_name){
-spans = document.getElementsByTagName("span");
-idArray = new Array();
- 
-    for (x=0; x<spans.length; x++) {
-        if (spans[x].className==class_name) {
-        idArray.push(spans[x].id)
-        }
-    }
-    return idArray;
-}
-
 
 function toggleDiv(id){
 var spans = document.getElementsByTagName('span');
@@ -137,8 +121,7 @@ function removeByElement(arrayName,arrayElement)
 
 function togglestars(imgID, txtID, favorites,cellid,label)
 {
-//    alerst(cellid);
-//   var cells = document.getElementsByTagName('td';
+
   var imgTag = document.getElementById(imgID);
   var cellTag = document.getElementById(cellid);
    
@@ -182,26 +165,23 @@ function togglestars(imgID, txtID, favorites,cellid,label)
    
        favorite = false;
    
-    }
-    else
-    {
+    }else{
       imgName = fileName + '_2.' + fileExt;
       txtTag.style.fontWeight = "900";
   
       favorite = true;	
       
       
-    }
-  }
-  else
-  {
+	}
+  }else{
     imgName = fileName + '_2.' + fileExt;
     txtTag.style.fontWeight = "900";
 
     favorite = true; 
     
-  }
+	}
 
+//if it is favorited send a 1
   if (favorite == true) {
       favorites.push(cellTag.id);
       txtTag.className= 'favoritelist';
@@ -217,14 +197,11 @@ function togglestars(imgID, txtID, favorites,cellid,label)
  			favorite:show,
   	          }});
 
-  }
-     
-  
-  else if (favorite == false){
+  }else if (favorite == false){
       removeByElement(favorites,cellTag.id);
       txtTag.className = 'notselected';
        cellTag.className = 'notselected_check';
-//       /*alert*/(favorites.length);
+
  	show=0;
    new Ajax.Request(document.URL, {
   	          method: 'POST',
@@ -241,16 +218,9 @@ function togglestars(imgID, txtID, favorites,cellid,label)
    
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
-  
-   
-   
-    var direction = favorite ? 'false' : 'true';
+  return false;
 
-
-	 
-return false;
-
-  }
+}
 
 
 
@@ -441,55 +411,44 @@ function visibility (element_name,is_visible) {
    return false;
 }
 
-// for ipad, function to make collapse and expand toggle when button is touched 
+//  function to make text toggle when button/link is touched 
 function swap(me,main,alt) {
 me.innerHTML = (me.innerHTML == main) ? alt : main;
 }
 
-function updatetitle(me,main,alt,ison)
-{
 
-swap(me,main,alt);
+//Wrapper function -- will toggle the 'Show All and Show Favorites' texit 
+//then checks to see whether the favorites should be displayed or if they 
+//should all be displayed--sends 0 or 1 to the server 
+//controller.update_sections does the actual updating of the tracks
+function updatetitle(me,main,alt,ison){
+  
+  
+var e = $(track_listing_id);// all e._____ objects are visual effects
 
-//   /*alert*/(state);
-  
-//      /*aler*/t(ison);
-  
-  
-  var e = $(track_listing_id);
-     e.setOpacity(0.3);
-                     e.hide();
-		       ison = (me.innerHTML == 'Show Favorites') ? 0 : 1;
+swap(me,main,alt);//toggle
+
+e.hide();
+e.setOpacity(0.3);
+ison = (me.innerHTML == 'Show Favorites') ? 0 : 1;
 		       
-		  new Ajax.Request(document.URL, {
-  	          method: 'POST',
-		  asynchronous:false,
-  		  parameters: {
-  		        action:    'show_favorites',
- 			show: ison,
-  	          }});
+new Ajax.Request(
+		document.URL, {
+		method: 'POST',
+		asynchronous:false,
+		parameters: {
+		action:    'show_favorites',
+		show: ison, //sends 0 or 1 
+			     }
+				}
+		);
                   
- 		    e.show();
+e.show();
 		        
-//  alert(ison);
- 		   
 Controller.update_sections(new Array(track_listing_id),'',1,false)
   
  
 };
-
-
-function swapvar (me, main,alt) {
- alert(me);
- if (me==false){me = true}
- else if (me == true) { me = false};
-  alert(me);
-}
-
-
-
-
-
 
 function collapse(element_name) {
    var control = document.getElementById(element_name+"_title");

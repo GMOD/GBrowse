@@ -873,30 +873,26 @@ sub render_track_table {
   my $an;
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
-my @labels;
+  my @labels;
   
-  warn "favorites = {$settings->{show_favorites}}";
+  warn "favorites = {$settings->{show_favorites}}" if DEBUG;
  
-#       @labels= grep {$settings->{favorites}{$_}} @labels
-           if( $settings->{show_favorites})
-	     
-		  {
-		     @labels = ();
+      
+  if( $settings->{show_favorites}){
+
+		    @labels = ();
 		    foreach $an(keys %{$settings->{favorites}})
 			  {
-#  chomp($as);
-# 			  warn "value =$an";
-# 			 warn Dumper($settings->{favorites});
  			  push @labels,$an
  			  if $settings->{favorites}->{$an} == 1;
 			 
 			  }
 		    }else{@labels   = $self->potential_tracks};
 		    warn "label = @labels";
-#     print Dumper($settings->{favorites});
+
   
-    warn "show favorites = $settings->{show_favorites}"; 
-  warn "potential tracks = @labels";
+    warn "show favorites = $settings->{show_favorites}" if DEBUG; 
+    warn "potential tracks = @labels" if DEBUG;
 
 
   my ($filter_active,@hilite);
@@ -951,6 +947,7 @@ my $checkid = "notselectedcheck_${label}";
 
 my $showicon;
 
+#if the track has already been favorited, the image source is made into the yellow star
  if($settings->{favorites}{$label}){
  $showicon =  img({ -id =>"ficonpic_${key}", 
 		      -name => 'example',
@@ -1395,19 +1392,20 @@ sub render_select_favorites_link {
  
    
  
-    warn "settings  $settings->{show_favorites}";
+    warn "settings  $settings->{show_favorites}" if DEBUG;
  
     if ($style eq 'button') {
 	    return button({-name=>$title,
   		          -onClick => "Effect.toggle('favoritelist');",
 		          },)
 	   } elsif ($style eq 'link') {
-# 	    $settings->{show_favorites}= 1;
-	    warn "ison = $settings->{show_favorites}";
+
+	    warn "ison = $settings->{show_favorites}" if DEBUG;
              
 	    return a({-href=>'javascript:void(0)',
 		     
-		    -onClick => "updatetitle(this,'Show Favorites','Show All', $ison);"},
+		    -onClick => "updatetitle(this,'Show Favorites','Show All', $ison);"
+		      },
 		    'Show Favorites');
 
 	

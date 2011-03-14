@@ -283,10 +283,10 @@ sub ACTION_set_favorite {
     my $label        = $q->param('label')     or croak "call me with the 'label' argument";
     my $is_favorite  = $q->param('favorite'); 
 #       or croak "call me with the 'favorite' argument";
-    warn "set_favorite($label,$is_favorite)";
+    warn "set_favorite($label,$is_favorite)" if DEBUG;
     my $settings = $self->state;
     $settings->{favorites}{$label} = $is_favorite;
-    warn "name = $settings->{favorites}{$label}";
+    warn "name = $settings->{favorites}{$label}" if DEBUG;
 
 
      if ($is_favorite = 0){delete($settings->{favorites}{$label})};
@@ -309,7 +309,7 @@ sub ACTION_show_favorites {
     
     my $settings = $self->state;
     $settings->{show_favorites} = $show;
-    warn "show_favorites($settings->{show_favorites})";
+    warn "show_favorites($settings->{show_favorites})" if DEBUG;
     $self->session->flush;
     return (204,'text/plain',undef);
 }

@@ -93,7 +93,7 @@ function setVisState (element_name,is_visible) {
 
 
 function toggleDiv(id){
-var spans = document.getElementsByTagName('span');
+var spans = document.getElementsByTagName('div');
 
 
     for (var i = spans.length; i--;) {
@@ -416,22 +416,53 @@ function swap(me,main,alt) {
 me.innerHTML = (me.innerHTML == main) ? alt : main;
 }
 
+//same as updatetitle(below) but will refresh the favorites if the user 
+//decides to unclick a favorite while it is in show favorites mode
 
+function refresh(ison){
+  
+  
+var e = $(track_listing_id);// all e._____ objects are visual effects
+
+
+
+e.hide();
+e.setOpacity(0.3);
+
+		       
+new Ajax.Request(
+		document.URL, {
+		method: 'POST',
+		asynchronous:false,
+		parameters: {
+		action:    'show_favorites',
+		show: ison, //sends 0 or 1 
+			     }
+				}
+		);
+                  
+e.show();
+		        
+Controller.update_sections(new Array(track_listing_id),'',1,false)
+  
+ 
+};
 //Wrapper function -- will toggle the 'Show All and Show Favorites' texit 
 //then checks to see whether the favorites should be displayed or if they 
 //should all be displayed--sends 0 or 1 to the server 
 //controller.update_sections does the actual updating of the tracks
-function updatetitle(me,main,alt,ison){
+function updatetitle(me,main,alt,ison,refresh){
   
   
 var e = $(track_listing_id);// all e._____ objects are visual effects
+var refreshid = document.getElementById(refresh);
 
 swap(me,main,alt);//toggle
 
 e.hide();
 e.setOpacity(0.3);
 ison = (me.innerHTML == 'Show Favorites') ? 0 : 1;
-		       
+refreshid.style.display= (me.innerHTML == 'Show Favorites') ? 'none' : 'block';		       
 new Ajax.Request(
 		document.URL, {
 		method: 'POST',

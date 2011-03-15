@@ -849,6 +849,11 @@ my $showicon =  img({
 											  span({-id =>'showfavorites'},
 								      $favoriteicon),$self->render_select_favorites_link('link'));
 
+
+ $html .= div({-id => 'showrefresh',-style=>'font-weight:bold; position:relative; left: 350px; bottom : 30px; display:none;'},
+											  span({-id =>'refresh'},
+								      $favoriteicon),$self->render_select_refresh_link('link'));
+
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
 							    style=>"text-indent:2em;padding-top:8px; display:block;"},
@@ -1376,13 +1381,48 @@ sub render_select_track_link {
 		  }
 	  );
 }
+sub render_select_refresh_link {
+    my $self  = shift;
+    my $style  = shift || 'button';
+    my $favoritelist = 'favoritelist';
+    my $title = $self->translate('FAVORITES');
+
+       my $settings = $self->state;
+    
+
+ my $ison= 1; 
+
+
+ 
+   
+ 
+    warn "settings  $settings->{show_favorites}" if DEBUG;
+ 
+    if ($style eq 'button') {
+	    return button({-name=>$title,
+  		          -onClick => "Effect.toggle('favoritelist');",
+		          },)
+	   } elsif ($style eq 'link') {
+
+	    warn "ison = $settings->{show_favorites}" if DEBUG;
+             
+	    return a({-href=>'javascript:void(0)',
+		     
+		    -onClick => "refresh($ison);"
+		      },
+		    'Refresh');
+
+	
+    }
+
+}
 
 sub render_select_favorites_link {
     my $self  = shift;
     my $style  = shift || 'button';
     my $favoritelist = 'favoritelist';
     my $title = $self->translate('FAVORITES');
-    my $titleshow = 'Show All';
+    my $refresh = 'showrefresh';
        my $settings = $self->state;
     
 
@@ -1404,7 +1444,7 @@ sub render_select_favorites_link {
              
 	    return a({-href=>'javascript:void(0)',
 		     
-		    -onClick => "updatetitle(this,'Show Favorites','Show All', $ison);"
+		    -onClick => "updatetitle(this,'Show Favorites','Show All', $ison,'showrefresh');"
 		      },
 		    'Show Favorites');
 

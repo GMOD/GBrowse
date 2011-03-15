@@ -949,18 +949,18 @@ my $showicon;
 
 #if the track has already been favorited, the image source is made into the yellow star
  if($settings->{favorites}{$label}){
- $showicon =  img({ -id =>"ficonpic_${key}", 
+ $showicon =  img({ -id =>"ficonpic_${label}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid','${label}');",
+		      -onClick => "togglestars('ficonpic_${label}', 'selectrackname_${label}',favoritearray,'$checkid','${label}');",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon_2.png",},);
 
 
 }else{
- $showicon =  img({ -id =>"ficonpic_${key}", 
+ $showicon =  img({ -id =>"ficonpic_${label}", 
 		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${key}', 'selectrackname_${label}',favoritearray,'$checkid','${label}');",
+		      -onClick => "togglestars('ficonpic_${label}', 'selectrackname_${label}',favoritearray,'$checkid','${label}');",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);

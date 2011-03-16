@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 43;
+use constant TEST_COUNT => 47;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -147,11 +147,11 @@ for my $img (@images) {
     ok (-e $img && -s _);
 }
 
-ok (scalar @images,4);
+ok (scalar @images,8);
 
 # uncomment to see the images
-# warn join ' ',@images;
-# sleep 20;
+#warn join ' ',@images;
+#sleep 5000;
 
 exit 0;
 

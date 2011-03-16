@@ -827,6 +827,7 @@ sub render_toggle_track_table {
   my $filter = $self->track_filter_plugin;
   my $settings = $self->state;
 $settings->{show_favorites} =0;
+$settings->{clear_favorites} =0;
 ## adding javascript array at the top so we can pass it into a js array -- ugly but it works
   my $html = "<script>var favoritearray = []; </script>" ;
   
@@ -853,6 +854,10 @@ my $showicon =  img({
  $html .= div({-id => 'showrefresh',-style=>'font-weight:bold; position:relative; left: 350px; bottom : 30px; display:none;'},
 											  span({-id =>'refresh'},
 								      $favoriteicon),$self->render_select_refresh_link('link'));
+
+$html .= div({-id => 'clearfavs',-style=>'font-weight:bold; position:relative; left: 350px; bottom : 30px;'},
+											  span({-id =>'clear'},
+								      $favoriteicon),$self->render_select_clear_link('link'));
 
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
@@ -886,14 +891,28 @@ sub render_track_table {
   if( $settings->{show_favorites}){
 
 		    @labels = ();
+		     if($settings->{clear_favorites}){
+				  $settings->{favorites}={};	
+				  @labels= ();
+		   	    
+				 }else{
 		    foreach $an(keys %{$settings->{favorites}})
 			  {
  			  push @labels,$an
  			  if $settings->{favorites}->{$an} == 1;
 			 
 			  }
-		    }else{@labels   = $self->potential_tracks};
-		    warn "label = @labels";
+			      if($settings->{clear_favorites}){
+				  $settings->{favorites}={};	
+				  @labels= $self->potential_tracks;
+		   	    
+				 }}
+ }elsif($settings->{clear_favorites}){
+		    $settings->{favorites}={};	
+		    @labels= $self->potential_tracks;
+		   	    
+ }else{@labels   = $self->potential_tracks};
+		    warn "label = @labels" if DEBUG;
 
   
     warn "show favorites = $settings->{show_favorites}" if DEBUG; 
@@ -1381,11 +1400,43 @@ sub render_select_track_link {
 		  }
 	  );
 }
+
+sub render_select_clear_link {
+    my $self  = shift;
+    my $style  = shift || 'button';
+
+    my $title = $self->translate('CLEAR_FAV');
+
+       my $settings = $self->state;
+   my $clear = 1;
+   
+ 
+    warn "settings  $settings->{show_favorites}" if DEBUG;
+ 
+    if ($style eq 'button') {
+	    return button({-name=>$title,
+  		          -onClick => "Effect.toggle('favoritelist');",
+		          },)
+	   } elsif ($style eq 'link') {
+
+	    warn "ison = $settings->{show_favorites}" if DEBUG;
+             
+	    return a({-href=>'javascript:void(0)',
+		     
+		    -onClick => "clearallfav($clear);"
+		      },
+		   $title);
+
+	
+    }
+
+}
+
 sub render_select_refresh_link {
     my $self  = shift;
     my $style  = shift || 'button';
-    my $favoritelist = 'favoritelist';
-    my $title = $self->translate('FAVORITES');
+
+    my $title = $self->translate('REFRESH_FAV');
 
        my $settings = $self->state;
     
@@ -1410,7 +1461,7 @@ sub render_select_refresh_link {
 		     
 		    -onClick => "refresh($ison);"
 		      },
-		    'Refresh');
+		   $title);
 
 	
     }
@@ -1420,8 +1471,9 @@ sub render_select_refresh_link {
 sub render_select_favorites_link {
     my $self  = shift;
     my $style  = shift || 'button';
-    my $favoritelist = 'favoritelist';
+
     my $title = $self->translate('FAVORITES');
+    my $showall = $self->translate('SHOWALL');
     my $refresh = 'showrefresh';
        my $settings = $self->state;
     
@@ -1444,9 +1496,9 @@ sub render_select_favorites_link {
              
 	    return a({-href=>'javascript:void(0)',
 		     
-		    -onClick => "updatetitle(this,'Show Favorites','Show All', $ison,'showrefresh');"
+		    -onClick => "updatetitle(this,'$title','$showall', $ison,'showrefresh','clearfavs');"
 		      },
-		    'Show Favorites');
+		   $title);
 
 	
     }

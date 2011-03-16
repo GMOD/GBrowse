@@ -94,7 +94,18 @@ END
 
    TRACKS   => 'Tracks',
    
-   FAVORITES => 'Show Favorites',
+  
+# FAVORITE MENU LINKS
+   FAVORITES => 'Show Favorites Only',		
+    
+   SHOWALL   => 'Show All',
+
+   REFRESH_FAV   => 'Refresh Favorites',
+    
+   CLEAR_FAV     => 'Clear All Favorites',
+
+#############
+
 
    SELECT_TRACKS   => 'Select Tracks',
 

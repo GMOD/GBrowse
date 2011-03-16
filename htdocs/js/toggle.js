@@ -418,6 +418,35 @@ me.innerHTML = (me.innerHTML == main) ? alt : main;
 
 //same as updatetitle(below) but will refresh the favorites if the user 
 //decides to unclick a favorite while it is in show favorites mode
+function clearallfav(clear){
+  
+  
+var e = $(track_listing_id);// all e._____ objects are visual effects
+
+clear =1;
+
+e.hide();
+e.setOpacity(0.3);
+
+		       
+new Ajax.Request(
+		document.URL, {
+		method: 'POST',
+		asynchronous:false,
+		parameters: {
+		action:    'clear_favorites',
+		clear: clear,
+			     }
+				}
+		);
+                  
+e.show();
+		        
+Controller.update_sections(new Array(track_listing_id),'',1,false);
+  
+ 
+};
+
 
 function refresh(ison){
   
@@ -437,6 +466,19 @@ new Ajax.Request(
 		parameters: {
 		action:    'show_favorites',
 		show: ison, //sends 0 or 1 
+		clear:0,
+			     }
+				}
+		);
+
+new Ajax.Request(
+		document.URL, {
+		method: 'POST',
+		asynchronous:false,
+		parameters: {
+		action:    'clear_favorites',
+	
+		clear:0,
 			     }
 				}
 		);
@@ -451,18 +493,21 @@ Controller.update_sections(new Array(track_listing_id),'',1,false)
 //then checks to see whether the favorites should be displayed or if they 
 //should all be displayed--sends 0 or 1 to the server 
 //controller.update_sections does the actual updating of the tracks
-function updatetitle(me,main,alt,ison,refresh){
+function updatetitle(me,main,alt,ison,refresh, clear){
   
   
 var e = $(track_listing_id);// all e._____ objects are visual effects
 var refreshid = document.getElementById(refresh);
+var clearid = document.getElementById(clear);
 
 swap(me,main,alt);//toggle
 
 e.hide();
 e.setOpacity(0.3);
-ison = (me.innerHTML == 'Show Favorites') ? 0 : 1;
-refreshid.style.display= (me.innerHTML == 'Show Favorites') ? 'none' : 'block';		       
+ison = (me.innerHTML == main) ? 0 : 1;
+refreshid.style.display= (me.innerHTML == main) ? 'none' : 'block';
+clearid.style.left=(me.innerHTML == main) ? '350px' : '550px';
+clearid.style.bottom=(me.innerHTML == main) ? '30px' : '47px';
 new Ajax.Request(
 		document.URL, {
 		method: 'POST',
@@ -473,7 +518,19 @@ new Ajax.Request(
 			     }
 				}
 		);
+
+new Ajax.Request(
+		document.URL, {
+		method: 'POST',
+		asynchronous:false,
+		parameters: {
+		action:    'clear_favorites',
+	
+		clear:0,
+			     }
+				});
                   
+		
 e.show();
 		        
 Controller.update_sections(new Array(track_listing_id),'',1,false)

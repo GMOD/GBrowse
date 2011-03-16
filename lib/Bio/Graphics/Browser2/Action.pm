@@ -314,6 +314,18 @@ sub ACTION_show_favorites {
     return (204,'text/plain',undef);
 }
 
+sub ACTION_clear_favorites {
+    my $self = shift;
+    my $q     = shift;
+    my $clear = $q->param('clear');
+    
+    my $settings = $self->state;
+    $settings->{clear_favorites} = $clear;
+    warn "show_favorites($settings->{show_favorites})" if DEBUG;
+    $self->session->flush;
+    return (204,'text/plain',undef);
+}
+
 sub ACTION_reconfigure_plugin {
     my $self   = shift;
     my $q      = shift;

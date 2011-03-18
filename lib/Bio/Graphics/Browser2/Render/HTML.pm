@@ -365,6 +365,7 @@ sub render_html_head {
       track_pan.js
       ruler.js
       controller.js
+      sessionvars.js
 
     );
 
@@ -830,6 +831,8 @@ $settings->{show_favorites} =0;
 $settings->{clear_favorites} =0;
 ## adding javascript array at the top so we can pass it into a js array -- ugly but it works
   my $html = "<script>var favoritearray = []; </script>" ;
+
+
   
 
 my $showicon =  img({
@@ -875,6 +878,7 @@ use Data::Dumper;
 # Render Track Table - Invoked to draw the checkbox group in the "Select Tracks" tab. It creates a hyperlinked set of feature names.
 sub render_track_table {
   my $self     = shift;
+  warn "bleh";
   my $settings = $self->state;
   my $source   = $self->data_source;
 
@@ -970,21 +974,25 @@ sub render_track_table {
 my $checkid = "notselectedcheck_${label}";
 
 my $showicon;
-
+my $name =  $self->{$category_table_labels}->{label};
+warn "section = $name";
 #if the track has already been favorited, the image source is made into the yellow star
  if($settings->{favorites}{$label}){
- $showicon =  img({ -id =>"ficonpic_${label}", 
-		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${label}', 'selectrackname_${label}',favoritearray,'$checkid','${label}');",
+ 
+ $showicon =  img({   -class => "star",
+		      -id =>"${label}", 
+		      -label => "${label}",
+		      -onClick => "togglestars(event,'${label}', 'selectrackname_${label}',favoritearray,'$checkid');",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon_2.png",},);
 
 
 }else{
- $showicon =  img({ -id =>"ficonpic_${label}", 
-		      -name => 'example',
-		      -onClick => "togglestars('ficonpic_${label}', 'selectrackname_${label}',favoritearray,'$checkid','${label}');",
+ $showicon =  img({   -class => "star",
+		      -id =>"${label}", 
+		      -label => "${label}",
+		      -onClick => "togglestars(event,'${label}', 'selectrackname_${label}',favoritearray,'$checkid');",
 		      -style => 'cursor:pointer;',
 		      
 		      -src   => $self->data_source->button_url."/ficon.png",},);
@@ -1013,14 +1021,14 @@ my $showicon;
   }
 
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
-
+ 
   # Sort the tracks into categories:
   # Overview tracks
   # Region tracks
   # Regular tracks (which may be further categorized by user)
   # Plugin tracks
   # External tracks
-  my %track_groups;
+ my %track_groups;
   foreach (@labels) {
     my $category = $self->categorize_track($_);
     push @{$track_groups{$category}},$_;
@@ -1135,7 +1143,7 @@ my $showicon;
   return join( "\n",
 	       start_form(-name=>'trackform',
 			  -id=>'trackform'),
-	       div({-class=>'searchbody',-style=>'padding-left:1em'},$slice_and_dice),
+	       div({-class=>'searchbody',-id=> 'range', -style=>'padding-left:1em'},$slice_and_dice),
 	       end_form,
 	       $self->html_frag('html5',$settings),
 	       );

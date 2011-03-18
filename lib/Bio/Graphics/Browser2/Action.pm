@@ -282,6 +282,7 @@ sub ACTION_set_favorite {
     my $q    = shift;
     my $label        = $q->param('label')     or croak "call me with the 'label' argument";
     my $is_favorite  = $q->param('favorite');
+    my $startindex   = $q->param('startindex');
 #   or croak "call me with the 'favorite' argument";
     warn "set_favorite($label,$is_favorite)" if DEBUG;
     my $settings = $self->state;

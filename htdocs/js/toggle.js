@@ -83,7 +83,6 @@ var getElementsByClassName = function (className, tag, elm){
 };
 
 
-
 // setVisState sends the visibility state to the server.
 function setVisState (element_name,is_visible) {
   var visibility = is_visible ? 'show' : 'hide';
@@ -114,25 +113,39 @@ function removeByElement(arrayName,arrayElement)
 	 
       } 
   }
-  
+///////////////////////////////////////////////////////
 
+ function pausecomp(millis) 
+{
+var date = new Date();
+var curDate = null;
 
+do { curDate = new Date(); } 
+while(curDate-date < millis);
+}
  
 
-function togglestars(imgID, txtID, favorites,cellid,label)
-{
 
+function togglestars(event,imgID, txtID, favorites,cellid)
+{
+ 
+  
+
+  
+  
+  
+//   detectshiftkey();
   var imgTag = document.getElementById(imgID);
   var cellTag = document.getElementById(cellid);
-   
+ 
   var txtTag = document.getElementById(txtID);
   var fullPathName = imgTag.src;
   var pathSplit = fullPathName.split("/");
   var getfileNameExt = pathSplit.length - 1;
   var fullFilePath = '';
   var str = imgID.replace("ficonpic_","");
-
-
+  
+ 
 
 
   if (pathSplit.length == 0)
@@ -150,8 +163,20 @@ function togglestars(imgID, txtID, favorites,cellid,label)
   var fileExt = fileNameSpilt[1]; // just the file extention
   var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
   var imgName ='';
-  var show;
+  var show;     
+  
+  
+  var stars = getElementsByClassName("star");  
+  idtoarray(stars);
+  var starsid = idArray;
 
+  var firstIndex;
+  if (!event.shiftKey){
+  firstIndex = starsid.findIndex(imgID); 
+  sessvars.firstIndex= {"index":firstIndex};
+  
+ }
+  var lastIndex;
  
   if (fileNameMainSpilt.length > 1)
   {
@@ -181,6 +206,8 @@ function togglestars(imgID, txtID, favorites,cellid,label)
     
 	}
 
+      
+     
 //if it is favorited send a 1
   if (favorite == true) {
       favorites.push(cellTag.id);
@@ -193,7 +220,7 @@ function togglestars(imgID, txtID, favorites,cellid,label)
   		  asynchronous:true,
   		  parameters: {
   		        action:    'set_favorite',
-  			label:   label,
+  			label:   imgID,
  			favorite:show,
   	          }});
 
@@ -208,12 +235,69 @@ function togglestars(imgID, txtID, favorites,cellid,label)
   		  asynchronous:true,
   		  parameters: {
   		        action:    'set_favorite',
-  			label:   label,
+  			label:   imgID,
  			favorite:show,
   	          }});
 
   }
+if (event.shiftKey) {
 
+    firstIndex = sessvars.firstIndex.index;
+    lastIndex = starsid.findIndex(imgID);
+//     alert(firstIndex);
+    show = (favorite == true) ? 1 : 0;
+    
+    if(lastIndex>firstIndex){
+      
+      
+       for(var i=firstIndex+1 ;i<=lastIndex; i++){
+ stars[i].src= fullFilePath + imgName;      
+      }
+
+     
+    for(var i=firstIndex+1 ;i<=lastIndex; i++){
+     
+      new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:false,
+// 		  onSuccess : pausecomp(1230)
+		  parameters: {
+  		        action:    'set_favorite',
+  			label:   starsid[i],
+ 			favorite:show,
+  	          },
+		
+  		});
+    }
+    }
+// 	 for(var i=(firstIndex-1) ;i>=lastIndex; i--){
+//     stars[i].src= fullFilePath + imgName;
+//     }  */ 
+      
+  
+    }else{
+      
+       for(var i=firstIndex-1 ;i>=lastIndex; i++){
+ stars[i].src= fullFilePath + imgName;      
+      }
+    
+    for(var i=(firstIndex-1) ;i>=lastIndex; i--){
+    
+
+     new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:false,
+		
+  		  parameters: {
+  		        action:    'set_favorite',
+  			label:   starsid[i],
+ 			favorite:show,
+  	          }});
+		  
+      }
+     
+     
+    }
 
    
   var finalFile = fullFilePath + imgName;
@@ -223,6 +307,30 @@ function togglestars(imgID, txtID, favorites,cellid,label)
 }
 
 
+function idtoarray(stars)
+{
+ 
+idArray = new Array();
+ 
+    for (x=0; x<stars.length; x++) {
+        if (stars[x].className==="star") {
+        idArray[x] = stars[x].id
+        }
+ 
+}
+   return idArray; 
+}
+
+Array.prototype.findIndex = function(value){
+var ctr = "";
+for (var i=0; i < this.length; i++) {
+// use === to check for Matches. ie., identical (===), ;
+if (this[i] == value) {
+return i;
+}
+}
+return ctr;
+};
 
 // checkSummaries makes sure any collapsed nodes have their summaries visible upon page load.
 function checkSummaries() {
@@ -411,6 +519,11 @@ function visibility (element_name,is_visible) {
    return false;
 }
 
+
+
+
+
+
 //  function to make text toggle when button/link is touched 
 function swap(me,main,alt) {
 me.innerHTML = (me.innerHTML == main) ? alt : main;
@@ -443,7 +556,7 @@ new Ajax.Request(
 e.show();
 		        
 Controller.update_sections(new Array(track_listing_id),'',1,false);
-  
+ 
  
 };
 
@@ -486,7 +599,7 @@ new Ajax.Request(
 e.show();
 		        
 Controller.update_sections(new Array(track_listing_id),'',1,false)
-  
+
  
 };
 //Wrapper function -- will toggle the 'Show All and Show Favorites' texit 

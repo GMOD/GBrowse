@@ -128,14 +128,9 @@ while(curDate-date < millis);
 
 function togglestars(event,imgID, txtID, favorites,cellid)
 {
- 
-  
-
-  
-  
-  
-//   detectshiftkey();
+ //   detectshiftkey();
   var imgTag = document.getElementById(imgID);
+
   var cellTag = document.getElementById(cellid);
  
   var txtTag = document.getElementById(txtID);
@@ -144,7 +139,7 @@ function togglestars(event,imgID, txtID, favorites,cellid)
   var getfileNameExt = pathSplit.length - 1;
   var fullFilePath = '';
   var str = imgID.replace("ficonpic_","");
-  
+  var labels_Range = new Array();
  
 
 
@@ -209,27 +204,12 @@ function togglestars(event,imgID, txtID, favorites,cellid)
       
      
 //if it is favorited send a 1
-  if (favorite == true) {
-      favorites.push(cellTag.id);
-      txtTag.className= 'favoritelist';
-
-       cellTag.className= 'favoritelist_check';
-      show = 1;
-     new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action:    'set_favorite',
-  			label:   imgID,
- 			favorite:show,
-  	          }});
-
-  }else if (favorite == false){
-      removeByElement(favorites,cellTag.id);
+  
+     
       txtTag.className = 'notselected';
        cellTag.className = 'notselected_check';
-
- 	show=0;
+       show = (favorite == true) ? 1 : 0;
+//    
    new Ajax.Request(document.URL, {
   	          method: 'POST',
   		  asynchronous:true,
@@ -239,70 +219,52 @@ function togglestars(event,imgID, txtID, favorites,cellid)
  			favorite:show,
   	          }});
 
-  }
+  
 if (event.shiftKey) {
 
     firstIndex = sessvars.firstIndex.index;
     lastIndex = starsid.findIndex(imgID);
+  
+    var j;
+    var i;
 //     alert(firstIndex);
     show = (favorite == true) ? 1 : 0;
     
-    if(lastIndex>firstIndex){
-      
-      
-       for(var i=firstIndex+1 ;i<=lastIndex; i++){
- stars[i].src= fullFilePath + imgName;      
-      }
-
-     
-    for(var i=firstIndex+1 ;i<=lastIndex; i++){
-     
-      new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:false,
-// 		  onSuccess : pausecomp(1230)
-		  parameters: {
-  		        action:    'set_favorite',
-  			label:   starsid[i],
- 			favorite:show,
-  	          },
-		
-  		});
+    if(lastIndex<firstIndex){
+      var tmp; 
+      tmp = lastIndex;
+      lastIndex = firstIndex;
+      firstIndex = tmp;
     }
-    }
-// 	 for(var i=(firstIndex-1) ;i>=lastIndex; i--){
-//     stars[i].src= fullFilePath + imgName;
-//     }  */ 
-      
-  
-    }else{
-      
-       for(var i=firstIndex-1 ;i>=lastIndex; i++){
- stars[i].src= fullFilePath + imgName;      
-      }
-    
-    for(var i=(firstIndex-1) ;i>=lastIndex; i--){
-    
+ 
+       var range = lastIndex - firstIndex; 
+    for( i=firstIndex , j = 0; i<=lastIndex, j <= range ; i++, j++){
+   labels_Range[j] = starsid[i]
+   }
+   var labels_json = labels_Range.toString();
 
-     new Ajax.Request(document.URL, {
+
+new Ajax.Request(document.URL, {
   	          method: 'POST',
-  		  asynchronous:false,
-		
+  		  asynchronous:true,
   		  parameters: {
   		        action:    'set_favorite',
-  			label:   starsid[i],
+  			label:  labels_json,
  			favorite:show,
   	          }});
-		  
-      }
+
      
-     
+       for(var i=firstIndex ;i<=lastIndex; i++){
+   stars[i].src= fullFilePath + imgName;      
+       }
     }
+
 
    
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
   return false;
+
 
 }
 

@@ -280,23 +280,26 @@ sub ACTION_set_track_visibility {
 sub ACTION_set_favorite {
     my $self = shift;
     my $q    = shift;
-    my $label        = $q->param('label')     or croak "call me with the 'label' argument";
+    my $labels        = $q->param('label')     or croak "call me with the 'label' argument";
     my $is_favorite  = $q->param('favorite');
-    my $startindex   = $q->param('startindex');
-#   or croak "call me with the 'favorite' argument";
-    warn "set_favorite($label,$is_favorite)" if DEBUG;
     my $settings = $self->state;
-    $settings->{favorites}{$label} = $is_favorite;
-    warn "name = $settings->{favorites}{$label}" if DEBUG;
 
 
-     if ($is_favorite = 0){delete($settings->{favorites}{$label})};
+    warn "lebels = $labels" if DEBUG;
+    my @labels = split(',' , $labels);
+    warn "lebels = @labels" if DEBUG;
 
 
+    foreach my $label(@labels){
+	$settings->{favorites}{$label} = $is_favorite;
+	if ($is_favorite == 0){delete($settings->{favorites}{$label})};
+      }
     $self->session->flush;
     return (204,'text/plain',undef);
 }
 
+
+#
 # parameters:
 #       method: 'post',
 #       parameters: {

@@ -878,7 +878,7 @@ use Data::Dumper;
 # Render Track Table - Invoked to draw the checkbox group in the "Select Tracks" tab. It creates a hyperlinked set of feature names.
 sub render_track_table {
   my $self     = shift;
-  warn "bleh";
+  warn "bleh" if DEBUG;
   my $settings = $self->state;
   my $source   = $self->data_source;
 

@@ -887,25 +887,24 @@ sub render_track_table {
   my $an;
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
-  my @labels;
+  my @labels=$self->potential_tracks;
   
-  warn "favorites = {$settings->{show_favorites}}" if DEBUG;
+  warn "favorites = {$settings->{show_favorites}} " if DEBUG;
  
       
   if( $settings->{show_favorites}){
 
-		    @labels = ();
+# 		    @labels = ();
 		     if($settings->{clear_favorites}){
 				  $settings->{favorites}={};	
 				  @labels= ();
 		   	    
 				 }else{
-		    foreach $an(keys %{$settings->{favorites}})
-			  {
- 			  push @labels,$an
- 			  if $settings->{favorites}->{$an} == 1;
-			 
-			  }
+		  warn "favorites = @labels = $settings->{show_favorites}" if DEBUG;	
+		   @labels= grep {$settings->{favorites}{$_}} @labels;
+#  			  if $settings->{favorites}{$_}== 1;
+		  warn "favorites = @labels" if DEBUG;	 
+			  
 			      if($settings->{clear_favorites}){
 				  $settings->{favorites}={};	
 				  @labels= $self->potential_tracks;

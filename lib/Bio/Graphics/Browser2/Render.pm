@@ -833,6 +833,7 @@ sub render_body {
   }
 
   $main_page .= $self->render_select_track_link;
+;
 
   my $tracks        = $self->render_tracks_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";

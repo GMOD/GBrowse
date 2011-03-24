@@ -403,7 +403,7 @@ sub wrap_rendered_track {
     my $height = $args{'height'};
     my $url    = $args{'url'};
     my $titles = $args{'titles'};
-
+  
     # track_type Used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
     my $status = $args{'status'};    # for debugging
@@ -416,7 +416,10 @@ sub wrap_rendered_track {
     my $help     = "$buttons/query.png";
     my $download = "$buttons/download.png";
     my $configure= "$buttons/tools.png";
-    my $menu = "$buttons/menu.png";
+    my $menu 	 = "$buttons/menu.png";
+    my $favicon  = "$buttons/fmini.png";
+    my $favicon_2= "$buttons/fmini_2.png";
+    my $add_or_remove = $self->language->translate('ADDED_TO') || 'Add track to favorites';
     
 
     my $settings = $self->settings;
@@ -492,7 +495,7 @@ sub wrap_rendered_track {
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
     my $help_click     = "GBox.showTooltip(event,'$help_url',1)"; 
 
-
+    
 
     my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
@@ -513,20 +516,25 @@ sub wrap_rendered_track {
     }
     $title =~ s/:(overview|region|detail)$//;
 
-    
-
+    my $fav_click      =  "toggle_bar_stars(event,'fav_${label}', '$label', '$title')";
+   
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
+    my $starIcon;
+       $starIcon = ($settings->{favorites}{$label}) ? $favicon_2 : $favicon;
     my @images = (
-	img({   -src         => $icon,
+	img({   -src         => $icon, 
                 -id          => "${label}_icon",
                 -onClick     =>  "collapse('$label')",
                 -style       => 'cursor:pointer',
 		$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')"),
             }
         ),
+
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
+
 		-onClick     => "ShowHideTrack('$label',false)",
+# 
                 -style       => 'cursor:pointer',
                 $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
             }
@@ -538,6 +546,18 @@ sub wrap_rendered_track {
                     "$balloon_style.showTooltip(event,'$share_this_track')"),
             }
         ),
+
+
+	
+        $fav_click ? img({   -src         => $starIcon,
+				-id          =>"fav_${label}",
+				-style       => 'cursor:pointer',
+				-onmousedown => $fav_click,
+				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$add_or_remove')"),
+# 				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
+			    })
+	              : '',
+	
 
         $config_click ? img({   -src         => $configure,
 				-style       => 'cursor:pointer',
@@ -553,22 +573,27 @@ sub wrap_rendered_track {
 			      })
 	                 : '',
 
-        img({   -src         => $help,
-                -style       => 'cursor:pointer',
-                -onmousedown => $help_click,
-                $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$about_this_track')"),
-            }
-        )
+       
 
-	);
+
+
+	); 
+
+
+use Data::Dumper;
    my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
  
   my $cancel_ipad = 'Turn off';
-  my $share_ipad = 'Share';
+  my $share_ipad = 'Share'; 
   my $configure_ipad = 'Configure';
   my $download_ipad = 'Download';
   my $about_ipad = 'About track';
-  
+ 
+
+#    $settings->{favorites} = {};
+#    print Dumper($settings->{favorites}{$label});
+  my $bookmark;  
+#  = ($HTMLPAGE->{favorites}{$label}) ? 'Favorite' : 'Unfavorite';
     my $menuicon = img ({-src => $menu, 
 			 -style => 'padding-right:15px;',},),
    
@@ -576,22 +601,24 @@ sub wrap_rendered_track {
  	
  	   
  
- 	   div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
- 	   div({-class => 'ipadcollapsed', 
+ 	     div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
+	     div({-class => 'ipadcollapsed', 
                 -id    => "${label}_icon", 
  		-onClick =>  "collapse('$label')",
 		
 		},
- 		 div({-class => 'linkbg', -onClick => "swap(this,'Collapse','Expand')", -id => "${label}_expandcollapse", },$ipad_collapse)),
- 	    div({-class => 'ipadcollapsed',
+	     div({-class => 'linkbg', -onClick => "swap(this,'Collapse','Expand')", -id => "${label}_expandcollapse", },$ipad_collapse)),
+	     div({-class => 'ipadcollapsed',
  		 -id => "${label}_kill",
  		 -onClick     => "ShowHideTrack('$label',false)",
 					  }, div({-class => 'linkbg',},
  					    $cancel_ipad)),
-     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, div({-class => 'linkbg',},$share_ipad)),
+	     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, div({-class => 'linkbg',},$share_ipad)),
  	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
+	     div({-class => 'ipadcollapsed',  -onmousedown => $fav_click,}, div({-class => 'linkbg', -onClick => "swap(this,'Favorite','Unfavorite')"},$bookmark)),
  	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,}, div({-class => 'linkbg',},$download_ipad)),
  	     div({-class => 'ipadcollapsed', -style => 'width:200px',  -onmousedown => $help_click,}, div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
+	    
  	    
  
  		  );
@@ -678,7 +705,7 @@ sub wrap_rendered_track {
     my $html = div({-class=>'centered_block',
 		 -style=>"position:relative;overflow:hidden"
 		},
-                ( $show_titlebar ? $titlebar : '' ) . $popmenu .  $subtrack_labels . $inner_div . $overlay_div ) . ( $map_html || '' );
+         ($show_titlebar ? $titlebar : '' ) . $popmenu .  $subtrack_labels . $inner_div . $overlay_div ) . ( $map_html || '' );
     return $html;
 }
 
@@ -1364,6 +1391,9 @@ sub run_local_requests {
     my $filters = $self->generate_filters($settings,$source,\@labels_to_generate);
 
     my (%children,%reaped);
+
+
+
 
     local $SIG{CHLD} = sub {
 	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {

@@ -890,8 +890,9 @@ sub render_track_table {
   my @labels=$self->potential_tracks;
   
   warn "favorites = {$settings->{show_favorites}} " if DEBUG;
- 
-      
+
+#  my $update= "<script type='text/javascript'>homeToselectWrapper();</script>";
+#       return $update;
   if( $settings->{show_favorites}){
 
 # 		    @labels = ();
@@ -1403,7 +1404,8 @@ sub render_select_track_link {
     my $self  = shift;
     my $title = $self->translate('SELECT_TRACKS');
     return button({-name=>$title,
-		    -onClick => "Controller.select_tab('track_page')"
+		    -onClick => "Controller.select_tab('track_page')",
+		  
 		  }
 	  );
 }
@@ -1430,7 +1432,8 @@ sub render_select_clear_link {
              
 	    return a({-href=>'javascript:void(0)',
 		     
-		    -onClick => "clearallfav($clear);"
+		    -onClick => "clearallfav($clear);",
+		    
 		      },
 		   $title);
 
@@ -1525,7 +1528,9 @@ sub render_select_browser_link {
 
     if ($style eq 'button') {
 	    return button({-name=>$title,
-		           -onClick => "Controller.select_tab('main_page')"
+		           -onClick => "Controller.select_tab('main_page')",
+			   
+# 		   "Controller.update_section('range');"
 		          }
 	   
 	        );

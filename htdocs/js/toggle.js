@@ -114,16 +114,100 @@ function removeByElement(arrayName,arrayElement)
       } 
   }
 ///////////////////////////////////////////////////////
+function homeToselectWrapper(){
 
- function pausecomp(millis) 
-{
-var date = new Date();
-var curDate = null;
-
-do { curDate = new Date(); } 
-while(curDate-date < millis);
+//    Controller.select_tab('main_page');
+		    Controller.update_sections('main_page');
+  		   Controller.update_sections('range'); 
 }
+
  
+function toggle_bar_stars(event,imgID, label, title){
+    var imgTag = document.getElementById(imgID);
+
+//   alert(imgTag.src);
+  var fullPathName = imgTag.src;
+  var pathSplit = fullPathName.split("/");
+  var getfileNameExt = pathSplit.length - 1;
+  var fullFilePath = '';
+ 
+// alert(imgID);
+// alert(imgTag);
+// alert(title);
+  if (pathSplit.length == 0)
+  {
+    fullFilePath = ''; 
+  }
+  else if (pathSplit.length > 0)
+  {
+    fullFilePath = fullPathName.replace(pathSplit[getfileNameExt], ''); 
+  }
+ 
+  var fileNameExt = pathSplit[getfileNameExt]; 
+  var fileNameSpilt = fileNameExt.split("."); 
+  var fileName = fileNameSpilt[0]; // just the file name
+  var fileExt = fileNameSpilt[1]; // just the file extention
+  var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
+  var imgName ='';
+  var show;     
+  
+ 
+  if (fileNameMainSpilt.length > 1)
+  {
+   
+    var fileNameMain = fileNameMainSpilt.length - 1;
+    fileNameMain = fileNameMainSpilt[fileNameMain]; 
+    if (fileNameMain == 2)
+    {
+      imgName = fileNameMainSpilt[0] + '.' + fileExt;
+   
+   
+       favorite = false;
+   
+    }else{
+      imgName = fileName + '_2.' + fileExt;
+  
+  
+      favorite = true;	
+      
+      
+	}
+  }else{
+    imgName = fileName + '_2.' + fileExt;
+
+
+    favorite = true; 
+    
+	}
+
+ show = (favorite == true) ? 1 : 0;
+
+ 
+//  alert(trackStatus);
+//    
+   new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'set_favorite',
+  			label:  label,
+ 			favorite:show,
+  	          }});
+		  
+		  
+ var finalFile = fullFilePath + imgName;
+   imgTag.src = finalFile;
+   
+   
+  
+  refresh(0);
+  return false;
+
+
+
+}
+
+
 
 
 function togglestars(event,imgID, txtID, favorites,cellid)
@@ -263,6 +347,7 @@ new Ajax.Request(document.URL, {
    
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
+
   return false;
 
 
@@ -521,6 +606,7 @@ Controller.update_sections(new Array(track_listing_id),'',1,false);
  
  
 };
+
 
 
 function refresh(ison){

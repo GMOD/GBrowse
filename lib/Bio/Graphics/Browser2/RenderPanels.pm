@@ -547,12 +547,14 @@ sub wrap_rendered_track {
             }
         ),
 
-
+    
 	
-        $fav_click ? img({   -src         => $starIcon,
+        $fav_click ? img({   	-src         => $starIcon,
 				-id          =>"fav_${label}",
+				-class       => 'toolbarStar',
 				-style       => 'cursor:pointer',
 				-onmousedown => $fav_click,
+				
 				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$add_or_remove')"),
 # 				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
 			    })

@@ -114,12 +114,7 @@ function removeByElement(arrayName,arrayElement)
       } 
   }
 ///////////////////////////////////////////////////////
-function homeToselectWrapper(){
 
-//    Controller.select_tab('main_page');
-		    Controller.update_sections('main_page');
-  		   Controller.update_sections('range'); 
-}
 
  
 function toggle_bar_stars(event,imgID, label, title){
@@ -224,9 +219,8 @@ function togglestars(event,imgID, txtID, favorites,cellid)
   var fullFilePath = '';
   var str = imgID.replace("ficonpic_","");
   var labels_Range = new Array();
+  var ministars_Range = new Array();
  
-
-
   if (pathSplit.length == 0)
   {
     fullFilePath = ''; 
@@ -243,12 +237,19 @@ function togglestars(event,imgID, txtID, favorites,cellid)
   var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
   var imgName ='';
   var show;     
-  
+
+
   
   var stars = getElementsByClassName("star");  
-  idtoarray(stars);
+  idtoarray(stars,"star");
   var starsid = idArray;
-
+//   /*alert*/(starsid);
+  var ministars = getElementsByClassName("toolbarStar");
+  idtoarray(ministars, "toolbarStar");
+  var ministarsids= idArray;
+  
+//   alert(ministarsids);
+  
   var firstIndex;
   if (!event.shiftKey){
   firstIndex = starsid.findIndex(imgID); 
@@ -274,15 +275,14 @@ function togglestars(event,imgID, txtID, favorites,cellid)
       txtTag.style.fontWeight = "900";
   
       favorite = true;	
-      
-      
+
 	}
   }else{
     imgName = fileName + '_2.' + fileExt;
     txtTag.style.fontWeight = "900";
 
     favorite = true; 
-    
+          
 	}
 
       
@@ -302,7 +302,10 @@ function togglestars(event,imgID, txtID, favorites,cellid)
   			label:   imgID,
  			favorite:show,
   	          }});
-
+     var miniID = 'fav_'+imgID;
+  var browserstarTag = $(miniID);
+    var blank_min_src =fullFilePath+"fmini.png";
+    var coloured_min_src = fullFilePath+"fmini_2.png";
   
 if (event.shiftKey) {
 
@@ -323,28 +326,38 @@ if (event.shiftKey) {
  
        var range = lastIndex - firstIndex; 
     for( i=firstIndex , j = 0; i<=lastIndex, j <= range ; i++, j++){
-   labels_Range[j] = starsid[i]
+   labels_Range[j] = starsid[i];
+
    }
-   var labels_json = labels_Range.toString();
+   var labels_string = labels_Range.toString();
 
-
+    
 new Ajax.Request(document.URL, {
   	          method: 'POST',
   		  asynchronous:true,
   		  parameters: {
   		        action:    'set_favorite',
-  			label:  labels_json,
+  			label:  labels_string,
+			
  			favorite:show,
   	          }});
+		  
+  var minisrc = (show == 1) ? coloured_min_src : blank_min_src;
 
-     
+//     alert(minisrc);
        for(var i=firstIndex ;i<=lastIndex; i++){
    stars[i].src= fullFilePath + imgName;      
+   ministars[i].src = minisrc;
+   
        }
     }
-
-
-   
+    
+  
+// (favorite == true) ? fullFilePath+'fmini_2.png' : fullFilePath+'fmini.png';
+   browserstarTag.src = (favorite == true) ? coloured_min_src : blank_min_src;
+//    alert(browserstarTag.src);
+//   alert(blank_min_src);
+//   alert(coloured_min_src);
   var finalFile = fullFilePath + imgName;
   imgTag.src = finalFile;
 
@@ -354,14 +367,14 @@ new Ajax.Request(document.URL, {
 }
 
 
-function idtoarray(stars)
+function idtoarray(stars,class)
 {
  
 idArray = new Array();
  
-    for (x=0; x<stars.length; x++) {
-        if (stars[x].className==="star") {
-        idArray[x] = stars[x].id
+    for (x=0, y=0; x<stars.length; x++,y++) {
+        if (stars[x].className===class) {
+        idArray[y] = stars[x].id
         }
  
 }
@@ -582,7 +595,8 @@ function clearallfav(clear){
   
   
 var e = $(track_listing_id);// all e._____ objects are visual effects
-
+var ministars = getElementsByClassName("toolbarStar");
+var i;
 clear =1;
 
 e.hide();
@@ -603,7 +617,9 @@ new Ajax.Request(
 e.show();
 		        
 Controller.update_sections(new Array(track_listing_id),'',1,false);
- 
+ for (i in ministars){
+   ministars[i].src ="http://localhost/gbrowse2/images/buttons/fmini.png";
+ }
  
 };
 
@@ -645,8 +661,8 @@ new Ajax.Request(
 		);
                   
 e.show();
-		        
-Controller.update_sections(new Array(track_listing_id),'',1,false)
+
+
 
  
 };

@@ -57,11 +57,12 @@ function ShowHideTrack(track_name,visible) {
   Controller.each_track(track_name,function(gbtrack) {
        var el_id   = gbtrack.track_div_id;
        var element = $(el_id);
-
+       
        if (visible) {
            if (element.style.display == "none") { 
              element.style.display="block";
              Controller.set_track_visibility(gbtrack.track_id, 1);
+	     
            }
        }
        else {

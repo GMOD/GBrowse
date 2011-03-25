@@ -2047,7 +2047,7 @@ sub track_visible {
 sub update_state_from_cgi {
   my $self  = shift;
   my $state = $self->state;
-
+warn "state = $state";
   $self->update_options($state);
   $self->update_coordinates($state);
   $self->update_region($state);

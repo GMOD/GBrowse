@@ -748,6 +748,7 @@ sub install_filter {
     return $out_fh if $child;
 
     # we are in child now
+    Bio::Graphics::Browser2::Render->prepare_fcgi_for_fork('child');
     my $unzip = IO::File->new("| $command") or die "Can't open $command: $!";
     my $buffer;
     while ((my $bytes = read($in_fh,$buffer,8192))>0) {

@@ -237,7 +237,11 @@ function togglestars(event,imgID, txtID, favorites,cellid)
   var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
   var imgName ='';
   var show;     
-
+     var miniID = 'fav_'+imgID;
+  
+  var browserstarTag = document.getElementById(miniID);
+    var blank_min_src =fullFilePath+"fmini.png";
+    var coloured_min_src = fullFilePath+"fmini_2.png";
 
   
   var stars = getElementsByClassName("star");  
@@ -302,10 +306,7 @@ function togglestars(event,imgID, txtID, favorites,cellid)
   			label:   imgID,
  			favorite:show,
   	          }});
-     var miniID = 'fav_'+imgID;
-  var browserstarTag = $(miniID);
-    var blank_min_src =fullFilePath+"fmini.png";
-    var coloured_min_src = fullFilePath+"fmini_2.png";
+
   
 if (event.shiftKey) {
 
@@ -352,9 +353,11 @@ new Ajax.Request(document.URL, {
        }
     }
     
-  
+
 // (favorite == true) ? fullFilePath+'fmini_2.png' : fullFilePath+'fmini.png';
+   if(browserstarTag){
    browserstarTag.src = (favorite == true) ? coloured_min_src : blank_min_src;
+   };
 //    alert(browserstarTag.src);
 //   alert(blank_min_src);
 //   alert(coloured_min_src);
@@ -662,6 +665,7 @@ new Ajax.Request(
                   
 e.show();
 
+Controller.update_sections(new Array(track_listing_id),'',1,false)
 
 
  

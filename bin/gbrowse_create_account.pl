@@ -79,10 +79,10 @@ my $uid = $userdb->userid_from_username($name);
 unless ($uid) {
 # this creates a new session for the admin user
     my $session     = $globals->session;
-    my $favoritetable = $globals->favorites;
+
     my $sessionid   = $session->id;
     my $uploadsid   = $session->uploadsid;
-    my @favorites_list = $favoritetable->favorites;
+ 
     $session->flush();
 
     my ($status,undef,$message) = 

@@ -1141,6 +1141,57 @@ var GBrowseController = Class.create({
      }
   },
 
+  saveSession:
+  function(/*settings_json*/){
+//     var settings = settings_json.evalJSON();
+    
+
+alert('hello');
+
+
+ new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'save_session',
+  			name:  'snapshot_test',
+	
+  	          }});
+		  
+   /* 
+    for (var o in settings){
+    alert(o+" : "+settings[o]);
+    }*/
+  },
+		
+			     
+  setSession:
+  function(/*settings_json*/){
+//     var settings = settings_json.evalJSON();
+    
+  
+  
+alert('hello');
+
+
+ new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action: 'set_session',
+  			name: 'hello',
+	
+  	          }});
+		  
+		  
+		
+		  
+   /* 
+    for (var o in settings){
+    alert(o+" : "+settings[o]);
+    }*/
+  },
+					     
   wait_for_initialization:
   function (html, callback) {
       $('main').setOpacity(0.2);

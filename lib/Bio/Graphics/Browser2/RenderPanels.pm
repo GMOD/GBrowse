@@ -13,6 +13,7 @@ use Bio::Graphics::Browser2::Util qw[shellwords url_label];
 use Bio::Graphics::Browser2::Render::Slave::Status;
 use IO::File;
 use Time::HiRes 'sleep','time';
+use Data::Dumper;
 use POSIX 'WNOHANG','setsid';
 use CGI qw(:standard param escape unescape);
 
@@ -269,6 +270,7 @@ sub make_requests {
 
 	my $format_option = $settings->{features}{$label}{options};
 
+
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
 	@subtrack_args = @{$settings->{subtracks}{$label}} 
@@ -293,6 +295,7 @@ sub make_requests {
 				     $format_option, 
 				     $label ],
 		    );
+    
 		my $msg = eval {$args->{remotes}->error($track)};
 		$cache_object->flag_error($msg || "Could not fetch data for $track");
 		$d{$track} = $cache_object;
@@ -323,7 +326,7 @@ sub make_requests {
 			     $label ],
 	    -cache_time => $cache_time
         );
-
+#       warn "object= $format_option";
         $d{$label} = $cache_object;
     }
 
@@ -391,6 +394,7 @@ sub render_tracks {
     }
     
     return \%result;
+ 
 }
 
 # Returns the HMTL to show a track with controls, title, arrows, etc.
@@ -582,7 +586,7 @@ sub wrap_rendered_track {
 	); 
 
 
-use Data::Dumper;
+
    my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
  
   my $cancel_ipad = 'Turn off';
@@ -594,7 +598,7 @@ use Data::Dumper;
 
 #    $settings->{favorites} = {};
 #    print Dumper($settings->{favorites}{$label});
-  my $bookmark;  
+my $bookmark = 'Favorite'; 
 #  = ($HTMLPAGE->{favorites}{$label}) ? 'Favorite' : 'Unfavorite';
     my $menuicon = img ({-src => $menu, 
 			 -style => 'padding-right:15px;',},),
@@ -2086,6 +2090,15 @@ sub create_track_args {
   my $is_summary      = $source->show_summary($label,$self->vis_length,$self->settings);
   
   my $state            = $self->settings;
+
+#    my %temp = %$state;
+# 
+# foreach my $k (keys %temp) {
+#        warn "$k: $temp{$k}\n";
+#     }
+
+
+
   my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 
                     keys %{$state->{features}{$label}{semantic_override}};
   $semantic_override ||= 0;

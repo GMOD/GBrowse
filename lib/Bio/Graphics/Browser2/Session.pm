@@ -15,6 +15,7 @@ use Carp 'carp';
 use constant LOCK_TIMEOUT => 10;
 eval "require Time::HiRes;";
 
+
 my $HAS_NFSLOCK;
 my $HAS_MYSQL;
 
@@ -31,8 +32,8 @@ use constant DEBUG_LOCK => DEBUG || 0;
 sub new {
 	my $class    = shift;
 	my %args     = @_;
-	my ($driver,$id,$session_args,$default_source,$lockdir,$locktype,$expire_time,$favorites) 
-	  = @args{'driver','id','args','source','lockdir','locktype','expires','favorites'};
+	my ($driver,$id,$session_args,$default_source,$lockdir,$locktype,$expire_time) 
+	  = @args{'driver','id','args','source','lockdir','locktype','expires'};
 
 	$CGI::Session::NAME = 'gbrowse_sess';     # custom cookie
 	$CGI::Session::Driver::file::NoFlock = 1; # flocking unnecessary because we roll our own
@@ -66,6 +67,7 @@ sub new {
 sub load_session {
     my $self = shift;
     $self->session_argv(@_);
+#     print Dumper("session = "(\%{$self->session_argv(@_)});
     return CGI::Session->new($self->session_argv);
 }
 
@@ -368,6 +370,15 @@ sub config_hash {
   my $self = shift;
   my $source  = $self->source;
   my $session = $self->{session};
+ 
+  my $snapshots =$session->{_DATA};
+  my $snapshot_value = $snapshots->{yeast};
+  my $pagesettings = $snapshot_value->{page_settings};
+ my %temp = %$pagesettings;
+while ( (my $key, my $value) = each %temp)
+{
+  warn "key: $key, value: $temp{$key}\n";
+};
   $session->param($source=>{}) unless $session->param($source);
   return $session->param($source);
 }

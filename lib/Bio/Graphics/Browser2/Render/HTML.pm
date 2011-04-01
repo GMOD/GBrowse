@@ -1013,12 +1013,19 @@ warn "section = $name" if DEBUG;
 			  
 			 },
 			  $showicon,);
+
+ if($settings->{favorites}{$label}){
 #     
-    $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline"}, 
+    $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline;font-weight:900;"}, 
 		      a({@args},$key),  
 		     
-		      span({-style => 'float:left'}, $favoriteicon,)
-		   );
+		      span({-style => 'float:left'}, $favoriteicon,))
+		   }else{
+		   $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline;font-weight:normal;"}, 
+		      a({@args},$key),  
+		     
+		      span({-style => 'float:left'}, $favoriteicon,))
+			    }
  
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
        my $escaped_label = CGI::escape($label);

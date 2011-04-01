@@ -179,10 +179,7 @@ sub render_navbar {
   my $source_form = div({-id=>'source_form'},$self->source_form());
 
   my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
-  
-# my $sessionButton = div({-id=>'sessionbutton'},$self->render_select_saveSession());
-# 
-# my $setSession = div({-id=>'sessionbutton'},$self->render_select_setSession());
+
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
 			   table({-border=>0,-width=>'100%'},
@@ -193,13 +190,7 @@ sub render_navbar {
 				    td({-align=>'left'},
 				       $sliderform || '&nbsp;'
 				    ),
-# 				     td({-align=>'left'},
-# 				       $sessionButton || '&nbsp;'
-# 				    ),
-# ,
-# 				     td({-align=>'left'},
-# 				       $setSession || '&nbsp;'
-# 				    )
+# 			
 				 )
 			   ),
 			   $self->html_frag('html3',$self->state)
@@ -1531,40 +1522,6 @@ sub render_select_favorites_link {
     }
 
 }
-
-
-sub render_select_saveSession {
-my $self = shift;
-my $title = 'Save Session';
-
- return button({-name=>$title,
-		           -onClick => "Controller.saveSession()",
-			   
-# 		   "Controller.update_section('range');"
-		          },
-	   
-	        );
-}
-
-sub render_select_setSession {
-my $self = shift;
-my $title = 'Set Session';
-
- return button({-name=>$title,
-		           -onClick => "Controller.setSession()",
-			   
-# 		   "Controller.update_section('range');"
-		          },
-	   
-	        );
-}
-
-
-# sub save_session{
-# my $self = shift;
-# warn "self = $self";
-# warn "hello";
-# }
 
 
 # Render Select Browser Link - Returns the HTML for the "Back to Browser" button/link.

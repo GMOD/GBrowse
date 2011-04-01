@@ -499,15 +499,18 @@ sub upload_file {
     my $self = shift;
     my ($file_name, $fh, $content_type, $overwrite) = @_;
 
+    my $original_name = $file_name;
+    $file_name    =~ s/\.(gz|bz2)$//;  # to indicate that it is decompressed
+
     warn "$file_name: OVERWRITE = $overwrite" if DEBUG;
 
     my $filename = $self->trackname_from_url($file_name, !$overwrite);
     
     $content_type ||= '';
 
-    if ($content_type eq 'application/gzip' or $file_name =~ /\.gz$/) {
+    if ($content_type eq 'application/gzip' or $original_name =~ /\.gz$/) {
 		$fh = $self->install_filter($fh,'gunzip -c');
-    } elsif ($content_type eq 'application/bzip2' or $file_name =~ /\.bz2$/) {
+    } elsif ($content_type eq 'application/bzip2' or $original_name =~ /\.bz2$/) {
 		$fh = $self->install_filter($fh,'bunzip2 -c');
     }
     

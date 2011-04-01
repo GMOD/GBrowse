@@ -14,6 +14,7 @@
    * All newly-added tracks now appear at top of panel rather than at bottom, as per user request.
    * "remote renderer" option can now appear in GBrowse.conf as a global default 
    * Fixed handling of uploaded .gz files under FastCGI so that they don't result in a server error message.
+   * Changed handling of uploaded wiggle files so that autoscaling is set to per-chromosome by default.
 
 2.26
    * Fixed account registration confirmation screen, which was blacked out on all

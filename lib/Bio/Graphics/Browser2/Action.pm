@@ -333,38 +333,6 @@ sub ACTION_clear_favorites {
 }
 
 
-# sub ACTION_set_session {
-# 
-# }
-
-
-sub ACTION_save_session {
-    my $self = shift;
-    my $q     = shift;
-    my $name = $q->param('name');
-    my $settings = $self->state;
-# 
-# 
-#    %snapshot = %$settings;
-#     delete(%snapshot{snapshots});
-# 
-# 
-#     $settings->{snapshots}->{$name} = %snapshot;
-# #     warn "settings = $settings";
-# # warn "$self";
-# 
-# 
-#   my %temsess = %{$settings->{snapshots}}; 
-#  while ( (my $key, my $value) = each %temsess)
-#  {
-#    warn "key: $key, value: $temsess{$key}\n";
-#  };
-
-
-    $self->session->flush;
-    return (204,'text/plain',undef);
-}
-
 
 sub ACTION_reconfigure_plugin {
     my $self   = shift;

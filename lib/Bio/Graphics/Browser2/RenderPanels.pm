@@ -2092,12 +2092,6 @@ sub create_track_args {
   
   my $state            = $self->settings;
 
-#    my %temp = %$state;
-# 
-# foreach my $k (keys %temp) {
-#        warn "$k: $temp{$k}\n";
-#     }
-
 
 
   my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 

@@ -370,15 +370,7 @@ sub config_hash {
   my $self = shift;
   my $source  = $self->source;
   my $session = $self->{session};
- 
-  my $snapshots =$session->{_DATA};
-  my $snapshot_value = $snapshots->{yeast};
-  my $pagesettings = $snapshot_value->{page_settings};
- my %temp = %$pagesettings;
-while ( (my $key, my $value) = each %temp)
-{
-  warn "key: $key, value: $temp{$key}\n";
-};
+
   $session->param($source=>{}) unless $session->param($source);
   return $session->param($source);
 }

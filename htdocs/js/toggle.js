@@ -139,9 +139,9 @@ function toggle_bar_stars(event,imgID, label, title){
   }
  
   var fileNameExt = pathSplit[getfileNameExt]; 
-  var fileNameSpilt = fileNameExt.split("."); 
-  var fileName = fileNameSpilt[0]; // just the file name
-  var fileExt = fileNameSpilt[1]; // just the file extention
+  var fileNameSplit = fileNameExt.split("."); 
+  var fileName = fileNameSplit[0]; // just the file name
+  var fileExt = fileNameSplit[1]; // just the file extention
   var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
   var imgName ='';
   var show;     
@@ -231,9 +231,9 @@ function togglestars(event,imgID, txtID, favorites,cellid)
   }
  
   var fileNameExt = pathSplit[getfileNameExt]; 
-  var fileNameSpilt = fileNameExt.split("."); 
-  var fileName = fileNameSpilt[0]; // just the file name
-  var fileExt = fileNameSpilt[1]; // just the file extention
+  var fileNameSplit = fileNameExt.split("."); 
+  var fileName = fileNameSplit[0]; // just the file name
+  var fileExt = fileNameSplit[1]; // just the file extention
   var fileNameMainSpilt = fileName.split("_"); // check for a spilt on '_'
   var imgName ='';
   var show;     
@@ -639,7 +639,7 @@ new Ajax.Request(
                   
 e.show();
 		        
-Controller.update_sections(new Array(track_listing_id),'',1,false);
+Controller.update_sections(new Array(track_listing_id));
  for (i in ministars){
    ministars[i].src ="http://localhost/gbrowse2/images/buttons/fmini.png";
  }
@@ -684,11 +684,7 @@ new Ajax.Request(
 		);
                   
 e.show();
-
-Controller.update_sections(new Array(track_listing_id),'',1,false)
-
-
- 
+Controller.update_sections(new Array(track_listing_id));
 };
 //Wrapper function -- will toggle the 'Show All and Show Favorites' texit 
 //then checks to see whether the favorites should be displayed or if they 
@@ -734,9 +730,7 @@ new Ajax.Request(
 		
 e.show();
 		        
-Controller.update_sections(new Array(track_listing_id),'',1,false)
-  
- 
+Controller.update_sections(new Array(track_listing_id));
 };
 
 function collapse(element_name) {

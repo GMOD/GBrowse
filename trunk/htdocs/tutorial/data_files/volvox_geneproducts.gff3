@@ -1,9 +1,0 @@
-##gff-version 3
-##Note: See http://song.sourceforge.net
-
-# file: volvox_geneproducts.gff3
-ctgA	example	remark	1000	2000	.	.	.	Name=hga
-ctgA	example	protein_coding_primary_transcript	1100	2000	.	+	.	Name=Gene:hga
-ctgA	example	polypeptide	1200	1900	.	+	.	Name=Protein:HGA
-ctgA	example	protein_coding_primary_transcript	1600	3000	.	-	.	Name=Gene:hgb
-ctgA	example	polypeptide	1800	2900	.	-	.	Name=Protein:HGB

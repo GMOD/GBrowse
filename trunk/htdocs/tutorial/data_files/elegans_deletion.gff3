@@ -1,8 +1,0 @@
-##gff-version 3
-#date Tue Feb 24 06:39:41 2004
-#source gbrowse GFFDumper plugin
-#NOTE: Selected features dumped.
-
-C01F4	Allele	deletion	27101	28837	.	+	.	Name=ok722
-C01F4	Allele	deletion	18720	19202	.	+	.	Name=ok818
-

@@ -179,10 +179,10 @@ sub render_navbar {
   my $source_form = div({-id=>'source_form'},$self->source_form());
 
   my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
-  
-# my $sessionButton = div({-id=>'sessionbutton'},$self->render_select_saveSession());
-# 
-# my $setSession = div({-id=>'sessionbutton'},$self->render_select_setSession());
+my $sessionButton = div({-id=>'sessionbutton'},$self->render_select_saveSession());
+
+my $setSession = div({-id=>'sessionbutton'},$self->render_select_setSession());
+
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
 			   table({-border=>0,-width=>'100%'},
@@ -193,13 +193,14 @@ sub render_navbar {
 				    td({-align=>'left'},
 				       $sliderform || '&nbsp;'
 				    ),
-# 				     td({-align=>'left'},
-# 				       $sessionButton || '&nbsp;'
-# 				    ),
-# ,
-# 				     td({-align=>'left'},
-# 				       $setSession || '&nbsp;'
-# 				    )
+				    td({-align=>'left'},
+				       $sessionButton || '&nbsp;'
+				    ),
+
+				     td({-align=>'left'},
+				       $setSession || '&nbsp;'
+				    )
+# 			
 				 )
 			   ),
 			   $self->html_frag('html3',$self->state)
@@ -1013,12 +1014,19 @@ warn "section = $name" if DEBUG;
 			  
 			 },
 			  $showicon,);
+
+ if($settings->{favorites}{$label}){
 #     
-    $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline"}, 
+    $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline;font-weight:900;"}, 
 		      a({@args},$key),  
 		     
-		      span({-style => 'float:left'}, $favoriteicon,)
-		   );
+		      span({-style => 'float:left'}, $favoriteicon,))
+		   }else{
+		   $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline;font-weight:normal;"}, 
+		      a({@args},$key),  
+		     
+		      span({-style => 'float:left'}, $favoriteicon,))
+			    }
  
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
        my $escaped_label = CGI::escape($label);
@@ -1452,6 +1460,44 @@ sub render_select_clear_link {
 
 }
 
+
+
+
+sub render_select_saveSession {
+my $self = shift;
+my $title = 'Save Session';
+
+ return button({-name=>$title,
+		           -onClick => "Controller.saveSession()",
+			   
+# 		   "Controller.update_section('range');"
+		          },
+	   
+	        );
+}
+
+sub render_select_setSession {
+my $self = shift;
+my $title = 'Set Session';
+my $settings = $self->state;
+# $settings->{snapshot_active}=0;
+# warn "active = $settings->{snapshot_active}";
+
+ return button({-name=>$title,
+		-id=>'setsession',
+		-onClick => "Controller.setSession()",
+			   
+# 		   "Controller.update_section('range');"
+		          },
+	   
+	        );
+
+ 
+
+}
+
+
+
 sub render_select_refresh_link {
     my $self  = shift;
     my $style  = shift || 'button';
@@ -1524,40 +1570,6 @@ sub render_select_favorites_link {
     }
 
 }
-
-
-sub render_select_saveSession {
-my $self = shift;
-my $title = 'Save Session';
-
- return button({-name=>$title,
-		           -onClick => "Controller.saveSession()",
-			   
-# 		   "Controller.update_section('range');"
-		          },
-	   
-	        );
-}
-
-sub render_select_setSession {
-my $self = shift;
-my $title = 'Set Session';
-
- return button({-name=>$title,
-		           -onClick => "Controller.setSession()",
-			   
-# 		   "Controller.update_section('range');"
-		          },
-	   
-	        );
-}
-
-
-# sub save_session{
-# my $self = shift;
-# warn "self = $self";
-# warn "hello";
-# }
 
 
 # Render Select Browser Link - Returns the HTML for the "Back to Browser" button/link.

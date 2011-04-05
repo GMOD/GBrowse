@@ -372,16 +372,31 @@ sub config_hash {
   my $session = $self->{session};
  
   my $snapshots =$session->{_DATA};
-  my $snapshot_value = $snapshots->{yeast};
+  my $snapshot_value = $snapshots->{$source};
   my $pagesettings = $snapshot_value->{page_settings};
- my %temp = %$pagesettings;
-while ( (my $key, my $value) = each %temp)
-{
-  warn "key: $key, value: $temp{$key}\n";
-};
-  $session->param($source=>{}) unless $session->param($source);
-  return $session->param($source);
+  my %temp = %$pagesettings;
+
+
+
+
+# while ( (my $key, my $value) = each %temp)
+# {
+#   warn "key: $key, value: $temp{$key}\n";
+# };
+
+
+
+
+if($pagesettings->{snapshot_active}){  
+$pagesettings->{snapshots}->{$source}={} unless $pagesettings->{snapshots}->{$source};
+return $pagesettings->{snapshots}->{$source};
+}else{
+return $session->param($source);
+ $session->param($source=>{}) unless $session->param($source);
+    }
+
 }
+
 
 # problem with explicit DESTROY is that it gets called in all child
 # processes. Better to have the unlock happen when filehandle is truly

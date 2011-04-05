@@ -177,7 +177,8 @@ function toggle_bar_stars(event,imgID, label, title){
 
  show = (favorite == true) ? 1 : 0;
 
- 
+ var finalFile = fullFilePath + imgName;
+   imgTag.src = finalFile;
 //  alert(trackStatus);
 //    
    new Ajax.Request(document.URL, {
@@ -190,8 +191,7 @@ function toggle_bar_stars(event,imgID, label, title){
   	          }});
 		  
 		  
- var finalFile = fullFilePath + imgName;
-   imgTag.src = finalFile;
+ 
    
    
   
@@ -243,16 +243,26 @@ function togglestars(event,imgID, txtID, favorites,cellid)
     var blank_min_src =fullFilePath+"fmini.png";
     var coloured_min_src = fullFilePath+"fmini_2.png";
 
-  
+  ////select track stars
   var stars = getElementsByClassName("star");  
   idtoarray(stars,"star");
   var starsid = idArray;
-//   /*alert*/(starsid);
+  /////////////
+
+  var startext = getElementsByClassName("selectrackname");
+  idtoarray(startext,"selectrackname");
+  var starTextId = idArray;
+
+/////browser page stars
   var ministars = getElementsByClassName("toolbarStar");
   idtoarray(ministars, "toolbarStar");
+
   var ministarsids= idArray;
-  
-//   alert(ministarsids);
+//////////////
+
+
+
+
   
   var firstIndex;
   if (!event.shiftKey){
@@ -347,8 +357,18 @@ new Ajax.Request(document.URL, {
 
 //     alert(minisrc);
        for(var i=firstIndex ;i<=lastIndex; i++){
-   stars[i].src= fullFilePath + imgName;      
+   stars[i].src= fullFilePath + imgName;   
+   
+   if(imgName=='ficon.png'){
+   startext[i].style.fontWeight = "normal";
+   }else{
+     startext[i].style.fontWeight = "900";
+   }
+   
+   
+   if(ministars[i]){
    ministars[i].src = minisrc;
+   }
    
        }
     }
@@ -592,6 +612,9 @@ function swap(me,main,alt) {
 me.innerHTML = (me.innerHTML == main) ? alt : main;
 }
 
+function swap_button(me,main,alt) {
+me.value = (me.value == main) ? alt : main;
+}
 //same as updatetitle(below) but will refresh the favorites if the user 
 //decides to unclick a favorite while it is in show favorites mode
 function clearallfav(clear){

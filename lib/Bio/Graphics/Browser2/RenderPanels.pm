@@ -526,6 +526,16 @@ sub wrap_rendered_track {
     my $starIcon;
        $starIcon = ($settings->{favorites}{$label}) ? $favicon_2 : $favicon;
     my @images = (
+        $fav_click ? img({   	-src         => $starIcon,
+				-id          =>"fav_${label}",
+				-class       => 'toolbarStar',
+				-style       => 'cursor:pointer',
+				-onmousedown => $fav_click,
+				
+				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$add_or_remove')"),
+# 				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
+			    })
+	              : '',
 	img({   -src         => $icon, 
                 -id          => "${label}_icon",
                 -onClick     =>  "collapse('$label')",
@@ -553,16 +563,7 @@ sub wrap_rendered_track {
 
     
 	
-        $fav_click ? img({   	-src         => $starIcon,
-				-id          =>"fav_${label}",
-				-class       => 'toolbarStar',
-				-style       => 'cursor:pointer',
-				-onmousedown => $fav_click,
-				
-				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$add_or_remove')"),
-# 				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
-			    })
-	              : '',
+
 	
 
         $config_click ? img({   -src         => $configure,

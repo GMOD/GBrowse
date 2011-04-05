@@ -1141,56 +1141,6 @@ var GBrowseController = Class.create({
      }
   },
 
-  saveSession:
-  function(/*settings_json*/){
-//     var settings = settings_json.evalJSON();
-    
-
-alert('hello');
-
-
- new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action:    'save_session',
-  			name:  'snapshot_test',
-	
-  	          }});
-		  
-   /* 
-    for (var o in settings){
-    alert(o+" : "+settings[o]);
-    }*/
-  },
-		
-			     
-  setSession:
-  function(/*settings_json*/){
-//     var settings = settings_json.evalJSON();
-    
-  
-  
-alert('hello');
-
-
- new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action: 'set_session',
-  			name: 'hello',
-	
-  	          }});
-		  
-		  
-		
-		  
-   /* 
-    for (var o in settings){
-    alert(o+" : "+settings[o]);
-    }*/
-  },
 					     
   wait_for_initialization:
   function (html, callback) {
@@ -1255,7 +1205,63 @@ alert('hello');
   function(event, url) {
     GBox.showTooltip(event, url);
 	Controller.update_sections(new Array(custom_tracks_id));
-  }
+  },
+				     
+				    
+  saveSession:
+  function(/*settings_json*/){
+//     var settings = settings_json.evalJSON();
+    
+
+alert('hello');
+
+
+ new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'save_session',
+  			name:  'snapshot_test',
+	
+  	          }});
+		  
+   /* 
+    for (var o in settings){
+    alert(o+" : "+settings[o]);
+    }*/
+  },
+		
+			     
+  setSession:
+  function(/*settings_json*/){
+//     var settings = settings_json.evalJSON();
+var session_button = document.getElementById('setsession');
+swap_button(session_button, 'Set Session', 'Unset Session');
+  
+
+alert('hello');
+
+snapshot_active = (session_button.value == 'Set Session') ? 0 : 1;
+alert(session_button.value+ " "+snapshot_active);
+
+ new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action: 'set_session',
+  			name: 'snapshot_test',
+			active: snapshot_active,
+	
+  	          }});
+		  
+		  
+		
+		  
+   /* 
+    for (var o in settings){
+    alert(o+" : "+settings[o]);
+    }*/
+  },
 
 });
 

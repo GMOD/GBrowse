@@ -519,7 +519,8 @@ sub wrap_rendered_track {
 	$title = $source->setting($l=>'key') || $label;
     }
     $title =~ s/:(overview|region|detail)$//;
-
+     
+ 
     my $fav_click      =  "toggle_bar_stars(event,'fav_${label}', '$label', '$title')";
    
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
@@ -2091,6 +2092,12 @@ sub create_track_args {
   my $is_summary      = $source->show_summary($label,$self->vis_length,$self->settings);
   
   my $state            = $self->settings;
+
+#    my %temp = %$state;
+# 
+# foreach my $k (keys %temp) {
+#        warn "$k: $temp{$k}\n";
+#     }
 
 
 

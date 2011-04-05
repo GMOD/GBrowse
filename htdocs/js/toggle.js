@@ -193,9 +193,9 @@ function toggle_bar_stars(event,imgID, label, title){
  var finalFile = fullFilePath + imgName;
    imgTag.src = finalFile;
    
-   
-  
+// alert(isfavorites);
   refresh(0);
+
   return false;
 
 
@@ -658,18 +658,6 @@ var e = $(track_listing_id);// all e._____ objects are visual effects
 e.hide();
 e.setOpacity(0.3);
 
-		       
-new Ajax.Request(
-		document.URL, {
-		method: 'POST',
-		asynchronous:false,
-		parameters: {
-		action:    'show_favorites',
-		show: ison, //sends 0 or 1 
-		clear:0,
-			     }
-				}
-		);
 
 new Ajax.Request(
 		document.URL, {
@@ -678,7 +666,7 @@ new Ajax.Request(
 		parameters: {
 		action:    'clear_favorites',
 	
-		clear:0,
+		clear:ison,
 			     }
 				}
 		);
@@ -698,13 +686,17 @@ var refreshid = document.getElementById(refresh);
 var clearid = document.getElementById(clear);
 
 swap(me,main,alt);//toggle
-
-e.hide();
-e.setOpacity(0.3);
 ison = (me.innerHTML == main) ? 0 : 1;
 refreshid.style.display= (me.innerHTML == main) ? 'none' : 'block';
 clearid.style.left=(me.innerHTML == main) ? '350px' : '550px';
 clearid.style.bottom=(me.innerHTML == main) ? '30px' : '47px';
+
+
+
+
+e.hide();
+e.setOpacity(0.3);
+
 new Ajax.Request(
 		document.URL, {
 		method: 'POST',

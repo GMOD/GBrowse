@@ -180,6 +180,7 @@ sub render_navbar {
 
   my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
 
+
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
 			   table({-border=>0,-width=>'100%'},
@@ -189,7 +190,8 @@ sub render_navbar {
 				    ),
 				    td({-align=>'left'},
 				       $sliderform || '&nbsp;'
-				    ),
+				    )
+				
 # 			
 				 )
 			   ),
@@ -828,8 +830,8 @@ sub render_toggle_track_table {
  my $source   = $self->data_source;
   my $filter = $self->track_filter_plugin;
   my $settings = $self->state;
-$settings->{show_favorites} =0;
-$settings->{clear_favorites} =0;
+# $settings->{show_favorites} =0;
+# $settings->{clear_favorites} =0;
 ## adding javascript array at the top so we can pass it into a js array -- ugly but it works
   my $html = "<script>var favoritearray = []; </script>" ;
 
@@ -850,16 +852,16 @@ my $showicon =  img({
 
  
   $html .= div({-style=>'font-weight:bold'},'<<',$self->render_select_browser_link('link'));
- $html .= div({-id => 'showfavoritestext',-style=>'font-weight:bold; position:relative; left: 175px; bottom : 14px'},
+ $html .= div({-id => 'showfavoritestext',-style=>'font-weight:bold; position:relative; left: 175px; bottom : 14px; width: 200px;' },
 											  span({-id =>'showfavorites'},
 								      $favoriteicon),$self->render_select_favorites_link('link'));
 
 
- $html .= div({-id => 'showrefresh',-style=>'font-weight:bold; position:relative; left: 350px; bottom : 30px; display:none;'},
+ $html .= div({-id => 'showrefresh',-style=>'font-weight:bold; position:relative; left: 350px; bottom : 30px; width: 200px; display:none;'},
 											  span({-id =>'refresh'},
 								      $favoriteicon),$self->render_select_refresh_link('link'));
 
-$html .= div({-id => 'clearfavs',-style=>'font-weight:bold; position:relative; left: 350px; bottom : 30px;'},
+$html .= div({-id => 'clearfavs',-style=>'font-weight:bold; position:relative; left: 350px; bottom : 30px; width: 200px;'},
 											  span({-id =>'clear'},
 								      $favoriteicon),$self->render_select_clear_link('link'));
 
@@ -1449,6 +1451,44 @@ sub render_select_clear_link {
     }
 
 }
+
+
+
+
+sub render_select_saveSession {
+my $self = shift;
+my $title = 'Save Session';
+
+ return button({-name=>$title,
+		           -onClick => "Controller.saveSession()",
+			   
+# 		   "Controller.update_section('range');"
+		          },
+	   
+	        );
+}
+
+sub render_select_setSession {
+my $self = shift;
+my $title = 'Set Session';
+my $settings = $self->state;
+# $settings->{snapshot_active}=0;
+# warn "active = $settings->{snapshot_active}";
+
+ return button({-name=>$title,
+		-id=>'setsession',
+		-onClick => "Controller.setSession()",
+			   
+# 		   "Controller.update_section('range');"
+		          },
+	   
+	        );
+
+ 
+
+}
+
+
 
 sub render_select_refresh_link {
     my $self  = shift;
@@ -3539,7 +3579,7 @@ sub display_citation {
         $key .= " (at >$lim bp)";
    }
 
-   my $citation = div({-class => 'searchbody', -style => 'padding:10px;width:70%'}, h4($key), $cit_txt);
+   my $citation = div({-class => 'searchbody', -style => 'padding:10px;width:70%; '}, h4($key), $cit_txt);
      
  
    $return_html

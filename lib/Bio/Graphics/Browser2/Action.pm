@@ -333,6 +333,9 @@ sub ACTION_clear_favorites {
 }
 
 
+ 
+
+
 
 sub ACTION_reconfigure_plugin {
     my $self   = shift;

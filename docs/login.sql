@@ -34,7 +34,14 @@ CREATE TABLE session (
     username      varchar(32) not null,
     sessionid        char(32) not null UNIQUE,
     uploadsid        char(32) not null UNIQUE
+
 ) ENGINE=InnoDB;
+DROP TABLE IF EXISTS favorites; 
+CREATE TABLE favorites (
+    userid            integer not null PRIMARY KEY auto_increment,
+    username      varchar(32) not null, 
+    favorite	  varchar(32) not null
+)ENGINE=InnoDB;
 
 DROP TABLE IF EXISTS uploads;
 CREATE TABLE uploads (

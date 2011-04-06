@@ -189,7 +189,8 @@ sub render_navbar {
 				    ),
 				    td({-align=>'left'},
 				       $sliderform || '&nbsp;'
-				    )
+				    ),
+# 			
 				 )
 			   ),
 			   $self->html_frag('html3',$self->state)
@@ -349,7 +350,7 @@ sub render_html_head {
   push @scripts,{src=>"$js/$_"}
     foreach qw(
       buttons.js 
-      toggle.js 
+      trackFavorites.js
       karyotype.js
       rubber.js
       overviewSelect.js
@@ -365,6 +366,8 @@ sub render_html_head {
       track_pan.js
       ruler.js
       controller.js
+      sessionvars.js
+
     );
 
   # add scripts needed by plugins. Looks in /js folder unless specified.
@@ -641,9 +644,13 @@ sub render_instructions {
   : '';
 }
 
+
+
+
 # Renders the HTML for the spinning "busy" signal on the top-left corner of the page.
 sub render_busy_signal {
     my $self = shift;
+    
     return img({
         -id    => 'busy_indicator',
         -src   => $self->data_source->button_url.'/spinner.gif',
@@ -790,11 +797,14 @@ sub galaxy_form {
 sub render_track_filter {
     my $self   = shift;
     my $plugin = shift;
-
+    
     my $form         = $plugin->configure_form();
     my $plugin_type  = $plugin->type;
     my $action       = $self->translate('Configure_plugin');
     my $name         = $plugin->name;
+
+    my $showfav   = $self->translate('FAVORITES');
+    my $showall   = $self->translate('SHOWALL');
 
     return
  	div({-id=>'track select',-style=>'padding-top:8px'},
@@ -810,28 +820,39 @@ sub render_track_filter {
 	    ),
 	    end_form(),
 	  script({-type=>'text/javascript'},
-		 "function doPluginUpdate() { Controller.reconfigure_plugin('$action',null,null,'$plugin_type',\$('track_filterform')) }")
+		 "function doPluginUpdate() { Controller.reconfigure_plugin('$action',null,null,'$plugin_type',\$('track_filterform'));updateTitle(\$('show_all_link'),'$showfav','$showall',0);}")
 	);
 }
 
 # This surrounds the track table with a toggle
 sub render_toggle_track_table {
   my $self     = shift;
-  my $html;
+  my $source   = $self->data_source;
+  my $filter = $self->track_filter_plugin;
+  my $settings = $self->state;
+  # $settings->{show_favorites} =0;
 
-  $html .= div({-style=>'font-weight:bold'},'<<',$self->render_select_browser_link('link'));
+## adding javascript array at the top so we can pass it into a js array -- ugly but it works
+  my $html = "<script>var favoritearray = []; </script>" ;
+
+  $html .= div({-style=>'font-weight:bold'},
+	       span({-style=>'padding-right:80px'},'<<',$self->render_select_browser_link('link')),
+	       span({-id => 'showfavoritestext',-style=>'padding-right:80px'},
+		    $self->render_select_favorites_link('link')),
+	       span({-id => 'clearfavs'},
+		    $self->render_select_clear_link('link')));
 
   if (my $filter = $self->track_filter_plugin) {
       $html .= $self->toggle({tight=>1},'track_select',div({class=>'searchtitle',
-							    style=>"text-indent:2em;padding-top:8px"},
+							    style=>"text-indent:2em;padding-top:8px; display:block;"},
 							   $self->render_track_filter($filter)));
   }
+
   $html .= $self->toggle('Tracks',$self->render_track_table);
   $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));
-
   return $html;
 }
-
+use Data::Dumper;
 # Render Track Table - Invoked to draw the checkbox group in the "Select Tracks" tab. It creates a hyperlinked set of feature names.
 sub render_track_table {
   my $self     = shift;
@@ -840,12 +861,19 @@ sub render_track_table {
 
   # read category table information
   my $category_table_labels = $self->category_table();
-
+  my $an;
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
-  my @labels     = $self->potential_tracks;
+  my @labels=$self->potential_tracks;
+  
+  warn "favorites = {$settings->{show_favorites}} " if DEBUG;
 
-  warn "potential tracks = @labels" if DEBUG;
+  if( $settings->{show_favorites}){
+      warn "favorites = @labels = $settings->{show_favorites}" if DEBUG;	
+      @labels= grep {$settings->{favorites}{$_}} @labels;
+  }
+
+  warn "label = @labels" if DEBUG;
 
   my ($filter_active,@hilite);
   if (my $filter = $self->track_filter_plugin) {
@@ -884,21 +912,67 @@ sub render_track_table {
    }
    
    my $balloon = $source->setting('balloon style') || 'GBubble';
-   
-   my @args = ( -href => $link, -target => 'citation');
+   my $cellid = 'datacell';
+    my @args = ( -href => $link, -target => 'citation', -style => 'cursor:pointer');
    push @args, -style => 'Font-style: italic' if $label =~ /^(http|ftp|file):/;
    push @args, -onmouseover => "$balloon.showTooltip(event,'$mouseover')" if $mouseover;
+
 
    # add hilighting if requested
    for my $h (@hilite) {
        $key =~ s!($h)!<span style="background-color:yellow">$1</span>!gi;
    }
-   
-   $labels{$label} = a({@args},$key);
 
+my $checkid = "notselectedcheck_${label}";
+
+my $showicon;
+my $name =  $self->{$category_table_labels}->{label};
+warn "section = $name" if DEBUG;
+#if the track has already been favorited, the image source is made into the yellow star
+ if($settings->{favorites}{$label}){
+ 
+ $showicon =  img({   -class => "star",
+		      -id =>"${label}", 
+		      -label => "${label}",
+		      -onClick => "togglestars(event,'${label}', 'selectrackname_${label}',favoritearray,'$checkid');",
+		      -style => 'cursor:pointer;',
+		      
+		      -src   => $self->data_source->button_url."/ficon_2.png",},);
+
+
+}else{
+ $showicon =  img({   -class => "star",
+		      -id =>"${label}", 
+		      -label => "${label}",
+		      -onClick => "togglestars(event,'${label}', 'selectrackname_${label}',favoritearray,'$checkid');",
+		      -style => 'cursor:pointer;',
+		      
+		      -src   => $self->data_source->button_url."/ficon.png",},);
+};
+
+ my $favoriteicon = span({-href => '#', 
+			  -id => 'favclick', 
+			  
+			 },
+			  $showicon,);
+
+ if($settings->{favorites}{$label}){
+#     
+    $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline;font-weight:900;"}, 
+		      a({@args},$key),  
+		     
+		      span({-style => 'float:left'}, $favoriteicon,))
+		   }else{
+		   $labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline;font-weight:normal;"}, 
+		      a({@args},$key),  
+		     
+		      span({-style => 'float:left'}, $favoriteicon,))
+			    }
+ 
    if (my ($selected,$total) = $self->subtrack_counts($label)) {
        my $escaped_label = CGI::escape($label);
        $labels{$label} .= ' ['. span({-class       =>'clickable',
+				      
 				      -onMouseOver  => "GBubble.showTooltip(event,'".$self->translate('CLICK_MODIFY_SUBTRACK_SEL')."')",
 				      -onClick      => "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
 				     },i($self->translate('SELECT_SUBTRACKS',$selected,$total))).']';
@@ -906,14 +980,14 @@ sub render_track_table {
   }
 
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
-
+ 
   # Sort the tracks into categories:
   # Overview tracks
   # Region tracks
   # Regular tracks (which may be further categorized by user)
   # Plugin tracks
   # External tracks
-  my %track_groups;
+ my %track_groups;
   foreach (@labels) {
     my $category = $self->categorize_track($_);
     push @{$track_groups{$category}},$_;
@@ -953,7 +1027,7 @@ sub render_track_table {
     next if $seenit{$category}++;
     my $id = "${category}_section";
     my $category_title   = (split m/(?<!\\):/,$category)[-1];
-    $category_title      =~ s/\\//g;
+#     $category_title      =~ s/\\//g;
     $category_title      =~ s!($_)!<span style="background-color:yellow">$1</span>!gi foreach @hilite;    
 
     
@@ -978,15 +1052,19 @@ sub render_track_table {
 	%ids        = map {$_=>{id=>"${_}_check"}} @track_labels;
       }
 
+
+
       my @checkboxes = checkbox_group(-name       => 'l',
 				      -values     => \@track_labels,
+						   
 				      -labels     => \%labels,
 				      -defaults   => \@defaults,
 				      -onClick    => "gbTurnOff('$id');gbToggleTrack(this)",
 				      -attributes => \%ids,
 				      -override   => 1,
+				      
 				     );
-      my $table      = $self->tableize(\@checkboxes,$category);
+      my $table      = $self->tableize(\@checkboxes,$category,undef, \@track_labels);
 
       my $visible =  $filter_active                            ? 1
                    : exists $settings->{section_visible}{$id}  ? $settings->{section_visible}{$id} 
@@ -1008,6 +1086,9 @@ sub render_track_table {
 			            -style => "display: " . ($visible? "none" : "inline") . ";"},"")
 			    .br()   if exists $track_groups{$category};
       $section_contents{$category} = div($control.$section);
+
+
+ 
     }
 
     else {
@@ -1021,7 +1102,7 @@ sub render_track_table {
   return join( "\n",
 	       start_form(-name=>'trackform',
 			  -id=>'trackform'),
-	       div({-class=>'searchbody',-style=>'padding-left:1em'},$slice_and_dice),
+	       div({-class=>'searchbody',-id=> 'range', -style=>'padding-left:1em'},$slice_and_dice),
 	       end_form,
 	       $self->html_frag('html5',$settings),
 	       );
@@ -1151,7 +1232,9 @@ sub render_global_config {
         . div(
 	       table ({-border => 0, -cellspacing=>0, -width=>'100%'},
 		      TR(
+			  
 			  td( b(  checkbox(
+				      
 				      -name     => 'grid',
 				      -label    => $self->translate('SHOW_GRID'),
 				      -override => 1,
@@ -1259,7 +1342,10 @@ sub render_global_config {
 		      )
 	       )
 	) . end_form();
+
+
     return div($content);
+
 }
 
 # Clear Hilights - Returns the HTML for the "Clear Highligting" link.
@@ -1277,20 +1363,59 @@ sub render_select_track_link {
     my $self  = shift;
     my $title = $self->translate('SELECT_TRACKS');
     return button({-name=>$title,
-		    -onClick => "Controller.select_tab('track_page')"
+		    -onClick => "Controller.select_tab('track_page')",
+		  
 		  }
 	  );
 }
+
+sub render_select_clear_link {
+    my $self  = shift;
+
+    my $title = $self->translate('CLEAR_FAV');
+    my $settings = $self->state;
+    my $clear = 1;
+
+    warn "settings  $settings->{show_favorites}" if DEBUG;
+    my $showicon =  img({-src   => $self->data_source->button_url."/ficon_2.png"});
+    return a({-href=>'javascript:void(0)',
+	      -onClick => "clearallfav($clear);",
+	     },
+	     $showicon,$title);
+}
+
+sub render_select_favorites_link {
+    my $self  = shift;
+
+    my $showfav   = $self->translate('FAVORITES');
+    my $showall   = $self->translate('SHOWALL');
+    my $refresh   = 'showrefresh';
+    my $settings  = $self->state;
+    
+    my $ison      = $settings->{show_favorites}; 
+    my $title     = $ison ? $showall : $showfav;
+    my $showicon =  img({-src   => $self->data_source->button_url."/ficon_2.png"},'');
+ 
+    warn "settings  $settings->{show_favorites}" if DEBUG;
+    warn "ison = $settings->{show_favorites}" if DEBUG;
+    return $showicon.
+	a({-id      => 'show_all_link',
+	   -href    =>'javascript:void(0)',
+	   -onClick => "updateTitle(this,'$showfav','$showall');"
+	  },
+	  $title);
+}
+
 
 # Render Select Browser Link - Returns the HTML for the "Back to Browser" button/link.
 sub render_select_browser_link {
     my $self  = shift;
     my $style  = shift || 'button';
-
+    my $settings = $self->state;
     my $title = $self->translate('BACK_TO_BROWSER');
     if ($style eq 'button') {
 	    return button({-name=>$title,
-		           -onClick => "Controller.select_tab('main_page')"
+		           -onClick => "Controller.select_tab('main_page')",
 		          }
 	        );
     } elsif ($style eq 'link') {
@@ -1881,7 +2006,7 @@ sub segment2link {
 
 sub tableize {
   my $self              = shift;
-  my ($array,$category,$cols) = @_;
+   my ($array,$category,$cols,$labelnames) = @_;
   return unless @$array;
 
   my $columns = $cols || 
@@ -1899,28 +2024,36 @@ sub tableize {
   }
 
   my $cwidth = int(100/$columns+0.5) . '%';
-
+ 
   my $html = start_table({-border=>0,-width=>'100%'});
 
   if (@column_labels) {
       $html.="<tr><td></td>";
       for (my $column=0;$column<$columns;$column++) {
-	  $html .= "<td><b>$column_labels[$column]</b></td>";
+	  $html .= "<td><b>$column_labels[$column]</b> </td>";
       }
       $html.="</tr>";
   }
 
   for (my $row=0;$row<$rows;$row++) {
     # do table headers
-    $html .= qq(<tr class="searchtitle">);
+    $html .= qq(<tr class="searchtitle";display=block>);
     $html .= "<td><b>$row_labels[$row]</b></td>" if @row_labels;
     for (my $column=0;$column<$columns;$column++) {
+ my $label    = $labelnames->[$column*$rows + $row] || '&nbsp;';
       my $checkbox = $array->[$column*$rows + $row] || '&nbsp;';
-
+  
       # de-couple the checkbox and label click behaviors
       $checkbox =~ s/\<\/?label\>//gi;
+	  
+     
 
-      $html .= td({-width=>$cwidth},$checkbox);
+
+
+      $html .=td({-width=>$cwidth,-style => 'visibility:visible'},span({ -id => "notselectedcheck_${label}", -class => 'notselected_check'},$checkbox));
+ 
+      
+# 
     }
     $html .= "</tr>\n";
   }
@@ -3326,4 +3459,3 @@ sub format_upload_autocomplete {
     return $html;
 }
 1;
-

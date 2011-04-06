@@ -100,13 +100,15 @@ sub session {
     my $self = shift;
     my $d = $self->{session};
     $self->{session} = shift if @_;
+    warn "d= $d" if DEBUG;
+    warn "self->session= $self->{session}" if DEBUG;
     $d;
 }
 
 sub state {
   my $self = shift;
   my $d = $self->{state};
-  $STATE = $self->{state} = shift if @_;
+  $STATE = $self->{state}= shift if @_;
   $d;
 }
 
@@ -834,6 +836,7 @@ sub render_body {
   }
 
   $main_page .= $self->render_select_track_link;
+;
 
   my $tracks        = $self->render_tracks_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
@@ -2051,7 +2054,7 @@ sub track_visible {
 sub update_state_from_cgi {
   my $self  = shift;
   my $state = $self->state;
-
+warn "state = $state" if DEBUG;
   $self->update_options($state);
   $self->update_coordinates($state);
   $self->update_region($state);

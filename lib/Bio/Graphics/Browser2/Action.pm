@@ -269,6 +269,64 @@ sub ACTION_set_track_visibility {
     return (204,'text/plain',undef);
 }
 
+# parameters:
+#       method: 'post',
+#       parameters: {
+#           action:    'set_favorite',
+#           label:     track_id,
+#           favorite:  true_or_false,
+#       }
+sub ACTION_set_favorite {
+    my $self = shift;
+    my $q    = shift;
+    my $labels        = $q->param('label')     or croak "call me with the 'label' argument";
+    my $is_favorite  = $q->param('favorite');
+    my $settings = $self->state;
+
+    warn "lebels = $labels" if DEBUG;
+    my @labels = split(',' , $labels);
+    warn "lebels = @labels" if DEBUG;
+
+    foreach my $label(@labels){
+	$settings->{favorites}{$label} = $is_favorite;
+	if ($is_favorite == 0){delete($settings->{favorites}{$label})};
+      }
+    $self->session->flush;
+    return (204,'text/plain',undef);
+}
+
+#
+# parameters:
+#       method: 'post',
+#       parameters: {
+#           action:    'show_favorites',
+#           show:      true_or_false,
+#       }
+sub ACTION_show_favorites {
+    my $self = shift;
+    my $q     = shift;
+    my $show  = $q->param('show');
+    
+    my $settings = $self->state;
+    $settings->{show_favorites} = $show;
+    warn "show_favorites($settings->{show_favorites})"; # if DEBUG;
+    $self->session->flush;
+    return (204,'text/plain',undef);
+}
+
+sub ACTION_clear_favorites {
+    my $self = shift;
+    my $q     = shift;
+    my $clear = $q->param('clear');
+    my $settings = $self->state;
+    $settings->{favorites}={} if $clear;	
+    warn "show_favorites($settings->{show_favorites})" if DEBUG;
+    $self->session->flush;
+    return (204,'text/plain',undef);
+}
+
+
+
 sub ACTION_reconfigure_plugin {
     my $self   = shift;
     my $q      = shift;

@@ -1,5 +1,4 @@
 package Bio::Graphics::Browser2::RenderPanels;
-
 use strict;
 use warnings;
 
@@ -14,6 +13,7 @@ use Bio::Graphics::Browser2::Util qw[shellwords url_label];
 use Bio::Graphics::Browser2::Render::Slave::Status;
 use IO::File;
 use Time::HiRes 'sleep','time';
+use Data::Dumper;
 use POSIX 'WNOHANG','setsid';
 use CGI qw(:standard param escape unescape);
 
@@ -248,7 +248,6 @@ sub make_requests {
     my $self   = shift;
     my $args   = shift;
     my $source = $self->source;
-    
     my $settings=$self->settings;
 
     my $feature_files  = $args->{external_features};
@@ -270,6 +269,7 @@ sub make_requests {
 	my (@filter_args,@featurefile_args,@subtrack_args);
 
 	my $format_option = $settings->{features}{$label}{options};
+
 
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
@@ -295,6 +295,7 @@ sub make_requests {
 				     $format_option, 
 				     $label ],
 		    );
+    
 		my $msg = eval {$args->{remotes}->error($track)};
 		$cache_object->flag_error($msg || "Could not fetch data for $track");
 		$d{$track} = $cache_object;
@@ -325,7 +326,7 @@ sub make_requests {
 			     $label ],
 	    -cache_time => $cache_time
         );
-
+#       warn "object= $format_option";
         $d{$label} = $cache_object;
     }
 
@@ -393,6 +394,7 @@ sub render_tracks {
     }
     
     return \%result;
+ 
 }
 
 # Returns the HMTL to show a track with controls, title, arrows, etc.
@@ -405,7 +407,7 @@ sub wrap_rendered_track {
     my $height = $args{'height'};
     my $url    = $args{'url'};
     my $titles = $args{'titles'};
-
+  
     # track_type Used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
     my $status = $args{'status'};    # for debugging
@@ -418,7 +420,11 @@ sub wrap_rendered_track {
     my $help     = "$buttons/query.png";
     my $download = "$buttons/download.png";
     my $configure= "$buttons/tools.png";
-
+    my $menu 	 = "$buttons/menu.png";
+    my $favicon  = "$buttons/fmini.png";
+    my $favicon_2= "$buttons/fmini_2.png";
+    my $add_or_remove = $self->language->translate('ADDED_TO') || 'Add track to favorites';
+    
     my $settings = $self->settings;
     my $source   = $self->source;
 
@@ -431,7 +437,7 @@ sub wrap_rendered_track {
     # Work around bug in google chrome which is manifested by the <area> link information
     # on all EVEN reloads of the element by ajax calls. Weird.
     my $agent  = CGI->user_agent || '';
-    $map_id   .= "_".int(rand(1000)) if $agent =~ /chrome/i;  
+    $map_id   .= "_".int(rand(1000)) ;
 
     my $img = img(
         {   -src    => $url,
@@ -442,6 +448,7 @@ sub wrap_rendered_track {
             -border => 0,
             -name   => $label,
             -style  => $img_style
+	    
         }
     );
 
@@ -489,7 +496,9 @@ sub wrap_rendered_track {
     }
 
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
-    my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
+    my $help_click     = "GBox.showTooltip(event,'$help_url',1)"; 
+
+    
 
     my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
@@ -510,64 +519,135 @@ sub wrap_rendered_track {
     }
     $title =~ s/:(overview|region|detail)$//;
 
+    my $fav_click      =  "toggle_bar_stars(event,'fav_${label}', '$label', '$title')";
+   
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
+    my $starIcon      = ($settings->{favorites}{$label}) ? $favicon_2 : $favicon;
     my @images = (
-	img({   -src         => $icon,
+        $fav_click ? img({   	-src         => $starIcon,
+				-id          =>"fav_${label}",
+				-class       => 'toolbarStar',
+				-style       => 'cursor:pointer',
+				-onmousedown => $fav_click,
+				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$add_or_remove')"),
+			    })
+	              : '',
+	img({   -src         => $icon, 
                 -id          => "${label}_icon",
-                -onClick     => "collapse('$label')",
+                -onClick     =>  "collapse('$label')",
                 -style       => 'cursor:pointer',
-                -onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')",
+		$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')"),
             }
         ),
+
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
+
 		-onClick     => "ShowHideTrack('$label',false)",
+# 
                 -style       => 'cursor:pointer',
-                -onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')",
+                $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
             }
         ),
         img({   -src   => $share,
                 -style => 'cursor:pointer',
-                -onMouseOver =>
-                    "$balloon_style.showTooltip(event,'$share_this_track')",
-		    -onMousedown =>
-                    "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
+		-onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
+                $self->if_not_ipad(-onMouseOver =>
+                    "$balloon_style.showTooltip(event,'$share_this_track')"),
             }
         ),
+
+    
+	
+
+	
 
         $config_click ? img({   -src         => $configure,
 				-style       => 'cursor:pointer',
 				-onmousedown => $config_click,
-				-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')",
+				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
 			    })
 	              : '',
         $download_click ? img({   -src         => $download,
 				  -style       => 'cursor:pointer',
 				  -onmousedown => $download_click,
-				  -onMouseOver =>
-				      "$balloon_style.showTooltip(event,'$download_this_track')",
+				  $self->if_not_ipad(-onMouseOver =>
+						     "$balloon_style.showTooltip(event,'$download_this_track')"),
 			      })
 	                 : '',
 
-        img({   -src         => $help,
-                -style       => 'cursor:pointer',
-                -onmousedown => $help_click,
-                -onMouseOver =>
-	    "$balloon_style.showTooltip(event,'$about_this_track')",
-            }
-        )
-	);
+       
 
+
+
+	); 
+
+
+
+   my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
+ 
+  my $cancel_ipad = 'Turn off';
+  my $share_ipad = 'Share'; 
+  my $configure_ipad = 'Configure';
+  my $download_ipad = 'Download';
+  my $about_ipad = 'About track';
+ 
+
+#    $settings->{favorites} = {};
+#    print Dumper($settings->{favorites}{$label});
+my $bookmark = 'Favorite'; 
+#  = ($HTMLPAGE->{favorites}{$label}) ? 'Favorite' : 'Unfavorite';
+    my $menuicon = img ({-src => $menu, 
+			 -style => 'padding-right:15px;',},),
+   
+    my $popmenu = div({-id =>"popmenu_${title}", -style => 'display:none'},
+ 	
+ 	   
+ 
+ 	     div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
+	     div({-class => 'ipadcollapsed', 
+                -id    => "${label}_icon", 
+ 		-onClick =>  "collapse('$label')",
+		
+		},
+	     div({-class => 'linkbg', -onClick => "swap(this,'Collapse','Expand')", -id => "${label}_expandcollapse", },$ipad_collapse)),
+	     div({-class => 'ipadcollapsed',
+ 		 -id => "${label}_kill",
+ 		 -onClick     => "ShowHideTrack('$label',false)",
+					  }, div({-class => 'linkbg',},
+ 					    $cancel_ipad)),
+	     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, div({-class => 'linkbg',},$share_ipad)),
+ 	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
+	     div({-class => 'ipadcollapsed',  -onmousedown => $fav_click,}, div({-class => 'linkbg', -onClick => "swap(this,'Favorite','Unfavorite')"},$bookmark)),
+ 	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,}, div({-class => 'linkbg',},$download_ipad)),
+ 	     div({-class => 'ipadcollapsed', -style => 'width:200px',  -onmousedown => $help_click,}, div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
+	    
+ 	    
+ 
+ 		  );
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
+    
+    my $titlebar = 
+	span(
+		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
+		    -id => "${label}_title",
+		  
+		   
+				},
 
-    my $titlebar = span(
-        {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
-            -id => "${label}_title"
-        },
-	@images,
-	$title
-    );
+	   
+		  
+		 
+
+ 	    $self->if_not_ipad(@images,),
+	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
+	    
+# 	 	
+	   
+	    span({-class => 'drag_region',},$title),
+
+	);
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
@@ -587,7 +667,7 @@ sub wrap_rendered_track {
     my $pad_img = img(
         {   -src    => $pad_url,
             -width  => $pad->width,
-            -height => $pad->height,
+#             -height => $pad->height;
             -border => 0,
             -id     => "${label}_pad",
             -style  => $collapsed ? "display:inline" : "display:none",
@@ -599,8 +679,6 @@ sub wrap_rendered_track {
     # Add arrows for panning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
-# works with IE7, but looks awful. IE8 should support standard css opacity.
-#	$style      .= ';filter:alpha(opacity=30);moz-opacity:0.35';
         my $pan_left   =  img({
 	    -style   => $style . ';left:5px',
 	    -class   => 'panleft',
@@ -630,10 +708,27 @@ sub wrap_rendered_track {
     my $html = div({-class=>'centered_block',
 		 -style=>"position:relative;overflow:hidden"
 		},
-                ( $show_titlebar ? $titlebar : '' ) . $subtrack_labels . $inner_div . $overlay_div) . ( $map_html || '' );
+         ($show_titlebar ? $titlebar : '' ) . $popmenu .  $subtrack_labels . $inner_div . $overlay_div ) . ( $map_html || '' );
     return $html;
 }
 
+sub if_not_ipad {
+    my $self = shift;
+    my @args = @_;
+    my $agent = CGI->user_agent || '';
+    my $probably_ipad = $agent =~ /Mobile.+Safari/i;
+    return if $probably_ipad;
+    return @args;
+}
+
+sub if_ipad {
+    my $self = shift;
+    my @args = @_;
+    my $agent = CGI->user_agent || '';
+    my $probably_ipad = $agent =~ /Mobile.+Safari/i;
+    return  if !$probably_ipad;
+    return @args;
+}
 # This routine is called to hand off the rendering to a remote renderer. 
 # The remote processor does not have to have a copy of the config file installed;
 # the entire DataSource object is sent to it in serialized form via
@@ -1299,6 +1394,9 @@ sub run_local_requests {
     my $filters = $self->generate_filters($settings,$source,\@labels_to_generate);
 
     my (%children,%reaped);
+
+
+
 
     local $SIG{CHLD} = sub {
 	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {
@@ -1983,13 +2081,16 @@ sub create_track_args {
   my ($label,$args) = @_;
 
   my $segment         = $self->segment;
-  my $length          = $self->vis_length; 
+  my $length          = $segment->length;
   my $source          = $self->source;
   my $lang            = $self->language;
 
   my $is_summary      = $source->show_summary($label,$self->vis_length,$self->settings);
   
   my $state            = $self->settings;
+
+
+
   my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 
                     keys %{$state->{features}{$label}{semantic_override}};
   $semantic_override ||= 0;
@@ -2071,7 +2172,7 @@ sub vis_length {
     my $self = shift;
     my $segment = $self->segment;
     my $length  = $segment->length;
-    return int($length/$self->details_mult);
+    return $length/$self->details_mult;
 }
 
 sub subtrack_manager {

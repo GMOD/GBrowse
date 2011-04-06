@@ -79,8 +79,10 @@ my $uid = $userdb->userid_from_username($name);
 unless ($uid) {
 # this creates a new session for the admin user
     my $session     = $globals->session;
+
     my $sessionid   = $session->id;
     my $uploadsid   = $session->uploadsid;
+ 
     $session->flush();
 
     my ($status,undef,$message) = 

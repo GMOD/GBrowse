@@ -271,6 +271,7 @@ var GBrowseController = Class.create({
     // Update Section Methods *****************************************
     update_sections:
     function(section_names, param_str, scroll_there, spin, onSuccessFunc) {
+      
         if (param_str==null){
             param_str = '';
         }
@@ -912,57 +913,6 @@ var GBrowseController = Class.create({
             detailsdiv.show();
         }
     },
-
-
-    show_info_message:
-    function (action,width) {
-        if (width == null) width=300;
-	var dim     = document.body.getDimensions();
-	var info = $('info_container');
-	if (info == null) {
-	    info        = new Element('div',{id:'info_container'});
-	    info.setStyle({position: 'absolute',
-			   zIndex:   100000,
-			   display:'none'});
-	    document.body.appendChild(info);
-
-	    var abs_container = new Element('div',{id:'abs_info_container'});
-	    info.appendChild(abs_container);
-
-	    var content = new Element('div',{id:'info_content'});
-	    abs_container.appendChild(content);
-	    var button = new Element('input',{type:'button',
-					      style:'float:right',
-					      id:'info_button',
-					      value:this.translate('OK')});
-	    // button.insert('&nbsp;'); // needed to close tag
-	    button.observe('click',function(ev) {$('info_container').hide()});
-	    content.insert({after:button});
-	}
-	// double containment necessary to avoid IE zindex bug!
-	$('info_container').setStyle( {
-		position: 'absolute',
-		backgroundColor: 'white',
-	        top:      '50px',
-		left:     Math.round((dim.width-width)/4)+'px',
-		zIndex:   10000,
-		width:   width+'px'
-	    });
-        $('abs_info_container').setStyle( {
-		position: 'absolute',
-		backgroundColor: 'white',
-	        top:      '0px',
-		left:     '0px',
-		border:   'double',
-		padding: '5px',
-		zIndex:  100001
-	    });
-	new Ajax.Updater('info_content',
-			 document.URL,{ 
-			     parameters: { action: action } ,
-			     onSuccess: function (t) { $('info_container').show()}
-	});
-    },
     
     edit_upload_title:
     function(upload_name, title_element) {
@@ -1193,6 +1143,7 @@ var GBrowseController = Class.create({
      }
   },
 
+					     
   wait_for_initialization:
   function (html, callback) {
       $('main').setOpacity(0.2);

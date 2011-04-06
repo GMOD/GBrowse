@@ -15,6 +15,7 @@
    * "remote renderer" option can now appear in GBrowse.conf as a global default 
    * Fixed handling of uploaded .gz files under FastCGI so that they don't result in a server error message.
    * Changed handling of uploaded wiggle files so that autoscaling is set to per-chromosome by default.
+   * Added the ability to designate certain tracks as "favorites."
 
 2.26
    * Fixed account registration confirmation screen, which was blacked out on all

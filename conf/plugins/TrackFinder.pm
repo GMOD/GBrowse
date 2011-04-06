@@ -45,20 +45,20 @@ sub configure_form {
   my $html = '';
 
   $html .= div({-class=>'searchbody'}, 
-	   	   b('Search: ').textfield(-id         => 'plugin_TrackFinderKeywords',
-					   -name       => $self->config_name('keywords'),
- 					   -onKeyDown => "Controller.busy();if (typeof(timeOutID) != 'undefined') clearTimeout(timeOutID);timeOutID= setTimeout('Controller.idle();doPluginUpdate()',500)",
-					   -override   => 1,
-					   -value      => $current_config->{keywords},
-					   -onChange   => 'Controller.busy();doPluginUpdate();Controller.idle()',
-      		),
-      	 input({-type => 'checkbox',
-      	        -id => 'stickySearch',
-      	        -value => 'Stick to top when scrolled'
-      	       }
-      	 ),
-      	 label({-for => 'stickySearch'}, 'Stick to top when scrolled')
-	);
+	       b('Search: ').textfield(-id         => 'plugin_TrackFinderKeywords',
+				       -name       => $self->config_name('keywords'),
+				       -onKeyDown => "Controller.busy();if (typeof(timeOutID) != 'undefined') clearTimeout(timeOutID);timeOutID= setTimeout('Controller.idle();doPluginUpdate()',500)",
+				       -override   => 1,
+				       -value      => $current_config->{keywords},
+				       -onChange   => 'Controller.busy();doPluginUpdate();Controller.idle()',
+	       ),
+	       input({-type => 'checkbox',
+		      -id => 'stickySearch',
+		      -value => 'Stick to top when scrolled'
+		     }
+	       ),
+	       label({-for => 'stickySearch'}, 'Stick to top when scrolled')
+      );
   $html .= button(-value   => 'Clear',
 		  -onClick => "\$('plugin_TrackFinderKeywords').clear();doPluginUpdate()",
       );

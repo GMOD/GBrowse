@@ -93,6 +93,19 @@ END
    DISPLAY_SETTINGS => 'Display Settings',
 
    TRACKS   => 'Tracks',
+   
+  
+# FAVORITE MENU LINKS
+   FAVORITES => 'Show Favorites Only',		
+    
+   SHOWALL   => 'Show All',
+
+   REFRESH_FAV   => 'Refresh Favorites',
+    
+   CLEAR_FAV     => 'Clear All Favorites',
+
+#############
+
 
    SELECT_TRACKS   => 'Select Tracks',
 
@@ -203,6 +216,10 @@ END
    NEW         => 'New...',
 
    REMOTE_TITLE => 'Add remote annotations',
+
+   #ipad
+   IPAD_BALLOON => '\nTap feature again to see more details',
+   #
 
    REMOTE_URL   => 'Enter remote track URL',
 
@@ -445,7 +462,7 @@ END
 
  CONFIGURE_THIS_TRACK   => '<b>Configure this track</b>',
 
- DOWNLOAD_THIS_TRACK   => '<b>Download this track</b>',
+ DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
 
  ABOUT_THIS_TRACK   => '<b>About this track</b>',
 

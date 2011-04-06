@@ -390,13 +390,13 @@ new Ajax.Request(document.URL, {
 }
 
 
-function idtoarray(stars,class)
+function idtoarray(stars,className)
 {
  
 idArray = new Array();
  
     for (x=0, y=0; x<stars.length; x++,y++) {
-        if (stars[x].className===class) {
+        if (stars[x].className===className) {
         idArray[y] = stars[x].id
         }
  
@@ -678,7 +678,7 @@ Controller.update_sections(new Array(track_listing_id));
 //then checks to see whether the favorites should be displayed or if they 
 //should all be displayed--sends 0 or 1 to the server 
 //controller.update_sections does the actual updating of the tracks
-function updatetitle(me,main,alt,ison,refresh, clear){
+function updatetitle(me,main,alt, refresh, clear){
   
   
 var e = $(track_listing_id);// all e._____ objects are visual effects
@@ -686,7 +686,7 @@ var refreshid = document.getElementById(refresh);
 var clearid = document.getElementById(clear);
 
 swap(me,main,alt);//toggle
-ison = (me.innerHTML == main) ? 0 : 1;
+var ison = (me.innerHTML == main) ? 0 : 1;
 refreshid.style.display= (me.innerHTML == main) ? 'none' : 'block';
 clearid.style.left=(me.innerHTML == main) ? '350px' : '550px';
 clearid.style.bottom=(me.innerHTML == main) ? '30px' : '47px';

@@ -1529,14 +1529,16 @@ sub render_select_refresh_link {
 sub render_select_favorites_link {
     my $self  = shift;
     my $style  = shift || 'button';
+    my $settings = $self->state;
 
-    my $title = $self->translate('FAVORITES');
     my $showall = $self->translate('SHOWALL');
+    my $showfavonly = $self->translate('FAVORITES');
     my $refresh = 'showrefresh';
-       my $settings = $self->state;
-    
+    my $title= $showfavonly; 
 
- my $ison= $settings->{show_favorites}; 
+
+
+  
 
 
  
@@ -1554,10 +1556,11 @@ sub render_select_favorites_link {
              
 	    return a({-href=>'javascript:void(0)',
 		     
-		    -onClick => "updatetitle(this,'$title','$showall', $ison,'showrefresh','clearfavs');"
+		    -onClick => "updatetitle(this,'$title','$showall','showrefresh','clearfavs');"
 		      },
-		   $title);
-
+		   $title,	
+			    );
+	 
 	
     }
 

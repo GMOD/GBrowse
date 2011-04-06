@@ -93,6 +93,19 @@ END
    DISPLAY_SETTINGS => 'Display Settings',
 
    TRACKS   => 'Tracks',
+   
+  
+# FAVORITE MENU LINKS
+   FAVORITES => 'Show Favorites Only',		
+    
+   SHOWALL   => 'Show All',
+
+   REFRESH_FAV   => 'Refresh Favorites',
+    
+   CLEAR_FAV     => 'Clear All Favorites',
+
+#############
+
 
    SELECT_TRACKS   => 'Select Tracks',
 
@@ -204,9 +217,7 @@ END
 
    REMOTE_TITLE => 'Add remote annotations',
 
-   #ipad
-   IPAD_BALLOON => '\nTap feature again to see more details '
-   #
+   IPAD_BALLOON => '\nTap feature again to see more details',
 
    REMOTE_URL   => 'Enter remote track URL',
 
@@ -648,7 +659,7 @@ END
                                 '<br><br>To complete the account creation process and to log into your %s ' .
                                 'account, please type in your username and click the "Continue" button below.',
    MUST_TYPE_USERNAME        => 'You must type in your username to continue.',
-   INCORRECT_LINK            => 'The link provided is either incorrect or expired.<br> Please click continue to exit.',
+   INCORRECT_LINK            => 'The confirmation code provided is either incorrect or expired.<br> Please click continue to exit.',
    PENDING                   => 'pending',
    
    WELCOME                   => 'Welcome, %s',

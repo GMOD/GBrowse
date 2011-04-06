@@ -365,9 +365,8 @@ sub render_html_head {
       track_configure.js
       track_pan.js
       ruler.js
-      controller.js
       sessionvars.js
-
+      controller.js
     );
 
   # add scripts needed by plugins. Looks in /js folder unless specified.
@@ -655,7 +654,7 @@ sub render_busy_signal {
         -id    => 'busy_indicator',
         -src   => $self->data_source->button_url.'/spinner.gif',
         -style => 'position: fixed; top: 5px; left: 5px; display: none',
-        -alt   => $self->translate('WORKING')
+        -alt   => ($self->translate('WORKING')||'')
        });
 }
 
@@ -905,12 +904,12 @@ sub render_track_table {
 	   $cit_txt =~ s/\s+\S+$//; 
 	   $cit_txt =~ s/\'/\&\#39;/g;
 	   $cit_txt =~ s/\"/\&\#34;/g;
-	   $cit_txt .= '... <i>' . $self->translate('CLICK_FOR_MORE') . '</i>';
+	   $cit_txt .= '... <i>' . ($self->translate('CLICK_FOR_MORE')||'') . '</i>';
        }
        $mouseover = "<b>$key</b>";
        $mouseover .= ": $cit_txt"                           if $cit_txt;
    }
-   
+
    my $balloon = $source->setting('balloon style') || 'GBubble';
    my $cellid = 'datacell';
     my @args = ( -href => $link, -target => 'citation', -style => 'cursor:pointer');

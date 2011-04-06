@@ -244,6 +244,10 @@ htdocs/images/buttons/cursor-ewmove.cur
 htdocs/images/buttons/dark_0.4_pixel.png
 htdocs/images/buttons/download.png
 htdocs/images/buttons/ex.png
+htdocs/images/buttons/ficon.png
+htdocs/images/buttons/ficon_2.png
+htdocs/images/buttons/fmini.png
+htdocs/images/buttons/fmini_2.png
 htdocs/images/buttons/green.gif
 htdocs/images/buttons/green1.gif
 htdocs/images/buttons/green2.gif
@@ -348,6 +352,7 @@ htdocs/js/rubber.js
 htdocs/js/ruler.js
 htdocs/js/scriptaculous.js
 htdocs/js/scrollfix.js
+htdocs/js/sessionvars.js
 htdocs/js/slider.js
 htdocs/js/sound.js
 htdocs/js/subtracktable.css
@@ -357,6 +362,7 @@ htdocs/js/toggle.js
 htdocs/js/track.js
 htdocs/js/track_configure.js
 htdocs/js/track_pan.js
+htdocs/js/trackFavorites.js
 htdocs/js/unittest.js
 htdocs/js/x_cook.js
 htdocs/tutorial/bin/expression_levels.pl

@@ -2507,12 +2507,12 @@ sub asynchronous_update_sections {
             }
             else {
                 $return_object->{'plugin_configure_div'}
-                    = $self->translate('NOT_RECOGNIZED_PLUGIN',$plugin_base) . "\n";
+                    = $self->translate('NOT_RECOGNIZED_PLUGIN',$plugin_base)||'' . "\n";
             }
         }
         else {
             $return_object->{'plugin_configure_div'}
-                = $self->translate('NO_PLUGIN_SPECIFIED') . "\n";
+                = $self->translate('NO_PLUGIN_SPECIFIED')||'' . "\n";
         }
     }
 

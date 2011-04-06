@@ -68,6 +68,8 @@ for ('volvox_final.conf','yeast_chr1.conf') {
 		   '$REMOTE2'=>"http://localhost:".$servers[1]->listen_port});
 }
 
+template_copy('../conf/languages/POSIX.pm','testdata/conf/languages/POSIX.pm',{});
+
 for my $s (@servers) {
     $s->debug(1);
     ok($s->run);
@@ -238,7 +240,7 @@ $CGI::Q = new CGI(
 ($status,$mime,$render_object) = $render->asynchronous_event();
 if (ok($render_object) and ok($render_object->{'section_html'})){
   my $section_html = $render_object->{'section_html'};
-  ok( $section_html->{'plugin_configure_div'} eq "blah is not a recognized plugin\n");
+  ok( $section_html->{'plugin_configure_div'} eq "blah is not a recognized plugin");
 }
 
 # No plugin
@@ -249,7 +251,7 @@ $CGI::Q = new CGI(
 ($status,$mime,$render_object) = $render->asynchronous_event();
 if (ok($render_object) and ok($render_object->{'section_html'})){
   my $section_html = $render_object->{'section_html'};
-  ok( $section_html->{'plugin_configure_div'} eq "No plugin was specified.\n");
+  ok( $section_html->{'plugin_configure_div'} eq "No plugin was specified.");
 }
 
 # Real plugin

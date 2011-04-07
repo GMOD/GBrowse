@@ -1,0 +1,30 @@
+<html>
+<head>
+  <title>Example Perl scripts that use the GBrowse2 REST API</title>
+</head>
+<body>
+
+<p>This director contains little Perl scripts that illustrate how to do
+stuff with the GBrowse2 REST API.</p>
+
+<dl>
+  <dt><a href="gbrowse_get_sessionid.pl">gbrowse_get_sessionid.pl</a></dt>
+	<dd>Print out a valid GBrowse session. A new session will be
+	created the first time it is used. On subsequent invocations,
+	it will reuse the existing session. The session cookie
+	is stored in ~/.gbrowse_session. Delete this file to force
+	a new session.</dd>
+
+  <dt><a href="gbrowse_new_sessionid.pl">gbrowse_new_sessionid.pl</a></dt>
+ 	<dd>Start a brand new GBrowse session and print out the session ID.
+	A new session will be used every time.</dd>
+
+  <dt><a href="gbrowse_upload_file.pl">gbrowse_upload_file.pl</a></dt>
+	<dd>Upload a file into GBrowse.</dd>
+
+
+  <dt><a href="gbrowse_upload_data.pl">gbrowse_upload_data.pl</a></dt>
+	<dd>Upload a data string into GBrowse.</dd>
+</dl>
+</body>
+</html>

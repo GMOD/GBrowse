@@ -182,6 +182,7 @@ sub render_navbar {
 my $sessionButton = div({-id=>'sessionbutton'},$self->render_select_saveSession());
 
 my $setSession = div({-id=>'sessionbutton'},$self->render_select_setSession());
+my $snapshotMenu = div({-id=>'snapshotMenu'},$self->render_select_snapshotsMenu());
 
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
@@ -196,10 +197,14 @@ my $setSession = div({-id=>'sessionbutton'},$self->render_select_setSession());
 				    td({-align=>'left'},
 				       $sessionButton || '&nbsp;'
 				    ),
-
+				
 				     td({-align=>'left'},
-				       $setSession || '&nbsp;'
+				       $snapshotMenu || '&nbsp;'
 				    )
+# 
+# 				     td({-align=>'left'},
+# 				       $setSession || '&nbsp;'
+# 				    )
 # 			
 				 )
 			   ),
@@ -207,6 +212,7 @@ my $setSession = div({-id=>'sessionbutton'},$self->render_select_setSession());
 		       )
     )
       . div( { -id => "plugin_configure_div"},'');
+   
 }
 
 # Plugin Form - Returns the HTML for the plugin form in the main navigation bar.
@@ -302,7 +308,12 @@ sub render_html_head {
   my ($dsn,$title,@other_initialization) = @_;
   my @plugin_list = $self->plugins->plugins;
   my $uses_database = $self->user_tracks->database;
-  
+  my $settings = $self->state;
+  my $snapshotSessions = $settings->{snapshots};
+  my @snapshotNames = keys %$snapshotSessions;
+  my $snapshotsString = join(',',@snapshotNames);
+
+
   return if $self->{started_html}++;
 
   $title =~ s/<[^>]+>//g; # no markup in the head
@@ -314,7 +325,8 @@ sub render_html_head {
   # Set any onTabLoad functions
   my $main_page_onLoads = "";
   my $track_page_onLoads = '';
-  my $community_track_page_onLoads = '';
+  my $community_track_page_onLoads = "";
+# 
   my $custom_track_page_onLoads = "";
   my $settings_page_onLoads = "";
   
@@ -377,6 +389,7 @@ sub render_html_head {
       ruler.js
       controller.js
       sessionvars.js
+
 
     );
 
@@ -450,7 +463,7 @@ sub render_html_head {
 
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
   my $other_actions   = join ';',@other_initialization;
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
+  push @args,(-onLoad => "initialize_page(); Controller.addOptionArray('$snapshotsString'); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
 
   return start_html(@args);
 }
@@ -1460,6 +1473,20 @@ sub render_select_clear_link {
 
 }
 
+sub render_select_snapshotsMenu{
+my $self = shift; 
+my $snapshotForm = join '',(
+		   start_form(-name=>'set_Session',
+			      -id=>'set_session',
+			      -onSubmit=>"Controller.setSession()"),
+		    
+		    popup_menu(-NAME=>'select_snapshot', 
+			       -values=>'Set Snapshot'),
+		    end_form,
+	    ),
+
+}
+
 
 
 
@@ -1469,7 +1496,7 @@ my $title = 'Save Session';
 
  return button({-name=>$title,
 		           -onClick => "Controller.saveSession()",
-			   
+# 			   
 # 		   "Controller.update_section('range');"
 		          },
 	   
@@ -1480,17 +1507,32 @@ sub render_select_setSession {
 my $self = shift;
 my $title = 'Set Session';
 my $settings = $self->state;
+my @snapshotsArray;
+# $settings->{snapshots} ={};
+my $snapshotSessions = $settings->{snapshots};
+
 # $settings->{snapshot_active}=0;
 # warn "active = $settings->{snapshot_active}";
 
+
+my @snapshotNames = keys %$snapshotSessions;
+my $snapshotsString = join(',',@snapshotNames);
+
  return button({-name=>$title,
 		-id=>'setsession',
-		-onClick => "Controller.setSession()",
+		-onClick => "Controller.setSession('$snapshotsString')",
 			   
 # 		   "Controller.update_section('range');"
 		          },
 	   
 	        );
+
+
+#  my %temp = %$snapshotSessions; 
+#      while ( (my $key) = each %temp)
+#      {
+#        warn "$key" ;
+#      };
 
  
 
@@ -1544,9 +1586,6 @@ sub render_select_favorites_link {
        my $settings = $self->state;
     
 
- my $ison= $settings->{show_favorites}; 
-
-
  
    
  
@@ -1562,7 +1601,7 @@ sub render_select_favorites_link {
              
 	    return a({-href=>'javascript:void(0)',
 		     
-		    -onClick => "updatetitle(this,'$title','$showall', $ison,'showrefresh','clearfavs');"
+		    -onClick => "updatetitle(this,'$title','$showall','showrefresh','clearfavs');"
 		      },
 		   $title);
 
@@ -2807,7 +2846,7 @@ END
 			  -values  => \@all_glyphs,
 			  -default => ref $glyph eq 'CODE' ? $dynamic : $glyph,
 			  -current => $override->{'glyph'},
-			  -scripts => {-id=>'glyph_picker_id',-onChange => 'track_configure.glyph_select($(\'config_table\'),this)'}
+			  -scripts => {-id=>'glyph_picker_id',-onChange => 'track_configure.glyph_s$(\'config_table\'),this)'}
 		      )
 		   )
 	);

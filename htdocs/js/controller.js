@@ -1212,8 +1212,8 @@ var GBrowseController = Class.create({
   function(/*settings_json*/){
 //     var settings = settings_json.evalJSON();
     
+var name = prompt("Please enter a unique session name","Session Name");
 
-alert('hello');
 
 
  new Ajax.Request(document.URL, {
@@ -1221,7 +1221,7 @@ alert('hello');
   		  asynchronous:true,
   		  parameters: {
   		        action:    'save_session',
-  			name:  'snapshot_test',
+  			name: name,
 	
   	          }});
 		  
@@ -1230,19 +1230,44 @@ alert('hello');
     alert(o+" : "+settings[o]);
     }*/
   },
-		
-			     
+				
+  addOption: 
+ function(selectbox,text,value){
+   
+  var optn = document.createElement("OPTION");
+  optn.text = text;
+  optn.value = value;
+  selectbox.options.add(optn);
+   
+ },
+
+				     
+ addOptionArray:
+ function(snapshots) {
+   
+   var snapshotArray = snapshots.split(',');
+   for (var i=0; i < snapshotArray.length;++i){
+   var snapshotform = document.getElementById('set_session');
+   Controller.addOption(snapshotform.select_snapshot, snapshotArray[i], snapshotArray[i]);
+}
+ },
+				     
+				     
   setSession:
-  function(/*settings_json*/){
+  function(){
 //     var settings = settings_json.evalJSON();
 var session_button = document.getElementById('setsession');
 swap_button(session_button, 'Set Session', 'Unset Session');
-  
 
-alert('hello');
+
+
+
+
+
+// alert('hello');
 
 snapshot_active = (session_button.value == 'Set Session') ? 0 : 1;
-alert(session_button.value+ " "+snapshot_active);
+// alert(session_button.value+ " "+snapshot_active);
 
  new Ajax.Request(document.URL, {
   	          method: 'POST',
@@ -1254,7 +1279,7 @@ alert(session_button.value+ " "+snapshot_active);
 	
   	          }});
 		  
-		  
+	history.go(0);	  
 		
 		  
    /* 

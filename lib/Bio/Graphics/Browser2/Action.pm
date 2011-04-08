@@ -341,22 +341,21 @@ sub ACTION_save_session {
     my $q     = shift;
     my $name = $q->param('name');
     my $settings = $self->state;
+    my $session = $self->session;
+
 # 
+      my %snapshot = %{$settings};
+       delete %snapshot->{snapshots};
+    $settings->{snapshots}->{$name} = \%snapshot;
+
+
+#      my @sessions_arv = @{$session->{session_argv}};
+#  foreach (@sessions_arv) {
+#  	warn $_;
+#  } 
 # 
-      my $snapshot = $settings;
-      delete($snapshot->{snapshots});
-# 
-# 
-     $settings->{snapshots}->{$name} = $snapshot;
-# #     warn "settings = $settings";
-# # warn "$self";
-# 
-## 
-#   my %temsess = %{$settings->{snapshots}->{$name}}; 
-#   while ( (my $key, my $value) = each %temsess)
-#   {
-#     warn "key: $key, value: $temsess{$key}\n";
-#   };
+
+
 
 
     $self->session->flush;
@@ -372,13 +371,13 @@ my $settings = $self->state;
 
 $settings->{current_session} = $name;
 $settings->{snapshot_active} = $active;
-
-   my %temsess = %$settings; 
-  while ( (my $key, my $value) = each %temsess)
-  {
-    warn "key: $key, value: $temsess{$key}\n";
-  };
-warn "active = $settings->{snapshot_active}";
+# 
+#    my %temsess = %$settings; 
+#   while ( (my $key, my $value) = each %temsess)
+#   {
+#     warn "key: $key, value: $temsess{$key}\n";
+#   };
+# warn "active = $settings->{snapshot_active}";
 $self->session->flush;
 return(204,'text/plain',undef);
  

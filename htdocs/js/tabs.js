@@ -31,47 +31,28 @@ var TabbedSection = Class.create( {
 
   do_select_tab:
   function(tab_id) {
-	  var whichOne;
-	  for (var i=0;i<this.tab_menus.length;i++) {
-	      if (this.tab_menus[i].id == tab_id)
-	      	 whichOne=i;
-          }
-	 
-	  var current = this.tab_divs.find(function (e) { 
-                                                 return e.visible();
-                                               });
-	 
-					       
-	  var imgs = document.getElementsByClassName('toolbarStar');
-	  idtoarray(imgs,'toolbarStar');
-	  var stars_id_array = idArray;
+      var whichOne;
+      for (var i=0;i<this.tab_menus.length;i++) {
+	  if (this.tab_menus[i].id == tab_id)
+	      whichOne=i;
+      }
+      var current = this.tab_divs.find(function (e) { 
+	      return e.visible();
+	  });
+      
+      var imgs           = document.getElementsByClassName('toolbarStar');
+      var stars_id_array = idtoarray(imgs,'toolbarStar');
+      this.tab_menus.each(
+			  function(e) {
+			      e.className='tabmenu_inactive';
+			  });
+      this.tab_menus[whichOne].className='tabmenu_active';
 	  
-
-	  
-
-		  
-	  
-	  
-	  
-// 	  alert(toolbarstars);
-// 	  alert('hello');
-//          if(tab_id == 'main_page_select'){
-// // 	   alert('hello');
-// 	    /*alert*/(labels);
-// 
-// 	 }
-	  this.tab_menus.each(
-	         function(e) {
-	         	       e.className='tabmenu_inactive';
-		         });
-          this.tab_menus[whichOne].className='tabmenu_active';
-
-	  if (current != null) current.hide();
-	  Effect.BlindDown( this.tab_divs[whichOne],
-	                    { duration: 0.5,
-	                      afterFinish: function() { onTabLoad(tab_id) }
-	                    }
+      if (current != null) current.hide();
+      Effect.BlindDown( this.tab_divs[whichOne],{ duration: 0.5,
+		  afterFinish: function() { onTabLoad(tab_id) }
+	  }
 	  );
-	}
+  }
 
 });  // end Class.create

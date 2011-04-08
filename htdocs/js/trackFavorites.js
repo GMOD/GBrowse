@@ -44,7 +44,7 @@ function toggle_bar_stars(event,imgID, label, title) {
     var fileNameExt = pathSplit[getfileNameExt]; 
     var fileNameSplit = fileNameExt.split("."); 
     var fileName = fileNameSplit[0]; // just the file name
-    var fileExt = fileNameSplit[1]; // just the file extention
+    var fileExt  = fileNameSplit[1]; // just the file extention
     var fileNameMainSplit = fileName.split("_"); // check for a split on '_'
     var imgName ='';
     var show;     
@@ -70,7 +70,7 @@ function toggle_bar_stars(event,imgID, label, title) {
 		 parameters: {
 		 action:    'set_favorite',
 		     label:  label,
-		     favorite:show,
+		     favorite:show
 		     }});
 		  
      var finalFile = fullFilePath + imgName;
@@ -119,19 +119,15 @@ function togglestars(event,imgID, txtID, favorites,cellid)
 
   ////select track stars
   var stars = document.getElementsByClassName("star");  
-  idtoarray(stars,"star");
-  var starsid = idArray;
+  var starsid = idtoarray(stars,"star");
   /////////////
 
   var startext = document.getElementsByClassName("selectrackname");
-  idtoarray(startext,"selectrackname");
-  var starTextId = idArray;
+  var starTextId = idtoarray(startext,"selectrackname");
 
 /////browser page stars
-  var ministars = document.getElementsByClassName("toolbarStar");
-  idtoarray(ministars, "toolbarStar");
-
-  var ministarsids= idArray;
+  var ministars   = document.getElementsByClassName("toolbarStar");
+  var ministarsid = idtoarray(ministars, "toolbarStar");
  
   if (fileNameMainSplit.length > 1)
       {
@@ -185,19 +181,15 @@ function togglestars(event,imgID, txtID, favorites,cellid)
   return false;
 }
 
-
-function idtoarray(stars,class)
-{
- 
-idArray = new Array();
- 
-    for (x=0, y=0; x<stars.length; x++,y++) {
-        if (stars[x].className===class) {
-        idArray[y] = stars[x].id
-        }
- 
-}
-   return idArray; 
+function idtoarray(stars,className) {
+    var idArray = new Array();
+    var x,y;
+    for (x=0,y=0; x<stars.length; x++,y++) {
+        if (stars[x].className === className) {
+	    idArray[y] = stars[x].id;
+	}
+    }
+    return idArray; 
 }
 
 Array.prototype.findIndex = function(value){

@@ -944,7 +944,7 @@ sub render_track_table {
 	my $weight = $settings->{favorites}{$label} ? '900' : 'normal';
 	$labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline;font-weight:$weight"}, 
 			       a({@args},$key),  
-			       span({-style => 'float:left'}, $favoriteicon));
+			       span({-style => 'postion:relative; right:10px'}, $favoriteicon));
 	
 	if (my ($selected,$total) = $self->subtrack_counts($label)) {
 	    my $escaped_label = CGI::escape($label);
@@ -2020,7 +2020,7 @@ sub tableize {
 
 
 
-      $html .=td({-width=>$cwidth,-style => 'visibility:visible'},span({ -id => "notselectedcheck_${label}", -class => 'notselected_check'},$checkbox));
+      $html .=td({-width=>$cwidth,-style => 'visibility:visible;'},span({ -id => "notselectedcheck_${label}", -class => 'notselected_check'},$checkbox));
  
       
 # 

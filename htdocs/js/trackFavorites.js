@@ -341,6 +341,7 @@ function showFavorites(ison){
 function updateTitle(me,ison){
     var show_favorites = Controller.translate('FAVORITES');
     var show_all       = Controller.translate('SHOWALL');
+    Element.extend(me);
     var current = me.hasClassName('favorites_only') ? 0 : 1;
     if (ison == null)
 	ison = current;

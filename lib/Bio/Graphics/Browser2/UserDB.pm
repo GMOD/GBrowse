@@ -453,7 +453,7 @@ sub accountinfo_from_username {
     my $self     = shift;
     my $username = shift;
     my $userdb = $self->dbi;
-    return $userdb->selectrow_array('SELECT a.gecos,a.email FROM users as a.session as b WHERE a.userid=b.userid AND b.username=?',
+    return $userdb->selectrow_array('SELECT a.gecos,a.email FROM users as a,session as b WHERE a.userid=b.userid AND b.username=?',
 				    undef,$username);
 }
 

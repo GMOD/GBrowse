@@ -46,7 +46,6 @@ my $build = GBrowseInstall->new(
 	'File::NFSLock'            => 0,
 	'GD::SVG'                  => 0,
 	'Math::BigInt'             => 0,
-#	'MOBY::Client::Central'    => 0,
 	'Net::OpenID::Consumer'    => 0,
 	'Net::SMTP::SSL'           => 0,
 	$] <= 5.008 ? ('Safe::World'  => 0)

@@ -1,6 +1,10 @@
+2.28
+   * Added compile-time warnings about the bioperl version.
+
 2.27
-   * THIS VERSION REQUIRES BIOPERL 1.069 IN ORDER FOR SOME FEATURES TO WORK PROPERLY. 
-     BioPerl 1.069 is available from http://github.com/bioperl/bioperl-live/tarball/master.
+   * THIS VERSION REQUIRES BIOPERL 1.62 IN ORDER FOR SOME FEATURES TO WORK PROPERLY. 
+     Bioperl 1.62 and higher are not available on CPAN as of April 2011. Please obtain 
+     the latest development version from http://github.com/bioperl/bioperl-live/tarball/master.
      To download from the command line use: 
      wget --no-check-certificate http://github.com/bioperl/bioperl-live/tarball/master -O bioperl.tar.gz
    * Fixed account registration confirm code URL so that it doesn't get mangled by GBrowse redirection.

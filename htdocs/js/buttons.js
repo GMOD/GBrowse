@@ -46,9 +46,6 @@ function gbToggleTrack (button) {
 
 // ShowHideTrack toggles the visibility of "track", based on the "visible" flag.
 function ShowHideTrack(track_name,visible) {
-
-    alert('ShowHideTrack ' + track_name + ' ' + visible);
-
   var track_link  = $('link_'+track_name);
   var ancestor   = track_link.ancestors().find(
 					function (el) {

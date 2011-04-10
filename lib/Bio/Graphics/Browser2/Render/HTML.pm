@@ -818,7 +818,7 @@ sub render_track_filter {
 	    ),
 	    end_form(),
 	  script({-type=>'text/javascript'},
-		 "function doPluginUpdate() { Controller.reconfigure_plugin('$action',null,null,'$plugin_type',\$('track_filterform'));updateTitle(\$('show_all_link'),'$showfav','$showall',0);}")
+		 "function doPluginUpdate() { Controller.reconfigure_plugin('$action',null,null,'$plugin_type',\$('track_filterform'));updateTitle(\$('show_all_link'),0);}")
 	);
 }
 
@@ -830,8 +830,8 @@ sub render_toggle_track_table {
   my $settings = $self->state;
   # $settings->{show_favorites} =0;
 
-## adding javascript array at the top so we can pass it into a js array -- ugly but it works
-  my $html = "<script>var favoritearray = []; </script>" ;
+  ## adding javascript array at the top so we can pass it into a js array -- ugly but it works
+  my $html = '';
 
   $html .= div({-style=>'font-weight:bold'},
 	       span({-style=>'padding-right:80px'},'<<',$self->render_select_browser_link('link')),
@@ -884,7 +884,8 @@ sub render_track_table {
     }
 
     # add citation link, favorite stars and other markup
-    my %labels;
+    my $button_url = $self->data_source->button_url;
+    my (%labels,$class);
     for my $label (@labels) {
 	my $key = $self->label2key($label);
 	my ($link,$mouseover);
@@ -895,7 +896,7 @@ sub render_track_table {
 	elsif ($label =~ /^file:/){
 	    $link = "?Download%20File=$key";
 	}
-	else {
+	elsif ($self->data_source->setting($label=>'citation')){
 	    $link = "?display_citation=$label";#;source=" . $settings->{source};
 	    my $cit_txt = citation( $source, $label, $self->language ) || '';
 	    if ( length $cit_txt > 100) {
@@ -908,14 +909,17 @@ sub render_track_table {
 	    }
 	    $mouseover = "<b>$key</b>";
 	    $mouseover .= ": $cit_txt"                           if $cit_txt;
+	    $class      = '';
+	} else {
+	    $class = 'track_title';
+	    $link = 'javascript:void(0)';
 	}
 
 	my $balloon = $source->setting('balloon style') || 'GBubble';
 	my $cellid = 'datacell';
-	my @args = ( -href => $link, -target => 'citation', -style => 'cursor:pointer');
+	my @args = ( -href => $link, -target => 'citation',-class=>$class);
 	push @args, -style => 'Font-style: italic' if $label =~ /^(http|ftp|file):/;
 	push @args, -onmouseover => "$balloon.showTooltip(event,'$mouseover')" if $mouseover;
-
 
 	# add hilighting if requested
 	for my $h (@hilite) {
@@ -928,23 +932,21 @@ sub render_track_table {
 	warn "section = $name" if DEBUG;
 
 	#if the track has already been favorited, the image source is made into the yellow star
-	my $star      = $settings->{favorites}{$label} ? '/ficon_2.png' : '/ficon.png';
-	my $showicon  = img({   -class => "star",
-				-id => $label, 
-				-label => $label,
-				-onClick => "togglestars(event,'$label', 'selectrackname_${label}',favoritearray,'$checkid');",
+	my $star      = $settings->{favorites}{$label} ? 'ficon_2.png' : 'ficon.png';
+	my $class     = $settings->{favorites}{$label} ? 'star favorite' : 'star';
+	my $favoriteicon  = img({-class =>  $class,
+				-id      => "star_$label",
+				-onClick => "togglestars('$label')",
 				-style => 'cursor:pointer;',
-				-src   => $self->data_source->button_url.$star}
+				-src   => "$button_url/$star"}
 	    );
 
-	my $favoriteicon = span({-href => '#', 
-				 -id => 'favclick', 
-				},$showicon,);
-	
-	my $weight = $settings->{favorites}{$label} ? '900' : 'normal';
-	$labels{$label} = span({-class => 'selectrackname', -id => "selectrackname_${label}", -style=>"display:inline;font-weight:$weight"}, 
-			       a({@args},$key),  
-			       span({-style => 'postion:relative; right:10px'}, $favoriteicon));
+	my $weight = $settings->{favorites}{$label}         ? 'bold'   : 'normal';
+	my $title  = a({-id=>"link_${label}",@args},$key);
+	$labels{$label} = span({-class => 'selectrackname',
+				-id => "selectrackname_${label}", 
+				-style=>"display:inline;font-weight:$weight"},
+			       $title,$favoriteicon);
 	
 	if (my ($selected,$total) = $self->subtrack_counts($label)) {
 	    my $escaped_label = CGI::escape($label);
@@ -1005,7 +1007,6 @@ sub render_track_table {
 	my $category_title   = (split m/(?<!\\):/,$category)[-1];
 	$category_title      =~ s!($_)!<span style="background-color:yellow">$1</span>!gi foreach @hilite;    
 
-	
 	my $file_id;
 
 	if ($category eq $self->translate('REGION') 
@@ -1031,7 +1032,6 @@ sub render_track_table {
 
 	    my @checkboxes = checkbox_group(-name       => 'l',
 					    -values     => \@track_labels,
-					    
 					    -labels     => \%labels,
 					    -defaults   => \@defaults,
 					    -onClick    => "gbTurnOff('$id');gbToggleTrack(this)",
@@ -1347,11 +1347,11 @@ sub render_select_clear_link {
     my $clear = 1;
 
     warn "settings  $settings->{show_favorites}" if DEBUG;
-    my $showicon =  img({-src   => $self->data_source->button_url."/ficon_2.png"});
-    return a({-href=>'javascript:void(0)',
-	      -onClick => "clearallfav($clear);",
-	     },
-	     $showicon,$title);
+    my $showicon =  img({-src   => $self->data_source->button_url."/ficon_2.png",-border=>0});
+    return span(a({-href=>'javascript:void(0)',
+		  -onClick => "clearallfav($clear);",
+		 },
+		 $title),$showicon);
 }
 
 sub render_select_favorites_link {
@@ -1364,16 +1364,15 @@ sub render_select_favorites_link {
     
     my $ison      = $settings->{show_favorites}; 
     my $title     = $ison ? $showall : $showfav;
-    my $showicon =  img({-src   => $self->data_source->button_url."/ficon_2.png"},'');
+    my $showicon =  img({-src   => $self->data_source->button_url."/ficon_2.png",-border=>0});
  
     warn "settings  $settings->{show_favorites}" if DEBUG;
     warn "ison = $settings->{show_favorites}" if DEBUG;
-    return $showicon.
-	a({-id      => 'show_all_link',
-	   -href    =>'javascript:void(0)',
-	   -onClick => "updateTitle(this,'$showfav','$showall');"
-	  },
-	  $title);
+    return span(a({-id      => 'show_all_link',
+		   -class  => $settings->{show_favorites} ? 'favorites_only' : '',
+		   -href    =>'javascript:void(0)',
+		   -onClick => "updateTitle(this)"
+		  },$title),$showicon);
 }
 
 
@@ -1978,6 +1977,7 @@ sub tableize {
   my $self              = shift;
    my ($array,$category,$cols,$labelnames) = @_;
   return unless @$array;
+  my $settings = $self->state;
 
   my $columns = $cols || 
        $self->data_source->global_setting('config table columns') || 3;
@@ -2010,20 +2010,17 @@ sub tableize {
     $html .= qq(<tr class="searchtitle";display=block>);
     $html .= "<td><b>$row_labels[$row]</b></td>" if @row_labels;
     for (my $column=0;$column<$columns;$column++) {
- my $label    = $labelnames->[$column*$rows + $row] || '&nbsp;';
-      my $checkbox = $array->[$column*$rows + $row] || '&nbsp;';
+	my $label    = $labelnames->[$column*$rows + $row] || '&nbsp;';
+	my $checkbox = $array->[$column*$rows + $row] || '&nbsp;';
   
-      # de-couple the checkbox and label click behaviors
-      $checkbox =~ s/\<\/?label\>//gi;
-	  
-     
+	# de-couple the checkbox and label click behaviors
+	$checkbox =~ s/\<\/?label\>//gi;
 
+	my $class = $settings->{features}{$label}{visible} ? 'activeTrack' : '';
 
-
-      $html .=td({-width=>$cwidth,-style => 'visibility:visible;'},span({ -id => "notselectedcheck_${label}", -class => 'notselected_check'},$checkbox));
- 
-      
-# 
+	$html .=td({-width=>$cwidth,-style => 'visibility:visible',-class=>$class},
+		   span({ -id => "notselectedcheck_${label}", 
+			  -class => 'notselected_check'},$checkbox));
     }
     $html .= "</tr>\n";
   }

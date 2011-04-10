@@ -25,6 +25,15 @@ A.bred            { color: #FFFFFF;
                     font-size : small;
                     text-align: center;
 		  }
+A.track_title {
+    cursor: pointer;
+    color: black;
+}
+A.track_title:hover {
+    text-decoration: none;
+    background: transparent;
+    cursor:     text;
+}
 BODY              { background-color: #F7FBFF;
                     font-family: sans-serif;
 	            font-size: small;
@@ -101,6 +110,9 @@ span.tctl         { cursor: pointer }
     padding-left:  5px;
     padding-right: 5px;
 }
+#.activeTrack {
+#    background-color: lightsteelblue;
+#}
 .datatitle {
     height: 25px;
 }

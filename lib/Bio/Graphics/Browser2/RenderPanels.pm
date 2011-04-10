@@ -519,14 +519,17 @@ sub wrap_rendered_track {
     }
     $title =~ s/:(overview|region|detail)$//;
 
-    my $fav_click      =  "toggle_bar_stars(event,'fav_${label}', '$label', '$title')";
+#    my $fav_click      =  "toggle_bar_stars(event,'fav_${label}', '$label', '$title')";
+    my $fav_click      =  "toggle_titlebar_stars('$label')";
    
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
-    my $starIcon      = ($settings->{favorites}{$label}) ? $favicon_2 : $favicon;
+    my $favorite      = $settings->{favorites}{$label};
+    my $starIcon      = $favorite ? $favicon_2 : $favicon;
+    my $starclass     = $favorite ? "toolbarStar favorite" : "toolbarStar";
     my @images = (
         $fav_click ? img({   	-src         => $starIcon,
-				-id          =>"fav_${label}",
-				-class       => 'toolbarStar',
+				-id          =>"barstar_${label}",
+				-class       => $starclass,
 				-style       => 'cursor:pointer',
 				-onmousedown => $fav_click,
 				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$add_or_remove')"),
@@ -542,9 +545,7 @@ sub wrap_rendered_track {
 
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
-
 		-onClick     => "ShowHideTrack('$label',false)",
-# 
                 -style       => 'cursor:pointer',
                 $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
             }
@@ -556,11 +557,6 @@ sub wrap_rendered_track {
                     "$balloon_style.showTooltip(event,'$share_this_track')"),
             }
         ),
-
-    
-	
-
-	
 
         $config_click ? img({   -src         => $configure,
 				-style       => 'cursor:pointer',
@@ -576,15 +572,9 @@ sub wrap_rendered_track {
 			      })
 	                 : '',
 
-       
-
-
-
 	); 
 
-
-
-   my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
+    my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
  
   my $cancel_ipad = 'Turn off';
   my $share_ipad = 'Share'; 
@@ -632,19 +622,10 @@ my $bookmark = 'Favorite';
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title",
-		  
-		   
 				},
-
-	   
-		  
-		 
 
  	    $self->if_not_ipad(@images,),
 	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
-	    
-# 	 	
-	   
 	    span({-class => 'drag_region',},$title),
 
 	);
@@ -667,7 +648,6 @@ my $bookmark = 'Favorite';
     my $pad_img = img(
         {   -src    => $pad_url,
             -width  => $pad->width,
-#             -height => $pad->height;
             -border => 0,
             -id     => "${label}_pad",
             -style  => $collapsed ? "display:inline" : "display:none",

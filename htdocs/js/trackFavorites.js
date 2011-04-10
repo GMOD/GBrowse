@@ -28,157 +28,54 @@ function removeByElement(arrayName,arrayElement)
   }
 
 ///////////////////////////////////////////////////////
-function toggle_bar_stars(event,imgID, label, title) {
-    var imgTag = document.getElementById(imgID);
-
-    var fullPathName = imgTag.src;
-    var pathSplit = fullPathName.split("/");
-    var getfileNameExt = pathSplit.length - 1;
-    var fullFilePath = '';
-    if (pathSplit.length == 0) {
-	fullFilePath = ''; 
-    } else if (pathSplit.length > 0) {
-	fullFilePath = fullPathName.replace(pathSplit[getfileNameExt], ''); 
+function toggle_titlebar_stars(label,isFavorite) {
+    var img                      = $('barstar_'+label);
+    if (isFavorite == null) {
+	isFavorite               = img.hasClassName('favorite');
+        isFavorite                   = !isFavorite;  // toggle
     }
- 
-    var fileNameExt = pathSplit[getfileNameExt]; 
-    var fileNameSplit = fileNameExt.split("."); 
-    var fileName = fileNameSplit[0]; // just the file name
-    var fileExt  = fileNameSplit[1]; // just the file extention
-    var fileNameMainSplit = fileName.split("_"); // check for a split on '_'
-    var imgName ='';
-    var show;     
-  
-     if (fileNameMainSplit.length > 1) {
-	 var fileNameMain = fileNameMainSplit.length - 1;
-	 fileNameMain = fileNameMainSplit[fileNameMain]; 
-	 if (fileNameMain == 2) {
-	     imgName = fileNameMainSplit[0] + '.' + fileExt;
-	     favorite = false;
-	 } else {
-	     imgName = fileName + '_2.' + fileExt;
-	     favorite = true;	
-	 }
-     } else {
-	 imgName = fileName + '_2.' + fileExt;
-	 favorite = true; 
-     }
-     show = (favorite == true) ? 1 : 0;
-     new Ajax.Request(document.URL, {
-	     method: 'POST',
-		 asynchronous:false,
-		 parameters: {
-		 action:    'set_favorite',
-		     label:  label,
-		     favorite:show
-		     }});
-		  
-     var finalFile = fullFilePath + imgName;
-     imgTag.src = finalFile;
-     Controller.update_sections(new Array(track_listing_id));
-     return false;
+    togglestars(label,isFavorite);
 }
 
-function togglestars(event,imgID, txtID, favorites,cellid)
-{
- //   detectshiftkey();
-  var imgTag = document.getElementById(imgID);
+function togglestars(label,isFavorite) {
+    var img                      = $('star_'+label);
+    var label_title              = $('selectrackname_'+label);
+    if (img != null) {
+	if (isFavorite == null)
+	    isFavorite               = !img.hasClassName('favorite');  // toggle
+	var src                      = Controller.button_url(isFavorite ? 'ficon_2.png'  : 'ficon.png');
+	img.src                      = src;
+	label_title.style.fontWeight = isFavorite ? 'bold' : 'normal';
+	if (isFavorite)
+	    img.addClassName('favorite');
+	else
+	    img.removeClassName('favorite');
+    }
 
-  var cellTag = document.getElementById(cellid);
- 
-  var txtTag = document.getElementById(txtID);
-  var fullPathName = imgTag.src;
-  var pathSplit = fullPathName.split("/");
-  var getfileNameExt = pathSplit.length - 1;
-  var fullFilePath = '';
-  var str = imgID.replace("ficonpic_","");
-  var labels_Range = new Array();
-  var ministars_Range = new Array();
- 
-  if (pathSplit.length == 0)
-  {
-    fullFilePath = ''; 
-  }
-  else if (pathSplit.length > 0)
-  {
-    fullFilePath = fullPathName.replace(pathSplit[getfileNameExt], ''); 
-  }
- 
-  var fileNameExt = pathSplit[getfileNameExt]; 
-  var fileNameSplit = fileNameExt.split("."); 
-  var fileName = fileNameSplit[0]; // just the file name
-  var fileExt = fileNameSplit[1]; // just the file extention
-  var fileNameMainSplit = fileName.split("_"); // check for a split on '_'
-  var imgName ='';
-  var show;     
-     var miniID = 'fav_'+imgID;
-  
-  var browserstarTag = document.getElementById(miniID);
-  var blank_min_src    = fullFilePath+"fmini.png";
-  var coloured_min_src = fullFilePath+"fmini_2.png";
+    new Ajax.Request(document.URL, {
+ 	  method: 'POST',
+ 	      asynchronous:true,
+ 	      parameters: {
+ 	      action:    'set_favorite',
+ 		  label:    label,
+		  favorite: isFavorite ? 1 : 0
+		    },
+		onComplete: function (transport) {
+		    Controller.update_sections(new Array(track_listing_id));
+	    }
+    });
+    set_titlebar_star(label,isFavorite);
+}
 
-  ////select track stars
-  var stars = document.getElementsByClassName("star");  
-  var starsid = idtoarray(stars,"star");
-  /////////////
-
-  var startext = document.getElementsByClassName("selectrackname");
-  var starTextId = idtoarray(startext,"selectrackname");
-
-/////browser page stars
-  var ministars   = document.getElementsByClassName("toolbarStar");
-  var ministarsid = idtoarray(ministars, "toolbarStar");
- 
-  if (fileNameMainSplit.length > 1)
-      {
-   
-	  var fileNameMain = fileNameMainSplit.length - 1;
-	  fileNameMain = fileNameMainSplit[fileNameMain]; 
-	  if (fileNameMain == 2)
-	      {
-		  imgName = fileNameMainSplit[0] + '.' + fileExt;
-		  txtTag.style.fontWeight = "normal";
-		  
-		  favorite = false;
-   
-	      }else{
-	      imgName = fileName + '_2.' + fileExt;
-	      txtTag.style.fontWeight = "900";
-	      
-	      favorite = true;	
-	      
-	  }
-      }else{
-      imgName = fileName + '_2.' + fileExt;
-      txtTag.style.fontWeight = "900";
-      
-      favorite = true; 
-      
-  }
-     
-  //if it is favorited send a 1
-  
-     
-  txtTag.className = 'notselected';
-  cellTag.className = 'notselected_check';
-  show = (favorite == true) ? 1 : 0;
-  //    
-  new Ajax.Request(document.URL, {
-	  method: 'POST',
-	      asynchronous:true,
-	      parameters: {
-	      action:    'set_favorite',
-		  label:   imgID,
-		  favorite:show
-  	          }});
-
-  if(browserstarTag){
-      browserstarTag.src = (favorite == true) ? coloured_min_src : blank_min_src;
-  };
-  var finalFile = fullFilePath + imgName;
-  imgTag.src = finalFile;
-
-  return false;
+function set_titlebar_star(label,isFavorite) {
+    var img = $('barstar_'+label);
+    if (img == null) return;
+    var src = Controller.button_url(isFavorite ? 'fmini_2.png'  : 'fmini.png');
+    if (isFavorite)
+	img.addClassName('favorite');
+    else 
+	img.removeClassName('favorite');
+    img.src = src;
 }
 
 function idtoarray(stars,className) {
@@ -353,7 +250,7 @@ function getName(node) {
     //Some of the cell names are wrapped within anchor tags, test if it is or not.
     if (node.down("a"))
       var track_name = node.down("a").firstChild.nodeValue.stripTags();
-    else
+    else if (node.down('input'))
       var track_name = node.down("input").nextSibling.nodeValue.stripTags();
     return track_name.replace(/^\s+|\s+$/g,"");;
   }
@@ -388,11 +285,6 @@ function visibility (element_name,is_visible) {
    }
    setVisState(element_name, is_visible);
    return false;
-}
-
-//  function to make text toggle when button/link is touched 
-function swap(me,main,alt) {
-    me.innerHTML = (me.innerHTML == main) ? alt : main;
 }
 
 //same as updatetitle(below) but will refresh the favorites if the user 
@@ -446,11 +338,17 @@ function showFavorites(ison){
 //controller.update_sections does the actual updating of the tracks
 // ison true shows favorites
 // ison false shows all
-function updateTitle(me,main,alt,ison){
-    var current = (me.innerHTML == main) ? 1 : 0;
+function updateTitle(me,ison){
+    var show_favorites = Controller.translate('FAVORITES');
+    var show_all       = Controller.translate('SHOWALL');
+    var current = me.hasClassName('favorites_only') ? 0 : 1;
     if (ison == null)
 	ison = current;
-    me.innerHTML = ison ? alt : main;
+    me.innerHTML = ison ? show_all : show_favorites;
+    if (ison)
+	me.addClassName('favorites_only');
+    else
+	me.removeClassName('favorites_only');
     if (ison == current)
 	showFavorites(ison);
 };

@@ -51,6 +51,7 @@ my $build = GBrowseInstall->new(
 	$] <= 5.008 ? ('Safe::World'  => 0)
                     : ()               ,
 	'Template'                 => 2.20,
+        'Term::ReadKey'            => 0,
     },
     script_files => [
 	'bin/gbrowse_clean.pl',

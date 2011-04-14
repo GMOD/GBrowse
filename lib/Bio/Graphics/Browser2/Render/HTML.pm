@@ -885,7 +885,7 @@ sub render_track_table {
 
     # add citation link, favorite stars and other markup
     my $button_url = $self->data_source->button_url;
-    my (%labels,$class);
+    my (%labels);
     for my $label (@labels) {
 	my $key = $self->label2key($label);
 	my ($link,$mouseover);
@@ -909,15 +909,16 @@ sub render_track_table {
 	    }
 	    $mouseover = "<b>$key</b>";
 	    $mouseover .= ": $cit_txt"                           if $cit_txt;
-	    $class      = '';
-	} else {
-	    $class = 'track_title';
-	    $link = 'javascript:void(0)';
 	}
+	my $track_on    = $settings->{features}{$label}{visible};
+	my $favorite    = $settings->{favorites}{$label};
+	my $title_class = 'track_title';
+	$title_class   .= ' activeTrack' if $track_on;
+	$title_class   .= ' favorite'    if $favorite;
 
 	my $balloon = $source->setting('balloon style') || 'GBubble';
 	my $cellid = 'datacell';
-	my @args = ( -href => $link, -target => 'citation',-class=>$class);
+	my @args = ( -href => $link, -target => 'citation',-class=>$title_class);
 	push @args, -style => 'Font-style: italic' if $label =~ /^(http|ftp|file):/;
 	push @args, -onmouseover => "$balloon.showTooltip(event,'$mouseover')" if $mouseover;
 
@@ -932,8 +933,8 @@ sub render_track_table {
 	warn "section = $name" if DEBUG;
 
 	#if the track has already been favorited, the image source is made into the yellow star
-	my $star      = $settings->{favorites}{$label} ? 'ficon_2.png' : 'ficon.png';
-	my $class     = $settings->{favorites}{$label} ? 'star favorite' : 'star';
+	my $star      = $favorite ? 'ficon_2.png' : 'ficon.png';
+	my $class     = $favorite ? 'star favorite' : 'star';
 	my $favoriteicon  = img({-class =>  $class,
 				-id      => "star_$label",
 				-onClick => "togglestars('$label')",
@@ -942,10 +943,10 @@ sub render_track_table {
 	    );
 
 	my $weight = $settings->{favorites}{$label}         ? 'bold'   : 'normal';
-	my $title  = a({-id=>"link_${label}",@args},$key);
+	my $title  = span({-id=>"link_${label}",@args},$key);
 	$labels{$label} = span({-class => 'selectrackname',
-				-id => "selectrackname_${label}", 
-				-style=>"display:inline;font-weight:$weight"},
+				-id    => "selectrackname_${label}", 
+				-style =>"display:inline;font-weight:$weight"},
 			       $title,$favoriteicon);
 	
 	if (my ($selected,$total) = $self->subtrack_counts($label)) {
@@ -1995,7 +1996,7 @@ sub tableize {
 
   my $cwidth = int(100/$columns+0.5) . '%';
  
-  my $html = start_table({-border=>0,-width=>'100%'});
+  my $html = start_table({-border=>0,-width=>'100%',-cellpadding=>0,-cellspacing=>0});
 
   if (@column_labels) {
       $html.="<tr><td></td>";
@@ -2018,9 +2019,9 @@ sub tableize {
 
 	my $class = $settings->{features}{$label}{visible} ? 'activeTrack' : '';
 
-	$html .=td({-width=>$cwidth,-style => 'visibility:visible',-class=>$class},
-		   span({ -id => "notselectedcheck_${label}", 
-			  -class => 'notselected_check'},$checkbox));
+	$html .= td({-width=>$cwidth,-style => 'visibility:visible',-class=>$class},
+		    span({ -id => "notselectedcheck_${label}", 
+			   -class => 'notselected_check'},$checkbox));
     }
     $html .= "</tr>\n";
   }

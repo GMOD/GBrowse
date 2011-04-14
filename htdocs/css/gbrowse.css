@@ -25,14 +25,12 @@ A.bred            { color: #FFFFFF;
                     font-size : small;
                     text-align: center;
 		  }
-A.track_title {
+.track_title {
     cursor: pointer;
     color: black;
 }
-A.track_title:hover {
-    text-decoration: none;
-    background: transparent;
-    cursor:     text;
+.favorite {
+    font-weight: bold;
 }
 BODY              { background-color: #F7FBFF;
                     font-family: sans-serif;

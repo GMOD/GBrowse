@@ -6,7 +6,10 @@ BODY              { background-color: #F7FBFF;
                     font-family: sans-serif;
 	            font-size: small;
                   }
-.activeTrack      { background-color: SandyBrown; }
+.activeTrack      { 
+    background-color: #F87431;
+    color:       white;
+		  }
 .datatitle        { background-color: khaki;                }
 .databody         { background-color: lightgoldenrodyellow; }
 .multiplechoicetitle  { background-color: lightblue;

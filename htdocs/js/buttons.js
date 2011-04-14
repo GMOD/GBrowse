@@ -51,10 +51,13 @@ function ShowHideTrack(track_name,visible) {
 					function (el) {
 					    return el.nodeName == 'TD'
 					});
-  if (visible)
+  if (visible) {
       ancestor.addClassName('activeTrack');
-  else
+      track_link.addClassName('activeTrack');
+  }  else {
       ancestor.removeClassName('activeTrack');
+      track_link.removeClassName('activeTrack');
+  }
 
   if (visible && !Controller.track_exists(track_name)) {
       Controller.add_track(track_name);

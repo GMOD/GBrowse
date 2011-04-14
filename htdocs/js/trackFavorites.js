@@ -45,7 +45,6 @@ function togglestars(label,isFavorite) {
 	    isFavorite               = !img.hasClassName('favorite');  // toggle
 	var src                      = Controller.button_url(isFavorite ? 'ficon_2.png'  : 'ficon.png');
 	img.src                      = src;
-	label_title.style.fontWeight = isFavorite ? 'bold' : 'normal';
 	if (isFavorite)
 	    img.addClassName('favorite');
 	else

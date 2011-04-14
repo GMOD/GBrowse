@@ -133,7 +133,6 @@ sub ACTION_demo {
     my $apache =  GBrowseGuessDirectories->apache
 	or die "Could not find apache executable on this system. Can't run demo";
 
-    print STDERR "Starting apache....\n";
     system "$apache -k start -f $dir/conf/httpd.conf";
     sleep 3;
     if (-e "$dir/logs/apache2.pid") {
@@ -301,10 +300,10 @@ sub ACTION_register {
 	}
     } else {
 	print STDERR "If you wish to register at a later time please \"./Build register\"\n";
+	print STDERR "Press any key to continue\n";
+	my $h = <STDIN>;
     }
     $self->registration_done(1);
-    print STDERR "Press any key to continue\n";
-    my $h = <STDIN>;
 }
 
 
@@ -344,7 +343,7 @@ sub apache_conf {
     my $perl5lib= $self->added_to_INC;
     my $inc      = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
     my $fcgi_inc = $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
-    my $fcgid_inc= $perl5lib ? "DefaultInitEnv PERL5LIB $perl5lib"        : '';
+    my $fcgid_inc= $perl5lib ? "FcgidInitialEnv PERL5LIB $perl5lib"        : '';
     my $modperl_switches = $perl5lib
 	? "PerlSwitches ".join ' ',map{"-I$_"} split ':',$perl5lib
         : '';
@@ -386,7 +385,7 @@ ScriptAlias  "/gb2"      "$cgibin"
   <Location /fgb2>
     SetHandler   fcgid-script
   </Location>
-  DefaultInitEnv GBROWSE_CONF $conf
+  FcgidInitialEnv GBROWSE_CONF $conf
   # these directives prevent idle/busy timeouts and may need to be
   # adjusted up or down
   FcgidMinProcessesPerClass 6

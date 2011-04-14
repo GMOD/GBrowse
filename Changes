@@ -1,3 +1,6 @@
+2.29
+   * Updated mod_fcgid "FcgidInitialEnv" directive to current recommended name.
+
 2.28
    * Added compile-time warnings about the bioperl version.
 

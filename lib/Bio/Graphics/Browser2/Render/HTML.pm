@@ -90,7 +90,7 @@ sub render_login_required {
 # Render Tabbed Pages - Returns the HTML containing the tabs & the page DIVs to hold the content.
 sub render_tabbed_pages {
     my $self = shift;
-    my ($main_html,$tracks_html,$community_tracks_html,$custom_tracks_html,$settings_html,) = @_;
+    my ($main_html,$tracks_html,$community_tracks_html,$custom_tracks_html,$settings_html,$snapshot_html) = @_;
     my $uses_database = $self->user_tracks->database;
     
     my $main_title             = $self->translate('MAIN_PAGE');
@@ -98,7 +98,8 @@ sub render_tabbed_pages {
     my $community_tracks_title = $self->translate('COMMUNITY_TRACKS_PAGE') if $uses_database;
     my $custom_tracks_title    = $self->translate('CUSTOM_TRACKS_PAGE');
     my $settings_title         = $self->translate('SETTINGS_PAGE');
-
+    my $snapshot_title	       = $self->translate('SNAPSHOT_SELECT');
+# 
     my $html = '';
     $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
 	           div({-id=>'tabbed_menu',-class=>'tabmenu'},
@@ -107,12 +108,14 @@ sub render_tabbed_pages {
 	           $uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
 	           span({id=>'custom_tracks_page_select'},      $custom_tracks_title),
 	           span({id=>'settings_page_select'},           $settings_title),
+		    span({id=>'snapshots_page_select'},           $snapshot_title),
 	       ),
 	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
 	   div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
 	   $uses_database?div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html) : "",
 	   div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
 	   div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),
+	   div({-id=>'snapshots_page',        -class=>'tabbody'}, $snapshot_html),
 	);
     return $html;
 }
@@ -156,7 +159,7 @@ sub render_navbar {
 
   my $settings = $self->state;
   my $source   = '/'.$self->session->source.'/';
-
+  my $close = $self->translate('CLOSE');
   my $searchform = join '',(
       start_form(
 	  -name   => 'searchform',
@@ -177,12 +180,14 @@ sub render_navbar {
   my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
 
   my $source_form = div({-id=>'source_form'},$self->source_form());
-
+  my $snapshot_form = div({-id=>'snapshot_form'},$self->snapshot_form());
   my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
 my $sessionButton = div({-id=>'sessionbutton'},$self->render_select_saveSession());
-
-my $setSession = div({-id=>'sessionbutton'},$self->render_select_setSession());
-my $snapshotMenu = div({-id=>'snapshotMenu'},$self->render_select_snapshotsMenu());
+my $style = "position:absolute;right:20px;width:200px;height:45px;background-color:#B4CDCD;z-index:1; border-style:solid;display:none;";
+my $save_prompt = div({-id => 'save_snapshot',-style=>"$style"},
+			      $snapshot_form,
+			a({-href=>'#', -onClick=>"Controller.hide_snapshot_prompt()", -style=>"position:relative;top:2px"},$close)
+					  );
 
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
@@ -195,16 +200,11 @@ my $snapshotMenu = div({-id=>'snapshotMenu'},$self->render_select_snapshotsMenu(
 				       $sliderform || '&nbsp;'
 				    ),
 				    td({-align=>'left'},
-				       $sessionButton || '&nbsp;'
+				       $sessionButton || '&nbsp;',
+				      $save_prompt,
+
 				    ),
-				
-				     td({-align=>'left'},
-				       $snapshotMenu || '&nbsp;'
-				    )
-# 
-# 				     td({-align=>'left'},
-# 				       $setSession || '&nbsp;'
-# 				    )
+	
 # 			
 				 )
 			   ),
@@ -212,7 +212,8 @@ my $snapshotMenu = div({-id=>'snapshotMenu'},$self->render_select_snapshotsMenu(
 		       )
     )
       . div( { -id => "plugin_configure_div"},'');
-   
+  
+
 }
 
 # Plugin Form - Returns the HTML for the plugin form in the main navigation bar.
@@ -246,6 +247,28 @@ sub source_form {
     );
 }
 
+sub snapshot_form {
+    my $self = shift;
+
+
+	div({
+		   -id=>'snapshot_form',},
+		  
+ 		   
+	  input({
+		    -type => "text",
+		    -name => "snapshot_name",
+		    -id => "snapshot_name",
+		    -onKeyPress=>"Controller.submitWithEnter(event);",
+		    -style => "width:180px",
+		    -value =>  $self->translate('SNAPSHOT_FORM'), 
+					 
+		    -onClick => "this.value='';"
+		}),
+	
+	
+    );
+}
 # Slider Form - Returns the HTML for the zooming controls with the "Flip" checkbox.
 sub sliderform {
     my $self    = shift;
@@ -463,7 +486,7 @@ sub render_html_head {
 
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
   my $other_actions   = join ';',@other_initialization;
-  push @args,(-onLoad => "initialize_page(); Controller.addOptionArray('$snapshotsString'); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
 
   return start_html(@args);
 }
@@ -1473,71 +1496,20 @@ sub render_select_clear_link {
 
 }
 
-sub render_select_snapshotsMenu{
-my $self = shift; 
-my $snapshotForm = join '',(
-		   start_form(-name=>'set_Session',
-			      -id=>'set_session',
-			      -onSubmit=>"Controller.setSession()"),
-		    
-		    popup_menu(-NAME=>'select_snapshot', 
-			       -values=>'Set Snapshot'),
-		    end_form,
-	    ),
-
-}
-
-
-
 
 sub render_select_saveSession {
 my $self = shift;
 my $title = 'Save Session';
 
  return button({-name=>$title,
-		           -onClick => "Controller.saveSession()",
+		           -onClick => "Effect.Appear('save_snapshot');",
+ 
 # 			   
 # 		   "Controller.update_section('range');"
 		          },
 	   
 	        );
 }
-
-sub render_select_setSession {
-my $self = shift;
-my $title = 'Set Session';
-my $settings = $self->state;
-my @snapshotsArray;
-# $settings->{snapshots} ={};
-my $snapshotSessions = $settings->{snapshots};
-
-# $settings->{snapshot_active}=0;
-# warn "active = $settings->{snapshot_active}";
-
-
-my @snapshotNames = keys %$snapshotSessions;
-my $snapshotsString = join(',',@snapshotNames);
-
- return button({-name=>$title,
-		-id=>'setsession',
-		-onClick => "Controller.setSession('$snapshotsString')",
-			   
-# 		   "Controller.update_section('range');"
-		          },
-	   
-	        );
-
-
-#  my %temp = %$snapshotSessions; 
-#      while ( (my $key) = each %temp)
-#      {
-#        warn "$key" ;
-#      };
-
- 
-
-}
-
 
 
 sub render_select_refresh_link {
@@ -1647,6 +1619,18 @@ sub render_community_tracks_section {
 	return $html;
 }
 
+# Render select snapshots.
+sub render_saved_snapshots_section {
+    my $self = shift;
+    my $userdata = $self->user_tracks;
+    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
+	$html .= div({-id => "snapshots_page"}, $self->render_saved_snapshots_listing);
+	$html = div({-style => 'margin: 1em;'}, $html);
+	return $html;
+}
+
+
+
 # Render Custom Tracks Section - Returns the content of the "Custom Tracks" tab.
 sub render_custom_tracks_section {
     my $self = shift;
@@ -1683,13 +1667,55 @@ sub userdata_upload {
 			 },"[$from_file]"));
 	$html       .= div({-id=>'custom_list_start'},'');
     return $html;
-}
+} 
 
+# Render saved snapshots listing 
+sub render_saved_snapshots_listing{
+ my $self = shift; 
+ my $settings = $self->state;
+ my $snapshots = $settings->{snapshots};
+ my @snapshot_keys =  keys %$snapshots;
+ my $timeStamp;
+ my $buttons = $self->data_source->globals->button_url;
+ my $deleteSnapshotPath = "$buttons/ex.png";
+
+
+
+ my $html = h1({-style => "position:relative;bottom:30px;display: inline-block; margin-right: 1em;"}, $self->translate('SNAPSHOT_SELECT'));
+ for my $keys(@snapshot_keys) { 
+    $timeStamp = $snapshots->{$keys}->{session_time};
+
+    warn "time = $timeStamp";
+ $html 	  .=  
+
+	      div({
+		  -id =>"snapshot_section",
+		  -style=>"padding-left:3em;width:4px; background-color:#F0E68C;",
+		  },
+	      div({-class=>"snapshot_name", 
+		    -id=>$keys,
+		    -style=> "width:460px;border-style:solid;border-width:1px;border-color:#F0E68C; background-color:#FFF8DC"},
+		 span({-id=>"kill_${keys}"},  img({   -src         => $deleteSnapshotPath, 
+						      -id          => "kill",
+						      -onClick     =>  "Controller.killSession('${keys}')",
+						      -style       => 'cursor:pointer',
+				
+						  },
+						    )
+						      ),
+		 span({ -style=>"width:230px;"},a({-href=>"#"}, $keys)),
+		 span({-style=>"width:230px;position:absolute;left:235px;"},$timeStamp) ),
+	 
+			  )
+			      }
+
+ return $html;
+}
 # Render Community Track Listing - Returns the HTML listing of public tracks available to a user.
 sub render_community_track_listing {
 	my $self = shift;
 	my $globals	= $self->globals;
-	my $html = h1({-style => "display: inline-block; margin-right: 1em;"}, $self->translate('COMMUNITY_TRACKS'));
+	my $html = h1({-style => "display: inline-block; 62margin-right: 1em;"}, $self->translate('COMMUNITY_TRACKS'));
 	my $search = $_[0] || "";
 	my $offset = $_[1] || 0;
 	my $usertracks = $self->user_tracks;

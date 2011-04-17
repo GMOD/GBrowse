@@ -1207,13 +1207,51 @@ var GBrowseController = Class.create({
 	Controller.update_sections(new Array(custom_tracks_id));
   },
 				     
-				    
-  saveSession:
-  function(/*settings_json*/){
-//     var settings = settings_json.evalJSON();
-    
-var name = prompt("Please enter a unique session name","Session Name");
+				     
+				     
+  hide_snapshot_prompt:
+ function(){
+   $('save_snapshot').hide();
+   return false;
+  },
+				     
+ submitWithEnter: 
+   function(e,utcTime){
+     if (!e) var e = window.event;
+      if (e.keyCode) code = e.keyCode;
+      else if (e.which) code = e.which;
 
+      if (code==13) {
+	
+	Controller.hide_snapshot_prompt();
+	Controller.saveSession('snapshot_name',utcTime)
+	Controller.update_sections('snapshots_page');
+	}
+     
+ },
+				     
+ killSession:
+ function(snapshot){
+   var snapshot_row = document.getElementById(snapshot);
+  
+   snapshot_row.style.display="none";
+    new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'delete_session',
+  			name: snapshot,
+			
+		
+	
+  	          }});
+   
+ },
+				     
+  saveSession:
+  function(textFieldId,gmt_time){
+//     var settings = settings_json.evalJSON();
+ var sessionName = document.getElementById(textFieldId).value;
 
 
  new Ajax.Request(document.URL, {
@@ -1221,37 +1259,22 @@ var name = prompt("Please enter a unique session name","Session Name");
   		  asynchronous:true,
   		  parameters: {
   		        action:    'save_session',
-  			name: name,
+  			name: sessionName,
+			time: gmt_time
+		
 	
   	          }});
+		  
+Controller.hide_snapshot_prompt();
+
+
+
 		  
    /* 
     for (var o in settings){
     alert(o+" : "+settings[o]);
     }*/
-  },
-				
-  addOption: 
- function(selectbox,text,value){
-   
-  var optn = document.createElement("OPTION");
-  optn.text = text;
-  optn.value = value;
-  selectbox.options.add(optn);
-   
- },
-
-				     
- addOptionArray:
- function(snapshots) {
-   
-   var snapshotArray = snapshots.split(',');
-   for (var i=0; i < snapshotArray.length;++i){
-   var snapshotform = document.getElementById('set_session');
-   Controller.addOption(snapshotform.select_snapshot, snapshotArray[i], snapshotArray[i]);
-}
- },
-				     
+  },				     
 				     
   setSession:
   function(){

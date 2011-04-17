@@ -334,26 +334,33 @@ sub ACTION_clear_favorites {
 
 
  
+sub ACTION_delete_session {
+    my $self = shift;
+    my $q     = shift;
+    my $name = $q->param('name');
+   
+    my $settings = $self->state;
+    my %snapshot = %{$settings};
+       delete %snapshot->{snapshots}->{$name};
 
+    $self->session->flush;
+    return (204,'text/plain',undef);
+}
 
 sub ACTION_save_session {
     my $self = shift;
     my $q     = shift;
     my $name = $q->param('name');
+   
     my $settings = $self->state;
-    my $session = $self->session;
-
-# 
-      my %snapshot = %{$settings};
+     my $UTCtime = gmtime(time);
+    $settings->{session_time}=$UTCtime;
+#     warn "time = $UTCtime";
+    
+    my %snapshot = %{$settings};
        delete %snapshot->{snapshots};
     $settings->{snapshots}->{$name} = \%snapshot;
 
-
-#      my @sessions_arv = @{$session->{session_argv}};
-#  foreach (@sessions_arv) {
-#  	warn $_;
-#  } 
-# 
 
 
 

@@ -841,8 +841,9 @@ sub render_body {
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;
   my $global_config = $self->render_global_config;
+  my $saved_snapshots = $self->render_saved_snapshots_section;
 
-  $output .= $self->render_tabbed_pages($main_page,$tracks,$community,$custom,$global_config);
+  $output .= $self->render_tabbed_pages($main_page,$tracks,$community,$custom,$global_config, $saved_snapshots);
   $output .= $self->login_manager->render_confirm;
   $output .= $self->render_bottom($features);
 

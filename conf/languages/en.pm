@@ -106,7 +106,9 @@ END
    CLEAR_FAV     => 'Clear All Favorites',
 
 #############
+   SNAPSHOT_FORM   => 'Snapshot Name',
 
+   SNAPSHOT_SELECT => 'Saved Snapshots',
 
    SELECT_TRACKS   => 'Select Tracks',
 

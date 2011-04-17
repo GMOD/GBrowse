@@ -42,24 +42,7 @@ var TabbedSection = Class.create( {
                                                });
 	 
 					       
-	  var imgs = document.getElementsByClassName('toolbarStar');
-	  idtoarray(imgs,'toolbarStar');
-	  var stars_id_array = idArray;
-	  
 
-	  
-
-		  
-	  
-	  
-	  
-// 	  alert(toolbarstars);
-// 	  alert('hello');
-//          if(tab_id == 'main_page_select'){
-// // 	   alert('hello');
-// 	    /*alert*/(labels);
-// 
-// 	 }
 	  this.tab_menus.each(
 	         function(e) {
 	         	       e.className='tabmenu_inactive';

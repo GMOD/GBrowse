@@ -571,7 +571,13 @@ sub wrap_rendered_track {
 						     "$balloon_style.showTooltip(event,'$download_this_track')"),
 			      })
 	                 : '',
-
+        img({   -src         => $help,
+                 -style       => 'cursor:pointer',
+                 -onmousedown => $help_click,
+                 -onMouseOver =>
+             "$balloon_style.showTooltip(event,'$about_this_track')",
+             }
+        )
 	); 
 
     my $ipad_collapse = $collapsed ? 'Expand':'Collapse';

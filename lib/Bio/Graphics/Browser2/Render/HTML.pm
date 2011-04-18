@@ -1678,14 +1678,20 @@ sub render_saved_snapshots_listing{
  my $timeStamp;
  my $buttons = $self->data_source->globals->button_url;
  my $deleteSnapshotPath = "$buttons/ex.png";
+ my $nameHeading = $self->translate('SNAPSHOT_FORM');
+ my $timeStampHeading = $self->translate('TIMESTAMP');
+ my $escapedKey;
 
-
-
- my $html = h1({-style => "position:relative;bottom:30px;display: inline-block; margin-right: 1em;"}, $self->translate('SNAPSHOT_SELECT'));
+ my $html = h2({-style => "position:relative;bottom:25px;display: inline-block; margin-right: 1em;"}, $self->translate('SNAPSHOT_SELECT'));
+$html .= div({-id=>'headingRow',-style=>"height:30px;width:500px;background-color:#F0E68C"},
+	  h1({-style => "position:relative; left:3em; margin-right: 1em;"},$nameHeading),
+	 h1({-style => " position:relative; left:235px;bottom:30px;margin-right: 1em;"},$timeStampHeading),
+	      );
  for my $keys(@snapshot_keys) { 
     $timeStamp = $snapshots->{$keys}->{session_time};
-
-    warn "time = $timeStamp";
+    $escapedKey = $keys;
+    $escapedKey =~ s/('":)/\\$1/g;
+    warn "time = $timeStamp" if DEBUG;
  $html 	  .=  
 
 	      div({
@@ -1693,18 +1699,18 @@ sub render_saved_snapshots_listing{
 		  -style=>"padding-left:3em;width:4px; background-color:#F0E68C;",
 		  },
 	      div({-class=>"snapshot_name", 
-		    -id=>$keys,
+		    -id=>$keys || 'snapshotname',
 		    -style=> "width:460px;border-style:solid;border-width:1px;border-color:#F0E68C; background-color:#FFF8DC"},
 		 span({-id=>"kill_${keys}"},  img({   -src         => $deleteSnapshotPath, 
 						      -id          => "kill",
-						      -onClick     =>  "Controller.killSession('${keys}')",
+						      -onClick     =>  "Controller.killSession('$escapedKey')",
 						      -style       => 'cursor:pointer',
 				
 						  },
 						    )
 						      ),
 		 span({ -style=>"width:230px;"},a({-href=>"#"}, $keys)),
-		 span({-style=>"width:230px;position:absolute;left:235px;"},$timeStamp) ),
+		 span({-style=>"width:230px;position:absolute;left:250px;"},$timeStamp) ),
 	 
 			  )
 			      }

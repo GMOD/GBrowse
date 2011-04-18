@@ -1217,6 +1217,7 @@ var GBrowseController = Class.create({
 				     
  submitWithEnter: 
    function(e,utcTime){
+     
      if (!e) var e = window.event;
       if (e.keyCode) code = e.keyCode;
       else if (e.which) code = e.which;
@@ -1224,8 +1225,9 @@ var GBrowseController = Class.create({
       if (code==13) {
 	
 	Controller.hide_snapshot_prompt();
+	
 	Controller.saveSession('snapshot_name',utcTime)
-	Controller.update_sections('snapshots_page');
+
 	}
      
  },
@@ -1253,7 +1255,7 @@ var GBrowseController = Class.create({
 //     var settings = settings_json.evalJSON();
  var sessionName = document.getElementById(textFieldId).value;
 
-
+ if(sessionName){
  new Ajax.Request(document.URL, {
   	          method: 'POST',
   		  asynchronous:true,
@@ -1264,8 +1266,8 @@ var GBrowseController = Class.create({
 		
 	
   	          }});
-		  
-Controller.hide_snapshot_prompt();
+ }		  
+
 
 
 

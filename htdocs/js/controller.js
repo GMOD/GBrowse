@@ -1212,11 +1212,11 @@ var GBrowseController = Class.create({
   hide_snapshot_prompt:
  function(){
    $('save_snapshot').hide();
-   return false;
+
   },
 				     
  submitWithEnter: 
-   function(e,utcTime){
+   function(e){
      
      if (!e) var e = window.event;
       if (e.keyCode) code = e.keyCode;
@@ -1226,13 +1226,14 @@ var GBrowseController = Class.create({
 	
 	Controller.hide_snapshot_prompt();
 	
-	Controller.saveSession('snapshot_name',utcTime)
+	Controller.saveSnapshot('snapshot_name')
+	  
 
 	}
      
  },
 				     
- killSession:
+ killSnapshot:
  function(snapshot){
    var snapshot_row = document.getElementById(snapshot);
   
@@ -1250,8 +1251,8 @@ var GBrowseController = Class.create({
    
  },
 				     
-  saveSession:
-  function(textFieldId,gmt_time){
+  saveSnapshot:
+  function(textFieldId){
 //     var settings = settings_json.evalJSON();
  var sessionName = document.getElementById(textFieldId).value;
 
@@ -1262,10 +1263,11 @@ var GBrowseController = Class.create({
   		  parameters: {
   		        action:    'save_session',
   			name: sessionName,
-			time: gmt_time
+			
 		
 	
   	          }});
+
  }		  
 
 
@@ -1278,20 +1280,28 @@ var GBrowseController = Class.create({
     }*/
   },				     
 				     
-  setSession:
+unsetSnapshot:
   function(){
-//     var settings = settings_json.evalJSON();
-var session_button = document.getElementById('setsession');
-swap_button(session_button, 'Set Session', 'Unset Session');
 
 
+ new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action: 'set_session',
+  			
+		        unset: 1,
+		
+  	          }});
+		  
+	location.reload(true);	  
+
+  },			     
+  setSnapshot:
+  function(sessionName){
 
 
-
-
-// alert('hello');
-
-snapshot_active = (session_button.value == 'Set Session') ? 0 : 1;
+// snapshot_active = (session_button.value == 'Set Session') ? 0 : 1;
 // alert(session_button.value+ " "+snapshot_active);
 
  new Ajax.Request(document.URL, {
@@ -1299,12 +1309,11 @@ snapshot_active = (session_button.value == 'Set Session') ? 0 : 1;
   		  asynchronous:true,
   		  parameters: {
   		        action: 'set_session',
-  			name: 'snapshot_test',
-			active: snapshot_active,
-	
+  			name: sessionName,
+		
   	          }});
 		  
-	history.go(0);	  
+	location.reload(true);	  
 		
 		  
    /* 

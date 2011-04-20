@@ -279,10 +279,13 @@ sub session { shift->{session} }
 sub page_settings {
   my $self        = shift;
   my $hash        = $self->config_hash;
-  
+
+ 
   $hash->{page_settings}         ||= {};
    $hash->{page_settings}{userid} ||= $self->id;     # store the id in our state
+
    return $hash->{page_settings};
+# 
 }
 
 sub plugin_settings {
@@ -371,20 +374,31 @@ sub config_hash {
   my $self = shift;
   my $source  = $self->source;
   my $session = $self->{session};
+  my $settings =$session->{_DATA}->{$source}->{page_settings};
+  my  $snapshotName = $settings->{current_session};
+  my $isSnapshotActive;
+  my $currentSnapshot;
 
-  my $settings =$session->{_DATA};
-#   my $name = $settings->{current_session};
-   my $snapshotSession= $session->{_DATA}->{$source}->{page_settings}->{snapshots};
+if ($snapshotName){
+   $currentSnapshot  = $settings->{snapshots}->{$snapshotName};
+   $isSnapshotActive = $settings->{snapshot_active};
+   $settings = $settings->{original_settings};
+}
 
-#      my %temsess = %$snapshotSession; 
-#      while ( (my $key, my $value) = each %temsess)
-#      {
-#        warn "snapkey_: $key, value: $temsess{$key}\n" ;
-#      };
-# 
 
-# return $snapshotSettings->{source};
-# $snapshotSettings->{source} = {} unless $snapshotSettings->{source}; 
+$settings = ($isSnapshotActive) ? $currentSnapshot : $settings;
+# warn "active = $isSnapshotActive";
+
+  $session->{_DATA}->{$source}->{page_settings} =  $settings;
+
+#   warn "test = $currentSnapshot";
+#           my %temsess = %$settings; 
+#           while ( (my $key, my $value) = each %temsess)
+#           {
+#             warn "snapkey_: $key, value: $temsess{$key}\n" ;
+#         };
+
+
  return $session->param($source);
   $session->param($source=>{}) unless $session->param($source);
     

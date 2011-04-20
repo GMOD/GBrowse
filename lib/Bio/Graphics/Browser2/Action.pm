@@ -11,6 +11,7 @@ use File::Basename 'basename';
 use JSON;
 use constant DEBUG => 0;
 use Data::Dumper;
+use Storable qw(dclone);;
 
 sub new {
     my $class  = shift;
@@ -357,14 +358,11 @@ sub ACTION_save_session {
     $settings->{session_time}=$UTCtime;
 #     warn "time = $UTCtime";
     
-    my %snapshot = %{$settings};
+    my %snapshot = %{dclone $settings};
        delete %snapshot->{snapshots};
+      %snapshot->{snapshot_active} =1;
+    
     $settings->{snapshots}->{$name} = \%snapshot;
-
-
-
-
-
     $self->session->flush;
     return (204,'text/plain',undef);
 }
@@ -373,18 +371,13 @@ sub ACTION_set_session {
 my $self = shift; 
 my $q = shift; 
 my $name = $q->param('name');
-my $active = $q->param('active');
+my $unset = $q->param('unset');
 my $settings = $self->state;
-
+my %originalSettings = %{dclone $settings};
+$settings->{original_settings} = \%originalSettings;
 $settings->{current_session} = $name;
-$settings->{snapshot_active} = $active;
-# 
-#    my %temsess = %$settings; 
-#   while ( (my $key, my $value) = each %temsess)
-#   {
-#     warn "key: $key, value: $temsess{$key}\n";
-#   };
-# warn "active = $settings->{snapshot_active}";
+$settings->{snapshot_active} = ($unset) ? 0 : 1;
+warn "test = $settings->{snapshot_active}";
 $self->session->flush;
 return(204,'text/plain',undef);
  

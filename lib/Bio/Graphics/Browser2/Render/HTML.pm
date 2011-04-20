@@ -178,16 +178,21 @@ sub render_navbar {
                ? '' : b($self->translate('Landmark')).':'.br().$searchform.$self->examples();
 
   my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
-
+my $isSnapshotActive = $settings->{snapshot_active};
   my $source_form = div({-id=>'source_form'},$self->source_form());
   my $snapshot_form = div({-id=>'snapshot_form'},$self->snapshot_form());
   my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
-my $sessionButton = div({-id=>'sessionbutton'},$self->render_select_saveSession());
-my $style = "position:absolute;right:20px;width:200px;height:45px;background-color:#B4CDCD;z-index:1; border-style:solid;display:none;";
+
+
+my $unsetSessionButton = ($isSnapshotActive) ? div({-id=>'unsessionbutton', -style=>"position:absolute; right:67px; top: 160px"},$self->render_select_unsetSnapshot()) : 'nbsp;';
+my $saveSessionButton = ($isSnapshotActive) ? 'nbsp;' : div({-id=>'unsessionbutton', -style=>"position:absolute; right:67px; top: 160px"},$self->render_select_saveSession());
+my $style = "position:absolute;right:20px;top:185px;width:200px;height:45px;background-color:#B4CDCD;z-index:1; border-style:solid;display:none;";
 my $save_prompt = div({-id => 'save_snapshot',-style=>"$style"},
 			      $snapshot_form,
 			a({-href=>'#', -onClick=>"Controller.hide_snapshot_prompt()", -style=>"position:relative;top:2px"},$close)
 					  );
+
+
 
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
@@ -199,15 +204,12 @@ my $save_prompt = div({-id => 'save_snapshot',-style=>"$style"},
 				    td({-align=>'left'},
 				       $sliderform || '&nbsp;'
 				    ),
-				    td({-align=>'left'},
-				       $sessionButton || '&nbsp;',
-				      $save_prompt,
-
-				    ),
-	
-# 			
+				    
 				 )
 			   ),
+			   $unsetSessionButton,
+			   $save_prompt,
+			   $saveSessionButton,
 			   $self->html_frag('html3',$self->state)
 		       )
     )
@@ -265,6 +267,7 @@ sub snapshot_form {
 					 
 		    -onClick => "this.value='';"
 		}),
+	
 	
 	
     );
@@ -1511,6 +1514,21 @@ my $title = 'Save Session';
 	        );
 }
 
+sub render_select_unsetSnapshot {
+my $self = shift;
+my $title = 'Unset Snapshot';
+
+ return button({-name=>$title,
+		           -onClick => "Controller.unsetSnapshot()",
+ 
+# 			   
+# 		   "Controller.update_section('range');"
+		          },
+	   
+	        );
+}
+
+
 
 sub render_select_refresh_link {
     my $self  = shift;
@@ -1678,19 +1696,21 @@ sub render_saved_snapshots_listing{
  my $timeStamp;
  my $buttons = $self->data_source->globals->button_url;
  my $deleteSnapshotPath = "$buttons/ex.png";
+ my $setSnapshotPath    = "$buttons/checkmark.png";
  my $nameHeading = $self->translate('SNAPSHOT_FORM');
  my $timeStampHeading = $self->translate('TIMESTAMP');
  my $escapedKey;
-
- my $html = h2({-style => "position:relative;bottom:25px;display: inline-block; margin-right: 1em;"}, $self->translate('SNAPSHOT_SELECT'));
-$html .= div({-id=>'headingRow',-style=>"height:30px;width:500px;background-color:#F0E68C"},
+#  $settings->{snapshot_active}= 0;
+ my $html = h2({-style => "position:relative;display: inline-block; margin-right: 1em;"}, $self->translate('SNAPSHOT_SELECT'));
+$html .= div({-id=>'headingRow',-style=>"height:30px;width:501px;background-color:#F0E68C"},
 	  h1({-style => "position:relative; left:3em; margin-right: 1em;"},$nameHeading),
 	 h1({-style => " position:relative; left:235px;bottom:30px;margin-right: 1em;"},$timeStampHeading),
 	      );
  for my $keys(@snapshot_keys) { 
+  if($keys){
     $timeStamp = $snapshots->{$keys}->{session_time};
     $escapedKey = $keys;
-    $escapedKey =~ s/('":)/\\$1/g;
+    $escapedKey =~ s/(['"])/\\$1/g;
     warn "time = $timeStamp" if DEBUG;
  $html 	  .=  
 
@@ -1701,19 +1721,28 @@ $html .= div({-id=>'headingRow',-style=>"height:30px;width:500px;background-colo
 	      div({-class=>"snapshot_name", 
 		    -id=>$keys || 'snapshotname',
 		    -style=> "width:460px;border-style:solid;border-width:1px;border-color:#F0E68C; background-color:#FFF8DC"},
+		  span({-id=>"set_${keys}"},  img({   -src         => $setSnapshotPath, 
+						      -id          => "set",
+						      -onClick     =>  "Controller.setSnapshot('$escapedKey')",
+						      -style       => 'cursor:pointer',
+				
+						  },
+						    )
+						      ),
 		 span({-id=>"kill_${keys}"},  img({   -src         => $deleteSnapshotPath, 
 						      -id          => "kill",
-						      -onClick     =>  "Controller.killSession('$escapedKey')",
+						      -onClick     =>  "Controller.killSnapshot('$escapedKey')",
 						      -style       => 'cursor:pointer',
 				
 						  },
 						    )
 						      ),
 		 span({ -style=>"width:230px;"},a({-href=>"#"}, $keys)),
-		 span({-style=>"width:230px;position:absolute;left:250px;"},$timeStamp) ),
+		 span({-style=>"width:230px;position:absolute;left:260px;"},$timeStamp) ),
 	 
 			  )
 			      }
+				     }
 
  return $html;
 }

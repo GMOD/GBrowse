@@ -314,12 +314,14 @@ sub print_features {
 			td({-height=>3},'')
 	    );
 	
-	my @subfeatures;
-	# sort features with hits so that hit is in order
-	if ($f->can('hit') && $f->hit) {
-	    @subfeatures  = sort {$a->hit->start <=> $b->hit->start} $f->get_SeqFeatures;
+	# try to sort features with hits so that hit is in order.
+	# But, subfeatures don't always have the hit, so check for
+	# that too
+	my @subfeatures = $f->get_SeqFeatures;
+	if ($f->can('hit') && $f->hit && $subfeatures[0] && $subfeatures[0]->hit) {
+	    @subfeatures  = sort {$a->hit->start <=> $b->hit->start} @subfeatures;
 	} else {
-	    @subfeatures = sort {$a->start <=> $b->start} $f->get_SeqFeatures;
+	    @subfeatures = sort {$a->start <=> $b->start} @subfeatures;
 	}
 
  	my $subtable = $self->print_multiple($f,

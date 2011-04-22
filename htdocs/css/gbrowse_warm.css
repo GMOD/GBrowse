@@ -10,21 +10,21 @@ BODY              { background-color: #F7FBFF;
     background-color: #F87431;
     color:       white;
 		  }
-.datatitle        { background-color: khaki;                }
+.datatitle        { background-color: khaki;      }
 .databody         { background-color: lightgoldenrodyellow; }
 .multiplechoicetitle  { background-color: lightblue;
 		        font-size: small;
 }
-.searchtitle      { background-color: beige;
+.searchtitle      { background-color: khaki;
 	            font-size: small;
-		    margin-left: 1em;
-		    margin-right: 1em;
+		    margin-left: 0em;
+		    margin-right: 0em;
 }
-.searchbody       { background-color: khaki;
+.searchbody       { background-color: beige;
 	            font-size: small;
-		    margin-left: 1em;
-		    margin-bottom: 3px;
-		    margin-right: 1em;
+		    margin-left: 0em;
+		    margin-bottom: 0px;
+		    margin-right: 0em;
 }
 .settingstitle    { background-color: #E6EBF0;
 	            font-size: small;

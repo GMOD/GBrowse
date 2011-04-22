@@ -1959,6 +1959,7 @@ sub default_tracks {
 sub auto_open {
     my $self     = shift;
     my $features = $self->region()->features() || return;
+    @$features  <= 1 or return;  # don't autoopen multiple hits!!
     my $state    = $self->state;
 
     for my $feature (@$features) {

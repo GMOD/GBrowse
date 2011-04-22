@@ -410,6 +410,7 @@ sub _search_features_locally {
  	my $features = $region->search_features($args);
 	warn $features ? "got @$features" : "got no features" if DEBUG;
 	next unless $features && @$features;
+	$features = $self->filter_features($dbid,$features);
 	$self->add_dbid_to_features($dbid,$features);
 	push @found,@$features;
 
@@ -417,9 +418,20 @@ sub _search_features_locally {
 	    warn "hit @found in the default database, so short-circuiting" if DEBUG;
 	    last;
 	}
+
     }
 
-    return \@found;
+    return \@found;		
+}
+
+# remove any features in the database's "exclude types" list
+sub filter_features {
+    my $self = shift;
+    my ($dbid,$features) = @_;
+    my %exclude = map {lc $_=> 1} $self->source->exclude_types($dbid);
+    return $features unless %exclude;
+    my @f = grep {!$exclude{lc $_->primary_tag}} @$features;
+    return \@f;
 }
 
 =head2 $found = $db->search_features_remotely($args)

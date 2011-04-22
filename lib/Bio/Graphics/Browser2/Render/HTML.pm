@@ -1032,15 +1032,22 @@ sub render_track_table {
 
 
 	    my @checkboxes = checkbox_group(-name       => 'l',
-					    -values     => \@track_labels,
-					    -labels     => \%labels,
-					    -defaults   => \@defaults,
-					    -onClick    => "gbTurnOff('$id');gbToggleTrack(this)",
-					    -attributes => \%ids,
-					    -override   => 1,
-					    
-		);
+	    				    -values     => \@track_labels,
+	    				    -labels     => \%labels,
+	    				    -defaults   => \@defaults,
+	    				    -onClick    => "gbTurnOff('$id');gbToggleTrack(this)",
+	    				    -attributes => \%ids,
+	    				    -override   => 1,
+	    	);
 	    my $table      = $self->tableize(\@checkboxes,$category,undef, \@track_labels);
+	    # my @spans = map {span(
+	    # 			 {
+	    # 			     -id      => "${_}_check",
+	    # 			     -onClick => "gbTurnOff('$id');gbToggleTrack('$_')",
+	    # 			 },
+	    # 			 $labels{$_})} @track_labels;
+#	    my $table      = $self->tableize(\@spans,$category,undef, \@track_labels);
+
 
 	    my $visible =  $filter_active                            ? 1
 		         : exists $settings->{section_visible}{$id}  ? $settings->{section_visible}{$id} 

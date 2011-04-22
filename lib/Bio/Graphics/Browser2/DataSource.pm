@@ -972,6 +972,12 @@ sub search_options {
 	|| 'default';
 }
 
+sub exclude_types {
+    my $self = shift;
+    my $dbid = shift;
+    return shellwords($self->setting($dbid => 'exclude types')||'');
+}
+
 =item @ids   = $dsn->db2id($db)
 
 =item $dbid  = $dsn->db2id($db)

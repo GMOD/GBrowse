@@ -310,6 +310,16 @@ sub lookup_features {
       warn "try a keyword search for $literal_name" if DEBUG;
       $features = $self->_feature_keyword_search($literal_name);
   }
+
+  if ($class) {
+      my $regex = quotemeta($class);
+      my @f;
+      foreach (@$features) {
+	  my $c = eval {$_->class};
+	  push @f,$_ if ($c && $c =~ /^$regex/i) or $_->primary_tag =~ /^$regex/i;
+      }
+      $features = \@f;
+  }
   
   return $features;
 }

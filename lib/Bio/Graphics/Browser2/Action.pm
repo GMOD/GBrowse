@@ -359,7 +359,7 @@ sub ACTION_save_session {
 #     warn "time = $UTCtime";
     
     my %snapshot = %{dclone $settings};
-       delete %snapshot->{snapshots};
+#        delete %snapshot->{snapshots};
       %snapshot->{snapshot_active} =1;
     
     $settings->{snapshots}->{$name} = \%snapshot;
@@ -370,13 +370,12 @@ sub ACTION_save_session {
 sub ACTION_set_session {
 my $self = shift; 
 my $q = shift; 
-my $name = $q->param('name');
-my $unset = $q->param('unset');
+my $name = $q->param('n ame');
 my $settings = $self->state;
-my %originalSettings = %{dclone $settings};
-$settings->{original_settings} = \%originalSettings;
+
 $settings->{current_session} = $name;
-$settings->{snapshot_active} = ($unset) ? 0 : 1;
+$settings->{snapshot_active} =  1;
+
 warn "test = $settings->{snapshot_active}";
 $self->session->flush;
 return(204,'text/plain',undef);

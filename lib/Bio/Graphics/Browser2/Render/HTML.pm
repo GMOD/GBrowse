@@ -46,6 +46,7 @@ sub render_top {
     $features ||= [];
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
+    $html   .=  $self->render_snapshotTitle;
     $html   .=  $self->html_frag('html1',$self->state);
     return  $err
 	  . $self->toggle({nodiv=>1},'banner','',$html);
@@ -184,8 +185,8 @@ my $isSnapshotActive = $settings->{snapshot_active};
   my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
 
 
-my $unsetSessionButton = ($isSnapshotActive) ? div({-id=>'unsessionbutton', -style=>"position:absolute; right:67px; top: 160px"},$self->render_select_unsetSnapshot()) : 'nbsp;';
-my $saveSessionButton = ($isSnapshotActive) ? 'nbsp;' : div({-id=>'unsessionbutton', -style=>"position:absolute; right:67px; top: 160px"},$self->render_select_saveSession());
+
+my $saveSessionButton = div({-id=>'unsessionbutton', -style=>"position:absolute; right:67px; top: 160px"},$self->render_select_saveSession());
 my $style = "position:absolute;right:20px;top:185px;width:200px;height:45px;background-color:#B4CDCD;z-index:1; border-style:solid;display:none;";
 my $save_prompt = div({-id => 'save_snapshot',-style=>"$style"},
 			      $snapshot_form,
@@ -207,9 +208,10 @@ my $save_prompt = div({-id => 'save_snapshot',-style=>"$style"},
 				    
 				 )
 			   ),
-			   $unsetSessionButton,
-			   $save_prompt,
+		
+			   
 			   $saveSessionButton,
+			    $save_prompt,
 			   $self->html_frag('html3',$self->state)
 		       )
     )
@@ -664,10 +666,21 @@ sub render_title {
     my $self  = shift;
     my $title = shift;
     my $error = shift;
+
     my $settings = $self->state;
     return $settings->{head}
         ? h1({-id=>'page_title',-class=>$error ? 'error' : 'normal'},$title)
 	: '';
+}
+
+sub render_snapshotTitle {
+    my $self  = shift;
+
+    my $error = shift;
+    my $settings = $self->state;
+    my $title = ($settings->{current_session}) ? $settings->{current_session} : " ";
+     return h1({-id=>'page_title',-class=>'normal'},"Current Snapshot : $title")
+
 }
 
 # Renders the search & navigation instructions & examples.
@@ -1514,21 +1527,6 @@ my $title = 'Save Session';
 	        );
 }
 
-sub render_select_unsetSnapshot {
-my $self = shift;
-my $title = 'Unset Snapshot';
-
- return button({-name=>$title,
-		           -onClick => "Controller.unsetSnapshot()",
- 
-# 			   
-# 		   "Controller.update_section('range');"
-		          },
-	   
-	        );
-}
-
-
 
 sub render_select_refresh_link {
     my $self  = shift;
@@ -1700,12 +1698,14 @@ sub render_saved_snapshots_listing{
  my $nameHeading = $self->translate('SNAPSHOT_FORM');
  my $timeStampHeading = $self->translate('TIMESTAMP');
  my $escapedKey;
+
 #  $settings->{snapshot_active}= 0;
  my $html = h2({-style => "position:relative;display: inline-block; margin-right: 1em;"}, $self->translate('SNAPSHOT_SELECT'));
 $html .= div({-id=>'headingRow',-style=>"height:30px;width:501px;background-color:#F0E68C"},
 	  h1({-style => "position:relative; left:3em; margin-right: 1em;"},$nameHeading),
 	 h1({-style => " position:relative; left:235px;bottom:30px;margin-right: 1em;"},$timeStampHeading),
 	      );
+
  for my $keys(@snapshot_keys) { 
   if($keys){
     $timeStamp = $snapshots->{$keys}->{session_time};
@@ -1743,6 +1743,7 @@ $html .= div({-id=>'headingRow',-style=>"height:30px;width:501px;background-colo
 			  )
 			      }
 				     }
+	
 
  return $html;
 }

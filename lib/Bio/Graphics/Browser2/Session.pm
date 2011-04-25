@@ -382,7 +382,7 @@ sub config_hash {
 if ($snapshotName){
    $currentSnapshot  = $settings->{snapshots}->{$snapshotName};
    $isSnapshotActive = $settings->{snapshot_active};
-   $settings = $settings->{original_settings};
+ 
 }
 
 

@@ -1267,42 +1267,15 @@ var GBrowseController = Class.create({
 		
 	
   	          }});
+		}		  
 
- }		  
-
-
-
-
-		  
-   /* 
-    for (var o in settings){
-    alert(o+" : "+settings[o]);
-    }*/
   },				     
+				     			     
 				     
-unsetSnapshot:
-  function(){
-
-
- new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action: 'set_session',
-  			
-		        unset: 1,
-		
-  	          }});
-		  
-	location.reload(true);	  
-
-  },			     
-  setSnapshot:
+				     
+				     
+ setSnapshot:
   function(sessionName){
-
-
-// snapshot_active = (session_button.value == 'Set Session') ? 0 : 1;
-// alert(session_button.value+ " "+snapshot_active);
 
  new Ajax.Request(document.URL, {
   	          method: 'POST',
@@ -1310,16 +1283,9 @@ unsetSnapshot:
   		  parameters: {
   		        action: 'set_session',
   			name: sessionName,
-		
   	          }});
-		  
-	location.reload(true);	  
-		
-		  
-   /* 
-    for (var o in settings){
-    alert(o+" : "+settings[o]);
-    }*/
+	
+	location.reload(true);
   },
 
 });

@@ -1279,7 +1279,7 @@ var GBrowseController = Class.create({
 
  new Ajax.Request(document.URL, {
   	          method: 'POST',
-  		  asynchronous:true,
+  		  asynchronous:false,
   		  parameters: {
   		        action: 'set_session',
   			name: sessionName,

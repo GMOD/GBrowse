@@ -108,6 +108,8 @@ END
 #############
    SNAPSHOT_FORM   => 'Snapshot Name',
    
+   CURRENT_SNAPSHOT => 'Current Snapshot:',
+
    TIMESTAMP      => 'Snapshot Timestamp [GMT]',
 
    SNAPSHOT_SELECT => 'Saved Snapshots',

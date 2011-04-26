@@ -279,13 +279,9 @@ sub session { shift->{session} }
 sub page_settings {
   my $self        = shift;
   my $hash        = $self->config_hash;
-
- 
   $hash->{page_settings}         ||= {};
-   $hash->{page_settings}{userid} ||= $self->id;     # store the id in our state
-
-   return $hash->{page_settings};
-# 
+  $hash->{page_settings}{userid} ||= $self->id;     # store the id in our state
+  return $hash->{page_settings};
 }
 
 sub plugin_settings {
@@ -369,20 +365,19 @@ sub match_nonce {
     warn "$nonce eq ",md5_hex($new_nonce, $salt)                          if DEBUG;
     return $nonce eq md5_hex($new_nonce, $salt);
 }
-
 sub config_hash {
   my $self = shift;
   my $source  = $self->source;
   my $session = $self->{session};
   my $settings =$session->{_DATA}->{$source}->{page_settings};
   my  $snapshotName = $settings->{current_session};
-  my $isSnapshotActive;
-  my $currentSnapshot;
+  my $isSnapshotActive = 0;
+  my $currentSnapshot = 0;
 
 if ($snapshotName){
    $currentSnapshot  = $settings->{snapshots}->{$snapshotName};
    $isSnapshotActive = $settings->{snapshot_active};
- 
+
 }
 
 
@@ -404,6 +399,7 @@ $settings = ($isSnapshotActive) ? $currentSnapshot : $settings;
     
 
 }
+
 
 
 # problem with explicit DESTROY is that it gets called in all child

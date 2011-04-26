@@ -675,12 +675,11 @@ sub render_title {
 
 sub render_snapshotTitle {
     my $self  = shift;
-
     my $error = shift;
+    my $currentSnapshot = $self->translate('CURRENT_SNAPSHOT');
     my $settings = $self->state;
-    my $title = ($settings->{current_session}) ? $settings->{current_session} : " ";
-     return h1({-id=>'page_title',-class=>'normal'},"Current Snapshot : $title")
-
+    my $title = ($settings->{snapshot_active}) ? $settings->{current_session} : " ";
+     return h1({-id=>'page_title',-class=>'normal'},"Current Snapshot : $title") if ($settings->{snapshot_active});
 }
 
 # Renders the search & navigation instructions & examples.
@@ -1685,12 +1684,21 @@ sub userdata_upload {
     return $html;
 } 
 
+
+sub timeSort {
+
+    my ($time) = ( shift =~ /\d{2}:\d{2}:\d{2}/ );
+    return $time;
+}
+
+
 # Render saved snapshots listing 
 sub render_saved_snapshots_listing{
  my $self = shift; 
  my $settings = $self->state;
  my $snapshots = $settings->{snapshots};
  my @snapshot_keys =  keys %$snapshots;
+ my @sortedSnapshots = sort @snapshot_keys;
  my $timeStamp;
  my $buttons = $self->data_source->globals->button_url;
  my $deleteSnapshotPath = "$buttons/ex.png";
@@ -1706,7 +1714,7 @@ $html .= div({-id=>'headingRow',-style=>"height:30px;width:501px;background-colo
 	 h1({-style => " position:relative; left:235px;bottom:30px;margin-right: 1em;"},$timeStampHeading),
 	      );
 
- for my $keys(@snapshot_keys) { 
+ for my $keys(@sortedSnapshots) { 
   if($keys){
     $timeStamp = $snapshots->{$keys}->{session_time};
     $escapedKey = $keys;

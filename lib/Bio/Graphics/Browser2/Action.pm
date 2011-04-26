@@ -12,7 +12,7 @@ use JSON;
 use constant DEBUG => 0;
 use Data::Dumper;
 use Storable qw(dclone);;
-
+use POSIX;
 sub new {
     my $class  = shift;
     my $render = shift;
@@ -270,14 +270,7 @@ sub ACTION_set_track_visibility {
     return (204,'text/plain',undef);
 }
 
-# This is for Sonu to review and modify as necessary
-# parameters:
-#       method: 'post',
-#       parameters: {
-#           action:    'set_favorite',
-#           label:     track_id,
-#           favorite:  true_or_false,
-#       }
+
 sub ACTION_set_favorite {
     my $self = shift;
     my $q    = shift;
@@ -299,16 +292,6 @@ sub ACTION_set_favorite {
     return (204,'text/plain',undef);
 }
 
-
-
-
-#
-# parameters:
-#       method: 'post',
-#       parameters: {
-#           action:    'show_favorites',
-#           show:      true_or_false,
-#       }
 sub ACTION_show_favorites {
     my $self = shift;
     my $q     = shift;
@@ -354,15 +337,18 @@ sub ACTION_save_session {
     my $name = $q->param('name');
    
     my $settings = $self->state;
-     my $UTCtime = gmtime(time);
+     my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
     $settings->{session_time}=$UTCtime;
 #     warn "time = $UTCtime";
-    
+
+
     my %snapshot = %{dclone $settings};
-#        delete %snapshot->{snapshots};
-      %snapshot->{snapshot_active} =1;
+
+  $settings->{snapshots}->{$name} = \%snapshot;
+ 
+
     
-    $settings->{snapshots}->{$name} = \%snapshot;
+  
     $self->session->flush;
     return (204,'text/plain',undef);
 }
@@ -370,11 +356,16 @@ sub ACTION_save_session {
 sub ACTION_set_session {
 my $self = shift; 
 my $q = shift; 
-my $name = $q->param('n ame');
+my $name = $q->param('name');
 my $settings = $self->state;
-
-$settings->{current_session} = $name;
 $settings->{snapshot_active} =  1;
+$settings->{current_session} = $name;
+
+
+  $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots};
+  $settings->{snapshots}->{$name}->{current_session} = $name;
+ warn "$settings->{snapshots}->{$name}->{current_session}";
+ $settings->{snapshots}->{$name}->{snapshot_active} =  1;
 
 warn "test = $settings->{snapshot_active}";
 $self->session->flush;

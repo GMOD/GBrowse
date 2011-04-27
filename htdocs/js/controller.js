@@ -1179,12 +1179,14 @@ var GBrowseController = Class.create({
   },
 
   make_image_link:
-  function(type) {
+  function(type,open) {
     var url = '?make_image=' + type;
     url += ';view_start=' + TrackPan.get_start();
     url += ';view_stop='  + TrackPan.get_stop();
     url += ';view_width=' + TrackPan.width_no_pad;
+    if(open){
     window.open(url);
+    }else{return url};
   },
 
   gbgff_link:
@@ -1206,8 +1208,7 @@ var GBrowseController = Class.create({
     GBox.showTooltip(event, url);
 	Controller.update_sections(new Array(custom_tracks_id));
   },
-				     
-				     
+
 				     
   hide_snapshot_prompt:
  function(){
@@ -1227,7 +1228,9 @@ var GBrowseController = Class.create({
 	Controller.hide_snapshot_prompt();
 	
 	Controller.saveSnapshot('snapshot_name')
-	  
+      
+      
+     document.location.reload(true);
 
 	}
      
@@ -1263,6 +1266,7 @@ var GBrowseController = Class.create({
   		  parameters: {
   		        action:    'save_session',
   			name: sessionName,
+			svgImage: Controller.make_image_link("GD::SVG",0),
 			
 		
 	

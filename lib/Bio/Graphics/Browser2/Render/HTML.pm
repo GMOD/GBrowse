@@ -345,7 +345,7 @@ sub render_html_head {
   return if $self->{started_html}++;
 
   $title =~ s/<[^>]+>//g; # no markup in the head
-
+  
   # pick scripts
   my $js       = $dsn->globals->js_url;
   my @scripts;
@@ -373,6 +373,7 @@ sub render_html_head {
   $onTabScript .= "if (tab_id == 'custom_track_page_select') {$custom_track_page_onLoads}\n";
   $onTabScript .= "if (tab_id == 'settings_page_select') {$settings_page_onLoads}\n";
   $onTabScript .= "};";
+
   push (@scripts,({type=>"text/javascript"}, $onTabScript));
 
   my $url = "?action=get_translation_tables" . ( $self->language_code ? ';language='.($self->language_code)[0] : '' ); #Include language as a parameter to prevent browser from using wrong cache if user changes languages
@@ -491,7 +492,7 @@ sub render_html_head {
 
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
   my $other_actions   = join ';',@other_initialization;
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions;Sortable.create('snapshotTable',{tag:'div',only:'draggable'});");
 
   return start_html(@args);
 }
@@ -679,7 +680,10 @@ sub render_snapshotTitle {
     my $currentSnapshot = $self->translate('CURRENT_SNAPSHOT');
     my $settings = $self->state;
     my $title = ($settings->{snapshot_active}) ? $settings->{current_session} : " ";
-     return h1({-id=>'page_title',-class=>'normal'},"Current Snapshot : $title") if ($settings->{snapshot_active});
+  if ($settings->{snapshot_active}){
+     return h1({-id=>'page_title',-class=>'normal'},"Current Snapshot : $title");
+      }else{
+      return " ";}
 }
 
 # Renders the search & navigation instructions & examples.
@@ -725,10 +729,10 @@ sub render_actionmenu {
     my $self  = shift;
     my $settings = $self->state;
 
-    my   @export_links=a({-href=>'#',-onclick=>'Controller.make_image_link("GD")'},      $self->translate('IMAGE_LINK'));
-    push @export_links,a({-href=>'#',-onclick=>'Controller.make_image_link("GD::SVG")'}, $self->translate('SVG_LINK'))
+    my   @export_links=a({-href=>'#',-onclick=>'Controller.make_image_link("GD",1)'},      $self->translate('IMAGE_LINK'));
+    push @export_links,a({-href=>'#',-onclick=>'Controller.make_image_link("GD::SVG",1)'}, $self->translate('SVG_LINK'))
 	if HAVE_SVG;
-    push @export_links,a({-href=>'#',-onclick=>'Controller.make_image_link("PDF")'},     $self->translate('PDF_LINK'))
+    push @export_links,a({-href=>'#',-onclick=>'Controller.make_image_link("PDF",1)'},     $self->translate('PDF_LINK'))
 	if HAVE_SVG && $self->can_generate_pdf;
 
     # Pass the gff link to a javascript function which will add the missing parameters that are determined client-side
@@ -1699,6 +1703,7 @@ sub render_saved_snapshots_listing{
  my $snapshots = $settings->{snapshots};
  my @snapshot_keys =  keys %$snapshots;
  my @sortedSnapshots = sort @snapshot_keys;
+ my $imageURL;
  my $timeStamp;
  my $buttons = $self->data_source->globals->button_url;
  my $deleteSnapshotPath = "$buttons/ex.png";
@@ -1710,29 +1715,28 @@ sub render_saved_snapshots_listing{
 #  $settings->{snapshot_active}= 0;
  my $html = h2({-style => "position:relative;display: inline-block; margin-right: 1em;"}, $self->translate('SNAPSHOT_SELECT'));
 $html .= div({-id=>'headingRow',-style=>"height:30px;width:501px;background-color:#F0E68C"},
-	  h1({-style => "position:relative; left:3em; margin-right: 1em;"},$nameHeading),
+	 h1({-style => "position:relative; left:3em; margin-right: 1em; width:180px"},$nameHeading),
 	 h1({-style => " position:relative; left:235px;bottom:30px;margin-right: 1em;"},$timeStampHeading),
 	      );
-
+$html.= qq(<div id = "snapshotTable">);
  for my $keys(@sortedSnapshots) { 
   if($keys){
     $timeStamp = $snapshots->{$keys}->{session_time};
+    $imageURL = $snapshots->{$keys}->{image_url};
     $escapedKey = $keys;
     $escapedKey =~ s/(['"])/\\$1/g;
     warn "time = $timeStamp" if DEBUG;
  $html 	  .=  
 
-	      div({
-		  -id =>"snapshot_section",
-		  -style=>"padding-left:3em;width:4px; background-color:#F0E68C;",
-		  },
-	      div({-class=>"snapshot_name", 
+
+	      div({ 
+ 		    -class=>"draggable",
 		    -id=>$keys || 'snapshotname',
-		    -style=> "width:460px;border-style:solid;border-width:1px;border-color:#F0E68C; background-color:#FFF8DC"},
+		    -style=> "padding-left:3em;width:460px;height:35px;border-style:solid;border-width:1px;border-color:#F0E68C; background-color:#FFF8DC; cursor: move;"},
 		  span({-id=>"set_${keys}"},  img({   -src         => $setSnapshotPath, 
 						      -id          => "set",
 						      -onClick     =>  "Controller.setSnapshot('$escapedKey')",
-						      -style       => 'cursor:pointer',
+						      -style       => 'cursor:pointer;position:relative;top:20px',
 				
 						  },
 						    )
@@ -1740,19 +1744,21 @@ $html .= div({-id=>'headingRow',-style=>"height:30px;width:501px;background-colo
 		 span({-id=>"kill_${keys}"},  img({   -src         => $deleteSnapshotPath, 
 						      -id          => "kill",
 						      -onClick     =>  "Controller.killSnapshot('$escapedKey')",
-						      -style       => 'cursor:pointer',
+						      -style       => 'cursor:pointer;position:relative;top:20px',
 				
 						  },
 						    )
 						      ),
-		 span({ -style=>"width:230px;"},a({-href=>"#"}, $keys)),
-		 span({-style=>"width:230px;position:absolute;left:260px;"},$timeStamp) ),
+		 span({-style=>"width:230px;"},span({-class => "snapshot_names", -style=>"position:relative;top:20px"}, $keys)),
+		 span({-class => "timestamps",-style=>"width:230px;position:absolute;left:260px;"},$timeStamp,
+				  img({-src => $imageURL, -width=>"50",-height=>"30", -style=>"position:relative;left:45px;top:5px"},),) ),
+		  
 	 
-			  )
+
 			      }
 				     }
-	
 
+$html 	  .=  qq(</div>);
  return $html;
 }
 # Render Community Track Listing - Returns the HTML listing of public tracks available to a user.

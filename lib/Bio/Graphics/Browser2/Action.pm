@@ -7,6 +7,7 @@ use strict;
 use Carp qw(croak confess cluck);
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
+use Bio::Graphics::Browser2::Render::HTML;
 use File::Basename 'basename';
 use JSON;
 use constant DEBUG => 0;
@@ -335,18 +336,19 @@ sub ACTION_save_session {
     my $self = shift;
     my $q     = shift;
     my $name = $q->param('name');
-   
+    my $imageURL = $q->param('svgImage');
     my $settings = $self->state;
      my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
     $settings->{session_time}=$UTCtime;
+    $settings->{image_url} = $imageURL;
 #     warn "time = $UTCtime";
 
 
     my %snapshot = %{dclone $settings};
 
   $settings->{snapshots}->{$name} = \%snapshot;
- 
 
+#    Bio::Graphics::Browser2::Render::HTML->render_saved_snapshots_listing();
     
   
     $self->session->flush;

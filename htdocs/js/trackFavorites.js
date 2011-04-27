@@ -108,10 +108,6 @@ function checkSummaries() {
     for(j = 0; j < sections.length; j++) {
 	if(sections[j].visible() == false)
 	    summarizeTracks(sections[j]);
-      
-	var track_checkboxes = sections[j].select("input[type=checkbox]:not([id$=_a]):not([id$=_n])");
-	for (var f = 0; f < track_checkboxes.length; f++)
-	    track_checkboxes[f].observe("change", checkAllToggles);
     }
 }
 
@@ -120,7 +116,7 @@ function updateList(node) {
     var children = getChildren(node);
     var list_items = getList(node).select("span");
     for (var a = 0; a < list_items.length; a++) {
-	if (children[a].select('input[type=checkbox]:checked').length != 0) {
+	if (children[a].select('span.activeTrack').length != 0) {
 	    list_items[a].removeClassName("hide").addClassName("show");
 	} else {
 	    list_items[a].removeClassName("show").addClassName("hide");
@@ -138,19 +134,25 @@ function getList(node) {
     return list;
 }
 
+function _checkAllToggles(element) {
+    var node        = element.up("div.el_visible");
+    var all_on      = node.up().down("input[type=checkbox][id$=_a]");
+    var all_off     = node.up().down("input[type=checkbox][id$=_n]");
+    var all_tracks  = node.select("span.track_title");
+    var on_tracks   = all_tracks.findAll(function (el) {return el.hasClassName('activeTrack')});
+
+    all_off.checked = on_tracks.length  == 0;
+    all_on.checked  = all_tracks.length == on_tracks.length;
+}
+
 // Check "All" Toggles - turns off any "All On" or "All Off" checkboxes which are checked.
 function checkAllToggles() {
-    var node = this.up("div.el_visible");
-    var all_on = node.up().down("input[type=checkbox][id$=_a]");
-    var all_off = node.up().down("input[type=checkbox][id$=_n]");
-
-    all_off.checked = (node.down("input[type=checkbox]:checked"))? false : true;
-    all_on.checked = (node.down("input[type=checkbox]:not(:checked)"))? false : true;
+    _checkAllToggles(this);
 }
 
 // summarizeTracks mines the track options box for possible tracks and creates a shorter listing of them when the section is hidden.
 function summarizeTracks(node) {
-    var children = getChildren(node);
+    var children  = getChildren(node);
     var list_text = listText(children);
   
     // Append the HTML into the track list.
@@ -161,7 +163,7 @@ function summarizeTracks(node) {
 
 // Determines whether a node should be "on" in the listing.
 function isOn(node) {
-    return (node.select('input[type="checkbox"][name=l]:checked').length > 0)? true : false;
+    return (node.select('span.activeTrack').length > 0)? true : false;
 }
 
 // listText creates the listing text from the elements given.
@@ -234,7 +236,7 @@ function getChildren(node) {
     var nodes = new Array;
     // Make sure they're valid groups, not just empty table cells...
     for (var i = 0; i < children.length; i++) {
-	if (((has_groups == true) && children[i].match("div.el_visible")) || ((has_groups == false) && (children[i].select("input[type=checkbox][name=l]").length > 0)))
+	if (((has_groups == true) && children[i].match("div.el_visible")) || ((has_groups == false) && (children[i].select("span.track_title").length > 0)))
 	    nodes.push(children[i]);
     }
     return nodes;
@@ -246,12 +248,8 @@ function getName(node) {
   if (isGroup(node)) {
     return (node.previous("div.ctl_visible"))? node.previous("div.ctl_visible").down("span.tctl > b").innerHTML : node.previous("div").down("div.ctl_visible").down("span.tctl > b").innerHTML;
   } else {
-    //Some of the cell names are wrapped within anchor tags, test if it is or not.
-    if (node.down("a"))
-      var track_name = node.down("a").firstChild.nodeValue.stripTags();
-    else if (node.down('input'))
-      var track_name = node.down("input").nextSibling.nodeValue.stripTags();
-    return track_name.replace(/^\s+|\s+$/g,"");;
+      var track_name = node.down("span").innerHTML.stripTags();
+      return track_name.replace(/^\s+|\s+$/g,"");;
   }
 }
 

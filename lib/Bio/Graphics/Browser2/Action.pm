@@ -723,6 +723,22 @@ sub ACTION_set_upload_title {
     return (204,'text/plain',undef);
 }
 
+sub ACTION_set_upload_track_key {
+    my $self = shift;
+    my $q    = shift;
+    $self->session->unlock;
+
+    my $state       = $self->state;
+    my $render      = $self->render;
+    my $file      = $q->param('upload_id')  or confess "No file given to set_upload_track_key.";
+    my $label     = $q->param('label')      or confess "No label given to set_upload_track_key.";
+    my $new_key   = $q->param('key')        or confess "No new key given to set_upload_track_key.";
+
+    my $usertracks = $render->user_tracks;
+    $new_key       = $usertracks->set_key($file, $label, $new_key);
+    return (200,'text/plain',$new_key);
+}
+
 sub ACTION_share_file {
     my $self = shift;
     my $q = shift;

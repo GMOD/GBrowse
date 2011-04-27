@@ -7,9 +7,13 @@ BODY              { background-color: #F7FBFF;
 	            font-size: small;
                   }
 .activeTrack      { 
-    background-color: #F87431;
+    background-color: #F0A040;
     color:       white;
 		  }
+.track_title:hover {
+    background-color: #F0A040;
+    color:       white;
+}
 .datatitle        { background-color: khaki;      }
 .databody         { background-color: lightgoldenrodyellow; }
 .multiplechoicetitle  { background-color: lightblue;

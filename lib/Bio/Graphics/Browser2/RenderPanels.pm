@@ -366,7 +366,6 @@ sub render_tracks {
     my $self     = shift;
     my $requests = shift;
     my $args     = shift;
-    
     my %result;
     
     for my $label ( keys %$requests ) {
@@ -518,14 +517,13 @@ sub wrap_rendered_track {
 	$title = $source->setting($l=>'key') || $label;
     }
     $title =~ s/:(overview|region|detail)$//;
-
-#    my $fav_click      =  "toggle_bar_stars(event,'fav_${label}', '$label', '$title')";
     my $fav_click      =  "toggle_titlebar_stars('$label')";
    
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
     my $favorite      = $settings->{favorites}{$label};
     my $starIcon      = $favorite ? $favicon_2 : $favicon;
     my $starclass     = $favorite ? "toolbarStar favorite" : "toolbarStar";
+    (my $l = $label) =~ s/:(overview|detail|regionview)$//;     
     my @images = (
         $fav_click ? img({   	-src         => $starIcon,
 				-id          =>"barstar_${label}",
@@ -545,7 +543,7 @@ sub wrap_rendered_track {
 
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
-		-onClick     => "ShowHideTrack('$label',false)",
+		-onClick     => "ShowHideTrack('$l',false)",
                 -style       => 'cursor:pointer',
                 $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
             }
@@ -581,46 +579,36 @@ sub wrap_rendered_track {
 	); 
 
     my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
- 
-  my $cancel_ipad = 'Turn off';
-  my $share_ipad = 'Share'; 
-  my $configure_ipad = 'Configure';
-  my $download_ipad = 'Download';
-  my $about_ipad = 'About track';
+    my $cancel_ipad = 'Turn off';
+    my $share_ipad = 'Share'; 
+    my $configure_ipad = 'Configure';
+    my $download_ipad = 'Download';
+    my $about_ipad = 'About track';
  
 
-#    $settings->{favorites} = {};
-#    print Dumper($settings->{favorites}{$label});
-my $bookmark = 'Favorite'; 
-#  = ($HTMLPAGE->{favorites}{$label}) ? 'Favorite' : 'Unfavorite';
+    my $bookmark = 'Favorite'; 
     my $menuicon = img ({-src => $menu, 
 			 -style => 'padding-right:15px;',},),
    
     my $popmenu = div({-id =>"popmenu_${title}", -style => 'display:none'},
- 	
- 	   
- 
- 	     div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
-	     div({-class => 'ipadcollapsed', 
-                -id    => "${label}_icon", 
- 		-onClick =>  "collapse('$label')",
-		
-		},
-	     div({-class => 'linkbg', -onClick => "swap(this,'Collapse','Expand')", -id => "${label}_expandcollapse", },$ipad_collapse)),
-	     div({-class => 'ipadcollapsed',
- 		 -id => "${label}_kill",
- 		 -onClick     => "ShowHideTrack('$label',false)",
-					  }, div({-class => 'linkbg',},
- 					    $cancel_ipad)),
-	     div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, div({-class => 'linkbg',},$share_ipad)),
- 	     div({-class => 'ipadcollapsed',  -onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
-	     div({-class => 'ipadcollapsed',  -onmousedown => $fav_click,}, div({-class => 'linkbg', -onClick => "swap(this,'Favorite','Unfavorite')"},$bookmark)),
- 	     div({-class => 'ipadcollapsed',  -onmousedown => $download_click,}, div({-class => 'linkbg',},$download_ipad)),
- 	     div({-class => 'ipadcollapsed', -style => 'width:200px',  -onmousedown => $help_click,}, div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
-	    
- 	    
- 
+		      div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
+		      div({-class => 'ipadcollapsed', 
+			   -id    => "${label}_icon", 
+			   -onClick =>  "collapse('$label')",
+			  },
+			  div({-class => 'linkbg', -onClick => "swap(this,'Collapse','Expand')", -id => "${label}_expandcollapse", },$ipad_collapse)),
+		      div({-class => 'ipadcollapsed',
+			   -id => "${label}_kill",
+			   -onClick     => "ShowHideTrack('$label',false)",
+			  }, div({-class => 'linkbg',},
+				 $cancel_ipad)),
+		      div({-class => 'ipadcollapsed',  -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, div({-class => 'linkbg',},$share_ipad)),
+		      div({-class => 'ipadcollapsed',  -onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
+		      div({-class => 'ipadcollapsed',  -onmousedown => $fav_click,}, div({-class => 'linkbg', -onClick => "swap(this,'Favorite','Unfavorite')"},$bookmark)),
+		      div({-class => 'ipadcollapsed',  -onmousedown => $download_click,}, div({-class => 'linkbg',},$download_ipad)),
+		      div({-class => 'ipadcollapsed', -style => 'width:200px',  -onmousedown => $help_click,}, div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
  		  );
+    
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
     

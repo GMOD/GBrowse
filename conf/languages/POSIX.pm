@@ -388,6 +388,7 @@ END
 
  ADD_DESCRIPTION    => 'Click to add a description',
  ADD_TITLE          => 'Click to edit the title',
+ EDIT_LABEL         => 'Click to view track. Shift or control-click to edit.',
  NO_DESCRIPTION     => 'No description',
 
  CONFIGURATION     => 'Configuration',

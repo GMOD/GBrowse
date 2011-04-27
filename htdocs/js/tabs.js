@@ -49,10 +49,10 @@ var TabbedSection = Class.create( {
       this.tab_menus[whichOne].className='tabmenu_active';
 	  
       if (current != null) current.hide();
-      Effect.BlindDown( this.tab_divs[whichOne],{ duration: 0.5,
-		  afterFinish: function() { onTabLoad(tab_id) }
-	  }
-	  );
+            Effect.BlindDown( this.tab_divs[whichOne],{ 
+      	          duration: 0.5,
+      		  afterFinish: function() { onTabLoad(tab_id); }
+        });
   }
 
 });  // end Class.create

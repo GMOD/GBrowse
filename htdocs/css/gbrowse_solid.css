@@ -2,7 +2,10 @@
 
 /* These are frequently-changed options that provide a buttoned-down
    "gray" look */
-
+.activeTrack      { 
+    background-color: #D0D0D0;
+    color:       black;
+}
 .datatitle        { background-color: khaki; }
 .databody         { background-color: lightgoldenrodyellow; }
 .multiplechoicetitle  { background-color: lightblue;

@@ -29,8 +29,17 @@ A.bred            { color: #FFFFFF;
     cursor: pointer;
     color: black;
 }
+.track_title:hover {
+    background:lightsteelblue;
+}
 .favorite {
     font-weight: bold;
+}
+.remote {
+    font-style: italic;
+}
+.text_match {
+    background-color:yellow;
 }
 BODY              { background-color: #F7FBFF;
                     font-family: sans-serif;

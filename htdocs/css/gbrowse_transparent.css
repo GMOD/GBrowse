@@ -6,6 +6,10 @@ BODY              { background: url(../images/backgrounds/lrock005.jpg);
                     font-family: sans-serif;
 	            font-size: small;
                   }
+.activeTrack      { 
+    background-color: #D0D0D0;
+    color:       black;
+}
 .datatitle        { background-color: rgba(224,224,224,0.4);
 		   }
 .databody         { background-color: rgba(240,240,240,0.4);

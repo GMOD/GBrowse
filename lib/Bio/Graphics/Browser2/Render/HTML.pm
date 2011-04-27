@@ -1750,7 +1750,7 @@ $html.= qq(<div id = "snapshotTable">);
 						    )
 						      ),
 		 span({-style=>"width:230px;"},span({-class => "snapshot_names", -style=>"position:relative;top:20px"}, $keys)),
-		 span({-class => "timestamps",-style=>"width:230px;position:absolute;left:260px;"},$timeStamp,
+		 span({-class => "timestamps",-style=>"width:230px;position:absolute;left:235px;"},$timeStamp,
 				  img({-src => $imageURL, -width=>"50",-height=>"30", -style=>"position:relative;left:45px;top:5px"},),) ),
 		  
 	 

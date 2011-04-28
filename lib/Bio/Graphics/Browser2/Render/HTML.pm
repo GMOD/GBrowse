@@ -3073,24 +3073,38 @@ sub download_track_menu {
     my $byebye      = 'Balloon.prototype.hideTooltip(1)';
 
     my $segment_str = segment_str($segment);
+    
+    my @format_options = Bio::Graphics::Browser2::TrackDumper->available_formats($data_source,$track);
+    my @radios      = radio_group(-name   => 'format',
+				  -values => \@format_options,
+				  -labels => {fasta => 'FASTA',
+					      gff3  => 'GFF3',
+					      genbank => 'Genbank',
+					      vista => 'BED (peaks + wiggle)',
+					      bed   => 'WIG',
+					      sam   => 'SAM alignment format'});
 
+    my $options = "gbgff=1;l=$track;s=0;f=save+gff3;'+\$('dump_form').serialize()";
     my $html = '';
     $html   .= div({-align=>'center'},
-		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key),br(),
-
+		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key).
+		   hr().
+		   start_form({-id=>'dump_form'}).
+		   div($self->tr('FORMAT'),@radios).
+		   end_form().
+		   hr().
 		   button(-value   => $self->translate('DOWNLOAD_TRACK_DATA_REGION',$segment_str),
-			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid:$start..$end;l=$track;s=0;f=save+gff3';$byebye",
+			  -onClick => "$unload;window.location='?q=$seqid:$start..$end;$options;$byebye",
 		   ),br(),
 
 		   button(-value   => $self->translate('DOWNLOAD_TRACK_DATA_CHROM',$seqid),
-			  -onClick => "$unload;window.location='?gbgff=1;q=$seqid;l=$track;s=0;f=save+gff3';$byebye",
+			  -onClick => "$unload;window.location='?q=$seqid;$options;$byebye",
 		   ),br(),
 
 		   button(-value=> $self->translate('DOWNLOAD_TRACK_DATA_ALL'),
-			  -onClick => "$unload;location.href='?gbgff=1;l=$track;s=0;f=save+gff3';$byebye",
+			  -onClick => "$unload;location.href='?$options;$byebye",
 		   )).
-
-		   button(-style=>"background:pink",-onClick=>"$byebye",-name=>$self->translate('CANCEL'));
+		   button(-style=>"background:pink;float:right",-onClick=>"$byebye",-name=>$self->translate('CANCEL'));
     return $html;
 }
 

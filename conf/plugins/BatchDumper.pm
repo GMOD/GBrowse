@@ -157,7 +157,7 @@ sub dump {
     }
   }
 
-  my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
+  my $out = new Bio::SeqIO(-format => $config->{'fileformat'},-fh=>\*STDOUT);
   if ($mime_type =~ /html/) {
     print start_html('Batch Sequence');
       foreach my $segment (@segments) {

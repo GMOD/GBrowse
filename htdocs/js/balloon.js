@@ -346,7 +346,7 @@ Balloon.prototype.doShowTooltip = function() {
   wrapper.id = 'contentWrapper';
   self.contents.appendChild(wrapper);
   if ('createTouch' in document) {
-  wrapper.innerHTML = helpText + Controller.translate('IPAD_BALLOON');
+      wrapper.innerHTML = helpText + Controller.translate('IPAD_BALLOON');
   }else{
     wrapper.innerHTML = helpText;
   }

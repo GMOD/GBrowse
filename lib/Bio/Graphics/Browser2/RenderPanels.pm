@@ -584,7 +584,6 @@ sub wrap_rendered_track {
     my $configure_ipad = 'Configure';
     my $download_ipad = 'Download';
     my $about_ipad = 'About track';
- 
 
     my $bookmark = 'Favorite'; 
     my $menuicon = img ({-src => $menu, 

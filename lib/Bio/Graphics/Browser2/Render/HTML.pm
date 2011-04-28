@@ -1538,7 +1538,7 @@ sub render_custom_track_listing {
 	my $html = h1($self->translate('UPLOADED_TRACKS'));
 
 	$html .= a( {
-	    -href => $self->annotation_help.'#remote',
+	    -href => $self->annotation_help,
 	    -target => '_blank'
 		    },
 		    i('['.$self->translate('HELP_FORMAT_UPLOAD').']')

@@ -923,6 +923,7 @@ var GBrowseController = Class.create({
     function(upload_name, title_element) {
         if (title_element == null)
             return true;
+	Element.extend(title_element);
         title_element.setStyle({
             border: '2px',
 	    cursor: 'text',
@@ -976,6 +977,7 @@ var GBrowseController = Class.create({
 	function(upload_name, upload_label, key_element) {
         if (key_element == null)
             return true;
+	Element.extend(key_element);
         key_element.setStyle({
             border: '2px',
 	    cursor: 'text',

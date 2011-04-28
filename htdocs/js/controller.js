@@ -572,7 +572,7 @@ var GBrowseController = Class.create({
                         Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
                     } 
                     if (scroll_there)
-                        new Effect.ScrollTo(gbtrack.track_div_id);
+                        new Effect.ScrollTo(gbtrack.track_div_id,{queue: 'end'});
                 } // end onSuccess
             }); // end Ajax.Request
         }); //end each_track()
@@ -1196,9 +1196,9 @@ var GBrowseController = Class.create({
   },
 
   select_tab:
-  function (tab_id) {
+  function (tab_id,animate) {
      if (this.tabs != null) {
-	 this.tabs.select_tab(tab_id);
+	 this.tabs.select_tab(tab_id,animate);
      }
   },
 

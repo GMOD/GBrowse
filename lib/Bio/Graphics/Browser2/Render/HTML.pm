@@ -1628,7 +1628,7 @@ sub render_track_list_title {
     my $go_there = join(' ',
 			map {
 			    my $label = $_;
-			    my $go_there_script    = "Controller.select_tab('main_page');Controller.scroll_to_matching_track('$label')";
+			    my $go_there_script    = "Controller.select_tab('main_page',false);Controller.scroll_to_matching_track('$label')";
 			    my $edit_label_script  = "Controller.edit_upload_track_key('$fileid', '$label', this)";
 			    my $script             = $is_mine ? "if (event.shiftKey || event.ctrlKey) {$edit_label_script} else {$go_there_script}"
 				                              : $go_there_script;

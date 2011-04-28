@@ -587,7 +587,9 @@ var GBrowseController = Class.create({
             return result;
         });
         if (first_track != null) {
-	    new Effect.ScrollTo(first_track.id,{queue:'end'});
+	    new Effect.ScrollTo(first_track,
+				{  queue:'end' }
+				);
         }
     },
 

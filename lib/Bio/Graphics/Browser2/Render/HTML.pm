@@ -949,8 +949,8 @@ sub render_track_table {
 
 	my $checkicon =   img({-id=>"${label}_img",
 			       -onClick => "gbToggleTrack('$label')",
-			       -src=>$track_on ? "$button_url/check_mark_transparent.png" 
-				               : "$button_url/16x16_empty.png"});
+			       -src=>$track_on ? "$button_url/check.png" 
+				               : "$button_url/empty.png"});
 	my $help     = $link ?
 	    a({-href=>$link,
 	       -target=>'_new',

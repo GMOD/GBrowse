@@ -46,11 +46,11 @@ function ShowHideTrack(track_name,visible) {
   if (visible) {
       ancestor.addClassName('activeTrack');
       track_title.addClassName('activeTrack');
-      track_img.src=Controller.button_url('check_mark_transparent.png');
+      track_img.src=Controller.button_url('check.png');
   }  else {
       ancestor.removeClassName('activeTrack');
       track_title.removeClassName('activeTrack');
-      track_img.src=Controller.button_url('16x16_empty.png');
+      track_img.src=Controller.button_url('empty.png');
   }
 
   checkSummaries();

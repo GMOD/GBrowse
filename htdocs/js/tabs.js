@@ -48,6 +48,7 @@ var TabbedSection = Class.create( {
 			      e.className='tabmenu_inactive';
 			  });
       this.tab_menus[whichOne].className='tabmenu_active';
+      var  tab = this.tab_divs[whichOne];
 	  
       if (current != null) current.hide();
       if (animate)

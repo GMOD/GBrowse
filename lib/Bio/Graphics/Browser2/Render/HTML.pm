@@ -1726,6 +1726,7 @@ $html.= qq(<div id = "snapshotTable">);
     $escapedKey = $keys;
     $escapedKey =~ s/(['"])/\\$1/g;
     warn "time = $timeStamp" if DEBUG;
+if($keys ne " " || ""){
  $html 	  .=  
 
 
@@ -1753,7 +1754,7 @@ $html.= qq(<div id = "snapshotTable">);
 		 span({-class => "timestamps",-style=>"width:230px;position:absolute;left:235px;"},$timeStamp,
 				  img({-src => $imageURL, -width=>"50",-height=>"30", -style=>"position:relative;left:45px;top:5px"},),) ),
 		  
-	 
+			   }
 
 			      }
 				     }

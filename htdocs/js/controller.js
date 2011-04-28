@@ -1218,21 +1218,26 @@ var GBrowseController = Class.create({
 				     
  submitWithEnter: 
    function(e){
-     
+     var sessionName = $('save_snapshot').value;
      if (!e) var e = window.event;
       if (e.keyCode) code = e.keyCode;
       else if (e.which) code = e.which;
-
+      
+ //key = enter?
       if (code==13) {
-	
+
+
 	Controller.hide_snapshot_prompt();
 	
 	Controller.saveSnapshot('snapshot_name')
-      
-      
-     document.location.reload(true);
+        
+        document.location.reload(true);
+	
+     
+   
 
 	}
+		  
      
  },
 				     

@@ -2,7 +2,7 @@
 # This script checks the schemas and required fields of the Users Database.
 use strict;
 use FindBin '$Bin';
-use lib "$Bin/../lib";
+use lib "$Bin/../blib/lib";
 use Bio::Graphics::Browser2 "open_globals";
 use CGI::Session;
 use Digest::MD5 qw(md5_hex);

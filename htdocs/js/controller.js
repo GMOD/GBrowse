@@ -722,7 +722,7 @@ var GBrowseController = Class.create({
                     if ($(track_div_id) != null) {
                         actually_remove(track_div_id);
                     }
-                    Controller.update_sections(new Array(track_listing_id),null,null,true);
+                    Controller.update_sections(new Array(track_listing_id),null,ull,true);
                 }
             } // end onSuccess
         });
@@ -1232,11 +1232,8 @@ var GBrowseController = Class.create({
 	Controller.saveSnapshot('snapshot_name')
         
         document.location.reload(true);
-	
-     
-   
-
-	}
+ 
+		    }
 		  
      
  },

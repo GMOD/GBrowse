@@ -3075,22 +3075,31 @@ sub download_track_menu {
     my $segment_str = segment_str($segment);
     
     my @format_options = Bio::Graphics::Browser2::TrackDumper->available_formats($data_source,$track);
+    my %foptions       = map {$_=>1} @format_options;
+    my $default     = $foptions{$state->{preferred_dump_format}} ? $state->{preferred_dump_format}
+                                                                 : $foptions{gff3}  ? 'gff3'
+								 : $foptions{bed}   ? 'bed'
+								 : $foptions{sam}   ? 'sam'
+								 : $foptions{vista} ? 'vista'
+								 : 'fasta';
     my @radios      = radio_group(-name   => 'format',
 				  -values => \@format_options,
+				  -default => $default,
 				  -labels => {fasta => 'FASTA',
 					      gff3  => 'GFF3',
 					      genbank => 'Genbank',
-					      vista => 'BED (peaks + wiggle)',
+					      vista        => 'WIG (peaks+signal)',
+					      vista_wiggle => 'WIG (signal)',
+					      vista_peaks  => 'WIG (peaks)',
 					      bed   => 'WIG',
 					      sam   => 'SAM alignment format'});
-
     my $options = "gbgff=1;l=$track;s=0;f=save+gff3;'+\$('dump_form').serialize()";
     my $html = '';
     $html   .= div({-align=>'center'},
 		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key).
 		   hr().
 		   start_form({-id=>'dump_form'}).
-		   div($self->tr('FORMAT'),@radios).
+		   div($self->tableize(\@radios,undef,3,undef)).
 		   end_form().
 		   hr().
 		   button(-value   => $self->translate('DOWNLOAD_TRACK_DATA_REGION',$segment_str),

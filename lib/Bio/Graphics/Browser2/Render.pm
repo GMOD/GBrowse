@@ -1318,6 +1318,7 @@ sub handle_gff_dump {
     @labels        = $self->split_labels((param('type'),param('t'))) unless @labels;
     @labels        = $self->visible_tracks                           unless @labels;
 
+    $self->state->{preferred_dump_format} = param('format') if param('format');
 
     my $dumper = Bio::Graphics::Browser2::TrackDumper->new(
         -data_source => $self->data_source(),

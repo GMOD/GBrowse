@@ -32,6 +32,11 @@ use Bio::Graphics::FeatureFile;
 use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Browser2::Util 'modperl_request';
+use Bio::SeqIO;
+use Bio::Seq::RichSeq;
+use Bio::SeqFeature::Generic;
+use POSIX qw(strftime);
+
 sub new {
     my $class   = shift;
     my %options = @_;
@@ -97,8 +102,109 @@ sub dump_gff3 {
     shift->_dump_gff3(@_);
 }
 
+sub dump_vista_peaks {
+    shift->_dump_gff3(@_,1,1);  # magic number==1 means print peaks only
+}
+
+sub dump_vista_wiggle {
+    shift->_dump_gff3(@_,1,2);  # magic number==2 means print signal data only
+}
+
 sub dump_vista {
-    shift->_dump_gff3(@_,1,1);
+    shift->_dump_gff3(@_,1,3); # magic number==3 means print peaks + signal data
+}
+
+
+
+sub dump_fasta {
+    my $self = shift;
+    my ($db,$segment,$types,$label) = @_;
+    my $out = new Bio::SeqIO(-format=>'fasta',-fh=>\*STDOUT);
+    my $seq = $segment->seq;
+    $out->write_seq($seq);
+}
+
+sub dump_genbank {
+    my $self = shift;
+    my ($db,$segment,$types,$label) = @_;
+    my $seq = $self->get_rich_seq($db,$segment,$types);
+    my $out = new Bio::SeqIO(-format=>'genbank',-fh=>\*STDOUT);
+    $out->write_seq($seq);
+}
+
+sub get_rich_seq {
+    my $self = shift;
+    my ($db,$segment,$types) = @_;
+    my @args = $segment ? (-seq_id=> $segment->seq_id,
+			   -start => $segment->start,
+			   -end   => $segment->end)
+	                : ();
+
+    my $iterator = $db->get_seq_stream(@args,-type=>$types);
+
+    warn "segment=$segment, types=@$types";
+
+    my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_id,
+				     -desc             => $segment->desc,
+				     -accession_number => $segment->accession_number,
+				     -alphabet         => $segment->alphabet || 'dna',
+	);
+    $seq->add_date(strftime("%d-%b-%Y",localtime));
+    my $ps = $segment->primary_seq; 
+    $seq->primary_seq(!ref $ps ? Bio::PrimarySeq->new(-seq=>$ps) : $ps);
+    $segment->absolute(1);
+    my $offset     = $segment->start - 1;
+    my $segmentend = $segment->length;
+    while ($_ = $iterator->next_seq) {
+	my $score = $_->score;
+	$score    = ref $score eq 'HASH' ? $score->{sumData}/$score->{validCount} : $score;
+	my $nf = Bio::SeqFeature::Generic->new(-primary_tag => $_->primary_tag,
+					       -source_tag  => $_->source_tag,
+					       -frame       => eval{$_->phase}||eval{$_->frame}||undef,
+					       -score       => $score,
+	    );
+	for my $tag ( $_->get_all_tags ) {
+	    my %seen;
+	    $nf->add_tag_value($tag, grep { ! $seen{$_}++ } 
+			       grep { defined } $_->get_tag_values($tag));
+	}
+	$nf->add_tag_value('name',$_->display_name) if $_->display_name;
+	my $loc = $_->location;
+	my @locs = $loc->each_Location;
+	for my $sl (@locs ) {
+	    $sl->start($sl->start() - $offset);
+	    $sl->end  ($sl->end() - $offset );
+	    my ($startstr,$endstr);
+	    
+	    if( $sl->start() < 1) {
+		$startstr = "<1";
+		$endstr   = $sl->end;
+	    }
+	    
+	    if( $sl->end() > $segmentend) {
+		$endstr = ">$segmentend";
+		$startstr = $sl->start unless defined $startstr;
+	    }
+	    if( defined $startstr || defined $endstr ) {
+		$sl = Bio::Location::Fuzzy->new(-start         => $startstr,
+						-end           => $endstr,
+						-strand        => $sl->strand,
+						-location_type => '..');
+		# warn $sl->to_FTstring();
+	    }
+	}
+	if( @locs > 1 ) { 
+	    # let's insure they are sorted
+	    @locs = sort { $a->start <=> $b->start } @locs;
+	    $nf->location( new Bio::Location::Split(-locations => \@locs,
+						    -seq_id    =>
+						    $segment->display_id));
+	} else { 
+	    $nf->location(shift @locs);
+	}
+	$seq->add_SeqFeature($nf);
+    }
+    return $seq;
 }
 
 sub _dump_gff3 {
@@ -137,9 +243,10 @@ sub _dump_gff3 {
 	}
     }
 
-    $self->print_peaks($db,\%peaks,$label)        if %peaks;
-    $self->print_bio_graphics_wigs(\%wigs,$label) if %wigs;
-    $self->print_bigwigs(\%bigwigs,$label)        if %bigwigs;
+    warn "vista=$vista";
+    $self->print_peaks($db,\%peaks,$label)        if %peaks   && $vista==1 or $vista == 3;
+    $self->print_bio_graphics_wigs(\%wigs,$label) if %wigs    && $vista==2 or $vista == 3;
+    $self->print_bigwigs(\%bigwigs,$label)        if %bigwigs && $vista==2 or $vista == 3;
 }
 
 sub dump_sam {
@@ -289,7 +396,7 @@ sub print_bed_score {
     my $self = shift;
     my $f    = shift;
     my $score = defined $f->score ? sprintf("%.4f",$f->score) : '';
-    $score =~ s/0+$//;
+    $score =~ s/\.?0+$//;
     my $seq_id = $f->seq_id;
     if (my $prefix = $self->add_prefix) {
 	$seq_id    = "$prefix$seq_id";
@@ -304,8 +411,12 @@ sub available_formats {
     my $db  = $source->open_database($label);
     my $glyph = $source->code_setting($label => 'glyph');
 
-    my @formats = qw(fasta gff3 genbank);
-    push @formats,'vista','bed' if  $glyph =~ /vista/i;
+    my @formats = qw(fasta);
+    push @formats,qw(gff3 genbank) unless $db->isa('Bio::DB::Bam') 
+	                               or $db->isa('Bio::DB::Sam')
+				       or $db->isa('Bio::DB::BigWig')
+                                       or $glyph =~ /wiggle|xyplot|density/;
+    push @formats,'vista','vista_wiggle','vista_peaks' if  $glyph =~ /vista/i;
     push @formats,'sam'   if  $db->isa('Bio::DB::Bam')    or $db->isa('Bio::DB::Sam');
     push @formats,'bed'   if  $db->isa('Bio::DB::BigWig') or $db->isa('Bio::DB::BigWigSet');
     push @formats,'bed'   if  $glyph =~ /wiggle|xyplot|density/;
@@ -318,9 +429,16 @@ sub guess_dump_method {
     my $db   = shift;
     my $label= shift;
 
-    return 'dump_gff3'   if $self->forced_format eq 'gff3';
-    return 'dump_vista'  if $self->data_source->code_setting($label => 'glyph') =~ /vista/i;
+    return 'dump_gff3'    if $self->forced_format eq 'gff3';
+    return 'dump_fasta'   if $self->forced_format eq 'fasta';
+    return 'dump_genbank' if $self->forced_format eq 'genbank';
+    return 'dump_sam'     if $self->forced_format eq 'sam';
+    return 'dump_bigwig'  if $self->forced_format eq 'bed';
+    return 'dump_vista'        if $self->forced_format eq 'vista';
+    return 'dump_vista_wiggle' if $self->forced_format eq 'vista_wiggle';
+    return 'dump_vista_peaks'  if $self->forced_format eq 'vista_peaks';
 
+    return 'dump_vista'   if $self->data_source->code_setting($label => 'glyph') =~ /vista/i;
     return 'dump_gff3_autowig'   if $db->isa('Bio::DB::SeqFeature::Store');
     return 'dump_gff3_autowig'   if $db->isa('Bio::DB::GFF');
     return 'dump_gff3_autowig'   if $db->isa('Bio::DB::Das::Chado');
@@ -399,10 +517,8 @@ sub print_bigwigs {
     eval "use Bio::DB::BigWig"
 	unless Bio::DB::BigWig->can('new');
 
-    my $prefix = $self->add_prefix;
     for my $track_name (keys %$wigs) {
 	for my $seqid (keys %{$wigs->{$track_name}}) {
-	    $seqid = "$prefix$seqid" if $prefix;
 	    for my $wigfile (keys %{$wigs->{$track_name}{$seqid}}) {
 		my ($start,$end) = @{$wigs->{$track_name}{$seqid}{$wigfile}};
 		my $path = File::Spec->rel2abs($wigfile,$basedir);

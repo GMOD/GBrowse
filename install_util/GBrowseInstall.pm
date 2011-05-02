@@ -472,7 +472,6 @@ sub ACTION_install {
     my $sessions   = File::Spec->catfile($persistent,'sessions');
     my $userdata   = File::Spec->catfile($persistent,'userdata');
     mkpath([$sessions,$userdata],0711);
-    system 'sudo','chown','-R',"$uid.$gid",$sessions,$userdata;
 
     my $databases = $self->install_path->{'databases'};
     
@@ -491,6 +490,7 @@ sub ACTION_install {
     my $perl          = $self->perl;
     my @inc           = map{"-I$_"} split ':',$self->added_to_INC;
     system $perl,@inc,$metadb_script;
+    system 'sudo','chown','-R',"$uid.$gid",$sessions,$userdata;
 
     if (Module::Build->y_n(
 	    "It is recommended that you restart Apache. Shall I try this for you?",'y'

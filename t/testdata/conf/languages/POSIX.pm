@@ -217,7 +217,7 @@ END
 
    REMOTE_TITLE => 'Add remote annotations',
 
-   IPAD_BALLOON => '\nTap feature again to see more details',
+   IPAD_BALLOON => 'Tap features twice to see more details',
 
    REMOTE_URL   => 'Enter remote track URL',
 

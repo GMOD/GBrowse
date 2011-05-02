@@ -1351,7 +1351,7 @@ sub render_select_clear_link {
     my $clear = 1;
 
     warn "settings  $settings->{show_favorites}" if DEBUG;
-    my $showicon =  img({-src   => $self->data_source->button_url."/ficon_2.png",-border=>0});
+    my $showicon =  img({-src   => $self->data_source->button_url."/ficon.png",-border=>0});
     return span(a({-href=>'javascript:void(0)',
 		  -onClick => "clearallfav($clear);",
 		 },

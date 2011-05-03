@@ -90,6 +90,10 @@ END
 
    DOWNLOAD         => 'Download',
 
+   DOWNLOAD_ALL     => 'Download entire dataset',
+
+   TRACK_ID         => 'Track ID=<b>%s</b>',
+
    DISPLAY_SETTINGS => 'Display Settings',
 
    TRACKS   => 'Tracks',
@@ -146,6 +150,8 @@ END
    SUBTRACK_INSTRUCTIONS   => 'Select the tracks you wish to display. Sort the tracks by clicking on the column headings, or by clicking and dragging rows into position.',
 
    SELECT_SUBTRACKS   => '%d of %d subtracks selected',
+
+   NO_TRACK_CITATION => 'There is no additional information about this track.',
 
    EDIT       => 'Edit File...',
 
@@ -463,7 +469,7 @@ END
 
  DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
 
- ABOUT_THIS_TRACK   => '<b>About this track</b>',
+ ABOUT_THIS_TRACK   => '<b>About track <i>%s</i></b>',
 
  SUBTRACKS_SHOWN    => 'This track contains selectable subtracks. Click to modify the selection or change subtrack order.',
 

@@ -1302,11 +1302,11 @@ sub handle_gff_dump {
     if (my $action = param ('f') || param('fetch')) {
 	$gff_action = $action;
     } elsif ($action = param('gbgff')||param('download_track')) {
-	$gff_action = 'scan'           if $action eq 'scan';
-	$gff_action = 'datafile'       if $action eq '1';
-	$gff_action = 'save datafile'  if $action =~ /save/i;
-	$gff_action = 'save fasta'     if $action =~ /fasta/i;
-	$gff_action .= " trackdef"     if param('s') or param('stylesheet');
+	$gff_action  = 'scan'           if $action eq 'scan';
+	$gff_action  = 'datafile'       if $action eq '1';
+	$gff_action  = 'save datafile'  if $action =~ /save/i;
+	$gff_action  = 'save fasta'     if $action =~ /fasta/i;
+	$gff_action .= " trackdef"      if param('s') or param('stylesheet');
     }
     return unless $gff_action;
 
@@ -1367,6 +1367,10 @@ sub handle_gff_dump {
 	} elsif ($actions{trackdef}) {
 	    print header( -type                => 'text/plain');
 	    $dumper->print_stylesheet();
+	} else {
+	    print header( -type                => $mime,
+			  -content_disposition => "attachment; filename=$title.$ext");
+	    $dumper->print_datafile() ;
 	}
     }
 
@@ -2717,8 +2721,8 @@ sub update_state_from_details_mult {
     my $self = shift;
     my $state = $self->state;
 
-    my $view_start = $state->{view_start};
-    my $view_stop  = $state->{view_stop};
+    my $view_start = $state->{view_start} || 0;
+    my $view_stop  = $state->{view_stop}  || 0;
 
     my $details_mult = $self->details_mult;
 
@@ -2747,7 +2751,9 @@ sub region_string {
     my $self    = shift;
     my $state   = $self->state;
     my $source  = $self->data_source;
-    my $divider = $source->unit_divider;
+    my $divider = $source->unit_divider || 1;
+    $state->{view_start} ||= 0;
+    $state->{view_stop}   ||= 0;
     $state->{name} = "$state->{ref}:".
 	              $source->commas($state->{view_start}/$divider).
 		      '..'.

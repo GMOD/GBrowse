@@ -468,7 +468,7 @@ sub wrap_rendered_track {
         || "<b>Download this track</b>";
 
     my $about_this_track = '';
-    $about_this_track .= $self->language->translate('ABOUT_THIS_TRACK')
+    $about_this_track .= $self->language->translate('ABOUT_THIS_TRACK',$label)
         || "<b>About this track</b>";
 
     my $escaped_label = CGI::escape($label);

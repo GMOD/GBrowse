@@ -462,7 +462,7 @@ END
 
  DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
 
- ABOUT_THIS_TRACK   => '<b>About this track</b>',
+ ABOUT_THIS_TRACK   => '<b>About track <i>%s</i></b>',
 
  SUBTRACKS_SHOWN    => 'This track contains selectable subtracks. Click to modify the selection or change subtrack order.',
 

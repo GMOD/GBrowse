@@ -89,8 +89,8 @@ sub dump_track {
     my $db     = $source->open_database($label);
     my @types  = shellwords($source->setting($label=>'feature'));
 
-    warn "format = ",$self->forced_format;
     my $dump_method = $self->guess_dump_method($db,$label);
+    local $SIG{PIPE} = sub {die 'sigPIPE!'};
     $self->$dump_method($db,$segment,\@types,$label);
 }
 
@@ -141,8 +141,6 @@ sub get_rich_seq {
 	                : ();
 
     my $iterator = $db->get_seq_stream(@args,-type=>$types);
-
-    warn "segment=$segment, types=@$types";
 
     my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_id,
 				     -desc             => $segment->desc,
@@ -223,13 +221,15 @@ sub _dump_gff3 {
     #    defer printing to the end and produce a facsimile of 
     #    a UCSC wigfile upload (using bedgraph format).
     # 2) otherwise we print out a valid gff3 file
-
     my ($gff3_header,$bed_header,%peaks,%wigs,%bigwigs);
     while (my $f = $iterator->next_seq) {
 	if (($autowig || $vista) && (my ($wig) = $f->get_tag_values('wigfile'))) {
 	    my ($start,$end) = ($f->start,$f->end);
 	    $start           = $segment->start if $segment && $start < $segment->start;
 	    $end             = $segment->end   if $segment && $end   > $segment->end;
+	    if (my $base = $self->data_source->setting($label=>'basedir')) {
+		$wig = File::Spec->rel2abs($wig,$base);
+	    }
 	    my $w = $wig =~ /\.bw$/ ? \%bigwigs : \%wigs;
 	    my $trackname = $f->display_name || $f->type;
 	    $trackname    .= " (Signal)" if $vista;
@@ -243,7 +243,7 @@ sub _dump_gff3 {
 	}
     }
 
-    warn "vista=$vista";
+    $vista ||= 3;
     $self->print_peaks($db,\%peaks,$label)        if %peaks   && $vista==1 or $vista == 3;
     $self->print_bio_graphics_wigs(\%wigs,$label) if %wigs    && $vista==2 or $vista == 3;
     $self->print_bigwigs(\%bigwigs,$label)        if %bigwigs && $vista==2 or $vista == 3;

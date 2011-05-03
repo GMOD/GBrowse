@@ -1,3 +1,7 @@
+2.30
+   * Improved behavior of track dumper so that when the user aborts the download the server
+     exits gracefully.
+
 2.29
    * Updated mod_fcgid "FcgidInitialEnv" directive to current recommended name.
    * You can now narrow the search to features with a desired primary tag using the syntax

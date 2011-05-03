@@ -1,3 +1,7 @@
+2.31
+   * Fixed "testdata/conf/languages/POSIX.pm: Permission denied" error when running Build test.
+   * Removed outdated instructions to install bioperl 1.6.9 from source.
+
 2.30
    * Improved behavior of track dumper so that when the user aborts the download the server
      exits gracefully.

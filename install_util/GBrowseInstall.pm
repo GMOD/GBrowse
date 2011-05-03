@@ -700,6 +700,8 @@ sub substitute_in_place {
     my $etc         =  $self->install_path->{'etc'} ||= GBrowseGuessDirectories->etc;
     my $cgiurl        = $self->cgiurl;
 
+    $persistent ||= $databases;
+
     while (<$in>) {
 	s/\$INSTALLSCRIPT/$installscript/g;
 	s/\$ETC/$etc/g;
@@ -949,22 +951,7 @@ sub check_prereq {
     my $self   = shift;
     my $result = $self->SUPER::check_prereq(@_);
     unless ($result) {
-	my $bioperl_present = eval "use Bio::Root::Version 1.0069; 1";
-	if (!$bioperl_present) {
-	    $self->log_warn(<<END);
-  * This module requires Bioperl 1.62 or higher, which may not be available       *
-  * on CPAN. Please obtain the latest development version from                    *
-  * http://github.com/bioperl/bioperl-live/tarball/master                         *
-  * To download from the command line, and install run:                           *
-  *  wget --no-check-certificate http://github.com/bioperl/bioperl-live/tarball/master -O bioperl.tar.gz *
-  *  tar zxvf bioperl.tar.gz                                                      *
-  *  cd bioperl*                                                                  *
-  *  perl Build.PL                                                                *
-  *  sudo Build install                                                           *
-
-END
-	} else {
-	    $self->log_warn(<<END);
+	$self->log_warn(<<END);
   * Do not worry if some "recommended" prerequisites are missing. You can install *
   * them later if you need the features they provide. Do not proceed with the     *
   * install if any of "REQUIRED" prerequisites are missing.                       *
@@ -974,7 +961,7 @@ END
 
 END
     }
-    }
+    return $result;
 }
 
 1;

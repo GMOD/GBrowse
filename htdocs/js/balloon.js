@@ -43,7 +43,6 @@ var balloonIsSuppressed;
 var tooltipIsSuppressed;
 var supportsTouch = ('createTouch' in document);
 
-
 //////////////////////////////////////////////////////////////////////////
 // This is constructor that is called to initialize the Balloon object  //
 //////////////////////////////////////////////////////////////////////////
@@ -62,17 +61,20 @@ var Balloon = function () {
   // scrolling aborts unsticky balloons
   document.onscroll    = Balloon.prototype.hideTooltip;
 
-  // make balloons go away if the page is unloading or waiting
-  // to unload.
-  window.onbeforeunload = function(){
-    Balloon.prototype.hideTooltip(1);
-    balloonIsSuppressed = true;
-  };
-
   // for IE, the balloons can;t start until the page is finished loading
   // set a flag that will get toggled when loading is finished
   if (this.isIE()) {
-    this.suppress = true;
+      this.suppress = true;
+  } else {
+      // make balloons go away if the page is unloading or waiting
+      // to unload. Note that we do not call this for IE because
+      // IE8 has a bug which triggers beforeunload event every time
+      // an anchor is clicked, and stopping event propagation doesn't
+      // seem to fix it.
+      window.onbeforeunload = function(){
+            Balloon.prototype.hideTooltip(1);
+            balloonIsSuppressed = true;
+      };
   }
 
   return this;
@@ -83,8 +85,7 @@ var Balloon = function () {
 // delay time to avoid balloons popping up on rapid mouseover events    //
 //////////////////////////////////////////////////////////////////////////
 Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
-			      
-	
+
   // If the object is not configured by now, fall back to default
   if (!this.configured) {
     BalloonConfig(this,'GBubble');
@@ -268,6 +269,8 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
   var delay = mouseOver ? this.delayTime : 1;
   this.timeoutTooltip = window.setTimeout(this.doShowTooltip,delay);
   this.pending = true;
+
+  return false;
 }
 
 
@@ -329,10 +332,9 @@ Balloon.prototype.doShowTooltip = function() {
   self.pageRight  = pageLeft + pageWidth;
 
   // do we have a cursor position?
-  if (!(self.activeTop && self.activeRight)) {
-//     self.setActiveCoordinates();
-  }
-
+  //  if (!(self.activeTop && self.activeRight)) {
+  // self.setActiveCoordinates();
+  // }
 
   // balloon orientation
   var vOrient = self.activeTop > pageMid ? 'up' : 'down';
@@ -374,6 +376,8 @@ Balloon.prototype.doShowTooltip = function() {
   self.startY = self.activeTop;
 
   self.fade(0,self.opacity,self.fadeIn);
+
+  return false;
 }
 
 Balloon.prototype.addCloseButton = function () {
@@ -434,7 +438,7 @@ Balloon.prototype.makeBalloon = function() {
   //self.parts.push(balloon);
 
   if (self.displayTime)  {
-    self.timeoutAutoClose = window.setTimeout(this.hideTooltip,self.displayTime);
+      self.timeoutAutoClose = window.setTimeout(this.hideTooltip,self.displayTime);
   }
   return balloon;
 }
@@ -711,9 +715,12 @@ Balloon.prototype.doOpacity = function(op,opc,el) {
   self.setStyle(el,'KhtmlOpacity',op);
 }
 
-Balloon.prototype.hideTooltip = function(override) { 
+Balloon.prototype.hideTooltip = function(override) {
+
   // some browsers pass the event object == we don't want it
+  if (override == null)  override = false;
   if (override && typeof override == 'object') override = false;
+
   if (balloonIsSticky && !override) return false;
 
   var self = currentBalloonClass;
@@ -747,7 +754,7 @@ Balloon.prototype.cleanup = function() {
   else {
     body = document.body;
   }
-
+  
   var bubble = $('balloon');
   var close  = $('closeButton');
   var cont   = $('container');
@@ -788,11 +795,6 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
 
   var scrollTop  = 0;
   var scrollLeft = 0;
-//  Why?  I do not know. perhaps a vestigial patch?
-//  if (self.isIE()) {
-//    var scrollTop  = window.pageYOffset || document.documentElement.scrollTop  || 0; 
-//    var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || 0;
-//  }
 
   var XY = self.eventXY(evt);
   adjustment   = self.hOffset < 20 ? 10 : 0;
@@ -808,7 +810,7 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
     var deltaY = Math.abs(self.activeTop - self.startY);
 
     if (deltaX > self.stopTrackingX || deltaY > self.stopTrackingY) {
-      self.hideTooltip();
+	self.hideTooltip();
     }
     else {
       var b = self.activeBalloon;

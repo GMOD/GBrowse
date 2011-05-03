@@ -834,10 +834,7 @@ sub render_body {
       my $details = $self->translate('CHROM_NOT_FOUND_DETAILS',  $features->[0]->display_name, $features->[0]->seq_id);
       $main_page .= script({-type=>'text/javascript'},"Controller.show_error('$message','$details')")
   }
-
-  $main_page .= $self->render_select_track_link;
-;
-
+  
   my $tracks        = $self->render_tracks_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;

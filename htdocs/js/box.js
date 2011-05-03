@@ -14,17 +14,15 @@ var Box = function () {
   // scrolling aborts unsticky box
   document.onscroll    = Balloon.prototype.hideTooltip;
 
-  // go away if the page is unloading or waiting
-  // to unload.
-  window.onbeforeunload = function(){
-    Balloon.prototype.hideTooltip(1);
-    balloonIsSuppressed = true;
-  };
-
-  // for IE, the box can't start until the page is finished loading
-  // set a flag that will get toggled when loading is finished
   if (this.isIE()) {
-    this.suppress = true;
+      this.suppress = true;
+  } else {
+      // make balloons go away if the page is unloading or waiting
+      // to unload.
+      window.onbeforeunload = function(){
+            Balloon.prototype.hideTooltip(1);
+            balloonIsSuppressed = true;
+      };
   }
 
   return this;

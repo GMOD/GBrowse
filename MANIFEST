@@ -208,6 +208,8 @@ htdocs/css/gbrowse_solid.css
 htdocs/css/gbrowse_transparent.css
 htdocs/css/gbrowse_warm.css
 htdocs/css/karyotype.css
+htdocs/css/menulink.png
+htdocs/css/menulink_active.png
 htdocs/css/subtracktable.css
 htdocs/css/titlebar-default.css
 htdocs/css/titlebar-safari.css
@@ -599,7 +601,6 @@ libalign/realign.h
 LICENSE
 Makefile.PL
 MANIFEST
-META.yml
 README
 README.fedora_and_selinux
 README.GBrowse-2.00
@@ -644,4 +645,3 @@ t/testdata/phylo_align/species.tre
 t/testdata/phylo_align/volvox_alignment.conf
 t/testdata/phylo_align/volvox_phyloalign.gff
 t/testdata/TemplateCopy.pm
-META.json

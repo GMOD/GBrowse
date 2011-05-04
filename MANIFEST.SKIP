@@ -79,3 +79,4 @@ slave\.pid
 ^genes[^/]+\.gff3
 ^gbrowse_users.*
 .*\.new
+^META\.

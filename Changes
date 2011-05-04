@@ -2,6 +2,8 @@
    * Fixed help menu so that "About GBrowse" works correctly again.
    * Worked around issue of disappearing balloons under IE8.
    * Fixed issue of malpositioned balloons under IE8.
+   * Fixed off-by-one error in decorated FASTA dumper when displaying borders
+     of minus strand features.
 
 2.31
    * Fixed "testdata/conf/languages/POSIX.pm: Permission denied" error when running Build test.

@@ -6,9 +6,8 @@ build_requires:
   Capture::Tiny: 0
   ExtUtils::CBuilder: 0
 configure_requires:
-  Module::Build: 0.38
-dynamic_config: 1
-generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.110930'
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3607'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -17,7 +16,6 @@ name: GBrowse
 provides:
   Bio::DB::GFF::Aggregator::match_gap:
     file: lib/Bio/DB/GFF/Aggregator/match_gap.pm
-    version: 0
   Bio::DB::GFF::Aggregator::reftranscript:
     file: lib/Bio/DB/GFF/Aggregator/reftranscript.pm
     version: 0.10
@@ -29,193 +27,134 @@ provides:
     version: 0.30
   Bio::DB::SeqFeature::Store::BedLoader:
     file: lib/Bio/DB/SeqFeature/Store/BedLoader.pm
-    version: 0
   Bio::DB::Tagger:
     file: lib/Bio/DB/Tagger.pm
     version: 1.00
   Bio::DB::Tagger::Iterator:
     file: lib/Bio/DB/Tagger.pm
-    version: 0
   Bio::DB::Tagger::Tag:
     file: lib/Bio/DB/Tagger/Tag.pm
-    version: 0
   Bio::DB::Tagger::mysql:
     file: lib/Bio/DB/Tagger/mysql.pm
-    version: 0
   Bio::Graphics::Browser2:
     file: lib/Bio/Graphics/Browser2.pm
-    version: 2.31
+    version: 2.32
   Bio::Graphics::Browser2::Action:
     file: lib/Bio/Graphics/Browser2/Action.pm
-    version: 0
   Bio::Graphics::Browser2::AdminTracks:
     file: lib/Bio/Graphics/Browser2/UserTracks.pm
-    version: 0
   Bio::Graphics::Browser2::AuthorizedFeatureFile:
     file: lib/Bio/Graphics/Browser2/AuthorizedFeatureFile.pm
-    version: 0
   Bio::Graphics::Browser2::CAlign:
     file: lib/Bio/Graphics/Browser2/CAlign.pm
-    version: 0
   Bio::Graphics::Browser2::CachedTrack:
     file: lib/Bio/Graphics/Browser2/CachedTrack.pm
-    version: 0
   Bio::Graphics::Browser2::DataBase:
     file: lib/Bio/Graphics/Browser2/DataBase.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader:
     file: lib/Bio/Graphics/Browser2/DataLoader.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader::bam:
     file: lib/Bio/Graphics/Browser2/DataLoader/bam.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader::bed:
     file: lib/Bio/Graphics/Browser2/DataLoader/bed.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader::bigwig:
     file: lib/Bio/Graphics/Browser2/DataLoader/bigwig.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader::featurefile:
     file: lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader::generic:
     file: lib/Bio/Graphics/Browser2/DataLoader/generic.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader::gff:
     file: lib/Bio/Graphics/Browser2/DataLoader/gff.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader::gff3:
     file: lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader::sam:
     file: lib/Bio/Graphics/Browser2/DataLoader/sam.pm
-    version: 0
   Bio::Graphics::Browser2::DataLoader::wiggle:
     file: lib/Bio/Graphics/Browser2/DataLoader/wiggle.pm
-    version: 0
   Bio::Graphics::Browser2::DataSource:
     file: lib/Bio/Graphics/Browser2/DataSource.pm
-    version: 0
   Bio::Graphics::Browser2::ExternalData:
     file: lib/Bio/Graphics/Browser2/ExternalData.pm
-    version: 0
   Bio::Graphics::Browser2::GFFhelper:
     file: lib/Bio/Graphics/Browser2/GFFhelper.pm
-    version: 0
   Bio::Graphics::Browser2::I18n:
     file: lib/Bio/Graphics/Browser2/I18n.pm
-    version: 0
   Bio::Graphics::Browser2::Markup:
     file: lib/Bio/Graphics/Browser2/Markup.pm
-    version: 0
   Bio::Graphics::Browser2::MetaDB:
     file: lib/Bio/Graphics/Browser2/RegionSearch.pm
-    version: 0
   Bio::Graphics::Browser2::MetaSegment:
     file: lib/Bio/Graphics/Browser2/RegionSearch.pm
-    version: 0
   Bio::Graphics::Browser2::MetaSegment::Iterator:
     file: lib/Bio/Graphics/Browser2/RegionSearch.pm
-    version: 0
   Bio::Graphics::Browser2::OptionPick:
     file: lib/Bio/Graphics/Browser2/OptionPick.pm
-    version: 0
   Bio::Graphics::Browser2::PadAlignment:
     file: lib/Bio/Graphics/Browser2/PadAlignment.pm
-    version: 0
   Bio::Graphics::Browser2::Plugin:
     file: lib/Bio/Graphics/Browser2/Plugin.pm
     version: 0.30
   Bio::Graphics::Browser2::Plugin::AuthPlugin:
     file: lib/Bio/Graphics/Browser2/Plugin/AuthPlugin.pm
-    version: 0
   Bio::Graphics::Browser2::PluginSet:
     file: lib/Bio/Graphics/Browser2/PluginSet.pm
-    version: 0
   Bio::Graphics::Browser2::Realign:
     file: lib/Bio/Graphics/Browser2/Realign.pm
-    version: 0
   Bio::Graphics::Browser2::Region:
     file: lib/Bio/Graphics/Browser2/Region.pm
-    version: 0
   Bio::Graphics::Browser2::RegionSearch:
     file: lib/Bio/Graphics/Browser2/RegionSearch.pm
-    version: 0
   Bio::Graphics::Browser2::RemoteSet:
     file: lib/Bio/Graphics/Browser2/RemoteSet.pm
-    version: 0
   Bio::Graphics::Browser2::Render:
     file: lib/Bio/Graphics/Browser2/Render.pm
-    version: 0
   Bio::Graphics::Browser2::Render::HTML:
     file: lib/Bio/Graphics/Browser2/Render/HTML.pm
-    version: 0
   Bio::Graphics::Browser2::Render::Login:
     file: lib/Bio/Graphics/Browser2/Render/Login.pm
-    version: 0
   Bio::Graphics::Browser2::Render::Slave:
     file: lib/Bio/Graphics/Browser2/Render/Slave.pm
-    version: 0
   Bio::Graphics::Browser2::Render::Slave::Status:
     file: lib/Bio/Graphics/Browser2/Render/Slave/Status.pm
-    version: 0
   Bio::Graphics::Browser2::RenderPanels:
     file: lib/Bio/Graphics/Browser2/RenderPanels.pm
-    version: 0
   Bio::Graphics::Browser2::Session:
     file: lib/Bio/Graphics/Browser2/Session.pm
-    version: 0
   Bio::Graphics::Browser2::Shellwords:
     file: lib/Bio/Graphics/Browser2/Shellwords.pm
-    version: 0
   Bio::Graphics::Browser2::SubtrackTable:
     file: lib/Bio/Graphics/Browser2/SubtrackTable.pm
-    version: 0
   Bio::Graphics::Browser2::TrackDumper:
     file: lib/Bio/Graphics/Browser2/TrackDumper.pm
-    version: 0
   Bio::Graphics::Browser2::UserConf:
     file: lib/Bio/Graphics/Browser2/UserTracks.pm
-    version: 0
   Bio::Graphics::Browser2::UserDB:
     file: lib/Bio/Graphics/Browser2/UserDB.pm
     version: 0.5
   Bio::Graphics::Browser2::UserTracks:
     file: lib/Bio/Graphics/Browser2/UserTracks.pm
-    version: 0
   Bio::Graphics::Browser2::UserTracks::Database:
     file: lib/Bio/Graphics/Browser2/UserTracks/Database.pm
-    version: 0
   Bio::Graphics::Browser2::UserTracks::Filesystem:
     file: lib/Bio/Graphics/Browser2/UserTracks/Filesystem.pm
-    version: 0
   Bio::Graphics::Browser2::Util:
     file: lib/Bio/Graphics/Browser2/Util.pm
-    version: 0
   Bio::Graphics::GBrowseFeature:
     file: lib/Bio/Graphics/GBrowseFeature.pm
-    version: 0
   Bio::Graphics::Karyotype:
     file: lib/Bio/Graphics/Karyotype.pm
-    version: 0
   Bio::Graphics::Wiggle::Loader::Nosample:
     file: lib/Bio/Graphics/Browser2/DataLoader/wiggle.pm
-    version: 0
   CGI::Toggle:
     file: lib/CGI/Toggle.pm
-    version: 0
   FakeHomol:
     file: lib/Bio/Graphics/Browser2/GFFhelper.pm
-    version: 0
   LRUCache:
     file: lib/Bio/Graphics/Browser2/DataBase.pm
-    version: 0
   Legacy::DB::SyntenyBlock:
     file: lib/Legacy/DB/SyntenyBlock.pm
-    version: 0
   Legacy::DB::SyntenyIO:
     file: lib/Legacy/DB/SyntenyIO.pm
-    version: 0
   Legacy::Graphics::Browser:
     file: lib/Legacy/Graphics/Browser.pm
     version: 1.17
@@ -224,19 +163,15 @@ provides:
     version: 1.01
   Legacy::Graphics::Browser::PageSettings:
     file: lib/Legacy/Graphics/Browser/PageSettings.pm
-    version: 0
   Legacy::Graphics::Browser::Synteny:
     file: lib/Legacy/Graphics/Browser/Synteny.pm
     version: 0.01
   Legacy::Graphics::Browser::Util:
     file: lib/Legacy/Graphics/Browser/Util.pm
-    version: 0
   Legacy::Graphics::BrowserConfig:
     file: lib/Legacy/Graphics/Browser.pm
-    version: 0
   MyFeatureFileLoader:
     file: lib/Bio/Graphics/Browser2/DataLoader/featurefile.pm
-    version: 0
 recommends:
   Bio::DB::BigFile: 1
   Bio::DB::Sam: 1.2
@@ -272,4 +207,4 @@ requires:
   perl: 5.008
 resources:
   license: http://dev.perl.org/licenses/
-version: 2.31
+version: 2.32

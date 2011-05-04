@@ -38,7 +38,7 @@ BEGIN {
 	       );
 }
 
-$VERSION = '0.20';
+$VERSION = '0.30';
 
 @ISA = qw(Bio::Graphics::Browser2::Plugin);
 
@@ -219,7 +219,7 @@ sub configure_form {
 				     ))));
     }
     autoEscape(1);
-    my $html= table(@choices);
+    my $html= table({-width=>'100%'},@choices);
     $html;
 }
 
@@ -253,6 +253,7 @@ sub make_markup {
       my $start = $p->start - $segment_start;
       my $end   = $start + $p->length;
 
+      $start++ if $p->strand < 0;
       ($start,$end) = map {$segment_length-$_} ($end,$start) if $flip;
 
       warn("$p ". $p->location->to_FTstring() . " type is ".$p->primary_tag) if DEBUG;

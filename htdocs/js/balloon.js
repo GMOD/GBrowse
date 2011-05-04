@@ -656,11 +656,20 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   }
 
   // Make edges match the main balloon body
-  self.setStyle('topRight','height', self.getLoc(balloon,'height'));
+  self.setStyle('topRight', 'height', self.getLoc(balloon,'height'));
   self.setStyle('bottomLeft','width', self.getLoc(balloon,'width'));
 
+  // next section is some debugging for IE8 problem
+  //  var b = self.activeBalloon;
+  //  var bwidth  = self.getLoc(b,'width');
+  //  self.setStyle(b,'right',null);
+  //  var newLeft = self.activeLeft - bwidth;
+  //  self.setStyle(b,'left',newLeft);
+  
   self.hOrient = hOrient;
   self.vOrient = vOrient;
+
+  self.adjustBalloonPosition();  // for IE8
 }
 
 
@@ -813,6 +822,15 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
 	self.hideTooltip();
     }
     else {
+	self.adjustBalloonPosition();
+    }
+  }
+
+  return true;
+}
+
+Balloon.prototype.adjustBalloonPosition = function() {
+      var self = currentBalloonClass;
       var b = self.activeBalloon;
       var bwidth  = self.getLoc(b,'width');
       var bheight = self.getLoc(b,'height');
@@ -834,10 +852,6 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
       else if (self.vOrient == 'down') {
         self.setStyle(b,'top',self.activeBottom);
       }
-    }
-  }
-
-  return true;
 }
 
 ////

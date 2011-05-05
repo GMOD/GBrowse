@@ -278,6 +278,10 @@ CPAN::Shell->install('Bio::Graphics');
 print STDERR "\n *** Installing Generic-Genome-Browser ***\n";
 
 my $latest_version = find_gbrowse_latest();
+##the find_gbrowse_latest function is broken at the moment; since
+##the version of GBrowse 1 is unlike to change more than once in the 
+##near future, we'll just hard code the value
+$latest_version = 'Generic-Genome-Browser-1.70';
 my $gbrowse        = SOURCEFORGE_MIRROR1.$latest_version.'.tar.gz';
 eval {do_install($gbrowse,
                  'gbrowse.tgz',

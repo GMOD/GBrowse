@@ -71,7 +71,7 @@ sub wrap_login_form {
 	hidden(-name=>'plugin',-value=>$plugin_name),
 	button(
 	    -name    => $render->translate('Cancel'),
-	    -onClick => 'Balloon.prototype.hideTooltip(1);login_blackout(false)'
+	    -onClick => 'Box.prototype.hideTooltip(true)'
 	),
 	button(
 	    -name    => 'plugin_button',
@@ -112,7 +112,7 @@ sub render_plugin_login {
 		)
 		: (
 		    span({-style       => $style,
-			  -onMouseDown => "login_blackout(true,'');GBox.showTooltip(event,'url:?action=plugin_login',true,380)"
+			  -onMouseDown => "GBox.modalDialog(event,'url:?action=plugin_login',380)"
 			 },
 			 $render->translate('LOGIN'))
 		)
@@ -241,7 +241,6 @@ sub render_openid_confirm {
     my $load      = "$login_globals;".
      	            "login_blackout(true,'');".
      		    "confirm_openid('$id','$page',$logged_in,'$email','$gecos');";
-
     return $settings->{head} ?
         iframe({-style  => 'display:none;',
                 -onLoad => $load}

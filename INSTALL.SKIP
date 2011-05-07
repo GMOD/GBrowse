@@ -38,3 +38,13 @@
 ^blib/conf\/yeast_simple\.conf$
 ^blib/etc\/default\/gbrowse\-slave$
 ^blib/etc\/init\.d\/gbrowse\-slave$
+^blib/conf\/GBrowse\.conf$
+^blib/conf\/pop_demo\.conf$
+^blib/conf\/slave_preload\.conf$
+^blib/conf\/synteny\/rice_synteny\.conf$
+^blib/conf\/synteny\/wild_rice_synteny\.conf$
+^blib/conf\/yeast_chr1\+2\.conf$
+^blib/conf\/yeast_renderfarm\.conf$
+^blib/conf\/yeast_simple\.conf$
+^blib/etc\/default\/gbrowse\-slave$
+^blib/etc\/init\.d\/gbrowse\-slave$

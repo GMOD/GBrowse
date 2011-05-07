@@ -4,6 +4,8 @@
  bgcolor and border but is otherwise meant to be simple and lightweight.
 */
 
+var Modal=false; // true if a modal dialog is on screen
+
 //////////////////////////////////////////////////////////////////////////
 // This is constructor that is called to initialize the Balloon object  //
 //////////////////////////////////////////////////////////////////////////
@@ -43,8 +45,9 @@ Box.prototype.makeBalloon = function() {
   if (box) self.parent.removeChild(box);
   box = document.createElement('div');
   box.setAttribute('id','balloon');
+
   self.parent.appendChild(box);
-  self.activeBalloon = box;
+  self.activeBalloon    = box;
 
   var contents = document.createElement('div');
   contents.setAttribute('id','contents');
@@ -212,4 +215,46 @@ Box.prototype.addCloseButton = function () {
   self.setStyle(closeButton,'display','inline');
   self.setStyle(closeButton,'cursor','pointer');
   self.setStyle(closeButton,'z-index',999999999);
+}
+
+Box.prototype.greyout = function (turnOn) {
+    //Adapted from http://www.hunlock.com/blogs/Snippets:_Howto_Grey-Out_The_Screen
+    var greyout  = $('greyout');
+    if(!greyout) {
+        var contents = $$('body')[0];
+        var div      = document.createElement('div');
+	div.id                    = 'greyout';
+	div.style.backgroundColor = '#000000';
+	div.style.display         = 'none';
+	div.style.filter          = 'alpha(opacity=70)';
+	div.style.height          = '100%';
+	div.style.left            = '0px';
+	div.style.MozOpacity      = '0.7';
+	div.style.opacity         = '0.7';
+	div.style.overflow        = 'hidden';
+	div.style.position        = 'absolute';
+	div.style.top             = '0px';
+	div.style.width           = '100%';
+	div.style.zIndex          = 0;
+	contents.appendChild(div);
+	greyout=$('greyout');
+    }
+    if (turnOn && !Modal) {
+        document.body.style.overflow = 'hidden';
+        greyout.style.display         = 'block';
+    } else if (Modal) {
+        document.body.style.overflow = 'auto';
+        greyout.style.display         = 'none';
+    }
+    Modal=turnOn;
+}
+
+Box.prototype.modalDialog = function(evt,caption,width,height) {
+    this.showTooltip(evt,caption,true,width,height);
+    this.greyout(true);
+}
+
+Box.prototype.hideTooltip = function(override) {
+    this.greyout(false);
+    Balloon.prototype.hideTooltip(override);
 }

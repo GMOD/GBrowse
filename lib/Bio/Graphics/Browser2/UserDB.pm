@@ -189,7 +189,6 @@ sub do_sendmail {
   my $args = shift;
   my $globals = $self->{globals};
 
-  warn "DO SENDMAIL";
 
   eval {
 	  $globals->smtp or die "No SMTP server found in globals";
@@ -1207,8 +1206,6 @@ END
 	$openid)
 	or return {error=>'Error: '.$userdb->errstr.'.'};
 
-    warn "do_get_openid($openid) => rows = $rows";
-    
     if($rows != 1) {
         if($rows != 0) {
             $error  = "Error: $rows rows returned, please consult your service host.";
@@ -1309,7 +1306,6 @@ sub do_add_openid_to_account {
 sub do_add_openid_user {
     my $self = shift;
     my ($user, $email, $gecos, $openid, $sessionid, $remember) = @_;
-    warn "gecos=$gecos";
     
     my $userdb = $self->{dbi};
 

@@ -1535,7 +1535,7 @@ function login_blackout(turnOn,text) {
             div.style.position        = 'absolute';
             div.style.top             = '0px';
             div.style.width           = '100%';
-	    div.style.zIndex          = '50';
+	    div.style.zIndex          = 50;
 
         var msg = document.createElement('div');
             msg.id                    = 'loginConfirmText';
@@ -1554,8 +1554,8 @@ function login_blackout(turnOn,text) {
             msg.style.width           = '380px';
 	    msg.style.zIndex          = '10000';
 
-        contents.appendChild(msg);
-        contents.appendChild(div);
+	 contents.appendChild(msg);
+         contents.appendChild(div);
 
         screen = document.getElementById('loginConfirmScreen');
         text   = document.getElementById('loginConfirmText');

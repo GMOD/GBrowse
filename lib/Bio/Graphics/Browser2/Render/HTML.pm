@@ -3078,12 +3078,12 @@ sub download_track_menu {
     
     my @format_options = Bio::Graphics::Browser2::TrackDumper->available_formats($data_source,$track);
     my %foptions       = map {$_=>1} @format_options;
-    my $default     = $foptions{$state->{preferred_dump_format}} ? $state->{preferred_dump_format}
-                                                                 : $foptions{gff3}  ? 'gff3'
-								 : $foptions{bed}   ? 'bed'
-								 : $foptions{sam}   ? 'sam'
-								 : $foptions{vista} ? 'vista'
-								 : 'fasta';
+    my $default     = $foptions{$state->{preferred_dump_format}||''} ? $state->{preferred_dump_format}
+                                                                     : $foptions{gff3}  ? 'gff3'
+								     : $foptions{bed}   ? 'bed'
+								     : $foptions{sam}   ? 'sam'
+								     : $foptions{vista} ? 'vista'
+								     : 'fasta';
     my @radios      = radio_group(-name   => 'format',
 				  -values => \@format_options,
 				  -default => $default,

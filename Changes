@@ -1,3 +1,11 @@
+2.33
+   * Fixed plugin authentication system to prevent an all-dark screen during authentication
+     dialog on Firefox and Opera platforms.
+   * Fixed fasta and genbank track dumping so that "download all data" option works properly
+     rather than returning an empty file.  
+   * Fixed sigPIPE warnings appearing in error log after an openid authentication.
+   * Removed some stray debugging messages.
+
 2.32
    * Fixed help menu so that "About GBrowse" works correctly again.
    * Worked around issue of disappearing balloons under IE8.

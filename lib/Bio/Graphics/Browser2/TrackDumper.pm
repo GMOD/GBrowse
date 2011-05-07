@@ -114,22 +114,34 @@ sub dump_vista {
     shift->_dump_gff3(@_,1,3); # magic number==3 means print peaks + signal data
 }
 
-
-
 sub dump_fasta {
     my $self = shift;
     my ($db,$segment,$types,$label) = @_;
     my $out = new Bio::SeqIO(-format=>'fasta',-fh=>\*STDOUT);
-    my $seq = $segment->seq;
-    $out->write_seq($seq);
+    for my $seg ($self->get_segs($db,$segment)) {
+	my $seq = $seg->seq;
+	$out->write_seq($seq);
+    }
 }
 
 sub dump_genbank {
     my $self = shift;
     my ($db,$segment,$types,$label) = @_;
-    my $seq = $self->get_rich_seq($db,$segment,$types);
     my $out = new Bio::SeqIO(-format=>'genbank',-fh=>\*STDOUT);
-    $out->write_seq($seq);
+    for my $seg ($self->get_segs($db,$segment)) {
+	my $seq = $self->get_rich_seq($db,$seg,$types);
+	$out->write_seq($seq);
+    }
+}
+
+sub get_segs {
+    my $self = shift;
+    my ($db,$segment) = shift;
+    return $segment if $segment;
+    return eval {
+	my @ids = $db->seq_ids;
+	map {$db->segment($_)} @ids;
+    };
 }
 
 sub get_rich_seq {

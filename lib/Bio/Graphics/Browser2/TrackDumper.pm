@@ -90,7 +90,7 @@ sub dump_track {
     my @types  = shellwords($source->setting($label=>'feature'));
 
     my $dump_method = $self->guess_dump_method($db,$label);
-    local $SIG{PIPE} = sub {die 'sigPIPE!'};
+    local $SIG{PIPE} = sub {die 'aborted track dump due to sigPIPE'};
     $self->$dump_method($db,$segment,\@types,$label);
 }
 

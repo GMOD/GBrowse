@@ -1,3 +1,8 @@
+2.34
+   * Fixed broken https:// links in karyotype summary table; patch courtesy Dan Bolser
+   * Fixed behavior of "q" parameter to match the documented behavior.
+   * Fixed RemoteSet to avoid failures due to nonexistence of download directory.
+
 2.33
    * Fixed plugin authentication system to prevent an all-dark screen during authentication
      dialog on Firefox and Opera platforms.

@@ -6,6 +6,7 @@ use base 'Bio::Graphics::Browser2::ExternalData';
 
 use Bio::Graphics::Browser2::Util 'shellwords';
 use IO::File;
+use File::Path 'mkpath';
 use CGI 'cookie','param','unescape';
 use Digest::MD5 'md5_hex';
 use File::Spec;
@@ -47,6 +48,8 @@ sub add_files_from_state {
 	}
 
 	my $remote_url = $config->setting($track=>'remote feature') or next;
+	$remote_url    = &$remote_url() 
+	    if ref $remote_url && ref $remote_url eq 'CODE';
 	warn "adding remote_url = $remote_url" if DEBUG;
 	$self->add_source($track,$remote_url);
     }
@@ -286,6 +289,7 @@ sub mirror {
   $file = "$file-$$";
   my $tmpfile  = File::Spec->catfile($volume,$dirs,$file);
 
+  mkpath($dirs) unless -e $dirs && -d _;
   my $response = $ua->request($request,$tmpfile);
 
   if ($response->is_success) {  # we got a new file, so need to process it

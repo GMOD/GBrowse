@@ -2305,13 +2305,13 @@ sub update_coordinates {
     $position_updated++;
   }
 
-  elsif (param('q')) {
-      warn "param(q) = ",param('q') if DEBUG;
-      $state->{search_str} = param('q');
-      @{$state}{'ref','view_start','view_stop'} 
-          = Bio::Graphics::Browser2::Region->parse_feature_name($state->{search_str});
-      $position_updated++;
-  }
+#  elsif (param('q')) {
+#      warn "param(q) = ",param('q') if DEBUG;
+#      $state->{search_str} = param('q');
+#      @{$state}{'ref','view_start','view_stop'} 
+#          = Bio::Graphics::Browser2::Region->parse_feature_name($state->{search_str});
+#      $position_updated++;
+#  }
 
   # quench uninit variable warning
   my $current_span = length($state->{view_stop}||'') ? ($state->{view_stop} - $state->{view_start} + 1) 
@@ -2361,14 +2361,15 @@ sub update_coordinates {
       warn "name = $state->{name}" if DEBUG;
   }
 
-  elsif (param('name')) {
-      $state->{backup_region} = [$state->{ref},$state->{start},$state->{stop},$state->{view_start},$state->{view_stop}] if $state->{ref};
+  elsif (param('name') || param('q')) {
+      $state->{backup_region} = 
+	  [$state->{ref},$state->{start},$state->{stop},$state->{view_start},$state->{view_stop}] if $state->{ref};
       undef $state->{ref};  # no longer valid
       undef $state->{start};
       undef $state->{stop};
       undef $state->{view_start};
       undef $state->{view_stop};
-      $state->{name}       = $state->{search_str} = param('name');
+      $state->{name}       = $state->{search_str} = param('name') || param('q');
       $state->{dbid}       = param('dbid'); # get rid of this
   }
 }

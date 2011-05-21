@@ -51,7 +51,7 @@ function ShowHideTrack(track_name,visible) {
   }  else {
       ancestor.removeClassName('activeTrack');
       track_title.removeClassName('activeTrack');
-      track_img.src=Controller.button_url('empty.png');
+      track_img.src=Controller.button_url('square.png');
   }
 
   checkSummaries();

@@ -36,6 +36,7 @@ function gbToggleTrack (track_name) {
 function ShowHideTrack(track_name,visible) {
   var track_title = $(track_name+'_check');
   var track_img   = $(track_name+'_img');
+  if (track_title == null) return;
   var ancestor    = track_title.ancestors().find(
 					function (el) {
 					    return el.nodeName == 'TD'

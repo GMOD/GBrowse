@@ -145,7 +145,7 @@ END
 
    SUBTRACK_INSTRUCTIONS   => 'Select the tracks you wish to display. Sort the tracks by clicking on the column headings, or by clicking and dragging rows into position.',
 
-   SELECT_SUBTRACKS   => '%d of %d subtracks selected',
+   SELECT_SUBTRACKS   => 'showing %d/%d subtracks',
 
    EDIT       => 'Edit File...',
 

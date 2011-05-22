@@ -917,7 +917,7 @@ sub render_track_table {
 	my $balloon = $source->setting('balloon style') || 'GBubble';
 	my $cellid = 'datacell';
 
-	my @classes = 'track_title';
+	my @classes; # = 'track_title';
 	push @classes,'activeTrack' if $track_on;
 	push @classes,'favorite'    if $favorite;
 	push @classes,'remote'      if $label =~ /^(http|ftp|file):/;
@@ -962,7 +962,7 @@ sub render_track_table {
 	    : '';
 	
 	$label_sort{$label}  = $key;
-	$labels{$label}      = join(' ',$checkicon,$favoriteicon,$title,$help);
+	$labels{$label}      = join(' ',$favoriteicon,span({-class=>'track_title'},$checkicon,$title),$help);
 	
 	if (my ($selected,$total) = $self->subtrack_counts($label)) {
 	    my $escaped_label = CGI::escape($label);
@@ -2005,10 +2005,10 @@ sub tableize {
 
   my $cwidth = int(100/$columns+0.5) . '%';
  
-  my $html = start_table({-border=>0,-width=>'100%',-cellpadding=>0,-cellspacing=>0});
+  my $html = start_table({-border=>0,-width=>'100%'});
 
   if (@column_labels) {
-      $html.="<tr><td></td>";
+      $html.="<tr valign='top'><td></td>";
       for (my $column=0;$column<$columns;$column++) {
 	  $html .= "<td><b>$column_labels[$column]</b> </td>";
       }
@@ -2017,7 +2017,7 @@ sub tableize {
 
   for (my $row=0;$row<$rows;$row++) {
     # do table headers
-    $html .= qq(<tr class="searchtitle";display=block>);
+    $html .= qq(<tr class="searchtitle" valign="top">);
     $html .= "<td><b>$row_labels[$row]</b></td>" if @row_labels;
     for (my $column=0;$column<$columns;$column++) {
 	my $label    = $labelnames->[$column*$rows + $row] || '&nbsp;';

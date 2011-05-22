@@ -108,6 +108,8 @@ END
     
    CLEAR_FAV     => 'Clear All Favorites',
 
+   ADDED_TO     => 'Add track to favorites',
+
 #############
 
 

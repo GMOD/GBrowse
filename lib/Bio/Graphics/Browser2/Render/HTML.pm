@@ -933,9 +933,11 @@ sub render_track_table {
 	#if the track has already been favorited, the image source is made into the yellow star
 	my $star      = $favorite ? 'ficon_2.png' : 'ficon.png';
 	my $class     = $favorite ? 'star favorite' : 'star';
+	my $show_fav  = $self->translate('ADDED_TO');
 	my $favoriteicon  = img({-class =>  $class,
 				-id      => "star_$label",
 				-onClick => "togglestars('$label')",
+				-onMouseOver => "GBubble.showTooltip(event,'$show_fav')",
 				-style => 'cursor:pointer;',
 				-src   => "$button_url/$star"}
 	    );

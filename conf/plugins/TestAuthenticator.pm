@@ -6,8 +6,12 @@ use base 'Bio::Graphics::Browser2::Plugin::AuthPlugin';
 sub authenticate {
     my $self = shift;
     my ($name,$password) = $self->credentials;
-    return unless $name eq 'lincoln' && $password eq 'foobar';
-    return ($name,'Lincoln Stein');  # username, fullname
+    if ($name eq 'lincoln' && $password eq 'foobar') {
+	return ($name,'Lincoln Stein');  # username, fullname	
+    } elsif ($name eq 'jane' && $password eq 'foobar') {
+	return ($name,'Jane Doe');
+    }
+    return;
 }
 
 

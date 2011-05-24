@@ -2111,17 +2111,21 @@ sub reconfigure_track {
     my $dynamic = $self->translate('DYNAMIC_VALUE');
     my $mode    = param('mode');
 
-    my $length          = param('segment_length')  || 0;
-    my $semantic_len    = param('apply_semantic')  || 0;
-    my $delete_semantic = param('delete_semantic');
-    my $summary         = param('summary_mode');
+    my $length            = param('segment_length')       || 0;
+    my $semantic_low      = param('apply_semantic_low')   || 0;
+    my $semantic_hi       = param('apply_semantic_hi')    || 0;
+    my $delete_semantic   = param('delete_semantic');
+    my $summary           = param('summary_mode');
 
     $state->{features}{$label}{summary_mode_len} = $summary if defined $summary;
 
-    delete $state->{features}{$label}{semantic_override}{$delete_semantic} if $delete_semantic;
+    ($semantic_low,$semantic_hi) = ($semantic_hi,$semantic_low) if $semantic_low > $semantic_hi;
+    $self->clip_override_ranges($state->{features}{$label}{semantic_override},
+				$semantic_low,
+				$semantic_hi);
 
-    my $o = $mode eq 'summary' ? $state->{features}{$label}{summary_override}                ={}
-                               : $state->{features}{$label}{semantic_override}{$semantic_len}={};
+    my $o = $mode eq 'summary' ? $state->{features}{$label}{summary_override}                                = {}
+                               : $state->{features}{$label}{semantic_override}{"$semantic_low:$semantic_hi"} = {};
 
     my $glyph = param('conf_glyph') || '';
   
@@ -2145,7 +2149,8 @@ sub reconfigure_track {
 	    $s = 'autoscale';
 	}
 
-	my $configured_value = $source->semantic_fallback_setting($label=>$s,$semantic_len);
+	# semantic setting for this configured length
+	my $configured_value = $source->semantic_fallback_setting($label=>$s,$semantic_low+1);
 
 	if ($value eq $dynamic) {
 	    delete $o->{$s};
@@ -2164,6 +2169,108 @@ sub reconfigure_track {
 	undef $o->{min_score}; 
 	undef $o->{max_score} 
     }
+}
+
+#        low                    hi
+#          <--------------------->  current
+#  <-----------> A
+#                            <-------------> B
+#   <--------------------------------------------->  C
+#                <--------->  D
+#
+sub clip_override_ranges {
+    my $self = shift;
+    warn "clipping...";
+    my ($semconf,$low,$hi) = @_;
+    warn "clipping regions to $low..$hi";
+
+    # legacy representation of bounds
+    for my $k (keys %$semconf) {
+	unless ($k =~ /:/) {
+	    $semconf->{"$k:999999999"} = $semconf->{$k};
+	    delete $semconf->{$k};
+	}
+    }
+
+    my @ranges = map {
+	my ($l,$h) = split ':';
+	$l ||= 0;
+	$h ||= 1_000_000_000;
+	[$l,$h];
+    } keys %$semconf;
+    @ranges = sort {$a->[0]<=>$b->[0]} @ranges;
+    for my $r (@ranges) {
+	my $key  = "$r->[0]:$r->[1]";
+	my $conf = $semconf->{$key};
+	delete $semconf->{$key};
+	my $overlap;
+	warn "overlapping $low:$hi with $key";
+
+	if ($r->[0] <= $low && $r->[1] >= $hi) {   # case C
+	    warn "case C";
+	    $semconf->{$r->[0]  . ':' . ($low-1)} = $conf unless $r->[0] >= $low-1;
+	    $semconf->{($hi+1)  . ':' . $r->[1] } = $conf unless $hi+1   >= $r->[1];
+	    $overlap++;
+	}
+
+	if ($r->[0] > $low && $r->[1] < $hi) {   # case D
+	    warn "case D";
+	    $overlap++;
+	    # delete
+	}
+	
+	if ($r->[1] >= $low && $r->[0] <= $low) { # case A
+	    warn "case A";
+	    $r->[1] =  $low-1;
+	    $semconf->{"$r->[0]:$r->[1]"} = $conf
+		unless $r->[0] >= $r->[1];
+	    $overlap++;
+	} 
+
+	if ($r->[1] >= $hi && $r->[0] <= $hi) {   # case B
+	    warn "case B";
+	    $r->[0] =  $hi+1;
+	    $semconf->{"$r->[0]:$r->[1]"} = $conf
+		unless $r->[0] >= $r->[1];
+	    $overlap++;
+	}
+
+	unless ($overlap) {
+	    warn "disjunct";
+	    $semconf->{$key} = $conf;
+	}
+    }
+}
+
+sub find_override_bounds {
+    my $self = shift;
+    my ($semconf,$length) = @_;
+    my @ranges = sort {$a->[0]<=>$b->[0]} 
+    map { my @a = split ':';
+	  \@a
+    } keys %$semconf;
+    my ($low,$hi) = (0,999999999);
+    for my $r (@ranges) {
+	warn "@$r";
+	next unless @$r == 2;
+	if ($length >= $r->[0] && $length <= $r->[1]) {
+	    return @$r;
+	}
+	$low = $r->[1]+1 if $r->[1] < $length;
+	$hi  = $r->[0]-1 if $r->[0] > $length;
+    }
+    return ($low,$hi);
+}
+
+sub find_override_region {
+    my $self = shift;
+    my ($semconf,$length) = @_;
+    my @ranges = keys %$semconf;
+    for my $r (@ranges) {
+	my ($low,$hi) = split ':',$r;
+	return $r if $length >= $low && (!defined $hi || $length <= $hi);
+    }
+    return;
 }
 
 sub update_options {
@@ -2291,8 +2398,6 @@ sub update_tracks {
 sub update_coordinates {
   my $self  = shift;
   my $state = shift || $self->state;
-
-  warn "update_coordinates, session id = ",$self->session->id if DEBUG;
 
   delete $self->{region}; # clear cached region
   my $position_updated;

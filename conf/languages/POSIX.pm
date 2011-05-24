@@ -439,9 +439,12 @@ END
 
  SCALE_MAX        => 'Maximum scale value',
 
+ MIN              => 'Min',
+ MAX              => 'Max',
+
  SHOW_VARIANCE    => 'Show variance band',
 
- APPLY_CONFIG     => 'Apply this config when region >=',
+ APPLY_CONFIG     => 'Apply config when view between',
 
  SHOW_SUMMARY     => 'Show summary when region >=',
 

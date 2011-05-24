@@ -2059,11 +2059,8 @@ sub create_track_args {
   
   my $state            = $self->settings;
 
-
-
-  my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 
-                    keys %{$state->{features}{$label}{semantic_override}};
-  $semantic_override ||= 0;
+  my $semantic_override = $self->render->find_override_region($state->{features}{$label}{semantic_override},
+							      $length/$self->details_mult);
   my $override         = $is_summary ? $state->{features}{$label}{summary_override}
                                      : $state->{features}{$label}{semantic_override}{$semantic_override};
 
@@ -2564,7 +2561,6 @@ sub details_mult {
     return $render->details_mult if $render;
 
     # workaround for Slave processes, which have no render object
-    # 
     return $self->source->details_multiplier($self->settings);
 }
 

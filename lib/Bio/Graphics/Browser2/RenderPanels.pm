@@ -2066,17 +2066,18 @@ sub create_track_args {
                    : {};
 
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
-  warn "override = @override";
 
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
   push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
 
   if ($is_summary) {
-      unshift @override,(-glyph     => 'wiggle_density',
-			 -height    => 15,
-			 -min_score => 0,
-			 -autoscale => 'local'
+      unshift @override,(
+	  -glyph     => 'wiggle_density',
+	  -height    => 15,
+	  -min_score => 0,
+	  -autoscale => 'local',
       );
+      push @override, $source->i18n_style("$label:summary",$lang);
   }
   my $hilite_callback = $args->{hilite_callback};
 

@@ -415,6 +415,22 @@ sub default_style {
   return $self->SUPER::style('TRACK DEFAULTS');
 }
 
+sub summary_style {
+  my $self = shift;
+  my $type = shift;
+  $type   .= ":summary";
+
+  local $self->{config} = $self->{_user_tracks}{config}
+      if exists $self->{_user_tracks}{config}{$type};
+
+  my $config  = $self->{config}  or return;
+  my $hashref = $config->{$type};
+  unless ($hashref) {
+    $hashref = $config->{$type} or return;
+  }
+  return map {("-$_" => $hashref->{$_})} keys %$hashref;
+}
+
 sub style {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);

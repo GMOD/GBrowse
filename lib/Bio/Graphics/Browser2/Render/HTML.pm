@@ -917,7 +917,7 @@ sub render_track_table {
 	my $balloon = $source->setting('balloon style') || 'GBubble';
 	my $cellid = 'datacell';
 
-	my @classes; # = 'track_title';
+	my @classes = 'track_title';
 	push @classes,'activeTrack' if $track_on;
 	push @classes,'favorite'    if $favorite;
 	push @classes,'remote'      if $label =~ /^(http|ftp|file):/;
@@ -956,15 +956,12 @@ sub render_track_table {
 	my $help     = $link ?
 	    a({-href=>$link,
 	       -target=>'_new',
-	      },
-	      img({-border=>0,
-		   -src=>"$button_url/query.png",
-		   -onmouseover => "$balloon.showTooltip(event,'$mouseover')",
-		   -style=>'padding-left:0.5em'}))
+	       -onmouseover => "$balloon.showTooltip(event,'$mouseover')",
+	      }, '[?]')
 	    : '';
 	
 	$label_sort{$label}  = $key;
-	$labels{$label}      = join(' ',$favoriteicon,span({-class=>'track_title'},$checkicon,$title),$help);
+	$labels{$label}      = join(' ',$favoriteicon,span({-class=>'track_label'},$checkicon,$title),$help);
 	
 	if (my ($selected,$total) = $self->subtrack_counts($label)) {
 	    my $escaped_label = CGI::escape($label);

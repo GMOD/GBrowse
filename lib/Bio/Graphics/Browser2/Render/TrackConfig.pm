@@ -55,7 +55,7 @@ sub config_dialog {
     my $level              = join '..',@level;
 
     my $key = $render->label2key($label);
-    $key .= $summary_mode      ? " (Feature Density Summary)" 
+    $key .= $summary_mode      ? " (".$render->translate('FEATURE_SUMMARY').')'
            :$level             ? " ($level)"
 	   :'';
 
@@ -291,9 +291,7 @@ END
 		   th( { -align => 'right' }, $render->translate('BACKGROUND_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_bgcolor',
-			   $summary_mode ? 'black'
-                                         :
-			      $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
+			   $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
 			   $override->{'bgcolor'}
 		       )
 		   )
@@ -570,11 +568,8 @@ sub region_size_menu {
   my %seen;
   my @r         = sort {$a<=>$b} $source->get_ranges(),$length,$extra_val;
   my @ranges	= grep {!$seen{$source->unit_label($_)}++} @r;
-  warn "ranges = @ranges";
   my %labels    = map  {$_=> scalar $source->unit_label($_)} @ranges;
 
-  warn join ',',%labels;
-  
   $labels{MIN()}   = $self->render->translate('MIN');
   $labels{MAX()}   = $self->render->translate('MAX');
   @ranges = sort {$b<=>$a} @ranges;

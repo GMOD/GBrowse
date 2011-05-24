@@ -2180,7 +2180,6 @@ sub reconfigure_track {
 #
 sub clip_override_ranges {
     my $self = shift;
-    warn "clipping...";
     my ($semconf,$low,$hi) = @_;
     warn "clipping regions to $low..$hi";
 
@@ -2204,23 +2203,19 @@ sub clip_override_ranges {
 	my $conf = $semconf->{$key};
 	delete $semconf->{$key};
 	my $overlap;
-	warn "overlapping $low:$hi with $key";
 
 	if ($r->[0] <= $low && $r->[1] >= $hi) {   # case C
-	    warn "case C";
 	    $semconf->{$r->[0]  . ':' . ($low-1)} = $conf unless $r->[0] >= $low-1;
 	    $semconf->{($hi+1)  . ':' . $r->[1] } = $conf unless $hi+1   >= $r->[1];
 	    $overlap++;
 	}
 
 	if ($r->[0] > $low && $r->[1] < $hi) {   # case D
-	    warn "case D";
 	    $overlap++;
 	    # delete
 	}
 	
 	if ($r->[1] >= $low && $r->[0] <= $low) { # case A
-	    warn "case A";
 	    $r->[1] =  $low-1;
 	    $semconf->{"$r->[0]:$r->[1]"} = $conf
 		unless $r->[0] >= $r->[1];
@@ -2228,7 +2223,6 @@ sub clip_override_ranges {
 	} 
 
 	if ($r->[1] >= $hi && $r->[0] <= $hi) {   # case B
-	    warn "case B";
 	    $r->[0] =  $hi+1;
 	    $semconf->{"$r->[0]:$r->[1]"} = $conf
 		unless $r->[0] >= $r->[1];
@@ -2236,7 +2230,6 @@ sub clip_override_ranges {
 	}
 
 	unless ($overlap) {
-	    warn "disjunct";
 	    $semconf->{$key} = $conf;
 	}
     }

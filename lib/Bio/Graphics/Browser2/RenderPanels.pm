@@ -2061,17 +2061,19 @@ sub create_track_args {
 
   my $semantic_override = $self->render->find_override_region($state->{features}{$label}{semantic_override},
 							      $length/$self->details_mult);
-  my $override         = $is_summary ? $state->{features}{$label}{summary_override}
-                                     : $state->{features}{$label}{semantic_override}{$semantic_override};
+  my $override  = $is_summary           ? $state->{features}{$label}{summary_override}
+                   : $semantic_override ? $state->{features}{$label}{semantic_override}{$semantic_override}
+                   : {};
 
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
+  warn "override = @override";
+
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
   push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
 
   if ($is_summary) {
       unshift @override,(-glyph     => 'wiggle_density',
 			 -height    => 15,
-			 -bgcolor   => 'black',
 			 -min_score => 0,
 			 -autoscale => 'local'
       );
@@ -2118,16 +2120,13 @@ sub create_track_args {
       @args = ($segment,
 	       @default_args,
 	       $source->default_style,
-	       $source->i18n_style($label,
-				   $lang),
+	       $source->i18n_style($label,$lang),
 	       @override,
 	  );
   } else {
     @args = (@default_args,
 	     $source->default_style,
-	     $source->i18n_style($label,
-			       $lang,
-			       $length),
+	     $source->i18n_style($label,$lang,$length),
 	     @override,
 	    );
   }

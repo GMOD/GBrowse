@@ -448,6 +448,8 @@ END
 
  SHOW_SUMMARY     => 'Show summary when region >',
 
+ FEATURE_SUMMARY     => 'Feature Density Summary',
+
  LINEWIDTH        => 'Line width',
 
  STRANDED         => 'Show strand',

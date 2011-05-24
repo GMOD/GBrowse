@@ -522,13 +522,10 @@ END
                          :$summary_length;
     push @rows,TR({-class=>'general'},
 		  th( { -align => 'right' }, $render->translate('SHOW_SUMMARY')),
-		  td(textfield(
-			 -name    => 'summary_mode',
-			 -override=> 1,
-			 -size    => 7,
-			 -value   => $summ),' bp'
+		  td(
+		      $self->region_size_menu('summary_mode',$summ)
 		  )
-		   ) if $can_summarize && $summary_length;
+	) if $can_summarize && $summary_length;
 
     my $submit_script = <<END;
 Element.extend(this);

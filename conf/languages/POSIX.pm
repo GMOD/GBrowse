@@ -446,7 +446,7 @@ END
 
  APPLY_CONFIG     => 'Apply config when view between',
 
- SHOW_SUMMARY     => 'Show summary when region >=',
+ SHOW_SUMMARY     => 'Show summary when region >',
 
  LINEWIDTH        => 'Line width',
 

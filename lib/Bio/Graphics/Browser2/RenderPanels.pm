@@ -523,7 +523,7 @@ sub wrap_rendered_track {
     my $favorite      = $settings->{favorites}{$label};
     my $starIcon      = $favorite ? $favicon_2 : $favicon;
     my $starclass     = $favorite ? "toolbarStar favorite" : "toolbarStar";
-    (my $l = $label) =~ s/:(overview|detail|regionview)$//;     
+    (my $l = $label) =~ s/:(overview|detail|regionview)$//;
     my @images = (
         $fav_click ? img({   	-src         => $starIcon,
 				-id          =>"barstar_${label}",
@@ -543,7 +543,7 @@ sub wrap_rendered_track {
 
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
-		-onClick     => "ShowHideTrack('$l',false)",
+		-onClick     => "ShowHideTrack('$label',false)",
                 -style       => 'cursor:pointer',
                 $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
             }
@@ -604,7 +604,8 @@ sub wrap_rendered_track {
 			  }, div({-class => 'linkbg',},
 				 $cancel_ipad)),
 		      div({-class => 'ipadcollapsed',  
-			   -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, div({-class => 'linkbg',},$share_ipad)),
+			   -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, 
+			  div({-class => 'linkbg',},$share_ipad)),
 		      div({-class => 'ipadcollapsed',  -
 			       onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
 		      div({-class => 'ipadcollapsed',  

@@ -578,6 +578,10 @@ sub semantic_setting {
 sub semantic_label {
   my ($self,$label,$length) = @_;
   return $label unless defined $length && $length > 0;
+
+  my $mult = $self->global_setting('details multiplier') || 1;
+  $length /= $mult;
+
   # look for:
   # 1. a section like "Gene:100000" where the cutoff is less than the length of the segment
   #    under display.

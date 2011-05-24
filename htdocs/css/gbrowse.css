@@ -25,11 +25,11 @@ A.bred            { color: #FFFFFF;
                     font-size : small;
                     text-align: center;
 		  }
-.track_title {
+.track_label {
     cursor: pointer;
     color: black;
 }
-.track_title:hover {
+.track_label:hover {
     background:lightsteelblue;
 }
 .favorite {

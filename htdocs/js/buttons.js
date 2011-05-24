@@ -16,12 +16,10 @@ function gbCheck (button,state) {
   if (!checkboxes)
     return false;
 
-  //  var track_names = new Array();
   for (var i=0; i<checkboxes.length; i++) {
       var track_name = checkboxes[i].id.substring(0,checkboxes[i].id.lastIndexOf("_"));
       ShowHideTrack(track_name,state);
   }
-  //  var added_tracks = Controller.add_tracks(track_names);
   gbTurnOff(a);
   button.checked = true;
   updateList($(a));

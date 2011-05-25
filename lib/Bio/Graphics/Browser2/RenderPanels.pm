@@ -270,7 +270,6 @@ sub make_requests {
 
 	my $format_option = $settings->{features}{$label}{options};
 
-
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
 	@subtrack_args = @{$settings->{subtracks}{$label}} 
@@ -281,7 +280,8 @@ sub make_requests {
 	(my $track = $label) =~ s/:(overview|region|details?)$//;
 	if ($feature_files && exists $feature_files->{$track}) {
 
-	    my $feature_file = $feature_files->{$track};
+	    # some broken logic here...
+	    my $feature_file = $feature_files->{$track} || $feature_files->{$label};
 
 	    unless (ref $feature_file) { # upload problem!
 		my $cache_object = Bio::Graphics::Browser2::CachedTrack->new(
@@ -301,8 +301,9 @@ sub make_requests {
 		$d{$track} = $cache_object;
 		next;
 	    }
-
-	    next unless $label =~ /:$args->{section}$/;
+	    
+	    # broken logic here?
+	    # next unless $label =~ /:$args->{section}$/;
 	    @featurefile_args =  eval {
 		$feature_file->isa('Bio::Das::Segment')||$feature_file->types, 
 		$feature_file->mtime;
@@ -326,7 +327,6 @@ sub make_requests {
 			     $label ],
 	    -cache_time => $cache_time
         );
-#       warn "object= $format_option";
         $d{$label} = $cache_object;
     }
 
@@ -1363,12 +1363,6 @@ sub run_local_requests {
     my %feature_file_offsets;
 
     my @labels_to_generate = @$labels;
-
-    # this is now done in the subprocess
-#    foreach (@labels_to_generate) {
-#	$requests->{$_}->lock();   # flag that request is in process
-#    }
-
     my @ordinary_tracks    = grep {!$feature_files->{$_}} @labels_to_generate;
     my @feature_tracks     = grep {$feature_files->{$_} } @labels_to_generate;
 
@@ -1376,9 +1370,6 @@ sub run_local_requests {
     my $filters = $self->generate_filters($settings,$source,\@labels_to_generate);
 
     my (%children,%reaped);
-
-
-
 
     local $SIG{CHLD} = sub {
 	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {

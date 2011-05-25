@@ -659,6 +659,7 @@ sub background_individual_track_render {
     my $details_msg = '';
 
     my $external    = $self->external_data;
+    my $source      = $self->data_source;
     
     my $section;
     my $segment;
@@ -683,7 +684,7 @@ sub background_individual_track_render {
         $details_msg     = h1(
             $self->translate(
                 'TOO_BIG',
-                scalar $self->data_source()->unit_label(MAX_SEGMENT),
+                scalar $source->unit_label(MAX_SEGMENT),
             )
         );
         my %track_keys = ( $label => 0 );
@@ -705,8 +706,9 @@ sub background_individual_track_render {
     my %track_keys;
     foreach my $cache_track_hash ( $cache_track_hash, ) {
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-	    my $unique_label = $external->{$track_label} 
-	        ? "$track_label:$section"
+	    my $unique_label = 
+		$source->is_remotetrack($track_label) ? $track_label
+		: $external->{$track_label}           ? "$track_label:$section"
 		: $track_label;
             $track_keys{ $unique_label }
                 = $cache_track_hash->{$track_label}->key();
@@ -2181,7 +2183,6 @@ sub reconfigure_track {
 sub clip_override_ranges {
     my $self = shift;
     my ($semconf,$low,$hi) = @_;
-    warn "clipping regions to $low..$hi";
 
     # legacy representation of bounds
     for my $k (keys %$semconf) {
@@ -2244,7 +2245,6 @@ sub find_override_bounds {
     } keys %$semconf;
     my ($low,$hi) = (0,999999999);
     for my $r (@ranges) {
-	warn "@$r";
 	next unless @$r == 2;
 	if ($length >= $r->[0] && $length <= $r->[1]) {
 	    return @$r;
@@ -2402,14 +2402,6 @@ sub update_coordinates {
     $state->{view_stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
     $position_updated++;
   }
-
-#  elsif (param('q')) {
-#      warn "param(q) = ",param('q') if DEBUG;
-#      $state->{search_str} = param('q');
-#      @{$state}{'ref','view_start','view_stop'} 
-#          = Bio::Graphics::Browser2::Region->parse_feature_name($state->{search_str});
-#      $position_updated++;
-#  }
 
   # quench uninit variable warning
   my $current_span = length($state->{view_stop}||'') ? ($state->{view_stop} - $state->{view_start} + 1) 
@@ -3344,11 +3336,15 @@ sub expand_track_names {
     my @results;
 
     for my $t (@tracks) {
-	if ($external->{$t} || $source->code_setting($t=>'remote feature')) {
+	if ($source->code_setting($t=>'remote feature')) {
+	    push @results,$t;
+	}
+	elsif ($external->{$t}) {
 	    my @sections = $self->featurefile_sections($t);
 	    @sections    = ('detail') unless @sections;
 	    push @results,"$t:$_" foreach @sections;
-	} else {
+	}
+	else {
 	    push @results,$t;
 	}
     }
@@ -3378,9 +3374,9 @@ sub get_section_from_label {
 sub trackname_to_id {
     my $self = shift;
     my ($name,$section) = @_;
-    $self->external_data->{$name}
-                   ? "$name:$section"
-		   : $name;
+    $self->data_source->is_remotetrack($name) ? $name
+   :$self->external_data->{$name}             ? "$name:$section"
+   : $name;
 }
 
 ################## get renderer for this segment #########
@@ -3527,7 +3523,6 @@ sub render_deferred {
     
     warn '(render_deferred(',join(',',@$labels),') for section ',$section,' nocache=',$nocache if DEBUG;
 
-    
     my $renderer   = $self->get_panel_renderer($seg,
 					       $self->thin_whole_segment,
 					       $self->thin_region_segment
@@ -3755,7 +3750,6 @@ sub external_data {
     my $search       = $self->get_search_object;
     my $meta_segment = $search->segment($segment);
     my $too_big      =  $segment && ($self->get_panel_renderer($segment)->vis_length > $max_segment);
-    #$segment->length > $max_segment);
     if (!$too_big && $segment) {
 	my $search       = $self->get_search_object;
 	my $rel2abs      = $search->coordinate_mapper($segment,1);
@@ -4045,8 +4039,6 @@ sub chrom_sizes {
 sub generate_chrom_sizes {
     my $self  = shift;
     my $sizes = shift;
-
-    warn "creating $sizes";
 
     my $source = $self->data_source;
 

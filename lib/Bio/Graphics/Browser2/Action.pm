@@ -241,7 +241,6 @@ sub ACTION_add_tracks {
     $render->init_database();
     $render->init_plugins();
     my $track_data = $render->add_tracks(\@track_names);
-    warn "add_tracks: ",join ' ',keys %$track_data;
     my $return_object = { track_data => $track_data, };
     $self->session->flush;
     return ( 200, 'application/json', $return_object );

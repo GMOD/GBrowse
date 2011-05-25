@@ -170,7 +170,7 @@ sub selection_table {
     my $comment      = $self->track_comment;
     my $instructions = $render->tr('SUBTRACK_INSTRUCTIONS');
 
-       # it is possible for there to be more fields in the data table than among
+    # it is possible for there to be more fields in the data table than among
     # the selectors, so we create additional dummy columns in the header
     my $cols = 0;
     for (keys %$elements) {
@@ -249,7 +249,7 @@ END
 
     return div({-class=>'subtrack_table',
 		-id=>'subtrack_table_scroller'},
-	    table({-width=>$width,
+	    table({-width=>'98%',
 		   -class => "subtrack-table table-autosort table-autostripe table-stripeclass:alternate",
 		   -style => CGI->user_agent =~ /KHTML/ ? "border-collapse:collapse" 
 		                                        : "border-collapse:separate",
@@ -426,7 +426,7 @@ sub infer_settings_from_source {
       }
       my $count = keys %$meta;
 
-      my @tags       = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
+      my @tags    = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
       @dimensions = map {[ucfirst($_),'tag_value',$_]} @tags;
 
       # translate these into rows
@@ -438,14 +438,20 @@ sub infer_settings_from_source {
       push @{$rows[0]},'*';
     }
 
-
-
     return unless @dimensions && @rows;
 
+    # apply "facet dimensions" setting on top of dimensions
+    if (my %facet_dimensions = shellwords($source->setting(general=>'facet dimensions'))) {
+	for my $d (@dimensions) {
+	    $d->[0] = $facet_dimensions{$d->[0]} || $d->[0];
+	}
+    }
+
+    my %facet_values = shellwords($source->setting(general=>'facet values'));
     my $aliases     = $source->setting($label=>'subtrack select labels') 
 	            ||$source->setting($label=>'subtrack labels') ; # deprecated API
-
     my %aliases    = map {shellwords($_)} split ';',$aliases if $aliases;
+    %aliases       = (%facet_values,%aliases);
     return (\@dimensions,\@rows,\%aliases);
 }
 

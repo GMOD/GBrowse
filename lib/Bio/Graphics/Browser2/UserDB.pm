@@ -273,8 +273,7 @@ END
     $select->execute($db_search,$db_search,$db_search) or die $select->errstr;
     my @results;
     while (my @a = $select->fetchrow_array) {
-#	push @results,(grep /$search/i,@a);
-	push @results, "$a[1] &lt;$a[2]&gt; ($a[0])";
+	push @results, ($a[2] && $a[2] !~ /unused/i ? "$a[1] &lt;$a[2]&gt; ($a[0])" : "$a[1] ($a[0])");
     }
     $select->finish;
     return \@results;

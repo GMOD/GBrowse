@@ -37,6 +37,26 @@ function initAutocomplete() {
 			     }
                          }
 	 );
+
+    
+    $$('.autocomplete.usersearch').each(function (div) {
+	    var entry_id = div.id.replace(/_choices$/,'');
+	    new Ajax.Autocompleter(
+				   entry_id,
+				   div.id,
+				   document.URL,
+				   {
+				       frequency: 0.2,
+					   parameters:         'action=autocomplete_user_search',
+					   paramName:          'prefix',
+					   minChars:           3,
+					   updateElement: function(t) {
+					   var username = t.innerHTML.match(/ \((.+)\)$/);
+				           $(entry_id).value=username[1].stripTags();
+				           }
+				   }
+				   )
+		});
 }
 
 

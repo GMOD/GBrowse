@@ -1953,7 +1953,7 @@ sub render_track_sharing {
 		    -onFocus => "this.clear()"
 		});
 	    my $add_autocomplete = div({-id=>"${id}_choices",
-					-class=>'autocomplete'},'') if $self->setting('autocomplete');
+					-class=>'autocomplete usersearch'},'') if $self->setting('autocomplete');
 	    my $add_link = "&nbsp;" . a(
 		{
 		    -href => "javascript: void(0)",
@@ -2906,7 +2906,7 @@ sub format_autocomplete {
 
 sub format_upload_autocomplete {
     my $self     = shift;
-    my $matches = shift;
+    my $matches  = shift;
     my $partial  = shift;
     my %names;
     for my $f (@$matches) {

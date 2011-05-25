@@ -2062,8 +2062,9 @@ sub create_track_args {
   
   my $state            = $self->settings;
 
-  my $semantic_override = $self->render->find_override_region($state->{features}{$label}{semantic_override},
-							      $length/$self->details_mult);
+  my $semantic_override = Bio::Graphics::Browser2::Render->find_override_region(
+      $state->{features}{$label}{semantic_override},
+      $length/$self->details_mult);
   my $override  = $is_summary           ? $state->{features}{$label}{summary_override}
                    : $semantic_override ? $state->{features}{$label}{semantic_override}{$semantic_override}
                    : {};

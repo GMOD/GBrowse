@@ -1,3 +1,13 @@
+2.35
+   * Preparations for faceted track searching
+     * deprecate "subtrack select" and "subtrack table" options in favor of "subtrack facets",
+       which introspects values from database (will require updates to Bio::DB::SeqFeature and friends)
+     * add "facet labels" and "facet values" options
+     * allow options to be tagged with "ex:option_name" to identify facets
+   * Fix subtracks to prevent features from appearing in the subtrack manager that won't be
+     displayed in the track panel because the feature type doesn't match the configured "feature"
+     option.
+
 2.34
    * Fixed broken https:// links in karyotype summary table; patch courtesy Dan Bolser
    * Fixed behavior of "q" parameter to match the documented behavior.

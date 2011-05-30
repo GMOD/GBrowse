@@ -28,12 +28,14 @@ var region_container_id     = 'region_panels';
 var detail_container_id     = 'detail_panels'; 
 var external_utility_div_id = 'external_utility_div'; 
 var page_title_id           = 'page_title';
-var galaxy_form_id          = 'galaxy_form';
+var galaxy_form_id          = 'galaxy_form';       
 var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
 var userdata_table_id       = 'userdata_table_div';
 var custom_tracks_id        = 'custom_tracks';
 var community_tracks_id     = 'community_tracks';
+// Allows you to update the snapshot table asynchronously %%
+var snapshot_table_id 	    = 'snapshots_page';
 var GlobalDrag;
 
 //  Sorta Constants
@@ -284,7 +286,7 @@ var GBrowseController = Class.create({
         if (spin == null) {
             spin = false;
         }
-        
+
         var request_str = "action=update_sections" + param_str;
         for (var i = 0; i < section_names.length; i++) {
             if (spin)
@@ -293,7 +295,7 @@ var GBrowseController = Class.create({
 							alt: Controller.translate('WORKING')}) );
             request_str += "&section_names="+section_names[i];
         }
-
+	
         new Ajax.Request(Controller.url, {
             method:     'post',
             parameters: request_str,
@@ -461,11 +463,11 @@ var GBrowseController = Class.create({
 
         if (force == null)
             force = false;
-
         var request_str = "action=add_tracks";
         var found_track = false;
         for (var i = 0; i < track_names.length; i++) {
             var track_name = track_names[i];
+		
             if ( force || !this.track_exists(track_name) ) {
                 request_str += "&track_names="+encodeURIComponent(track_name);
                 found_track = true;
@@ -473,8 +475,9 @@ var GBrowseController = Class.create({
         }
 
         if (!found_track) return false;
-
+	
         this.busy();
+	
         new Ajax.Request(Controller.url, {
             method:     'post',
             parameters: request_str,
@@ -1320,7 +1323,84 @@ show_info_message:
   function(event, url) {
     GBox.showTooltip(event, url);
 	Controller.update_sections(new Array(custom_tracks_id));
-  }
+  },
+
+/* %% Snapshot js:				     
+  hide_snapshot_prompt:
+ function(){
+   $('save_snapshot').hide();
+
+  },
+				     
+ submitWithEnter: 
+   function(e){
+     var sessionName = $('save_snapshot').value;
+     if (!e) var e = window.event;
+      if (e.keyCode) code = e.keyCode;
+      else if (e.which) code = e.which;
+      
+ //key = enter?
+      if (code==13) {
+	Controller.hide_snapshot_prompt();
+	
+	Controller.saveSnapshot('snapshot_name')
+        
+        //%% reloads the entire page which is not effective
+	// document.location.reload(true);
+
+        var sections = new Array(snapshot_table_id);
+	Controller.update_sections(sections); 	
+		    } 
+ },
+				     
+ killSnapshot:
+ function(snapshot){
+   var snapshot_row = document.getElementById(snapshot);
+  
+   snapshot_row.style.display="none";
+    new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'delete_session',
+  			name: snapshot,
+
+  	          }});
+   
+ },
+				     
+  saveSnapshot:
+  function(textFieldId){
+//     var settings = settings_json.evalJSON();
+ var sessionName = document.getElementById(textFieldId).value;
+
+ if(sessionName){
+ new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'save_session',
+  			name: sessionName,
+			// causing image to pop up %%
+			// svgImage: Controller.make_image_link("GD::SVG",0),			
+
+  	          }});
+		}		  
+
+  },				     		     				     				 				     
+ setSnapshot:
+  function(sessionName){
+
+ new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:false,
+  		  parameters: {
+  		        action: 'set_session',
+  			name: sessionName,
+  	          }});
+	
+	location.reload(true);
+  },*/
 
 });
 

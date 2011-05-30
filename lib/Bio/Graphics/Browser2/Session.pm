@@ -370,10 +370,39 @@ sub config_hash {
   my $self = shift;
   my $source  = $self->source;
   my $session = $self->{session};
+  # *** Initialize the snapshot session data ***
+  my $settings =$session->{_DATA}->{$source}->{page_settings};
+  my  $snapshotName = $settings->{current_session};
+  my $isSnapshotActive = 0;
+  my $currentSnapshot = 0;
+ # *** If there is a snapshot, activate it ***
+if ($snapshotName){
+   $currentSnapshot  = $settings->{snapshots}->{$snapshotName};
+   $isSnapshotActive = $settings->{snapshot_active};
 
-  $session->param($source=>{}) unless $session->param($source);
-  return $session->param($source);
 }
+
+# *** Change the settings based on the active snapshot ***
+$settings = ($isSnapshotActive) ? $currentSnapshot : $settings;
+# warn "active = $isSnapshotActive";
+
+  $session->{_DATA}->{$source}->{page_settings} =  $settings;
+
+#   warn "test = $currentSnapshot";
+#           my %temsess = %$settings; 
+#           while ( (my $key, my $value) = each %temsess)
+#           {
+#             warn "snapkey_: $key, value: $temsess{$key}\n" ;
+#         };
+
+
+ return $session->param($source);
+  $session->param($source=>{}) unless $session->param($source);
+    
+
+}
+
+
 
 # problem with explicit DESTROY is that it gets called in all child
 # processes. Better to have the unlock happen when filehandle is truly

@@ -17,11 +17,11 @@ Welcome to the Generic Genome Browser!
 
 <dl>
   <dt><b>Online tutorial and sample data files</b></dt>
-  <dd><a href="tutorial/tutorial.html">$HTDOCS/tutorial<a>.</dd>
+  <dd><a href="tutorial/tutorial.html">/var/www/gbrowse2/tutorial<a>.</dd>
   <dt>Installation and configuration manual</dt>
   <dd><b><a href="http://gmod.org/wiki/GBrowse_2.0_HOWTO">GBrowse 2.0 HOWTO</a></b></dd>
   <dt><b>Example scripts to control GBrowse from the command line</b></dt>
-  <dd><a href="example_scripts">$HTDOCS/example_scripts</a></dd>
+  <dd><a href="example_scripts">/var/www/gbrowse2/example_scripts</a></dd>
 </dl>
 
 <h2>Example Databases</h2>
@@ -32,9 +32,9 @@ Example in-memory databases from yeast chromosomes 1 and 2 have been
 installed for you.  Try them at these URL:
 
 <ul>
-<li><a href="$CGIURL/gbrowse/yeast">http://your.host/cgi-bin/gb2/gbrowse/yeast</a> (simple example)</li>
-<li><a href="$CGIURL/gbrowse/yeast_advanced">http://your.host/cgi-bin/gb2/gbrowse/yeast_advanced</a> (advanced example)</li>
-<li><a href="$CGIURL/gbrowse/yeast_renderfarm">http://your.host/cgi-bin/gb2/gbrowse/yeast_renderfarm</a> (yeast_renderfarm example)</li>
+<li><a href="/cgi-bin/gb2/gbrowse/yeast">http://your.host/cgi-bin/gb2/gbrowse/yeast</a> (simple example)</li>
+<li><a href="/cgi-bin/gb2/gbrowse/yeast_advanced">http://your.host/cgi-bin/gb2/gbrowse/yeast_advanced</a> (advanced example)</li>
+<li><a href="/cgi-bin/gb2/gbrowse/yeast_renderfarm">http://your.host/cgi-bin/gb2/gbrowse/yeast_renderfarm</a> (yeast_renderfarm example)</li>
 </ul>
 
 <p>
@@ -91,23 +91,23 @@ components:
 
 <dl>
   <dt>GBrowse documentation, stylesheets and in-memory databases.
-  <dd><b>$HTDOCS</b>
+  <dd><b>/var/www/gbrowse2</b>
       <p>
   <dt>GBrowse configuration files
-  <dd><b>$CONF/GBrowse.conf</b>
+  <dd><b>/etc/gbrowse2/GBrowse.conf</b>
       <p>
   <dt>Preinstalled sample database(s)
-  <dd><b>$DATABASES</b>
+  <dd><b>/var/lib/gbrowse2/databases</b>
       <p>
   <dt>GBrowse CGI (web) scripts
   <dd><ul>
-          <li><b>$CGIBIN/gbrowse</b>
-          <li><b>$CGIBIN/gbrowse_img</b>
-          <li><b>$CGIBIN/gbrowse_details</b>
+          <li><b>/usr/lib/cgi-bin/gb2/gbrowse</b>
+          <li><b>/usr/lib/cgi-bin/gb2/gbrowse_img</b>
+          <li><b>/usr/lib/cgi-bin/gb2/gbrowse_details</b>
       </ul>
       <p>
   <dt>Temporary directories for cached images and sessions.
-  <dd><b>$TMP</b>
+  <dd><b>/tmp/gbrowse2</b>
 </dl>
 
 <p>

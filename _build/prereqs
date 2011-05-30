@@ -1,0 +1,43 @@
+do{ my $x = {
+       'build_requires' => {
+                             'Capture::Tiny' => 0,
+                             'ExtUtils::CBuilder' => 0
+                           },
+       'conflicts' => {},
+       'requires' => {
+                       'IO::String' => 0,
+                       'Storable' => 0,
+                       'Bio::Graphics' => '2.09',
+                       'Bio::Root::Version' => '1.0069',
+                       'perl' => '5.008',
+                       'CGI::Session' => '4.02',
+                       'Digest::MD5' => 0,
+                       'File::Temp' => 0,
+                       'GD' => '2.07',
+                       'JSON' => 0,
+                       'Statistics::Descriptive' => 0,
+                       'LWP' => 0,
+                       'ExtUtils::CBuilder' => 0
+                     },
+       'recommends' => {
+                         'GD::SVG' => 0,
+                         'Bio::Das' => 0,
+                         'DBD::SQLite' => 0,
+                         'DB_File::Lock' => 0,
+                         'Math::BigInt' => 0,
+                         'File::NFSLock' => 0,
+                         'Digest::SHA' => 0,
+                         'Net::OpenID::Consumer' => 0,
+                         'Crypt::SSLeay' => 0,
+                         'Term::ReadKey' => 0,
+                         'FCGI' => 0,
+                         'DBI' => 0,
+                         'Bio::DB::BigFile' => '1',
+                         'DBD::Pg' => 0,
+                         'Template' => '2.2',
+                         'DBD::mysql' => 0,
+                         'Bio::DB::Sam' => '1.2',
+                         'Net::SMTP::SSL' => 0
+                       }
+     };
+$x; }

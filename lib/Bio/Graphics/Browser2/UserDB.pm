@@ -383,7 +383,7 @@ SELECT count(*) FROM users WHERE userid=?
 END
 ;
 	if ($rows > 0) {
-	    $userdb->do('UPDATE users SET gecos=?,email=? WHERE userid=?',undef,$fullname,$userid);
+	    $userdb->do('UPDATE users SET gecos=?,email=? WHERE userid=?','',$fullname,$userid);
 	} else {
 	    my $nowfun = $self->nowfun();
 	    my $email  = $email || ('unused_'.$self->create_key(32).'@nowhere.net');

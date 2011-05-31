@@ -55,6 +55,7 @@ sub set_username {
     my $username = shift;
     $self->{'.authenticated_username'} = $username;
 }
+
 sub username     { 
     my $self = shift;
     return $self->{'.authenticated_username'} || CGI->remote_user;
@@ -72,6 +73,8 @@ sub authorized {
   my $host     = CGI->remote_host;
   my $addr     = CGI->remote_addr;
   my $user     = $self->username;
+
+  warn "user = $user";
 
   undef $host if $host eq $addr;
   return $restrict->($host,$addr,$user) if ref $restrict eq 'CODE';

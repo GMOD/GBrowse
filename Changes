@@ -1,7 +1,12 @@
 2.34
-   * Fixed broken https:// links in karyotype summary table; patch courtesy Dan Bolser
-   * Fixed behavior of "q" parameter to match the documented behavior.
-   * Fixed RemoteSet to avoid failures due to nonexistence of download directory.
+   * Fix broken https:// links in karyotype summary table; patch courtesy Dan Bolser
+   * Fix behavior of "q" parameter to match the documented behavior.
+   * Fix RemoteSet to avoid failures due to nonexistence of download directory.
+   * Fix bug that allowed unauthorized users to view restricted tracks under
+     following circumstances: FastCGI activated, track configuration changed, server
+     not restarted.
+   * Added an LDAP authentication plugin (LDAPAuthenticate).
+   * Clean up appearance of favorite stars and checkboxes to deconfuse users.
 
 2.33
    * Fixed plugin authentication system to prevent an all-dark screen during authentication

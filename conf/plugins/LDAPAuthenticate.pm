@@ -16,7 +16,10 @@ sub authenticate {
 
     my $ldap = $self->_ldap_connect or return;
 
-    # do an anonymous search to get the dn with which to bind
+    # possibly bind to the server if a root DN and password are needed
+    $self->_initial_bind($ldap);
+
+    # do a search to get the user dn with which to bind
     my $search = $ldap->search(
 	base   => $self->people_base,
 	filter => "(&(objectClass=posixAccount)(uid=$name))"
@@ -67,6 +70,22 @@ sub _ldap_connect {
     return $ldap;
 }
 
+sub _initial_bind {
+    my $self = shift;
+    my $ldap = shift;
+    my $bind_dn    = $self->bind_dn   or return;
+    my $bind_pass  = $self->bind_pass or return;
+    my $message    = $ldap->bind($bind_dn,password=>$bind_pass);
+    return unless $message->is_error;
+    my $text = $message->error_text;
+    warn <<END;
+Error during initial binding to $bind_dn:
+    '$text'
+All LDAP logins may fail.
+END
+;
+}
+
 sub server {
     return shift->required_setting('ldap server'); 
 }
@@ -77,6 +96,14 @@ sub people_base {
 
 sub groups_base {
     return shift->required_setting('groups baase');
+}
+
+sub bind_dn {
+    return shift->setting('bind dn');
+}
+
+sub bind_pass {
+    return shift->setting('bind pass');
 }
 
 sub required_setting {
@@ -98,9 +125,18 @@ Bio::Graphics::Browser2::Plugin::LDAPAuthenticate - Authenticate user against an
 
 =head1 SYNOPSIS
 
-In the appropriate gbrowse configuration file:
+In the GBrowse.conf configuration file:
 
  authentication plugin = LDAPAuthenticate
+
+ [LDAPAuthenticate:plugin]
+ login hint = your foobar corp account
+ ldap server = ldap.foobar.com
+ people base = ou=People,dc=foobar,dc=ny,dc=usa
+ groups base = ou=Groups,dc=foobar,dc=ny,dc=usa
+ # the following only needed if the LDAP server forbids anonymous (unbound) searches:
+ bind dn    = uid=root,ou=People,dc=foobar,dc=ny,dc=usa
+ bind pass  = xyzzy
 
 =head1 DESCRIPTION
 
@@ -132,6 +168,19 @@ where the provided user id will be found.
 
 B<groups base> (required) is the search base for the Group records
 where the user's group membership can be determined.
+
+In addition, if your LDAP server requires a username and password to
+bind to B<before> permitting searches, then you will need to provide:
+
+B<bind dn> (optional) the distinguished name of the LDAP user to bind to.
+This is often called the LDAP "root" user.
+
+B<bind pass> (optional) the password of the LDAP user to bind to.
+
+Note that providing this bind user's account name and password in a
+file that is readable by the web server can be considered a security
+risk. Consider allowing anonymous searches on the LDAP server, or else
+create an unprivileged user account for the initial binding step.
 
 =head1 SEE ALSO
 

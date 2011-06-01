@@ -70,6 +70,7 @@ conf/plugins/FastaDumper.pm
 conf/plugins/FBTableDumper.pm
 conf/plugins/FilterTest.pm
 conf/plugins/GeneFinder.pm
+conf/plugins/LDAPAuthenticate.pm
 conf/plugins/OligoFinder.pm
 conf/plugins/PamAuthenticate.pm
 conf/plugins/PrimerDesigner.pm

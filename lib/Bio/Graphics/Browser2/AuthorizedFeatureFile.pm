@@ -74,8 +74,6 @@ sub authorized {
   my $addr     = CGI->remote_addr;
   my $user     = $self->username;
 
-  warn "user = $user";
-
   undef $host if $host eq $addr;
   return $restrict->($host,$addr,$user) if ref $restrict eq 'CODE';
   my @tokens = split /\s*(satisfy|order|allow from|deny from|require user|require group|require valid-user)\s*/i,$restrict;

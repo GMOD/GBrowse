@@ -211,7 +211,8 @@ sub global_setting {
   my $option = shift;
   my $value  = $self->code_setting(general=>$option);
   return $value if defined $value;
-  return $self->globals->code_setting(general=>$option);
+  my $globals = $self->globals or return;
+  return $globals->code_setting(general=>$option);
 }
 
 # format for time can be in any of the forms...

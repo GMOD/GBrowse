@@ -25,6 +25,7 @@ use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
 use Bio::Graphics::Browser2::UserTracks;
 use Bio::Graphics::Browser2::UserDB;
 use Bio::Graphics::Browser2::Session;
+use Bio::Graphics::Browser2::Render::SnapshotManager;
 use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
@@ -2550,7 +2551,7 @@ sub asynchronous_update_sections {
 
     # Saved Snapshot Section
     if ( $handle_section_name{'snapshots_page'}) {
-	$return_object->{'snapshots_page'} = $self->render_saved_snapshots_listing();
+	$return_object->{'snapshots_page'} = $self->Bio::Graphics::Browser2::Render::SnapshotManager::render_saved_snapshots_listing();
 	#$return_object->{'snapshots_page'} = $self->render_snapshotTitle();
     }
 

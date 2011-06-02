@@ -122,17 +122,15 @@ GBrowseController.addMethods({
 		// Each child that is active, is added to the active children array, and inactive children are removed from the track listing
 		children.each(function(child) {
 			var track_name = child.id.substring(0, (child.id.length - 6));
-
 			if(child.className == 'track_title activeTrack'){
 			 	active_children.push(track_name);
-			}else if(child.className == 'track_title'){
-				// Toggles the tracks on or off as they're selected
-				Controller.delete_track(track_name);
 			}
+				// All tracks are initially deleted (and unregistered)
+				Controller.delete_track(track_name);
 		});	
 
 		// The tracks are added and browser is refreshed.
-		Controller.add_tracks(active_children,function(){Controller.update_coordinates("reload segment");}, true);
+		Controller.add_tracks(active_children,function(){Controller.refresh_tracks();}, true);
 		
 		// The title is updated to reflect the new snapshot that has been set
 		$('snapshot_page_title').innerHTML = 'Current Snapshot : ' + sessionName;
@@ -184,17 +182,9 @@ GBrowseController.addMethods({
             });
   },
 
-  hideSendSnapshot:
-  function(snapshot){
-
-	$('send_snapshot_' + snapshot).hide();	
-
-  },
-
   loadSnapshot:
   function(){
 	
-	// The snapshot name and code are stored for later use. ERROR CHECKING NEEDED HERE.
  	var load_name = $('load_snapshot_name').value;
   	var load_snapshot = $('load_snapshot_code').value;
   
@@ -218,5 +208,95 @@ GBrowseController.addMethods({
             });
   },
 
+  downSnapshot:
+  function(snapshot){
+	
+  	$('busy_indicator').show();
+
+	// An asynchronous request is made to retrieve the snapshot information
+ 	new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'down_session',
+  			name: 	snapshot
+  	          },
+		  onSuccess: function(transport) {
+			// Upon success, the user can download the snapshot
+			$('busy_indicator').hide();
+			//window.open(/home/aelnaiem/Desktop/snapshot.txt, 'Download');
+		  }
+            });
+  },
+
+  mailSnapshot:
+  function(snapshot){
+	var email = $('email_' + snapshot).value;
+
+  	$('mail_snapshot_' + snapshot).hide();
+  	$('busy_indicator').show();
+
+	// An asynchronous request is used to send an email to the email provided
+ 	new Ajax.Request(document.URL, {
+  	          method: 'POST',
+  		  asynchronous:true,
+  		  parameters: {
+  		        action:    'mail_session',
+  			email: 	   email,
+			name:  snapshot,
+			url:   document.location.href,
+  	          },
+		  onSuccess: function(transport) {
+                  	$('busy_indicator').hide();
+		  }
+            });
+	
+
+  },
+
+ checkSnapshot:
+  function(){
+	// The source, session, and snapshot information are stored
+	var browser_source = Controller.findParameter("source");
+ 	var session = Controller.findParameter("session");
+	var snapshot = Controller.findParameter("snapshot");
+
+	if(browser_source != null && session != null && snapshot != null){
+		// An asynchronous request loads the snapshot into the browser
+	 	new Ajax.Request(document.URL, {
+	  	          method: 'POST',
+	  		  asynchronous:true,
+	  		  parameters: {
+	  		        action:    'load_url',
+				name:  snapshot,
+				userid: session,
+				browser_source: browser_source,
+	  	          },
+			  onSuccess: function(transport) {
+		          	$('busy_indicator').show();
+				Controller.setSnapshot(snapshot);
+			  }
+		    });
+	}
+	
+
+  },
+
+ findParameter:
+  function(param){
+	// Searches the URL for the value of the parameter passed in
+   	var search = window.location.search.substring(1);
+   	if(search.indexOf('&') > -1) {
+      		var params = search.split('&');
+      		for(var i = 0; i < params.length; i++) {
+          		var key_value = params[i].split('=');
+          		if(key_value[0] == param) return key_value[1];
+      		}
+   	} else {
+      		var params = search.split('=');
+      		if(params[0] == param) return params[1];
+   	}
+   return null;
+}
 });
 

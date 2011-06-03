@@ -1,3 +1,6 @@
+2.35
+   * Fix internal server error caused by certain semantic zooming declarations.
+
 2.34
    * Fix broken https:// links in karyotype summary table; patch courtesy Dan Bolser
    * Fix behavior of "q" parameter to match the documented behavior.

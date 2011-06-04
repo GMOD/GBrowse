@@ -1,3 +1,6 @@
+2.36
+   * Make semantic zooming work again when database option changed.
+
 2.35
    * Fix internal server error caused by certain semantic zooming declarations.
 

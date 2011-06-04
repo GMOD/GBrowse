@@ -604,7 +604,7 @@ sub semantic_label {
   #    under display.
   # 2. a section like "Gene" which has no cutoff to use.
   if (my @lowres = map {[split ':']}
-      grep {/$label:(\d+)/ && $1 <= $length}
+      grep {/^$label:(\d+)/ && $1 <= $length}
       $self->configured_types)
     {
       ($label) = map {join ':',@$_} sort {$b->[1] <=> $a->[1]} @lowres;
@@ -745,9 +745,14 @@ sub invert_types {
   return unless $config;
 
   my %inverted;
-  for my $label (keys %{$config}) {
-      my $feature = $self->setting($label => 'feature') or next;
-      my ($dbid)  = $self->db_settings($label) or next;
+  for my $label (sort keys %{$config}) {
+      my $length = 0;
+      if ($label =~ /^(.+):(\d+)$/) {
+       	  $label  = $1;
+       	  $length = $2;
+      }
+      my $feature = $self->semantic_setting($label => 'feature',$length) or next;
+      my ($dbid)  = $self->db_settings($label => $length) or next;
       $dbid =~ s/:database$//;
       foreach (shellwords($feature||'')) {
 	  $inverted{lc $_}{$dbid}{$label}++;

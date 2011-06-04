@@ -1647,6 +1647,7 @@ sub add_features_to_track {
 	next;
       }
 
+
       $source->add_dbid_to_feature($feature,$iterator2dbid{$iterator});
 
       my @labels = $source->feature2label($feature,$length);
@@ -1673,7 +1674,7 @@ sub add_features_to_track {
 	  }
 	  
 	  # Handle generic grouping (needed for GFF3 database)
-	  $group_field{$l} = $source->semantic_setting($l => 'group_on',$length) 
+ 	  $group_field{$l} = $source->semantic_setting($l => 'group_on',$length) 
 	      unless exists $group_field{$l};
 	  
 	  if (my $pattern = $group_pattern{$l}) {
@@ -2135,7 +2136,6 @@ sub create_track_args {
 	     @override,
 	    );
   }
-
   return @args;
 }
 

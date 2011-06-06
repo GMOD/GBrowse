@@ -240,7 +240,11 @@ sub run {
 
   my $session = $self->session;
   my $source  = $self->data_source;
-  $source->set_username($session->username) if $session->private;
+  if ($session->private) {
+      $source->set_username($session->username);
+  } else {
+      $source->set_username(undef);
+  }
 
   if ($source->must_authenticate) {
       if ($session->private && 

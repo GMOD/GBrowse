@@ -411,7 +411,6 @@ sub label2type {
 sub track_listing_class {
     my $self = shift;
     my $style    =  lc $self->global_setting('track listing style') || 'categories';
-    warn "style = $style";
     my $subclass =   $style eq 'categories' ? 'Categories'
 	           : $style eq 'facets'     ? 'Facets'
 		   : die "invalid track listing style '$style'";

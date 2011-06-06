@@ -18,6 +18,8 @@
    * Fix subtracks to prevent features from appearing in the subtrack manager that won't be
      displayed in the track panel because the feature type doesn't match the configured "feature"
      option.
+   * Add option "track listing style" to select style of the track listing. Options are "categories" (default)
+     and "facets". Currently only "categories" works.
 
 2.34
    * Fix broken https:// links in karyotype summary table; patch courtesy Dan Bolser

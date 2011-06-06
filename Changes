@@ -1,3 +1,6 @@
+2.37
+   * Fix summary mode to work again when no explicit configuration given.
+
 2.36
    * Make semantic zooming work again when database option changed.
 

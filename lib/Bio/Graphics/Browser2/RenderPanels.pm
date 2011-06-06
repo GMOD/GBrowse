@@ -2082,7 +2082,7 @@ sub create_track_args {
 	  -min_score => 0,
 	  -autoscale => 'local',
       );
-      push @override, $source->i18n_style("$label:summary",$lang);
+      push @override, $source->i18n_style("$label:summary",$lang) if $source->Bio::Graphics::FeatureFile::setting("$label:summary");
   }
   my $hilite_callback = $args->{hilite_callback};
 

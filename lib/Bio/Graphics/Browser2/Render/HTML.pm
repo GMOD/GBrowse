@@ -846,13 +846,17 @@ sub render_toggle_track_table {
 							   $self->render_track_filter($filter)));
   }
 
-  my $listing_class = $source->track_listing_class;
-  eval "require $listing_class;1" or die $@ unless $listing_class->can('new');
-  my $tlr = $listing_class->new($self);
-
-  $html .= $self->toggle('Tracks',$tlr->render_track_listing.$self->html_frag('html5',$settings));
+  $html .= $self->toggle('Tracks',$self->render_track_table);
   $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));
   return $html;
+}
+
+sub render_track_table {
+    my $self = shift;
+    my $listing_class = $self->data_source->track_listing_class;
+    eval "require $listing_class;1" or die $@ unless $listing_class->can('new');
+    my $tlr = $listing_class->new($self);
+    return $tlr->render_track_listing.$self->html_frag('html5',$self->state);
 }
 
 # Render Multiple Choices - 

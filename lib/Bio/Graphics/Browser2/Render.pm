@@ -2726,9 +2726,6 @@ sub asynchronous_update_coordinates {
 
     my $state  = $self->state;
 
-#    warn "asynchronous_update_coordinates, session id = ",$self->session->id;
-#    warn "asynchronous_update_coordinates: \$state->{ref} = $state->{ref}";
-
     my $whole_segment_start = $state->{seg_min};
     my $whole_segment_stop  = $state->{seg_max};
 

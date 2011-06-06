@@ -1720,7 +1720,10 @@ sub tableize {
   
 	# de-couple the checkbox and label click behaviors
 	$checkbox =~ s/\<\/?label\>//gi;
-
+	if ($label =~/^=/) {
+          $label = '&nbsp;';
+          $checkbox = '&nbsp;';
+        }
 	my $class = $settings->{features}{$label}{visible} ? 'activeTrack' : '';
 
 	$html .= td({-width=>$cwidth,-style => 'visibility:visible',-class=>$class},

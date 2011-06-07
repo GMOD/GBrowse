@@ -124,10 +124,10 @@ $trackname ||= $basename;
 # minus strand
 
 if( $force || ! -f "$odir/$basename.minus.bedgraph" ) {
-    `$exe_genomeCoverage ibam -split -bg -strand - -i $bamfile -g $genome > $odir/$basename.minus.bedgraph`;
+    `$exe_genomeCoverage -ibam -split -bg -strand - -i $bamfile -g $genome > $odir/$basename.minus.bedgraph`;
 }
 if( $force || ! -f "$odir/$basename.plus.bedgraph") {
-    `$exe_genomeCoverage ibam -split -bg -strand + -i $bamfile -g $genome > $odir/$basename.plus.bedgraph`;
+    `$exe_genomeCoverage -ibam -split -bg -strand + -i $bamfile -g $genome > $odir/$basename.plus.bedgraph`;
 }
 
 my %chrom_cov;

@@ -1647,10 +1647,10 @@ sub add_features_to_track {
 	next;
       }
 
-
       $source->add_dbid_to_feature($feature,$iterator2dbid{$iterator});
-
       my @labels = $source->feature2label($feature,$length);
+
+      warn "[$$] $iterator->next_seq() returns $feature, will assign to @labels" if DEBUG;
 
       for my $l (@labels) {
 

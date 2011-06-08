@@ -586,7 +586,7 @@ sub karyotype_setting {
 sub semantic_setting {
   my ($self,$label,$option,$length) = @_;
   my $slabel = $self->semantic_label($label,$length);
-  my $val = $self->code_setting($slabel => $option) if defined $slabel;
+  my $val    = $self->code_setting($slabel => $option) if defined $slabel;
 
   return $val if defined $val;
   return $self->code_setting($label => $option);
@@ -597,10 +597,11 @@ sub semantic_label {
   return $label unless defined $length && $length > 0;
 
   my $mult = $self->global_setting('details multiplier') || 1;
-  $length /= $mult;
+  # round a bit
+  $length = int(0.5+($length+1)/$mult);
 
   # look for:
-  # 1. a section like "Gene:100000" where the cutoff is less than the length of the segment
+  # 1. a section like "Gene:100000" where the cutoff is <= the length of the segment
   #    under display.
   # 2. a section like "Gene" which has no cutoff to use.
   if (my @lowres = map {[split ':']}
@@ -751,6 +752,8 @@ sub invert_types {
        	  $label  = $1;
        	  $length = $2;
       }
+
+      $length *= $self->global_setting('details multiplier') || 1;
       my $feature = $self->semantic_setting($label => 'feature',$length) or next;
       my ($dbid)  = $self->db_settings($label => $length) or next;
       $dbid =~ s/:database$//;

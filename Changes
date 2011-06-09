@@ -1,3 +1,7 @@
+2.39
+   * SVG images now download as type application/svg+xml rather than triggering
+     inline display behavior.
+
 2.38
    * Fix more semantic zooming bugs, particularly when zooming out from a BAM track.
    * Fix blank tracks when viewing a datasource composed of only a single BAM database.

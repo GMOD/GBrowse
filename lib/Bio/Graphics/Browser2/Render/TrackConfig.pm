@@ -572,7 +572,7 @@ sub region_size_menu {
 
   $labels{MIN()}   = $self->render->translate('MIN');
   $labels{MAX()}   = $self->render->translate('MAX');
-  @ranges = sort {$b<=>$a} @ranges;
+  @ranges = sort {$b||0<=>$a||0} @ranges;
 
   return popup_menu(-name    => $name,
 		    -values  => \@ranges,

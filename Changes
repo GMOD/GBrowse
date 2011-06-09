@@ -1,3 +1,7 @@
+2.38
+   * Fix more semantic zooming bugs.
+   * Fix blank tracks when viewing a datasource composed of only a single BAM database.
+
 2.37
    * Fix summary mode to work again when no explicit configuration given.
 

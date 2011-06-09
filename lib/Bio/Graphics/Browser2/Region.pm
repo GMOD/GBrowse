@@ -244,7 +244,12 @@ sub lookup_features {
   {
 
       warn "searchopts = ",join ',',%$searchopts if DEBUG;
-      last SEARCHING unless %$searchopts;
+      unless (%$searchopts) {
+	  warn "segment(-name => $name,-start=>$start,-end=>$stop)" if DEBUG;
+	  my @f = $db->segment(-name => $name,-start=>$start,-end=>$stop);
+	  $features = \@f;
+	  last SEARCHING;
+      }
 
       for my $n ([$name,$start,$stop],
 		 [$literal_name,undef,undef]) {
@@ -348,8 +353,6 @@ sub _feature_get {
       && $db->can('get_features_by_alias');
 
   warn "get_features_by_alias(@argv) => @features" if DEBUG;
-
-#  warn "get_feature_by_alias(@argv) => @features";
 
   @features  = grep {$_->length} $db->segment(@argv)               
       if !@features && $name !~ /[*?]/;

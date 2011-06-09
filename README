@@ -10,10 +10,9 @@ The 2.X versions are now considered stable. You may download it from
 CPAN at http://search.cpan.org/~lds/GBrowse/ or get the developer's
 version via SVN:
 
+Checkout read-only
 git clone git://github.com/GMOD/GBrowse.git
 
-Previous Repository
-svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/trunk Generic-Genome-Browser
 
 The older 1.X version is still available for download here:
 

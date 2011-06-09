@@ -1,6 +1,7 @@
 2.38
-   * Fix more semantic zooming bugs.
+   * Fix more semantic zooming bugs, particularly when zooming out from a BAM track.
    * Fix blank tracks when viewing a datasource composed of only a single BAM database.
+   * Fix "can't take log of negative number" bug when zoomed way in.
 
 2.37
    * Fix summary mode to work again when no explicit configuration given.

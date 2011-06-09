@@ -1168,8 +1168,6 @@ sub make_map {
     push @map, $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale);
   }
 
-
-  warn "There are ",scalar @$boxes," boxes";
   foreach my $box (@$boxes){
     next unless $box->[0]->can('primary_tag');
 

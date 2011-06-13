@@ -2,30 +2,7 @@
 // *** Snapshot functions ***
 
 GBrowseController.addMethods({
- hide_snapshot_prompt:
- function(){
-   	$('save_snapshot').hide();
-  },
-				     
- submitWithEnter: 
- function(e){
-
-   	var sessionName = document.getElementById('snapshot_name').value;
-   	
-	// Store the value of the key entered
-     	if (!e) var e = window.event;
-      	if (e.keyCode) code = e.keyCode;
-      	else if (e.which) code = e.which;
-
- 	// If the user presses enter, the snapshot is saved
-      	if (code==13) {
-		Controller.hide_snapshot_prompt();
-	
-		Controller.saveSnapshot('snapshot_name')
-
-	    	     } 	
- },
-				     
+	     	     
  killSnapshot:
  function(snapshot){
 	var snapshot_row = document.getElementById(snapshot);
@@ -44,20 +21,28 @@ GBrowseController.addMethods({
   	          }});
 
 	// Removes the snapshot from the pages title if it was the last one set
-	if($('snapshot_page_title').innerHTML == 'Current Snapshot : ' + snapshot){
-		$('snapshot_page_title').innerHTML = 'Current Snapshot : ';
+	if($('snapshot_page_title').innerHTML == 'Snapshot : ' + snapshot){
+		$('snapshot_page_title').innerHTML = 'Snapshot : ';
 		$('snapshot_page_title').hide();
 	}
    
  },
 				     
   saveSnapshot:
-  function(textFieldId){
+  function(){
 
- 	var sessionName = document.getElementById(textFieldId).value;
-
+ 	var sessionName = $('snapshot_name').value;
+	if(Controller.snapshotExists(sessionName)){
+		return;
+	}
 	// If a value was entered for the name of the snapshot then it is saved
- 	if(sessionName){
+ 	else if(sessionName){
+
+		$('busy_indicator').show();
+		$('snapshot_page_title').update('Saving Snapshot...');
+		$('snapshot_page_title').style.color = 'red';
+		$('snapshot_page_title').show();
+
 		// An asynchronous request is made to save a snapshot of the session
  		new Ajax.Request(document.URL, {
   	        	  method: 'POST',
@@ -66,12 +51,6 @@ GBrowseController.addMethods({
   			        action:    'save_session',
   				name: sessionName,
   	        	  }});
-
-		// The page title is updated to reflect the current snapshot
-		$('snapshot_page_title').innerHTML = 'Current Snapshot : ' + sessionName;
-		$('snapshot_page_title').show();
-
-		$('busy_indicator').show();
 
 		// A timer is used to ensure that the snapshot table is recreated only after the information has been updated
 		setTimeout(function(){
@@ -83,33 +62,47 @@ GBrowseController.addMethods({
 			// Another timeout is used to end the busy indicator after the table has been created	
 			setTimeout(function(){
 				Sortable.create('snapshotTable',{tag:'div',only:'draggable'});	
-				$('busy_indicator').hide();		
+				$('busy_indicator').hide();	
+
+				// The page title is updated to reflect the current snapshot
+				//$('snapshot_page_title').update('Snapshot : ' + sessionName);
+				//$('snapshot_page_title').style.color = 'navy';
+				$('snapshot_page_title').hide();
 				    	     },1500)	
 				     },2500)
+	} else {
+		alert("Please enter a name for the snapshot. The snapshot was not saved.");
 	}
 
   },	
-			     		     				     				 				     
+	     				     				 				     
  setSnapshot:
  function(sessionName){
+
+	$('busy_indicator').show();
+	$('snapshot_page_title').update('Loading Snapshot...');
+	$('snapshot_page_title').style.color = 'red';
+	$('snapshot_page_title').show();
+	var active = new Array();
 
 	// A request is made to update the current session
  	new Ajax.Request(document.URL, {
   	          method: 'POST',
-  		  asynchronous:false,
+  		  asynchronous:true,
   		  parameters: {
   		        action: 'set_session',
   			name: sessionName,
   	          },
 		  onSuccess: function(transport) {
+			// The array of selected tracks is stored
+			active = transport.responseJSON.toString();
+			active = active.split(",");
+			
 			// The various sections of the browser affected when a session is changed are updated
 			var sections = new Array(track_listing_id, page_title_id, custom_tracks_id, community_tracks_id, search_form_objects_id, snapshot_table_id);
 			Controller.update_sections(sections); 	
 		  }
 	});
-	
-	$('busy_indicator').show();
-	
 	// A timeout is used to ensure that the sections are updated before further changes are made
 	setTimeout(function(){
 
@@ -117,28 +110,26 @@ GBrowseController.addMethods({
 
 		// All the children of the tracks_panel are stored
 		var children = $A($("tracks_panel").descendants());
-		var active_children = new Array(); 
 
 		// Each child that is active, is added to the active children array, and inactive children are removed from the track listing
 		children.each(function(child) {
 			var track_name = child.id.substring(0, (child.id.length - 6));
-			if(child.className == 'track_title activeTrack'){
-			 	active_children.push(track_name);
-			}
-				// All tracks are initially deleted (and unregistered)
-				Controller.delete_track(track_name);
+			// All tracks are initially deleted (and unregistered)
+			Controller.delete_track(track_name);
 		});	
 
 		// The tracks are added and browser is refreshed.
-		Controller.add_tracks(active_children,function(){Controller.refresh_tracks();}, true);
+		Controller.add_tracks(active,function(){Controller.refresh_tracks(true);}, true);
 		
-		// The title is updated to reflect the new snapshot that has been set
-		$('snapshot_page_title').innerHTML = 'Current Snapshot : ' + sessionName;
-		$('snapshot_page_title').show();	
-
 		// The busy indicator is removed after all actions have been completed
 		setTimeout(function(){
 			$('busy_indicator').hide();
+
+			// The title is updated to reflect the new snapshot that has been set
+			//$('snapshot_page_title').update('Snapshot : ' + sessionName);
+			//$('snapshot_page_title').style.color = 'navy';
+			Controller.select_tab('main_page')
+			$('snapshot_page_title').hide();
 			}, 2000)
 			     },2000)
   },
@@ -172,62 +163,25 @@ GBrowseController.addMethods({
   		  asynchronous:true,
   		  parameters: {
   		        action:    'send_session',
-  			name: 	snapshot
+  			name: 	snapshot,
+			url:   document.location.href,
   	          },
 		  onSuccess: function(transport) {
 			// Upon success, the snapshot code is output to the user for copying
                   	var results      = transport.responseText;
-			$('send_snapshot_url_' + snapshot).innerHTML = results;
+			$('send_snapshot_url_' + snapshot).update(results);
 		  }
             });
   },
 
-  loadSnapshot:
-  function(){
-	
- 	var load_name = $('load_snapshot_name').value;
-  	var load_snapshot = $('load_snapshot_code').value;
-  
-  	$('load_snapshot').hide();
-  	$('busy_indicator').show();
-
-	// An asynchronous request is made to add the snapshot to the current session
- 	new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action:    'load_session',
-  			name: 	load_name,
-			snapshot:	load_snapshot,
-  	          },
-		  onSuccess: function(transport) {
-			// The loaded session is set to be the current session
-			setSnapshot(load_name);
-                  	$('busy_indicator').hide();
-		  }
-            });
-  },
-
-  downSnapshot:
+ pushForward:
   function(snapshot){
-	
-  	$('busy_indicator').show();
-
-	// An asynchronous request is made to retrieve the snapshot information
- 	new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action:    'down_session',
-  			name: 	snapshot
-  	          },
-		  onSuccess: function(transport) {
-			// Upon success, the user can download the snapshot
-			$('busy_indicator').hide();
-			//window.open(/home/aelnaiem/Desktop/snapshot.txt, 'Download');
-		  }
-            });
-  },
+	var draggable = $$('.draggable');
+	draggable.each(function(drag){
+		drag.style.zIndex = 0;
+	})
+	$(snapshot).style.zIndex = 1000;
+ },
 
   mailSnapshot:
   function(snapshot){
@@ -250,17 +204,15 @@ GBrowseController.addMethods({
                   	$('busy_indicator').hide();
 		  }
             });
-	
-
   },
 
  checkSnapshot:
   function(){
 	// The source, session, and snapshot information are stored
 	var browser_source = Controller.findParameter("source");
- 	var session = Controller.findParameter("session");
+ 	var session = Controller.findParameter("id");
 	var snapshot = Controller.findParameter("snapshot");
-
+	
 	if(browser_source != null && session != null && snapshot != null){
 		// An asynchronous request loads the snapshot into the browser
 	 	new Ajax.Request(document.URL, {
@@ -269,12 +221,15 @@ GBrowseController.addMethods({
 	  		  parameters: {
 	  		        action:    'load_url',
 				name:  snapshot,
-				userid: session,
+				id: session,
 				browser_source: browser_source,
 	  	          },
 			  onSuccess: function(transport) {
 		          	$('busy_indicator').show();
 				Controller.setSnapshot(snapshot);
+			  },
+			  on504: function() {
+				alert("GBrowse could not find the provided session or snapshot");
 			  }
 		    });
 	}
@@ -296,7 +251,36 @@ GBrowseController.addMethods({
       		var params = search.split('=');
       		if(params[0] == param) return params[1];
    	}
-   return null;
-}
+        return null;
+ },
+
+ enlarge_image:
+  function(image){
+	$('large_snapshot').setAttribute('src', image);
+	Box.prototype.greyout(true);
+	$('enlarge_image').show();
+ },
+
+ snapshotExists:
+  function(snapshot){
+	// If the snapshot exists, the user is prompted to see if they want to overwrite it
+	// False is returned if the snapshot does not exist or will be overwritten
+	var check = document.getElementById(snapshot);
+	
+	if (check){
+		if(check.style.display == 'none'){
+			return false;
+		}
+		var choice = confirm('A snapshot with the same name has already been saved, would you like to overwrite it?');
+		if (choice){
+			return false;
+		} else {
+			return true;
+		}
+	} else {
+		return false;
+	}
+ }
+
 });
 

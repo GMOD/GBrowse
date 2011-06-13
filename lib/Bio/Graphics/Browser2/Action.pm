@@ -79,8 +79,8 @@ sub ACTION_navigate {
 
     my $view_start = $q->param('view_start');
     my $view_stop  = $q->param('view_stop');
-
-    unless (!defined $view_start or $view_start eq 'NaN' or $view_stop eq 'NaN') {
+    my $snapshot  = $q->param('snapshot');
+    unless (!defined $view_start or $view_start eq 'NaN' or $view_stop eq 'NaN' or $snapshot) {
 	$render->state->{view_start} = ($view_start && $view_start >= 0)? $view_start : $render->state->{view_start},
 	$render->state->{view_stop}  = ($view_stop  && $view_stop  >= 0)? $view_stop  : $render->state->{view_stop},
     }
@@ -241,13 +241,14 @@ sub ACTION_add_tracks {
     my $q    = shift;
 
     my $render = $self->render;
-
     my @track_names = $q->param('track_names');
-
+	
     $render->init_database();
     $render->init_plugins();
+
     my $track_data = $render->add_tracks(\@track_names);
     my $return_object = { track_data => $track_data, };
+
     $self->session->flush;
     return ( 200, 'application/json', $return_object );
 }
@@ -336,12 +337,12 @@ sub ACTION_delete_session {
     my $q     = shift;
     my $name = $q->param('name');
    
+    my $source = $self->data_source->name;
     my $settings = $self->state;
-
-    delete($settings->{snapshot_active});
-    delete($settings->{current_session});
-    my %snapshot = %{$settings};
-       delete %snapshot->{snapshots}->{$name};
+    my $session = $self->session->session->{'_DATA'}->{$source};
+	
+    my $snapshot = $session;
+    delete $snapshot->{snapshots}->{$name};
 
     $self->session->flush;
 
@@ -351,24 +352,25 @@ sub ACTION_delete_session {
 sub ACTION_save_session {
     my $self = shift;
     my $q     = shift;
-    my $name = $q->param('name');
-
+    my $name = $q->param('name');   
+    my $source = $self->data_source->name;
     my $settings = $self->state;
+    my $session = $self->session->session->{'_DATA'}->{$source};
+    
     my $imageURL = $self->render->image_link($settings);
-
-     my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
-    $settings->{session_time}=$UTCtime;
-    $settings->{image_url} = $imageURL;
+    my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
 
     # Creating a deep copy of the snapshot
     my %snapshot = %{dclone $settings};
-    $settings->{snapshots}->{$name} = \%snapshot;
-    # Updating the snapshots hash
-    $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots}; 
+    $session->{snapshots}->{$name} = \%snapshot;
 
+    # Updating the snapshots hash
+    $session->{snapshots}->{$name}->{session_time}=$UTCtime;
+    $session->{snapshots}->{$name}->{image_url} = $imageURL;
+	
     $self->session->flush;
     $self->ACTION_set_session($q);
-    
+
     return (204,'text/plain',undef);
 }
 
@@ -376,74 +378,43 @@ sub ACTION_set_session {
      my $self = shift; 
      my $q = shift; 
      my $name = $q->param('name');
+     my $source = $self->data_source->name;
      my $settings = $self->state;
+     my $session = $self->session->session->{'_DATA'}->{$source};
 
-     $settings->{snapshot_active} =  1;
-     $settings->{current_session} = $name;
+#     $settings->{current_session} = $name;
+     
+     %{$settings} = %{dclone $session->{snapshots}->{$name}};
+     my @tracks = @{$settings->{tracks}};
 
-     $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots};
-     $settings->{snapshots}->{$name}->{current_session} = $name;
-     $settings->{snapshots}->{$name}->{snapshot_active} =  1;
-     # Doing a deep copy of the selected snapshot
-     $settings = dclone $settings->{snapshots}->{$name};
+     my @selected_tracks = ();
+     foreach (@tracks){	
+	if ($settings->{features}->{$_}->{visible} == 1){
+	     push(@selected_tracks, $_);
+	}
+     }   
 
      $self->session->flush;
- 
-     return(204,'text/plain',undef); 
+
+     return(200,'application/json',\@selected_tracks);
  }
 
 sub ACTION_send_session {
      my $self = shift; 
      my $q = shift; 
      my $name = $q->param('name');
+     my $url = $q->param('url');
+
      my $settings = $self->state;
-     
-     $Data::Dumper::Indent = 0;
-     $Data::Dumper::Purity = 1;
-     $Data::Dumper::Useqq = 1;
-     # Storing the snapshot as a string
-     my $snapshot = Dumper($settings->{snapshots}->{$name});
-     return(200,'text/plain',$snapshot); 
- }
+     my $source = $settings->{source};
+     my $id = $self->session->uploadsid;
 
-sub ACTION_down_session {
-     my $self = shift; 
-     my $q = shift; 
-     my $name = $q->param('name');
-     my $settings = $self->state;
-     
-     $Data::Dumper::Indent = 0;
-     $Data::Dumper::Purity = 1;
-     $Data::Dumper::Useqq = 1;
-     #Storing the snapshot as a string and saving it to a textfile
-     my $snapshot = Dumper($settings->{snapshots}->{$name});
-     open SNAPSHOT, ">/home/aelnaiem/Desktop/$name.txt";
-     print SNAPSHOT "$snapshot";
-     close SNAPSHOT;
-
-     return(204,'text/plain',undef); 
- }
-
-sub ACTION_load_session {
-     my $self = shift; 
-     my $q = shift; 
-     my $name = $q->param('name');
-     my $snapshot_data = $q->param('snapshot');
-     # The snapshot hash is created and saved to the session
-     my $snap = eval "my $snapshot_data";
- 
-     my $settings = $self->state;
-     my $userid = $settings->{userid};
-
-     my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
-     $snap->{session_time} = $UTCtime;
-     $snap->{userid} = $userid;
-     
-     $settings->{snapshots}->{$name} = $snap;
-     $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots}; 
- 
+     # The snapshot information is embedded into the URL
+     $url = "$url?id=$id&snapshot=$name&source=$source";
+     $url =~ s/ /%20/g;
      $self->session->flush;
-     return(204,'text/plain',undef); 
+
+     return(200,'text/plain',$url); 
  }
 
 sub ACTION_mail_session {
@@ -454,11 +425,12 @@ sub ACTION_mail_session {
      my $url = $q->param('url');
 
      my $settings = $self->state;
-     my $userid = $settings->{userid};
      my $source = $settings->{source};
+     my $id = $self->session->uploadsid;
+
      # The snapshot information is embedded into the URL
-     $url = "$url?source=$source&session=$userid&snapshot=$name;";
-     
+     $url = "$url?id=$id&snapshot=$name&source=$source";
+     $url =~ s/ /%20/g;
      my $globals = $self->render->globals;
 
      my $subject = "Genome Browser Snapshot: $name";
@@ -481,27 +453,32 @@ sub ACTION_load_url {
      my $q = shift; 
      my $source = $q->param('browser_source');
      my $name = $q->param('name');
-     my $from_userid = $q->param('userid');
-
+     $name =~ s/%20/ /g;
+     my $from_id = $q->param('id');
+     
      my $settings = $self->state;
      my $userid = $settings->{userid};
      
      # The snapshot is loaded from the global variable
      my $globals = $self->render->globals;
-     my $session = $globals->session($from_userid);
-     my $snapshot = $session->{session}->{_DATA}->{$source}->{page_settings}->{'snapshots'}->{$name};
-     
-     my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
-     $snapshot->{session_time} = $UTCtime;
+     my $session = $globals->session($from_id);
+     my $snapshot = $session->{session}->{_DATA}->{$source}->{'snapshots'}->{$name};
 
-     $snapshot->{userid} = $userid;
-     # The snapshot is saved after updates to some of the information have been made
-     $settings->{snapshots}->{$name} = $snapshot;
-     $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots}; 
+     if (!$snapshot || !$session){
+	return(504,'text/plain',undef);
+     } else {
 
-     $self->session->flush;
+     	my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
+     	$snapshot->{session_time} = $UTCtime;
+     	$snapshot->{userid} = $userid;
+	
+     	# The snapshot is saved after updates to some of the information have been made
+     	$self->session->session->{'_DATA'}->{$source}->{snapshots}->{$name} = $snapshot;
+	
+     	$self->session->flush;
 
-     return(204,'text/plain',undef); 
+     	return(204,'text/plain',undef);
+     }
  }
 
 # END snapshot section

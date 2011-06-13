@@ -147,3 +147,14 @@ BODY              { background-color: #F7FBFF;
 .public_even span.source_note {
     color: #999999;
 }
+.snapshot_button:hover {
+    border-color: #F0A040;
+    border-width: 2px;
+    border-style: solid;
+}
+.snapshot_icon:hover {
+    background-color: #F0A040;
+    border-width: 1px;
+    border-style: solid;
+    border-color: black;
+}

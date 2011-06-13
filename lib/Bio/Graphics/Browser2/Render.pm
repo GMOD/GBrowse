@@ -549,7 +549,7 @@ sub add_tracks {
     my $self        = shift;
     my $track_names = shift;
 
-    warn "add_tracks(@$track_names)" if DEBUG;
+    warn "add_tracks(@$track_names)" if DEBUG; 
 
     my %track_data;
     my $segment = $self->segment;
@@ -564,7 +564,6 @@ sub add_tracks {
     $self->init_remote_sources if $remote;
 	
     if ($segment) {
-
 	foreach my $track_name ( @$track_names ) {
 
 	    my @track_ids = $self->expand_track_names($track_name);
@@ -625,8 +624,7 @@ sub add_tracks {
 		};
 	    }
 	}
-    }
-
+    }	
     return \%track_data;
 }
 
@@ -838,13 +836,12 @@ sub render_body {
   }
   
   my $tracks        = $self->render_tracks_section;
+  my $saved_snapshots = $self->render_saved_snapshots_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;
   my $global_config = $self->render_global_config;
-  # *** Initialize the snapshot change ***
-  my $saved_snapshots = $self->render_saved_snapshots_section;
 
-  $output .= $self->render_tabbed_pages($main_page,$tracks,$community,$custom,$global_config, $saved_snapshots);
+  $output .= $self->render_tabbed_pages($main_page,$tracks,$saved_snapshots,$community,$custom,$global_config);
   $output .= $self->login_manager->render_confirm;
   $output .= $self->render_bottom($features);
 

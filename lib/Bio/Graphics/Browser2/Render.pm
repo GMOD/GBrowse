@@ -844,9 +844,24 @@ sub render_body {
   my $tracks        = $self->render_tracks_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;
-  my $global_config = $self->render_global_config;
+  my $preferences   = $self->render_global_config;
 
-  $output .= $self->render_tabbed_pages($main_page,$tracks,$community,$custom,$global_config);
+  # the number and type of track listing pages is dynamically configured
+  # here we get the information needed to render them
+  my @track_listing_modules = $self->track_listing_modules;
+  my @track_listing_tabs    = map {
+                               $_->tab_name => [$_->listing_title,$_->render_track_listing] 
+                                  } @track_listing_modules;
+
+
+  my @args =  (main_page  => [$self->translate('MAIN_PAGE'),$main_page]);
+  push @args, @track_listing_tabs;
+  push @args, (community_tracks_page => [$self->translate('COMMUNITY_TRACKS_PAGE'),$community])
+      if $community;
+  push @args, (custom_tracks_page    => [$self->translate('CUSTOM_TRACKS_PAGE'),$custom]);
+  push @args, (settings_page         => [$self->translate('SETTINGS_PAGE'),$preferences]);
+
+  $output .= $self->render_tabbed_pages(@args);
   $output .= $self->login_manager->render_confirm;
   $output .= $self->render_bottom($features);
 
@@ -3013,7 +3028,24 @@ sub update_galaxy_url {
     }
 }
 
-##################################################################3
+
+#################################################################
+#
+# TRACK LISTING CODE
+#
+#################################################################
+sub track_listing_modules {
+    my $self = shift;
+    my @listing_classes = $self->data_source->track_listing_classes;
+    my @modules;
+    for my $class (@listing_classes) {
+	eval "require $class;1" or die $@ unless $class->can('new');
+	push @modules,$class->new($self);
+    }
+    return @modules;
+}
+
+#################################################################
 #
 # SHARED RENDERING CODE HERE
 #
@@ -4188,10 +4220,13 @@ sub render_multiple_choices {
   croak "render_multiple_choices() should not be called in parent class";
 }
 
-sub render_global_config {
+sub render_global_preferences {
   my $self = shift;
-  croak "render_global_config() should not be called in parent class";
+  croak "render_global_preferences() should not be called in parent class";
 }
+
+# deprecated function name
+sub render_global_config { shift->render_global_preferences(@_) }
 
 sub render_toggle_external_table {
   my $self = shift;

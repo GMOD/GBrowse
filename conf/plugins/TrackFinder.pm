@@ -105,9 +105,9 @@ sub scripts {
 }
 
 # Functions to run once the content has been loaded.
+# The key is the tab section to trigger on.
 sub onLoads {
-  my %loads = (track_page => "scrollfix.setup();");
-  return %loads;
+    return (track_page => "scrollfix.setup();");
 }
 
 1;

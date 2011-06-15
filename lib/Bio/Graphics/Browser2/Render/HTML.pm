@@ -91,29 +91,20 @@ sub render_login_required {
 # Render Tabbed Pages - Returns the HTML containing the tabs & the page DIVs to hold the content.
 sub render_tabbed_pages {
     my $self = shift;
-    my ($main_html,$tracks_html,$community_tracks_html,$custom_tracks_html,$settings_html,) = @_;
-    my $uses_database = $self->user_tracks->database;
-    
-    my $main_title             = $self->translate('MAIN_PAGE');
-    my $tracks_title           = $self->translate('SELECT_TRACKS');
-    my $community_tracks_title = $self->translate('COMMUNITY_TRACKS_PAGE') if $uses_database;
-    my $custom_tracks_title    = $self->translate('CUSTOM_TRACKS_PAGE');
-    my $settings_title         = $self->translate('SETTINGS_PAGE');
+    my @tab_contents = @_;
 
-    my $html = '';
-    $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
-	           div({-id=>'tabbed_menu',-class=>'tabmenu'},
-	           span({id=>'main_page_select'},               $main_title),
-	           span({id=>'track_page_select'},              $tracks_title),
-	           $uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
-	           span({id=>'custom_tracks_page_select'},      $custom_tracks_title),
-	           span({id=>'settings_page_select'},           $settings_title),
-	       ),
-	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
-	   div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
-	   $uses_database?div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html) : "",
-	   div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
-	   div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),
+    my %tabs = @tab_contents;
+    my @tab_order;
+    while (my ($key,$value) = splice(@tab_contents,0,2)) {
+	push @tab_order,$key;
+    }
+
+    my @tab_titles   = map { span({-id=>"${_}_select"        },$tabs{$_}[0]) } @tab_order;
+    my @tab_html     = map { div( {-id=>$_, -class=>'tabbody'},$tabs{$_}[1]) } @tab_order;
+
+    my $html = div({-id=>'tabbed_section', -class=>'tabbed'},
+	           div({-id=>'tabbed_menu',-class=>'tabmenu'},@tab_titles), 
+		   @tab_html
 	);
     return $html;
 }
@@ -290,7 +281,7 @@ END
 sub render_html_head {
   my $self = shift;
   my ($dsn,$title,@other_initialization) = @_;
-  my @plugin_list = $self->plugins->plugins;
+  my @plugin_list   = $self->plugins->plugins;
   my $uses_database = $self->user_tracks->database;
   
   return if $self->{started_html}++;
@@ -300,33 +291,46 @@ sub render_html_head {
   # pick scripts
   my $js       = $dsn->globals->js_url;
   my @scripts;
-  
-  # Set any onTabLoad functions
-  my $main_page_onLoads = "";
-  my $track_page_onLoads = '';
-  my $community_track_page_onLoads = '';
-  my $custom_track_page_onLoads = "";
-  my $settings_page_onLoads = "";
-  
-  # Get plugin onTabLoad functions for each tab, if any
-  my %plugin_onLoads = map ($_->onLoads, @plugin_list);
-  $main_page_onLoads .= $plugin_onLoads{'main_page'} if $plugin_onLoads{'main_page'};
-  $track_page_onLoads .= $plugin_onLoads{'track_page'} if $plugin_onLoads{'track_page'};
-  $custom_track_page_onLoads .= $plugin_onLoads{'custom_track_page'} if $plugin_onLoads{'custom_track_page'} && $uses_database;
-  $community_track_page_onLoads .= $plugin_onLoads{'community_track_page'} if $plugin_onLoads{'community_track_page'};
-  $settings_page_onLoads .= $plugin_onLoads{'settings_page'} if $plugin_onLoads{'settings_page'};
-  
-  my $onTabScript .= "function onTabLoad(tab_id) {\n";
-  $onTabScript .= "if (tab_id == 'main_page_select') {$main_page_onLoads}\n";
-  $onTabScript .= "if (tab_id == 'track_page_select') {$track_page_onLoads}\n";
-  $onTabScript .= "if (tab_id == 'community_track_page_select') {$community_track_page_onLoads}\n" if $uses_database;
-  $onTabScript .= "if (tab_id == 'custom_track_page_select') {$custom_track_page_onLoads}\n";
-  $onTabScript .= "if (tab_id == 'settings_page_select') {$settings_page_onLoads}\n";
-  $onTabScript .= "};";
-  push (@scripts,({type=>"text/javascript"}, $onTabScript));
 
-  my $url = "?action=get_translation_tables" . ( $self->language_code ? ';language='.($self->language_code)[0] : '' ); #Include language as a parameter to prevent browser from using wrong cache if user changes languages
+  # get track listers
+  my @track_listing_modules = $self->track_listing_modules;
+  my @tab_names = ('main_page',
+		   (map {$_->tab_name} @track_listing_modules),
+		   'custom_track_page',
+		   'community_track_page',
+		   'settings_page');
+
+  # Get plugin onTabLoad functions for each tab, if any
+  # note that there may be two onLoads for the same page
+  my %plugin_onLoads;
+  for my $plugin (@plugin_list) {
+      my %pages = $plugin->onLoads;
+      push @{$plugin_onLoads{$_}},$pages{$_} foreach keys %pages;
+  }
+
+  my $onTabScript = "function onTabLoad(tab_id) {\n";
+  for my $tab_name (@tab_names) {
+      my $onloads = $plugin_onLoads{$tab_name} or next;
+      $onTabScript .= join ';',@{$onloads};
+      $onTabScript .= ";\n";
+  }
+  $onTabScript .= "};";
+  push (@scripts,$onTabScript);
+
+  #Include language as a parameter to prevent browser from using wrong cache if user changes languages
+  my $url = "?action=get_translation_tables" . ( $self->language_code ? ';language='.($self->language_code)[0] : '' ); 
   push (@scripts,({src=>$url}));
+
+  # track listing javascripts
+  push @scripts, map {
+      my $jscript = $_->javascript_modules;
+      {src =>
+	   $jscript =~  /^http/ ? $jscript
+	              : /^\S/   ? "$js/$jscript"
+		      : ()
+      }
+  } @track_listing_modules;
+  
   
   # drag-and-drop functions from scriptaculous
   push @scripts,{src=>"$js/$_"}
@@ -349,7 +353,6 @@ sub render_html_head {
   # our own javascript files
   push @scripts,{src=>"$js/$_"}
     foreach qw(
-      buttons.js 
       trackFavorites.js
       karyotype.js
       rubber.js
@@ -443,7 +446,8 @@ sub render_html_head {
   return start_html(@args);
 }
 
-# Render JS Controller Settings - Renders a block of javascript that loads some of our global config settings into the main controller object for use in client-side code.
+# Render JS Controller Settings - Renders a block of javascript that loads some of our global config settings 
+# into the main controller object for use in client-side code.
 sub render_js_controller_settings {
     my ( $self ) = @_;
     my $globals = $self->globals;
@@ -853,10 +857,8 @@ sub render_toggle_track_table {
 
 sub render_track_table {
     my $self = shift;
-    my $listing_class = $self->data_source->track_listing_class;
-    eval "require $listing_class;1" or die $@ unless $listing_class->can('new');
-    my $tlr = $listing_class->new($self);
-    return $tlr->render_track_listing.$self->html_frag('html5',$self->state);
+    my @modules       = $self->track_listing_modules;
+    return $modules[0]->render_track_listing.$self->html_frag('html5',$self->state);
 }
 
 # Render Multiple Choices - 
@@ -870,8 +872,8 @@ sub render_multiple_choices {
     return $karyotype->to_html($terms2hilite);
 }
 
-# Render Global Config - Returns the HTML for the Preferences page.
-sub render_global_config {
+# Render global preferences - Returns the HTML for the Preferences page.
+sub render_global_preferences {
     my $self     = shift;
     my $settings = $self->state;
 

@@ -383,7 +383,7 @@ sub infer_settings_from_source {
     my (@dimensions,@rows);
   TRY: {
 
-      if (my @facets = shellwords $source->setting($label=>'subtrack facets')) {
+      if (my @facets = shellwords $source->setting($label=>'ex:subtracks')) {
 	  @dimensions = map {[$_,'tag_value',$_]} @facets;
 	  @rows       = $package->get_facet_values($source,$label,@facets);
 	  last TRY;

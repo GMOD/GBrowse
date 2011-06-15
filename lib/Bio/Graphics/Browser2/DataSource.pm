@@ -408,13 +408,10 @@ sub label2type {
   return shellwords($self->setting($l,'feature')||$self->setting($label,'feature')||'');
 }
 
-sub track_listing_class {
+sub track_listing_classes {
     my $self = shift;
-    my $style    =  lc $self->global_setting('track listing style') || 'categories';
-    my $subclass =   $style eq 'categories' ? 'Categories'
-	           : $style eq 'facets'     ? 'Facets'
-		   : die "invalid track listing style '$style'";
-    return 'Bio::Graphics::Browser2::Render::HTML::TrackListing::'.$subclass;
+    my @classes    =  shellwords ($self->global_setting('track listing style') || 'categories');
+    return map {'Bio::Graphics::Browser2::Render::HTML::TrackListing::'.$_} @classes;
 }
 
 sub seqid_prefix { shift->fallback_setting(general=>'seqid_prefix') }

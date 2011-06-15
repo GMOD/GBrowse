@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser2::Render::HTML::TrackListing::Categories;
+package Bio::Graphics::Browser2::Render::HTML::TrackListing::categories;
 
 use strict;
 use warnings;
@@ -8,6 +8,11 @@ use Bio::Graphics::Browser2::Shellwords;
 use CGI qw(:standard);
 use Carp 'croak';
 use constant DEBUG => 0;
+
+sub listing_title {
+    my $self = shift;
+    $self->render->tr('SELECT_TRACKS') || 'Select Tracks';
+}
 
 sub render_track_listing {
     my $self = shift;
@@ -39,6 +44,7 @@ sub render_track_listing {
 	$filter_active = @labels<$tracks;  # mark filter active if the filter has changed the track count
     }
 
+    # render_one_track is defined in the parent class
     my %labels     = map {$_  => $self->render_one_track($_,\@hilite)} @labels;
     my %label_sort = map {$_  => $render->label2key($_)              } @labels;
 

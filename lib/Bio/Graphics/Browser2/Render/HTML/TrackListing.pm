@@ -22,6 +22,24 @@ sub render_track_listing {
     croak 'render_track_listing() must be implemented in a subclass of TrackListing.pm';
 }
 
+sub listing_title {
+    my $self = shift;
+    $self->render->tr('Generic Track Listing') || 'generic track listing';
+}
+
+sub tab_name {
+    return 'track_page';
+}
+
+sub javascript_modules {
+    my $self = shift;
+    return 'buttons.js';
+}
+
+sub stylesheets {
+    return;
+}
+
 sub categorize_track {
     my $self  = shift;
     my $label = shift;

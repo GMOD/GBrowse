@@ -29,9 +29,14 @@ GBrowseController.addMethods({
  },
 				     
   saveSnapshot:
-  function(){
+  function(alternate){
+	var sessionName;
+	if(alternate){
+		sessionName = 'snap_' + $('snapshot_name_2').value;
+	} else {
+		sessionName = 'snap_' + $('snapshot_name').value;
+	}
 
- 	var sessionName = $('snapshot_name').value;
 	if(Controller.snapshotExists(sessionName)){
 		return;
 	}

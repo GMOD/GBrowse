@@ -2,7 +2,7 @@ package Bio::Graphics::Browser2;
 # $Id$
 # Globals and utilities for GBrowse and friends
 
-our $VERSION = '2.33';
+our $VERSION = '2.38';
 
 use strict;
 use warnings;
@@ -156,6 +156,7 @@ sub make_path {
     my $path = shift;
     return unless $path =~ /^(.+)$/;
     $path = $1;
+	warn $path;
     mkpath($path,0,0777) unless -d $path;    
 }
 

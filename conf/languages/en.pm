@@ -67,6 +67,7 @@ Your request timed out.  You may have selected a region that is too large to dis
 Either turn off some tracks or try a smaller region.  If you are experiencing persistent
 timeouts, please press the red "Reset" button.
 END
+   IPAD_BALLOON => 'Tap feature again for more details',
 
    GO       => 'Go',
 
@@ -105,7 +106,13 @@ END
    CLEAR_FAV     => 'Clear All Favorites',
 
 #############
+   SNAPSHOT_FORM   => 'Snapshot Name',
+   
+   CURRENT_SNAPSHOT => 'Current Snapshot:',
 
+   TIMESTAMP      => 'Snapshot Timestamp [GMT]',
+
+   SNAPSHOT_SELECT => 'Saved Snapshots',
 
    SELECT_TRACKS   => 'Select Tracks',
 
@@ -218,7 +225,7 @@ END
    REMOTE_TITLE => 'Add remote annotations',
 
  #ipad
-   IPAD_BALLOON => 'Tap features twice see more details '
+   IPAD_BALLOON => '\nTap feature again to see more details '
    #
 
    REMOTE_URL   => 'Enter remote track URL',
@@ -462,7 +469,7 @@ END
 
  DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
 
- ABOUT_THIS_TRACK   => '<b>About track <i>%s</i></b>',
+ ABOUT_THIS_TRACK   => '<b>About this track</b>',
 
  SUBTRACKS_SHOWN    => 'This track contains selectable subtracks. Click to modify the selection or change subtrack order.',
 
@@ -641,7 +648,8 @@ END
                                 '<br><br>To complete the account creation process and to log into your %s ' .
                                 'account, please type in your username and click the "Continue" button below.',
    MUST_TYPE_USERNAME        => 'You must type in your username to continue.',
-   INCORRECT_LINK            => 'The confirmation code provided is either incorrect or expired.<br> Please click continue to exit.',
+   INCORRECT_LINK            => 'The link provided is either incorrect or expired.<br> Please click continue to exit.',
+   
    WELCOME                   => 'Welcome, %s',
    LOG_OUT_DESC              => 'Click here to log out from %s',
    LOG_OUT                   => 'Log Out',

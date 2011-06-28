@@ -3,6 +3,7 @@
      inline display behavior.
    * Update prerequisites to Text::ParseWords 3.27 in order to fix problem with
      subtrack configuration parsing.
+   * Fix bug which prevented add tracks from working properly under IE8.
 
 2.38
    * Fix more semantic zooming bugs, particularly when zooming out from a BAM track.

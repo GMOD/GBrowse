@@ -252,9 +252,9 @@ var GBrowseController = Class.create({
         var first_track = tracks[0];
 
         if (onTop && first_track != null)
-            parent_obj.insertBefore(tmp_element,first_track[0]);
+	    parent_obj.insert(tmp_element,{before: first_track[0]});
         else
-            parent_obj.appendChild(tmp_element);
+            parent_obj.insert(tmp_element);
         
         // Move each child node but skip if it is a comment (class is undef)
         if (tmp_element.hasChildNodes()) {
@@ -263,9 +263,9 @@ var GBrowseController = Class.create({
                 if (children[i].className == undefined)
                     continue;
                 if (onTop && first_track != null)
-                    parent_obj.insertBefore(children[i],first_track);
+                    parent_obj.insert(children[i],{before:first_track});
                 else
-                    parent_obj.appendChild(children[i]);
+                    parent_obj.insert(children[i]);
             }
         }
         parent_obj.removeChild(tmp_element);
@@ -487,7 +487,6 @@ var GBrowseController = Class.create({
                 var get_tracks = false;
 
                 for (var ret_track_id in track_data) {
-
                     if (Controller.gbtracks.get(ret_track_id) != null)
                         continue; //oops already know this one
 
@@ -1071,7 +1070,6 @@ show_info_message:
 				  var sections = new Array(custom_tracks_id, track_listing_id);
 				  if (using_database()) sections.push(community_tracks_id);
 				  Controller.update_sections(sections);
-				  //alert($(label+'_title').select('span.drag_region').innerHTML);
 				  var titles = $(label+'_title').select('span.drag_region');
 				  titles[0].innerHTML='<b>'+new_key+'</b>';
 			    }

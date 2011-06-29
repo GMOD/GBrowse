@@ -90,21 +90,25 @@ END
 
    DOWNLOAD         => 'Download',
 
+   DOWNLOAD_ALL     => 'Download entire dataset',
+
+   TRACK_ID         => 'Track ID=<b>%s</b>',
+
    DISPLAY_SETTINGS => 'Display Settings',
 
    TRACKS   => 'Tracks',
-
-
+   
+  
 # FAVORITE MENU LINKS
    FAVORITES => 'Show Favorites Only',		
     
    SHOWALL   => 'Show All',
 
-   REFRESH_FAV   => 'Refresh',
+   REFRESH_FAV   => 'Refresh Favorites',
     
    CLEAR_FAV     => 'Clear All Favorites',
 
-   ADDED_TO      => 'Add track to favorites',
+   ADDED_TO     => 'Add track to favorites',
 
 #############
 
@@ -148,6 +152,8 @@ END
    SUBTRACK_INSTRUCTIONS   => 'Select the tracks you wish to display. Sort the tracks by clicking on the column headings, or by clicking and dragging rows into position.',
 
    SELECT_SUBTRACKS   => 'showing %d/%d subtracks',
+
+   NO_TRACK_CITATION => 'There is no additional information about this track.',
 
    EDIT       => 'Edit File...',
 
@@ -219,9 +225,7 @@ END
 
    REMOTE_TITLE => 'Add remote annotations',
 
- #ipad
-   IPAD_BALLOON => 'Tap features twice see more details '
-   #
+   IPAD_BALLOON => 'Tap features twice to see more details',
 
    REMOTE_URL   => 'Enter remote track URL',
 
@@ -391,6 +395,9 @@ END
  ADD_YOUR_OWN_TRACKS => 'Add custom tracks',
 
  ADD_DESCRIPTION    => 'Click to add a description',
+ ADD_TITLE          => 'Click to edit the title',
+ EDIT_LABEL         => 'Click to view track. Shift or control-click to edit.',
+ NO_DESCRIPTION     => 'No description',
 
  CONFIGURATION     => 'Configuration',
 
@@ -431,6 +438,9 @@ END
  SCALE_MIN        => 'Minimum scale value',
 
  SCALE_MAX        => 'Maximum scale value',
+
+ MIN              => 'Min',
+ MAX              => 'Max',
 
  SHOW_VARIANCE    => 'Show variance band',
 
@@ -529,20 +539,36 @@ This track is another user\'s custom uploads; it is shared under a <b>%s</b>
 policy, so you are free to send the link to other users.
 END
 
+ SHARE_GROUP_EMAIL_SUBJECT => <<END,
+Track sharing notification from the %s browser
+END
+
+ SHARE_GROUP_EMAIL => <<END,
+The user named %s has shared some tracks with you. They will appear in your "Custom Tracks" section the next time you log into %s. To see the shared track(s) now, click on %s.
+
+Additional information about the shared tracks follows:
+
+  Upload name:        %s
+  Upload description: %s
+  Track names:        %s
+
+If you wish to remove these tracks from your session, go to "Custom Tracks" and click on the '[X]' next to the upload name. To add it back to your session, click on %s.
+END
+
  OTHER_SHARE_METHODS => <<END,
 You can also share it with another user by setting its permissions to
 <b>public</b> and giving them this link or letting them search for the
 track by name, or by changing its permissions to <b>group</b> and adding
 the user you want by username. To do this, select the "Custom Tracks"
 page and choose the sharing policy you want with the drop-down menu in
-the "sharing" section, then type the user\'s name or ID in the input
+the "sharing" section, then type the user's name or ID in the input
 field provided.
 END
 
  CANT_SHARE     => <<END,
 Sorry, this track is owned by another user who has only allowed access to
-a limited group of other users. Since it\'s not yours, you can\'t share it
-with anyone else. In order to share this track, you\'ll have to ask them
+a limited group of other users. Since it's not yours, you can't share it
+with anyone else. In order to share this track, you'll have to ask them
 for permission.
 END
 
@@ -563,10 +589,11 @@ END
    EMAIL_MY_PASSWORD         => 'E-mail my password',
    EDIT_ACCOUNT_DETAILS      => '%s: Edit account details',
    CONTINUE                  => 'Continue',
+   HAVE_OPENID               => 'Have an OpenID?',
    WITH_OPENID               => 'with your OpenID',
    SIGN_IN                   => 'Sign in',
+   OPENID_PROMPT             => "Select your OpenID provider's icon from the list below, or type your OpenID into the text box.",
    DONT_HAVE_OPENID          => 'Don\'t have an OpenID?',
-   OPENID_PROMPT             => "Select your OpenID provider\'s icon from the list below, or type your OpenID into the text box.",
    GO_BACK                   => 'Go Back.',
    ALL_FIELDS_REQUIRED       => 'All fields are required.',
    PASSWORDS_DO_NOT_MATCH    => 'Passwords do not match.',
@@ -632,6 +659,7 @@ END
    PASSWORD_CHANGE_SUCCESS   => 'Your password has been changed successfully.',
    OPENID_ADD_SUCCESS        => 'Your OpenID has been added successfully.',
    OPENID_REMOVE_SUCCESS     => 'Your OpenID has been removed successfully.',
+   OPENID_ADD_FAILED         => 'The OpenID could not be added: %s',
    OPERATION_SUCCESS         => 'Operation completed successfully.', 
    BACK                      => 'Back',
    CREATE_ACCOUNT            => 'Create Account',
@@ -646,13 +674,17 @@ END
                                 'account, please type in your username and click the "Continue" button below.',
    MUST_TYPE_USERNAME        => 'You must type in your username to continue.',
    INCORRECT_LINK            => 'The confirmation code provided is either incorrect or expired.<br> Please click continue to exit.',
+   PENDING                   => 'pending',
+   
    WELCOME                   => 'Welcome, %s',
    LOG_OUT_DESC              => 'Click here to log out from %s',
    LOG_OUT                   => 'Log Out',
    CHANGE_SETTINGS_DESC      => 'Click here to change your account settings',
    LOGIN_CREATE_DESC         => 'Click here to log in or create a new account. This will allow you to access your settings and uploaded tracks from multiple computers.',
+   LOGIN_REQUEST             => 'Please log in %s',
    LOGIN                     => 'Log in',
    LOGIN_CREATE              => 'Log in / create account',
+   LOGIN_REQUIRED            => 'You must log in to access this data source',
 
    #------------
    # USER TRACKS
@@ -674,6 +706,7 @@ END
    SHARING                   => 'Sharing:',
    TRACK_IS                  => 'Track is',
    SHARED_WITH_YOU           => '<b>shared</b> with you',
+   SHARING_ADD_USER          => 'Add',
    SHARING_PRIVATE           => 'Private',
    SHARING_CASUAL            => 'Casual',
    SHARING_GROUP             => 'Group',
@@ -752,8 +785,8 @@ END
    CLICK_MODIFY_SUBTRACK_SEL => 'Click to modify subtrack selections.',
    CLICK_FOR_MORE            => 'Click for more',
    PLUGIN_BASE_CLASS_DUMP    => "This is the base class for all GBrowse plugins.\n".
-                                "The fact that you\'re seeing this means that the author of ".
-                                "this plugin hasn\'t yet implemented a real dump() method.\n",
+                                "The fact that you're seeing this means that the author of ".
+                                "this plugin hasn't yet implemented a real dump() method.\n",
    PLUGIN_BASE_CLASS_DESC    => "This is the base class for all GBrowse plugins.\n".
                                 "The fact that you're seeing this means that the author of ".
                                 "this plugin hasn't yet entered a real description.\n",

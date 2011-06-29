@@ -6,6 +6,8 @@
    * Fix bug which prevented add tracks from working properly under IE8.
    * Fix bug which prevented "download all data from this track" from working for BAM/SAM
      tracks.
+   * Fix bug in English translation that was causing other languages to take precedence
+     even when browser was configured to accept them with lower precedence.
 
 2.38
    * Fix more semantic zooming bugs, particularly when zooming out from a BAM track.

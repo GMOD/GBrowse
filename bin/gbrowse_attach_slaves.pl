@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 use strict;
+
+use Term::ReadLine;
+
 use constant RENDERFARM_CONF         => '/srv/gbrowse/etc/renderfarm.conf';
 use constant IMAGE_MAP               => '/srv/gbrowse/etc/ami_map.txt';
 use constant SLAVE_SECURITY_GROUP    => 'GBrowseSlave';
@@ -13,6 +16,19 @@ use constant PORT_RANGE              => '8101-8103';
 # EC2_ACCESS_KEY and EC2_SECRET_KEY must be defined
 
 $ENV{PYTHONPATH}='/usr/local/lib/python2.6/dist-packages';
+
+if ($ARGV[0] =~ /^--?h/) {
+    die <<END;
+Usage: gbrowse_attach_slaves.pl [number of slaves]
+
+For use with the Amazon GBrowse image.
+Launch indicated number of gbrowse slaves and attach the current set of
+mounted data directories to them. Relaunch server in render slave mode.
+END
+}
+
+my $TERM;
+check_eucarc();
 
 my $SLAVE_COUNT = shift || 1;
 
@@ -142,19 +158,65 @@ sub get_keypair {
 }
 
 sub get_security_group {
-    print STDERR "Creating appropriate security grou...\n";
+    print STDERR <<END;
+Creating appropriate security group...
+If you see duplication warnings, it is because there are already (possibly inactive)
+slave instances defined for this master. This will not adversely affect the new slaves,
+but you may wish to terminate the old ones to recover storage space.
+END
+
     my $ssg        = SLAVE_SECURITY_GROUP;
     my $range      = PORT_RANGE;
     chomp (my $ip = `curl -s http://169.254.169.254/latest/meta-data/local-ipv4/`);
     chomp (my $instance = `curl -s http://169.254.169.254/latest/meta-data/instance-id`);
-
     $ssg   .= "-$instance";
     chomp (my $result   = `euca-delete-group $ssg`);
     chomp ($result = `euca-add-group -d'security group for gbrowse render slaves allows ssh and ports $range' $ssg`);
-#    die "Couldn't create security group for $ssg: $result" unless $result =~ /^GROUP/;
+    warn   $result unless $result =~ /^GROUP/;
     chomp ($result = `euca-authorize -P tcp -p 22 -s $ip/32 $ssg`);	
-    die $result unless $result =~ /PERMISSION/;
+    warn   $result unless $result =~ /PERMISSION/;
     chomp ($result = `euca-authorize -P tcp -p $range -s $ip/32 $ssg`);
-    die $result unless $result =~ /PERMISSION/;
+    warn   $result unless $result =~ /PERMISSION/;
     return $ssg;
+}
+
+sub check_eucarc {
+    if (-r "$ENV{HOME}/.eucarc") {
+	open my $f,"$ENV{HOME}/.eucarc" or die "~/.eucarc: $!";
+	while (<$f>) {
+	    chomp;
+	    my ($key,$value) = /^(EC2\w+)\s*=\s*(.+)/ or next;
+	    $ENV{$key}=$value;
+	}
+    }
+
+    $ENV{EC2_URL}        ||= get_ec2_url();
+    $ENV{EC2_ACCESS_KEY} ||= get_access_key();
+    $ENV{EC2_SECRET_KEY} ||= get_secret_key();
+}
+
+sub get_ec2_url {
+    chomp (my $zone = `curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`);
+    chop $zone;  # remove trailing 'a','b'...
+    return "http://ec2.$zone.amazonaws.com";
+}
+
+sub get_access_key {
+    print STDERR "\n";
+    print STDERR "I need your EC2 access key id. You can find this under \"Security Credentials\" on your Amazon account page.\n";
+    print STDERR "To avoid this prompt in the future, create a ~/.eucarc file containing the line EC2_ACCESS_KEY=<access key>\n";
+    return prompt ('EC2_ACCESS_KEY:');
+}
+
+sub get_secret_key {
+    print STDERR "\n";
+    print STDERR "I need your EC2 secret key. You can find this under \"Security Credentials\" on your Amazon account page.\n";
+    print STDERR "To avoid this prompt in the future, create a ~/.eucarc file containing the line EC2_SECRET_KEY=<access key>\n";
+    return prompt ('EC2_SECRET_KEY:');
+}
+
+sub prompt {
+    my $prompt = shift;
+    $TERM ||= Term::ReadLine->new('gbrowse_attach_slaves.pl');
+    return $TERM->readline($prompt);
 }

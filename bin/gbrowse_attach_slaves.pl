@@ -1,11 +1,10 @@
 #!/usr/bin/perl
 use strict;
 use constant RENDERFARM_CONF         => '/srv/gbrowse/etc/renderfarm.conf';
-use constant SNAPSHOT_MAP            => '/srv/gbrowse/etc/species_volume_map.txt';
 use constant IMAGE_MAP               => '/srv/gbrowse/etc/ami_map.txt';
 use constant SLAVE_SECURITY_GROUP    => 'GBrowseSlave';
 use constant MASTER_SECURITY_GROUP   => 'GBrowseMaster';
-use constant PORT_RANGE              => '8100-8105';
+use constant PORT_RANGE              => '8101-8103';
 
 # This is called on the master to launch instances.
 # It discovers which species are mounted
@@ -49,6 +48,7 @@ close OUTPUT;
 
 my %ips;
 while (keys %ips < $SLAVE_COUNT) {
+    print STDERR "waiting for instance to start....\n";
     sleep 5;
     chomp (my $output = `euca-describe-instances @instances`);
     for my $line (split "\n",$output) {
@@ -71,22 +71,11 @@ close F;
 system "sudo /etc/init.d/apache2 restart";
 exit 0;
 
-# sub get_snapshot_map {
-#     my %map;
-#     open F,SNAPSHOT_MAP or die "Can't open ",SNAPSHOT_MAP,": $!";
-#     while (<F>) {
-# 	chomp;
-# 	next if /^#/;
-# 	my ($mount,$snap_id,$vol_label) = split /\s+/;
-# 	$map{$mount} = [$snap_id,$vol_label];
-#     }
-#     close F;
-#     return \%map;
-# }
-
 sub get_snapshot_map {
     my $mounts = shift;
     my (%vol2snap,%mount2vol,%map);
+
+    print STDERR "Identifying slave AMI...\n";
 
     chomp (my $instance = `curl -s http://169.254.169.254/latest/meta-data/instance-id`);
     chomp (my $volumes  = `euca-describe-volumes`);
@@ -94,11 +83,11 @@ sub get_snapshot_map {
     # get volume and snapshot id for each mounted volume
     for my $line (split "\n",$volumes) {
 	if ($line =~ /^VOLUME/) {
-	    my ($vol,$snap) = (split /\s+/,$line)[1,3];
+	    my ($vol,$snap) = (split /\t/,$line)[1,3];
 	    $vol2snap{$vol} = $snap;
 	} elsif ($line =~ /^ATTACHMENT/) {
 	    next unless $line =~ /\s$instance\s/;
-	    my ($vol,$mount) = (split /\s+/,$line)[1,3];
+	    my ($vol,$mount) = (split /\t/,$line)[1,3];
 	    $mount2vol{$mount} = $vol;
 	}
     }
@@ -108,13 +97,19 @@ sub get_snapshot_map {
 	$device =~ s/\d+$//;
 	my $vol  = $mount2vol{$device} or next;
 	my $snap = $vol2snap{$vol};
+	$snap  ||= make_snap($vol);
 	$map{$species} = $snap;
     }
 
     return \%map;
 }
 
+sub make_snap {
+    die "make_snap() unimplemented";
+}
+
 sub get_species_mounts {
+    print STDERR "Determining which volumes to mount...\n";
     my @mounts;
     open F,'/proc/mounts' or die "Can't open /proc/mounts: $!";
     while (<F>) {
@@ -147,18 +142,19 @@ sub get_keypair {
 }
 
 sub get_security_group {
+    print STDERR "Creating appropriate security grou...\n";
     my $ssg        = SLAVE_SECURITY_GROUP;
-    my $msg        = MASTER_SECURITY_GROUP;
     my $range      = PORT_RANGE;
-    chomp (my $result   = `euca-describe-group $ssg`);
-    unless ($result) {
-	$result = `euca-add-group -d'security group for gbrowse render slaves allows ssh and ports $range' $ssg`;
-	die "Couldn't create security group for $ssg" unless $result =~ /^GROUP/;
-    }
     chomp (my $ip = `curl -s http://169.254.169.254/latest/meta-data/local-ipv4/`);
-    $result = `euca-authorize -P tcp -p 22 -s $ip/32 $ssg`;	
+    chomp (my $instance = `curl -s http://169.254.169.254/latest/meta-data/instance-id`);
+
+    $ssg   .= "-$instance";
+    chomp (my $result   = `euca-delete-group $ssg`);
+    chomp ($result = `euca-add-group -d'security group for gbrowse render slaves allows ssh and ports $range' $ssg`);
+#    die "Couldn't create security group for $ssg: $result" unless $result =~ /^GROUP/;
+    chomp ($result = `euca-authorize -P tcp -p 22 -s $ip/32 $ssg`);	
     die $result unless $result =~ /PERMISSION/;
-    $result = `euca-authorize -P tcp -p $range -o $msg $ssg`;
+    chomp ($result = `euca-authorize -P tcp -p $range -s $ip/32 $ssg`);
     die $result unless $result =~ /PERMISSION/;
     return $ssg;
 }

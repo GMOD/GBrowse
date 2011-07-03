@@ -1,3 +1,7 @@
+2.40
+   * Added support script for Amazon cloud image: gbrowse_attach_slaves.pl creates
+     slave instances for AMI ami-c6ca31af.
+
 2.39
    * Download SVG images as type application/svg+xml rather than triggering
      inline display behavior.

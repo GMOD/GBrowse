@@ -2125,7 +2125,6 @@ sub reconfigure_track {
                                : $state->{features}{$label}{semantic_override}{$semantic_len}={};
 
     my $glyph = param('conf_glyph') || '';
-  
     for my $s ( grep {/^conf_/} param()) {
         my @values = param($s);
 	my $value  = $values[-1]; # last one wins
@@ -2161,7 +2160,7 @@ sub reconfigure_track {
 	    }
 	}
     }
-    unless (defined $o->{autoscale} && $o->{autoscale} eq 'none') { 
+    if (defined $o->{autoscale} && $o->{autoscale} eq 'local') { 
 	undef $o->{min_score}; 
 	undef $o->{max_score} 
     }

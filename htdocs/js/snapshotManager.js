@@ -215,23 +215,25 @@ GBrowseController.addMethods({
   function(){
 	// The source, session, and snapshot information are stored
 	var browser_source = Controller.findParameter("source");
- 	var session = Controller.findParameter("id");
-	var snapshot = Controller.findParameter("snapshot");
+ 	var upload = Controller.findParameter("id");
+	var snapcode = Controller.findParameter("snapcode");
+	var snapname = Controller.findParameter("snapname");
 	
-	if(browser_source != null && session != null && snapshot != null){
+	if(browser_source != null && upload != null && snapcode != null && name != null){
 		// An asynchronous request loads the snapshot into the browser
 	 	new Ajax.Request(document.URL, {
 	  	          method: 'POST',
 	  		  asynchronous:true,
 	  		  parameters: {
 	  		        action:    'load_url',
-				name:  snapshot,
-				id: session,
+				snapcode:  snapcode,
+				snapname: snapname,
+				id: upload,
 				browser_source: browser_source,
 	  	          },
 			  onSuccess: function(transport) {
 		          	$('busy_indicator').show();
-				Controller.setSnapshot(snapshot);
+				Controller.setSnapshot(snapname);
 			  },
 			  on504: function() {
 				alert("GBrowse could not find the provided session or snapshot");
@@ -243,9 +245,11 @@ GBrowseController.addMethods({
   },
 
  findParameter:
-  function(param){
-	// Searches the URL for the value of the parameter passed in
-   	var search = window.location.search.substring(1);
+  function(param, search){
+	if(search == null){
+		// Searches the URL for the value of the parameter passed in
+	   	search = window.location.search.substring(1);
+	}
    	if(search.indexOf('&') > -1) {
       		var params = search.split('&');
       		for(var i = 0; i < params.length; i++) {
@@ -285,7 +289,34 @@ GBrowseController.addMethods({
 	} else {
 		return false;
 	}
- }
+ },
+
+ linkTrackLegend:
+  function(){
+	var subtrack_groups = $$('.subtrack_group');
+
+	subtrack_groups.each(function(subtrack_group) {
+		var subtracks = subtrack_group.childElements();
+		if(subtracks.size() > 1){
+			subtracks.each(function(subtrack) {
+				var label = subtrack.down().down().innerHTML;
+				var track_div = subtrack.ancestors()[2];
+				var map = track_div.down('map');
+				areas = map.childElements()				 
+				areas.each(function(area) {
+					var href = area.readAttribute('href');
+					href = href.replace(/;/g, "&");
+					var param = Controller.findParameter('name', href);
+					if(param == label){
+						subtrack.down().href = href.replace(/&/g, ";");
+						area.remove();
+						throw $break;
+					}
+				});
+			});
+		}
+        });
+  }
 
 });
 

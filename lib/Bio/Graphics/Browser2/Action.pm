@@ -15,7 +15,7 @@ use constant DEBUG => 0;
 use Data::Dumper;
 use Storable qw(dclone);;
 use POSIX;
-
+use Digest::MD5 'md5_hex';
 
 sub new {
     my $class  = shift;
@@ -367,7 +367,11 @@ sub ACTION_save_session {
     # Updating the snapshots hash
     $session->{snapshots}->{$name}->{session_time}=$UTCtime;
     $session->{snapshots}->{$name}->{image_url} = $imageURL;
-	
+
+    # Each snapshot has a unique snapshot_id (currently just an md5 sum of the unix time it is created
+    my $snapshot_id = md5_hex(time);
+    $session->{snapshots}->{$name}->{snapshot_id} = $snapshot_id;	
+
     $self->session->flush;
     $self->ACTION_set_session($q);
 
@@ -385,6 +389,10 @@ sub ACTION_set_session {
 #     $settings->{current_session} = $name;
      
      %{$settings} = %{dclone $session->{snapshots}->{$name}};
+     
+     # The snapshot_id is not stored in the current session information
+     delete $settings->{snapshot_id};
+
      my @tracks = @{$settings->{tracks}};
 
      my @selected_tracks = ();
@@ -407,10 +415,24 @@ sub ACTION_send_session {
 
      my $settings = $self->state;
      my $source = $settings->{source};
+     my $session = $self->session->session->{'_DATA'}->{$source};
      my $id = $self->session->uploadsid;
 
+     my $globals = $self->render->globals;
+     my $dir = $globals->user_dir;
+
+     my $filename = $session->{snapshots}->{$name}->{snapshot_id};
+         
+     mkdir File::Spec->catfile($dir,$source,$id);
+	
+     #Storing the snapshot as a string and saving it to a textfile. Typical directory /var/lib/gbrowse2/userdata/{source}/{uploadid}: 
+     my $snapshot = Dumper($session->{snapshots}->{$name});
+     open SNAPSHOT, ">$dir/$source/$id/$filename.txt" or die "Can't open $dir: $!";
+     print SNAPSHOT "$snapshot";
+     close SNAPSHOT;
+
      # The snapshot information is embedded into the URL
-     $url = "$url?id=$id&snapshot=$name&source=$source";
+     $url = "$url?id=$id&snapname=$name&snapcode=$filename&source=$source";
      $url =~ s/ /%20/g;
      $self->session->flush;
 
@@ -426,14 +448,27 @@ sub ACTION_mail_session {
 
      my $settings = $self->state;
      my $source = $settings->{source};
+     my $session = $self->session->session->{'_DATA'}->{$source};
      my $id = $self->session->uploadsid;
+
+     my $globals = $self->render->globals;
+     my $dir = $globals->user_dir;
+
+     my $filename = $session->{snapshots}->{$name}->{snapshot_id};
+         
+     mkdir File::Spec->catfile($dir,$source,$id);
+	
+     #Storing the snapshot as a string and saving it to a textfile. Typical directory /var/lib/gbrowse2/userdata/{source}/{uploadid}: 
+     my $snapshot = Dumper($session->{snapshots}->{$name});
+     open SNAPSHOT, ">$dir/$source/$id/$filename.txt" or die "Can't open $dir: $!";
+     print SNAPSHOT "$snapshot";
+     close SNAPSHOT;
 	
      # The snapshot information is embedded into the URL
-     $url = "$url?id=$id&snapshot=$name&source=$source";
+     $url = "$url?id=$id&snapname=$name&snapcode=$filename&source=$source";
      $url =~ s/ /%20/g;
-     my $globals = $self->render->globals;
 
-     my $subject = "Genome Browser Snapshot: $name";
+     my $subject = "Genome Browser Snapshot";
      my $contents = "Please follow this link to load the GBrowse snapshot: $url"; 
  
      # An email is sent containing the snapshot information
@@ -452,8 +487,9 @@ sub ACTION_load_url {
      my $self = shift; 
      my $q = shift; 
      my $source = $q->param('browser_source');
-     my $name = $q->param('name');
-     $name =~ s/%20/ /g;
+     my $filename = $q->param('snapcode');
+     my $name = $q->param('snapname');
+     $filename =~ s/%20/ /g;
      my $from_id = $q->param('id');
      
      my $settings = $self->state;
@@ -461,17 +497,25 @@ sub ACTION_load_url {
      
      # The snapshot is loaded from the global variable
      my $globals = $self->render->globals;
-     my $session = $globals->session($from_id);
-     my $snapshot = $session->{session}->{_DATA}->{$source}->{'snapshots'}->{$name};
+     my $dir = $globals->user_dir;
+     my $snapshot_data;
+     
+     open SNAPSHOT, "<$dir/$source/$from_id/$filename.txt" or die "Can't open $dir: $!";
+     $snapshot_data = do { local $/; <SNAPSHOT> };
+     close SNAPSHOT;
+     my $snapshot = eval "my $snapshot_data";
 
-     if (!$snapshot || !$session){
+     if (!$snapshot){
 	return(504,'text/plain',undef);
      } else {
 
      	my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
      	$snapshot->{session_time} = $UTCtime;
      	$snapshot->{userid} = $userid;
-	
+
+        my $snapshot_id = md5_hex(time);
+    	$snapshot->{snapshot_id} = $snapshot_id;
+
      	# The snapshot is saved after updates to some of the information have been made
      	$self->session->session->{'_DATA'}->{$source}->{snapshots}->{$name} = $snapshot;
 	

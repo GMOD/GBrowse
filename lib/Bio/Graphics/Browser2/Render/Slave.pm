@@ -38,9 +38,10 @@ sub new {
     my $class       = shift;
     my %args        = @_;
 
-    $args{ReuseAddr}    = 1 unless exists $args{ReuseAddr};
-    $args{LocalPort}  ||= 8101;
-    $args{Listen}     ||= 20;
+    $args{ReuseAddr}          = 1 unless exists $args{ReuseAddr};
+    $args{LocalPort}        ||= 8101;
+    $args{Listen}           ||= 20;
+    $args{PreForkCopies}    ||= 1;
 
     delete $args{LocalPort} if $args{LocalPort} eq 'dynamic'; 
 
@@ -63,6 +64,7 @@ sub listen_port { shift->{args}{LocalPort} }
 sub pidfile     { shift->{args}{PidFile}   }
 sub logfile     { shift->{args}{LogFile}   }
 sub user        { shift->{args}{User}      }
+sub prefork_copies { shift->{args}{PreForkCopies}      }
 sub pid         { shift->{pid}             }
 sub config_cache{ shift->{args}{CCacheDir} || File::Spec->catfile(File::Spec->tmpdir,'gbslave_ccache')}
 sub kill        {
@@ -157,23 +159,7 @@ sub run {
 
 	$self->Debug("Waiting for connection...");
 	my $c     = $d->accept() or next; # accept() is interruptable...
-	my $child = fork();
-	$self->Fatal("Couldn't fork: $!") unless defined $child;
-	if ($child) {
-	    $self->Info("Forked child PID $child");
-	    $c->close();
-	} else {
-	    my $time = time();
-	    Bio::Graphics::Browser2::DataBase->clone_databases();
-	    $self->Debug("clone_database() time: ",time()-$time," s");
-	    $self->process_connection($c);
-	    $self->Debug("process_connection() time: ",time()-$time," s");
-	    $d->close();
-	    $c->close();
-	    my $elapsed = time() - $time;
-	    $self->Debug("Process time $elapsed seconds");
-	    exit 0;
-	}
+	$self->process_connection($c);
     }
     $self->Info('Normal termination');
     unlink $self->pidfile if $self->pidfile;
@@ -193,6 +179,7 @@ sub process_connection {
     }
 
     $self->Debug("Finished connection from ",$c->peerhost);
+    $c->close;
 }
 
 
@@ -202,6 +189,7 @@ sub process_request {
 
     $self->Bench('reading request');
 
+    CGI::initialize_globals();
     if ($r->method eq 'GET') {
 	$CGI::Q = CGI->new($r->uri->query);
     } elsif ($r->method eq 'POST') {
@@ -215,24 +203,59 @@ sub process_request {
     }
 
     $self->Debug("process_request(): read ",$r->content_length," bytes");
-
-    $self->Debug("process_request(): setting environment");
-
     $self->Bench('setting environment');
     $self->setup_environment(param('env'));
     my $operation = param('operation') || 'invalid';
 
     $self->Debug("process_request(): operation = $operation");
 
-    my $content   = $operation eq 'render_tracks'   ? $self->render_tracks
-                  : $operation eq 'search_features' ? $self->search_features
-                                                    : 'Invalid request';
+    # make sure databases are already open in parent process
+    $self->Bench('thawing parameters');
+    my $tracks   = thaw param('tracks')     if param('tracks');
+    my $settings = thaw param('settings')   if param('settings');
+    my $dsn      = param('datasource');
+    my $d_name   = param('data_name');
+    my $d_mtime  = param('data_mtime');
+    my $source   = $self->get_datasource($dsn,$d_name,$d_mtime);
+    unless ($source) {
+	$self->Info('sending REQUEST DATASOURCE response');
+	$c->send_response(HTTP::Response->new(403=>"REQUEST DATASOURCE: $d_name"));
+	return;
+    }
+    $source or return (403,"REQUEST DATASOURCE: $d_name");
 
-    my ($status_code,$status_text,$content_type) =
-	 $content =~ /REQUEST DATASOURCE/ ? (403 => $content)
-        :$content !~ /invalid/
-	 ? (200 => 'Ok',          'application/gbrowse-encoded-genome')
-	 : (400 => 'Bad request', 'text/plain');
+    $self->Bench('loading databases');
+    $self->load_databases($tracks,$source) if $tracks;
+    
+    # fork only after loading databases; this keeps frequently used databases in memory between requests.
+    $self->Bench('forking child');
+    my $child = fork();
+    $self->Fatal("Couldn't fork: $!") unless defined $child;
+    if ($child) {
+	$self->Info("Forked child PID $child");
+	return;
+    } else {
+	$self->d->close();
+	$self->Bench('cloning databases');
+	Bio::Graphics::Browser2::DataBase->clone_databases();
+	$self->Bench("operation $operation");
+	$self->run_operation($c,$operation,$tracks,$source,$settings);
+	$self->Bench("cleaning up");
+	exit 0;
+    }
+}
+
+sub run_operation {
+    my $self      = shift;
+    my ($c,$operation,$tracks,$source,$settings) =  @_;
+
+    my $content   = $operation eq 'render_tracks'   ? $self->render_tracks($tracks,  $source, $settings)
+                  : $operation eq 'search_features' ? $self->search_features($tracks,$source, $settings)
+                                                    : 'invalid request';
+
+    my ($status_code,$status_text,$content_type) = 
+	$content =~ /invalid/i ? (400 => 'Bad request', 'text/plain')
+	                       : (200 => 'Ok',          'application/gbrowse-encoded-genome');
 
     $self->Bench('creating response');
 
@@ -244,10 +267,17 @@ sub process_request {
 
     $self->Bench('sending response');
     $c->send_response($response);
-
-    $self->Bench('cleaning up');
-
     $self->Info("host=",$c->peerhost,"; operation=$operation; response=$status_code; bytes=",length $content);
+}
+
+sub load_databases {
+    my $self   = shift;
+    my ($tracks,$source,$settings) = @_;
+    for my $t (@$tracks) {
+	# this caches databases in memory
+	my $length = defined $settings->{start} ? $settings->{start}-$settings->{stop}+1 : 0;
+	my $db = $source->open_database($t,$length);
+    }
 }
 
 sub Bench {
@@ -267,6 +297,7 @@ sub get_datasource {
     my $self = shift;
     my ($dsn,$name,$mtime)  = @_;
 
+    $self->Bench('getting datasource');
     mkpath $self->config_cache unless -e $self->config_cache;
 
     if (Storable::read_magic($dsn)) { # this is a storable image
@@ -295,23 +326,10 @@ sub get_datasource {
 
 sub render_tracks {
     my $self = shift;
+    my ($tracks,$datasource,$settings) = @_;
 
-    $self->Debug("render_tracks(): thawing parameters");
-    $self->Bench('thawing parameters');
-    my $tracks	        = thaw param('tracks');
-    my $settings	= thaw param('settings');
     my $language	= thaw param('language');
     my $panel_args      = thaw param('panel_args');
-    my $dsn             = param('datasource');
-    my $d_name          = param('data_name');
-    my $d_mtime         = param('data_mtime');
-
-    $self->Bench('getting datasource');
-
-    my $datasource	= $self->get_datasource($dsn,$d_name,$d_mtime);
-    unless ($datasource) {
-	return "REQUEST DATASOURCE: $d_name";
-    }
 
     $self->do_init($datasource);
     $self->adjust_conf($datasource);
@@ -330,7 +348,7 @@ sub render_tracks {
 	    $db = $datasource->open_database($track) or next;
 	    next if $seenit{$db}++;
 	    ($segment) = $db->segment(-name	=> $settings->{'ref'},
-				      -start=> $settings->{'start'},
+				      -start    => $settings->{'start'},
 				      -stop	=> $settings->{'stop'});
 	    last if $segment;
 	}
@@ -405,11 +423,9 @@ sub render_tracks {
 
 sub search_features {
     my $self = shift;
+    my ($tracks,$datasource,$settings) = @_;
 
     my $searchargs      = thaw param('searchargs');
-    my $tracks	        = thaw param('tracks');
-    my $settings	= thaw param('settings');
-    my $datasource	= thaw param('datasource');
 
     # initialize a region search object
     my $search = Bio::Graphics::Browser2::RegionSearch->new(

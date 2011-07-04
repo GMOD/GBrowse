@@ -851,315 +851,12 @@ sub render_toggle_track_table {
   return $html;
 }
 
-# Render Track Table - Invoked to draw the checkbox group in the "Select Tracks" tab. It creates a hyperlinked set of feature names.
 sub render_track_table {
-    my $self     = shift;
-    my $settings = $self->state;
-    my $source   = $self->data_source;
-
-    # read category table information
-    my $category_table_labels = $self->category_table();
-    my $an;
-    # tracks beginning with "_" are special, and should not appear in the
-    # track table.
-    my @labels = $self->potential_tracks;
-    
-    warn "favorites = {$settings->{show_favorites}} " if DEBUG;
-
-    if( $settings->{show_favorites}){
-	warn "favorites = @labels = $settings->{show_favorites}" if DEBUG;	
-	@labels= grep {$settings->{favorites}{$_}} @labels;
-    }
-
-    warn "label = @labels" if DEBUG;
-
-    my ($filter_active,@hilite);
-    if (my $filter = $self->track_filter_plugin) {
-	my $tracks = @labels;
-	eval {@labels    = $filter->filter_tracks(\@labels,$source)};
-	warn $@ if $@;
-	eval {@hilite    = $filter->hilite_terms};
-	warn $@ if $@;
-	$filter_active = @labels<$tracks;  # mark filter active if the filter has changed the track count
-    }
-
-    # add citation link, favorite stars and other markup
-    my $button_url = $self->data_source->button_url;
-    my (%labels,%label_sort);
-    for my $label (@labels) {
-	my $key = $self->label2key($label);
-	my ($link,$mouseover);
-	if ($label =~ /^plugin:/) {
-	    $key   = $self->plugin_name($label);
-	    #$labels{$label} = $self->plugin_name($label);
-	    #next;
-	}
-	elsif ($label =~ /^file:/){
-	    $link = "?Download%20File=$key";
-	}
-	elsif ($self->data_source->setting($label=>'citation')){
-	    $link = "?display_citation=$label";#;source=" . $settings->{source};
-	    my $cit_txt = citation( $source, $label, $self->language ) || '';
-	    if ( length $cit_txt > 100) {
-		$cit_txt =~ s/\<[^\>]+\>//g;     # truncate and strip tags for preview
-		$cit_txt =~ s/(.{100}).+/$1/; 
-		$cit_txt =~ s/\s+\S+$//; 
-		$cit_txt =~ s/\'/\&\#39;/g;
-		$cit_txt =~ s/\"/\&\#34;/g;
-		$cit_txt .= '... <i>' . ($self->translate('CLICK_FOR_MORE')||'') . '</i>';
-	    }
-	    $mouseover = "<b>$key</b>";
-	    $mouseover .= ": $cit_txt"  if $cit_txt;
-	}
-
-	my $track_on    = $settings->{features}{$label}{visible};
-	my $favorite    = $settings->{favorites}{$label};
-	my $balloon = $source->setting('balloon style') || 'GBubble';
-	my $cellid = 'datacell';
-
-	my @classes = 'track_title';
-	push @classes,'activeTrack' if $track_on;
-	push @classes,'favorite'    if $favorite;
-	push @classes,'remote'      if $label =~ /^(http|ftp|file):/;
-
-	# add hilighting if requested
-	for my $h (@hilite) {
-	    $key =~ s!($h)!<span class='text_match'>$1</span>!gi;
-	}
-
-	my $name =  $self->{$category_table_labels}->{label};
-	warn "section = $name" if DEBUG;
-
-	#if the track has already been favorited, the image source is made into the yellow star
-	my $star      = $favorite ? 'ficon_2.png' : 'ficon.png';
-	my $class     = $favorite ? 'star favorite' : 'star';
-	my $show_fav  = $self->translate('ADDED_TO');
-	my $favoriteicon  = img({-class =>  $class,
-				-id      => "star_$label",
-				-onClick => "togglestars('$label')",
-				-onMouseOver => "GBubble.showTooltip(event,'$show_fav')",
-				-style => 'cursor:pointer;',
-				-src   => "$button_url/$star"}
-	    );
-	my $category = $self->categorize_track($label);
-	my @args;
-	push @args, (-class => "@classes");
-	push @args, (-onClick     => "gbTurnOff('${category}_section');gbToggleTrack('$label')");
-	push @args, (-onmouseover => "$balloon.showTooltip(event,'$mouseover')") if $mouseover;
-
-	my $title  = span({-id=>"${label}_check",@args},$key);
-
-	my $checkicon =   img({-id=>"${label}_img",
-			       -onClick => "gbToggleTrack('$label')",
-			       -src=>$track_on ? "$button_url/check.png" 
-				               : "$button_url/square.png"});
-	my $help     = $link ?
-	    a({-href=>$link,
-	       -target=>'_new',
-	       -onmouseover => "$balloon.showTooltip(event,'$mouseover')",
-	      }, '[?]')
-	    : '';
-	
-	$label_sort{$label}  = $key;
-	$labels{$label}      = join(' ',$favoriteicon,span({-class=>'track_label'},$checkicon,$title),$help);
-	
-	if (my ($selected,$total) = $self->subtrack_counts($label)) {
-	    my $escaped_label = CGI::escape($label);
-	    $labels{$label} .= ' ['. span({-class       =>'clickable',
-					   -onMouseOver  => "GBubble.showTooltip(event,'".$self->translate('CLICK_MODIFY_SUBTRACK_SEL')."')",
-					   -onClick      => "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
-					  },i($self->translate('SELECT_SUBTRACKS',$selected,$total))).']';
-	}
-    }
-
-    my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
-    
-    # Sort the tracks into categories:
-    # Overview tracks
-    # Region tracks
-    # Regular tracks (which may be further categorized by user)
-    # Plugin tracks
-    # External tracks
-    my %track_groups;
-    foreach (@labels) {
-	my $category = $self->categorize_track($_);
-	push @{$track_groups{$category}},$_;
-    }
-
-    autoEscape(0);
-
-    # Get the list of all the categories needed.
-    my %exclude = map {$_=>1} map {$self->translate($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
-
-    (my $usertrack_cat = $self->translate('UPLOADED_TRACKS_CATEGORY')||'') =~ s/:.+$//;
-    $usertrack_cat    ||= '';
-    my @user_tracks    = grep {/^$usertrack_cat/i} keys %track_groups;
-    $exclude{$_}++ foreach @user_tracks;
-
-    my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
-
-    my $all_on  = $self->translate('ALL_ON');
-    my $all_off = $self->translate('ALL_OFF');
-
-    my (%seenit,%section_contents);
-
-    my @categories = (@user_keys,
-		      $self->translate('OVERVIEW'),
-		      $self->translate('REGION'),
-		      $self->translate('ANALYSIS'),
-	);
-    unshift @categories,@user_tracks if @user_tracks;
-
-    my $c_default = $source->category_default;
-
-    my @titles; # for sorting
-    
-    # For each category, create the appropriately-nested node. "My Tracks" node positions comes from the track's config file.
-    my $usertracks = $self->user_tracks;
-    foreach my $category (@categories) {
-	next if $seenit{$category}++;
-	my $id = "${category}_section";
-	my $category_title   = (split m/(?<!\\):/,$category)[-1];
-	$category_title      =~ s!($_)!<span style="background-color:yellow">$1</span>!gi foreach @hilite;    
-
-	my $file_id;
-
-	if ($category eq $self->translate('REGION') 
-	    && !$self->setting('region segment')) {
-	    next;
-	}
-
-	elsif  (exists $track_groups{$category}) {
-	    my @track_labels = @{$track_groups{$category}};
-
-	    $settings->{sk} ||= 'sorted'; # get rid of annoying warning
-
-	    # if these tracks are in a grid, then don't sort them
-	  BLOCK: {
-	      no warnings;  # kill annoying uninit warnings under modperl
-	      @track_labels = sort {lc ($label_sort{$a}) cmp lc ($label_sort{$b})} @track_labels
-		  if $settings->{sk} eq 'sorted' && !defined $category_table_labels->{$category};
-	    }
-
-	    my $visible =  $filter_active                            ? 1
-		         : exists $settings->{section_visible}{$id}  ? $settings->{section_visible}{$id} 
-	                 : $c_default;
-	    
-	    my @entries = map {$labels{$_}} @track_labels;
-	    my $table   = $self->tableize(\@entries,$category,undef, \@track_labels);
-
-	    # Get the content for this track.
-	    my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
-							 $id,
-							 b(ucfirst $category_title),
-							 div({-style=>'padding-left:1em'},
-							     span({-id=>$id},$table)));
-	    $control .= '&nbsp;'.i({-class=>'nojs'},
-				   checkbox(-id=>"${id}_a",-name=>"${id}_a",
-					    -label=>$all_on,-onClick=>"gbCheck(this,1);"),
-				   checkbox(-id=>"${id}_n",-name=>"${id}_n",
-					    -label=>$all_off,-onClick=>"gbCheck(this,0);")
-		)."&nbsp;".span({-class => "list",
-				 -id => "${id}_list",
-				 -style => "display: " . ($visible? "none" : "inline") . ";"},"")
-		.br()   if exists $track_groups{$category};
-	    $section_contents{$category} = div($control.$section);
-	}
-	else {
-	    next;
-	}
-    }
-
-    autoEscape(1);
-    my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories,$filter_active);
-    return join( "\n",
-		 start_form(-name=>'trackform',
-			    -id=>'trackform'),
-		 div({-class=>'searchbody',-id=> 'range', -style=>'padding-left:1em'},$slice_and_dice),
-		 end_form,
-		 $self->html_frag('html5',$settings),
-	);
-}
-
-# Category Table - This returns the hash of the category table.
-sub category_table {
-    my $self   = shift;
-    my $tabledata  = $self->data_source->setting('category tables');
-    my @tabledata  = shellwords($tabledata||'');
-    my %categorytable=();
-    while (@tabledata) {
-	    my $category=shift(@tabledata);
-	    my $rows=shift(@tabledata);
-	    my @rows=split(/\s+/,$rows);
-	    my $cols=shift(@tabledata);
-	    my @cols=split(/\s+/,$cols);
-	    $categorytable{$category}{row_labels}=\@rows;
-	    $categorytable{$category}{col_labels}=\@cols;
-    }
-    
-    return \%categorytable; 
-}
-
-sub indent_categories {
     my $self = shift;
-    my ($contents,$categories,$force_open) = @_;
-
-    my $category_hash = {};
-    my %sort_order;
-    my $sort_index = 0;
-
-    for my $category (@$categories) {
-	    my $cont   = $contents->{$category} || '';
-
-	    my @parts  = map {s/\\//g; $_} split m/(?<!\\):/,$category;
-	    $sort_order{$_} = $sort_index++ foreach @parts;
-
-	    my $i      = $category_hash;
-
-	    # we need to add phony __next__ and __contents__ keys to avoid
-	    # the case in which the track sections are placed at different
-	    # levels of the tree, for instance 
-	    # "category=level1:level2" and "category=level1"
-	    for my $index (0..$#parts) {
-	        $i = $i->{__next__}{$parts[$index]} ||= {};
-	        $i->{__contents__}                    = $cont 
-		                                        if $index == $#parts;
-	    }
-    }
-    my $i               = 1;
-    my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order,$force_open);
-}
-
-# Nest Toggles - This turns the nested category/subcategory hashes into a prettily-indented tracks table.
-sub nest_toggles {
-    my $self         = shift;
-    my ($hash,$sort,$force_open) = @_;
-    my $settings = $self->state;
-
-    my $result = '';
-    my $default = $self->data_source->category_default;
-
-    for my $key (sort { 
-	           ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b
-		      }  keys %$hash) {
-	    if ($key eq '__contents__') {
-	        $result .= $hash->{$key}."\n";
-	    } elsif ($key eq '__next__') {
-	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
-	    } elsif ($hash->{$key}{__next__}) {
-	        my $id =  "${key}_section";
-	        $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
-     	    $result .= $self->toggle_section({on=>$force_open||$settings->{section_visible}{$id}},
-					         $id,
-					         b($key).span({-class => "list",
-			                -id => "${id}_list"},""),
-					         div({-style=>'margin-left:1.5em;margin-right:1em'},
-						     $self->nest_toggles($hash->{$key},$sort,$force_open)));
-	    } else {
-	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
-	    }
-    }
-    return $result;
+    my $listing_class = $self->data_source->track_listing_class;
+    eval "require $listing_class;1" or die $@ unless $listing_class->can('new');
+    my $tlr = $listing_class->new($self);
+    return $tlr->render_track_listing.$self->html_frag('html5',$self->state);
 }
 
 # Render Multiple Choices - 
@@ -1984,7 +1681,7 @@ sub segment2link {
 
 sub tableize {
   my $self              = shift;
-   my ($array,$category,$cols,$labelnames) = @_;
+  my ($array,$cols,$labelnames,$row_labels,$column_labels) = @_;
   return unless @$array;
   my $settings = $self->state;
 
@@ -1994,12 +1691,11 @@ sub tableize {
 
   # gets the data for the defined 'category table(s)'
   my (@column_labels,@row_labels);
-  my $categorytable = $self->category_table();
-  if (defined $category and exists $categorytable->{$category} ) {
-      @column_labels = @{$categorytable->{$category}{row_labels}};
-      @row_labels    = @{$categorytable->{$category}{col_labels}};
-      $rows          = @row_labels;
-      $columns       = @column_labels;
+  if ($row_labels && $column_labels) {
+      @row_labels       = @$row_labels;
+      @column_labels    = @$column_labels;
+      $rows             = @row_labels;
+      $columns          = @column_labels;
   }
 
   my $cwidth = int(100/$columns+0.5) . '%';
@@ -2024,7 +1720,10 @@ sub tableize {
   
 	# de-couple the checkbox and label click behaviors
 	$checkbox =~ s/\<\/?label\>//gi;
-
+	if ($label =~/^=/) {
+          $label = '&nbsp;';
+          $checkbox = '&nbsp;';
+        }
 	my $class = $settings->{features}{$label}{visible} ? 'activeTrack' : '';
 
 	$html .= td({-width=>$cwidth,-style => 'visibility:visible',-class=>$class},
@@ -2562,7 +2261,7 @@ sub download_track_menu {
 		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key).
 		   hr().
 		   start_form({-id=>'dump_form'}).
-		   div($self->tableize(\@radios,undef,3,undef)).
+		   div($self->tableize(\@radios,3)).
 		   end_form().
 		   hr().
 		   button(-value   => $self->translate('DOWNLOAD_TRACK_DATA_REGION',$segment_str),

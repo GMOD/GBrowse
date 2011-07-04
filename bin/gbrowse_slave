@@ -8,22 +8,23 @@ use lib "$Bin/../lib";
 use Bio::Graphics::Browser2::Render::Slave;
 use constant DEFAULT_PORT => 8101;
 
-my ($port,$debug,$logfile,$pidfile,$user,$kill,$preload,$tmpdir);
+my ($port,$debug,$logfile,$pidfile,$user,$kill,$preload,$tmpdir,$prefork_copies);
 
 my $usage = <<USAGE;
 Usage: $0 [options]
 
 Options:
 
-    --port     -p  <port>  Network port number to listen to (default 8101).
-    --verbose  -v  <level> Verbosity level (0-3)
-    --user     -u  <name>  User to run under (same as current)
-    --log      -l  <path>  Log file path (default, use STDERR)
-    --pid          <path>  PID file path (default, none)
-    --kill     -k          Kill running server (use in conjunction with --pid).
-    --preload  <path>      Path to a config file containing override information
-                             and databases to preload
-    --tmp|-T   <path>      Override location of configuration file cache files.
+    --port     -p  <port>     Network port number to listen to (default 8101).
+    --prefork  -f  <children> Number of preforked copies to run (default 1)
+    --verbose  -v  <level>    Verbosity level (0-3)
+    --user     -u  <name>     User to run under (same as current)
+    --log      -l  <path>     Log file path (default, use STDERR)
+    --pid          <path>     PID file path (default, none)
+    --kill     -k             Kill running server (use in conjunction with --pid).
+    --preload  <path>         Path to a config file containing override information
+                                and databases to preload
+    --tmp|-T   <path>         Override location of configuration file cache files.
 
 Bare-naked Gbrowse render server.  Launch with the port number to
 listen on.
@@ -47,6 +48,7 @@ USAGE
 
 Getopt::Long::Configure('bundling');
 GetOptions('port|p=i'       => \$port,
+	   'prefork|f=i'    => \$prefork_copies,
 	   'verbose|v=i'    => \$debug,
 	   'logfile|l=s'    => \$logfile,
 	   'pidfile|pid=s'  => \$pidfile,
@@ -61,12 +63,14 @@ if ($kill) {
     exit 0;
 }
 
-$port  ||= DEFAULT_PORT;
+$port           ||= DEFAULT_PORT;
+$prefork_copies ||= 1;
 
 my $server = Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>$port,
 							User     => $user,
 							LogFile  => $logfile,
 							PidFile  => $pidfile,
+							PreForkCopies => $prefork_copies,
 							CCacheDir=> $tmpdir,
     )
     or die "Could not create server.\n";

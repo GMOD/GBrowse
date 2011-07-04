@@ -25,6 +25,7 @@ use Fcntl ':flock';
 use Carp 'croak';
 
 use constant DEBUG => 0;
+my %CHILDREN;
 
 our ($bench_message,$bench_time);
 
@@ -41,7 +42,7 @@ sub new {
     $args{ReuseAddr}          = 1 unless exists $args{ReuseAddr};
     $args{LocalPort}        ||= 8101;
     $args{Listen}           ||= 20;
-    $args{PreForkCopies}    ||= 1;
+    $args{PreForkCopies}    ||= 5;
 
     delete $args{LocalPort} if $args{LocalPort} eq 'dynamic'; 
 
@@ -59,7 +60,12 @@ sub new {
     return $self;
 }
 
-sub d           { shift->{daemon}          }
+sub d           { 
+    my $self = shift;
+    my $d    = $self->{daemon};
+    $self->{daemon} = shift if @_;
+    $d;
+}
 sub listen_port { shift->{args}{LocalPort} }
 sub pidfile     { shift->{args}{PidFile}   }
 sub logfile     { shift->{args}{LogFile}   }
@@ -140,30 +146,87 @@ sub run {
     my $quit     = 0;
     my $rotate   = 0;
 
-    $SIG{TERM}   = sub { $quit     = 1 };
-    $SIG{HUP}    = sub { $rotate   = 1 };
+    $SIG{TERM}   = sub { $self->Info('TERM received'); $quit     = 1 };
+    $SIG{HUP}    = sub { $self->Info('HUP received');  $rotate   = 1 };
 
-    my $d     = $self->d;
+    my $d = $self->d;
     $self->Info('GBrowse render slave starting on port ',$self->listen_port);
     $self->do_preload;
 
-    # accept loop in child process
-    while (!$quit) {
+    %CHILDREN = map {$_=>1} $self->prefork($self->prefork_copies);
 
-	if ($rotate) {
-	    $self->Info("Reopening log file");
-	    $self->open_log;
-	    $rotate = 0;
-	    next;
+    # parent sleeps until children need to be "taken care" of
+    if (!%CHILDREN) {
+	$self->request_loop;
+	CORE::exit 0;
+    }
+
+    if (%CHILDREN) { 
+#	$d->close;
+      SLEEP:
+	while (1) {
+	    sleep;
+	    if ($quit) {
+		CORE::kill TERM=>keys %CHILDREN;
+		last SLEEP;
+	    }
+
+	    if ($rotate) {
+		$self->Info("Reopening log file");
+		$self->open_log;
+		$rotate = 0;
+		next SLEEP;
+	    }
+
+	    $self->Info('children remaining = ', join ' ',keys %CHILDREN);
+	    if (keys %CHILDREN < $self->prefork_copies) {
+		my @new_children = $self->prefork($self->prefork_copies - keys %CHILDREN);
+		unless (@new_children) {
+		    $self->request_loop;
+		    CORE::exit 0;
+		}
+		%CHILDREN = (%CHILDREN,map {$_=>1} @new_children);
+		next SLEEP;
+	    }
+
 	}
+	unlink $self->pidfile if $self->pidfile;
+	$self->Info('Normal termination');
+    }
 
-	$self->Debug("Waiting for connection...");
-	my $c     = $d->accept() or next; # accept() is interruptable...
+    CORE::exit 0;
+}
+
+sub prefork {
+    my $self   = shift;
+    my $copies = shift;
+    my @children;
+
+    for (1..$copies) {
+	my $child = fork();
+	die "fork() error: $!" unless defined $child;
+	if ($child) {
+	    $self->Info("preforked pid $child");
+	    push @children,$child;
+	} else {
+	    return;
+	}
+    }
+    return @children;
+
+}
+
+sub request_loop {
+    my $self = shift;
+    my $d    = $self->d;
+    $self->preload_databases;
+
+    my $quit = 0;
+    $SIG{TERM}   = sub { $quit     = 1 };
+    while (!$quit) {
+	my $c  = $d->accept() or next; # accept() is interruptable...
 	$self->process_connection($c);
     }
-    $self->Info('Normal termination');
-    unlink $self->pidfile if $self->pidfile;
-    CORE::exit 0;
 }
 
 sub process_connection {
@@ -227,21 +290,29 @@ sub process_request {
     $self->Bench('loading databases');
     $self->load_databases($tracks,$source) if $tracks;
     
-    # fork only after loading databases; this keeps frequently used databases in memory between requests.
-    $self->Bench('forking child');
-    my $child = fork();
-    $self->Fatal("Couldn't fork: $!") unless defined $child;
-    if ($child) {
-	$self->Info("Forked child PID $child");
-	return;
-    } else {
-	$self->d->close();
-	$self->Bench('cloning databases');
-	Bio::Graphics::Browser2::DataBase->clone_databases();
+    # forking version
+    if ($self->prefork_copies <= 1) {
+	$self->Bench('forking child');
+	my $child = fork();
+	$self->Fatal("Couldn't fork: $!") unless defined $child;
+	if ($child) {
+	    $self->Info("Forked child PID $child");
+	    return;
+	} else {
+	    $self->d->close();
+	    $self->Bench('cloning databases');
+	    Bio::Graphics::Browser2::DataBase->clone_databases();
+	    $self->Bench("operation $operation");
+	    $self->run_operation($c,$operation,$tracks,$source,$settings);
+	    $self->Bench("cleaning up");
+	    exit 0;
+	}
+    }
+    # preforked version
+    else {
 	$self->Bench("operation $operation");
 	$self->run_operation($c,$operation,$tracks,$source,$settings);
 	$self->Bench("cleaning up");
-	exit 0;
     }
 }
 
@@ -488,7 +559,10 @@ sub become_daemon {
 
     # install signal handler in the master server
     $SIG{CHLD} = sub {
-	while ((my $c = waitpid(-1,WNOHANG))>0) { }
+	while ((my $c = waitpid(-1,WNOHANG))>0) { 
+	    $self->Info("Child pid $c terminated");
+	    delete $CHILDREN{$c};
+	}
     };
     umask(0);
     $ENV{PATH} = '/bin:/sbin:/usr/bin:/usr/sbin';

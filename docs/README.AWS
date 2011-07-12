@@ -1,0 +1,146 @@
+GBrowse Amazon EC2 Image -- Early documentation
+
+The development version of GBrowse is located on the private AMI
+ami-2e48b347, named "GBrowse 2.40 Master".
+
+To launch it:
+
+  1. Find the image in the AWS Console.
+  2. Right click and select "Launch Instance"
+     - Launch 1 instance.
+     - Select either the "micro" or "small" instance size.
+     - Select termination protection (good idea)
+     - Select your public/private keypair
+     - Select the WebServer security group (ports 80 and 22 open)
+  3. Wait for the instance to boot up, as indicated by "running" state
+     in the console instance browser.
+
+To access the web server:
+
+  1. Identify the public DNS name for the running instance, as indicated
+       in the console.
+  2. Point your web browse to this DNS name, using:
+       http://XXXX.amazonaws.com/gb2/gbrowse/elegans/
+      or
+       http://XXXX.amazonaws.com/gb2/gbrowse/yeast
+
+To log in:
+
+   1. Identify the public DNS name for the running instance
+   2. ssh to the instance using your keypair file and the
+       user name "gbrowse":
+
+        ssh -i keypair_file.pem gbrowse@XXXX.amazonaws.com
+   3. This should give you a command shell on the remote
+        machine.
+
+To launch slave processes:
+
+   1. While logged in to the running instance, create a .eucarc
+        file in your home directory. It should contain the
+	following:
+
+	EC2_ACCESS_KEY=<your access key here>
+	EC2_SECRET_KEY=<your secret key here>
+
+    2. Run the following command:
+
+            ~/GBrowse/bin/gbrowse_attach_slaves.pl <count>
+
+      Count is the number of rendering slaves you wish to launch.
+      This will launch the indicated number of GBrowse slave
+      instances and attach them to the running GBrowse process.
+
+HOW THE SYSTEM WORKS
+
+Filesystem Structure
+--------------------
+
+All GBrowse-related infrastructure, including libraries and
+configuration files is mounted on /srv/gbrowse. For example, the
+master GBrowse.conf script can be found at
+/srv/gbrowse/etc/GBrowse.conf.
+
+Species-specific datasets are mounted at /srv/gbrowse/species/XXXXX,
+where XXXXX is the name of the species. Within each species directory,
+you will find the following:
+
+  species.conf -- Contains the data source definition for this species.
+  tracks.conf  -- Contains detailed track configuration for this
+                     data source.
+  dbs/         -- SQLite databases for this data source.
+  Source/      -- Source files used to construct the SQLite databases
+  Source/README-- Description of how to get the source and regenerate
+                     the SQLite databases (this may be incomplete)
+  bin/         -- Scripts possibly used during the collection and
+                     processing of source data.
+
+/srv/gbrowse and each of the species mounts all occupy distinct EBS
+volumes and have a corresponding snapshot. The idea is that by
+mounting and unmounting the volumes, you can control what data sources
+are available to GBrowse (and avoid paying for storage for species you
+don't care about).
+
+Here is the current mapping between EBS volumes and snapshots:
+
+   /srv/gbrowse                         snap-c43e21aa
+   /srv/gbrowse/species/s_cerevisiae    snap-c23e21ac
+   /srv/gbrowse/species/c_elegans       snap-c03e21ae  
+
+After mounting or unmounting a species-specific volume, you should
+restart GBrowse using /etc/init.d/apache2 restart.
+
+The gbrowse_attach_slaves.pl Script
+-----------------------------------
+
+This script uses the euca2ools command-line tools, which in turn uses
+Amazon's REST API. The REST API is a lot faster than the SOAP API, so
+I prefer it.
+
+ 1. Look up which species volumes are mounted on the currently-running
+    master machine. This is done by inspecting the filesystem mount
+    tables.
+ 2. Find out what EBS snapshots correspond to the mounted volumes.This
+    is done via a series of euca2ools calls.
+ 3. Look up the AMI image for the current GBrowse Slave AMI. This is
+    currently done by inspecting the file
+    /srv/gbrowse/etc/ami_map.txt.
+ 4. Create a new security group for the slave instances that allows
+    network connections between the currently running master instance
+    and the slaves.
+ 5. Launch the desired number of GBrowse slave instances using the
+    AMI identified in step (3), the security group created
+    in step (4), and the EBS snapshots identified in step (2).
+ 6. As soon as the instances are running, update the configuration
+    file /srv/gbrowse/etc/renderfarm.conf so that the running GBrowse
+    process is aware of the slaves.
+ 7. Restart gbrowse.
+
+To Do
+-----
+
+ 1. The gbrowse_attach_slaves.pl script should record the instanceIds
+    of the launched instances so that they can be shut down when no
+    longer needed.
+
+    Ideally this could be done by attaching a tag to
+    the instance -- something like SlaveOf=i-12345, where i-12345 is
+    the ID of the currently running master intance. The challenge is
+    that euca2ools doesn't currently support the tagging API. I have
+    started work on a Perl interface that supports just enough of the
+    tagging API to get this done.
+ 
+ 2. There should be a gbrowse_detach_slaves.pl script that will use
+    this recorded slave instance information to terminate one or more
+    of the slaves (or all of them) and deregister them from
+    renderfarm.conf.
+
+ 3. Using /srv/gbrowse/etc/ami_map.txt to find the slave AMI is a
+    bit awkward. It means that every time we update the slave image
+    we have to fix ami_map.txt and create a new snapshot of the
+    /srv/gbrowse image. It would be better to use the tagging system
+    to mark the latest slave.
+
+ 4. Web-based interface for mounting and unmounting species data
+     volumes, and controlling the number of atached slaves.
+

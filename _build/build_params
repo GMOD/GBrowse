@@ -35,7 +35,7 @@ do{ my $x = [
                            'Net::SMTP::SSL' => 0
                          },
          'pod_files' => undef,
-         'dist_version' => '2.33',
+         'dist_version' => '2.38',
          'config_dir' => '_build',
          'sign' => undef,
          'recurse_into' => [],

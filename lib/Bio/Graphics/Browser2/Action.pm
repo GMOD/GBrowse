@@ -427,7 +427,7 @@ sub ACTION_mail_session {
      my $settings = $self->state;
      my $source = $settings->{source};
      my $id = $self->session->uploadsid;
-
+	
      # The snapshot information is embedded into the URL
      $url = "$url?id=$id&snapshot=$name&source=$source";
      $url =~ s/ /%20/g;

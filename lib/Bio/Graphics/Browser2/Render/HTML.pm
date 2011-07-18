@@ -194,9 +194,9 @@ sub render_navbar {
 
 
   # *** Creates the save session button and assigns it to save_prompt ***
-  my $saveSessionButton = div({-id=>'unsessionbutton', -style=>"position:absolute; right:67px; top: 145px; width: 100px;"},$self->render_select_saveSession());
-  my $restoreSessionButton = div({-id=>'loadbutton', -style=>"position:absolute; right:67px; top: 175px; width: 100px;"},$self->render_select_loadSession());
-  my $saveSessionStyle = "position:absolute;right:20px;top:185px;width:184px;height:50px;background:whitesmoke;z-index:1; border:2px solid gray;display:none; padding: 5px;";
+  my $saveSessionButton = div({-id=>'unsessionbutton', -style=>"width: 100px; position: relative; top:13px;"},$self->render_select_saveSession());
+  my $restoreSessionButton = div({-id=>'loadbutton', -style=>"width: 100px; position:relative; left: 130px; bottom: 12px;"},$self->render_select_loadSession());
+  my $saveSessionStyle = "position:fixed;left;width:184px;height:50px;background:whitesmoke;z-index:1; border:2px solid gray;display:none; padding: 5px;";
   my $save_prompt = div({-id => 'save_snapshot',-style=>"$saveSessionStyle"},
 			      $snapshot_form,
 				input({ -type => "button",
@@ -213,7 +213,7 @@ sub render_navbar {
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
 			   table({-border=>0,-width=>'100%'},
-				 TR(td({-width=>'50%'},$search),td($plugin_form)),
+				 TR(td({-width=>'50%'},$search),td({-width=>'28%'},$plugin_form), td($saveSessionButton . $save_prompt . $restoreSessionButton)),
 				 TR(td({-align=>'left'},
 				       $source_form,
 				    ),
@@ -222,11 +222,6 @@ sub render_navbar {
 				    ),
 				 )
 			   ),
-		
-			   # *** Makes the save session button and prompt toggle	   
-			   $saveSessionButton,
-			   $save_prompt,
-			   $restoreSessionButton,
 			   $self->html_frag('html3',$self->state)
 		       )
     )
@@ -277,9 +272,9 @@ sub snapshot_form {
 			    -style => "width:180px",
 			    -maxlength => "50",
 			    -value =>  $self->translate('SNAPSHOT_FORM'), 	 
-			    -onDblclick => "this.value='';"
-			}),
-    );
+			    -onDblclick => "this.value='';",
+			},),
+    		);
 }
 
 # Slider Form - Returns the HTML for the zooming controls with the "Flip" checkbox.

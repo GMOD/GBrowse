@@ -90,10 +90,6 @@ END
 
    DOWNLOAD         => 'Download',
 
-   DOWNLOAD_ALL     => 'Download entire dataset',
-
-   TRACK_ID         => 'Track ID=<b>%s</b>',
-
    DISPLAY_SETTINGS => 'Display Settings',
 
    TRACKS   => 'Tracks',
@@ -111,7 +107,14 @@ END
    ADDED_TO     => 'Add track to favorites',
 
 #############
+   
+   SNAPSHOT_FORM   => 'Snapshot Name',
 
+   CURRENT_SNAPSHOT => 'Current Snapshot:',
+
+   TIMESTAMP      => 'Snapshot Timestamp [GMT]',
+
+   SNAPSHOT_SELECT => 'Saved Snapshots',
 
    SELECT_TRACKS   => 'Select Tracks',
 
@@ -152,8 +155,6 @@ END
    SUBTRACK_INSTRUCTIONS   => 'Select the tracks you wish to display. Sort the tracks by clicking on the column headings, or by clicking and dragging rows into position.',
 
    SELECT_SUBTRACKS   => 'showing %d/%d subtracks',
-
-   NO_TRACK_CITATION => 'There is no additional information about this track.',
 
    EDIT       => 'Edit File...',
 
@@ -225,7 +226,9 @@ END
 
    REMOTE_TITLE => 'Add remote annotations',
 
-   IPAD_BALLOON => 'Tap features twice to see more details',
+   #ipad
+   IPAD_BALLOON => '\nTap feature again to see more details',
+   #
 
    REMOTE_URL   => 'Enter remote track URL',
 
@@ -396,7 +399,6 @@ END
 
  ADD_DESCRIPTION    => 'Click to add a description',
  ADD_TITLE          => 'Click to edit the title',
- EDIT_LABEL         => 'Click to view track. Shift or control-click to edit.',
  NO_DESCRIPTION     => 'No description',
 
  CONFIGURATION     => 'Configuration',
@@ -476,7 +478,7 @@ END
 
  DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
 
- ABOUT_THIS_TRACK   => '<b>About track <i>%s</i></b>',
+ ABOUT_THIS_TRACK   => '<b>About this track</b>',
 
  SUBTRACKS_SHOWN    => 'This track contains selectable subtracks. Click to modify the selection or change subtrack order.',
 
@@ -673,7 +675,7 @@ END
                                 '<br><br>To complete the account creation process and to log into your %s ' .
                                 'account, please type in your username and click the "Continue" button below.',
    MUST_TYPE_USERNAME        => 'You must type in your username to continue.',
-   INCORRECT_LINK            => 'The confirmation code provided is either incorrect or expired.<br> Please click continue to exit.',
+   INCORRECT_LINK            => 'The link provided is either incorrect or expired.<br> Please click continue to exit.',
    PENDING                   => 'pending',
    
    WELCOME                   => 'Welcome, %s',

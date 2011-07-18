@@ -1,0 +1,17 @@
+do{ my $x = {
+       'OpenIDConsumerSecret' => '832477134044410',
+       'config_done' => 1,
+       'registration_done' => 1,
+       'cgibin' => '/home/aelnaiem/GBrowse/cgi-bin',
+       'databases' => '/var/lib/gbrowse2/databases',
+       'wwwuser' => 'www-data',
+       'installconf' => 'y',
+       'conf' => '/etc/gbrowse2',
+       'htdocs' => '/home/aelnaiem/GBrowse/htdocs',
+       'tmp' => '/tmp/gbrowse2',
+       'portdemo' => 8000,
+       'persistent' => '/var/lib/gbrowse2',
+       'apachemodules' => '/usr/lib/apache2/modules',
+       'installetc' => 'y'
+     };
+$x; }

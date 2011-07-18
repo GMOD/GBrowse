@@ -24,6 +24,7 @@ my $build = GBrowseInstall->new(
         'ExtUtils::CBuilder'  => 0,
 	'File::Temp'          => 0,
 	'GD'                  => '2.07',
+	'Text::ParseWords'    => '3.27',
 	'IO::String'          => 0,
 	'JSON'                => 0,
 	'LWP'                 => 0,

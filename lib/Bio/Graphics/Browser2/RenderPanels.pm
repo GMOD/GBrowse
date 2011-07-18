@@ -1123,7 +1123,7 @@ sub calculate_scale_size {
     return ($guesstimate, $label);
 }
 
-sub log10 { log(shift)/log(10) }
+sub log10 { return eval {log(shift)/log(10)} || 0 }
 
 # Deprecated. This method was used to add the scale to the detail scale track. This is now done in javascript.
 sub make_scale_feature {
@@ -1463,6 +1463,8 @@ sub run_local_requests {
 		    my $track_args = $requests->{$label}->track_args;
 		    my $track      = $panel->add_track(@$track_args);
 
+		    warn "track_setup($label): ",time()-$time," seconds " if BENCHMARK;
+
 		    # == populate the tracks with feature data ==
 		    $self->add_features_to_track(
 			-labels    => [ $label, ],
@@ -1471,19 +1473,29 @@ sub run_local_requests {
 			-segment   => $segment,
 			-fsettings => $settings->{features},
 			);
-		    %trackmap = ($track=>$label);
 
+		    warn "add_features($label): ",time()-$time," seconds " if BENCHMARK;
+
+		    %trackmap = ($track=>$label);
 		}
 
 		# == generate the images and maps in background==
 		$gd     = $panel->gd;
+		warn "render gd($label): ",time()-$time," seconds " if BENCHMARK;
+
 		$titles = $panel->key_boxes;
 		foreach (@$titles) {splice (@$_,-1)}  # don't want to store all track config data to cache!
 		$self->debugging_rectangles($gd,scalar $panel->boxes)
 		    if DEBUGGING_RECTANGLES;
-		$map = $self->make_map( scalar $panel->boxes,
+		warn "render titles($label): ",time()-$time," seconds " if BENCHMARK;
+
+		my $boxes = $panel->boxes;
+		warn "boxes($label): ",time()-$time," seconds " if BENCHMARK;
+
+		$map = $self->make_map( $boxes,
 					$panel, $label,
 					\%trackmap, 0 );
+		warn "make_map($label): ",time()-$time," seconds " if BENCHMARK;
 	    }
 
 	    $requests->{$label}->put_data($gd, $map, $titles );

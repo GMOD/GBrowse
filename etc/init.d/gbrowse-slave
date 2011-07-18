@@ -20,7 +20,7 @@ USER=$WWWUSER
 PRELOAD=""
 RUNDIR=/var/run/gbrowse
 LOGDIR=/var/log/gbrowse
-PORT='8101'
+PORT='8101 8102 8103'
 VERBOSITY=1
 NICE=0
 
@@ -37,15 +37,18 @@ case "$1" in
   start)
 	echo -n "Starting $DESC: $NAME "
 	for port in $PORT; do
-	    if test -e $RUNDIR/$NAME.$port.pid ; then
+	    if [ -e $RUNDIR/$NAME.$port.pid ] && kill -0 `cat $RUNDIR/$NAME.$port.pid` >/dev/null 2>&1 ; then
 		echo "$NAME already running, use restart instead."
 	    else
                 PRELOAD_DB=""
 		if [ "$PRELOAD" != "" ]; then
                     PRELOAD_DB="--preload $PRELOAD"
 	        fi
+		if [ "$PREFORK" = "" ]; then
+                    PREFORK="1"
+                fi
 		PID="$RUNDIR/$NAME.$port.pid"
-		ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $PID $PRELOAD_DB"
+		ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --prefork $PREFORK --pid $PID $PRELOAD_DB"
 		/bin/sh -c "nice -n $NICE $DAEMON $ARGS"
 		chown $USER $PID
 		echo -n "$port "
@@ -58,13 +61,13 @@ case "$1" in
 	killed=0
 	for port in $PORT; do
 	    if test -e $RUNDIR/$NAME.$port.pid ; then
-		kill -TERM `cat $RUNDIR/$NAME.$port.pid`
+		kill -TERM `cat $RUNDIR/$NAME.$port.pid` >/dev/null 2>&1
 		killed=1
 	    fi
             echo -n "$port "
         done
 	if [ "$killed" -ne 1 ]; then
-	    ps -ef| grep $DAEMON | grep -v grep | awk '{ print $2 }' | xargs kill -TERM || true
+	    ps -ef| grep $DAEMON | grep -v grep | awk '{ print $2 }' | xargs kill -TERM >/dev/null 2>&1 || true
         fi
 	echo "."
 	;;

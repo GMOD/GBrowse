@@ -41,8 +41,8 @@ sub open_database {
 
   my @caller = caller(1);
   warn "[$$] open database @argv from @caller" if DEBUG;
-
   $db = eval {$adaptor->new(@argv)};
+
   if (!$db && $@ =~ /too many open files/) {
       warn "Too many open databases. Clearing and trying again.\n";
       warn "You may wish to adjust the CACHE_SIZE constant in Bio/Graphics/Browser2/DataBase.pm";

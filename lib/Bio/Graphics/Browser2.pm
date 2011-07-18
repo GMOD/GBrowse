@@ -2,7 +2,7 @@ package Bio::Graphics::Browser2;
 # $Id$
 # Globals and utilities for GBrowse and friends
 
-our $VERSION = '2.37';
+our $VERSION = '2.40';
 
 use strict;
 use warnings;
@@ -28,6 +28,7 @@ sub open_globals {
     my $conf_dir  = $self->config_base;
     my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
     my $path      = File::Spec->catfile($conf_dir,$conf_file);
+    die "No GBrowse configuration file at $path!" unless -r $path;
     return $self->new($path);
 }
 

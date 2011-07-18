@@ -258,7 +258,7 @@ sub render_image {
 	unlink $in,$out;
     }
     elsif ($format eq 'GD::SVG') {
-	print $self->header(-type => 'image/svg+xml',
+	print $self->header(-type => 'application/svg+xml',
 			    -content_disposition => "filename=$fname.svg");
 	print $img_data;
     } 

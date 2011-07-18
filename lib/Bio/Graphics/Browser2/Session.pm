@@ -372,18 +372,18 @@ sub config_hash {
   my $session = $self->{session};
   # *** Initialize the snapshot session data ***
   my $settings =$session->{_DATA}->{$source}->{page_settings};
-  my  $snapshotName = $settings->{current_session};
-  my $isSnapshotActive = 0;
-  my $currentSnapshot = 0;
+#  my  $snapshotName = $settings->{current_session};
+#  my $isSnapshotActive = 0;
+#  my $currentSnapshot = 0;
  # *** If there is a snapshot, activate it ***
-if ($snapshotName){
-   $currentSnapshot  = $settings->{snapshots}->{$snapshotName};
-   $isSnapshotActive = $settings->{snapshot_active};
+#if ($snapshotName){
+#   $currentSnapshot  = $settings->{snapshots}->{$snapshotName};
+#   $isSnapshotActive = $settings->{snapshot_active};
 
-}
+#}
 
 # *** Change the settings based on the active snapshot ***
-$settings = ($isSnapshotActive) ? $currentSnapshot : $settings;
+#$settings = ($isSnapshotActive) ? $currentSnapshot : $settings;
 # warn "active = $isSnapshotActive";
 
   $session->{_DATA}->{$source}->{page_settings} =  $settings;

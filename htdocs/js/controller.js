@@ -34,7 +34,6 @@ var search_form_objects_id  = 'search_form_objects';
 var userdata_table_id       = 'userdata_table_div';
 var custom_tracks_id        = 'custom_tracks';
 var community_tracks_id     = 'community_tracks';
-// Allows you to update the snapshot table asynchronously %%
 var snapshot_table_id 	    = 'snapshots_page';
 var GlobalDrag;
 
@@ -366,8 +365,11 @@ var GBrowseController = Class.create({
     // Kick-off Render Methods ****************************************
 
     update_coordinates:
-    function (action) {
-
+    function (action, snapshot) {
+	if (snapshot == null){
+		snapshot = false;
+	}
+	
         // submit search form if the detail panel doesn't exist
         if ( null == $(detail_container_id) ){
             document.searchform.force_submit.value = 1; 
@@ -395,7 +397,8 @@ var GBrowseController = Class.create({
                 action:     'navigate',  // 'action'   triggers an async call
                 navigate:   action,      // 'navigate' is an argument passed to the async routine
                 view_start: Math.round(TrackPan.get_start()),
-                view_stop:  Math.round(TrackPan.get_stop())
+                view_stop:  Math.round(TrackPan.get_stop()),
+		snapshot:   snapshot // Is true when a snapshot is being loaded, and false otherwise
             },
             onSuccess: function(transport) {
                 var results                 = transport.responseJSON;
@@ -445,8 +448,9 @@ var GBrowseController = Class.create({
     }, // end update_coordinates
 
     refresh_tracks:
-    function () {
-	Controller.update_coordinates('left 0');
+    function (snapshot) {
+	// The snapshot flag indicates that a snapshot is being loaded and refreshes the tracks accordingly
+	Controller.update_coordinates('left 0', snapshot);
     }, // end refresh_tracks
 
     scroll:
@@ -465,11 +469,11 @@ var GBrowseController = Class.create({
 
     add_tracks:
     function(track_names, onSuccessFunc, force, onTop) {
-
         if (force == null)
             force = false;
         var request_str = "action=add_tracks";
         var found_track = false;
+	track_names.reverse();
         for (var i = 0; i < track_names.length; i++) {
             var track_name = track_names[i];
 		
@@ -478,11 +482,11 @@ var GBrowseController = Class.create({
                 found_track = true;
             }
         }
-
+	//track_names.reverse();
         if (!found_track) return false;
 	
         this.busy();
-	
+
         new Ajax.Request(Controller.url, {
             method:     'post',
             parameters: request_str,
@@ -494,7 +498,9 @@ var GBrowseController = Class.create({
                 var track_keys = new Object();
                 var get_tracks = false;
 
-                for (var ret_track_id in track_data) {
+		for (var i = 0; i < track_names.length; i++) {
+                    var ret_track_id = track_names[i];	
+
                     if (Controller.gbtracks.get(ret_track_id) != null)
                         continue; //oops already know this one
 

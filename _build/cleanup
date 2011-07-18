@@ -1,8 +1,0 @@
-do{ my $x = {
-       'blib/arch/auto/Bio/Graphics/Browser2/CAlign/CAlign.so' => 1,
-       'blib/arch/auto/Bio/Graphics/Browser2/CAlign/CAlign.bs' => 1,
-       'lib/Bio/Graphics/Browser2/CAlign.o' => 1,
-       'blib' => 1,
-       'lib/Bio/Graphics/Browser2/CAlign.c' => 1
-     };
-$x; }

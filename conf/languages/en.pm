@@ -680,13 +680,8 @@ END
                                 '<br><br>To complete the account creation process and to log into your %s ' .
                                 'account, please type in your username and click the "Continue" button below.',
    MUST_TYPE_USERNAME        => 'You must type in your username to continue.',
-<<<<<<< HEAD
    INCORRECT_LINK            => 'The confirmation code provided is either incorrect or expired.<br> Please click continue to exit.',
    PENDING                   => 'pending',
-=======
-   INCORRECT_LINK            => 'The link provided is either incorrect or expired.<br> Please click continue to exit.',
->>>>>>> 21582ac
-   
    WELCOME                   => 'Welcome, %s',
    LOG_OUT_DESC              => 'Click here to log out from %s',
    LOG_OUT                   => 'Log Out',

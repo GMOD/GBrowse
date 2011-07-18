@@ -5,6 +5,7 @@ use strict;
 use base 'Bio::Graphics::Browser2::UserTracks';
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::UserDB;
+use Bio::Graphics::Browser2::SendMail;
 use DBI;
 use Digest::MD5 qw(md5_hex);
 use CGI qw(param url header());
@@ -414,7 +415,7 @@ sub email_sharee {
 							    $gbrowse_readd_link);
     $contents = CGI::unescapeHTML($contents);
     $subject = CGI::unescapeHTML($subject);
-    $userdb->do_sendmail({
+    $self->Bio::Graphics::Browser2::SendMail::do_sendmail($globals, {
 	from       => $globals->email_address,
 	from_title => $globals->application_name,
 	to         => $to_email,

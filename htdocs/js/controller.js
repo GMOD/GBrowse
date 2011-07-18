@@ -331,7 +331,7 @@ var GBrowseController = Class.create({
                 method: 'post', 
                 parameters: param,
                 onComplete:  function (transport) {
-                    Controller.update_coordinates('left 0'); // causes an elegant panel refresh
+                    Controller.refresh_tracks(); // causes an elegant panel refresh
                 } 
             }
         );
@@ -444,6 +444,11 @@ var GBrowseController = Class.create({
         }); // end Ajax.Request
     }, // end update_coordinates
 
+    refresh_tracks:
+    function () {
+	Controller.update_coordinates('left 0');
+    }, // end refresh_tracks
+
     scroll:
     function (direction,length_units) {
         if (!TrackPan.scroll(direction,length_units)) {
@@ -508,7 +513,7 @@ var GBrowseController = Class.create({
                     //Controller.append_child_from_html(html,$(panel_id),onTop);
 		    // force true - experimental
 		    Controller.append_child_from_html(html,$(panel_id),true);
-
+		
                     if (this_track_data.display_details == 0) {
                         $(ret_gbtrack.track_image_id).setOpacity(0);
                     } else {
@@ -1323,83 +1328,6 @@ show_info_message:
 	Controller.update_sections(new Array(custom_tracks_id));
   },
 
-/* %% Snapshot js:				     
-  hide_snapshot_prompt:
- function(){
-   $('save_snapshot').hide();
-
-  },
-				     
- submitWithEnter: 
-   function(e){
-     var sessionName = $('save_snapshot').value;
-     if (!e) var e = window.event;
-      if (e.keyCode) code = e.keyCode;
-      else if (e.which) code = e.which;
-      
- //key = enter?
-      if (code==13) {
-	Controller.hide_snapshot_prompt();
-	
-	Controller.saveSnapshot('snapshot_name')
-        
-        //%% reloads the entire page which is not effective
-	// document.location.reload(true);
-
-        var sections = new Array(snapshot_table_id);
-	Controller.update_sections(sections); 	
-		    } 
- },
-				     
- killSnapshot:
- function(snapshot){
-   var snapshot_row = document.getElementById(snapshot);
-  
-   snapshot_row.style.display="none";
-    new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action:    'delete_session',
-  			name: snapshot,
-
-  	          }});
-   
- },
-				     
-  saveSnapshot:
-  function(textFieldId){
-//     var settings = settings_json.evalJSON();
- var sessionName = document.getElementById(textFieldId).value;
-
- if(sessionName){
- new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action:    'save_session',
-  			name: sessionName,
-			// causing image to pop up %%
-			// svgImage: Controller.make_image_link("GD::SVG",0),			
-
-  	          }});
-		}		  
-
-  },				     		     				     				 				     
- setSnapshot:
-  function(sessionName){
-
- new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:false,
-  		  parameters: {
-  		        action: 'set_session',
-  			name: sessionName,
-  	          }});
-	
-	location.reload(true);
-  },*/
-
 });
 
 var Controller = new GBrowseController; // singleton
@@ -1436,7 +1364,7 @@ function initialize_page() {
     // when manually advancing the browser with its forward/backward buttons.
     // Unfortunately it causes an infinite loop when there are multiple regions!
     if ($(detail_container_id) != null)
-	Controller.update_coordinates('left 0');
+	Controller.refresh_tracks();
     
     // These statements get the rubberbanding running.
     Overview.prototype.initialize();

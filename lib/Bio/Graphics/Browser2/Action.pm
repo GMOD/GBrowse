@@ -8,6 +8,7 @@ use Carp qw(croak confess cluck);
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
 use Bio::Graphics::Browser2::Render::HTML;
+use Bio::Graphics::Browser2::SendMail;
 use File::Basename 'basename';
 use JSON;
 use constant DEBUG => 0;
@@ -330,17 +331,20 @@ sub ACTION_clear_favorites {
 }
 
 # *** The Snapshot actions
- 
 sub ACTION_delete_session {
     my $self = shift;
     my $q     = shift;
     my $name = $q->param('name');
    
     my $settings = $self->state;
+
+    delete($settings->{snapshot_active});
+    delete($settings->{current_session});
     my %snapshot = %{$settings};
        delete %snapshot->{snapshots}->{$name};
 
     $self->session->flush;
+
     return (204,'text/plain',undef);
 }
 
@@ -356,13 +360,15 @@ sub ACTION_save_session {
     $settings->{session_time}=$UTCtime;
     $settings->{image_url} = $imageURL;
 
+    # Creating a deep copy of the snapshot
     my %snapshot = %{dclone $settings};
-
     $settings->{snapshots}->{$name} = \%snapshot;
+    # Updating the snapshots hash
+    $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots}; 
 
     $self->session->flush;
     $self->ACTION_set_session($q);
-     #warn Dumper($settings);
+    
     return (204,'text/plain',undef);
 }
 
@@ -371,20 +377,19 @@ sub ACTION_set_session {
      my $q = shift; 
      my $name = $q->param('name');
      my $settings = $self->state;
+
      $settings->{snapshot_active} =  1;
      $settings->{current_session} = $name;
 
-
      $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots};
      $settings->{snapshots}->{$name}->{current_session} = $name;
-
      $settings->{snapshots}->{$name}->{snapshot_active} =  1;
+     # Doing a deep copy of the selected snapshot
+     $settings = dclone $settings->{snapshots}->{$name};
 
-     #warn "test = $settings->{snapshot_active}";
      $self->session->flush;
-     #warn Dumper($settings);
-     return(204,'text/plain',undef);
  
+     return(204,'text/plain',undef); 
  }
 
 sub ACTION_send_session {
@@ -392,12 +397,31 @@ sub ACTION_send_session {
      my $q = shift; 
      my $name = $q->param('name');
      my $settings = $self->state;
+     
      $Data::Dumper::Indent = 0;
      $Data::Dumper::Purity = 1;
      $Data::Dumper::Useqq = 1;
-     
+     # Storing the snapshot as a string
      my $snapshot = Dumper($settings->{snapshots}->{$name});
      return(200,'text/plain',$snapshot); 
+ }
+
+sub ACTION_down_session {
+     my $self = shift; 
+     my $q = shift; 
+     my $name = $q->param('name');
+     my $settings = $self->state;
+     
+     $Data::Dumper::Indent = 0;
+     $Data::Dumper::Purity = 1;
+     $Data::Dumper::Useqq = 1;
+     #Storing the snapshot as a string and saving it to a textfile
+     my $snapshot = Dumper($settings->{snapshots}->{$name});
+     open SNAPSHOT, ">/home/aelnaiem/Desktop/$name.txt";
+     print SNAPSHOT "$snapshot";
+     close SNAPSHOT;
+
+     return(204,'text/plain',undef); 
  }
 
 sub ACTION_load_session {
@@ -405,22 +429,82 @@ sub ACTION_load_session {
      my $q = shift; 
      my $name = $q->param('name');
      my $snapshot_data = $q->param('snapshot');
-
+     # The snapshot hash is created and saved to the session
      my $snap = eval "my $snapshot_data";
  
      my $settings = $self->state;
+     my $userid = $settings->{userid};
 
      my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
-     $snap->{session_time}=$UTCtime;
+     $snap->{session_time} = $UTCtime;
+     $snap->{userid} = $userid;
      
-     #warn Dumper($snap);	
-     #warn Dumper($settings);
      $settings->{snapshots}->{$name} = $snap;
+     $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots}; 
  
-     #warn Dumper($settings);
      $self->session->flush;
      return(204,'text/plain',undef); 
  }
+
+sub ACTION_mail_session {
+     my $self = shift; 
+     my $q = shift; 
+     my $name = $q->param('name');
+     my $to_email = $q->param('email');
+     my $url = $q->param('url');
+
+     my $settings = $self->state;
+     my $userid = $settings->{userid};
+     my $source = $settings->{source};
+     # The snapshot information is embedded into the URL
+     $url = "$url?source=$source&session=$userid&snapshot=$name;";
+     
+     my $globals = $self->render->globals;
+
+     my $subject = "Genome Browser Snapshot: $name";
+     my $contents = "Please follow this link to load the GBrowse snapshot: $url"; 
+ 
+     # An email is sent containing the snapshot information
+     $self->Bio::Graphics::Browser2::SendMail::do_sendmail($globals, {
+	from       => $globals->email_address,
+	from_title => $globals->application_name,
+	to         => $to_email,
+	subject    => $subject,
+	msg        => $contents});
+ 
+     $self->session->flush;
+     return(204,'text/plain',undef); 
+ }
+
+sub ACTION_load_url {
+     my $self = shift; 
+     my $q = shift; 
+     my $source = $q->param('browser_source');
+     my $name = $q->param('name');
+     my $from_userid = $q->param('userid');
+
+     my $settings = $self->state;
+     my $userid = $settings->{userid};
+     
+     # The snapshot is loaded from the global variable
+     my $globals = $self->render->globals;
+     my $session = $globals->session($from_userid);
+     my $snapshot = $session->{session}->{_DATA}->{$source}->{page_settings}->{'snapshots'}->{$name};
+     
+     my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
+     $snapshot->{session_time} = $UTCtime;
+
+     $snapshot->{userid} = $userid;
+     # The snapshot is saved after updates to some of the information have been made
+     $settings->{snapshots}->{$name} = $snapshot;
+     $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots}; 
+
+     $self->session->flush;
+
+     return(204,'text/plain',undef); 
+ }
+
+# END snapshot section
 
 sub ACTION_reconfigure_plugin {
     my $self   = shift;

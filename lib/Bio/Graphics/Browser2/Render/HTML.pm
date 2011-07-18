@@ -5,6 +5,7 @@ use warnings;
 use base 'Bio::Graphics::Browser2::Render';
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Browser2::SubtrackTable;
+use Bio::Graphics::Browser2::Render::SnapshotManager;
 use Bio::Graphics::Karyotype;
 use Bio::Graphics::Browser2::Render::TrackConfig;
 use Bio::Graphics::Browser2::Util qw[citation url_label segment_str];
@@ -495,7 +496,7 @@ sub render_html_head {
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
   my $other_actions   = join ';',@other_initialization;
   # *** Usings the Sortable commands from script.aculo.us and prototype for snapshots table ***
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions;Sortable.create('snapshotTable',{tag:'div',only:'draggable'});");
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions;Sortable.create('snapshotTable',{tag:'div',only:'draggable'});Controller.checkSnapshot()");
 
   return start_html(@args);
 }
@@ -1194,7 +1195,8 @@ sub render_saved_snapshots_section {
     my $self = shift;
     my $userdata = $self->user_tracks;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
-	$html .= div({-id => "snapshots_page"}, $self->render_saved_snapshots_listing);
+# Snapshot page rendering is done in the snapshotmanager.pm file
+	$html .= div({-id => "snapshots_page"}, $self->Bio::Graphics::Browser2::Render::SnapshotManager::render_saved_snapshots_listing);
 	$html = div({-style => 'margin: 1em;'}, $html);
 	return $html;
 }
@@ -1255,11 +1257,13 @@ sub render_saved_snapshots_listing{
  my $deleteSnapshotPath = "$buttons/snap_ex.png";
  my $setSnapshotPath    = "$buttons/snap_check.png";
  my $sendSnapshotPath	= "$buttons/snap_send.png";
+ my $downSnapshotPath	= "$buttons/snap_down.png";
+ my $mailSnapshotPath 	= "$buttons/snap_mail.png";
  my $nameHeading = $self->translate('SNAPSHOT_FORM');
  my $timeStampHeading = $self->translate('TIMESTAMP');
  my $escapedKey;
 
-#  $settings->{snapshot_active}= 0;
+#  creating the snapshot banner with the load and upload sections
  my $html = div({-id => "Snapshot_banner",},
 	    h2({-style => "position:relative;display: inline-block; margin-right: 1em;"}, $self->translate('SNAPSHOT_SELECT')),
 	    input({-type => "button", -name => "LoadSnapshot", -value => "Load Snapshot", -onclick => '$(\'load_snapshot\').show()',}),
@@ -1282,7 +1286,10 @@ sub render_saved_snapshots_listing{
 						-value => "Cancel",
 						-onclick => '$(\'load_snapshot\').hide()',}),
 							    ),
-		),		
+		),
+	    start_form({-enctype => "multipart/form", -method=>"post", -action=>"gbrowse_upload.pl",}),	
+	    	input({-type => "file", -name => "UpSnapshot", -value => "Upload Snapshot", -accept => "text/plain",}),
+	    	input({-type => "submit", -name => "UploadSnapshot", -value => "Upload Snapshot",}),end_form(),	 	
 		);
 
 $html .= div({-id=>'headingRow',-style=>"height:30px;width:501px;background-color:#F0E68C"},
@@ -1298,6 +1305,7 @@ $html.= qq(<div id = "snapshotTable">);
     $escapedKey = $keys;
     $escapedKey =~ s/(['"])/\\$1/g;
     warn "time = $timeStamp" if DEBUG;
+# Creating the snapshots table with all the snapshot features
 if($keys ne " " || ""){
  $html 	  .=  
 
@@ -1330,6 +1338,22 @@ if($keys ne " " || ""){
 						  },
 						    )
 						      ),
+		 span({-id=>"down_${keys}"},  img({   -src         => $downSnapshotPath, 
+						      -id          => "down",
+						      -onClick     => "Controller.downSnapshot('$escapedKey')",
+						      -style       => 'cursor:pointer;margin-top:10px',
+				
+						  },
+						    )
+						      ),
+		 span({-id=>"mail_${keys}"},  img({   -src         => $mailSnapshotPath, 
+						      -id          => "mail",
+						      -onClick     => '$(\'' . "mail_snapshot_${keys}" . '\').show()',
+						      -style       => 'cursor:pointer;margin-top:10px',
+				
+						  },
+						    )
+						      ),
 
 		 div(
 			{-id	=>"send_snapshot_${keys}",
@@ -1344,9 +1368,31 @@ if($keys ne " " || ""){
 				input({ -type => "button",
 					-name => "OK",
 					-value => "OK",
-					-onclick => "Controller.hideSendSnapshot('$escapedKey'); this.style.zIndex = \'0\'",}),
+					-onclick => '$(\'' . "send_snapshot_${keys}" . '\').hide(); this.style.zIndex = \'0\'',}),
 						    ),
 						      ),
+
+		 div(
+			{-id	=>"mail_snapshot_${keys}",
+			 -class =>"mail_snapshot",
+			 -style	=> 'background-color:whiteSmoke; border-width:2px; border-style:solid; border-color:gray; position:absolute;left:200px; width:420px; z-index:1000000; display:none; padding:5px;'},  
+			 div(
+				{-id => "mail_snapshot_contents",
+				 -style       => 'color:black; font-family:sans-serif; font-size: 11pt; 				margin-top:5px;overflow-x: auto; overflow-y: auto;',},
+				h1({-id => "mail_snap_header_${keys}",},"Mail Snapshot: ${keys}"),
+				p({-id => "mail_snap_message_${keys}",}, "Enter the email of the person you wish to send the snapshot to: ",),
+				input({-type => "text", -id => "email_${keys}", -style => 'width:280px; border-color:gray;',},"",),
+				input({ -type => "button",
+					-name => "Mail",
+					-value => "Send",
+					-onclick => "Controller.mailSnapshot('$escapedKey')",}),
+				input({ -type => "button",
+					-name => "Cancel",
+					-value => "Cancel",
+					-onclick => '$(\'' . "mail_snapshot_${keys}" . '\').hide(); this.style.zIndex = \'0\'',}),
+						    ),
+						      ),
+
 
 		 span({-style=>"width:230px;"},
 		 span({-class => "snapshot_names", -style=>"margin-top:10px; margin-left: 10px;"}, $keys)),

@@ -50,7 +50,6 @@ sub new {
 
 	$self->session_argv($driver,$id,$session_args);
 	$self->{session} = $self->lock_ex($id);
-
 	warn "CGI::Session->new($driver,$id,$session_args)=>",$self->{session}->id if DEBUG;
 
 	# never expire private (authenticated) sessions

@@ -685,15 +685,17 @@ sub wrap_rendered_track {
 
     my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
 
+    # The labels are now grouped so that a legend can be made for overlapping data sets.	
     my $subtrack_labels = join '',map {
 	my ($label,$left,$top) = @$_;
-	div({-class=>'subtrack',-style=>"top:${top}px;left:20px;background-color:white"},$label);
+	div({-class=>'subtrack',-style=>"position:relative; display:inline-block; margin-left: 20px;"},$label);
     } @$titles;
 
+    my $subtrack_container = div({-class=>'subtrack_group', -style=>"position:absolute; top:15px; left:40px;background-color:white;"}, $subtrack_labels);
     my $html = div({-class=>'centered_block',
 		 -style=>"position:relative;overflow:hidden"
 		},
-         ($show_titlebar ? $titlebar : '' ) . $popmenu .  $subtrack_labels . $inner_div . $overlay_div ) . ( $map_html || '' );
+         ($show_titlebar ? $titlebar : '' ) . $popmenu .  $subtrack_container . $inner_div . $overlay_div ) . ( $map_html || '' );
     return $html;
 }
 

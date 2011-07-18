@@ -530,7 +530,7 @@ var GBrowseController = Class.create({
                 if( get_tracks)
                     Controller.get_multiple_tracks(track_keys);
                 else
-                    Controller.idle();
+                    Controller.idle();;
             }
         });
         return true;
@@ -703,6 +703,7 @@ var GBrowseController = Class.create({
                         Controller.get_remaining_tracks(track_keys,time_out*decay,decay,time_key)
                     } ,time_out);
                 } else {
+		    Controller.linkTrackLegend();
                     Controller.idle();
                 }
             } // end onSuccess

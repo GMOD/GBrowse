@@ -35,7 +35,7 @@ IMG.trackimg      {
 	      }
 .subtrack {
     z-index:11;
-    position:absolute;
+    /*position:absolute; Changed by Ahmed Elnaiem to allow for legends on overlapped xyplots*/
     font-weight:bold;
     font-size: 9pt;
 }

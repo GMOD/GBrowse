@@ -47,6 +47,8 @@ sub render_top {
     $features ||= [];
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
+	# ***Render the snapshot title***
+    $html   .=  $self->render_snapshotTitle;
     $html   .=  $self->html_frag('html1',$self->state);
     return  $err
 	  . $self->toggle({nodiv=>1},'banner','',$html);
@@ -91,7 +93,8 @@ sub render_login_required {
 # Render Tabbed Pages - Returns the HTML containing the tabs & the page DIVs to hold the content.
 sub render_tabbed_pages {
     my $self = shift;
-    my ($main_html,$tracks_html,$community_tracks_html,$custom_tracks_html,$settings_html,) = @_;
+	# ***Add the title for the snapshots***
+    my ($main_html,$tracks_html,$community_tracks_html,$custom_tracks_html,$settings_html,$snapshot_html) = @_;
     my $uses_database = $self->user_tracks->database;
     
     my $main_title             = $self->translate('MAIN_PAGE');
@@ -99,8 +102,10 @@ sub render_tabbed_pages {
     my $community_tracks_title = $self->translate('COMMUNITY_TRACKS_PAGE') if $uses_database;
     my $custom_tracks_title    = $self->translate('CUSTOM_TRACKS_PAGE');
     my $settings_title         = $self->translate('SETTINGS_PAGE');
-
+	# *** Snapshot title ***
+    my $snapshot_title	       = $self->translate('SNAPSHOT_SELECT');
     my $html = '';
+	
     $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
 	           div({-id=>'tabbed_menu',-class=>'tabmenu'},
 	           span({id=>'main_page_select'},               $main_title),
@@ -108,13 +113,19 @@ sub render_tabbed_pages {
 	           $uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
 	           span({id=>'custom_tracks_page_select'},      $custom_tracks_title),
 	           span({id=>'settings_page_select'},           $settings_title),
+				# *** Snapshot span ***
+		       span({id=>'saved_snapshots_page_select'},           $snapshot_title),
 	       ),
 	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
 	   div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
 	   $uses_database?div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html) : "",
 	   div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
 	   div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),
+		# *** Snapshot div ***
+
+	   div({-id=>'saved_snapshots_page',       -class=>'tabbody'}, $snapshot_html),
 	);
+	
     return $html;
 }
 
@@ -157,7 +168,8 @@ sub render_navbar {
 
   my $settings = $self->state;
   my $source   = '/'.$self->session->source.'/';
-
+  # *** Added button to close the snapshot div ***
+  my $close = $self->translate('CLOSE');
   my $searchform = join '',(
       start_form(
 	  -name   => 'searchform',
@@ -176,10 +188,23 @@ sub render_navbar {
                ? '' : b($self->translate('Landmark')).':'.br().$searchform.$self->examples();
 
   my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
-
+  # *** Checks the state to see if a snapshot is active and assigns it ***
+  my $isSnapshotActive = $settings->{snapshot_active};
   my $source_form = div({-id=>'source_form'},$self->source_form());
-
+  # *** Creates a variable to store the snapshot form ***
+  my $snapshot_form = div({-id=>'snapshot_form'},$self->snapshot_form());
   my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
+
+
+# *** Creates the save session button and assigns it to save_prompt ***
+my $saveSessionButton = div({-id=>'unsessionbutton', -style=>"position:absolute; right:67px; top: 160px"},$self->render_select_saveSession());
+my $saveSessionStyle = "position:absolute;right:20px;top:185px;width:200px;height:45px;background-color:#B4CDCD;z-index:1; border-style:solid;display:none;";
+my $save_prompt = div({-id => 'save_snapshot',-style=>"$saveSessionStyle"},
+			      $snapshot_form,
+			a({-href=>'#', -onClick=>"Controller.hide_snapshot_prompt()", -style=>"position:relative;top:2px"},$close)
+					  );
+
+
 
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
@@ -193,6 +218,10 @@ sub render_navbar {
 				    ),
 				 )
 			   ),
+		
+			   # *** Makes the save session button and prompt toggle	   
+			   $saveSessionButton,
+			   $save_prompt,
 			   $self->html_frag('html3',$self->state)
 		       )
     )
@@ -227,6 +256,23 @@ sub source_form {
 		   -onSubmit=>''),
 	$self->source_menu(),
 	end_form
+    );
+}
+
+# *** Create the snapshot_form ***
+sub snapshot_form {
+    my $self = shift;
+    # %% Adding form %%
+		div({
+		    -id=>'snapshot_form',},
+		    input({
+			    -type => "text",
+			    -name => "snapshot_name",
+			    -id => "snapshot_name",
+			    -onKeyPress=>"Controller.submitWithEnter(event);",
+			    -style => "width:180px",
+			    -value =>  $self->translate('SNAPSHOT_FORM'), 	 
+			    -onClick => "this.value='';"}),
     );
 }
 
@@ -292,7 +338,13 @@ sub render_html_head {
   my ($dsn,$title,@other_initialization) = @_;
   my @plugin_list = $self->plugins->plugins;
   my $uses_database = $self->user_tracks->database;
-  
+  # *** Store the snapshot session information in variables ***
+  my $settings = $self->state;
+  my $snapshotSessions = $settings->{snapshots};
+  my @snapshotNames = keys %$snapshotSessions;
+  my $snapshotsString = join(',',@snapshotNames);
+
+
   return if $self->{started_html}++;
 
   $title =~ s/<[^>]+>//g; # no markup in the head
@@ -348,8 +400,11 @@ sub render_html_head {
 
   # our own javascript files
   push @scripts,{src=>"$js/$_"}
+ # *** Using toggle.js for snapshots *** 
+ #*** Using SnapshotManager for snapshots ***
     foreach qw(
-      buttons.js 
+      buttons.js
+      toggle.js
       trackFavorites.js
       karyotype.js
       rubber.js
@@ -365,7 +420,8 @@ sub render_html_head {
       track_configure.js
       track_pan.js
       ruler.js
-      controller.js
+      controller.js 
+      snapshotManager.js
     );
 
   # add scripts needed by plugins. Looks in /js folder unless specified.
@@ -438,7 +494,8 @@ sub render_html_head {
 
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
   my $other_actions   = join ';',@other_initialization;
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
+  # *** Usings the Sortable commands from script.aculo.us and prototype for snapshots table ***
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions;Sortable.create('snapshotTable',{tag:'div',only:'draggable'});");
 
   return start_html(@args);
 }
@@ -617,6 +674,19 @@ sub render_title {
     return $settings->{head}
         ? h1({-id=>'page_title',-class=>$error ? 'error' : 'normal'},$title)
 	: '';
+}
+
+# *** Function to render the snapshot title ***
+sub render_snapshotTitle {
+    my $self  = shift;
+    my $error = shift;
+    my $currentSnapshot = $self->translate('CURRENT_SNAPSHOT');
+    my $settings = $self->state;
+    my $title = ($settings->{snapshot_active}) ? $settings->{current_session} : " ";
+  if ($settings->{snapshot_active}){
+     return h1({-id=>'snapshot_page_title',-class=>'normal'},"Current Snapshot : $title");
+      }else{
+      return h1({-id=>'snapshot_page_title',-class=>'normal', -style=>'display: none;'},"Current Snapshot : $title");}
 }
 
 # Renders the search & navigation instructions & examples.
@@ -1054,6 +1124,21 @@ sub render_select_clear_link {
 		 $title),$showicon);
 }
 
+# *** Render the save session button ***
+sub render_select_saveSession {
+my $self = shift;
+my $title = 'Save Session';
+
+ return button({-name=>$title,
+		           -onClick => "Effect.Appear('save_snapshot');",
+ 
+# 			   
+# 		   "Controller.update_section('range');"
+		          },
+	   
+	        );
+}
+
 sub render_select_favorites_link {
     my $self  = shift;
 
@@ -1104,6 +1189,18 @@ sub render_community_tracks_section {
 	return $html;
 }
 
+# *** Render select snapshots. ****
+sub render_saved_snapshots_section {
+    my $self = shift;
+    my $userdata = $self->user_tracks;
+    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
+	$html .= div({-id => "snapshots_page"}, $self->render_saved_snapshots_listing);
+	$html = div({-style => 'margin: 1em;'}, $html);
+	return $html;
+}
+
+
+
 # Render Custom Tracks Section - Returns the content of the "Custom Tracks" tab.
 sub render_custom_tracks_section {
     my $self = shift;
@@ -1140,6 +1237,131 @@ sub userdata_upload {
 			 },"[$from_file]"));
 	$html       .= div({-id=>'custom_list_start'},'');
     return $html;
+}
+
+
+# *** Render saved snapshots listing ***
+sub render_saved_snapshots_listing{
+ my $self = shift; 
+ my $settings = $self->state;
+ my $snapshots = $settings->{snapshots};
+ my @snapshot_keys =  keys %$snapshots;
+ my @sortedSnapshots = sort @snapshot_keys;
+ my $imageURL;
+ my $base;
+ my $s;
+ my $timeStamp;
+ my $buttons = $self->data_source->globals->button_url;
+ my $deleteSnapshotPath = "$buttons/snap_ex.png";
+ my $setSnapshotPath    = "$buttons/snap_check.png";
+ my $sendSnapshotPath	= "$buttons/snap_send.png";
+ my $nameHeading = $self->translate('SNAPSHOT_FORM');
+ my $timeStampHeading = $self->translate('TIMESTAMP');
+ my $escapedKey;
+
+#  $settings->{snapshot_active}= 0;
+ my $html = div({-id => "Snapshot_banner",},
+	    h2({-style => "position:relative;display: inline-block; margin-right: 1em;"}, $self->translate('SNAPSHOT_SELECT')),
+	    input({-type => "button", -name => "LoadSnapshot", -value => "Load Snapshot", -onclick => '$(\'load_snapshot\').show()',}),
+	    div(
+		{-id	=>"load_snapshot",
+		 -style	=> 'background-color:whiteSmoke; border-width:2px; border-style:solid; border-color:gray; position:absolute;left:200px; width:620px; z-index:1000000; display:none; padding:5px;'},  
+			div(
+				{-id => "load_snapshot_contents",
+				 -style => 'color:black; font-family:sans-serif; font-size: 11pt; 				margin-top:5px;overflow-x: auto; overflow-y: auto;',},
+					h1({-id => "load_snapshot_header",},"Load Snapshot"),
+					p({-id => "load_snapshot_message",}, "Provide a name and insert the code for the snapshot to be loaded below:",
+					  input({-type => "text", -id => "load_snapshot_name", -value =>"Snapshot Name", -style => 'margin:10px; margin-left:0px;', -onclick => 'this.value = \'\'',},),
+					  textarea({-id => "load_snapshot_code", -style => 'width:605px; height:120px; padding:5px; border-color:gray;',},"",),),
+					input({ -type => "button",
+						-name => "Load",
+						-value => "Load",
+						-onclick => 'Controller.loadSnapshot()',}),
+					input({ -type => "button",
+						-name => "Cancel",
+						-value => "Cancel",
+						-onclick => '$(\'load_snapshot\').hide()',}),
+							    ),
+		),		
+		);
+
+$html .= div({-id=>'headingRow',-style=>"height:30px;width:501px;background-color:#F0E68C"},
+	 h1({-style => "position:relative; left:3em; margin-right: 1em; width:180px"},$nameHeading),
+	 h1({-style => " position:relative; left:235px;bottom:30px;margin-right: 1em;"},$timeStampHeading),
+	      );
+$html.= qq(<div id = "snapshotTable">);
+ for my $keys(@sortedSnapshots) { 
+  if($keys){
+    $timeStamp = $snapshots->{$keys}->{session_time};
+    $imageURL = $snapshots->{$keys}->{image_url};
+    ($base,$s) = $self->globals->gbrowse_base;
+    $escapedKey = $keys;
+    $escapedKey =~ s/(['"])/\\$1/g;
+    warn "time = $timeStamp" if DEBUG;
+if($keys ne " " || ""){
+ $html 	  .=  
+
+
+	      div({ 
+ 		    -class=>"draggable",
+		    -id=>$keys || 'snapshotname',
+		    -style=> "padding-left:1em;width:485px;height:35px;border-style:solid;border-width:1px;border-color:#F0E68C; background-color:#FFF8DC; cursor: move;font-size:14px;position:relative;"},
+		  span({-id=>"set_${keys}"},  img({   -src         => $setSnapshotPath, 
+						      -id          => "set",
+						      -onClick     =>  "Controller.setSnapshot('$escapedKey')",
+						      -style       => 'cursor:pointer;margin-top:10px',
+				
+						  },
+						    )
+						      ),
+		 span({-id=>"kill_${keys}"},  img({   -src         => $deleteSnapshotPath, 
+						      -id          => "kill",
+						      -onClick     =>  "Controller.killSnapshot('$escapedKey')",
+						      -style       => 'cursor:pointer;margin-top:10px',
+				
+						  },
+						    )
+						      ),
+		 span({-id=>"send_${keys}"},  img({   -src         => $sendSnapshotPath, 
+						      -id          => "send",
+						      -onClick     =>  "Controller.sendSnapshot('$escapedKey')",
+						      -style       => 'cursor:pointer;margin-top:10px',
+				
+						  },
+						    )
+						      ),
+
+		 div(
+			{-id	=>"send_snapshot_${keys}",
+			 -class =>"send_snapshot",
+			 -style	=> 'background-color:whiteSmoke; border-width:2px; border-style:solid; border-color:gray; position:absolute;left:200px; width:620px; z-index:1000000; display:none; padding:5px;'},  
+			 div(
+				{-id => "send_snapshot_contents",
+				 -style       => 'color:black; font-family:sans-serif; font-size: 11pt; 				margin-top:5px;overflow-x: auto; overflow-y: auto;',},
+				h1({-id => "snapshot_header_${keys}",},"Send Snapshot: ${keys}"),
+				p({-id => "snapshot_message_${keys}",}, "To send this snapshot, use the following: ",),
+				textarea({-id => "send_snapshot_url_${keys}", -style => 'width:605px; height:120px; padding:5px; border-color:gray;',},"",),
+				input({ -type => "button",
+					-name => "OK",
+					-value => "OK",
+					-onclick => "Controller.hideSendSnapshot('$escapedKey'); this.style.zIndex = \'0\'",}),
+						    ),
+						      ),
+
+		 span({-style=>"width:230px;"},
+		 span({-class => "snapshot_names", -style=>"margin-top:10px; margin-left: 10px;"}, $keys)),
+		 span({-class => "timestamps",-style=>"width:230px;position:absolute;left:235px;bottom:7px;margin-top:10px;font-size:14px"},$timeStamp,
+				  img({-src => $imageURL, -width=>"50",-height=>"30", -style=>"position:absolute;left:180px;top:-8px;", 
+-onmouseover => 'this.style.width=\'650px\'; this.style.height=\'auto\'; this.style.zIndex=\'1000\';',
+-onmouseout => 'this.style.width=\'50px\'; this.style.height=\'30px\'; this.style.zIndex=\'0\';'},),) ),
+		  
+			   }
+
+			      }
+				     }
+
+$html 	  .=  qq(</div>);
+ return $html;
 }
 
 # Render Community Track Listing - Returns the HTML listing of public tracks available to a user.

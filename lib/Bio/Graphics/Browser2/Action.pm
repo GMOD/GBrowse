@@ -7,10 +7,14 @@ use strict;
 use Carp qw(croak confess cluck);
 use CGI();
 use Bio::Graphics::Browser2::TrackDumper;
+use Bio::Graphics::Browser2::Render::HTML;
 use File::Basename 'basename';
 use JSON;
 use constant DEBUG => 0;
 use Data::Dumper;
+use Storable qw(dclone);;
+use POSIX;
+
 
 sub new {
     my $class  = shift;
@@ -129,6 +133,7 @@ sub ACTION_update_sections {
 
     my $return_object = { section_html => $section_html, };
     $self->session->flush;
+
     return ( 200, 'application/json', $return_object );
 }
 
@@ -324,7 +329,98 @@ sub ACTION_clear_favorites {
     return (204,'text/plain',undef);
 }
 
+# *** The Snapshot actions
+ 
+sub ACTION_delete_session {
+    my $self = shift;
+    my $q     = shift;
+    my $name = $q->param('name');
+   
+    my $settings = $self->state;
+    my %snapshot = %{$settings};
+       delete %snapshot->{snapshots}->{$name};
 
+    $self->session->flush;
+    return (204,'text/plain',undef);
+}
+
+sub ACTION_save_session {
+    my $self = shift;
+    my $q     = shift;
+    my $name = $q->param('name');
+
+    my $settings = $self->state;
+    my $imageURL = $self->render->image_link($settings);
+
+     my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
+    $settings->{session_time}=$UTCtime;
+    $settings->{image_url} = $imageURL;
+
+    my %snapshot = %{dclone $settings};
+
+    $settings->{snapshots}->{$name} = \%snapshot;
+
+    $self->session->flush;
+    $self->ACTION_set_session($q);
+     #warn Dumper($settings);
+    return (204,'text/plain',undef);
+}
+
+sub ACTION_set_session {
+     my $self = shift; 
+     my $q = shift; 
+     my $name = $q->param('name');
+     my $settings = $self->state;
+     $settings->{snapshot_active} =  1;
+     $settings->{current_session} = $name;
+
+
+     $settings->{snapshots}->{$name}->{snapshots} = $settings->{snapshots};
+     $settings->{snapshots}->{$name}->{current_session} = $name;
+
+     $settings->{snapshots}->{$name}->{snapshot_active} =  1;
+
+     #warn "test = $settings->{snapshot_active}";
+     $self->session->flush;
+     #warn Dumper($settings);
+     return(204,'text/plain',undef);
+ 
+ }
+
+sub ACTION_send_session {
+     my $self = shift; 
+     my $q = shift; 
+     my $name = $q->param('name');
+     my $settings = $self->state;
+     $Data::Dumper::Indent = 0;
+     $Data::Dumper::Purity = 1;
+     $Data::Dumper::Useqq = 1;
+     
+     my $snapshot = Dumper($settings->{snapshots}->{$name});
+     return(200,'text/plain',$snapshot); 
+ }
+
+sub ACTION_load_session {
+     my $self = shift; 
+     my $q = shift; 
+     my $name = $q->param('name');
+     my $snapshot_data = $q->param('snapshot');
+
+     my $snap = eval "my $snapshot_data";
+ 
+     my $settings = $self->state;
+
+     my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
+     $snap->{session_time}=$UTCtime;
+     
+     #warn Dumper($snap);	
+     #warn Dumper($settings);
+     $settings->{snapshots}->{$name} = $snap;
+ 
+     #warn Dumper($settings);
+     $self->session->flush;
+     return(204,'text/plain',undef); 
+ }
 
 sub ACTION_reconfigure_plugin {
     my $self   = shift;
@@ -640,7 +736,7 @@ sub ACTION_delete_upload {
     foreach (@tracks) {
 	my (undef,@db_args) = $self->data_source->db_settings($_);
 	Bio::Graphics::Browser2::DataBase->delete_database(@db_args);
-	$render->remove_track_from_state($_);
+	$render->remove_track_frdata__state($_);
     }
     $usertracks->delete_file($file);
     $self->render->data_source->clear_cached_config;

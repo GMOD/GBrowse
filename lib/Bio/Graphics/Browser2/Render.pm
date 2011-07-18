@@ -565,8 +565,9 @@ sub add_tracks {
     }
 
     $self->init_remote_sources if $remote;
-    
+	
     if ($segment) {
+
 	foreach my $track_name ( @$track_names ) {
 
 	    my @track_ids = $self->expand_track_names($track_name);
@@ -845,8 +846,10 @@ sub render_body {
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;
   my $global_config = $self->render_global_config;
+  # *** Initialize the snapshot change ***
+  my $saved_snapshots = $self->render_saved_snapshots_section;
 
-  $output .= $self->render_tabbed_pages($main_page,$tracks,$community,$custom,$global_config);
+  $output .= $self->render_tabbed_pages($main_page,$tracks,$community,$custom,$global_config, $saved_snapshots);
   $output .= $self->login_manager->render_confirm;
   $output .= $self->render_bottom($features);
 
@@ -2639,6 +2642,12 @@ sub asynchronous_update_sections {
 	$return_object->{'community_tracks'} = $self->render_community_track_listing(@_); #Passing on any search terms.
     }
 
+    # Saved Snapshot Section
+    if ( $handle_section_name{'snapshots_page'}) {
+	$return_object->{'snapshots_page'} = $self->render_saved_snapshots_listing();
+	#$return_object->{'snapshots_page'} = $self->render_snapshotTitle();
+    }
+
     # Handle Remaining and Undefined Sections
     foreach my $section_name ( keys %handle_section_name ) {
         next if ( defined $return_object->{$section_name} );
@@ -3930,6 +3939,7 @@ sub image_link {
     $img_url    .= ";keystyle=$keystyle" if $keystyle;
     $img_url    .= ";grid=$grid";
     $self->add_hilites($settings,\$img_url);
+
     return $img_url
 }
 

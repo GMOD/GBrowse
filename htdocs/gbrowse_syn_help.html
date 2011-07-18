@@ -14,9 +14,9 @@ The oryza data source contains genome annotations in GFF3 flat files
 for two rice species and blastz-derived whole genome aligment data between
  the two species.
 <ul>
-<li>$HTDOCS/databases/gbrowse_syn/rice/rice.gff3
-<li>$HTDOCS/databases/gbrowse_syn/wild_rice/wild_rice.gff3
-<li>$HTDOCS/databases/gbrowse_syn/alignments/rice.aln
+<li>/var/www/gbrowse2/databases/gbrowse_syn/rice/rice.gff3
+<li>/var/www/gbrowse2/databases/gbrowse_syn/wild_rice/wild_rice.gff3
+<li>/var/www/gbrowse2/databases/gbrowse_syn/alignments/rice.aln
 </ul>
 
 
@@ -27,9 +27,9 @@ Configuration files for the two species can be found at the locations
  species. They are already set up to use the in-memory adapter and the GFF3 flat files listed
  above.
 <ul>
-<li>$CONF/synteny/oryza.synconf.disabled</li>
-<li>$CONF/synteny/rice_synteny.conf</li>
-<li>$CONF/synteny/wild_rice_synteny.conf</li>
+<li>/etc/gbrowse2/synteny/oryza.synconf.disabled</li>
+<li>/etc/gbrowse2/synteny/rice_synteny.conf</li>
+<li>/etc/gbrowse2/synteny/wild_rice_synteny.conf</li>
 </ul>
 
 <h2>Activate the Example Data Source</h2>
@@ -54,7 +54,7 @@ Bye
  CLUSTALW-formated alignment file above into the database.
 
 <pre>
-$ cd $HTDOCS/databases/gbrowse_syn/alignments
+$ cd /var/www/gbrowse2/databases/gbrowse_syn/alignments
 $ sudo gunzip rice.aln.gz
 $ gbrowse_syn_load_alignments_msa.pl -u user -p pass -d rice_synteny -c -v rice.aln
 </pre>
@@ -64,10 +64,10 @@ $ gbrowse_syn_load_alignments_msa.pl -u user -p pass -d rice_synteny -c -v rice.
 
 <pre>
 # as a sudoer
-$ sudo mv $CONF/synteny/oryza.synconf.disabled $CONF/synteny/oryza.synconf
+$ sudo mv /etc/gbrowse2/synteny/oryza.synconf.disabled /etc/gbrowse2/synteny/oryza.synconf
 
 # or as root
-% mv $CONF/synteny/oryza.synconf.disabled $CONF/synteny/oryza.synconf
+% mv /etc/gbrowse2/synteny/oryza.synconf.disabled /etc/gbrowse2/synteny/oryza.synconf
 </pre>
 
 <h1> Advanced (optional) </h1>
@@ -99,13 +99,13 @@ Query OK, 0 rows affected (0.00 sec)
 
 <b>Note the mySQL user will need CREATE and INSERT privileges.</b>
 <pre>
-$ bp_seqfeature_load.pl -u user -p pass -d rice -c -f $HTDOCS/$GBROWSE_ROOT/databases/gbrowse_syn/rice/rice.gff3
+$ bp_seqfeature_load.pl -u user -p pass -d rice -c -f /var/www/gbrowse2/$GBROWSE_ROOT/databases/gbrowse_syn/rice/rice.gff3
 loading /var/www/html/gbrowse/databases/gbrowse_syn/rice/rice.gff3...
 Building object tree... 1.05s7s
 Loading bulk data into database... 0.67s
 load time: 31.40s
 
-$ bp_seqfeature_load.pl -u user -p pass -d wild_rice -c -f $HTDOCS/$GBROWSE_ROOT/databases/gbrowse_syn/wild_rice/wild_rice.gff3
+$ bp_seqfeature_load.pl -u user -p pass -d wild_rice -c -f /var/www/gbrowse2/$GBROWSE_ROOT/databases/gbrowse_syn/wild_rice/wild_rice.gff3
 loading /var/www/html/gbrowse/databases/gbrowse_syn/wild_rice/wild_rice.gff3...
 Building object tree... 1.15s9s
 Loading bulk data into database... 0.69s
@@ -121,13 +121,13 @@ changing the dsn argumant as required for each data source.
 
 <b>Note the mySQL user will need CREATE and INSERT privileges.</b>
 <pre>
-$ bp_seqfeature_load.pl -u user -p pass -d rice -c -f $HTDOCS/$GBROWSE_ROOT/databases/gbrowse_syn/rice/rice.gff3
+$ bp_seqfeature_load.pl -u user -p pass -d rice -c -f /var/www/gbrowse2/$GBROWSE_ROOT/databases/gbrowse_syn/rice/rice.gff3
 loading /var/www/html/gbrowse/databases/gbrowse_syn/rice/rice.gff3...
 Building object tree... 1.05s7s
 Loading bulk data into database... 0.67s
 load time: 31.40s
 
-$ bp_seqfeature_load.pl -u user -p pass -d wild_rice -c -f $HTDOCS/$GBROWSE_ROOT/databases/gbrowse_syn/wild_rice/wild_rice.gff3
+$ bp_seqfeature_load.pl -u user -p pass -d wild_rice -c -f /var/www/gbrowse2/$GBROWSE_ROOT/databases/gbrowse_syn/wild_rice/wild_rice.gff3
 loading /var/www/html/gbrowse/databases/gbrowse_syn/wild_rice/wild_rice.gff3...
 Building object tree... 1.15s9s
 Loading bulk data into database... 0.69s

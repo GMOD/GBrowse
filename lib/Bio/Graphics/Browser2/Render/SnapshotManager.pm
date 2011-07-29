@@ -22,7 +22,7 @@ use constant DEBUG => 0;
 
 use constant HAVE_SVG => eval "require GD::SVG; 1";
 
-sub render_saved_snapshots_listing{
+sub render_snapshots_listing{
  my $self = shift; 
  my $source = $self->data_source->name;
  my $settings = $self->state;

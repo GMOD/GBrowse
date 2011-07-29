@@ -111,14 +111,14 @@ sub render_tabbed_pages {
 	           div({-id=>'tabbed_menu',-class=>'tabmenu'},
 	           span({id=>'main_page_select'},               $main_title),
 	           span({id=>'track_page_select'},              $tracks_title),
-		   span({id=>'saved_snapshots_page_select'},           $snapshot_title),
+		   span({id=>'snapshots_page_select'},           $snapshot_title),
 	           $uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
 	           span({id=>'custom_tracks_page_select'},      $custom_tracks_title),,
 	           span({id=>'settings_page_select'},           $settings_title)
 	       ),
 	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
 	   div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
-           div({-id=>'saved_snapshots_page',       -class=>'tabbody'}, $snapshot_html),
+           div({-id=>'snapshots_page',       -class=>'tabbody'}, $snapshot_html),
 	   $uses_database?div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html) : "",
 	   div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
 	   div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),
@@ -184,7 +184,7 @@ sub render_navbar {
   my $search = $self->setting('no search')
                ? '' : b($self->translate('Landmark')).':'.br().$searchform.$self->examples();
 
-  my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
+  my $plugin_form = div({-id=>'plugin_form', -style=>'width:380px;float:left;'},$self->plugin_form());
   # *** Checks the state to see if a snapshot is active and assigns it ***
   #my $isSnapshotActive = $settings->{snapshot_active};
   my $source_form = div({-id=>'source_form'},$self->source_form());
@@ -194,8 +194,8 @@ sub render_navbar {
 
 
   # *** Creates the save session button and assigns it to save_prompt ***
-  my $saveSessionButton = div({-id=>'unsessionbutton', -style=>"width: 100px; position: relative; top:13px;"},$self->render_select_saveSession());
-  my $restoreSessionButton = div({-id=>'loadbutton', -style=>"width: 100px; position:relative; left: 130px; bottom: 12px;"},$self->render_select_loadSession());
+  my $saveSessionButton = div({-id=>'unsessionbutton', -style=>"width: 100px; position: relative; float:left;"},$self->render_select_saveSession());
+  my $restoreSessionButton = div({-id=>'loadbutton', -style=>"width: 100px; position:relative;float:right;"},$self->render_select_loadSession());
   my $saveSessionStyle = "position:fixed;left;width:184px;height:50px;background:whitesmoke;z-index:1; border:2px solid gray;display:none; padding: 5px;";
   my $save_prompt = div({-id => 'save_snapshot',-style=>"$saveSessionStyle"},
 			      $snapshot_form,
@@ -210,10 +210,12 @@ sub render_navbar {
 					-onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'',}),
 						    ),;
 
+  my $snapshot_options = div({-id => 'snapshot_options', -style => 'width:230px; float:right;'},$saveSessionButton . $save_prompt . $restoreSessionButton);
+
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
-			   table({-border=>0,-width=>'100%'},
-				 TR(td({-width=>'50%'},$search),td({-width=>'28%'},$plugin_form), td($saveSessionButton . $save_prompt . $restoreSessionButton)),
+			   table({-border=>0,-width=>'95%'},
+				 TR(td({-width=>'50%'},$search),td({-width=>'45%'},$plugin_form . $snapshot_options)),
 				 TR(td({-align=>'left'},
 				       $source_form,
 				    ),
@@ -403,11 +405,9 @@ sub render_html_head {
 
   # our own javascript files
   push @scripts,{src=>"$js/$_"}
- # *** Using toggle.js for snapshots *** 
  #*** Using SnapshotManager for snapshots ***
     foreach qw(
       buttons.js
-      toggle.js
       trackFavorites.js
       karyotype.js
       rubber.js
@@ -1143,7 +1143,7 @@ my $self = shift;
 my $title = 'Load Snapshot';
 
  return button({-name=>$title,
-		           -onClick => "Controller.select_tab('saved_snapshots_page');",
+		           -onClick => "Controller.select_tab('snapshots_page');",
 		          },	   
 	        );
 }
@@ -1199,12 +1199,12 @@ sub render_community_tracks_section {
 }
 
 # *** Render select snapshots. ****
-sub render_saved_snapshots_section {
+sub render_snapshots_section {
     my $self = shift;
     my $userdata = $self->user_tracks;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
 # Snapshot page rendering is done in the snapshotmanager.pm file
-	$html .= div({-id => "snapshots_page"}, $self->Bio::Graphics::Browser2::Render::SnapshotManager::render_saved_snapshots_listing);
+	$html .= div({-id => "snapshots_page"}, $self->Bio::Graphics::Browser2::Render::SnapshotManager::render_snapshots_listing);
 	$html = div({-style => 'margin: 1em;'}, $html);
 	return $html;
 }

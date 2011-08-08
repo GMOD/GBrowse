@@ -1,16 +1,16 @@
 #!/usr/bin/perl -w
-# $Id: load_alignments_msa.pl,v 1.1.2.2 2009-07-19 09:15:43 sheldon_mckay Exp $
-# This script will load the gbrowse_syn alignment database directly from a
-# multiple sequence alignment file.
+
+# This script will load the gbrowse_syn alignment database directly
+# from a multiple sequence alignment file. All Bio::AlignIO formats
+# are supported, however, each sequence *name* has to have the
+# following format: 'species-sequence(strand)/start-end'.
+
 
 use strict;
 use Bio::AlignIO;
-use List::Util 'sum';
 use Getopt::Long;
 use DBI;
 use Bio::DB::GFF::Util::Binning 'bin';
-
-use Data::Dumper;
 
 use constant MINBIN   => 1000;
 use constant FORMAT   => 'clustalw';
@@ -19,7 +19,6 @@ use constant MAPRES   => 100;
 
 use vars qw/$format $create $user $pass $dsn $aln_idx $verbose $nomap $mapres $hit_idx $pidx %map/;
 
-$| = 1;
 GetOptions(
 	   'format=s'    => \$format,
            'user=s'      => \$user,
@@ -43,13 +42,13 @@ my ($dbh,$sth_hit,$sth_map) = prepare_database($dsn,$user,$pass);
 
 while (my $infile = shift) {
   print "Processing alignment file $infile...\n" if $verbose;
-  my $alignIO = Bio::AlignIO->new( -file   => $infile, 
-				   -format => $format);
+  my $alignIO = Bio::AlignIO->new( -file   => $infile,
+                                   -format => $format);
 
   while (my $aln = $alignIO->next_aln) {
     my $len = $aln->length;
     $pidx = 0;
-    print STDERR "Processing Multiple Sequence Alignment " . ++$aln_idx . " (length $len)\t\t\t\r" if $verbose; 
+    print STDERR "Processing Multiple Sequence Alignment " . ++$aln_idx . " (length $len)\t\t\t\r" if $verbose;
     next if $aln->num_sequences < 2;
     my %seq;
     %map = ();
@@ -60,17 +59,17 @@ while (my $infile = shift) {
       next if $seq->seq =~ /^-+$/;
       # We have to tell the sequence object what its strand is
       $seq->strand($strand eq '-' ? -1 : 1);
-      $seq{$species} = [$ref, $seq->display_name, $seq->start, $seq->end, $strand, $seq->seq, $seq]; 
+      $seq{$species} = [$ref, $seq->display_name, $seq->start, $seq->end, $strand, $seq->seq, $seq];
     }
-    
+
     # make all pairwise hits and grid coordinates
     my @species = keys %seq;
-    
+
     for my $p (map_pairwise(@species)) {
       my ($s1,$s2) = @$p;
       my $array1 = $seq{$s1};
       my $array2 = $seq{$s2};
-      
+
       my $seq1 = $$array1[6];
       my $seq2 = $$array2[6];
 
@@ -82,7 +81,7 @@ while (my $infile = shift) {
       make_hit($s1 => $array1, $s2 => $array2);
     }
   }
-}  
+}
 
 # Make coordinate maps at the specified resolution
 sub make_map {
@@ -91,16 +90,16 @@ sub make_map {
   unless (UNIVERSAL::can($s1,'isa')) {
     warn "WTF? $s1 $s2\n" and next;
   }
-  
+
   column_to_residue_number($s1,$s2);
   my $coord = nearest($mapres,$s1->start);
   $coord += $mapres if $coord < $s1->start;
   my @map;
-  
+
   my $reverse = $s1->strand ne $s2->strand;
- 
+
   # have to get the column number from residue position, then
-  # the matching residue num from the column number 
+  # the matching residue num from the column number
   while ($coord < $s1->end) {
     my $col     = column_from_residue_number($s1,$coord);
     my $coord2  = residue_from_column_number($s2,$col) if $col;
@@ -118,7 +117,7 @@ sub column_to_residue_number {
     my $rev = $seq->strand < 0;
     my $res = $rev ? $seq->end - 1 : $seq->start + 1;
     my @cols = split '', $str;
-    
+
     my $pos;
     my $col;
     for my $chr (@cols) {
@@ -136,7 +135,7 @@ sub column_to_residue_number {
 sub column_from_residue_number {
   my ($seq, $res) = @_;
   my $id = $seq->id;
-  return $map{$id}{res}{$res};  
+  return $map{$id}{res}{$res};
 }
 
 sub residue_from_column_number {
@@ -188,22 +187,33 @@ sub check_name_format {
 
   my $nogood = <<"  END";
 
-I am sorry, I do not like the sequence name: $name
+I am sorry, I do not like the format of the sequence name: '$name'
 
-This will not work unless you use the name format described below for each
-sequence in the alignment.  
-
-We need the species, sequence name, strand, start and end for
+This will not work unless you use the name format described below for
 each sequence in the alignment.
+
+We need the species, sequence name, strand, start and end for each
+sequence in the alignment.
 
   Name format:
     species-sequence(strand)/start-end
-  
-    where species   = name of species, genome, strain, etc (string with no '-' characters)
-          sequence  = name of reference sequence (string with no '/' characters)
-          (strand)  = orientation of the alignment (relative to the reference sequence; + or -)
-          start     = start coordinate of the alignment relative to the reference sequence (integer)
-          end       = end coordinate of the alignment relative to the reference sequence   (integer)
+
+  Where:
+
+    species     name of species, genome, strain, etc
+                (the name must exclude '-' characters)
+
+    sequence    name of reference sequence
+                (the name must exclude '/' characters)
+
+    strand      orientation of the alignment relative to the reference
+                sequence; + or -
+
+    start       start coordinate of the alignment relative to the
+                reference sequence (integer)
+
+    end         end coordinate of the alignment relative to the
+                reference sequence (integer)
 
   Examples:
     c_elegans-I(+)/1..2300
@@ -212,8 +222,8 @@ each sequence in the alignment.
   END
   ;
 
-  die $nogood unless $name =~ /^([^-]+)-([^\(]+)\(([+-])\)$/;
   die $nogood unless $seq->start && $seq->end;
+  die $nogood unless $name =~ /^([^-]+)-([^\(]+)\(([+-])\)$/;
   return ($1,$2,$3);
 }
 
@@ -227,7 +237,7 @@ sub prepare_database {
   if ($create) {
     $dbh->do('drop table if exists alignments') or die DBI->errstr;
     $dbh->do('drop table if exists map') or die DBI->errstr;
-  
+
     $dbh->do(<<"    END;") or die DBI->errstr;
     create table alignments (
 			 hit_id    serial not null,
@@ -266,7 +276,7 @@ sub prepare_database {
   }
 
   my $hit_insert = $dbh->prepare(<<END) or die $dbh->errstr;
-insert into alignments (hit_name,src1,ref1,start1,end1,strand1,seq1,bin,src2,ref2,start2,end2,strand2,seq2) 
+insert into alignments (hit_name,src1,ref1,start1,end1,strand1,seq1,bin,src2,ref2,start2,end2,strand2,seq2)
 values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 END
 ;
@@ -277,7 +287,8 @@ END
 }
 
 sub load_alignment {
-  my ($src1,$ref1,$start1,$end1,$strand1,$seq1,$src2,$ref2,$start2,$end2,$strand2,$seq2,$map1,$map2) = @_;
+  my ($src1,$ref1,$start1,$end1,$strand1,$seq1,
+      $src2,$ref2,$start2,$end2,$strand2,$seq2,$map1,$map2) = @_;
 
   # not using the cigar strings right now
   ($seq1,$seq2) = ('','');  
@@ -293,9 +304,9 @@ sub load_alignment {
   my $bin1 = scalar bin($start1,$end1,MINBIN);
   my $bin2 = scalar bin($start2,$end2,MINBIN);
   my $hit2 = "${hit1}r";
-  
+
   # force ref strand to always be positive and invert target strand as required
-  invert(\$strand1,\$strand2) if $strand1 eq '-'; 
+  invert(\$strand1,\$strand2) if $strand1 eq '-';
 
   $sth_hit->execute($hit1,$src1,$ref1,$start1,$end1,$strand1,$seq1,$bin1,
 		    $src2,$ref2,$start2,$end2,$strand2,$seq2) or warn $sth_hit->errstr;
@@ -309,7 +320,7 @@ sub load_alignment {
 
   # reciprocal hit is also saved to facilitate switching amongst reference sequences
   invert(\$strand1,\$strand2) if $strand2 eq '-';
-  
+
   $sth_hit->execute($hit2,$src2,$ref2,$start2,$end2,$strand2,$seq2,$bin2,
 		    $src1,$ref1,$start1,$end1,$strand1,$seq1) or warn $sth_hit->errstr;
 
@@ -323,11 +334,10 @@ sub load_alignment {
   }
 
   print STDERR "Processed pair-wise alignment ".++$pidx."\r" if $verbose;
-
 }
 
 sub done {
-  $dbh->do('create index alignments_index1 on alignments (src1,ref1,bin,start1,end1);alter table alignments enable keys');
+  $dbh->do('create index alignments_index1 on alignments (src1,ref1,bin,start1,end1)');
   print "\nDone!\n\n";
 }
 
@@ -335,5 +345,5 @@ sub invert {
   my $strand1 = shift;
   my $strand2 = shift;
   $$strand1 = $$strand1 eq '+' ? '-' : '+';
-  $$strand2 = $$strand2 eq '+' ? '-' : '+'; 
+  $$strand2 = $$strand2 eq '+' ? '-' : '+';
 }

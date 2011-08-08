@@ -337,7 +337,7 @@ sub load_alignment {
 }
 
 sub done {
-  $dbh->do('create index alignments_index1 on alignments (src1,ref1,bin,start1,end1);alter table alignments enable keys');
+  $dbh->do('create index alignments_index1 on alignments (src1,ref1,bin,start1,end1)');
   print "\nDone!\n\n";
 }
 

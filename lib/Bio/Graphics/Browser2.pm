@@ -12,7 +12,6 @@ use File::Spec;
 use File::Path 'mkpath';
 use File::Basename 'dirname','basename';
 use Text::ParseWords 'shellwords';
-use File::Path 'mkpath';
 use Bio::Graphics::Browser2::DataSource;
 use Bio::Graphics::Browser2::Session;
 use GBrowse::ConfigData;

@@ -2,6 +2,7 @@
 use strict;
 use CGI;
 use Bio::Graphics::Browser2;
+use Bio::Graphics::Browser2::Render;
 use Bio::Graphics::Browser2::Render::Synteny::HTML;
 
 umask 022;

@@ -139,11 +139,15 @@ sub get_synteny_by_range {
 sub make_range_query {
   my $self = shift;
   my ($src,$ref,$start,$end,$tgt) = @_;
-  my $query = 
-      "select hit_name,src1,ref1,start1,end1,strand1,seq1,src2,ref2,start2,end2,strand2,seq2\n\tFROM alignments";
+  my $query = <<'';
+       SELECT
+              hit_name
+            , src1, ref1, start1, end1, strand1, seq1
+            , src2, ref2, start2, end2, strand2, seq2
+       FROM alignments
 
-  my @where = ();
-  my @args  = ();
+  my @where;
+  my @args;
 
   if (defined $src) {
     push @where,'src1=?';
@@ -167,7 +171,7 @@ sub make_range_query {
   }
 
   if (@where) {
-    $query .= "\n\tWHERE ".join(' AND ',@where);
+    $query .= "\n      WHERE ".join(' AND ',@where);
   }
 
   return ($query,@args);
@@ -179,7 +183,7 @@ sub bin_query {
   my ($start,$end) = @_;
   my ($query,@args);
 
-  $start = 0       unless defined($start);
+  $start = 0     unless defined($start);
   $end  = MAXBIN unless defined($end);
 
   my @bins;

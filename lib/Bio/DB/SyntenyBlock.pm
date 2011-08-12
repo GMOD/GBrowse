@@ -17,10 +17,24 @@ Bio::DB::SyntenyBlock -
 
 =head1 DESCRIPTION
 
-What does this hold and how? (I'm confused about sub-parts).
+A synteny block is a named a pair of SeqFeatures, one indexed by 'src'
+and one indexed by 'tgt'. The pair represents a syntentic block
+relationship between the two SeqFeatures.
+
+A syntenic block can have one or more 'parts'. If there is more than
+one part, the synteny block describes the whole range of sequence
+covered by the parts. The seqids, sequences and strands of the
+underlying parts are implicitly assumed to be the same accross the
+part.
+
+Subsequent parts are stored as 'parts', which seems buggy, because the
+first part isn't one of the parts stored, and it's range will be lost
+when we add the second part.
+
+TODO: Really use SeqFeatures.
+TODO: Implement as an alignment feature?
 
 =cut
-
 
 
 
@@ -35,14 +49,14 @@ sub new {
 }
 
 sub name    { shift->{name}        }
-
 sub src     { shift->{src}         }
+sub tgt     { shift->{tgt}         }
+
 sub src1    { shift->{src}[SRC]    }
 sub seqid   { shift->{src}[SEQID]  }
 sub strand  { shift->{src}[STRAND] }
 sub seq     { shift->{src}[SEQ]    }
 
-sub tgt     { shift->{tgt}         }
 sub src2    { shift->{tgt}[SRC]    }
 sub target  { shift->{tgt}[SEQID]  }
 sub tstrand { shift->{tgt}[STRAND] }
@@ -94,7 +108,6 @@ sub coordinates {
 # sorted parts list
 sub parts   { 
   my $self = shift;
-  ## What is the logic here?
   my $parts = $self->{parts} ?
       [sort {$a->start <=> $b->start} @{$self->{parts}}] : [$self];
   return $parts; 
@@ -124,6 +137,9 @@ sub add_part {
     $self->{parts} ||= [];
     push @{$self->{parts}},$subpart;
     return $subpart->name;
+  }
+  else{
+     ## What? What is returned here?
   }
 }
 

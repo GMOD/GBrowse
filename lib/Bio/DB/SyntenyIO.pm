@@ -8,8 +8,21 @@ use Bio::DB::SyntenyBlock;
 
 use constant MINBIN => 1000;
 use constant MAXBIN => 1_000_000_000;
-use constant EPSILON  => 1e-7;  # set to zero if you trust mysql's floating point comparisons
+# set EPSILON to zero if you trust mysql's floating point comparisons
+use constant EPSILON  => 1e-7;
 use constant POSRANGE => 200;
+
+=head1 NAME
+
+Bio::DB::SyntenyIO
+
+=head1 DESCRIPTION
+
+Manages the connection to the a synteny ('join') database, builds and
+issues queries against it, and returns Bio::DB::SyntenyBlock type
+results.
+
+=cut
 
 sub new {
   my $class = shift;
@@ -19,11 +32,13 @@ sub new {
   if (ref($dsn) && $dsn->isa('DBI::db')) {
     $dbh      = $dsn;
   } else {
-    $dbh       = DBI->connect($dsn,@_) or die "$dsn: Can't open; ",DBI->errstr;
+    $dbh      = DBI->connect($dsn,@_) or die "$dsn: Can't open; ",DBI->errstr;
   }
 
   my $self = {dbh=>$dbh};
-  $self->{nomap} = 1 unless _has_map($dbh);
+  $self->{nomap} = 1
+      unless _has_map($dbh);
+
   return bless $self, $class;
 }
 
@@ -77,14 +92,12 @@ sub grid_coords_by_range {
     my $pairs = $sth->fetchall_arrayref;
     push @pairs, @$pairs;
   }
-  
   return @pairs;
 }
 
 
-# Check to see of grid-lines are possible.  Some data sources
-# may lack the grid coordinate data (not that there is anything
-# wrong with that).
+# Check to see if grid-lines are possible; some data sources may not
+# have grid coordinate data.
 sub _has_map {
   my $dbh = shift;
   my $sth = $dbh->prepare('SELECT count(*) FROM map');
@@ -99,31 +112,35 @@ sub position_handle {
 
   unless (defined $self->{position_query}) {
     my $query = <<END;
-select pos1,pos2 from map
+SELECT pos1,pos2 FROM map
 WHERE hit_name = ?
 AND src1 = ?
 AND pos1 >= ?
 AND pos1 <= ?
 END
 ;
-    $self->{position_query} = $self->dbh->prepare_cached($query) or die $self->dbh->errstr;
-   
+    $self->{position_query} =
+        $self->dbh->prepare_cached($query) or die $self->dbh->errstr;
   }
-
   return $self->{position_query};
 }
 
 sub get_synteny_by_range {
   my $self = shift;
-  my ($src,            # a symbolic data source, like "worm"
-      $ref,            # reference for search range - contig or chromosome name
-      $start,          # start of search range
-      $end,            # end of search range
-      $tgt             # optional data source target, like "yeast"
+  my ($src,   # a symbolic data source, like "worm"
+      $ref,   # reference for search range - contig or chromosome name
+      $start, # start of search range
+      $end,   # end of search range
+      $tgt    # optional data source target, like "yeast"
      ) = rearrange([qw(SRC REF START END TGT)],@_);
-  my ($query,@args) = $self->make_range_query($src,$ref,$start,$end,$tgt);
-  my $sth           = $self->dbh->prepare_cached($query) or die $self->dbh->errstr;
-  $sth->execute(@args) or die $sth->errstr;
+
+  my ($query,@args) =
+    $self->make_range_query($src,$ref,$start,$end,$tgt);
+  my $sth = $self->dbh->prepare_cached($query)
+    or die $self->dbh->errstr;
+  $sth->execute(@args)
+    or die $sth->errstr;
+
   my %HITS;
   while (my($hit,
 	    $src,$ref1,$start1,$end1,$strand1,$seq1,
@@ -139,8 +156,14 @@ sub get_synteny_by_range {
 sub make_range_query {
   my $self = shift;
   my ($src,$ref,$start,$end,$tgt) = @_;
-  my $query = 
-      "select hit_name,src1,ref1,start1,end1,strand1,seq1,src2,ref2,start2,end2,strand2,seq2\n\tFROM alignments";
+  my $query = <<END;
+SELECT
+  hit_name,
+  src1,ref1,start1,end1,strand1,seq1,
+  src2,ref2,start2,end2,strand2,seq2
+FROM alignments
+END
+;
 
   my @where = ();
   my @args  = ();
@@ -179,15 +202,17 @@ sub bin_query {
   my ($start,$end) = @_;
   my ($query,@args);
 
-  $start = 0       unless defined($start);
+  $start = 0     unless defined($start);
   $end  = MAXBIN unless defined($end);
 
   my @bins;
   my $minbin = MINBIN;
   my $maxbin = MAXBIN;
-  my $tier = $maxbin;
+  my $tier = $maxbin; # What is tier?
   while ($tier >= $minbin) {
-    my ($tier_start,$tier_stop) = (bin_bot($tier,$start)-EPSILON(),bin_top($tier,$end)+EPSILON());
+    my ($tier_start,$tier_stop) =
+      (bin_bot($tier,$start)-EPSILON(),
+       bin_top($tier,$end)+EPSILON());
     if ($tier_start == $tier_stop) {
       push @bins,'bin=?';
       push @args,$tier_start;

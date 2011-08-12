@@ -18,6 +18,8 @@ use Bio::Graphics;
 use Legacy::Graphics::Browser::Util;
 use Legacy::Graphics::Browser::Synteny;
 use Legacy::Graphics::Browser::PageSettings;
+
+## These modules are used to query the synteny ('join') database
 use Bio::DB::SyntenyIO;
 use Bio::DB::SyntenyBlock;
 
@@ -151,8 +153,10 @@ sub run {
 
     if ($segment) {
 
-        print $self->overview_panel($self->syn_conf->whole_segment($segment),$segment);
-        print $self->reference_panel($self->syn_conf->whole_segment($segment),$segment);
+        print $self->
+            overview_panel($self->syn_conf->whole_segment($segment),$segment);
+        print $self->
+            reference_panel($self->syn_conf->whole_segment($segment),$segment);
 
         # make sure no hits go off-screen
         $self->remap_coordinates($_) for @{ $self->hits };
@@ -163,6 +167,7 @@ sub run {
         my @species = sort keys %species;
 
         # either display ref species + 2 repeating or 'all in one'
+        # what the fuck are you talking about?
         if ($page_settings->{display} eq 'expanded') {
             while (my @pair = splice @species, 0, 2) {
                 $self->draw_image($page_settings, $self->hits, @pair);
@@ -288,6 +293,8 @@ sub _type_from_box {
 sub draw_image {
   my ($self,$page_settings,$hits,@species) = @_;
   my ($toggle_section,@hits);
+
+  ## Filter hits for the given species
   for my $species (@species) {
     push @hits, grep {$_->src2 eq $species} @$hits;
   }
@@ -305,7 +312,7 @@ sub draw_image {
   my $max_gap = $segment->length * ($self->syn_conf->setting('max_span') || MAX_SPAN);
 
   # dynamically create synteny blocks
-  @hits = aggregate(\@hits) if $self->syn_conf->page_settings("aggregate");
+  @hits = aggregate($self, \@hits) if $self->syn_conf->page_settings("aggregate");
 
   # save the hits by name so we can access them from the name alone
   for (@hits) {
@@ -1179,7 +1186,8 @@ sub aggregate {
   my ( $self, $hits ) = @_;
   $self->syn_conf->{parts} = {};
 
-  my @sorted_hits = sort { $a->target cmp $b->target || $a->tstart <=> $b->tstart} @$hits;
+  my @sorted_hits = sort { $a->target cmp $b->target ||
+                           $a->tstart <=> $b->tstart} @$hits;
 
   my (%group,$last_hit);
 

@@ -1,9 +1,12 @@
 #!/usr/bin/perl -w
+
 use strict;
 use CGI;
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::Render;
 use Bio::Graphics::Browser2::Render::Synteny::HTML;
+
+use CGI::Carp qw(fatalsToBrowser);
 
 umask 022;
 

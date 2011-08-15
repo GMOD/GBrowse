@@ -4,6 +4,15 @@ use warnings;
 
 use constant DEBUG => 0;
 
+=head1 NAME
+
+Bio::Graphics::Browser2::ConsolidatedImage - wrapper for
+B::G::B2::Render::HTML that makes a consolidated image and imagemap,
+for use by frontends that require a consolidated image and imagemap,
+as opposed to the standard GBrowse2 single-track images and maps.
+
+=cut
+
 sub new {
     my $class   = shift;
     my $globals = shift;
@@ -20,8 +29,10 @@ sub render_multiple {
     my $self = shift;
     my ($renderer,$format,$flip,$embed) = @_;
     my $features = $self->render->region->features;
-    my $karyotype = Bio::Graphics::Karyotype->new(source   => $self->render->data_source,
-						  language => $self->render->language);
+    my $karyotype = Bio::Graphics::Karyotype->
+        new(source   => $self->render->data_source,
+            language => $self->render->language
+        );
     $karyotype->add_hits($features);
     my $panels = $karyotype->generate_panels($format);
     my (@gds,@seqids);
@@ -29,7 +40,8 @@ sub render_multiple {
 	push @gds,$panels->{$seqid}{panel}->gd;
 	push @seqids,$seqid;
     }
-    my $img_data = $self->consolidate_images(\@gds,undef,undef,'horizontal',\@seqids);
+    my $img_data = $self->
+        consolidate_images( \@gds, undef, undef, 'horizontal', \@seqids);
     return ($img_data,undef);
 }
 
@@ -87,9 +99,12 @@ sub calculate_composite_bounds {
     if ($orientation eq 'vertical') {
 	for my $g (@$gds) {
 	    warn "g=$g" if DEBUG;
+            ## Why would $g not be true here?
 	    next unless $g;
-	    $height +=   ($g->getBounds)[1];  # because GD::SVG is missing the width() and height() methods
-	    $width   ||= ($g->getBounds)[0];
+            # we use getBounds because GD::SVG is missing the width()
+            # and height() methods
+	    $height +=   ($g->getBounds)[1];
+	    $width   ||= ($g->getBounds)[0]; # Width constant for all $g?
 	}
     } elsif ($orientation eq 'horizontal') {
 	for my $g (@$gds) {
@@ -108,16 +123,18 @@ sub consolidate_images {
     my ($gds,$width,$height,$orientation,$labels) = @_;
     $orientation ||= 'vertical';
 
-    ($width,$height) = $self->calculate_composite_bounds($gds,$orientation) 
-	unless defined $width && defined $height;
+    ($width,$height) = $self->
+        calculate_composite_bounds($gds,$orientation)
+          unless defined $width && defined $height;
 
     warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
 
-    my $format = ref($gds->[0]);
-    warn "format = $format" if DEBUG;
+    my $img_format = ref($gds->[0]);
+    warn "format = $img_format" if DEBUG;
 
-    return $format =~ /^GD::SVG/ ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
-                                 : $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
+    return $img_format =~ /^GD::SVG/ ?
+      $self->_consolidate_svg($width,$height,$gds,$orientation,$labels):
+      $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
 }
 
 sub _consolidate_gd {
@@ -212,7 +229,7 @@ sub _consolidate_svg {
 	    $offset += $current_height;
 	}
 	$svg   .= qq(</svg>\n);
- 
+
 
    } else {
 	my $offset = 0;
@@ -240,8 +257,8 @@ sub _consolidate_svg {
 
     # munge fonts slightly for systems that don't have Helvetica installed
     $svg    =~ s/font="Helvetica"/font="san-serif"/gi;
-    $svg    =~ s/font-size="11"/font-size="9"/gi;  
-    $svg    =~ s/font-size="13"/font-size="12"/gi;  
+    $svg    =~ s/font-size="11"/font-size="9"/gi;
+    $svg    =~ s/font-size="13"/font-size="12"/gi;
     return $svg;
 }
 
@@ -268,13 +285,3 @@ sub consolidate_maps {
 
 1;
 
-__END__
-
-=head1 NAME
-
-Bio::Graphics::Browser2::ConsolidatedImage - wrapper for
-B::G::B2::Render::HTML that makes a consolidated image and imagemap,
-for use by frontends that require a consolidated image and imagemap,
-as opposed to the standard GBrowse2 single-track images and maps.
-
-=cut

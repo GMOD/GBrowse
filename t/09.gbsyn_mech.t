@@ -31,7 +31,8 @@ $mech->follow_link_ok(
    );
 
 # check that we still have the right image width
-is( image_widths_state( $mech )->{selected}, $new_width, 'still have the right image width' );
+is( image_widths_state( $mech )->{selected}, $new_width,
+    'still have the right image width' );
 
 # check each of the images on the example view
 for my $image ( $mech->images ) {
@@ -47,7 +48,8 @@ sub change_image_width {
     my $width_state = image_widths_state( $mech );
 
     #use Data::Dumper;
-    #diag "current: $width_state->{selected} ".Dumper( $width_state->{configured} );
+    #diag "current: $width_state->{selected} ".
+    #  Dumper( $width_state->{configured} );
 
     my ($new_image_width) =
         grep { $_ != $width_state->{selected} }

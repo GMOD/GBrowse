@@ -15,11 +15,36 @@ use constant SEQ    => 5;
 
 Bio::DB::SyntenyBlock - 
 
+=head1 USAGE
+
+    my $sb = ...
+
+    $sb->name; # Name of the current synteny block
+    $sb->src;  # Source 'SeqFeature'
+    $sb->tgt;  # Target 'SeqFeature'
+
+    ## The src and tgt 'SeqFeature's together define a syntenic
+    ## relationship between two sequences (and probably two species).
+
+    ## Methods for the src 'SeqFeature'
+    $sb->src1;   # species code
+    $sb->seqid;  # sequence seqid
+    $sb->start;  # start positon of the feature
+    $sb->end;    # end   positon of the feature
+    $sb->strand; # strand of the feature
+
+    ## Methods for the tgt 'SeqFeature'
+    $sb->src2;    # species code
+    $sb->target;  # sequence seqid
+    $sb->tstart;  # start positon of the feature
+    $sb->tend;    # end   positon of the feature
+    $sb->tstrand; # strand of the feature
+
 =head1 DESCRIPTION
 
 A synteny block is a named a pair of SeqFeatures, one indexed by 'src'
 and one indexed by 'tgt'. The pair represents a syntentic block
-relationship between the two SeqFeatures.
+relationship between the two 'SeqFeatures'.
 
 A syntenic block can have one or more 'parts'. If there is more than
 one part, the synteny block describes the whole range of sequence
@@ -62,7 +87,7 @@ sub target  { shift->{tgt}[SEQID]  }
 sub tstrand { shift->{tgt}[STRAND] }
 sub tseq    { shift->{tgt}[SEQ]    }
 
-sub start   { 
+sub start   {
   my $self = shift;
   my $value = shift;
   $self->{src}[START] = $value if $value;

@@ -23,18 +23,22 @@ use Legacy::Graphics::Browser::PageSettings;
 use Bio::DB::SyntenyIO;
 use Bio::DB::SyntenyBlock;
 
-
+## Set some default values
 use constant OVERVIEW_RATIO     => 0.9;
 use constant OVERVIEW_BGCOLOR   => 'gainsboro';
 use constant IMAGE_WIDTH        => 800;
 use constant INTERIMAGE_PAD     => 5;
 use constant VERTICAL_PAD       => 40;
 use constant ALIGN_HEIGHT       => 6;
-use constant MAX_SPAN           => 0.3;     # largest gap allowed for merging inset panels
-use constant TOO_SMALL          => 0.02;    # minimum span for displayed alignments
-use constant MAX_GAP            => 50_001;  # maximum gap for chaining
+# largest gap allowed for merging inset panels
+use constant MAX_SPAN           => 0.3;
+# minimum span for displayed alignments
+use constant TOO_SMALL          => 0.02;
+# maximum gap for chaining
+use constant MAX_GAP            => 50_001;
 use constant MAX_SEGMENT        => 2_000_001;
-use constant EXTENSION          => 'syn';   # extension for species conf files
+# extension for species conf files
+use constant EXTENSION          => 'syn';
 use constant DEBUG              => 0;
 use constant HELP               => 'http://gmod.org/wiki/GBrowse_syn_Help';
 
@@ -78,7 +82,7 @@ sub run {
         return;
     }
 
-    # search soure (general) configuration
+    # search source (general) configuration
     $self->syn_conf( Legacy::Graphics::Browser::Synteny->new );
     $self->syn_conf->read_configuration($conf_dir,'synconf');
 
@@ -312,7 +316,8 @@ sub draw_image {
   my $max_gap = $segment->length * ($self->syn_conf->setting('max_span') || MAX_SPAN);
 
   # dynamically create synteny blocks
-  @hits = aggregate($self, \@hits) if $self->syn_conf->page_settings("aggregate");
+  @hits = $self->aggregate(\@hits)
+      if $self->syn_conf->page_settings("aggregate");
 
   # save the hits by name so we can access them from the name alone
   for (@hits) {
@@ -327,11 +332,11 @@ sub draw_image {
     my $src    = $h->src2;
     my $contig = $h->target;
     $instance{$src,$contig} ||= 0;
-    my $key = join $;,$src,$contig,$instance{$src,$contig};
+    my $key = join($;, $src, $contig, $instance{$src,$contig});
 
     # start a new span if the gap is too large
     if ($span{$key} && ($h->tstart >= $span{$key}{end}+$max_gap)) {
-      $key = join $;,$src,$contig,++$instance{$src,$contig};
+      $key = join($;, $src, $contig, ++$instance{$src,$contig});
     }
 
     # Tally the plus and minus strand total.  We will flip the panel

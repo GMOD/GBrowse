@@ -11,6 +11,11 @@ multiple sequence alignment
                );
   $loader->load( $file_1, $file_2 );
 
+=head1 DESCRIPTION
+
+Loads multiple sequence alignments directly into a
+L<Bio::DB::Synteny::Store> using L<Bio::AlignIO>.
+
 =head1 METHODS
 
 =cut

@@ -11,7 +11,8 @@ sub init_database {
     if( $erase ) { # drop the tables if they exist
         local $dbh->{RaiseError} = 0;
         local $dbh->{PrintError} = 0;
-        $dbh->do( 'DROP TABLE alignments, map' );
+        $dbh->do( 'DROP TABLE alignments' );
+        $dbh->do( 'DROP TABLE map' );
     }
 
     $dbh->do( <<'');

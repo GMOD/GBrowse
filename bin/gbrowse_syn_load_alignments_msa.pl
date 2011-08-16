@@ -93,4 +93,7 @@ my $loader = Bio::DB::Synteny::Store::Loader::MSA->new(
     -mapres => $mapres,
     );
 
+# wrap the load in a transaction for speed
+$syn_store->dbh->{AutoCommit} = 0;
 $loader->load( @ARGV );
+$syn_store->dbh->{AutoCommit} = 1;

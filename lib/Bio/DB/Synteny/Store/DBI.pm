@@ -13,7 +13,7 @@ use constant MAPRES   => 100;
 
 use DBI;
 
-use Bio::DB::GFF::Util::Binning 'bin';
+use Bio::DB::GFF::Util::Binning qw/ bin bin_bot bin_top /;
 use Bio::DB::GFF::Util::Rearrange qw(rearrange);
 
 sub new_instance {

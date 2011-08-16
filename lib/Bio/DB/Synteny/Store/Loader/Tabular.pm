@@ -30,7 +30,7 @@ sub load {
                 }
                 $switch ? push @map2, $_ : push @map1, $_;
             }
-            $self->store->load_alignment(
+            $self->store->add_alignment(
                 [ $src1,$ref1,$start1,$end1,$strand1,$seq1, { @map1 } ],
                 [ $src2,$ref2,$start2,$end2,$strand2,$seq2, { @map2 } ],
                );

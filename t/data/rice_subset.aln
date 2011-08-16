@@ -1,0 +1,1877 @@
+CLUSTAL W(1.81) multiple sequence alignment W(1.81)
+
+
+rice-3(+)/16598648-16600199      ggaggccggccgtctgccatgcgtgagccagacggggcgggccggagacaggccacgtgg
+wild_rice-3(+)/14467855-14469373 gggggccgg------------------------------------agacaggccacgtgg
+                                 ** ******                                    ***************
+
+
+rice-3(+)/16598648-16600199      ccctgccccgggctgttgacccactggcacccctgtcccgggttgtcgccctcctttccc
+wild_rice-3(+)/14467855-14469373 ccctgccccgggctgttgacccactggcacccctgtcccgggttgtcgccctcctttccc
+                                 ************************************************************
+
+
+rice-3(+)/16598648-16600199      cgccatgctctaagtttgctcctcttctcgaacttctctctttgattcttcacgtcctct
+wild_rice-3(+)/14467855-14469373 cgccatgctctaagtttgctcctcttctcgaacttctctctttgattcttcacgtcctct
+                                 ************************************************************
+
+
+rice-3(+)/16598648-16600199      tggagcctccccttctagctcgatcacgctctgctcttccgcttggaggctggcaaaact
+wild_rice-3(+)/14467855-14469373 tggagcctccccttctagctcgatcgcgctctgctcttccgcttggaggctggcaaaact
+                                 ************************* **********************************
+
+
+rice-3(+)/16598648-16600199      ggtctacattaacaactctgttgcacccctgccaccagatggac--tgagtcgtatgctg
+wild_rice-3(+)/14467855-14469373 ggtctacattaacaactctgttgcacccctgccaccagatggactgtgagtcgtatgctg
+                                 ********************************************  **************
+
+
+rice-3(+)/16598648-16600199      cactaggcagtcttttgcagacctaggtgcagtgtgcatcgcaggctgttgttgtccccc
+wild_rice-3(+)/14467855-14469373 cactaggcagtcttttgcagacctaggtgcagtgtgcatcgcaggctgttgttgtcccct
+                                 *********************************************************** 
+
+
+rice-3(+)/16598648-16600199      gctaggtgtgccaaagatgcaggggtcctgggagggcgagacagagcgagcgcgaccggg
+wild_rice-3(+)/14467855-14469373 gctaggtgtgccaaagatgcaggggtcctgggagggcgagacagagcgagcgcgaccggg
+                                 ************************************************************
+
+
+rice-3(+)/16598648-16600199      agtgcggcttcaaatctaaacacatcatccgatctatcagaccgagcagaaggaggaaac
+wild_rice-3(+)/14467855-14469373 agtgcggcttcaaatctaaacacatcatccgatctatcagaccgagcagaaggaggaaac
+                                 ************************************************************
+
+
+rice-3(+)/16598648-16600199      atggaacagggtggggccaggagggaggcaacacgggacaggggcgcccgccgggaaacg
+wild_rice-3(+)/14467855-14469373 atggaacagggt-gggccaggagggaggcaacacgggacaggggcgcccgccgggaaacg
+                                 ************ ***********************************************
+
+
+rice-3(+)/16598648-16600199      acttgggccacggtccgaacgggtgcgcgcaacagggcacacggcccgtctggggggcgg
+wild_rice-3(+)/14467855-14469373 acttgggccacggtccgaacgggtgcgcgcaacatggcacacggcccgtctggggggcgg
+                                 ********************************** *************************
+
+
+rice-3(+)/16598648-16600199      ccgccgacggggggggcgcaccgcgagtccccaagcaggcaggacggtcgaccagtgacc
+wild_rice-3(+)/14467855-14469373 ccgccgacggggggggcgcaccgcgagtccccaagcaggcaggacggtcgaccagtgacc
+                                 ************************************************************
+
+
+rice-3(+)/16598648-16600199      gggcatcctccgtcggggcgcacgacactgcaacggggcagcccgaccccggggcgggtg
+wild_rice-3(+)/14467855-14469373 gggcattctccgtcggggcgcacgacactgcaacggggcagcccgaccccggggcgggtg
+                                 ****** *****************************************************
+
+
+rice-3(+)/16598648-16600199      ccaggacg-cccccccggaggggacatcgttcttactttgtggggttcagtacccgggaa
+wild_rice-3(+)/14467855-14469373 ccaggacgccccccccggaggggacgtcgttcttactttgtggggttcagtacccgggaa
+                                 ******** **************** **********************************
+
+
+rice-3(+)/16598648-16600199      actcgttgacactttgtggggtgcactacccagatggcccggcaatcgctcaccccaggc
+wild_rice-3(+)/14467855-14469373 actcgttgacactttgtggggtgcactacccagatggcccggcaattgctcaccccaggc
+                                 ********************************************** *************
+
+
+rice-3(+)/16598648-16600199      ccccaggcacatcggcagccgtcccattgtacacgctccccacaattgcgatcctggcac
+wild_rice-3(+)/14467855-14469373 ccccaggcacatcggcagccgtcccattgtacacgctccccacaattgcgatcctggcac
+                                 ************************************************************
+
+
+rice-3(+)/16598648-16600199      atgagagcgcgcgggcgccttcaccaggcatttcgtgtctggcagggcagtgctcaaccg
+wild_rice-3(+)/14467855-14469373 atgagagcgcgcgggcgccttcaccaggcatttcatgtctggcagggcagcgctcagccg
+                                 ********************************** *************** ***** ***
+
+
+rice-3(+)/16598648-16600199      ccggcggacggaaatggtccaacggccccccctcccggatcggcccatcctcagggttcc
+wild_rice-3(+)/14467855-14469373 ccggcggacagaaatggtccaacgg-cccccctcccggatcggcccatcctcagggttcc
+                                 ********* *************** **********************************
+
+
+rice-3(+)/16598648-16600199      gggctgctgcatcccacaaagcaagaaagacgccgctaagcagggaacccgccggccgga
+wild_rice-3(+)/14467855-14469373 gggctactgcatcccacaaagcaagaaagacgccgctaagcagggaacccgccggccgga
+                                 ***** ******************************************************
+
+
+rice-3(+)/16598648-16600199      ggggaaagggccccttcgtgaagtgcccaccgcacacaaccccgatttcgaagtggcatt
+wild_rice-3(+)/14467855-14469373 ggggaaagggccccttcgtgaagtgtccaccgcacacaaccccgatttcgaagtgtcatt
+                                 ************************* ***************************** ****
+
+
+rice-3(+)/16598648-16600199      tgggtctgtccccgaaagggggtgtcttgcgggtgcaacggcccatcgacaagtgttata
+wild_rice-3(+)/14467855-14469373 cgggtctgtccccagaagggggcgtcttgcgggtgcaacggcccatcgacaagtgttgta
+                                  ************  ******* ********************************** **
+
+
+rice-3(+)/16598648-16600199      ttagccggggcggcgtcccttaaccgagagaagagagagggctgtgcagggcgctggggg
+wild_rice-3(+)/14467855-14469373 ttagccggggcggcgtcccttaaccgaaagaagagagagggctgcgcagggcgctggggg
+                                 *************************** **************** ***************
+
+
+rice-3(+)/16598648-16600199      catttccaaatgtgtgcgctgatctcgctcttcg--ctctcctctgctctctctcgcgcc
+wild_rice-3(+)/14467855-14469373 catttccaaatttgtgcactgatctcgctcttcgctctctcctctgctctctctcgcgcc
+                                 *********** ***** ****************  ************************
+
+
+rice-3(+)/16598648-16600199      tctctctgagaatacatctgtgtaaaagaatgctaactataataagagcaatagaagtaa
+wild_rice-3(+)/14467855-14469373 tctctctgagagtacatctgtgtaaaataatgctaactataataagagcaatagaagtaa
+                                 *********** *************** ********************************
+
+
+rice-3(+)/16598648-16600199      taattgataagacaggataaaatgatgataataacaagtagatatgtaattaataagata
+wild_rice-3(+)/14467855-14469373 tagtcgacaagacaggataaaatgatagtaataacaagtaggtatgtaattaacaagata
+                                 ** * ** ******************  ************* *********** ******
+
+
+rice-3(+)/16598648-16600199      atgctgctaattagatgagacaatgatgacaatagatagatatataatgaatagaagtaa
+wild_rice-3(+)/14467855-14469373 atgctgcaaattagatgagacaatgatgataatagacagatatataatgaatagaagtaa
+                                 ******* ********************* ****** ***********************
+
+
+rice-3(+)/16598648-16600199      agtaaatactaatagttcatccaatagctctaacaataacgccagacaaaccaataa
+wild_rice-3(+)/14467855-14469373 agtaaatactaatagttcatccaatagctctaacaataacgccagacaaaccaataa
+                                 *********************************************************
+
+
+CLUSTAL W(1.81) multiple sequence alignment W(1.81)
+
+
+rice-3(+)/16600200-16611425      caacagaagtaat--aaacaatataatagaaataagcattgtaatagaaacaagcattat
+wild_rice-3(+)/14470179-14481412 caagaggagagaccgaagccataaagaagaacagagcgtc-taatagagacaag------
+                                 *** ** **  *   ** * *** *  ****   *** *  ******* *****      
+
+
+rice-3(+)/16600200-16611425      tattaaccatcttatataagaaatgactaataactagtgatagaacaagtgtaaacacga
+wild_rice-3(+)/14470179-14481412 -----------tcaggacaaagccgacagataaagagaattagaacgcgtgtagacaaga
+                                            * *    * *   ***  ****  **   ******  ***** *** **
+
+
+rice-3(+)/16600200-16611425      aaataattgtaggaagaaaaagaagtaggattgcatttaagtataatgatcaatagaaca
+wild_rice-3(+)/14470179-14481412 actgagttcaggggagaaaaggaagtgcgatagcaataaagaatagagatcaagagaaca
+                                 *   * **   ** ****** *****  *** *** * *** ***  ****** ******
+
+
+rice-3(+)/16600200-16611425      aagattgcaaaacatacattatctctagtgattatttatcgttataatctccattgtata
+wild_rice-3(+)/14470179-14481412 aagcttgcaaaaaagaagttatacggattgaatcgaaaaaagtataatctgaattgtata
+                                 *** ******** * *  ****    * *** *    *    ********  ********
+
+
+rice-3(+)/16600200-16611425      tctgtctattattatcattgtcttatctaattatatatctgcttgttgttgttactattt
+wild_rice-3(+)/14470179-14481412 tcgatcgattattgccagtggcttatctagttacatatctgctagctattattataacga
+                                 **  ** ******  ** ** ******** *** ********* * * ** ***  *   
+
+
+rice-3(+)/16600200-16611425      tatcttgtcttattaactattacttctattgctcttattacagttaacattattttacat
+wild_rice-3(+)/14470179-14481412 tatcttgtcgaatgaa-tataacgtcaatggcacgtattatagttaacactattttacat
+                                 *********  ** ** *** ** ** ** ** * ***** ******** **********
+
+
+rice-3(+)/16600200-16611425      agacatattctccgagagaggcgcgagagagagcataggagagagcgaagagcgagatca
+wild_rice-3(+)/14470179-14481412 agacatattctccgagagaggcgcgggagagagcaaaggagagaacgaagagcgagatca
+                                 ************************* ********* ******** ***************
+
+
+rice-3(+)/16600200-16611425      gtgcgcaaatttggaaatgcccccagcgtcctgtatagccccccctcttatataacactt
+wild_rice-3(+)/14470179-14481412 gtgcacaaatttggaaatgcccccagcgtcctgtatagccctccctcttacatgacactt
+                                 **** ************************************ ******** ** ******
+
+
+rice-3(+)/16600200-16611425      gtcaacgggccgttgtacccgcaagacaccccttttggggacggacccgactgacacttc
+wild_rice-3(+)/14470179-14481412 gtcgacgggccgttgtacccgcaagacacccctttcggggacggacccgactggcacttc
+                                 *** ******************************* ***************** ******
+
+
+rice-3(+)/16600200-16611425      gaaaccggggttgtgttcggtggacgcttcacgacggggggggctgacgcgtattcgacg
+wild_rice-3(+)/14470179-14481412 gaaaccggggttgtgttcggtggacacttcacgacggggggggctgacgcgtattcgacg
+                                 ************************* **********************************
+
+
+rice-3(+)/16600200-16611425      tcacggcggcggcggcgggggggccgacgcgtattaacatgggcaggctcagctaatgga
+wild_rice-3(+)/14470179-14481412 tcacggcggcggcgg--ggggggctgacgcggattaacatgggcaggctcagctaatgga
+                                 ***************  ******* ****** ****************************
+
+
+rice-3(+)/16600200-16611425      ttttttgtaagagggggaagtgcccgattgtccctgggggataaccctatctaggcattg
+wild_rice-3(+)/14470179-14481412 ttttttgcaagagggggaagtgcccgattgtccctgggggataaccctatcaaggcattg
+                                 ******* ******************************************* ********
+
+
+rice-3(+)/16600200-16611425      ctttgggggtataccctgtcggggcattcgcgcaggatgcatgtctgttattgtcccatt
+wild_rice-3(+)/14470179-14481412 ctttaggggtataccctatcggggcattggcgcaggatgcatgtctgttattgtcccatt
+                                 **** ************ ********** *******************************
+
+
+rice-3(+)/16600200-16611425      gccccaattgccccacatgcccctggccctgcccctatcaaggcacgatccagcaaagct
+wild_rice-3(+)/14470179-14481412 gccccaattgccccacacgcccctggccctgcccctatcaaggcacgatccagcaaagct
+                                 ***************** ******************************************
+
+
+rice-3(+)/16600200-16611425      gggccatctccatctattaatcagggagaagctagcttgacctgcaaagaaggagtagta
+wild_rice-3(+)/14470179-14481412 gggccatctccatctatcaaccagggagaagctagcttgacctgcaaagaaggagtagca
+                                 ***************** ** ************************************* *
+
+
+rice-3(+)/16600200-16611425      gacataatagaacaacttatacaatcagggcgagaagaacaatagataggtgtgcaataa
+wild_rice-3(+)/14470179-14481412 gacataatagaacaactcatacaattagggcaagaaggacaataaataggtgtgcaataa
+                                 ***************** ******* ***** ***** ****** ***************
+
+
+rice-3(+)/16600200-16611425      taataa---tagtagcaatagtataaatgcaatggtattatgataggaaagagtgtgtaa
+wild_rice-3(+)/14470179-14481412 taataacaataatagcaatagtataaatgcaatggtattatgataggaaagagtgcgtaa
+                                 ******   ** ******************************************* ****
+
+
+rice-3(+)/16600200-16611425      ttcttgtgttattattagtagtattccacttattagtagga-ggatcagtagcaacagta
+wild_rice-3(+)/14470179-14481412 ttcttgtgttattattagtagtattccacttattagtaaaaaggatcagtagcaacagca
+                                 **************************************  * **************** *
+
+
+rice-3(+)/16600200-16611425      attgcagtagtaattaaagcattaggtttttgtttttgttgacatgttagcactagcaat
+wild_rice-3(+)/14470179-14481412 attgcagtagtaattaaag-atcaggtttttgtttttgttgacatgttagcactagcaat
+                                 ******************* ** *************************************
+
+
+rice-3(+)/16600200-16611425      taaagcatccagtagaataagaatagaactactagaacaagaagtctaataatatccacg
+wild_rice-3(+)/14470179-14481412 taaagcatctagtagaataagaatagaactaccagaacaagaagtctaataatatccacg
+                                 ********* ********************** ***************************
+
+
+rice-3(+)/16600200-16611425      agtaggataagaataataatacttctagaactaaataaacaagaatcattttcattcatt
+wild_rice-3(+)/14470179-14481412 agtaggataataataataatacttctagaactaaataaacaagaatcattttcatttatt
+                                 ********** ********************************************* ***
+
+
+rice-3(+)/16600200-16611425      attattgagtaatgttataagaataagaatagaactattagaagaattctacaataataa
+wild_rice-3(+)/14470179-14481412 attattgagtaatgttataagaataagaatagaactattagaagaattctacaataataa
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gaatccacatctcgatctatcgacgatcaccatcattctcttgttatactttctcttatt
+wild_rice-3(+)/14470179-14481412 gaatccacatctcgatctatcgatgatcaccatcattctcttgttatactttctcttatt
+                                 *********************** ************************************
+
+
+rice-3(+)/16600200-16611425      cttcctattaatagaatctattgatgatcatcaccattctcttgctatgctttttcctat
+wild_rice-3(+)/14470179-14481412 cttcctattaatagaatctattgatgaccatcatcattctcttactatgctttttcctat
+                                 *************************** ***** ********* ****************
+
+
+rice-3(+)/16600200-16611425      tcttactgtcaatagaattgcaaaatcattttcctattcttactattaatagaattgcaa
+wild_rice-3(+)/14470179-14481412 tcttactgtcaacagaattgcaagatcattttcctattcctactattaatagaattgcaa
+                                 ************ ********** *************** ********************
+
+
+rice-3(+)/16600200-16611425      aattatcctagggctacgattattgctactagttataataggatagttctgaaagcacta
+wild_rice-3(+)/14470179-14481412 aattatcctagggcttcgattattgctactagttataataggatagttctgaaagcacta
+                                 *************** ********************************************
+
+
+rice-3(+)/16600200-16611425      ctaccagtcataacagaacgactaataagaacaatagaactagaaagaaaaggagcacta
+wild_rice-3(+)/14470179-14481412 ctaccagttatgacagaacgactaataagaacaatagaactagaaagaaaaggagcacta
+                                 ******** ** ************************************************
+
+
+rice-3(+)/16600200-16611425      agaagtctattgattgttctgttactcaaatctctttgcgcgatatcatcttgagtattg
+wild_rice-3(+)/14470179-14481412 agaagtctattaattgttctgttactcaa-tctctttgcgcgatatcatctcgagtattg
+                                 *********** ***************** ********************* ********
+
+
+rice-3(+)/16600200-16611425      cttgcaagaagaagtagaagaaggagtgacagatcatctacaacaagtgcaagagcagtt
+wild_rice-3(+)/14470179-14481412 cttgcaagaagaagtagaagaaggagtgacagatcatctacaacaggtgcaagagcagtt
+                                 ********************************************* **************
+
+
+rice-3(+)/16600200-16611425      aatagaagtagatcttctctttctggtaataataatacgaagtgcaggaaatggccccac
+wild_rice-3(+)/14470179-14481412 aatagaagtagatcttctccttctggcaataataataagaagtgcaggaaatggccccac
+                                 ******************* ****** ********** **********************
+
+
+rice-3(+)/16600200-16611425      tccgctgtttaacaagaagacaggggcagccctaggggcgtgtggggaaattggggcaat
+wild_rice-3(+)/14470179-14481412 tccgctgtttaacaagaagacaggggcagccctaggggcgtgtggggaaattggggcaat
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gggacaataacagatgtgtatcctgcgccactgccccgatagggtacacccctagagcag
+wild_rice-3(+)/14470179-14481412 gggacagtaacagatgtgtatcctgcgccaatgccccgatagggtacacccctagagcag
+                                 ****** *********************** *****************************
+
+
+rice-3(+)/16600200-16611425      cgccgcgatagggttacgccccaggtacagtcgggcacttgcccctctatgttttgtaca
+wild_rice-3(+)/14470179-14481412 cgccgcgatagggttacaccccaggtacaatcgggcacttgcccctctatgttt-gtaca
+                                 ***************** *********** ************************ *****
+
+
+rice-3(+)/16600200-16611425      gagatagcagtcccatactagactagtctactctgtctaggtctagtttgggtttagtgt
+wild_rice-3(+)/14470179-14481412 gagatagcagtcccatactagactagtctactctgtctaggtccagtttgggtttagtgt
+                                 ******************************************* ****************
+
+
+rice-3(+)/16600200-16611425      atagatgtagacctagactagatttaggtaggttagttaagttaaaaaccctaccaatga
+wild_rice-3(+)/14470179-14481412 atagatgtagacctagactagatttaggtaggttagttaagttaaaaaccctaccaatga
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gctctattaattattattattattattattatagatgacctaattaattgattgattgtg
+wild_rice-3(+)/14470179-14481412 gctctattaattattattattattatgat---agatgacctaattaattgattgattgtg
+                                 ************************** **   ****************************
+
+
+rice-3(+)/16600200-16611425      ctaataagacagacacacacacacaaaaaaagagcatgagatacagtataatcagtatca
+wild_rice-3(+)/14470179-14481412 ctaataagacagacacacacacacaaaaaaagagcatgagatacagtataatcagtatca
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tcatcacatataattcaaataattatatcatctcgtaatagagcaaatattcgtcaaatt
+wild_rice-3(+)/14470179-14481412 tcatcacatataattcaaataattatatcatctcgtaatagagcaaatattcgtcaaatt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      atttattctcttcatcttcaatttcttcttcttctgctattatttctacttccactctta
+wild_rice-3(+)/14470179-14481412 atttattctcttcatcttcaatttcttcttcttctgctattatttctactttcactctta
+                                 *************************************************** ********
+
+
+rice-3(+)/16600200-16611425      actgacgtatggtattattaccgatcccccaacactttaacctcaaatatttgccccaga
+wild_rice-3(+)/14470179-14481412 actgacgtatggtatcattaccgatcccccaacactttaacctcaaatatttgccccaga
+                                 *************** ********************************************
+
+
+rice-3(+)/16600200-16611425      aacctcgacccatcgtcgacgacccgaccaccaacactagttgcctcacctcagcctaag
+wild_rice-3(+)/14470179-14481412 aacctcgacccatcgtcgacgacccgaccaccaacactagttgcctcacctcagcctaag
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gcagaatcggcctagttctttccccaccgctcactgcacgtctgcacacgggtccaatat
+wild_rice-3(+)/14470179-14481412 gcagaatcggcctagttctttccccaccgctcactgcatgtctgcacacgggtccaatat
+                                 ************************************** *********************
+
+
+rice-3(+)/16600200-16611425      accgataacaggccgtccgaatgccgtctcatgcagccccaaaaatgatcgtggtcatgg
+wild_rice-3(+)/14470179-14481412 accgataacaggccgtccgaatgccgtcacatgcagccccaaaaatgatcgtggtcatgg
+                                 **************************** *******************************
+
+
+rice-3(+)/16600200-16611425      gctgtatgtggccagatgttttgcagcgcgtgtcccatgtccaacggtgtttctccgcac
+wild_rice-3(+)/14470179-14481412 gctgtatgtggccagatgttttgcagcgcgtgtcccatgtccaacggtgttactccgcac
+                                 *************************************************** ********
+
+
+rice-3(+)/16600200-16611425      cctggcgatgcccagggagaatgatgggcggccttccgggtccggacagccagggcggtg
+wild_rice-3(+)/14470179-14481412 cctggcgatgcccagggagaatgatgggcggccttccgggtccggacagccagggcggtg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gaaagtagaacaagcgcgctccctatcgaatggttggatccatgcaacctccccaccatg
+wild_rice-3(+)/14470179-14481412 gaaagtagaacaagcgcgctccctatcgaatggttggatccatgcaacctccccaccatg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tcgctccactccggtggctgcgtgctctgcccgctctccttccaagtgaggcggctgcac
+wild_rice-3(+)/14470179-14481412 tcgctccactccggtggctgcgtgctctgcccgctctccttccaagtgaggcggctgcac
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      aggagccatcaccaccattagcttgtgaaccgaccccctttcatgccgccctgcagagcc
+wild_rice-3(+)/14470179-14481412 aggagccatcaccaccattagcttgtgaaccggccccctttcatgccgccctgcagagcc
+                                 ******************************** ***************************
+
+
+rice-3(+)/16600200-16611425      acattgcctcccgagagatgtgtgaagagatcatgtagtccccaggggtgtttaccgcac
+wild_rice-3(+)/14470179-14481412 acattgcctcccgagagatgtgtgaagagatcatgtagtccccaggggtgtttaccgcac
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cgtgccaaggtgcgtggggggcgatccggcgtgcgcaccgtctctcttcaggcttctcat
+wild_rice-3(+)/14470179-14481412 cgtaccaaggtgcgtggggggcgatccggcgtgcgcaccgtctctcttcaggcttctcat
+                                 *** ********************************************************
+
+
+rice-3(+)/16600200-16611425      gatccgcaagtgatgttctttccaattccttgttagatctggccatatcatggatcatca
+wild_rice-3(+)/14470179-14481412 gatccgcaagtgatgttctttccaattccttgttagatctggccatatcatggatcatca
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gacctcgtgtaagcccaggtgcagaggaacttccctgactcaccacgtccttgcctggat
+wild_rice-3(+)/14470179-14481412 ggcctcgtgtaagcccaggtgcagaggaacttccctgactcaccacgtccttgcctggat
+                                 * **********************************************************
+
+
+rice-3(+)/16600200-16611425      tgagtgcatcgccgccctccaacagctgtcccagcaaaaatttgcgcgcacttggcagga
+wild_rice-3(+)/14470179-14481412 tgagtacatcgccgccctccaacagctgtcccagcaaaaatttgcgcgcacttggcagga
+                                 ***** ******************************************************
+
+
+rice-3(+)/16600200-16611425      gacggaatgtaaagtcaggcctcgcccctgttccccgacgagcctcgcgctcttcttcgg
+wild_rice-3(+)/14470179-14481412 gacggaatgtaaagtcaggcctcgcccctgttccccgacgagcctcgcgctcttc---gg
+                                 *******************************************************   **
+
+
+rice-3(+)/16600200-16611425      ccgtgccataacacaccaaccgaggtcagcccctcgctccacctgcacactccaaggaca
+wild_rice-3(+)/14470179-14481412 ccgtgccataacacaccaaccgaggtcagcccctcgctccacctgcacactccaaggaca
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gcgaaatcgcgcgatacagtgcggtcgagcgcacagcggtctgcggtcggggctggcccc
+wild_rice-3(+)/14470179-14481412 gcgaaatcgcgcgatacagtgcggtcgagcgcacagcggtc-gcggtcggggctggcccc
+                                 ***************************************** ******************
+
+
+rice-3(+)/16600200-16611425      gtgatgcgccgcccacggaagtgtgcccagcgagcatcaccctcccctcccccccggggg
+wild_rice-3(+)/14470179-14481412 gtgatgcgccgcccacggaagtgtgcccagcgagcatcaccctcccctcccccccccggg
+                                 *******************************************************  ***
+
+
+rice-3(+)/16600200-16611425      ggacggagattctgctacccaattcgggggattgggtggcggattggggcctaggcccct
+wild_rice-3(+)/14470179-14481412 g-acggagattctgctacccaattcgggggattgggtggcggattggggcctaggcccct
+                                 * **********************************************************
+
+
+rice-3(+)/16600200-16611425      aggtcaagccccagggccggcccggggcgcccccggtacggccccccggggaccaatccc
+wild_rice-3(+)/14470179-14481412 aggtcaagccccagggccggcccggggcgcccccggtacggccccccggggaccaatccc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cgtctttcttgccttgcggcagctgatgcgccctgccacaatgctggagttggaagagag
+wild_rice-3(+)/14470179-14481412 cgtctttcttgccttgcggcagctgatgcgccctgccacaatgctggagttggaagagag
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tttctcgtttacccctcgcccggcttccacggccggct------------aatccaagag
+wild_rice-3(+)/14470179-14481412 tttctcgtttacccctcgcccggcttccacggccggctcttgcgccggctaatccaagag
+                                 **************************************            **********
+
+
+rice-3(+)/16600200-16611425      ggtagggtggtaccgtcattatcatgcagccatgtgaatggaaagcaccttacatcatgc
+wild_rice-3(+)/14470179-14481412 ggtagggtggtaccgtcattatcatgcagccatgtgaatggaaagcaccttgcatcatgc
+                                 *************************************************** ********
+
+
+rice-3(+)/16600200-16611425      atgatctaggggctatgcaattcgtctagctcttacagcggtcgaccggcttgcttggtg
+wild_rice-3(+)/14470179-14481412 atgatctaggggctatgcaattcgtctagctcttacagcggtcgaccggcttgcttggtg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      catgtgcatcgttgataccggcgtatcagctgggccaaggcgctcttgtccctaccgcat
+wild_rice-3(+)/14470179-14481412 catgtgcatcgttgataccggcgtatcagctgggctaaggcgctcttgtccctaccgcat
+                                 *********************************** ************************
+
+
+rice-3(+)/16600200-16611425      atcagctgccgcaaggcaagaaagacggaccaccgtaggtgggctcgcggggaccccgtt
+wild_rice-3(+)/14470179-14481412 atcagctgccgcaaggcaagaaagacggaccatcgtaggtgggctcgcggggaccccgtt
+                                 ******************************** ***************************
+
+
+rice-3(+)/16600200-16611425      cgcgggccggcccccgcccctcggcggattaccccaatccgccgattggcgcgaatggtt
+wild_rice-3(+)/14470179-14481412 cgcgggccggcccccgcccctcggcggattaccccaatccgccgattggcgcgaatggtt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      agcaaacattcggccggccgcagcgccccaccacggggctgtgcgcgcactccgcgcagc
+wild_rice-3(+)/14470179-14481412 agcaaacattcggccggccgcagcgccccaccacggggctgtgcgcgcactccgcgcagt
+                                 *********************************************************** 
+
+
+rice-3(+)/16600200-16611425      gtggatcgatgtcccgtgcaccttcgtgcggggctacgcgccctgcttccgtaccccggg
+wild_rice-3(+)/14470179-14481412 gtggatcgatgtcccgtgcaccttcgtgcggggctatgcgccctgcttccgtaccccggg
+                                 ************************************ ***********************
+
+
+rice-3(+)/16600200-16611425      tgagtcagtgggcggagtggctggagcacacctctgtcaaaagcctgtacgctgggcgcc
+wild_rice-3(+)/14470179-14481412 tgagtcagtgggcggagtggctggagcacacctctgtcaaaagcctgtacgctgggcgcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ccggagtcgtgcgccacgccgcaagatggccgttgtcgcaccactggccactgctagttt
+wild_rice-3(+)/14470179-14481412 ccggagtcgtgcgccacgccgcaagatggccgttgtcgcaccactggccactgctagttt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ggactccttgaggggtgccgtaattgaccttaacaccccctcccccagggccgggggggg
+wild_rice-3(+)/14470179-14481412 ggactccttgaggggtgccgtaattgaccttaacaccccctcccccagggccgggggggg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gg-tcactctcttcgccctgtggcttggcggggacccgtgatcagtgcccccggaccggg
+wild_rice-3(+)/14470179-14481412 gggtcactctcttcgccctgtggcttggcggggacccgtgatcagtgcccccggaccggg
+                                 ** *********************************************************
+
+
+rice-3(+)/16600200-16611425      tgggacctgccaacgcgaggggcgcccgcacggcggttcctctgggcaccgaagggcgcg
+wild_rice-3(+)/14470179-14481412 tgggacctgccaacgcgaggggcgcccgcacggcggttcctctgggcaccgaagggcgcg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cggcgacggcaggggcggccgacagcgcgctgcaggaccctctgacacgttcgaggacag
+wild_rice-3(+)/14470179-14481412 cggcgacggcaggggcggccgacagcgcgctgcaggaccctctgacacgttcgaggacag
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ggaaattcgcgattcgataaccgtgacatctggaccatgttctcgcacttcaaacccagt
+wild_rice-3(+)/14470179-14481412 ggaaattcgcgattcgataaccgtgacatctggaccatgttctcgcacttcaaacccagt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cttttgacttctccaaagataggccccgaattcgaccaggggggactgcacatcagtttt
+wild_rice-3(+)/14470179-14481412 cttttgacttttccaaagataggccctgaattcgaccaggggggactgcacatcagtttt
+                                 ********** *************** *********************************
+
+
+rice-3(+)/16600200-16611425      ctgcgggggtgtgcaccggaggctcgttcgtaagaaggaaatttcgacacgaaagatgag
+wild_rice-3(+)/14470179-14481412 ctgcgggggtgtgcaccggaggctcgttcgtaagaaggaaatttcgacacgaaagatgag
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      aattctgggatgtaaaccggaagtcagtttacgaaaaacggacgcatacacaaaaaattg
+wild_rice-3(+)/14470179-14481412 aattctgggatgtaaaccggaagtcagtttacgaaaaacggacgcatacacaaaaaattg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gaacctgcaatcccctctgattgacccaaccagaatcctcctcctccggcaggggatcac
+wild_rice-3(+)/14470179-14481412 aaacctgcaatcccctctgattgacccaaccagaatcctcctcctccggcaggggatcac
+                                  ***********************************************************
+
+
+rice-3(+)/16600200-16611425      aaaagtaactgcttttttattgacgagaacccctcccccccgttcggagggcaggttcaa
+wild_rice-3(+)/14470179-14481412 aaaagtaactgcttttttattgacgagaacccctcccccccgttcggagggcaggttcaa
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gtacgacggggcagcttgctcctatagtgaaactttcctcggccctcgagatcgtcagcg
+wild_rice-3(+)/14470179-14481412 gtacgacggggcagcctgctcctatagtgaaactttcctcggccctcgagatcgtcagcg
+                                 *************** ********************************************
+
+
+rice-3(+)/16600200-16611425      agtcaaccgtgtcaaccttggcgacagtcatgccccttcttccgatctcttctgccgact
+wild_rice-3(+)/14470179-14481412 agtcaaccgtgtcaaccttggcgacagtcgtgccccttcatccgatctcttctgccgact
+                                 ***************************** ********* ********************
+
+
+rice-3(+)/16600200-16611425      gccgtgatcctctgtttgcaggtgggtggcgtccctgtcttccaccatgttcacctggcc
+wild_rice-3(+)/14470179-14481412 gccgtgatcctctgtttgcaggtgggtggcgtccctgtcttccaccatgttcacctggcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cccgcaacacctctttccccttcccaccgccatcgccacccgaggtgttcaaggcggccg
+wild_rice-3(+)/14470179-14481412 cccgcaacacctctttcctcttcccaccgccatcgccacccgaggtgttcaaggcggccg
+                                 ****************** *****************************************
+
+
+rice-3(+)/16600200-16611425      gcaccaacgcaccacccttttcgagaccgccgccggcagttcgaccagcgaccggcgtcc
+wild_rice-3(+)/14470179-14481412 gcaccaacgcaccacccttttcgagaccgccgccggcagttcgaccagcgaccggcgtcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      agctcgcacccccctccgacccacagctctctcccgccgacggttccccctgacagcgcc
+wild_rice-3(+)/14470179-14481412 agctcgcacccccctccgacccacagctctctcccgccgacggttccccctgacagcgcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ttactgtggggccgctgggtcaccgcatgtcctggcaagcgcctccccacggcccacacc
+wild_rice-3(+)/14470179-14481412 ttactgtggggccgctgggtcaccgcatgtcctggcaagcgcctccccacggcccacacc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ggggttccctgaacaatgcaggctaccactctatcccggatgcgcgcctgatgcaggcag
+wild_rice-3(+)/14470179-14481412 ggggttccctgaacaatgcaggctaccactctatcccggatgcgcgcctgatgcaggcag
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gtgcgcggtgggcttgggtgctttggctcgtcgttccctgaagggctgcagcgccaatcg
+wild_rice-3(+)/14470179-14481412 gtgcgcggtgggcttgggtgctttggctcgtcgttccctgaagggctgcagcgccaatcg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tctgatgccctgtggggcctgcttcagaacagccctttttccctgcccctgcaatccccg
+wild_rice-3(+)/14470179-14481412 tctgatgccctgtggggcctgcttcagaacagccctttttccctgcccctgcaatccccg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ccccctgcgcccttgagtcgccccagtgcacagacccgtgagttgcggtcaggccgtgcc
+wild_rice-3(+)/14470179-14481412 ccccctgcgcccttgagtcgccccagtgcacagacccgtgagttgcggtcaggccgtgcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      agtgctggtggggcggtcctgtggcaacccttgttcgggcctggaccgtgtcatgtcttt
+wild_rice-3(+)/14470179-14481412 agtgctggtggggcggtcctgtggcaacccttgttcgggcctggaccgtgtcatgtcttt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ctaactttggggcgcagtggccctcgatgcctggagcccacttgggggcgcggtggtcct
+wild_rice-3(+)/14470179-14481412 ctaactttggggcgcagtggccctcgatgcctggagcccacttggggccgcggtggtcct
+                                 *********************************************** ************
+
+
+rice-3(+)/16600200-16611425      cttgtcggggcctctccttcggttggccgtggcttcttgttgcctggcccttttgttcgt
+wild_rice-3(+)/14470179-14481412 cttgttggggcctctccttcggttggccgtggcttcttgttgcctggcccttttgttcgt
+                                 ***** ******************************************************
+
+
+rice-3(+)/16600200-16611425      tcttgtcctctggatggctgtggtccgttttttgcccggccacgctcgtccctccggcgt
+wild_rice-3(+)/14470179-14481412 tcttgtcctctggatggctgtggtccgttttttgcccggccacgctcgtcc----ggcgt
+                                 ***************************************************    *****
+
+
+rice-3(+)/16600200-16611425      ctacacttggtttcgggggcatccgcgccccaaagtgaaagcgacgacgcccggaagcat
+wild_rice-3(+)/14470179-14481412 ctacacttggtttcgggggcatccgcgccccaaagtgaaagcgacgacgcccggaagcat
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      aggggtggggcaccggtgcgtcgtggttcgcggcgctttcgcggctccgcccgcctccct
+wild_rice-3(+)/14470179-14481412 aggggtggggcaccggtgcgtcgtggttcgcggcgctttcgcggctccgcccgcctccct
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ccacgaacagccctctaacgcagggggaggcccaagctggagggccgttggcccccaatc
+wild_rice-3(+)/14470179-14481412 ccacgaacagccctctaacgcagggggaggcccaagctggagggccgttggcccctaatc
+                                 ******************************************************* ****
+
+
+rice-3(+)/16600200-16611425      aaaggaacaagccccaccaccaccagcatttgggtctccagcaacgaaccgttgcattct
+wild_rice-3(+)/14470179-14481412 aaaggaacaagccccaccaccaccagcatttgggtctccagcaacgaaccgttgcattct
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tgcgcccagtcgcacatcgctcatcgctagaccttttccccctcccctgaggagtcatag
+wild_rice-3(+)/14470179-14481412 tgtgcccagtcgcacatcgctcatcgctagaccttttccccctcccctgaggagtcatag
+                                 ** *********************************************************
+
+
+rice-3(+)/16600200-16611425      taaatcgtgtcccgagaaggaccctgttccgcggcatgcctgcgcctcgaagctcgggcc
+wild_rice-3(+)/14470179-14481412 taaatcgtgtcccgagaaggaccctgttccgcggcatgcctgcgcctcgaagctcgggcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gacccctgcaggcggcagccctggaccagtggagggtgctatgggcaccctggccttccg
+wild_rice-3(+)/14470179-14481412 gacccctgcaggcggcagccctggaccagtggagggtgctatgggcaccctggccttccg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      accaccccaacaatccaacaaccgcaaggatgcgaagggaagcacactcccagaaagatt
+wild_rice-3(+)/14470179-14481412 accaccccaacaatccaacaaccgcaaggatgcgaagggaagcacactcccagaaagatt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ctgttcggccctggcactgctgcatgaagtgccgaacgcagcattgcacccacaacatgt
+wild_rice-3(+)/14470179-14481412 ctgttcggccctggcactgctgcatgaagtgccgaacgcagcattgcacccacaacatgt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cgagagcagagttgcacccagaagtgccgagaaattggggaattccgacgatgcccaatc
+wild_rice-3(+)/14470179-14481412 cgagagcagagttgcacccagaagtgccgagaaattggggaattccgacaatgcccaatc
+                                 ************************************************* **********
+
+
+rice-3(+)/16600200-16611425      acgagcaccacccacccgaactaccaaccatgacttcccagcttccctcgccctccccat
+wild_rice-3(+)/14470179-14481412 acgagcaccacccacccgaactaccaaccatgacttcccagcttccctcgccctccccat
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ggacttccgcacgcccagactcctccgagtctcctccacccactccggcgcggcagcata
+wild_rice-3(+)/14470179-14481412 ggacttccgcacgcccagactcctccgagtctcctccacccactccggcgcggcagcata
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tgatctcttcacatgcctggagggggggggaggcggcagccctgcaccatccatgacgcc
+wild_rice-3(+)/14470179-14481412 tgatctcttcacatgcctggagggggggggaggcggcagccctgcaccatccatgacgcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ttcccagcagcagcctccctcacgatcgggaggccatcggcgcgcatcatgaagatcggg
+wild_rice-3(+)/14470179-14481412 ttcccagcagcagcctccctcacgatcgggaggccaccggcgcgcatcatgaagatcggg
+                                 ************************************ ***********************
+
+
+rice-3(+)/16600200-16611425      agggatgggagggagcttcttctccaaagacctgctgggatgccactgttcaacgcaatg
+wild_rice-3(+)/14470179-14481412 agggatgggagggagcttcttctccaaagacctgctgggatgccactgttcaacgcaatg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ccacagccacgtgaggtcgtcagcagtcgcatggctccgcggcgtcgctgagactccagt
+wild_rice-3(+)/14470179-14481412 ccacagccacgtgaggtcgtcagcagtcgcatggctccgcggcgtcgctgagactccagt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cgaactccgctccccggaacggtggggtgggtttgggaacctcgtcggtgtgcgccttgt
+wild_rice-3(+)/14470179-14481412 cgaactccgctccccggaacggtggggtgggtttgggaacctcgtcggtgtgcgccttgt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ctcgttagttcagtggcctcttccataacttgtgctacctcctgttcaccgctggctgaa
+wild_rice-3(+)/14470179-14481412 ctcgttagttcagtggcctcttccataacttgtgctacctcctgttcaccgctggctgaa
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cgcatctcaccacccaccgcccagggggaaggaggccttcgagggccccttcgcctcttc
+wild_rice-3(+)/14470179-14481412 cgcgtctcaccacccaccgcccagggggaaggaggccttcgagggccccttcgcctcttc
+                                 *** ********************************************************
+
+
+rice-3(+)/16600200-16611425      ccgacctgcccggttaattccaacaggccttcatgagtcatcacggcctcccagttcggc
+wild_rice-3(+)/14470179-14481412 ccgacctgcccggttaattccaacaggccttcatgagtcatcacggcctcccagttcggc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tttctccggaaggtctgg-ctggctgggcgtatggcccatcagcccgccccgcctcaccg
+wild_rice-3(+)/14470179-14481412 tttctccggaaggtctgggctggctgggcgtgtggcccatcagcccgccccgcctcaccg
+                                 ****************** ************ ****************************
+
+
+rice-3(+)/16600200-16611425      tgagaaacgctcggcatgattgcaagctggaaagcggtacgcacttcggtctgggtcgcc
+wild_rice-3(+)/14470179-14481412 tgagaaacgctcggcatgattgcaagctggaaagcggtacgcacttcggtctgggtcgcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      acctcctcccttcccctcaagttggtgccatgcatggtaggtggcggtgcgtggtcaacc
+wild_rice-3(+)/14470179-14481412 acctcctcccttcccctcaagttggtgccatgcatggtaggtggcggtgcatagtcaacc
+                                 ************************************************** * *******
+
+
+rice-3(+)/16600200-16611425      gggctgggcctcctaacgcggacgccatcacgccgaacgtgcccaccagggttaagttca
+wild_rice-3(+)/14470179-14481412 gggctgggtctcctaacgcggacgccatcacgccgaacgtgcccaccagggttaagttca
+                                 ******** ***************************************************
+
+
+rice-3(+)/16600200-16611425      ccatgaattgaattgactctccgacccgcaccctctcaacttggttgacaactccccaac
+wild_rice-3(+)/14470179-14481412 ccatgaattgaattgactctccgacccgcaccctctcaacttggttgacaactccccaac
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      caaatcatcaacctgagggcgaaccagacaatccggaccccgcgttggctgtgagcgtgg
+wild_rice-3(+)/14470179-14481412 caaatcatcaacctgagggcgaaccagacaatccggaccccgcgttggctgtgagcgtgg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      acctaggccacacgtccatttcgacatgtactcaccccaatccgaagccaccattccgca
+wild_rice-3(+)/14470179-14481412 acctaggccacacgtccatttcgacatgtactcaccccaatccgaagccaccattccgca
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ttccccaatccccgcgtcccgcgggatccccggattgtggtggacctcgacaccaggctg
+wild_rice-3(+)/14470179-14481412 ttccccaatccccgcgtcccgcgggatccccggattgtggtggacctcgacaccaggctg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cggcttttgggggcatgcggatcaatccgccaaatctcgacttctggactacaaatccag
+wild_rice-3(+)/14470179-14481412 cggcttttgggggcatgcggatcaatccgccaaatctcgacttctggactacaaatccag
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gcttctcggcacggctggcgccccaccttgcgtcgcgcacccacgttcacgggtcggcca
+wild_rice-3(+)/14470179-14481412 gcttctcggcacggctggcgccccaccttgcgtcgcgcacccacgttcacgggtcggcca
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gagcacgctgccttgggcacccttgcgctgttgcgcaatgtgattgggaagccagtgggg
+wild_rice-3(+)/14470179-14481412 gagcacgctgccttgggcacccttgcgctgttgcgcaatgtgattgggaagccagtgggg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      agggcacctcacgcatgatcgttgaggccgctcagatgggagagtcctcagttctccatc
+wild_rice-3(+)/14470179-14481412 agggcacctcacgcatgatcgttgaggccgctcagatgggagagtcctcagttctccatc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gtgtccaccaggattcacggatccccccatcccccttgacatcccgggctgctccccagg
+wild_rice-3(+)/14470179-14481412 gtgtccaccaggattcacggatccccccatcccccttgacatcccgggctgctccccagg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tccccggtcgcaatcggctttctcgtgaacctccacctctctgaattgcagctgcagttg
+wild_rice-3(+)/14470179-14481412 tccccggtcgcaatcggctttctcgtgaacctccacctctctgaattgcagctgcagttg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      acacgtgacgacctgctttgtcttccccaagttgacggtaagaaccgaggggcccggatc
+wild_rice-3(+)/14470179-14481412 acacgtgacgacctgctttgtcttccccaagttgacggtaagaaccgaggggcccggatc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ccgcatcattgcgcaccctggacccatgctctgcagggcagccggcatcatgatgcgttt
+wild_rice-3(+)/14470179-14481412 ccgcatcattgcgcaccctggacccatgctctgcagggcagccggcatcatgatgcgttt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ccaacgtggcggaccaatggtgaaaaggctctcgcttgctccccgcatcctcgctcatca
+wild_rice-3(+)/14470179-14481412 ccaacgtggcggaccaatggtgaaaaggctctcgcttgctccccgcatcctcgctcctca
+                                 ******************************************************** ***
+
+
+rice-3(+)/16600200-16611425      aatttggatcattgatgggcctcgtcagcgcgaggtgcagaacctcagtaggctcccacc
+wild_rice-3(+)/14470179-14481412 aatttggatcattgatgggcctcgtcagcgcgaggtgcagaacctcagtaggctcccacc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cctcattcgggtgggtctgcgctcgcgcgcaacggcgtccacggcgcatgttcttgatcc
+wild_rice-3(+)/14470179-14481412 cctcattcgggtgggtctgcgctcgcgcgcaacggcgtccacggcgcatgttcttgatcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      accacccgggacagctgacccgtgaccggggtcacccgcggcgcacctcgctcctcaccc
+wild_rice-3(+)/14470179-14481412 accacccgggacagctgacccgtgaccggggtcacccgcggcgcacctcgctcctcaccc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gcgcgaacgcgctccttgacccacaacagtatcctcctcatccgctccacaattggtggg
+wild_rice-3(+)/14470179-14481412 gcgcgaacgcgctccttgacccacaacagtatcctcctcatccgctccacaattggtggg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      caactctgagctctccttacgtacaggtctgcccacggatcctgcataactgacaatcat
+wild_rice-3(+)/14470179-14481412 caactctgagctctccttacgtacaggtctgcccacggatcctgcataactgacaatcat
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      caggccacccctggaggtagggagggggagcagtagaaggagcaacaggcgcagggcaac
+wild_rice-3(+)/14470179-14481412 caggccacccctggaggtagggagggggagcagtagaaggagcaacaggcgcagggcaac
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tcaaagcatgagaaagcttgcatgttcaaccgggggaattacaatggaggtttttgatgt
+wild_rice-3(+)/14470179-14481412 tcaaagcatgagaaaccttgcatgttcaaccgggggaattacaatggaggtttttgatgt
+                                 *************** ********************************************
+
+
+rice-3(+)/16600200-16611425      cgatctgagtctggaggtcgtgaagtaacgcacatcccccaagtagcagccacgatcgtt
+wild_rice-3(+)/14470179-14481412 cgatctgagtctggaggtcgtgaagtaacgcacatcccccaagtagcagccacgatcgtt
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gagcgccagggtccggcaacgcccgtcagggcgcccctcgcccccaacggtgaaaagggc
+wild_rice-3(+)/14470179-14481412 gagcgccagggtccggcaacgcccgtcagggcgcccctcgcccccaacggtgaaaagggc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      accaccatggaattggtgattgagggaggctggttaagattcagcctgctaacctccacc
+wild_rice-3(+)/14470179-14481412 accaccatggaattggtgattgagggaggctggttaagattcagcctgctaacctccacc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      agagcagatctgagggcagcgctgaggagcaagaagggaacattctatctggatgggcca
+wild_rice-3(+)/14470179-14481412 agagcagatctgagggcagcgctgaggagcaagaagggaacattctatctggatgggcca
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ggggcggaagaaacatcctgagaatcaccctacactgcctgactggccaccactgccatt
+wild_rice-3(+)/14470179-14481412 ggggcggaagaaacatcctgggaatcaccctacactgcctgactggccaccactgccatt
+                                 ******************** ***************************************
+
+
+rice-3(+)/16600200-16611425      atgccaggcactttctcgcgtgcagcatcctcacctggaagccaagctagttaccaggcg
+wild_rice-3(+)/14470179-14481412 atgccaggcactttctcgcgtgcagcatcctcacctggaagccaagctagttaccaggcg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      agacatagggattcgacctcgctgacggccggaaagcgtggtcgcgaagaagtccatggg
+wild_rice-3(+)/14470179-14481412 agacatagggattcgacctcgctgacggccggaaagcgtggtcgcgaagaagtccatggg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      catggaactaggcggccggcccagcgccatcccaaccagtgtgagggggcagcccgttga
+wild_rice-3(+)/14470179-14481412 catggaactaggcggccggcccagcgccatcccaaccagtgtgagggggcagcccgttga
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      cctggttgaaacagctacaccacatgctggtacctgacaatttacctccccactcaccga
+wild_rice-3(+)/14470179-14481412 cctggttgaaacagctacaccacatgctggtacctgacaatttacctccccactcaccga
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      attcgagatcgcgtccccccacgtggcacctgcgttgacgagcgccatccaggagctgtg
+wild_rice-3(+)/14470179-14481412 attcgagatcgcgtccccccacgtggcacctgcgttgacgaccgccatccaggagctgtg
+                                 ***************************************** ******************
+
+
+rice-3(+)/16600200-16611425      agcaacctgacgaggacgctgagccccaaccacgctcttgttcagttcagtgtgtacggc
+wild_rice-3(+)/14470179-14481412 agcaacctgacgaggacgctgagccccaaccacgctcttgttcagttcagtgtgcacggc
+                                 ****************************************************** *****
+
+
+rice-3(+)/16600200-16611425      ataatgcgcgaagagaaatgccacgtcacgcgccttggtggctcccccgcacctcctcgg
+wild_rice-3(+)/14470179-14481412 ataatgcgcgaagagaaatgccacgtcacgcgccttggtggctcccccgcacctcctcgg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ggacttgttgagcgccgccggccgtgcagtgggcctcttcttgggcgcccgttcgaacgc
+wild_rice-3(+)/14470179-14481412 ggacttgctgagcgccgccggccgtgcagtgggcctcttcttgggcgcccgttcgaacgc
+                                 ******* ****************************************************
+
+
+rice-3(+)/16600200-16611425      tcccgggaacgcggttgacggtgatctccaacgggagaccaatcacatccgcaacgcgtc
+wild_rice-3(+)/14470179-14481412 tcccgggaacgcggttgacggtgatctccaacgggagaccaatcacatccgcaacgcgtc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gtctcgaagacgtgccaccgacccgagctcctcacaggccgaccacgcgcgaatgcgccc
+wild_rice-3(+)/14470179-14481412 gtctcgaagacgtgccaccgacccgagctcctcacaggccgaccacgcgcgaatgcgccc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      accatgcaacccggtgcgcgcattcgcgcgcacgcccatctgtcagctcagaatgattcc
+wild_rice-3(+)/14470179-14481412 accatgcaacccggtgcgcgcattcgcgcgcacgcccatctgtcagctcagaatgattcc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      agctcagcgtttgccccccattcggcggcccttgccccctcaaggcacgcttcggccacc
+wild_rice-3(+)/14470179-14481412 agctcagcgtttgccccccattcggcggcccctgccccctcaaggcacgcttcggccacc
+                                 ******************************* ****************************
+
+
+rice-3(+)/16600200-16611425      aattcggcctccccctcggacacgccacccaaccggtctgaggcctgcagcgcgtccgca
+wild_rice-3(+)/14470179-14481412 aattcggcctccccctcggacacgccacccaaccggtctgaggcctgcagcgcgtccgca
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ctgagctcattggggtggtgcattgataccgcgctcatggccagggggcgcccccgctct
+wild_rice-3(+)/14470179-14481412 ctgagctcattagggtggtgcattgataccgcgctcatggccagggggcgcccccgctct
+                                 *********** ************************************************
+
+
+rice-3(+)/16600200-16611425      tccgatcttacaccaggactcgggttagatcgacgcccagagctgaatgggagagcaagg
+wild_rice-3(+)/14470179-14481412 ---gatcttacaccaggactcgggttagatcgacgcccagagctgaatgggagagcaagg
+                                    *********************************************************
+
+
+rice-3(+)/16600200-16611425      ctagttctggaaccggcagagaccgggccgcatccaccccttgccatgcgggccgcgcgc
+wild_rice-3(+)/14470179-14481412 ctagttctggaaccggcagagaccgggccgcatccaccccttgccatgcgggccgcgcgc
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gtccttctcaccccgcgccgcggggtccctcgatgccacttgtgcccccgcgcgcgccgg
+wild_rice-3(+)/14470179-14481412 gtccttcttacccttcgccgcggagtccctcgatgccacctgtgcccccgcgcgcgccgg
+                                 ******** ****  ******** *************** ********************
+
+
+rice-3(+)/16600200-16611425      cgggctcgcgtgcgcgcgc----------------acactcgagcccgccggtgctcgcg
+wild_rice-3(+)/14470179-14481412 cgggctcgcgtgcgcgcgcgcgcgcgcgcacacacacactcgagcctgccggtgcccgcg
+                                 *******************                *********** ******** ****
+
+
+rice-3(+)/16600200-16611425      cgggcacaaactgcgtcgagggactccgcggcgcagggtaagaaggacggcgcccccccc
+wild_rice-3(+)/14470179-14481412 cgggcacaaactgcatcgggggactccgcggcgcagggtaagaaggacggcgccccccc-
+                                 ************** *** **************************************** 
+
+
+rice-3(+)/16600200-16611425      ctcatagccgaggcatgggcctgtgcatgttgtcgttggtacgtccttcttactctacgg
+wild_rice-3(+)/14470179-14481412 -tcatagccgtggcatgggcctgtgcatgttgtcgttggtacgtccttcttactctgcgg
+                                  ********* ********************************************* ***
+
+
+rice-3(+)/16600200-16611425      ggggatggtcctcagaagtcgggcctgctcccgaggaccaccccccc--ggcagtaagaa
+wild_rice-3(+)/14470179-14481412 ggggagggtcctcagaagttgggcctgctcccgaggaccacccccccccggcagtaagaa
+                                 ***** ************* ***************************  ***********
+
+
+rice-3(+)/16600200-16611425      acacggaaccacacctaccgttctgcaccgtcggtcttctctctaccccctacatacgta
+wild_rice-3(+)/14470179-14481412 acacggaaccacacctaccgtcctgcaccgttggtcctggctctaccccctacatacgta
+                                 ********************* ********* **** *  ********************
+
+
+rice-3(+)/16600200-16611425      tccttcgggccaccgggtaacctaccccccggggggggcggtgtagggaccatcccgggg
+wild_rice-3(+)/14470179-14481412 tccttcgggccgccgggtaacctaccccccggggggggccgagtagggaccatcccgggg
+                                 *********** *************************** * ******************
+
+
+rice-3(+)/16600200-16611425      gctgcgccggctgcgccgacgtccggccggccgcatatcggcagactaccttaccccgta
+wild_rice-3(+)/14470179-14481412 gctgcgccggctgcgccgacgtccggccggccgcatatcggcagactattttgccccgta
+                                 ************************************************  ** *******
+
+
+rice-3(+)/16600200-16611425      catgtcacgtgccgtccacgacctctggtcgaaggtgttaggtatgtctcggacgtacgg
+wild_rice-3(+)/14470179-14481412 cctgtcacgtgccgtccacgatctctggtcgaaggtggtaggtatgactcggacgtacgg
+                                 * ******************* *************** ******** *************
+
+
+rice-3(+)/16600200-16611425      ggtggttaccgggtcacgtcaagcactcaagcatggcatggctgcatgggcccggatccg
+wild_rice-3(+)/14470179-14481412 ggtggttaccgggtcacgtcaagcactcaagcatggcatggctgcatgggcccggatccg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      aaccgacgctctccacgtcgacggtgccacccctagcacagcatgaccctataggcagct
+wild_rice-3(+)/14470179-14481412 aaccgacgctctccacgtcgacggtgccacccctagcacagcatgaccctataggcagct
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gtacaaagaacaagcctacctcttacgagattcaacgtaaatgcatagattgctggcgcc
+wild_rice-3(+)/14470179-14481412 gtacaaagaacaagcctacctcttacgagattcaacgtaaatgcatagattgctggagcc
+                                 ******************************************************** ***
+
+
+rice-3(+)/16600200-16611425      gaagataacatgtccatcgacggttcactcaatctcgcccggcccgcgggctccgagacc
+wild_rice-3(+)/14470179-14481412 gaagatgacatgtccatcgacggttcactcaatctcgcccggcccgcgggctccgagacc
+                                 ****** *****************************************************
+
+
+rice-3(+)/16600200-16611425      gacgcttcacccgggtgcagcagcgatctcagtacgctacctggcgtgcggcgaacgcca
+wild_rice-3(+)/14470179-14481412 gacgctccacccgggtgcagcagcgatcccagaacgctacctggcgtgcggcgaacgcca
+                                 ****** ********************* *** ***************************
+
+
+rice-3(+)/16600200-16611425      gtcagcgttttacccgggtaaggcagcgccgctctgagcacgctgctttgcctgggtaaa
+wild_rice-3(+)/14470179-14481412 gtcagcgttttacctgggtacggcagcgtcgctctgagcacgctgctttgcctaggtaag
+                                 ************** ***** ******* ************************ ***** 
+
+
+rice-3(+)/16600200-16611425      gcgttaccttacgatgctccctcggctccgcatccgattgtcggcgaatgtggtggtacc
+wild_rice-3(+)/14470179-14481412 gcgttaccttacgatgccccttcggctccgcatccgattgtcggcgaatgtggtggtacc
+                                 ***************** ** ***************************************
+
+
+rice-3(+)/16600200-16611425      gacgtccacgccgcatggcatgccgaatgcccacatgccaccccacctgactgggttttt
+wild_rice-3(+)/14470179-14481412 gacgtccacgccgcatggcatgccgaatgtccacatgccaccccacctgactgggttttt
+                                 ***************************** ******************************
+
+
+rice-3(+)/16600200-16611425      cttttgatgagctgagcagcacgttcaagctcacttccacaatcgctgttgtcactgtct
+wild_rice-3(+)/14470179-14481412 cttttgatgagctgagcagcacgttcaagctcacttccacaatcgctgttgtcactgtct
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      ccactgactaatcgactagctattgctgggtgagccctgcccccttcctttcccttctaa
+wild_rice-3(+)/14470179-14481412 ccactgactgatcgactagctattgctgggtgagccctgcccccttcctttcccttctaa
+                                 ********* **************************************************
+
+
+rice-3(+)/16600200-16611425      aatgctacttgctgcacatgcaaacacagtgcttttgcacatttgtttcatccgcagccg
+wild_rice-3(+)/14470179-14481412 aatgctacttgctgcacatgcaaacacagtgcttttgcacatttgtttcatccgcagccg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      gcggcttgcctcggggtcagctgatcatccggcccggtcggctggttggagctcgctcga
+wild_rice-3(+)/14470179-14481412 gcgacttgcctcggggtcagctgatcatccggcccggtcggctggttggagctcgctcga
+                                 *** ********************************************************
+
+
+rice-3(+)/16600200-16611425      actcagcccgccgccggcaacgtcgctccgaatcgatattcatcatatggcccctaatca
+wild_rice-3(+)/14470179-14481412 actcagcccgccgccggcaacgtcgctccgaatcgatattcatcatatggcccctaatca
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tatgacgcggcg----------tgcagcgggggggg-acagaggggatgtcctgtcaacc
+wild_rice-3(+)/14470179-14481412 tatgacgcggcgggggggggtgtgcagcgggggggggacagaggggatgtcctgtcaacc
+                                 ************          ************** ***********************
+
+
+rice-3(+)/16600200-16611425      gagccttcccaacagggcgcacttgtttaagacacctccccggcaactcccagggagcac
+wild_rice-3(+)/14470179-14481412 gagccttcccaacagggcgcacttgtttaagacacctccccggcaactccctgggagcac
+                                 *************************************************** ********
+
+
+rice-3(+)/16600200-16611425      ccgcgaccgtcattcacggcgtctctctcacttcggggcgggcccgccccccgtccgccc
+wild_rice-3(+)/14470179-14481412 ccgcgaccgtcattcacggcgtctctctcacttcggggcgggcccgccccccgtctgccc
+                                 ******************************************************* ****
+
+
+rice-3(+)/16600200-16611425      agtgtgcgttggcgtgaggttgggggcgctgcggcgtttctgtccctctgggctttggcg
+wild_rice-3(+)/14470179-14481412 agtgtgcgttggcgtgaggttgggggcgctgcggcgtttctgtccctctgggctttggcg
+                                 ************************************************************
+
+
+rice-3(+)/16600200-16611425      tggccgccgccactcccgctcgcctttgacatgcgcgccctgcgtccctgtgggtcttct
+wild_rice-3(+)/14470179-14481412 tggccgccgccactcccgctcgccttcgacatgcgcgccctgcgtccctgtaggtcttct
+                                 ************************** ************************ ********
+
+
+rice-3(+)/16600200-16611425      aagcatgacagccgacatggggccggtccgccccagagtgcaaccacaaattcgg
+wild_rice-3(+)/14470179-14481412 aagcatgacagccgacatggggccggtccgccccagagtgcaaccacaaattcgg
+                                 *******************************************************
+
+
+CLUSTAL W(1.81) multiple sequence alignment W(1.81)
+
+
+wild_rice-3(+)/1563251-1566721 caggcggagggaggggggtgccacctcgtctaaatgtcgtggaagccgtcctgcgcctgc
+rice-3(+)/1659486-1662995      caggcggagggaggggggtgcgacctcgtctaaatgtcgtggaagccgtcctgcgccggc
+                               ********************* *********************************** **
+
+
+wild_rice-3(+)/1563251-1566721 gcgcgtccactctttcggccgcgtccaggaaaaatgcttggaaacgctggcgtggcgtat
+rice-3(+)/1659486-1662995      gcgcgtccactctttcgaccgcgtccaggaaaaatgcttggaaacgctggcgtggcgtat
+                               ***************** ******************************************
+
+
+wild_rice-3(+)/1563251-1566721 tccgcagaagaaaagtgcattggactgagagaatggtgtattggactgaggcgcggattg
+rice-3(+)/1659486-1662995      tccgcagaagaaaagtgcattggactgagagaatggtgtattggactgaggcgtggattg
+                               ***************************************************** ******
+
+
+wild_rice-3(+)/1563251-1566721 gcgcgagtgtgattgggtttggcacgaggattgcgggaaagctcgatccgagagtgctct
+rice-3(+)/1659486-1662995      gcgcgagtttgattgggtttggcacgaggattgcgggaaagctcgatccgagagtgctct
+                               ******** ***************************************************
+
+
+wild_rice-3(+)/1563251-1566721 tggctccaccagacctgcgcctcgaaggaggagtcgtatcgattgctagtcgtacataga
+rice-3(+)/1659486-1662995      tggctccaccagacctgcgcctcgaaggaggagtcgtatcgattgctcgtcgtacataga
+                               *********************************************** ************
+
+
+wild_rice-3(+)/1563251-1566721 gatcttgcagtactggattagcgagggacgagccgaactgctcggggcgccgcatccgca
+rice-3(+)/1659486-1662995      gatcttgcagtactggattagcgagggacgagccgaactgctcggggcgccgcatccgca
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 cagcgtcagggcgcggggggtggcgttaatcctaattggtgagggcggaaccgctcactg
+rice-3(+)/1659486-1662995      cagcgtcagggcgcggggg-tggcgttaatcctaattggtgagggcggaaccgctcactg
+                               ******************* ****************************************
+
+
+wild_rice-3(+)/1563251-1566721 accggaaaactcaggttcgcgcggggtgcactctctactctcccgctccggctctatacg
+rice-3(+)/1659486-1662995      accggaaaactaaggttcacgcggggttcactctctactctcccgctccggctctatacg
+                               *********** ****** ******** ********************************
+
+
+wild_rice-3(+)/1563251-1566721 cgctttgacgttggtggcctctgcgtctcgcggcggtacaactaaagcgcttgtttctgg
+rice-3(+)/1659486-1662995      cgctttgacgttggtggcctctgcgtctcgcggcggtacaa-tgcagcgcttgtttct--
+                               ***************************************** *  *************  
+
+
+wild_rice-3(+)/1563251-1566721 tgagggtaggccggcgtcgtctagcttagctagctctggtggccaggccacgtcttaatc
+rice-3(+)/1659486-1662995      -------aggccggcgtcgtctagcttagctagctctggtggccaggccacgtcttaatc
+                                      *****************************************************
+
+
+wild_rice-3(+)/1563251-1566721 ccctgggtcgggtgaagtgggagacaccatacgcccagacgggacaaatgcacttccgca
+rice-3(+)/1659486-1662995      ccctgggtcgggtgaagtgggagacaccatacgcccagacgggacaaatgcacttccgca
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 tgacagcacaccttgggaagatatatgcgtgtgtataaatgtgacgatgatcgacatgga
+rice-3(+)/1659486-1662995      tgacagcacaccttgggaagatatatgcgtgtgtataaatgtgacgatgatcgacatgga
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gtaagaagaataattgaaaggtgcacgtgagcgtcagagcgtgaagaatgattgatcgtc
+rice-3(+)/1659486-1662995      gtaagaagaataattgaaaggtgcacgtgagcgtcagagcgtgaagaatgattgatcgtc
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 acaaacagagaagaagatctgatctgattctgaatctgattctgatattattgctgccat
+rice-3(+)/1659486-1662995      acaaacagagaagaagatctgatctgattctgaatctgattctgatattattgctgccat
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gcatgaaaagggttggataagctgcgtaatctgctgcatttttcctggtttaaaatcccc
+rice-3(+)/1659486-1662995      gcatgaaaagggttggataagctgcgtaatctgctgcatttttcctggtttaaaatcccc
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 agcttcccgtatgcttctgtttagcattggcatgcattggcccgcgcgttgtcaagtcga
+rice-3(+)/1659486-1662995      agcttcccgtatgcttctgtttggcattggcatgcattggcccgcgcgttgtcaagtcga
+                               ********************** *************************************
+
+
+wild_rice-3(+)/1563251-1566721 cagcgcagcgcgtcgccccggcgtagcgggctcgagtgtttacgccgtgcgcggagcgtc
+rice-3(+)/1659486-1662995      cagcgcagcgcatcgccccggcgtagcgggctcgagtgtttacgccgtgcgcggagcgtc
+                               *********** ************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gagccggcccgccccgaagtaagaagagcgcgctccgactactggtc-------------
+rice-3(+)/1659486-1662995      gagccagcccgccccgaagtaagaagagcgcgctccgaccactggtcactcgcgatccca
+                               ***** ********************************* *******             
+
+
+wild_rice-3(+)/1563251-1566721 --------------------------------gagatggtaaactgttgtcttgccttga
+rice-3(+)/1659486-1662995      ttgcgctgtcctggacgtctttcgtcgtcgacgagatggtaaactgttgtgttgccttta
+                                                               ****************** ******* *
+
+
+wild_rice-3(+)/1563251-1566721 gaccagggcttaaaaactggtaacccactaccccctccggggttgcccgggggtcaccca
+rice-3(+)/1659486-1662995      gaccagggctcaaaaactggtaacccactaccccctccggggttgccccggggtcaccca
+                               ********** ************************************* ***********
+
+
+wild_rice-3(+)/1563251-1566721 tctttacggggctaagccgggcccccaccggggcccgacccagccgcccccggtccagcc
+rice-3(+)/1659486-1662995      tctttacggggctaagccgggcccccaccggggcccgacccagccgcccccggtccagcc
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gagggggggttagatgacccacaccctccggactaactcgcacgatcgactggaccctat
+rice-3(+)/1659486-1662995      gagggggggttagatgacccacaccctccggactaactcgcacgatcgactggaccctat
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 agggttagccaccgatcggtcctgcgtttcttcgacgaagacgagtgaccctacatgctt
+rice-3(+)/1659486-1662995      agggttagccaccgatcggtcctgcgtttcttcgacgaagacgagtgaccctacatgctt
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 ctgcaagcgcaccggcgacgacgagccacgcgttcatgacgcgcgcgcactcacaacgcg
+rice-3(+)/1659486-1662995      ctgcaagcgcaccggcgacgacgagccacgcgtacatgacgcgcgcgcactcacaacgcg
+                               ********************************* **************************
+
+
+wild_rice-3(+)/1563251-1566721 cgcacacgacgctacacgaatcacgagaagctcaagcaaacacgtaagtaattaaaaggg
+rice-3(+)/1659486-1662995      cgcacacgatgctacacgaatcacgagaagctcaagcaaacacgtaagtaattaaaaggg
+                               ********* **************************************************
+
+
+wild_rice-3(+)/1563251-1566721 ggaaaagagaccagacagacatgataacaaaaatgctcatgcacttaagaacacccatgg
+rice-3(+)/1659486-1662995      ggaaaagagaccagacagacatgataacaaaaatgctcatgcatttaagaacacccatgg
+                               ******************************************* ****************
+
+
+wild_rice-3(+)/1563251-1566721 gcgagatcaaagccagttaatatgcattacaagcagatgtgcggcccagccctctccctc
+rice-3(+)/1659486-1662995      gcgagatcaaagccagttaatatgcattacaagcagatgtgcggcccagccctctccctc
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 tctcactctcgcaagactcaagttgatgatgatcatggatctaattaatgggaatacctg
+rice-3(+)/1659486-1662995      tctcactctcgcaagactcaagttgatgatgatcatggatctaattaatgggaatacctg
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 tagtatgttttcccaattagtttccagggggtgctagtaagaggagtatcatttgtcaca
+rice-3(+)/1659486-1662995      tagtatgttttcccaattagtttccagggggtgctagtaagaggagtatcatttgtcaca
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gtgggtttacagtggcatgcaacatcgatcgaagggacgctgaaatcaagcgccatgatg
+rice-3(+)/1659486-1662995      gtgggtttacagtggcatgcaacatcgatcgaagggacgctgaaatcaagcgccatgatg
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gggcccaagcgacttgtggggattcccgttggaagcatgctgcccacccaagtgccggcc
+rice-3(+)/1659486-1662995      gggcccaagcgacttgtggggattcccgttggaagcatgctgcccacccaagtgccggcc
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 aaactgccaatttccaattcccatcacaagggccttaatggaggagaggagggtggctgc
+rice-3(+)/1659486-1662995      aaactgccaatttccaattcccatcacaagggccttaatggaggagaggagggtggctgc
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 ggagagagcaaaccggccgtgcttcagggcgcgtcgacacactatccagcggcagtggaa
+rice-3(+)/1659486-1662995      ggagagagcaaaccggccgtgcttcagggcgcgtcgacacactatccagcggcagtggaa
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 tcgataggacaactcttacagagtgggtcacgtgcccactgctctgatttggctggtgac
+rice-3(+)/1659486-1662995      tcgataggacaactcttacagagtgggtcacgtgcccactgctctgatttggctggtgac
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gagcctggtggttaagagcagagcagagcatgagagacgaccatggcacaaatgcatgca
+rice-3(+)/1659486-1662995      gagcctggtggttaagagcagagcagagcatgagagacgaccatggcacaaatgcatgca
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 tgagcatgatatgagaaatcaatcaatgctgccatgtaaaattgacagaagaaaaaaagc
+rice-3(+)/1659486-1662995      tgagcatgatatgagaaatcaatcaatgctgccatgtaaaattgacagaagaaaaaaagc
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gtcgtcatgtgtcttaacccaccctttatatcatttttgtagctgcagcagcctcactct
+rice-3(+)/1659486-1662995      gtcgtcatgtgtcttaacccaccctttatatcatttttgtagatgcagcagcctcactct
+                               ****************************************** *****************
+
+
+wild_rice-3(+)/1563251-1566721 tttctggggccatccccttactcgctcttctttggggcactcgcccttattaccctgggg
+rice-3(+)/1659486-1662995      tttctggggccatccccttactcgctcttctttggggcactcgcccttattaccctgggg
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 cgggtttgcccccggcgcccgctttgagacgacggaccccgctcttccgcgcgacgctgc
+rice-3(+)/1659486-1662995      cgggtctgcccccggcgcccgctttgagacgacggaccccgctcttccgcgcgacgctgc
+                               ***** ******************************************************
+
+
+wild_rice-3(+)/1563251-1566721 tttcccactgctaggaggccccgctgccccggcgtcctccgttcgctctcttggtggcgc
+rice-3(+)/1659486-1662995      tttcccactgctaggaggccccgctgccccggcgtcctccgttcgctctcttggtggcgc
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 cctcccctcgtgtagaagcagcgagcgcccgacgtcgcaccctccttgcgtcagcccggg
+rice-3(+)/1659486-1662995      cctcccctcgtgtagaagcagcgagcgcccgacgtcgcaccctccttgcgtcagcccggg
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 cgctgaccgaagatctcggcggaggcaggtccgctggaagtgagggagacggcgtctttt
+rice-3(+)/1659486-1662995      cgctgaccgaagatctcggcggaggcaggtccgctggaagtgagggagacggcgtc-ttt
+                               ******************************************************** ***
+
+
+wild_rice-3(+)/1563251-1566721 ttcgctttctcgctccggggcggacccgcccccccgtatgctctgtgcgcgtgggtgcgt
+rice-3(+)/1659486-1662995      ttcgctttctcgcttcggggcgggcccgcccccccgtatgctctgtgcgcgtgggtgtgt
+                               ************** ******** ********************************* **
+
+
+wild_rice-3(+)/1563251-1566721 gggggggggagcgtcgaggcgtccgtgccccgctgggcttcggcgtggccggcccccgcg
+rice-3(+)/1659486-1662995      gtgggggggagagtcgaggcgtccgtgccccgctgggcttcggcgtggccggcccccgcg
+                               * ********* ************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gggcggctcgttttgggcacgcccgcctcccgcccctgcacctcggcggggcggccgccc
+rice-3(+)/1659486-1662995      gggcggctcgttttgggcacgcccgcctcccgcccctgcacctcggcggggcggccgccc
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 ggggggcgggtccgccccgaagcgggcagagagaaccgccacgaagcaagaagcacgaaa
+rice-3(+)/1659486-1662995      ggggggcgggtccgccccgaagcgggc--agagaaccgccacgaagcaagaagcacgaaa
+                               ***************************  *******************************
+
+
+wild_rice-3(+)/1563251-1566721 cgggtactaaagcagaccgtcacgatcaatcgattcagtcaagcaattaaatttccaagg
+rice-3(+)/1659486-1662995      cgggtactaaagcagaccgtcacgatcaatcgattcagtcaagcaattaaatttccaagg
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 caaggcggcgcaccacaacatacacccctcttccactgctgctgccttttcattcaaatt
+rice-3(+)/1659486-1662995      caaggcggcgcaccacaacatacacccctcttccactgctgctgccttttcattcaaatt
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gcaatcgggtatcgtggtcgtggtgagtcgtctggggccatgtatgcatgcatgcatgtg
+rice-3(+)/1659486-1662995      gcaatcgggtatcgtggtcgtggtgagtcgtctggggccatgtatgcatgcatgcatgtg
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 gctatgtgctctatcattcatccatcatcatcatcatgtatactccacttcgtttcttat
+rice-3(+)/1659486-1662995      gctatgtgctctatcattcatccatcatcatcatcatgtatactccacttcgtttcttat
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 cattatccattctttctattatgaatgatcattatacttcctctcagccatggtaaactg
+rice-3(+)/1659486-1662995      cattatccattctttctattatgaatgatcattatacttcctctcagccatggtaaactg
+                               ************************************************************
+
+
+wild_rice-3(+)/1563251-1566721 ttatttttattataattactactagaaacaatgtacgccacgactagttatcacctttgc
+rice-3(+)/1659486-1662995      ttacttttattataattactactagaaacaatgtacgccacgactagttatcacctttgc
+                               *** ********************************************************
+
+
+wild_rice-3(+)/1563251-1566721 actgggaagtaggtattaaccagaggtccagagcagagcaccaatggcccaatgccatgg
+rice-3(+)/1659486-1662995      actgggaagtaggtattaaccagacgtccagagcagagcaccaatggcccaatgccacgg
+                               ************************ ******************************** **
+
+
+wild_rice-3(+)/1563251-1566721 ccgccattggtgaaggaggcttggcacttccggtcttccactggtgatggtagaaaagag
+rice-3(+)/1659486-1662995      ccgccattggtgaaggaggcttggcactgccgctcttccactggtgatggtagaaaagag
+                               **************************** *** ***************************
+
+
+wild_rice-3(+)/1563251-1566721 gcccacggtgttgatattatgcgcgcgaagagcgtcttgacgcagcgatactccccgaga
+rice-3(+)/1659486-1662995      gcccacggtgttgatattatgcgtgcgaagagcgtcttgacgcagcgatactccccgaga
+                               *********************** ************************************
+
+
+wild_rice-3(+)/1563251-1566721 ctgctgcttgcttgttgatattgtttgaggccccaccggatcgcgggtttgtcatggacc
+rice-3(+)/1659486-1662995      ctgctggttgcttgtggatattgtttgaggccccacgggatcgcgggtttgtcgtgga--
+                               ****** ******** ******************** **************** ****  
+
+
+wild_rice-3(+)/1563251-1566721 ccccccccgagggggcgggacctcgccacgaccgagtggcctcgcccggggcggcgcggc
+rice-3(+)/1659486-1662995      ccccccccgagggggcgggacctcgccacgcccgagtggcctcgcccggggcggcgcggc
+                               ****************************** *****************************
+
+
+wild_rice-3(+)/1563251-1566721 acagtggctcggtcgccgggcagaaggcagcgggagggttagctcc----------acga
+rice-3(+)/1659486-1662995      acagtggctcggtcgccgggcagaaggcagcgggagggttagctccacgacgtaagacga
+                               **********************************************          ****
+
+
+wild_rice-3(+)/1563251-1566721 ccctcgtcgaatacgatctggagtgcggcacagagagggcggcagc
+rice-3(+)/1659486-1662995      ccctcgtcgaatacgatctggagtgcggcacagagagggcggcagc
+                               **********************************************
+
+
+CLUSTAL W(1.81) multiple sequence alignment W(1.81)
+
+
+rice-3(+)/1662996-1668978      cggccgctgcgccaggccgacggcaccgacagagagtccaaggccacgagagtccgatgc
+wild_rice-3(+)/1567499-1573481 cggccgctgcgccaggccgacggcaccgacagagagtccaaggccacgagagtccgatgc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gtacccgtaaagatccccgatggggattggcccctttgaggcccctgacttgtgcttctg
+wild_rice-3(+)/1567499-1573481 gtacccgtaaagatccccgatggggattgtcccctttgaggcccctgacttgtgcttctg
+                               ***************************** ******************************
+
+
+rice-3(+)/1662996-1668978      acgctcacgatcgcgaggcccgcggggcgggtcggttacgaggatctgggtctatagggt
+wild_rice-3(+)/1567499-1573481 acgctcacgatcgcgaggcccgcggggcgggtcggttacgaggatctgggtctatagggt
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ttgggcccctggggcctctgaggatgcatggatgatccgggtctctttgggtgggattcc
+wild_rice-3(+)/1567499-1573481 ttgggcccctggggcctctgaggatgcatggatgatccgggtctctttgggtgggattcc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gtgtcgaccctcgtctctcttacttcgccccggatgtgattgcggacccccccgcttggt
+wild_rice-3(+)/1567499-1573481 -tgtcgaccctcgtctttcttacttcgccccggatgtgattgcggacccctccgcttggc
+                                *************** ********************************* ******** 
+
+
+rice-3(+)/1662996-1668978      cccggctgcttactccgcccaggcccccaccgcagccgacgcccccgccgccgcccagca
+wild_rice-3(+)/1567499-1573481 cccggctgcttgctccgcccaggcccccaccgcagccgacgcccccgccaccgccgagca
+                               *********** ************************************* ***** ****
+
+
+rice-3(+)/1662996-1668978      gcggggtgcgggcggcgtcccgcgtcgtgcagcccgcacccccccgccgccccccctggg
+wild_rice-3(+)/1567499-1573481 gcggggtgcgggcggcgtcccgcgt---gcagcccgcacccccccgccgccccccc--gg
+                               *************************   ****************************  **
+
+
+rice-3(+)/1662996-1668978      gggggggccgggcggagtaagtagccgggcccaggtgtaagcgtctgcggtcgtattcgg
+wild_rice-3(+)/1567499-1573481 gggggggccgggcggagtaagtagccgggcccaggtgtgagcgtctgcggtcgtattcgg
+                               ************************************** *********************
+
+
+rice-3(+)/1662996-1668978      ggcgaagcaagaaagacgaacagtgtcgttgacgacaaaaaggccatctccgacccccga
+wild_rice-3(+)/1567499-1573481 ggcaaagcaagaaagacgaacagtgtcgttgacggcaaaaaggccatctccgacccccga
+                               *** ****************************** *************************
+
+
+rice-3(+)/1662996-1668978      ccaacagcttggacgagtggggcgaaccacagtccaagacgctgggggagctacccagtc
+wild_rice-3(+)/1567499-1573481 ccaacagcttggacgagtggggcgaaccacagtccaagacgctgggggagctacccagtc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gtagggctttcgcgcgtccccaatttctgctggaatgaacctcatggggatggttgagct
+wild_rice-3(+)/1567499-1573481 gtagggctttcgcgcgtccccaatttctgctggaatgaacctcatggggatggttgagct
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      tttgcggcttaattcaggaggtgtgcggttcggagtcaattgtagtcgggagcggccgaa
+wild_rice-3(+)/1567499-1573481 tttgcggcttaattcaggaggtgtgcggttcggagtcaattgtagtcgggagcggccgaa
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      cggatggcaagctggtggggtcgggatgtgggtggtggtcatgaccttcgcatcgtgtgt
+wild_rice-3(+)/1567499-1573481 cggatggcaagctggtggggtcgggatgtgggtggtagtcatgacctccgcgtcgtgtgt
+                               ************************************ ********** *** ********
+
+
+rice-3(+)/1662996-1668978      gacgacagtgagatgcgcggggaaccctgattcgcagatccgcaaggaagcgcaccgtca
+wild_rice-3(+)/1567499-1573481 gacgacagtgagatgcgcggggaaccctgattcgcagatccgcaaggaagcgcaccgtca
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aagagtcaaagacggtcaaaccacctcgtcaggccgggacgatctcctgcgcatgagact
+wild_rice-3(+)/1567499-1573481 aagagtcaaagacggtcaaaccacctcgtcaggccgggacgatctcctgcgcatgagact
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      tgtatgccatgcctggggtcccggaatactgccctgactgccagacgcgggtgaacgacc
+wild_rice-3(+)/1567499-1573481 tgtatgccatgcctggggtcccggaatactgccctgactgccagacgcgggtgaacgacc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ttccgccctgcgccagggtctaggagcatctgttggtaagacgggaataagagaggagga
+wild_rice-3(+)/1567499-1573481 ttccgccctgcgccagggtctaggagcatctgttggtaagacgggaataagagaggagga
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gtggtgaccggtcccgcatcgggcctgggtgagcacccaacctgcgaggtcgatgcttgt
+wild_rice-3(+)/1567499-1573481 gtggtgaccggtcccgcatcgggcctgggtgagcacccaacctgcgaggtcgatgcttgt
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      agcttccatgtggcacttcctacatcactgcggttgatttcacatgcttagggaaggctt
+wild_rice-3(+)/1567499-1573481 agcttccatgtggcacttcctacatcactgcggttgatttcacatgcttagggaaggctt
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ggccactggcgcagtcagcgggtcagcgggcacacatcgcgcggggggagggggctaagc
+wild_rice-3(+)/1567499-1573481 ggccactggcgcagtcagcgggtcagcgggcacacatcgcgcggggggagggggctaagc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aagaccctcgagtgagacattgctgaaaggaaggtggggtgaggttgggccacattgaga
+wild_rice-3(+)/1567499-1573481 aagaccctcgagtgagacattgctgaaaggaaggtggggtgaggttgggccacattgaga
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      agggtgaggcggggtgatgctatgcccgtcagtctgaaccagaacaggggtgggaagcat
+wild_rice-3(+)/1567499-1573481 agggtgaggcggggtgatgctatgcccgtcagtctgaaccagaacaggggtgggaagcat
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gtgagacgggtgttgtgcagattgtgcattgcctcagcgaaaggggggttatcacttttg
+wild_rice-3(+)/1567499-1573481 gtgagacgggtgttgtgcagattgtgcattgcctcagcgaaaggggggttatcacttttg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ggtccggttgctcagtgtgcttggcactcgcattgctgggaaccgcgacagcatgcctgg
+wild_rice-3(+)/1567499-1573481 ggtccggttgctcagtgtgcttggcactcgcattgctgggaaccgcgacagcatgcctgg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gcaaagagaaggttctttgggagatgtccgctgctgggaatgcaggagtcgggcgaccat
+wild_rice-3(+)/1567499-1573481 gcaaagagaaggttctttgggagatgtccgctgctgggaatgcaggagtcgggcgaccat
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gatgctcggagcattaactcgcgtcgcagcagtcaggtcacgagagacgcaagctcgttg
+wild_rice-3(+)/1567499-1573481 gatgctcggagcattaactcgcgtcgcagcagtcaggtcacgagagacccaagctcgttg
+                               ************************************************ ***********
+
+
+rice-3(+)/1662996-1668978      gcgcattgagggtcggtgattcgggaacgtgaggcagccctgctgttcggcaagtgacca
+wild_rice-3(+)/1567499-1573481 gcgcattgagggtcggtgattcgggaacgtgaggcagccctgctgttcggcaagtgacca
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ggggagccatgggcattggtgtagcccgcactgacacactgcagcctgcggtctcaggag
+wild_rice-3(+)/1567499-1573481 ggggagccatgggcattggtgtagcccgcactgacacactgcagcctgcggtctcaggag
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      cgggacgacgtcttgcgtgtggcggacatggaaggctgccccatgaccgtcgccgatgag
+wild_rice-3(+)/1567499-1573481 cgggacgacgtcttgcgtgtggcggacatggaaggctgccccatgaccgtcgccgatgag
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gagggtaggatgattgggacgcgccgctcacgtccgcacgtcctcactgccgccgcactt
+wild_rice-3(+)/1567499-1573481 gagggtaggatgattgggacgcgccgctcacgtccgcacgtcctcactgccgccgcactt
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      cccaccctccaccactgtgagaaggtcgctgggagaggtccatgtcatggcgtcttcgtc
+wild_rice-3(+)/1567499-1573481 cccaccctccaccactgtgagaaggtcgctgggagatgtccatgtcatggcgtcttcgtc
+                               ************************************ ***********************
+
+
+rice-3(+)/1662996-1668978      gtcgagcgtcctgggtgggcagcccatgacaagtgaccttccgggcgctgtgcttggcgc
+wild_rice-3(+)/1567499-1573481 gtcgagcgtcctgggtgggcagcccatgacaagtgaccttccgggcgctgtgcttggcgc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      acccctggtggggtgcaagcagaggggaagtccggcacccggagaacatgtgtaaggaac
+wild_rice-3(+)/1567499-1573481 acccctggtggggtgcaagcagaggggaagtccggcatccggagaacatgtgtaaggaac
+                               ************************************* **********************
+
+
+rice-3(+)/1662996-1668978      ggtctcgggggtggagcgagtcgtgcgcccatggtgccctcactttgagctggccctttc
+wild_rice-3(+)/1567499-1573481 ggtctcgggggtggagcgagtcgtgcgcccatggtgccctcactttgagctggccctttc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gcgctccaccgctccccagcaaccatccttgcaggccgaaccaactgtctgcaccggacc
+wild_rice-3(+)/1567499-1573481 gcgctccaccgctccccagcaaccatccttgcaggccgaaccaactgtctgcaccggacc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gggcagctcctcgcactgggagaggaacggataatctgatgggagggatggacgaggtcg
+wild_rice-3(+)/1567499-1573481 gggcagctcctcgcactgggagaggaacggataatctgatgggagggatggacgaggtcg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      tgggcttgacggccgtctgatggcccaacgcggccacctgttgatgcccatctgcctcag
+wild_rice-3(+)/1567499-1573481 tgggcttgacggccgtctgatggcccaacgcggccacctgttgatgcccatctgcctcag
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      cgtcacgccccgtgcttaacccattgacggtcgacggccgacagtgtcgacctcacccac
+wild_rice-3(+)/1567499-1573481 cgtcacgccccgtgcttaacccattgacggtcgacggccgacagtgtcgacctcacccac
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gcacccgcgggttggtagttacacgacgcccggtccccgacaacctatccctccgggggg
+wild_rice-3(+)/1567499-1573481 gcacccgcgggttggtagttacacgacgcccggtccccgacaacctatccctccgggggg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gcaattgacgggccatgtgggatgttgcgccgtggtcgggcggggtgctgggctggagcc
+wild_rice-3(+)/1567499-1573481 gcaattgacgggccatgtgggatgttgcgccgtggtcgggcggggtgctgggctggagac
+                               ********************************************************** *
+
+
+rice-3(+)/1662996-1668978      ccaaagggagtcctccagctcttgccatcgaactgtcggcgttggcattgctgggctgtg
+wild_rice-3(+)/1567499-1573481 ccaaagggagtcctccagctcttgccatcgaactgtcggcgttggcattgctgggctgtg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aactcgttgggtggccactgatcactggaatgatgtctcacgggcagaggcgagggtgaa
+wild_rice-3(+)/1567499-1573481 aactcgttgggtggccactgatcactggaatgatgtctcacgggcagaggcgagggtgaa
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aagggctgcgaggcgggatgggcgggcatgtgtggtcagccaagagcatgctgggcagag
+wild_rice-3(+)/1567499-1573481 aagggctgcgaggcgggatgggcgggcatgtgtggtcagccaagagcatgctgggcagag
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aagtcccgcctctgggcggagagcacgcgggtggttgaactgtacctcccgggggaagcg
+wild_rice-3(+)/1567499-1573481 aagtcccgcctctgggcggagagcacgcgggtggttgaactgtacctcccgggggaagcg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ttttgccagcgctggtttgagaattgagaactggccctgggcgggtcccgatctgcagag
+wild_rice-3(+)/1567499-1573481 ttttgccagcgctggtttgagaattgagaaccggccctgggcgggtcccgatctgcagag
+                               ******************************* ****************************
+
+
+rice-3(+)/1662996-1668978      agggaagtgggacggggccagggggggggg-aaccaatcggtggtgggatcccgcacgcg
+wild_rice-3(+)/1567499-1573481 agggaagtgggacggggccagggggggggggaaccaatcggtggtgggatcccgcacgcg
+                               ****************************** *****************************
+
+
+rice-3(+)/1662996-1668978      gacgagtgcaggcgtggtcggcatcaactgcgtggaacgggacacattgatgcgatcgga
+wild_rice-3(+)/1567499-1573481 gacgagtgcaggcgtggtcggcatcaactgcgtggaacgggacacattgatgcgatcgga
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ggaaaaaggaatggggatgcaaaagggtgcggccctcacgcgggccccggctgggaggag
+wild_rice-3(+)/1567499-1573481 ggaaaaaggaatggggatgcaaaagggtgcggccctcacgcgggccccggctgggaggag
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      atccccgtccacttcgggcagggcgggaggggacgtttcaccggaaagtgagagaggact
+wild_rice-3(+)/1567499-1573481 atccccgtccacttcgggcagggcgggaggggacgtttcaccggaaagtgagagaggact
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ggggtaccgagagctgtcagacagtcagagatggtcgctgatccggggtgaggggggggt
+wild_rice-3(+)/1567499-1573481 ggggtaccgagagctgtcagacagtcagagatggtcgctgatccggggtgaggggggg-t
+                               ********************************************************** *
+
+
+rice-3(+)/1662996-1668978      tcagggcatcttgccatcgtggaatcttgaatcgggtgatgaaggcctcagtcgcacacc
+wild_rice-3(+)/1567499-1573481 tcagggcatcttgccatcgtggaatcttgaatcgggtgatgaaggccttagtcgcacacc
+                               ************************************************ ***********
+
+
+rice-3(+)/1662996-1668978      ctttggactcgtgcgacccctttacaggtcctgatgttgttggagaaagcccatgcttct
+wild_rice-3(+)/1567499-1573481 ctttggactcgtgcgacccctttacaggtcctgatgttgttggagaaagcccatgcttct
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      cagtgcatgacgaccggactgagagtacatgacgttttctcgcgctggtcactcaccccg
+wild_rice-3(+)/1567499-1573481 cagtacatgacgaccggactgagagtacatgacgttttctcgcgctggtcactcaccccg
+                               **** *******************************************************
+
+
+rice-3(+)/1662996-1668978      gcttggcagcttccgcccaactcctacctcttttcccctccttcattcctcctatgacct
+wild_rice-3(+)/1567499-1573481 gcttggcagcttccgcccaattcctacctcttttcccctccttcattcctcctatgacct
+                               ******************** ***************************************
+
+
+rice-3(+)/1662996-1668978      atgtgcgtcttcggactgccgtgcattcgtaattgtggggcttgtagcatcacaacgcaa
+wild_rice-3(+)/1567499-1573481 ctgtgcgtcttcggactgccgtgcattcgtaattgtggggcttgtagcatcacaacgcaa
+                                ***********************************************************
+
+
+rice-3(+)/1662996-1668978      tatcacaactgctagacgtttgcagggtgggatgagatccacaaggacaccacctgaacc
+wild_rice-3(+)/1567499-1573481 tatcacaactgctagacgtttgcagggtgggatgagatccacaaggacaccacctgaacc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aaaactgttcacaatcataagacaataaacagatctcacaacaattgagggtgcaatgcc
+wild_rice-3(+)/1567499-1573481 aaaactgttcacaatcataagacaataaacagatctcacaacaattgagggtgcaatgcc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aacaacacttcatcttaacaaatcagaatgagcggcccatctcaagggatagggaaaatc
+wild_rice-3(+)/1567499-1573481 aacaacacttcatcttaacaaatcagaatgagcggcccatctcaagggatagggaaaatc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gcgaggtgcacagggggcggccctggttctagcccagaggggccgattccagaacaatgg
+wild_rice-3(+)/1567499-1573481 gcgaggtgcacagggggcggccctggttctagcccagaggggccgattccagaacaaggg
+                               ********************************************************* **
+
+
+rice-3(+)/1662996-1668978      gccccgagaccagctcccaagataactgagggtaacctgatttggccccacaattacttg
+wild_rice-3(+)/1567499-1573481 gccccgagaccagctcccaagataactgagggtaacctgatttggccccacaattacttg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gtaatgtatattattgtgtaagtgtcgtaggaggggaaagaatcggtccggaagatctta
+wild_rice-3(+)/1567499-1573481 gtaatgtatattattgtgcaagtgtcgtaggaggggaaagaatcggtccggaagatcttg
+                               ****************** **************************************** 
+
+
+rice-3(+)/1662996-1668978      tccaacgccaattgggatggctgtcggcagggtgggcctatcctctgatgatgcctcttc
+wild_rice-3(+)/1567499-1573481 tccaacgccaattgggatggctgtcggcagggtgggcctatcctctgatgatgcctcttc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      tgccggtgctggatgccccaactaccagtacatctgagtagagaacttcgacaagcaaag
+wild_rice-3(+)/1567499-1573481 tgccggtgctggatgccccaactaccagtacatctgagtagagaacttcgacaagcaaag
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gtgatacacttccggtggcatggttccatggatgacaagaggaggtcaatcggcggatga
+wild_rice-3(+)/1567499-1573481 gtgatacacttccggtggcatggttccatggatgacaagaggaggtcaatcggcggatga
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      agattgctaagcaaccccaagtgataagcgagcaaacgtcgttgtactcctagtccagtc
+wild_rice-3(+)/1567499-1573481 agattgctaagcaaccccaagtgacaagcgagcaaacgtcattgtactcctagtccagtc
+                               ************************ *************** *******************
+
+
+rice-3(+)/1662996-1668978      gtcatacactgagaagcttaggctttgttgttggagatgtgatcgacaagggcctgggac
+wild_rice-3(+)/1567499-1573481 gtcatgcactgaggagcttaggctttgttgttggagatgtgatcgacaagggcctgggac
+                               ***** ******* **********************************************
+
+
+rice-3(+)/1662996-1668978      atgcgttgacatgaagcgctgaatggacaccaaagctagggtgcctgatggaccaacagt
+wild_rice-3(+)/1567499-1573481 atgcgttgacatgaagcgctgaatggacaccaaagctagggtgcctgatggaccaacagt
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ggtggggtcgggcctgagctcttgggcgggccaaaccgtcagcatgaagcctgaatgcac
+wild_rice-3(+)/1567499-1573481 ggtggggtcgggcctgagctcttgggcgggccaaaccgtcagcatgaagcctgaatgcac
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gccacctctttgtaggccgacaccaagtccgcgctctttggctgcggttgatcgacaggg
+wild_rice-3(+)/1567499-1573481 gccacctctttgtaggccgacaccaagtccgcgctctttggctgcggttgatcgacaggg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gttgacgacaccgaagcctgcggttggtcgacaggggtttcgatcggtgccacgatgtta
+wild_rice-3(+)/1567499-1573481 gttgacgacaccgaagcctgcggttggtcgacaggggtttcgatcggtgccacgatgtta
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      acgcggagggcctgacgaaccaggtcagcaatattatcggggtgattagggcaagggtct
+wild_rice-3(+)/1567499-1573481 acgcggagggcctgacgaaccaggtcagcaattttatcggggtgattagggcaagggtct
+                               ******************************** ***************************
+
+
+rice-3(+)/1662996-1668978      ggaccctggcgttctcgtgattcgggaacctgctgacgacatctactaggccttaggaaa
+wild_rice-3(+)/1567499-1573481 ggaccctggcgttctcgtgattcgggaacctgctgacgacatctactaagccttaggaaa
+                               ************************************************ ***********
+
+
+rice-3(+)/1662996-1668978      cggggcccataccagggctatggctgtaggattggctgtgatggctagattgggctcgag
+wild_rice-3(+)/1567499-1573481 cggggcccataccagggctatggctgtaggattggctgtgatggctagattgggctcgag
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aaaattggggcagtggaataaaataaaaagctgttcaggcgagatgagctaggataagat
+wild_rice-3(+)/1567499-1573481 aaaattggggcagtggaataaaataaaaagctgttcaggcgagatgagctaggataagat
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aaaagctgaagagatccaataacaaggaaagcagaaaaagtattggcaacaataatattt
+wild_rice-3(+)/1567499-1573481 aaaagctgaagagatccaataacaaggaaagcagaaaaagtattggcaacaataatattt
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      ccaagtccaattcttcatattctataagctcctcatgctcaagctgcttatcttgcagta
+wild_rice-3(+)/1567499-1573481 ccaagtccaattcttcatattctataagctcctcatgctcaagctgcttatcttgcagta
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gatctacgtcaatgtcctctacgaatacaatatctaaatctatgtccttgaaaagaacga
+wild_rice-3(+)/1567499-1573481 gatctacgtcaatgtcctctacgaatacaatatctgaatctatgtccttgaaaagaacga
+                               *********************************** ************************
+
+
+rice-3(+)/1662996-1668978      cgtctaatagtataatgtccaccagaaaaagcagaagaacaaatatgtcaactataacga
+wild_rice-3(+)/1567499-1573481 cgtctaatagtataatgtccaccagaaaaagcagaagaacaaatatgtcaactataacga
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aatgacaaagaatatattcttagtgctcttattcaaactatagctcataatcctagaaca
+wild_rice-3(+)/1567499-1573481 aatgataaagaatatattcttagtgctcttattcaaactatagctcataatcctagaaca
+                               ***** ******************************************************
+
+
+rice-3(+)/1662996-1668978      tttgatcatgtattaattattattattatt---cttgctctatatctccttccctctctc
+wild_rice-3(+)/1567499-1573481 tttgatcatgtattaattattattattattattcttgctctatatctccttccctctctc
+                               ******************************   ***************************
+
+
+rice-3(+)/1662996-1668978      ttctcttaatagaataactagcaaccaacaacataacacacaagcataaacaaccaagct
+wild_rice-3(+)/1567499-1573481 ttctcttaatagaataactagcaaccaacaacataacacacaagcataaacaaccaagct
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      aactatcccaaatctaaacctaaatcttgatcgagttggaggaccctctatccttttggc
+wild_rice-3(+)/1567499-1573481 aactatcccaaatctaaacctaaatcttgatcgagttggaggaccctctatccttttggc
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      attttggacgggtccttacggggggcgggggggg--caattttggacgggtcaaagccgg
+wild_rice-3(+)/1567499-1573481 attttggacgggtccttacggggggcggggggggggcaattttggacgggtcaaagccgg
+                               **********************************  ************************
+
+
+rice-3(+)/1662996-1668978      ggaccaggtacgactgcggactgcgacggtgtgcgatcagcacccagagcgagcccgagg
+wild_rice-3(+)/1567499-1573481 ggaccaggtacgactgcggactgcgacggtgtg--atcagcacccagagcgagcccgagg
+                               *********************************  *************************
+
+
+rice-3(+)/1662996-1668978      cggggctgatatgagagggaccgctgagacgcggccggccggaccccggccaccttgggt
+wild_rice-3(+)/1567499-1573481 cggggctggtatgagagggaccgctgatacgcggccggccggaccccggccaccttgggt
+                               ******** ****************** ********************************
+
+
+rice-3(+)/1662996-1668978      gcgggggggc-cgcc-gcccggcgccccgggacggcatccgcgcgggggatttcgcctcc
+wild_rice-3(+)/1567499-1573481 gcgggggggcgcgcccgcccggcgccccgggacggcatccgcgcgggggatctcgcctcc
+                               ********** **** *********************************** ********
+
+
+rice-3(+)/1662996-1668978      cctcagccggagcccgggccccgcgcaaacccctagcggtaaaccctctaggtcatcggg
+wild_rice-3(+)/1567499-1573481 cctcagccggagcccgggccccgcgcaaacccctatcggtaaaccctctaggtcatcggg
+                               *********************************** ************************
+
+
+rice-3(+)/1662996-1668978      taacacaccccctccccggggggg-tcctcggagctcccgagcccaccccgtgcgagtaa
+wild_rice-3(+)/1567499-1573481 taacacaccccctcctcggggggggtccacggagctcccgagcccaccccgtgcgagtaa
+                               *************** ******** *** *******************************
+
+
+rice-3(+)/1662996-1668978      ggtggtagggcggtgcgtaatggcgagcggtagcaacatccacaacaggatagtggaaac
+wild_rice-3(+)/1567499-1573481 ggtggtagggcggtgcgtaatggcgagcggtagcaacatccacaacaggatagtggaaac
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      attgcaatgtttgtttcgatcgagctcatgatagaagactagatcatagcaacttagcag
+wild_rice-3(+)/1567499-1573481 attgcaatgtttgtttcgatcgagctcatgatagaagactaggtcatagcaacttagcag
+                               ****************************************** *****************
+
+
+rice-3(+)/1662996-1668978      agagcaacaataatagaccgagaagaggatgagcagcatccatgaatagagaatggtggt
+wild_rice-3(+)/1567499-1573481 agagcaacaataatagaccgagaagaggatgagcagcattcatgaatagagaatggtggt
+                               *************************************** ********************
+
+
+rice-3(+)/1662996-1668978      gatagaagtcgacaacagtaggcagaagcagaaccggtgcagccatagtaaagtcgagac
+wild_rice-3(+)/1567499-1573481 gatagaagtcgacaacagtaggcagaagcagaaccgatgcagccatagtgaagtcgagac
+                               ************************************ ************ **********
+
+
+rice-3(+)/1662996-1668978      cgatgctgtggctagaagccgccagtacaaacaatagtggtacgaacgataacagacttc
+wild_rice-3(+)/1567499-1573481 cgatgctgtggctagaagccgccagtacaaacaatagtagtacgaacgataacagacttc
+                               ************************************** *********************
+
+
+rice-3(+)/1662996-1668978      gtgcaggacgagaggaactggtttcgtttgaattctgataaactttgtgcgctgctgcca
+wild_rice-3(+)/1567499-1573481 gtgcaggacgagaggaactggtttcgtttgcattctgataaactttgtgcgctgctgcca
+                               ****************************** *****************************
+
+
+rice-3(+)/1662996-1668978      tcggagcacaaccaaaacacaacccgtcaaggagaggacgctggggcggtctcgagcgct
+wild_rice-3(+)/1567499-1573481 tcggagcacaatcaaaacacaacccgtcaaggggaggacgctggggcggtctcgagcgct
+                               *********** ******************** ***************************
+
+
+rice-3(+)/1662996-1668978      caagcgagtcggggctcttgcaaccgccccagggtctgagttgcggcgtcgagaacccca
+wild_rice-3(+)/1567499-1573481 caagcgagtcggggctctcgcaaccgccccagggtctgagttgcggcgtcgagaacccca
+                               ****************** *****************************************
+
+
+rice-3(+)/1662996-1668978      cagcgcccgtcccggccccccccgagggggtgccaatggctgggggtccaccctccggcg
+wild_rice-3(+)/1567499-1573481 cagcgcccgtcccggccccccccgagggggtgccaatggctgggggtccaccctccggcg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      gggccccattaattctggttccggctcccgcttaccccgcatttggtcgagacgtcgtgg
+wild_rice-3(+)/1567499-1573481 gggccccattaattctggttccggctcccgcttaccccgcatttggtcgagacgtcgtgg
+                               ************************************************************
+
+
+rice-3(+)/1662996-1668978      cgcaccgatcacaccacaacaaatccgattgagtctgccccaacgttggattgcgtgggc
+wild_rice-3(+)/1567499-1573481 cgcaccgatcacaccacaacaaatccggttgagtctgcaccaacgttggattgcgtgggc
+                               *************************** ********** *********************
+
+
+rice-3(+)/1662996-1668978      ttgcatcccgattgaacgcactgcgggcagcggcggtggaccgatcccctcc
+wild_rice-3(+)/1567499-1573481 ttgcatcccgattgaacgcactgcgggcagcggcagtggaccgatcccctcc
+                               ********************************** *****************
+
+

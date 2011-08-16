@@ -11,7 +11,6 @@ use Legacy::Graphics::Browser;
 use Legacy::Graphics::Browser::Util;
 use CGI qw/:standard escape/;
 use CGI::Toggle;
-use CGI::Carp 'fatalsToBrowser';
 use GD;
 
 our @ISA = ('Legacy::Graphics::Browser');

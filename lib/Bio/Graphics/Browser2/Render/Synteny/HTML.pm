@@ -3,8 +3,8 @@ package Bio::Graphics::Browser2::Render::Synteny::HTML;
 our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
 
 use strict;
+use Carp;
 use CGI qw/:standard Map Area delete_all/;
-use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
 use Digest::MD5 'md5_hex';
 use File::Glob ':glob';
@@ -20,8 +20,8 @@ use Legacy::Graphics::Browser::Synteny;
 use Legacy::Graphics::Browser::PageSettings;
 
 ## These modules are used to query the synteny ('join') database
-use Bio::DB::SyntenyIO;
-use Bio::DB::SyntenyBlock;
+use Bio::DB::Synteny::Store;
+use Bio::DB::Synteny::Block;
 
 ## Set some default values
 use constant OVERVIEW_RATIO     => 0.9;
@@ -96,7 +96,7 @@ sub run {
     $self->syn_conf->search_src($page_settings->{search_src});
     $self->syn_conf->source($page_settings->{source});
 
-    $self->syn_io(  Bio::DB::SyntenyIO->new($self->syn_conf->setting('join')) );
+    $self->syn_io( $self->open_syn_store() );
 
     my $segment = $self->landmark2segment($page_settings);
 
@@ -190,6 +190,18 @@ sub run {
     $page_settings->{old_src} = $self->syn_conf->search_src;
 
 }
+
+sub open_syn_store {
+    my ( $self ) = @_;
+    my $syn_store_class = $self->syn_conf->setting('join_adaptor');
+    my $args = $self->syn_conf->setting('join_args');
+    my @argv = ref $args eq 'CODE'
+             ? $args->()
+             : shellwords($args||'');
+
+    return $syn_store_class->new( @argv );
+}
+
 
 sub species_chooser {
   my $self = shift;
@@ -930,7 +942,7 @@ sub landmark2segment {
   # Did not find our segment?  Try the other species
   if (!$segment) {
     for my $src (grep {defined $_} @{$settings->{species}}) {
-      next if $src eq $source;
+      next if $source && $src eq $source;
       $segment = $self->_do_search($name,$src) if $name;
       if ($segment) {
 	$settings->{search_src} = $src;
@@ -1214,7 +1226,7 @@ sub aggregate {
     if (@$grp > 1) {
       my @coords  = sort {$a<=>$b} map {$_->start,$_->end}   @$grp;
       my @tcoords = sort {$a<=>$b} map {$_->tstart,$_->tend} @$grp;
-      my $hit = Bio::DB::SyntenyBlock->new($grp->[0]->name."_aggregate");
+      my $hit = Bio::DB::Synteny::Block->new($grp->[0]->name."_aggregate");
       $hit->add_part($grp->[0]->src,$grp->[0]->tgt);
       $hit->start(shift @coords);
       $hit->end(pop @coords);

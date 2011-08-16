@@ -918,7 +918,7 @@ sub landmark2segment {
   # Did not find our segment?  Try the other species
   if (!$segment) {
     for my $src (grep {defined $_} @{$settings->{species}}) {
-      next if $src eq $source;
+      next if $source && $src eq $source;
       $segment = $self->_do_search($name,$src) if $name;
       if ($segment) {
 	$settings->{search_src} = $src;

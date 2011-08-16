@@ -18,7 +18,7 @@ multiple sequence alignment
 package Bio::DB::Synteny::Store::Loader::MSA;
 use strict;
 
-use base 'Bio::Root::Root';
+use base 'Bio::DB::Synteny::Store::Loader';
 
 use Bio::AlignIO;
 use Bio::DB::GFF::Util::Rearrange qw(rearrange);
@@ -46,16 +46,14 @@ name supported by BioPerl's L<Bio::AlignIO> system.
 
 sub new {
     my $class = shift;
-    my ( $store, $format, $mapres ) = rearrange([qw[ STORE FORMAT MAPRES ]], @_ );
-    return bless {
-        store    => $store,
-        'format' => $format || $class->throw('-format argument required for MSA loader'),
-        mapres   => $mapres || DEFAULT_MAPRES,
-    }, ref $class || $class;
+    my $self = $class->SUPER::new( @_ );
+
+    my ( $format, $mapres ) = rearrange([qw[ FORMAT MAPRES ]], @_ );
+    $self->{format} = $format || $class->throw('-format argument required for MSA loader');
+    $self->{mapres} = $mapres || DEFAULT_MAPRES;
+    return $self;
 }
 
-sub verbose { shift->{verbose}  }
-sub store   { shift->{store}    }
 sub format  { shift->{'format'} }
 sub mapres  { shift->{mapres}   }
 

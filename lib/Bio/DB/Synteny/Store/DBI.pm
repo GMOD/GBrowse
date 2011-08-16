@@ -35,7 +35,7 @@ sub new_instance {
                      ],@_);
     $dbi_options  ||= {};
 
-    $dsn or $class->throw("Usage: ($dsn) ".$class."->init(-dsn => \$dbh || \$dsn)");
+    $dsn or $class->throw("Usage: ".$class."->init(-dsn => \$dbh || \$dsn)");
 
     my $dbh;
     if (ref $dsn) {

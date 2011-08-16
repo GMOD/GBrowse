@@ -90,7 +90,7 @@ sub run {
     $self->syn_conf->search_src($page_settings->{search_src});
     $self->syn_conf->source($page_settings->{source});
 
-    $self->syn_io(  Bio::DB::Synteny::Store->new($self->syn_conf->setting('join')) );
+    $self->syn_io( $self->open_syn_store() );
 
     my $segment = $self->landmark2segment($page_settings);
 
@@ -181,6 +181,18 @@ sub run {
     $page_settings->{old_src} = $self->syn_conf->search_src;
 
 }
+
+sub open_syn_store {
+    my ( $self ) = @_;
+    my $syn_store_class = $self->syn_conf->setting('join_adaptor');
+    my $args = $self->syn_conf->setting('join_args');
+    my @argv = ref $args eq 'CODE'
+             ? $args->()
+             : shellwords($args||'');
+
+    return $syn_store_class->new( @argv );
+}
+
 
 sub species_chooser {
   my $self = shift;

@@ -2,7 +2,9 @@
 description =  BLASTZ alignments for Oryza sativa 
 
 # The synteny database
-join        = dbi:mysql:database=rice_synteny;host=localhost
+join_adaptor = Bio::DB::Synteny::Store
+join_args    = -dsn  dbi:mysql:database=rice_synteny;host=localhost
+               -adaptor DBI::mysql
 
 # This option maps the relationship between the species data sources, names and descriptions
 # The value for "name" (the first column) is the symbolic name that gbrowse_syn users to identify each species.

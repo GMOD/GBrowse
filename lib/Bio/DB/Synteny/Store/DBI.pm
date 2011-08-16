@@ -43,7 +43,7 @@ sub new_instance {
     } else {
         # try to magically prepend dbi:XX: to dsn's if left out
         if( $dsn !~ /^dbi:/ and my ($probable_driver_name) = $class =~ /DBI::([^:]+)$/ ) {
-            $dsn = "dbi:$probable_driver_name:$dsn"
+            $dsn = "dbi:$probable_driver_name:dbname=$dsn"
         }
         $dbh = DBI->connect( $dsn, $user, $pass, $dbi_options );
         $dbh->{mysql_auto_reconnect} = 1;

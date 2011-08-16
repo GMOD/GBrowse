@@ -1,0 +1,453 @@
+#!/usr/bin/perl 
+
+eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
+use strict;
+use GD;
+use Bio::Graphics;
+use CGI qw(:standard param);
+
+=head1 NAME
+
+gbrowse_key_img
+
+=head1 SYNOPSIS
+
+A small cgi script designed for generating key images for features using heat_map glyph
+Shows the color space used to display feature scores. Hardcoded to be 120x23 image 
+and may be embedded in hover balloons using stanza code, i.e.
+
+ balloon hover = sub { my $f = shift;
+                       my $score = $f->score;
+                       my $img_url = "...gbrowse_key_img?min=0;max=0.001;start_c=blue;end_c=green";
+                       return $score ? join (" ","<img width=120 height=23 src=\"".$img_url."\"/>",$f->name,"(Score:".$score.")") : $f->name;
+
+The above code will display color key with score information
+
+=head2 Options
+
+  Option      Description                   Default
+  ------      -----------                   -------
+
+  -start_c     Beginning of the color       white
+               gradient, expressed as a 
+               named color or RGB hex 
+               string
+ 
+  -end_c       End of the color gradient    red
+
+  -min         Minimum score of the data    0
+  
+  -max         Maximum score of the data    255
+
+  -width       Width of the image           120
+
+  -height      Height of the image          20
+
+=cut
+
+my $min = param('min') || 0;
+my $max = param('max') || 255;
+my $start_color = param('start_c') || 'white';
+my $end_color   = param('end_c') || 'red';
+my $width = param('width') || 120;
+my $height = param ('height') || 20;
+my %COLORS;
+
+my $range = 255; # We have a 255-space all the time ?
+my $scale = 1;
+my $offset = 0;
+my $segments;
+
+for my $start (0..49) {
+    $start *= 2;
+    push @$segments, [ $start*$scale + $offset, ($start + 2)*$scale + $offset ];
+  }
+
+my $keyfeature = Bio::Graphics::Feature->new(-start    =>1,
+                                             -end      =>$range,
+                                             -segments =>$segments
+                                             );
+for (0..49) {
+  my $score += ($range/50) * $_;
+  ($keyfeature->segments)[$_]->score($score);
+}
+
+my $heater = HeatKey->new(-width      => $width,
+                          -height     => $height,
+                          -max        => $max,
+                          -min        => $min,
+                          -range      => $range,
+                          -start_color=> $start_color,
+                          -end_color  => $end_color
+                          ); 
+
+$heater->calculate_gradient($keyfeature->{segments});
+$heater->draw_image($keyfeature->{segments});
+my $data = $heater->gd->png;
+
+print header(-type => 'image/png',
+             -expires => '-1s');
+
+binmode(STDOUT);
+print $data;
+
+exit 0;
+
+
+
+package HeatKey;
+
+use base 'Bio::Graphics::Glyph::heat_map';
+
+# set up getter/setter methods
+BEGIN {
+  no strict 'refs';
+
+  my @subs = qw/ h_start s_start v_start h_range s_range v_range width height 
+                 start_color end_color min_score max_score low_rgb low_hsv high_rgb 
+                 score_range gd translation key_font min max/;
+
+  for my $sub ( @subs ) {
+    *{$sub} = sub {
+      my ($self, $v) = @_;
+      my $k = "$sub";
+
+      if (defined $v) {
+        $self->{$k} = $v;
+      }
+      return $self->{$k};
+    }
+  }
+}
+
+
+sub new {
+ my $class = shift @_;
+ my %options = @_;
+
+ my $width  = $options{-width};
+ my $height = $options{-height};
+ my $max    = $options{-max};
+ my $min    = $options{-min};
+ my $range  = $options{-range};
+ my $start_color = $options{-start_color};
+ my $end_color   = $options{-end_color};
+ my $self = bless {translation => {},
+                   gd          => new GD::Image($width,$height),
+                   width       => $width,
+                   height      => $height,
+                   min_score   => 0,
+                   max_score   => $range,
+                   min         => $min,
+                   max         => $max,
+                   start_color => $start_color,
+                   end_color   => $end_color,
+                   key_font    => GD::Font->Small
+                   }, ref $class || $class;
+
+ my %translation_table;
+ $self->read_colors;
+  for my $name (keys %COLORS) {
+    my $idx = $self->gd->colorAllocate(@{$COLORS{$name}});
+    $translation_table{$name} = $idx;
+  }
+
+ $self->translation(\%translation_table);
+ $self;
+}
+
+sub draw_image {
+ my $self = shift;
+ my $segments = shift;
+
+
+ # Set up
+ my $lines = $self->width;
+ my $heat_height = int($self->height-$self->{key_font}->height);
+ my $low_rgb = $self->low_rgb;
+ $self->gd->filledRectangle(0,0,$self->width,$self->height,$self->color_index(255,255,255));
+
+ #Paint gradient
+ for my $line (1..$self->width-2) {
+  my $index = int($line*(scalar(@{$segments}-1)/$self->width));
+  
+  my $score = ($keyfeature->segments)[$index]->score || 0;
+  my $partcolor;
+  # use start color if no score or no score gradient
+  unless (defined $score && $self->score_range ) {
+    $partcolor = $self->color_index(@$low_rgb);
+  }
+  else {
+    my @rgb = $self->calculate_color($score);
+    $partcolor = $self->color_index(@rgb);
+  }
+  $self->gd->line($line,$heat_height,$line,0,$partcolor);
+ }
+
+ #Write limits
+ if (defined $self->min && $self->max) {
+  my $padding = int($self->width/$self->{key_font}->width)-length("".$self->max)-2;
+  my $label = sprintf("%-".$padding."s %-3s",$self->min,$self->max);
+  $self->gd->string($self->{key_font},3,$heat_height,$label,$self->translate_color('black'));
+ }
+
+}
+
+#Overriding to get rid of panel
+sub color2hsv {
+  my ($self,$color) = @_;
+  my $color_idx = $self->translate_color($color);
+  my @rgb = $self->gd->rgb($color_idx);
+  return [$self->RGBtoHSV(@rgb)];
+}
+
+sub color_index {
+  my ($self, @rgb) = @_;
+  return $self->gd->colorResolve(@rgb);
+}
+
+sub option {
+  my $self = shift;
+  my $option_name = shift;
+  return $self->{$option_name} ? $self->{$option_name} : undef;
+}
+
+# Trimmed functions from Bio::Graphics::Panel (no alpha, just basic rgb)
+sub translate_color {
+  my $self    = shift;
+  my @colors  = @_;
+
+  my $index;
+  my $gd    = $self->gd             or return 1;
+
+  my $table = $self->translation or return 1;
+  if (@colors == 3) {
+    $index = $self->colorClosest($gd,@colors);
+  }
+  elsif ($colors[0] =~ /^\#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})/i) {
+    my ($r,$g,$b) = (hex($1),hex($2),hex($3));
+    $index = $self->colorClosest($gd,$r,$g,$b);
+  }
+  elsif ($colors[0] =~ /^(\d+),(\d+),(\d+)/i ||
+         $colors[0] =~ /^rgb\((\d+),(\d+),(\d+)\)/i
+      ) {
+    my (@rgb) = map {/(\d+)%/ ? int(255 * $1 / 100) : $_} ($1,$2,$3);
+      $index = $self->colorClosest($gd,@rgb);
+  }
+  else {
+      $index = defined $table->{$colors[0]} ? $table->{$colors[0]} : 1;
+  }
+  return $index;
+}
+
+
+sub read_colors {
+  my $class = shift;
+  local ($/) = "\n";
+  local $_;
+  while (<DATA>) {
+    chomp;
+    last if /^__END__/;
+    my ($name,$r,$g,$b) = split /\s+/;
+    @{$COLORS{$name}} = (hex $r,hex $g, hex $b);
+  }
+}
+
+1;
+
+__DATA__
+white                FF           FF            FF
+black                00           00            00
+aliceblue            F0           F8            FF
+antiquewhite         FA           EB            D7
+aqua                 00           FF            FF
+aquamarine           7F           FF            D4
+azure                F0           FF            FF
+beige                F5           F5            DC
+bisque               FF           E4            C4
+blanchedalmond       FF           EB            CD
+blue                 00           00            FF
+blueviolet           8A           2B            E2
+brown                A5           2A            2A
+burlywood            DE           B8            87
+cadetblue            5F           9E            A0
+chartreuse           7F           FF            00
+chocolate            D2           69            1E
+coral                FF           7F            50
+cornflowerblue       64           95            ED
+cornsilk             FF           F8            DC
+crimson              DC           14            3C
+cyan                 00           FF            FF
+darkblue             00           00            8B
+darkcyan             00           8B            8B
+darkgoldenrod        B8           86            0B
+darkgray             A9           A9            A9
+darkgreen            00           64            00
+darkkhaki            BD           B7            6B
+darkmagenta          8B           00            8B
+darkolivegreen       55           6B            2F
+darkorange           FF           8C            00
+darkorchid           99           32            CC
+darkred              8B           00            00
+darksalmon           E9           96            7A
+darkseagreen         8F           BC            8F
+darkslateblue        48           3D            8B
+darkslategray        2F           4F            4F
+darkturquoise        00           CE            D1
+darkviolet           94           00            D3
+deeppink             FF           14            100
+deepskyblue          00           BF            FF
+dimgray              69           69            69
+dodgerblue           1E           90            FF
+firebrick            B2           22            22
+floralwhite          FF           FA            F0
+forestgreen          22           8B            22
+fuchsia              FF           00            FF
+gainsboro            DC           DC            DC
+ghostwhite           F8           F8            FF
+gold                 FF           D7            00
+goldenrod            DA           A5            20
+gray                 80           80            80
+grey                 80           80            80
+green                00           80            00
+greenyellow          AD           FF            2F
+honeydew             F0           FF            F0
+hotpink              FF           69            B4
+indianred            CD           5C            5C
+indigo               4B           00            82
+ivory                FF           FF            F0
+khaki                F0           E6            8C
+lavender             E6           E6            FA
+lavenderblush        FF           F0            F5
+lawngreen            7C           FC            00
+lemonchiffon         FF           FA            CD
+lightblue            AD           D8            E6
+lightcoral           F0           80            80
+lightcyan            E0           FF            FF
+lightgoldenrodyellow FA           FA            D2
+lightgreen           90           EE            90
+lightgrey            D3           D3            D3
+lightpink            FF           B6            C1
+lightsalmon          FF           A0            7A
+lightseagreen        20           B2            AA
+lightskyblue         87           CE            FA
+lightslategray       77           88            99
+lightsteelblue       B0           C4            DE
+lightyellow          FF           FF            E0
+lime                 00           FF            00
+limegreen            32           CD            32
+linen                FA           F0            E6
+magenta              FF           00            FF
+maroon               80           00            00
+mediumaquamarine     66           CD            AA
+mediumblue           00           00            CD
+mediumorchid         BA           55            D3
+mediumpurple         100          70            DB
+mediumseagreen       3C           B3            71
+mediumslateblue      7B           68            EE
+mediumspringgreen    00           FA            9A
+mediumturquoise      48           D1            CC
+mediumvioletred      C7           15            85
+midnightblue         19           19            70
+mintcream            F5           FF            FA
+mistyrose            FF           E4            E1
+moccasin             FF           E4            B5
+navajowhite          FF           DE            AD
+navy                 00           00            80
+oldlace              FD           F5            E6
+olive                80           80            00
+olivedrab            6B           8E            23
+orange               FF           A5            00
+orangered            FF           45            00
+orchid               DA           70            D6
+palegoldenrod        EE           E8            AA
+palegreen            98           FB            98
+paleturquoise        AF           EE            EE
+palevioletred        DB           70            100
+papayawhip           FF           EF            D5
+peachpuff            FF           DA            B9
+peru                 CD           85            3F
+pink                 FF           C0            CB
+plum                 DD           A0            DD
+powderblue           B0           E0            E6
+purple               80           00            80
+red                  FF           00            00
+rosybrown            BC           8F            8F
+royalblue            41           69            E1
+saddlebrown          8B           45            13
+salmon               FA           80            72
+sandybrown           F4           A4            60
+seagreen             2E           8B            57
+seashell             FF           F5            EE
+sienna               A0           52            2D
+silver               C0           C0            C0
+skyblue              87           CE            EB
+slateblue            6A           5A            CD
+slategray            70           80            90
+snow                 FF           FA            FA
+springgreen          00           FF            7F
+steelblue            46           82            B4
+tan                  D2           B4            8C
+teal                 00           80            80
+thistle              D8           BF            D8
+tomato               FF           63            47
+turquoise            40           E0            D0
+violet               EE           82            EE
+wheat                F5           DE            B3
+whitesmoke           F5           F5            F5
+yellow               FF           FF            00
+yellowgreen          9A           CD            32
+gradient1       00 ff 00
+gradient2       0a ff 00
+gradient3       14 ff 00
+gradient4       1e ff 00
+gradient5       28 ff 00
+gradient6       32 ff 00
+gradient7       3d ff 00
+gradient8       47 ff 00
+gradient9       51 ff 00
+gradient10      5b ff 00
+gradient11      65 ff 00
+gradient12      70 ff 00
+gradient13      7a ff 00
+gradient14      84 ff 00
+gradient15      8e ff 00
+gradient16      99 ff 00
+gradient17      a3 ff 00
+gradient18      ad ff 00
+gradient19      b7 ff 00
+gradient20      c1 ff 00
+gradient21      cc ff 00
+gradient22      d6 ff 00
+gradient23      e0 ff 00
+gradient24      ea ff 00
+gradient25      f4 ff 00
+gradient26      ff ff 00
+gradient27      ff f4 00
+gradient28      ff ea 00
+gradient29      ff e0 00
+gradient30      ff d6 00
+gradient31      ff cc 00
+gradient32      ff c1 00
+gradient33      ff b7 00
+gradient34      ff ad 00
+gradient35      ff a3 00
+gradient36      ff 99 00
+gradient37      ff 8e 00
+gradient38      ff 84 00
+gradient39      ff 7a 00
+gradient40      ff 70 00
+gradient41      ff 65 00
+gradient42      ff 5b 00
+gradient43      ff 51 00
+gradient44      ff 47 00
+gradient45      ff 3d 00
+gradient46      ff 32 00
+gradient47      ff 28 00
+gradient48      ff 1e 00
+gradient49      ff 14 00
+gradient50      ff 0a 00
+__END__
+

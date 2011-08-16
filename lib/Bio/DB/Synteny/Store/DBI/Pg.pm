@@ -44,10 +44,9 @@ sub init_database {
 		  pos1 int not null,
 		  pos2 int not null,
 		  primary key(map_id)
-
 		  );
 
-      CREATE INDEX map_hit_name ON map (hit_name) DEFERRABLE INITIALLY DEFERRED;
+      CREATE INDEX map_hit_name ON map (hit_name);
 
 EOSQL
 

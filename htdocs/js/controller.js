@@ -530,7 +530,7 @@ var GBrowseController = Class.create({
                 if( get_tracks)
                     Controller.get_multiple_tracks(track_keys);
                 else
-                    Controller.idle();;
+                    Controller.idle();
             }
         });
         return true;
@@ -1333,7 +1333,7 @@ show_info_message:
   function(event, url) {
     GBox.showTooltip(event, url);
 	Controller.update_sections(new Array(custom_tracks_id));
-  },
+  }
 
 });
 

@@ -842,12 +842,12 @@ sub render_body {
   }
   
   my $tracks        = $self->render_tracks_section;
-  my $saved_snapshots = $self->render_saved_snapshots_section;
+  my $snapshots = $self->render_snapshots_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;
   my $global_config = $self->render_global_config;
 
-  $output .= $self->render_tabbed_pages($main_page,$tracks,$saved_snapshots,$community,$custom,$global_config);
+  $output .= $self->render_tabbed_pages($main_page,$tracks,$snapshots,$community,$custom,$global_config);
   $output .= $self->login_manager->render_confirm;
   $output .= $self->render_bottom($features);
 
@@ -2641,7 +2641,7 @@ sub asynchronous_update_sections {
 
     # Saved Snapshot Section
     if ( $handle_section_name{'snapshots_page'}) {
-	$return_object->{'snapshots_page'} = $self->Bio::Graphics::Browser2::Render::SnapshotManager::render_saved_snapshots_listing();
+	$return_object->{'snapshots_page'} = $self->Bio::Graphics::Browser2::Render::SnapshotManager::render_snapshots_listing();
 	#$return_object->{'snapshots_page'} = $self->render_snapshotTitle();
     }
 

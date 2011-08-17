@@ -41,6 +41,7 @@ sub tmp {
     my $self = shift;
     return File::Spec->catfile($PREFIX,'tmp','gbrowse2') if $PREFIX;
     return '/srv/gbrowse2/tmp'   if $ENV{DEB_BUILD_ARCH}; # FHS system
+    return '/var/tmp/gbrowse2'   if -e '/var/tmp' && -w '/var/tmp';
     return File::Spec->catfile(File::Spec->tmpdir,'gbrowse2');
 }
 

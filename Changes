@@ -1,4 +1,5 @@
 2.40
+   * Add ability to save and restore named snapshots of current state.
    * Changed behavior of render slave to a prefork model. Activate by including
       PREFORK=5 (or other desired number of servers) in /etc/default/gbrowse-slave.
    * Added support script for Amazon cloud image: gbrowse_attach_slaves.pl creates

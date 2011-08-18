@@ -1006,6 +1006,8 @@ sub render_scale_bar {
 
     my $flip = ( $section eq 'detail' and $state->{'flip'} ) ? 1 : 0;
 
+    $add_track_extra_args{'-postgrid'} = $args{'postgrid'} if $args{'postgrid'};
+
     my @panel_args = $self->create_panel_args(
         {   section        => $section, 
             segment        => $wide_segment,
@@ -1035,6 +1037,18 @@ sub render_scale_bar {
             -unit_divider   => $source->unit_divider,
             %add_track_extra_args,
         );
+
+	if (my $feats = $args{'tracks'}) {
+
+	    my @feature_types = $feats->types;
+
+	    for my $type (@feature_types) {
+	    my $features = $feats->features($type);
+	    my %options  = $feats->style($type);
+	    $panel->add_track($features,%options);  
+	    }
+
+	}
 
         # add uploaded files that have the "(over|region)view" option set
 

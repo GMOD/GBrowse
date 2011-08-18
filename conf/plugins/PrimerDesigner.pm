@@ -564,9 +564,15 @@ print <<JS;
 
     oPrimerDesigner.designPrimers = function () {
 	var mainform = document.getElementsByName('mainform')[0];
-	oPrimerDesigner.createNewFormElement(mainform, "configured", "Design Primers");
+	var conf = oPrimerDesigner.createNewFormElement(mainform, "configured", "Design Primers");
 	mainform.setAttribute("target", "_blank");
 	mainform.submit();
+
+	/*Remove these after submit or else will generate a bug where user*/
+	/*tries to scroll/zoom without closing rubber band menu first,    */
+	/*causing form to unintentionally be resubmitted                  */
+	mainform.removeChild(conf);
+	mainform.removeAttribute("target");
     }
 
     oPrimerDesigner.selectRegion = function () {
@@ -615,7 +621,6 @@ print <<JS;
 	var size_range = document.getElementById('product_size_range');
 
 	if (oPrimerDesigner.size_range != undefined) {
-	    console.log(oPrimerDesigner.size_range);
 	    size_range.value = oPrimerDesigner.size_range;
 	}
 
@@ -1132,10 +1137,12 @@ sub new_segment_map {
     my ($hstart, $hend) = $panel->location2pixel($lb,$rb);
 
     # first shaded
-    unless ( $hend-$hstart < 2 ) {
-      $gd->filledRectangle( $left + $hstart,
-			    $top, $left + $hend,
-			    $bottom, $panel->translate_color('lightgrey'));
+    if ($feats) {
+	unless ( $hend-$hstart < 2 ) {
+	$gd->filledRectangle( $left + $hstart,
+				$top, $left + $hend,
+				$bottom, $panel->translate_color('lightgrey'));
+	}
     }
 
     # then the red center line
@@ -1144,7 +1151,6 @@ sub new_segment_map {
 			  $bottom, $panel->translate_color('red'));
   };
 
-    #$args{'postgrid'} = $postgrid_callback;
     push @extra_args, ('postgrid', $postgrid_callback);
 
 

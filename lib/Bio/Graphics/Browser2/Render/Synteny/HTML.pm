@@ -184,7 +184,7 @@ sub run {
 
     $self->options_table;
     print end_form();
-    print $self->syn_conf->footer || end_html();
+    print $self->syn_conf->footer ? $self->syn_conf->footer . end_html() : end_html();
 
     # remember former source for the checkbox
     $page_settings->{old_src} = $self->syn_conf->search_src;

@@ -728,16 +728,17 @@ sub print_page_top {
   my $session   = shift;
   local $^W = 0;  # to avoid a warning from CGI.pm
 
-  my @stylesheet_headers;
+  my @additional_head;
   my @stylesheets = shellwords($self->setting('stylesheet') || '/gbrowse2/css/gbrowse.css');
   for my $ss (@stylesheets) {
       my ($url,$media) = $ss =~ /^([^(]+)(?:\((.+)\))?/;
       $media ||= 'all';
-      push @stylesheet_headers,CGI::Link({-rel=>'stylesheet',
-					  -type=>'text/css',
-					  -href=>$self->relative_path($url),
-					  -media=>$media});
+      push @additional_head, CGI::Link({-rel=>'stylesheet',
+                                        -type=>'text/css',
+                                        -href=>$self->relative_path($url),
+                                        -media=>$media});
   }
+  push @additional_head, $self->setting('head') if $self->setting('head');
 
   my $cookie  = CGI::Cookie->new(-name    => $CGI::Session::NAME,
  			        -value   => $session->id,
@@ -749,7 +750,6 @@ sub print_page_top {
   my @args = (-title => $title,
 	      -encoding=>$self->tr('CHARSET'),
 	     );
-  push @args,(-head=>$self->setting('head'))    if $self->setting('head');
   push @args,(-gbrowse_images => $self->globals->button_url || '/gbrowse2/images/buttons');
   push @args,(-gbrowse_js     => $self->globals->js_url      || '/gbrowse2/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;
@@ -759,7 +759,6 @@ sub print_page_top {
   push @onload, "alert('$alert')"        if $alert;
   push @onload, 'Overview.prototype.initialize()';
   push @onload, 'Details.prototype.initialize()';
- 
 
   # push all needed javascript files onto top of page
   my $js            = $self->globals->js_url || '/gbrowse2/js';
@@ -770,7 +769,7 @@ sub print_page_top {
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args, (-script => \@scripts);
   push @args, (-onLoad => join('; ',@onload));
-  push @args, (-head   => \@stylesheet_headers);
+  push @args, ( -head   => \@additional_head );
 
   print start_html(@args);
 

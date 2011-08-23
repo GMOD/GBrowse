@@ -20,6 +20,7 @@ my $build = GBrowseInstall->new(
 	'Bio::Root::Version'  => '1.005009001',
 	'Bio::Graphics'       => '2.09',
 	'CGI::Session'        => '4.02',
+	'Date::Parse'         => 0,
 	'Digest::MD5'         => 0,	
         'ExtUtils::CBuilder'  => 0,
 	'File::Temp'          => 0,

@@ -134,47 +134,47 @@ sub verb {
 
 #This is a cheat. Since there's no way to make javascript calls from ajax, 
 #code gets inserted here instead because GBrowse runs this no matter what.
-    unless ($CALL) {
+    #unless ($CALL) {
 
-my $detail_select_menu = detail_select_menu();
+#my $detail_select_menu = detail_select_menu();
 
-print <<JS;
+#print <<JS;
 
 
-    <script type="text/javascript"> 
+    #<script type="text/javascript"> 
 
-	var oPrimerDesigner = { };
+	#var oPrimerDesigner = { };
 
-	oPrimerDesigner.removeConfigureButton = function () {
-	    var plugin_select = document.getElementById('plugin');
-	    var config_button = document.getElementsByName('plugin_action')[0];
+	#oPrimerDesigner.removeConfigureButton = function () {
+	    #var plugin_select = document.getElementById('plugin');
+	    #var config_button = document.getElementsByName('plugin_action')[0];
 
-	    var i = plugin_select.selectedIndex;
-	    if (plugin_select.options[i].text == 'Design PCR primers')
-		config_button.style.display = 'none';
+	    #var i = plugin_select.selectedIndex;
+	    #if (plugin_select.options[i].text == 'Design PCR primers')
+		#config_button.style.display = 'none';
 
-	    plugin_select.onchange = function () { 
+	    #plugin_select.onchange = function () { 
 
-		var i = this.selectedIndex;
-		if (this.options[i].text == 'Design PCR primers') {
-		    config_button.style.display = 'none';
-		} else {
-		    config_button.style.display = 'inline';
-		}
+		#var i = this.selectedIndex;
+		#if (this.options[i].text == 'Design PCR primers') {
+		    #config_button.style.display = 'none';
+		#} else {
+		    #config_button.style.display = 'inline';
+		#}
 
-	    }
+	    #}
 
-	}
-	if (window.addEventListener) {  // W3C standard
-	    window.addEventListener('load', oPrimerDesigner.removeConfigureButton, false); // NB **not** 'onload'
-	} 
-	else if (window.attachEvent) {  // Microsoft
-	    window.attachEvent('onload', oPrimerDesigner.removeConfigureButton);
-	}
-    </script>
-JS
-	$CALL++;
-    }
+	#}
+	#if (window.addEventListener) {  // W3C standard
+	    #window.addEventListener('load', oPrimerDesigner.removeConfigureButton, false); // NB **not** 'onload'
+	#} 
+	#else if (window.attachEvent) {  // Microsoft
+	    #window.attachEvent('onload', oPrimerDesigner.removeConfigureButton);
+	#}
+    #</script>
+#JS
+	#$CALL++;
+    #}
 
   'Design';
 }
@@ -286,9 +286,9 @@ sub configure_form {
   my $map_text = $self->map_header;
 
   my $on = 1 unless $feats;
-  #my $no_target = li("There currently is no target region selected.")
-      #if ($rb - $lb) < 3;
-  my $no_target = li("Click and drag on the ruler to select a PCR target.");
+  my $no_target = li("There currently is no target region selected.")
+      if ($rb - $lb) < 3;
+  #my $no_target = li("Click and drag on the ruler to select a PCR target.");
   my $has_buttons = li("The size of potential PCR products can be adjusted via the 'Product size range' option below")
       unless $no_buttons;
   my $flanked = $no_target ? 'red line' : 'shaded region';
@@ -316,7 +316,7 @@ sub configure_form {
     Tr(
        { -class => 'searchtitle' },
       [ 
-#map text does nothing at the moment. not even sure what it's supposed to do
+#NML: map text does nothing at the moment. not even sure what it's supposed to do
 #It doesn't appear in the functional 1.7 version
 	#th($map_text) . 
 	th($zoom_menu),
@@ -346,8 +346,8 @@ sub configure_form {
     
     $html .= table( { -style => "width:${table_width}px" }, Tr( \@rows ) );
     $html .= br
-	  #. submit( -name => 'configured', -value => 'Design Primers' )
-	  #. '&nbsp;'
+	  . submit( -name => 'configured', -value => 'Design Primers' )
+	  . '&nbsp;'
 	  . reset('Reset Parameters')
 	  . '&nbsp;'
 	  . $self->back_button;
@@ -359,8 +359,9 @@ sub configure_form {
 		     -name   => 'mainform',
 		     -action => $action
 		     ).
-		     $html.
-		     end_form;
+	$html
+	.  end_form;
+	#die Dumper  $html;
 
   # if this is the first config, exit before form and buttons
   # are printed by gbrowse
@@ -403,8 +404,10 @@ sub map_header {
 sub dump {
   my ( $self, $segment ) = @_;
   my $conf = $self->configuration;
+  #print Dumper $conf;
   $self->reconfigure;
 
+  #print Dumper $conf;
   # dumpers provide their own headers, so make sure boiler plate
   # stuff is included
   #my $style_sheet = $self->browser_config->setting('stylesheet') || STYLE;
@@ -420,6 +423,7 @@ sub dump {
   delete $conf->{rb} if $conf->{rb} 
     && ($conf->{rb} < $segment->start + 1000 || $conf->{rb} > $segment->end);
   delete $conf->{target} unless $conf->{lb} && $conf->{rb};
+  #print Dumper $conf;
 
   my $target = $self->focus($segment);
   my $lb = $conf->{lb} || $target;
@@ -438,15 +442,15 @@ sub dump {
   }
   #print 'dump 1: '.$segment->start.' '.$segment->end.'<br>';
 
-#This is screwing up pan/zoom in 2.0. Commented out for now
-  #if ($new_start || $new_end) {
-    #$segment = $self->database->segment( -name  => $segment->ref,
-					 #-start => ($new_start || $segment->start),
-					 #-end   => ($new_end   || $segment->end) );
-    #$segment_size = $segment->length;
-  #}
+# NML: this might be screwing up pan/zoom. 
+  if ($new_start || $new_end) {
+    $segment = $self->database->segment( -name  => $segment->ref,
+					 -start => ($new_start || $segment->start),
+					 -end   => ($new_end   || $segment->end) );
+    $segment_size = $segment->length;
+  }
 
-    #Kludgy fix to get details panel to draw at an appropriate length
+    #NML: kludgy fix to get details panel to draw at an appropriate length
     #Otherwise, it spills past the browser window
     $self->renderer->set_details_multiplier(1);
 
@@ -563,19 +567,23 @@ print <<JS;
     }
 
     oPrimerDesigner.designPrimers = function () {
-	var mainform = document.getElementsByName('mainform')[0];
-	var conf = oPrimerDesigner.createNewFormElement(mainform, "configured", "Design Primers");
-	mainform.setAttribute("target", "_blank");
-	mainform.submit();
+	//var mainform = document.getElementsByName('mainform')[0];
+	//var conf = oPrimerDesigner.createNewFormElement(mainform, "configured", "Design Primers");
+
+	//mainform.setAttribute("target", "_blank");
+	//mainform.submit();
 
 	/*Remove these after submit or else will generate a bug where user*/
-	/*tries to scroll/zoom without closing rubber band menu first,    */
+	/*tries to scroll or zoom without closing rubber band menu first, */
 	/*causing form to unintentionally be resubmitted                  */
-	mainform.removeChild(conf);
-	mainform.removeAttribute("target");
+	//mainform.removeChild(conf);
+	//mainform.removeAttribute("target");
     }
 
     oPrimerDesigner.selectRegion = function () {
+
+	SelectArea.prototype.cancelRubber();
+
 	var size_range = document.getElementById('product_size_range');
 
 	var plugin = document.getElementsByName('plugin')[0].value;
@@ -610,9 +618,11 @@ print <<JS;
 	rb.value = select_end;
 
 	if (target.value == undefined || target.value < select_start || target.value > select_end) {
-	target.value = parseInt( (select_start+select_end)/2 );
+	    target.value = parseInt( (select_start+select_end)/2 );
 	}
 
+	var mainform = document.getElementsByName('mainform')[0];
+	mainform.submit();
     }
 
     oPrimerDesigner.unselectRegion = function () {
@@ -646,6 +656,18 @@ print <<JS;
 
 </script>
 JS
+#if (param('configured') ) {
+#print 'param configured<br>';
+#}
+#if ($self->get_primer3_params()) {
+    #print 'got primer3 params<br>';
+#} else {
+    #print Dumper param();
+#}
+#if (param('configured') && $self->get_primer3_params()) {
+  #print Dumper $conf;
+  #}
+
 
   # design the primers if required
   $self->design_primers( $segment, $lb, $rb)
@@ -670,11 +692,10 @@ JS
 	"'$_': $val"
     } (keys %$segment_info) );
 
-my $detail_select_menu = detail_select_menu();
+#my $detail_select_menu = detail_select_menu();
 
 print <<JS;
 
-$detail_select_menu
 
 <script type="text/javascript">
 
@@ -700,19 +721,19 @@ $detail_select_menu
     }
 
     /*Create submit form to get rubberband working*/
-    oPrimerDesigner.submitForm = oPrimerDesigner.getNewSubmitForm();
-    oPrimerDesigner.createNewFormElement(oPrimerDesigner.submitForm, "force_submit", "0");
-    oPrimerDesigner.createNewFormElement(oPrimerDesigner.submitForm, "plugin_action", "Go");
+    //oPrimerDesigner.submitForm = oPrimerDesigner.getNewSubmitForm();
+    //oPrimerDesigner.createNewFormElement(oPrimerDesigner.submitForm, "force_submit", "0");
+    //oPrimerDesigner.createNewFormElement(oPrimerDesigner.submitForm, "plugin_action", "Go");
 
-    oPrimerDesigner.createNewFormElement(oPrimerDesigner.submitForm, "plugin", document.getElementsByName('plugin')[0].value);
-    oPrimerDesigner.submitForm.style.display = 'none';
+    //oPrimerDesigner.createNewFormElement(oPrimerDesigner.submitForm, "plugin", document.getElementsByName('plugin')[0].value);
+    //oPrimerDesigner.submitForm.style.display = 'none';
 
-    var div = document.createElement('div');
-    div.innerHTML = '$div';
-    div.setAttribute('id', 'search_form_objects');
-    oPrimerDesigner.submitForm.appendChild(div);
+    //var div = document.createElement('div');
+    //div.innerHTML = '$div';
+    //div.setAttribute('id', 'search_form_objects');
+    //oPrimerDesigner.submitForm.appendChild(div);
 
-    document.searchform = oPrimerDesigner.submitForm;
+    //document.searchform = oPrimerDesigner.submitForm;
 
     oPrimerDesigner.details_panel = document.getElementById('primer_panel');
 
@@ -936,7 +957,13 @@ sub primer_results {
     label   => 1
   };
 
-  $featurefile->add_type( 'Primers' => $options );
+ $featurefile->set('primers',glyph=>'primers');
+ $featurefile->set('primers',label=>'1');
+ $featurefile->set('primers',height=>'10');
+ $featurefile->set('primers',bgcolor=>'red');
+
+
+  #$featurefile->add_type( 'Primers' => $options );
 
   for my $f (@feats) {
     $featurefile->add_feature( $f => 'Primers' );
@@ -1109,9 +1136,14 @@ sub new_segment_map {
 
     $zoom_menu = '';
 
-    $feats->set('primers',glyph=>'primers');
-    $feats->set('primers',label=>'1');
-    $feats->set('primers',bgcolor=>'red');
+   
+    my @feature_types = $feats->types;
+
+    for my $type (@feature_types) {
+        my $features = $feats->features($type);
+        my %options  = $feats->style($type);
+    }    
+ 
 
     push @extra_args, ('tracks', $feats);
 
@@ -1137,13 +1169,13 @@ sub new_segment_map {
     my ($hstart, $hend) = $panel->location2pixel($lb,$rb);
 
     # first shaded
-    if ($feats) {
+    #if ($feats) {
 	unless ( $hend-$hstart < 2 ) {
 	$gd->filledRectangle( $left + $hstart,
 				$top, $left + $hend,
 				$bottom, $panel->translate_color('lightgrey'));
 	}
-    }
+    #}
 
     # then the red center line
     $gd->filledRectangle( $left + $mstart,
@@ -1794,7 +1826,7 @@ sub zoomBar {
 		   );
 }
 
-#Holdovers from Bio::Graphics::Browser
+#NML: holdovers from Bio::Graphics::Browser
 #need to see if there are contemporary versions in new modules
 sub fatal_error {
     #my $self = shift;
@@ -1863,7 +1895,7 @@ sub sender_tabbed_pages {
 		   #span({id=>'settings_page_select'},           $settings_title),
 	       #),
 	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
-	   div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
+	   #div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
 	   #$uses_database?div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html) : "",
 	   #div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
 	   #div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),

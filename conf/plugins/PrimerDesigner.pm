@@ -442,13 +442,13 @@ sub dump {
   }
   #print 'dump 1: '.$segment->start.' '.$segment->end.'<br>';
 
-# NML: this might be screwing up pan/zoom. 
-  if ($new_start || $new_end) {
-    $segment = $self->database->segment( -name  => $segment->ref,
-					 -start => ($new_start || $segment->start),
-					 -end   => ($new_end   || $segment->end) );
-    $segment_size = $segment->length;
-  }
+# NML: this is causing the panel to zoom beyond the segment boundaries
+  #if ($new_start || $new_end) {
+    #$segment = $self->database->segment( -name  => $segment->ref,
+					 #-start => ($new_start || $segment->start),
+					 #-end   => ($new_end   || $segment->end) );
+    #$segment_size = $segment->length;
+  #}
 
     #NML: kludgy fix to get details panel to draw at an appropriate length
     #Otherwise, it spills past the browser window

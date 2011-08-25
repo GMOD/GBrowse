@@ -4,7 +4,7 @@
       "Lincoln Stein <lincoln.stein@gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.110930",
+   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.112150",
    "license" : [
       "perl_5"
    ],
@@ -22,7 +22,7 @@
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.38"
+            "Module::Build" : "0.36"
          }
       },
       "runtime" : {
@@ -47,7 +47,7 @@
             "Term::ReadKey" : 0
          },
          "requires" : {
-            "Bio::Graphics" : "2.09",
+            "Bio::Graphics" : "2.24",
             "Bio::Root::Version" : "1.0069",
             "CGI::Session" : "4.02",
             "Digest::MD5" : 0,
@@ -59,6 +59,7 @@
             "LWP" : 0,
             "Statistics::Descriptive" : 0,
             "Storable" : 0,
+            "Text::ParseWords" : "3.27",
             "perl" : "5.008"
          }
       }
@@ -102,7 +103,7 @@
       },
       "Bio::Graphics::Browser2" : {
          "file" : "lib/Bio/Graphics/Browser2.pm",
-         "version" : "2.33"
+         "version" : "2.39"
       },
       "Bio::Graphics::Browser2::Action" : {
          "file" : "lib/Bio/Graphics/Browser2/Action.pm",
@@ -256,6 +257,10 @@
          "file" : "lib/Bio/Graphics/Browser2/Render/Slave/Status.pm",
          "version" : 0
       },
+      "Bio::Graphics::Browser2::Render::TrackConfig" : {
+         "file" : "lib/Bio/Graphics/Browser2/Render/TrackConfig.pm",
+         "version" : 0
+      },
       "Bio::Graphics::Browser2::RenderPanels" : {
          "file" : "lib/Bio/Graphics/Browser2/RenderPanels.pm",
          "version" : 0
@@ -367,5 +372,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "2.33"
+   "version" : "2.39"
 }

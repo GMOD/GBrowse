@@ -16,6 +16,9 @@ use File::Compare 'compare';
 use File::Copy    'copy';
 use GBrowseGuessDirectories;
 
+use overload '""' => 'asString',
+    fallback => 1;
+
 use constant REGISTRATION_SERVER => 'http://modencode.oicr.on.ca/cgi-bin/gbrowse_registration';
 
 my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
@@ -963,6 +966,8 @@ END
     }
     return $result;
 }
+
+sub asString { return 'GBrowse installer' }
 
 1;
 

@@ -114,7 +114,7 @@ END
 
    TIMESTAMP      => 'Snapshot Timestamp [GMT]',
 
-   SNAPSHOT_SELECT => 'Saved Snapshots',
+   SNAPSHOT_SELECT => 'Snapshots',
 
    SELECT_TRACKS   => 'Select Tracks',
 

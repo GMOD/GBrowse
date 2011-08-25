@@ -842,7 +842,7 @@ sub render_body {
   }
   
   my $tracks        = $self->render_tracks_section;
-  my $snapshots = $self->render_snapshots_section;
+  my $snapshots     = $self->render_snapshots_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;
   my $global_config = $self->render_global_config;
@@ -1113,6 +1113,7 @@ sub region {
 	$region->features($features);
     }
     else { # a feature search
+	warn "here i am";
 	my $search   = $self->get_search_object();
 	my $features = $search->search_features();
 	if ($@) {
@@ -2641,8 +2642,7 @@ sub asynchronous_update_sections {
 
     # Saved Snapshot Section
     if ( $handle_section_name{'snapshots_page'}) {
-	$return_object->{'snapshots_page'} = $self->Bio::Graphics::Browser2::Render::SnapshotManager::render_snapshots_listing();
-	#$return_object->{'snapshots_page'} = $self->render_snapshotTitle();
+	$return_object->{'snapshots_page'} = Bio::Graphics::Browser2::Render::SnapshotManager->render_snapshots_listing($self);
     }
 
     # Handle Remaining and Undefined Sections

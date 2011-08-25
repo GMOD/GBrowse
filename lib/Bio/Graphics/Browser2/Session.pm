@@ -66,7 +66,6 @@ sub new {
 sub load_session {
     my $self = shift;
     $self->session_argv(@_);
-#     print Dumper("session = "(\%{$self->session_argv(@_)});
     return CGI::Session->new($self->session_argv);
 }
 
@@ -283,6 +282,12 @@ sub page_settings {
   return $hash->{page_settings};
 }
 
+sub snapshots {
+    my $self = shift;
+    my $hash = $self->config_hash;
+    return $hash->{snapshots}       ||= {};
+}
+
 sub plugin_settings {
   my $self = shift;
   my $plugin_base = shift;
@@ -369,39 +374,9 @@ sub config_hash {
   my $self = shift;
   my $source  = $self->source;
   my $session = $self->{session};
-  # *** Initialize the snapshot session data ***
-  my $settings =$session->{_DATA}->{$source}->{page_settings};
-#  my  $snapshotName = $settings->{current_session};
-#  my $isSnapshotActive = 0;
-#  my $currentSnapshot = 0;
- # *** If there is a snapshot, activate it ***
-#if ($snapshotName){
-#   $currentSnapshot  = $settings->{snapshots}->{$snapshotName};
-#   $isSnapshotActive = $settings->{snapshot_active};
-
-#}
-
-# *** Change the settings based on the active snapshot ***
-#$settings = ($isSnapshotActive) ? $currentSnapshot : $settings;
-# warn "active = $isSnapshotActive";
-
-  $session->{_DATA}->{$source}->{page_settings} =  $settings;
-
-#   warn "test = $currentSnapshot";
-#           my %temsess = %$settings; 
-#           while ( (my $key, my $value) = each %temsess)
-#           {
-#             warn "snapkey_: $key, value: $temsess{$key}\n" ;
-#         };
-
-
- return $session->param($source);
   $session->param($source=>{}) unless $session->param($source);
-    
-
+  return $session->param($source);
 }
-
-
 
 # problem with explicit DESTROY is that it gets called in all child
 # processes. Better to have the unlock happen when filehandle is truly

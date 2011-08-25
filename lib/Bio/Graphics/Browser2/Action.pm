@@ -79,8 +79,7 @@ sub ACTION_navigate {
 
     my $view_start = $q->param('view_start');
     my $view_stop  = $q->param('view_stop');
-    my $snapshot  = $q->param('snapshot');
-    unless (!defined $view_start or $view_start eq 'NaN' or $view_stop eq 'NaN' or $snapshot) {
+    unless (!defined $view_start or $view_start eq 'NaN' or $view_stop eq 'NaN') {
 	$render->state->{view_start} = ($view_start && $view_start >= 0)? $view_start : $render->state->{view_start},
 	$render->state->{view_stop}  = ($view_stop  && $view_stop  >= 0)? $view_stop  : $render->state->{view_stop},
     }
@@ -332,45 +331,36 @@ sub ACTION_clear_favorites {
 }
 
 # *** The Snapshot actions
-sub ACTION_delete_session {
+sub ACTION_delete_snapshot {
     my $self = shift;
     my $q     = shift;
     my $name = $q->param('name');
-   
-    my $source = $self->data_source->name;
-    my $settings = $self->state;
-    my $session = $self->session->session->{'_DATA'}->{$source};
-	
-    my $snapshot = $session;
-    delete $snapshot->{snapshots}->{$name};
-
+    my $snapshots = $self->session->snapshots;
+    delete $snapshots->{$name};
     $self->session->flush;
-
     return (204,'text/plain',undef);
 }
 
-sub ACTION_save_session {
+sub ACTION_save_snapshot {
     my $self = shift;
     my $q     = shift;
-    my $name = $q->param('name');   
-    my $source = $self->data_source->name;
-    my $settings = $self->state;
-    my $session = $self->session->session->{'_DATA'}->{$source};
-    
-    my $imageURL = $self->render->image_link($settings);
+    my $name  = $q->param('name');
+    my $snapshots = $self->session->snapshots;
+    my $settings  = $self->settings;
+    my $imageURL  = $self->render->image_link($settings);
+
     my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
 
     # Creating a deep copy of the snapshot
-    my %snapshot = %{dclone $settings};
-    $session->{snapshots}->{$name} = \%snapshot;
-
-    # Updating the snapshots hash
-    $session->{snapshots}->{$name}->{session_time}=$UTCtime;
-    $session->{snapshots}->{$name}->{image_url} = $imageURL;
+    my $snapshot = dclone $settings;
+    delete $snapshot->{name};
+    $snapshot->{image_url}            = $imageURL;
+    $snapshots->{$name}{data}         = $snapshot;
+    $snapshots->{$name}{session_time} = $UTCtime;
 
     # Each snapshot has a unique snapshot_id (currently just an md5 sum of the unix time it is created
     my $snapshot_id = md5_hex(time);
-    $session->{snapshots}->{$name}->{snapshot_id} = $snapshot_id;	
+    $snapshots->{$name}{snapshot_id}  = $snapshot_id;
 
     $self->session->flush;
     $self->ACTION_set_session($q);
@@ -378,27 +368,19 @@ sub ACTION_save_session {
     return (204,'text/plain',undef);
 }
 
-sub ACTION_set_session {
+sub ACTION_set_snapshot {
      my $self = shift; 
      my $q = shift; 
      my $name = $q->param('name');
-     my $source = $self->data_source->name;
-     my $settings = $self->state;
-     my $session = $self->session->session->{'_DATA'}->{$source};
+     my $settings  = $self->settings;
+     my $snapshots = $self->session->snapshots;
 
-#     $settings->{current_session} = $name;
-     
-     %{$settings} = %{dclone $session->{snapshots}->{$name}};
-     
-     # The snapshot_id is not stored in the current session information
-     delete $settings->{snapshot_id};
-
-     my @tracks = @{$settings->{tracks}};
+     %{$settings} = %{dclone $snapshots->{$name}{data}};
 
      my @selected_tracks = ();
-     foreach (@tracks){	
+     foreach (@{$settings->{tracks}}){	
 	if ($settings->{features}->{$_}->{visible} == 1){
-	     push(@selected_tracks, $_);
+	    push(@selected_tracks, $_);
 	}
      }   
 
@@ -407,26 +389,26 @@ sub ACTION_set_session {
      return(200,'application/json',\@selected_tracks);
  }
 
-sub ACTION_send_session {
+sub ACTION_send_snapshot {
      my $self = shift; 
      my $q = shift; 
      my $name = $q->param('name');
-     my $url = $q->param('url');
+     my $url  = $q->param('url');
+     my $snapshots = $self->session->snapshots;
 
      my $settings = $self->state;
-     my $source = $settings->{source};
-     my $session = $self->session->session->{'_DATA'}->{$source};
-     my $id = $self->session->uploadsid;
+     my $id       = $self->session->uploadsid;
 
      my $globals = $self->render->globals;
-     my $dir = $globals->user_dir;
+     my $dir     = $globals->user_dir;
 
-     my $filename = $session->{snapshots}->{$name}->{snapshot_id};
+     my $filename = $snapshots->{$name}{snapshot_id};
+     my $source   = $self->session->source;
          
      mkdir File::Spec->catfile($dir,$source,$id);
 	
      #Storing the snapshot as a string and saving it to a textfile. Typical directory /var/lib/gbrowse2/userdata/{source}/{uploadid}: 
-     my $snapshot = Dumper($session->{snapshots}->{$name});
+     my $snapshot = Dumper($snapshots->{$name}{data});
      open SNAPSHOT, ">$dir/$source/$id/$filename.txt" or die "Can't open $dir: $!";
      print SNAPSHOT "$snapshot";
      close SNAPSHOT;
@@ -439,27 +421,28 @@ sub ACTION_send_session {
      return(200,'text/plain',$url); 
  }
 
-sub ACTION_mail_session {
+sub ACTION_mail_snapshot {
      my $self = shift; 
      my $q = shift; 
-     my $name = $q->param('name');
+
+     my $name     = $q->param('name');
      my $to_email = $q->param('email');
-     my $url = $q->param('url');
+     my $url      = $q->param('url');
 
      my $settings = $self->state;
-     my $source = $settings->{source};
-     my $session = $self->session->session->{'_DATA'}->{$source};
+     my $snapshots = $self->session->snapshots;
      my $id = $self->session->uploadsid;
+     my $source   = $self->session->source;
 
      my $globals = $self->render->globals;
-     my $dir = $globals->user_dir;
+     my $dir     = $globals->user_dir;
 
-     my $filename = $session->{snapshots}->{$name}->{snapshot_id};
+     my $filename = $snapshots->{$name}{snapshot_id};
          
      mkdir File::Spec->catfile($dir,$source,$id);
 	
      #Storing the snapshot as a string and saving it to a textfile. Typical directory /var/lib/gbrowse2/userdata/{source}/{uploadid}: 
-     my $snapshot = Dumper($session->{snapshots}->{$name});
+     my $snapshot = Dumper($snapshots->{$name}{data});
      open SNAPSHOT, ">$dir/$source/$id/$filename.txt" or die "Can't open $dir: $!";
      print SNAPSHOT "$snapshot";
      close SNAPSHOT;
@@ -483,17 +466,18 @@ sub ACTION_mail_session {
      return(204,'text/plain',undef); 
  }
 
-sub ACTION_load_url {
+sub ACTION_load_snapshot_from_file {
      my $self = shift; 
      my $q = shift; 
-     my $source = $q->param('browser_source');
+     my $source   = $q->param('browser_source');
      my $filename = $q->param('snapcode');
-     my $name = $q->param('snapname');
-     $filename =~ s/%20/ /g;
+     my $name     = $q->param('snapname');
+     $filename    =~ s/%20/ /g;  # not needed?
+     $filename    =~ s![/.]!!g;
      my $from_id = $q->param('id');
      
      my $settings = $self->state;
-     my $userid = $settings->{userid};
+     my $userid   = $settings->{userid};
      
      # The snapshot is loaded from the global variable
      my $globals = $self->render->globals;
@@ -511,16 +495,14 @@ sub ACTION_load_url {
 
      	my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
      	$snapshot->{session_time} = $UTCtime;
-     	$snapshot->{userid} = $userid;
+     	$snapshot->{userid}       = $userid;
 
         my $snapshot_id = md5_hex(time);
     	$snapshot->{snapshot_id} = $snapshot_id;
 
-     	# The snapshot is saved after updates to some of the information have been made
-     	$self->session->session->{'_DATA'}->{$source}->{snapshots}->{$name} = $snapshot;
-	
-     	$self->session->flush;
+	$self->snapshots->{$name} = $snapshot;
 
+     	$self->session->flush;
      	return(204,'text/plain',undef);
      }
  }

@@ -15,7 +15,7 @@ GBrowseController.addMethods({
   	          method: 'POST',
   		  asynchronous:true,
   		  parameters: {
-  		        action:    'delete_session',
+  		        action:    'delete_snapshot',
   			name: snapshot,
 
   	          }});
@@ -53,7 +53,7 @@ GBrowseController.addMethods({
   	        	  method: 'POST',
   			  asynchronous:true,
   			  parameters: {
-  			        action:    'save_session',
+  			        action:    'save_snapshot',
   				name: sessionName,
   	        	  }});
 
@@ -92,21 +92,21 @@ GBrowseController.addMethods({
 
 	// A request is made to update the current session
  	new Ajax.Request(document.URL, {
-  	          method: 'POST',
-  		  asynchronous:true,
-  		  parameters: {
-  		        action: 'set_session',
+		method: 'POST',
+		    asynchronous:true,
+		    parameters: {
+		    action: 'set_snapshot',
   			name: sessionName,
-  	          },
-		  onSuccess: function(transport) {
-			// The array of selected tracks is stored
-			active = transport.responseJSON.toString();
-			active = active.split(",");
+			},
+		    onSuccess: function(transport) {
+		    // The array of selected tracks is stored
+		    active = transport.responseJSON.toString();
+		    active = active.split(",");
 			
-			// The various sections of the browser affected when a session is changed are updated
-			var sections = new Array(track_listing_id, page_title_id, custom_tracks_id, community_tracks_id, search_form_objects_id, snapshot_table_id);
-			Controller.update_sections(sections); 	
-		  }
+		    // The various sections of the browser affected when a session is changed are updated
+		    var sections = new Array(track_listing_id, page_title_id, custom_tracks_id, community_tracks_id, search_form_objects_id, snapshot_table_id);
+		    Controller.update_sections(sections); 	
+		}
 	});
 	// A timeout is used to ensure that the sections are updated before further changes are made
 	setTimeout(function(){
@@ -121,7 +121,7 @@ GBrowseController.addMethods({
 			var track_name = child.id.substring(0, (child.id.length - 6));
 			// All tracks are initially deleted (and unregistered)
 			Controller.delete_track(track_name);
-		});	
+		    });	
 
 		// The tracks are added and browser is refreshed.
 		Controller.add_tracks(active,function(){Controller.refresh_tracks(true);}, true);
@@ -134,13 +134,12 @@ GBrowseController.addMethods({
 			//$('snapshot_page_title').update('Snapshot : ' + sessionName);
 			//$('snapshot_page_title').style.color = 'navy';
 			Controller.select_tab('main_page')
-			$('snapshot_page_title').hide();
-			}, 2000)
-			     },2000)
-  },
+			    $('snapshot_page_title').hide();
+		    }, 2000)
+		    },2000)
+	    },
 
-  sendSnapshot:
-  function(snapshot){
+sendSnapshot: function(snapshot){
 
 	// The snapshot code to be sent is initially set to ''
   	var snapshot_url = '';
@@ -167,7 +166,7 @@ GBrowseController.addMethods({
   	          method: 'POST',
   		  asynchronous:true,
   		  parameters: {
-  		        action:    'send_session',
+  		        action:    'send_snapshot',
   			name: 	snapshot,
 			url:   document.location.href,
   	          },
@@ -200,7 +199,7 @@ GBrowseController.addMethods({
   	          method: 'POST',
   		  asynchronous:true,
   		  parameters: {
-  		        action:    'mail_session',
+  		        action:    'mail_snapshot',
   			email: 	   email,
 			name:  snapshot,
 			url:   document.location.href,
@@ -225,7 +224,7 @@ GBrowseController.addMethods({
 	  	          method: 'POST',
 	  		  asynchronous:true,
 	  		  parameters: {
-	  		        action:    'load_url',
+	  		        action:    'load_snapshot_from_file',
 				snapcode:  snapcode,
 				snapname: snapname,
 				id: upload,

@@ -1204,12 +1204,11 @@ sub render_snapshots_section {
     my $userdata = $self->user_tracks;
     my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
 # Snapshot page rendering is done in the snapshotmanager.pm file
-	$html .= div({-id => "snapshots_page"}, $self->Bio::Graphics::Browser2::Render::SnapshotManager::render_snapshots_listing);
-	$html = div({-style => 'margin: 1em;'}, $html);
-	return $html;
+    my $snapshot_manager = Bio::Graphics::Browser2::Render::SnapshotManager->new();
+    $html .= div({-id => "snapshots_page"}, $snapshot_manager->render_snapshots_listing($self));
+    $html = div({-style => 'margin: 1em;'}, $html);
+    return $html;
 }
-
-
 
 # Render Custom Tracks Section - Returns the content of the "Custom Tracks" tab.
 sub render_custom_tracks_section {
@@ -1264,7 +1263,8 @@ sub render_community_track_listing {
 	my $max_files = $globals->public_files;
 	my $total_tracks = $usertracks->public_count($search);
 	my $track_limit = $search? @requested_tracks : $max_files;
-	my $tracks_displayed = ($track_limit < (@requested_tracks? @requested_tracks : $total_tracks))? $track_limit : (@requested_tracks? @requested_tracks : $total_tracks);
+	my $tracks_displayed = ($track_limit < (@requested_tracks? @requested_tracks : $total_tracks))
+	                      ? $track_limit : (@requested_tracks? @requested_tracks : $total_tracks);
 	my $tracks_remaining = $total_tracks - ($offset + $tracks_displayed);
 	my $tracks_before = $offset;
 	

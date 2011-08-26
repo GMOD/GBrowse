@@ -70,4 +70,4 @@ my $loader = Bio::DB::Synteny::Store::Loader::Tabular->new(
 # wrap the load in a transaction for speed
 $syn_store->dbh->{AutoCommit} = 0;
 $loader->load( @ARGV );
-$syn_store->dbh->{AutoCommit} = 0;
+$syn_store->dbh->{AutoCommit} = 1;

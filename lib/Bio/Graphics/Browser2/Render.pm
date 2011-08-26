@@ -77,6 +77,7 @@ sub new {
   $self->data_source($data_source);
   $self->session($session);
   $self->state($session->page_settings);
+  warn "render(start = ",$self->state->{start},")";
   $self->set_language();
   $self->set_signal_handlers();
   $self;
@@ -948,16 +949,16 @@ sub render_panels {
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
         my $panels_html    = $self->get_blank_panels( [$self->overview_tracks],
 						      'overview' );
-		my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
-		$html .= div(
-			$self->toggle({tight=>1},
-	 			  'Overview',
-	 			  div({ -id => 'overview_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px' },
-	 			      $scale_bar_html, $panels_html,
-	 			  ))
-	 	    ) . $drag_script;
+	my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
+	$html .= div(
+	    $self->toggle({tight=>1},
+			  'Overview',
+			  div({ -id => 'overview_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px' },
+			      $scale_bar_html, $panels_html,
+			  ))
+	    ) . $drag_script;
     }
-
+    
     if ( $section->{'regionview'} and $self->state->{region_size} ) {
 
         my $scale_bar_html = $self->scale_bar( $seg, 'region' );
@@ -967,12 +968,13 @@ sub render_panels {
 
         $html .= div(
             $self->toggle({tight=>1},
-                'Region',
-                div({ -id => 'region_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px'  },
-                    $scale_bar_html, $panels_html,
-                )
+			  'Region',
+			  div({ -id => 'region_panels', -class => 'track', 
+				-style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px'  },
+			      $scale_bar_html, $panels_html,
+			  )
             )
-        ) . $drag_script;
+	    ) . $drag_script;
     }
 
     if ( $section->{'detailview'} ) {
@@ -982,7 +984,7 @@ sub render_panels {
 						      'detail');
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
         my $details_msg    = span({ -id => 'details_msg', },'');
-		my $clear_hilites  = $self->clear_highlights;
+	my $clear_hilites  = $self->clear_highlights;
         $html .= div(
             $self->toggle({tight=>1},
 			  'Details',
@@ -1000,7 +1002,7 @@ sub render_panels {
             )
 	    ) . $drag_script;
     }
-    return $html;
+    return div({-id=>'panels'},$html);
 }
 
 sub get_post_load_functions {
@@ -1113,7 +1115,6 @@ sub region {
 	$region->features($features);
     }
     else { # a feature search
-	warn "here i am";
 	my $search   = $self->get_search_object();
 	my $features = $search->search_features();
 	if ($@) {

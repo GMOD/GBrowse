@@ -363,6 +363,34 @@ var GBrowseController = Class.create({
     },
 
     // Kick-off Render Methods ****************************************
+    reload_panels:  // called only to reload a snapshot
+	function (segment_info) {
+	    if (segment_info != null) {
+		this.segment_info = segment_info;
+	    }
+
+	    new Ajax.Request(Controller.url,{
+		    method: 'post',
+		    parameters: {
+			action: 'render_panels'
+		    },
+		    onSuccess: function(transport) { 
+			$('panels').innerHTML = transport.responseText;
+			$('panels').innerHTML.evalScripts();
+			var color = overviewObject.background;
+			var unit  = overviewObject.unit;
+			var divider = overviewObject.divider;
+			['overview','region','detail'].each(function(e) {
+				    var m = $(e+'SelectMenu');
+				    if (m) m.remove();
+			    });
+			this.initialize_page();
+			set_dragcolors(color);
+			set_dragunits(unit,divider);
+		    }
+		});
+	    
+	}, //end render_panels()
 
     update_coordinates:
     function (action, snapshot) {
@@ -389,7 +417,6 @@ var GBrowseController = Class.create({
             //  else
             //  alert('REPORT THIS BUG: element '+gbtrack.track_image_id+' should not be null');
         });
-
 
         new Ajax.Request(Controller.url, {
             method:     'post',
@@ -447,11 +474,11 @@ var GBrowseController = Class.create({
         }); // end Ajax.Request
     }, // end update_coordinates
 
-    refresh_tracks:
-    function (snapshot) {
-	// The snapshot flag indicates that a snapshot is being loaded and refreshes the tracks accordingly
-	Controller.update_coordinates('left 0', snapshot);
-    }, // end refresh_tracks
+    refresh_tracks: 
+	function (snapshot) {
+	    // The snapshot flag indicates that a snapshot is being loaded and refreshes the tracks accordingly
+	    Controller.update_coordinates('left 0', snapshot);
+	}, // end refresh_tracks
 
     scroll:
     function (direction,length_units) {
@@ -1358,7 +1385,8 @@ function initialize_page() {
     var tabs = $$("div.tabbody").collect( function(element) {
 	    return element.id;
 	});
-    Controller.tabs = new TabbedSection(tabs);
+    if (Controller.tabs == null)
+	Controller.tabs = new TabbedSection(tabs);
 
     //event handlers
     [page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
@@ -1379,6 +1407,8 @@ function initialize_page() {
     Details.prototype.initialize();
     if ($('autocomplete_choices') != null) 
 	initAutocomplete();
+
+    Sortable.create('snapshotTable',{tag:'div',only:'draggable'});
 }
 
 // set the colors for the rubberband regions
@@ -1391,7 +1421,7 @@ function set_dragcolors(color) {
      detailsObject.background  = color;
 }
 
-// set the colors for the rubberband regions
+// set the units for the rubberband regions
 function set_dragunits(unit,divider) {
     if (unit == null)    unit    = 'bp';
     if (divider == null) divider = 1;

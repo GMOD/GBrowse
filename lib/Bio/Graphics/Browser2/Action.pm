@@ -66,6 +66,20 @@ sub handle_legacy_calls {
     return;
 }
 
+sub ACTION_render_panels {
+    my $self   = shift;
+    my $q      = shift;
+    my $render = $self->render;
+    my $seg    = eval {$render->region->seg};
+    return (204,'text/plain',undef) unless $seg;
+    my $source = $render->data_source;
+    $render->init_plugins();
+    my $html   = $render->render_panels($seg,{overview   => $source->show_section('overview'),
+					      regionview => $source->show_section('region'),
+					      detailview => $source->show_section('detail')});
+    return (200,'text/html',$html);
+}
+
 # each ACTION_* method corresponds to a "action=*" parameter on the CGI stack
 sub ACTION_navigate {
     my $self   = shift;
@@ -353,18 +367,17 @@ sub ACTION_save_snapshot {
 
     # Creating a deep copy of the snapshot
     my $snapshot = dclone $settings;
-    delete $snapshot->{name};
     $snapshot->{image_url}            = $imageURL;
     $snapshots->{$name}{data}         = $snapshot;
     $snapshots->{$name}{session_time} = $UTCtime;
+
+    warn "save_snapshot(start=",$snapshots->{$name}{data}{start},')';
 
     # Each snapshot has a unique snapshot_id (currently just an md5 sum of the unix time it is created
     my $snapshot_id = md5_hex(time);
     $snapshots->{$name}{snapshot_id}  = $snapshot_id;
 
     $self->session->flush;
-    $self->ACTION_set_session($q);
-
     return (204,'text/plain',undef);
 }
 
@@ -377,16 +390,12 @@ sub ACTION_set_snapshot {
 
      %{$settings} = %{dclone $snapshots->{$name}{data}};
 
-     my @selected_tracks = ();
-     foreach (@{$settings->{tracks}}){	
-	if ($settings->{features}->{$_}->{visible} == 1){
-	    push(@selected_tracks, $_);
-	}
-     }   
-
+     warn "set_snapshot(start = ",$settings->{start},')';
+     my @selected_tracks  = $self->render->visible_tracks;
+     my $segment_info     = $self->render->segment_info_object();
      $self->session->flush;
 
-     return(200,'application/json',\@selected_tracks);
+     return(200,'application/json',{tracks=>\@selected_tracks,segment_info=>$segment_info});
  }
 
 sub ACTION_send_snapshot {

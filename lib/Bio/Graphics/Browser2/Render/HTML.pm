@@ -51,6 +51,11 @@ sub render_top {
 	# ***Render the snapshot title***
     $html   .=  $self->render_snapshotTitle;
     $html   .=  $self->html_frag('html1',$self->state);
+
+    # testing
+    $html   .= button({-onClick=>'Controller.reload_panels()',
+		       -name=>'re-render panels'});
+
     return  $err
 	  . $self->toggle({nodiv=>1},'banner','',$html);
 }
@@ -498,8 +503,7 @@ sub render_html_head {
   my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
   my $other_actions   = join ';',@other_initialization;
   # *** Usings the Sortable commands from script.aculo.us and prototype for snapshots table ***
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions;Sortable.create('snapshotTable',{tag:'div',only:'draggable'});Controller.checkSnapshot()");
-
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions;");
   return start_html(@args);
 }
 

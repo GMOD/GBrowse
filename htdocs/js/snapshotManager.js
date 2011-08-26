@@ -98,46 +98,17 @@ GBrowseController.addMethods({
 		    action: 'set_snapshot',
   			name: sessionName,
 			},
-		    onSuccess: function(transport) {
-		    // The array of selected tracks is stored
-		    active = transport.responseJSON.toString();
-		    active = active.split(",");
-			
-		    // The various sections of the browser affected when a session is changed are updated
-		    var sections = new Array(track_listing_id, page_title_id, custom_tracks_id, community_tracks_id, search_form_objects_id, snapshot_table_id);
-		    Controller.update_sections(sections); 	
+		    onSuccess: function(transport) { 
+		      var results = transport.responseJSON;
+		      Controller.reload_panels(results.segment_info);
+		      TrackPan.make_details_draggable();
+		      console.log(results.segment_info.detail_start);
+		      Controller.select_tab('main_page');
+		      $('snapshot_page_title').hide();
+
 		}
 	});
-	// A timeout is used to ensure that the sections are updated before further changes are made
-	setTimeout(function(){
-
-		Sortable.create('snapshotTable',{tag:'div',only:'draggable'});	
-
-		// All the children of the tracks_panel are stored
-		var children = $A($("tracks_panel").descendants());
-
-		// Each child that is active, is added to the active children array, and inactive children are removed from the track listing
-		children.each(function(child) {
-			var track_name = child.id.substring(0, (child.id.length - 6));
-			// All tracks are initially deleted (and unregistered)
-			Controller.delete_track(track_name);
-		    });	
-
-		// The tracks are added and browser is refreshed.
-		Controller.add_tracks(active,function(){Controller.refresh_tracks(true);}, true);
-		
-		// The busy indicator is removed after all actions have been completed
-		setTimeout(function(){
-			$('busy_indicator').hide();
-
-			// The title is updated to reflect the new snapshot that has been set
-			//$('snapshot_page_title').update('Snapshot : ' + sessionName);
-			//$('snapshot_page_title').style.color = 'navy';
-			Controller.select_tab('main_page')
-			    $('snapshot_page_title').hide();
-		    }, 2000)
-		    },2000)
-	    },
+ },
 
 sendSnapshot: function(snapshot){
 

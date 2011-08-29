@@ -114,19 +114,19 @@ sub render_tabbed_pages {
 	
     $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
 	           div({-id=>'tabbed_menu',-class=>'tabmenu'},
-	           span({id=>'main_page_select'},               $main_title),
-	           span({id=>'track_page_select'},              $tracks_title),
-		   span({id=>'snapshots_page_select'},           $snapshot_title),
-	           $uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
-	           span({id=>'custom_tracks_page_select'},      $custom_tracks_title),,
-	           span({id=>'settings_page_select'},           $settings_title)
-	       ),
-	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
-	   div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
-           div({-id=>'snapshots_page',       -class=>'tabbody'}, $snapshot_html),
-	   $uses_database?div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html) : "",
-	   div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
-	   div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),
+		       span({id=>'main_page_select'},               $main_title),
+		       span({id=>'track_page_select'},              $tracks_title),
+		       span({id=>'snapshots_page_select'},           $snapshot_title),
+		       $uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
+		       span({id=>'custom_tracks_page_select'},      $custom_tracks_title),,
+		       span({id=>'settings_page_select'},           $settings_title)
+		   ),
+		   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
+		   div({-id=>'track_page',           -class=>'tabbody' ,-style=>'display:none'}, $tracks_html),
+		   div({-id=>'snapshots_page',       -class=>'tabbody' ,-style=>'display:none'}, $snapshot_html),
+		   $uses_database?div({-id=>'community_tracks_page',-class=>'tabbody',-style=>'display:none'}, $community_tracks_html) : "",
+		   div({-id=>'custom_tracks_page',   -class=>'tabbody',-style=>'display:none'}, $custom_tracks_html),
+		   div({-id=>'settings_page',        -class=>'tabbody',-style=>'display:none'}, $settings_html),
 	);
 	
     return $html;

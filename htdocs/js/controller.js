@@ -416,6 +416,8 @@ var GBrowseController = Class.create({
             //  alert('REPORT THIS BUG: element '+gbtrack.track_image_id+' should not be null');
         });
 
+	console.log(TrackPan.get_start());
+
         new Ajax.Request(Controller.url, {
             method:     'post',
             parameters: {
@@ -1134,9 +1136,6 @@ show_info_message:
             backgroundColor:'beige',
             padding:'5px 5px 5px 5px'
         });
-        // var r = document.createRange();
-        // r.selectNodeContents(container_element);
-        // window.getSelection().addRange(r);
         Event.observe(container_element,'keypress',this.set_upload_description);
         Event.observe(container_element,'blur',this.set_upload_description);
     },

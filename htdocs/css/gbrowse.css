@@ -199,11 +199,9 @@ div.ipadtitle
 		color: black;
 		font-size: 16pt;
 		text-align :center;
-/*  		border-style:solid; */ 
-/* 		border-color:black; */
-	
-		 /*"collapse('$label')",*/
 }
+
+.tabbody {display:block}
 
 span.ficon:active{
   
@@ -212,62 +210,61 @@ background-image: url('ficonactive.png');
 }
 
 
-	#dhtmlgoodies_leftPanel ul{
-		padding-left:20px;
-		margin-left:0px;
-	}
-	#dhtmlgoodies_leftPanel div{
-		padding:3px;
-	}
-	#mainContent{
-		width:660px;
-		margin-left:150px;
-		background-color:#FFF;
-		padding-right:5px;
-		border-left:1px solid #000;
-		border-right:1px solid #000;
-		border-bottom:1px solid #000;
+#dhtmlgoodies_leftPanel ul{
+    padding-left:20px;
+    margin-left:0px;
+}
+#dhtmlgoodies_leftPanel div{
+    padding:3px;
+}
+#mainContent{
+    width:660px;
+    margin-left:150px;
+    background-color:#FFF;
+    padding-right:5px;
+    border-left:1px solid #000;
+    border-right:1px solid #000;
+    border-bottom:1px solid #000;
 		
-	}
+}
 
-	/* END CSS ONLY NEEDED FOR THIS DEMO PAGE */
+/* END CSS ONLY NEEDED FOR THIS DEMO PAGE */
 	
-	#dhtmlgoodies_leftPanel{	/* Styling the help panel */
+#dhtmlgoodies_leftPanel{	/* Styling the help panel */
 		
-		background-color: #FAFAD2;	
-		color:#000000;	/* White text color */
-		font-family: Trebuchet MS, Lucida Sans Unicode, Arial, sans-serif;	/* Which font to use */
-		
-		/* You shouldn't change these 5 options unless you need to */		
-		height:100%;		
-		left:0px;
-		z-index:10;
-		position:absolute;
-		display:none;
+    background-color: #FAFAD2;	
+    color:#000000;	/* White text color */
+    font-family: Trebuchet MS, Lucida Sans Unicode, Arial, sans-serif;	/* Which font to use */
+    
+    /* You shouldn't change these 5 options unless you need to */		
+    height:100%;		
+    left:0px;
+    z-index:10;
+    position:absolute;
+    display:none;
  		 
-	}
+}
 	
-	#dhtmlgoodies_leftPanel #leftPanelContent{
-		padding:0px;
-	}
-	#dhtmlgoodies_leftPanel .closeLink{ /* Layout of close link */
-		padding-left:2px;
-		padding-right:2px;
-		background-color:#FFF;
-		position:absolute;
-		top:2px;
-		right:2px;
-		border:1px solid #000;
-		color:#000;
-		font-size:1.2em;				
-	}
-	#dhtmlgoodies_leftPanel .closeLink:hover{	/* Close link text  - mouseover effect*/
-		color:#FFF;
-		background-color:#000;
-	}	
-	
-	div.normal{
-		font-style:normal;
-		    }
-z
+#dhtmlgoodies_leftPanel #leftPanelContent{
+    padding:0px;
+}
+#dhtmlgoodies_leftPanel .closeLink{ /* Layout of close link */
+    padding-left:2px;
+    padding-right:2px;
+    background-color:#FFF;
+    position:absolute;
+    top:2px;
+    right:2px;
+    border:1px solid #000;
+    color:#000;
+    font-size:1.2em;				
+}
+#dhtmlgoodies_leftPanel .closeLink:hover{	/* Close link text  - mouseover effect*/
+    color:#FFF;
+    background-color:#000;
+}	
+
+div.normal{
+    font-style:normal;
+}
   

@@ -261,6 +261,9 @@ sendSnapshot: function(snapshot){
 	}
  },
 
+      /* this code has nothing to do with snapshots
+       * but is instead a hack for xyplot overlays
+       * disable it for now
  linkTrackLegend:
   function(){
 	var subtrack_groups = $$('.subtrack_group');
@@ -287,6 +290,7 @@ sendSnapshot: function(snapshot){
 		}
 	    });
   }
+      */
 
 });
 

@@ -268,24 +268,24 @@ sendSnapshot: function(snapshot){
 	subtrack_groups.each(function(subtrack_group) {
 		var subtracks = subtrack_group.childElements();
 		if(subtracks.size() > 1){
-			subtracks.each(function(subtrack) {
-				var label = subtrack.down().down().innerHTML;
-				var track_div = subtrack.ancestors()[2];
-				var map = track_div.down('map');
-				areas = map.childElements()				 
+		    subtracks.each(function(subtrack) {
+			    var label = subtrack.down().down().innerHTML;
+			    var track_div = subtrack.ancestors()[2];
+			    var map = track_div.down('map');
+			    areas = map.childElements()				 
 				areas.each(function(area) {
 					var href = area.readAttribute('href');
 					href = href.replace(/;/g, "&");
 					var param = Controller.findParameter('name', href);
 					if(param == label){
-						subtrack.down().href = href.replace(/&/g, ";");
-						area.remove();
-						throw $break;
+					    subtrack.down().href = href.replace(/&/g, ";");
+					    area.remove();
+					    throw $break;
 					}
-				});
+				    });
 			});
 		}
-        });
+	    });
   }
 
 });

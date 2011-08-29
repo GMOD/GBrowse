@@ -40,8 +40,6 @@ var GlobalDrag;
 //  Sorta Constants
 var expired_limit  = 1;
 
-
-
 var GBrowseController = Class.create({
 
   // Class Utility Methods ******************************************
@@ -730,7 +728,7 @@ var GBrowseController = Class.create({
                         Controller.get_remaining_tracks(track_keys,time_out*decay,decay,time_key)
                     } ,time_out);
                 } else {
-		    Controller.linkTrackLegend();
+		    //		    Controller.linkTrackLegend();   try to find different workaround
                     Controller.idle();
                 }
             } // end onSuccess

@@ -397,18 +397,20 @@ sub _search_features_locally {
     my %seenit;
 
     for my $dbid (@dbids) {
-	warn "searching in ",$dbid if DEBUG;
+	my $opts      = $self->source->search_options($dbid);
+	next if $opts =~ /none/;
+	warn "[$$] searching in ",$dbid if DEBUG;
 	my $db = $self->source->open_database($dbid);
 	next if $seenit{$db}++;
 	my $region   = Bio::Graphics::Browser2::Region->new(
 	    { source     => $self->source,
 	      state      => $self->state,
 	      db         => $db,
-	      searchopts => $self->source->search_options($dbid),
+	      searchopts => $opts,
 	    }
 	    ); 
  	my $features = $region->search_features($args);
-	warn $features ? "got @$features" : "got no features" if DEBUG;
+	warn $features && @$features ? "[$$] got @$features" : "[$$] got no features" if DEBUG;
 	next unless $features && @$features;
 	$features = $self->filter_features($dbid,$features);
 	$self->add_dbid_to_features($dbid,$features);

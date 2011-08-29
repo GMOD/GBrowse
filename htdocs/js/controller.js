@@ -93,6 +93,7 @@ var GBrowseController = Class.create({
 	reset_after_track_load:
 	// This may be a little overkill to run these after every track update but
 	// since there is no "We're completely done with all the track updates for the
+
 	// moment" hook, I don't know of another way to make sure the tracks become
 	// draggable again
 	function () {
@@ -273,7 +274,7 @@ var GBrowseController = Class.create({
     // Update Section Methods *****************************************
     update_sections:
     function(section_names, param_str, scroll_there, spin, onSuccessFunc) {
-      
+
         if (param_str==null){
             param_str = '';
         }
@@ -292,8 +293,7 @@ var GBrowseController = Class.create({
 							alt: Controller.translate('WORKING')}) );
             request_str += "&section_names="+section_names[i];
         }
-	
-        new Ajax.Request(Controller.url, {
+	new Ajax.Request(Controller.url, {
             method:     'post',
             parameters: request_str,
             onSuccess: function(transport) {
@@ -310,8 +310,9 @@ var GBrowseController = Class.create({
                         initAutocomplete();
                     if (section_name == page_title_id)
                         document.title = $(section_name).innerHTML;
-                    if (onSuccessFunc != null)
+                    if (onSuccessFunc != null) {
                         onSuccessFunc();
+		    }
                 }
                 checkSummaries();
             }
@@ -392,6 +393,7 @@ var GBrowseController = Class.create({
 
     update_coordinates:
     function (action, snapshot) {
+	console.log('update_coordinates()');
 	if (snapshot == null){
 		snapshot = false;
 	}
@@ -415,8 +417,6 @@ var GBrowseController = Class.create({
             //  else
             //  alert('REPORT THIS BUG: element '+gbtrack.track_image_id+' should not be null');
         });
-
-	console.log(TrackPan.get_start());
 
         new Ajax.Request(Controller.url, {
             method:     'post',

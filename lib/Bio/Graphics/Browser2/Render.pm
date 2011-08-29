@@ -30,7 +30,7 @@ use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
-use constant TRACE_RUN            => 0;
+use constant TRACE_RUN            => 1;
 use constant TRACE                => 0; # shows top level events
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
 use constant REGION_SCALE_LABEL   => 'Region Scale';
@@ -349,7 +349,7 @@ sub run_asynchronous_event {
     my $self = shift;
     my ($status, $mime_type, $data, %headers) = $self->asynchronous_event or return;
 
-    warn "[$$] asynchronous event returning status=$status, mime-type=$mime_type" if DEBUG;
+    warn "[$$] asynchronous event returning status=$status, mime-type=$mime_type"; # if DEBUG;
 
     # add the cookies!
     $headers{-cookie} = [$self->state_cookie,$self->auth_cookie];
@@ -2066,7 +2066,7 @@ sub track_visible {
 sub update_state_from_cgi {
   my $self  = shift;
   my $state = $self->state;
-warn "state = $state" if DEBUG;
+  warn "state = $state" if DEBUG;
   $self->update_options($state);
   $self->update_coordinates($state);
   $self->update_region($state);
@@ -2848,12 +2848,14 @@ sub region_string {
     my $state   = $self->state;
     my $source  = $self->data_source;
     my $divider = $source->unit_divider || 1;
-    $state->{view_start} ||= 0;
+    $state->{view_start}  ||= 0;
     $state->{view_stop}   ||= 0;
+    warn "name was $state->{name}";
     $state->{name} = "$state->{ref}:".
 	              $source->commas($state->{view_start}/$divider).
 		      '..'.
 		      $source->commas($state->{view_stop}/$divider);
+    warn "name is $state->{name}";
 }
 
 sub zoom_to_span {

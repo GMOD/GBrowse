@@ -94,6 +94,7 @@ sub ACTION_navigate {
     my $view_start = $q->param('view_start');
     my $view_stop  = $q->param('view_stop');
     unless (!defined $view_start or $view_start eq 'NaN' or $view_stop eq 'NaN') {
+	warn "updating view_start etc";
 	$render->state->{view_start} = ($view_start && $view_start >= 0)? $view_start : $render->state->{view_start},
 	$render->state->{view_stop}  = ($view_stop  && $view_stop  >= 0)? $view_stop  : $render->state->{view_stop},
     }

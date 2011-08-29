@@ -51,6 +51,7 @@ function toggleRuler (ruler_visible) {
 }
 
 function updateRuler() {
+    console.log('updateRuler()');
   var height       = $('detail_panels').getHeight() - 17 + 'px';
   var ruler_label  = $('ruler_label');
   var ruler_handle = $('ruler_handle');

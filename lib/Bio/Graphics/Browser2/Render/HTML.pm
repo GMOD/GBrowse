@@ -52,10 +52,6 @@ sub render_top {
     $html   .=  $self->render_snapshotTitle;
     $html   .=  $self->html_frag('html1',$self->state);
 
-    # testing
-    $html   .= button({-onClick=>'Controller.reload_panels()',
-		       -name=>'re-render panels'});
-
     return  $err
 	  . $self->toggle({nodiv=>1},'banner','',$html);
 }

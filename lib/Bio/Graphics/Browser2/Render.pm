@@ -30,7 +30,7 @@ use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
-use constant TRACE_RUN            => 1;
+use constant TRACE_RUN            => 0;
 use constant TRACE                => 0; # shows top level events
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
 use constant REGION_SCALE_LABEL   => 'Region Scale';
@@ -78,6 +78,7 @@ sub new {
   $self->session($session);
   $self->state($session->page_settings);
   warn "render(start = ",$self->state->{start},")";
+  warn "render(NAME = ",$self->state->{name},")";
   $self->set_language();
   $self->set_signal_handlers();
   $self;
@@ -279,8 +280,10 @@ sub run {
   warn "[$$] init()"         if $debug;
   $self->init();
 
-  warn "[$$] update_state()" if $debug;
+  warn "[$$] update_state()";# if $debug;
+  warn "NAME WAS ",$self->state->{name};
   $self->update_state();
+  warn "NAME IS ",$self->state->{name};
   
   # EXPERIMENTAL CODE -- GET RID OF THE URL PARAMETERS
   if ($ENV{QUERY_STRING} && $ENV{QUERY_STRING} =~ /reset/) {
@@ -388,7 +391,7 @@ sub asynchronous_event {
     my $settings = $self->state;
     my $events;
 
-    warn "event(",(join ' ',param()),")" if DEBUG;
+    warn "[$$] asynchronous event(",query_string(),")";# if TRACE_RUN;
 
     # TO ADD AN ASYNCHRONOUS REQUEST...
     # 1. Give the request a unique name, such as "foo"
@@ -2465,7 +2468,9 @@ sub update_coordinates {
       undef $state->{stop};
       undef $state->{view_start};
       undef $state->{view_stop};
+      warn "NAME WAS $state->{name}";
       $state->{name}       = $state->{search_str} = param('name') || param('q');
+      warn "NAME IS $state->{name}";
       $state->{dbid}       = param('dbid'); # get rid of this
   }
 }
@@ -2683,6 +2688,7 @@ sub asynchronous_update_element {
         return $container;
     }
     elsif ( $element eq 'landmark_search_field' ) {
+	warn "name = ",$self->state->{name};
         return $self->state->{name};
     }
     elsif ( $element eq 'overview_panels' ) {
@@ -2732,6 +2738,7 @@ sub asynchronous_update_coordinates {
     my $action = shift;
 
     my $state  = $self->state;
+    warn "NAME WAS $state->{name}";
 
     my $whole_segment_start = $state->{seg_min};
     my $whole_segment_stop  = $state->{seg_max};
@@ -2757,16 +2764,16 @@ sub asynchronous_update_coordinates {
 	$position_updated++;
     }
     if ( $action =~ /flip (\S+)/ ) {
-    if ( $action =~ /name/) {
-        $self->move_to_name($state, $action);
-        $position_updated++;
-    }
-        if ( $1 eq 'true' ) {
-            $state->{'flip'} = 1;
-        }
-        else {
-            $state->{'flip'} = 0;
-        }
+	if ( $action =~ /name/) {
+	    $self->move_to_name($state, $action);
+	    $position_updated++;
+	}
+	if ( $1 eq 'true' ) {
+	    $state->{'flip'} = 1;
+	}
+	else {
+	    $state->{'flip'} = 0;
+	}
     }
 
     if ($position_updated) { # clip and update param
@@ -2807,6 +2814,7 @@ sub asynchronous_update_coordinates {
 
 	# update our "name" state and the CGI parameter
 	$state->{name} = $self->region_string;
+	warn "asynchronous_update_coordinates(): NAME IS $state->{name}";
     }
 
     $self->session->flush();
@@ -2850,12 +2858,10 @@ sub region_string {
     my $divider = $source->unit_divider || 1;
     $state->{view_start}  ||= 0;
     $state->{view_stop}   ||= 0;
-    warn "name was $state->{name}";
-    $state->{name} = "$state->{ref}:".
-	              $source->commas($state->{view_start}/$divider).
-		      '..'.
-		      $source->commas($state->{view_stop}/$divider);
-    warn "name is $state->{name}";
+    return "$state->{ref}:".
+	$source->commas($state->{view_start}/$divider).
+	'..'.
+	$source->commas($state->{view_stop}/$divider);
 }
 
 sub zoom_to_span {

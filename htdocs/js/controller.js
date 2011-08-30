@@ -393,7 +393,6 @@ var GBrowseController = Class.create({
 
     update_coordinates:
     function (action, snapshot) {
-	console.log('update_coordinates()');
 	if (snapshot == null){
 		snapshot = false;
 	}

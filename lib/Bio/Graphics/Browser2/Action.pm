@@ -89,6 +89,8 @@ sub ACTION_navigate {
     my $source   = $self->data_source;
     my $settings = $self->settings;
 
+    warn "navigate name WAS = $settings->{name}";
+
     my $action = $q->param('navigate') or croak "for the navigate action, a CGI argument named \"navigate\" must be present";
 
     my $view_start = $q->param('view_start');
@@ -130,6 +132,7 @@ sub ACTION_navigate {
 	region_scale_bar   => $region_scale_return_object,
 	detail_scale_bar   => $detail_scale_return_object,
     };
+    warn "navigate name NOW = $settings->{name}";
     $self->session->flush;
     return (200,'application/json',$return_object);
 }

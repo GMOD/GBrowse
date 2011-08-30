@@ -315,7 +315,6 @@ var GBrowseTrackPan = Class.create({
 
 	get_start:
 	function () {
-	    // console.log('detail_start='+this.detail_start+', detail_stop ='+this.detail_stop+', details_mult='+this.details_mult+', x='+this.x);
 	    var len = this.detail_stop - this.detail_start;
 	    var start = Math.round(this.detail_start + len * (this.details_mult - 1) / this.details_mult * this.x);
 	    return start;

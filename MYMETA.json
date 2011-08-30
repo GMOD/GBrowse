@@ -22,7 +22,7 @@
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.36"
+            "Module::Build" : "0.38"
          }
       },
       "runtime" : {
@@ -103,7 +103,7 @@
       },
       "Bio::Graphics::Browser2" : {
          "file" : "lib/Bio/Graphics/Browser2.pm",
-         "version" : "2.39"
+         "version" : "2.40"
       },
       "Bio::Graphics::Browser2::Action" : {
          "file" : "lib/Bio/Graphics/Browser2/Action.pm",
@@ -245,6 +245,14 @@
          "file" : "lib/Bio/Graphics/Browser2/Render/HTML.pm",
          "version" : 0
       },
+      "Bio::Graphics::Browser2::Render::HTML::TrackListing" : {
+         "file" : "lib/Bio/Graphics/Browser2/Render/HTML/TrackListing.pm",
+         "version" : 0
+      },
+      "Bio::Graphics::Browser2::Render::HTML::TrackListing::Categories" : {
+         "file" : "lib/Bio/Graphics/Browser2/Render/HTML/TrackListing/Categories.pm",
+         "version" : 0
+      },
       "Bio::Graphics::Browser2::Render::Login" : {
          "file" : "lib/Bio/Graphics/Browser2/Render/Login.pm",
          "version" : 0
@@ -372,5 +380,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "2.39"
+   "version" : "2.40"
 }

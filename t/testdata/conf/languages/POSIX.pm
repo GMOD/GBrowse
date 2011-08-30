@@ -116,6 +116,10 @@ END
 
    SNAPSHOT_SELECT => 'Snapshots',
 
+   SAVE_SNAPSHOT   => 'Save Snapshot',
+
+   LOAD_SNAPSHOT   => 'Load Snapshot',
+
    SELECT_TRACKS   => 'Select Tracks',
 
    TRACK_SELECT   => 'Search for Specific Tracks',

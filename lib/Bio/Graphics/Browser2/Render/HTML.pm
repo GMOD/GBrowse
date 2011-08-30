@@ -99,7 +99,6 @@ sub render_login_required {
 # Render Tabbed Pages - Returns the HTML containing the tabs & the page DIVs to hold the content.
 sub render_tabbed_pages {
     my $self = shift;
-	# ***Add the title for the snapshots***
     my ($main_html,$tracks_html,$snapshot_html,$community_tracks_html,$custom_tracks_html,$settings_html) = @_;
     my $uses_database = $self->user_tracks->database;
     
@@ -1206,7 +1205,9 @@ sub render_community_tracks_section {
 sub render_snapshots_section {
     my $self = shift;
     my $userdata = $self->user_tracks;
-    my $html = $self->is_admin? h2({-style=>'font-style:italic;background-color:yellow'}, $self->translate('ADMIN_MODE_WARNING')) : "";
+    my $html = $self->is_admin ? h2({-style=>'font-style:italic;background-color:yellow'}, 
+				   $self->translate('ADMIN_MODE_WARNING')) 
+	                       : "";
 # Snapshot page rendering is done in the snapshotmanager.pm file
     my $snapshot_manager = Bio::Graphics::Browser2::Render::SnapshotManager->new();
     $html .= div({-id => "snapshots_page"}, $snapshot_manager->render_snapshots_listing($self));

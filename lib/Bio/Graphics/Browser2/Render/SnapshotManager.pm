@@ -66,11 +66,13 @@ sub render_snapshots_listing {
 			    -name => "Cancel",
 			    -value => "Cancel",
 			    -onclick => '$(\'save_snapshot_2\').hide(); this.style.zIndex = \'0\'',}),
-		),),
+		)),
 		div({-id => "enlarge_image",
-		     -style => 'display: none; position:absolute; left: 155px; top:100px; width: 1000px; border: #F0E68C; z-index: 10000;'},
+		     -style => 'display: none; position:absolute; left: 155px; top:100px; width: 1000px; border: #F0E68C; z-index: 10000;'
+		    },
 		    img({-style => 'cursor:pointer;', -onclick=> '$(\'enlarge_image\').hide(); Box.prototype.greyout(false);', -src => "$closeImage"},),
-		    img({-id => 'large_snapshot', -src => '', -width=>'1000', -height => 'auto'},),),
+		    img({-id => 'large_snapshot', -width=>'1000', -height => 'auto'})
+		)
      );
 
  $html .= div({-id=>'headingRow',-style=>"height:20px;background-color:#F0E68C"},

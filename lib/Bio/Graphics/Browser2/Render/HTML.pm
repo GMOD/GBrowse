@@ -400,6 +400,7 @@ sub render_html_head {
   my $stylesheet = $self->setting('stylesheet')||'/gbrowse2/css/gbrowse.css';
   push @stylesheets,{src => $self->globals->resolve_path('css/tracks.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/subtracktable.css','url')};
+  push @stylesheets,{src => $self->globals->resolve_path('css/snapshots.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/karyotype.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/dropdown.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/default_theme.css','url')};

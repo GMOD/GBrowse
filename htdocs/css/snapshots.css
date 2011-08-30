@@ -1,0 +1,133 @@
+#save_snapshot_2 {
+    width:184px;
+    height:50px;
+    background:whitesmoke;
+    z-index:1; 
+    border:2px solid gray;
+    display:none; 
+    padding: 5px; 
+    position: fixed; 
+    left: 140px; 
+    z-index: 1000000;
+}
+#snapshot_section_title {
+    position:relative;
+    display: inline-block; 
+    margin-right: 1em;
+}
+#enlarge_image {
+    display: none; 
+    position:absolute; 
+    left: 155px; 
+    top:100px; 
+    width: 1000px; 
+    border: #F0E68C; 
+    z-index: 10000;
+}
+#enlarge_image>img {
+    cursor:pointer;
+}
+#headingRow>h1 {
+    position:relative;
+    margin-right:1em;
+}
+.snapshot_button,.snapshot_icon {
+    cursor:pointer;
+    margin-top:10px;
+}
+div.send_snapshot {
+    background-color:whiteSmoke;
+    border-width:2px; 
+    border-style:solid; 
+    border-color:gray; 
+    position:absolute;
+    left:200px; 
+    width:800px; 
+    z-index:1000000; 
+    padding:5px;
+}
+#send_snapshot_contents {
+    color:black; 
+    font-family:sans-serif; 
+    font-size: 11pt;
+    margin-top:5px;
+    overflow-x: auto; 
+    overflow-y: auto;
+}
+#send_snapshot_box {
+    border-bottom-style: solid; 
+    border-width: 1px; 
+    padding-left: 3px; 
+    width: 795px;
+}
+.snapshot_message {
+    font-size: small;
+}
+#send_snapshot_contents>textarea {
+    height: 100px;
+    resize: both;
+}
+.snapshot_url {
+    width:785px; 
+    padding:5px; 
+    border-color:gray;
+}
+.mail_snapshot {
+    background-color:whiteSmoke; 
+    border-width:2px; 
+    border-style:solid; 
+    border-color:gray; 
+    position:absolute;
+     left:  200px; 
+    width:  420px; 
+    z-index:1000000; 
+    display:none; 
+    padding:5px;
+}
+#mail_snapshot_contents {
+    color:black; 
+    font-family:sans-serif; 
+    font-size: 11pt; 
+    margin-top:5px;
+    overflow-x: auto; 
+    overflow-y: auto;
+}
+.mail_snapshot_box {
+    border-bottom-style: solid; 
+    border-width: 1px; 
+    padding-left: 3px; 
+    width: 415px;
+}
+.snapshot_image_frame {
+    width:230px;
+}
+.snapshot_names {
+    margin-top:10px; 
+    margin-left: 10px;
+}
+.timestamps {
+    width:230px;
+    position:absolute;
+    left:550px;
+    bottom:7px;
+    margin-top:10px;
+    font-size:14px
+}
+.snapshot_image {
+    position:absolute;
+    left:180px;
+    top:-8px;
+    cursor:pointer;
+    border: solid 1px black;
+}
+.snapshot_table_entry {
+    padding-left:1em;
+    height:35px;
+    border-style:solid;
+    border-width:1px;
+    border-color:#F0E68C; 
+    background-color:#FFF8DC; 
+    cursor: move;
+    font-size:14px;
+    position:relative;
+}

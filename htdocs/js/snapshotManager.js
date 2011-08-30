@@ -119,7 +119,7 @@ sendSnapshot: function(snapshot){
 	// Only one send snapshot_box is open at a time
   	var send_snapshot_boxes = $$('.send_snapshot');
   	send_snapshot_boxes.each(function(box){
-		box.style.display = "none";
+		box.hide();
   	})
 
 	// Snapshot rows are pushed back and the selected row is pushed forward

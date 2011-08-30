@@ -10,6 +10,7 @@ use Bio::Graphics::Browser2::TrackDumper;
 use Bio::Graphics::Browser2::Render::HTML;
 use Bio::Graphics::Browser2::SendMail;
 use File::Basename 'basename';
+use File::Path     'make_path';
 use JSON;
 use constant DEBUG => 0;
 use Data::Dumper;
@@ -302,9 +303,9 @@ sub ACTION_set_favorite {
     my $is_favorite  = $q->param('favorite');
     my $settings = $self->state;
 
-    warn "lebels = $labels" if DEBUG;
+    warn "labels = $labels" if DEBUG;
     my @labels = split(',' , $labels);
-    warn "lebels = @labels" if DEBUG;
+    warn "labels = @labels" if DEBUG;
 
     foreach my $label(@labels){
 	$settings->{favorites}{$label} = $is_favorite;
@@ -386,9 +387,10 @@ sub ACTION_set_snapshot {
      my $settings  = $self->settings;
      my $snapshots = $self->session->snapshots;
 
+     warn "[$$] get snapshot $name: $snapshots->{$name}";
+
      %{$settings} = %{dclone $snapshots->{$name}{data}};
 
-     warn "set_snapshot(start = ",$settings->{start},')';
      my @selected_tracks  = $self->render->visible_tracks;
      my $segment_info     = $self->render->segment_info_object();
      $self->session->flush;
@@ -435,6 +437,7 @@ sub ACTION_mail_snapshot {
      my $name     = $q->param('name');
      my $to_email = $q->param('email');
      my $url      = $q->param('url');
+     $url         =~ s/\?.+$//;
 
      my $settings = $self->state;
      my $snapshots = $self->session->snapshots;
@@ -446,11 +449,11 @@ sub ACTION_mail_snapshot {
 
      my $filename = $snapshots->{$name}{snapshot_id};
          
-     mkdir File::Spec->catfile($dir,$source,$id);
+     make_path(File::Spec->catfile($dir,$source,$id));
 	
      #Storing the snapshot as a string and saving it to a textfile. Typical directory /var/lib/gbrowse2/userdata/{source}/{uploadid}: 
      my $snapshot = Dumper($snapshots->{$name}{data});
-     open SNAPSHOT, ">$dir/$source/$id/$filename.txt" or die "Can't open $dir: $!";
+     open SNAPSHOT, ">$dir/$source/$id/$filename.txt" or die "Can't open $dir/$source/$id/$filename.txt: $!";
      print SNAPSHOT "$snapshot";
      close SNAPSHOT;
 	
@@ -462,15 +465,17 @@ sub ACTION_mail_snapshot {
      my $contents = "Please follow this link to load the GBrowse snapshot: $url"; 
  
      # An email is sent containing the snapshot information
-     $self->Bio::Graphics::Browser2::SendMail::do_sendmail($globals, {
-	from       => $globals->email_address,
-	from_title => $globals->application_name,
-	to         => $to_email,
-	subject    => $subject,
-	msg        => $contents});
- 
-     $self->session->flush;
-     return(204,'text/plain',undef); 
+     my ($result,$msg) = Bio::Graphics::Browser2::SendMail->do_sendmail({
+	 from       => $globals->email_address,
+	 from_title => $globals->application_name,
+	 to         => $to_email,
+	 subject    => $subject,
+	 msg        => $contents},$globals);
+     return (200,'application/json',
+	     {
+		 success => $result,
+		 msg     => $msg
+	     });
  }
 
 sub ACTION_load_snapshot_from_file {
@@ -494,23 +499,26 @@ sub ACTION_load_snapshot_from_file {
      open SNAPSHOT, "<$dir/$source/$from_id/$filename.txt" or die "Can't open $dir: $!";
      $snapshot_data = do { local $/; <SNAPSHOT> };
      close SNAPSHOT;
-     my $snapshot = eval "my $snapshot_data";
+     my $VAR1;
+     my $snapshot = eval $snapshot_data;
+     warn $@ if $@;
 
      if (!$snapshot){
 	return(504,'text/plain',undef);
      } else {
+	 my $snapshots = $self->session->snapshots;
 
-     	my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
-     	$snapshot->{session_time} = $UTCtime;
-     	$snapshot->{userid}       = $userid;
+	 my $UTCtime = strftime("%Y-%m-%d %H:%M:%S\n", gmtime(time));
+	 $snapshots->{$name}{session_time} = $UTCtime;
+	 $snapshots->{$name}{userid}       = $userid;
 
-        my $snapshot_id = md5_hex(time);
-    	$snapshot->{snapshot_id} = $snapshot_id;
+	 my $snapshot_id = md5_hex(time);
+	 $snapshots->{$name}{snapshot_id} = $snapshot_id;
+	 $snapshots->{$name}{data} = $snapshot;
 
-	$self->snapshots->{$name} = $snapshot;
-
-     	$self->session->flush;
-     	return(204,'text/plain',undef);
+	 warn "[$$] create snapshot $name: ",$self->session->snapshots->{$name}{data} if DEBUG;
+	 $self->session->flush;
+	 return(204,'text/plain',undef);
      }
  }
 

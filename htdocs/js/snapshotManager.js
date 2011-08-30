@@ -176,46 +176,53 @@ sendSnapshot: function(snapshot){
 			url:   document.location.href,
   	          },
 		  onSuccess: function(transport) {
-                  	$('busy_indicator').hide();
+		      var results = transport.responseJSON;
+		      if (!results.success) {
+			  Controller.show_error('Your mail could not be sent',results.msg);
+		      }
+                      $('busy_indicator').hide();
 		  }
             });
   },
 
  checkSnapshot:
-  function(){
+    function(){
 	// The source, session, and snapshot information are stored
 	var browser_source = Controller.findParameter("source");
- 	var upload = Controller.findParameter("id");
-	var snapcode = Controller.findParameter("snapcode");
-	var snapname = Controller.findParameter("snapname");
-	
+ 	var upload         = Controller.findParameter("id");
+	var snapcode       = Controller.findParameter("snapcode");
+	var snapname       = Controller.findParameter("snapname");
+
 	if(browser_source != null && upload != null && snapcode != null && name != null){
-		// An asynchronous request loads the snapshot into the browser
-	 	new Ajax.Request(document.URL, {
-	  	          method: 'POST',
-	  		  asynchronous:true,
-	  		  parameters: {
-	  		        action:    'load_snapshot_from_file',
-				snapcode:  snapcode,
-				snapname: snapname,
-				id: upload,
-				browser_source: browser_source,
-	  	          },
-			  onSuccess: function(transport) {
-		          	$('busy_indicator').show();
-				Controller.setSnapshot(snapname);
-			  },
-			  on504: function() {
-				alert("GBrowse could not find the provided session or snapshot");
-			  }
-		    });
+	    // An asynchronous request loads the snapshot into the browser
+	    new Ajax.Request(document.URL, {
+		method: 'POST',
+		asynchronous:false,
+		parameters: {
+	  	    action:    'load_snapshot_from_file',
+		    snapcode:  snapcode,
+		    snapname: snapname,
+		    id: upload,
+		    browser_source: browser_source,
+		},
+		onSuccess: function(transport) {
+		    $('busy_indicator').show();
+		    Controller.setSnapshot(snapname);
+		},
+		onFailure: function(transport) {
+		    alert('failed');
+		},
+		on504: function() {
+		    alert("GBrowse could not find the provided session or snapshot");
+		}
+	    });
+	    location.href=location.href.substr(0,location.href.indexOf('?'));
 	}
 	
+    },
 
-  },
-
- findParameter:
-  function(param, search){
+    findParameter:
+    function(param, search){
 	if(search == null){
 		// Searches the URL for the value of the parameter passed in
 	   	search = window.location.search.substring(1);

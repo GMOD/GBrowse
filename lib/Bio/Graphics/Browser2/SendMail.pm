@@ -25,7 +25,6 @@ sub do_sendmail {
   my $args = shift;
   my $globals = shift;
 
-
   eval {
 	  $globals->smtp or die "No SMTP server found in globals";
 

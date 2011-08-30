@@ -343,14 +343,6 @@ sub render_html_head {
   my @plugin_list = $self->plugins->plugins;
   my $uses_database = $self->user_tracks->database;
 
-  # *** Store the snapshot session information in variables *** Not sure why Sonu did this...
-  #my $source = $self->data_source->name;
-  #my $session = $self->session->session->{'_DATA'}->{$source};
-  #my $snapshotSessions = $session->{snapshots};
-  #my @snapshotNames = keys %$snapshotSessions;
-  #my $snapshotsString = join(',',@snapshotNames);
-
-
   return if $self->{started_html}++;
 
   $title =~ s/<[^>]+>//g; # no markup in the head
@@ -496,10 +488,9 @@ sub render_html_head {
   # add body's onload arguments, including ones used by plugins
   my $autocomplete = '';
 
-  my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
-  my $other_actions   = join ';',@other_initialization;
-  # *** Usings the Sortable commands from script.aculo.us and prototype for snapshots table ***
-  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions;");
+  my $plugin_onloads   = join ';',map {eval{$_->body_onloads}} @plugin_list;
+  my $other_actions    = join ';',@other_initialization;
+  push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
   return start_html(@args);
 }
 

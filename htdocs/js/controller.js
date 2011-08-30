@@ -1367,7 +1367,6 @@ function using_database() {
 }
 
 function initialize_page() {
-
     if (Controller == null) Controller = new GBrowseController;
 
     // This oddity prevents ?id=logout from appearing in the url box.
@@ -1405,6 +1404,7 @@ function initialize_page() {
 	initAutocomplete();
 
     Sortable.create('snapshotTable',{tag:'div',only:'draggable'});
+    Controller.checkSnapshot()
 }
 
 // set the colors for the rubberband regions

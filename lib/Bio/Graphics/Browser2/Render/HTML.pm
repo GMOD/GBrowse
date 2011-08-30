@@ -185,32 +185,34 @@ sub render_navbar {
                ? '' : b($self->translate('Landmark')).':'.br().$searchform.$self->examples();
 
   my $plugin_form = div({-id=>'plugin_form', -style=>'width:380px;float:left;'},$self->plugin_form());
+
   # *** Checks the state to see if a snapshot is active and assigns it ***
   #my $isSnapshotActive = $settings->{snapshot_active};
   my $source_form = div({-id=>'source_form'},$self->source_form());
+
   # *** Creates a variable to store the snapshot form ***
   my $snapshot_form = div({-id=>'snapshot_form'},$self->snapshot_form());
   my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
-
 
   # *** Creates the save session button and assigns it to save_prompt ***
   my $saveSessionButton = div({-id=>'unsessionbutton', -style=>"width: 100px; position: relative; float:left;"},$self->render_select_saveSession());
   my $restoreSessionButton = div({-id=>'loadbutton', -style=>"width: 100px; position:relative;float:right;"},$self->render_select_loadSession());
   my $saveSessionStyle = "position:fixed;left;width:184px;height:50px;background:whitesmoke;z-index:1; border:2px solid gray;display:none; padding: 5px;";
   my $save_prompt = div({-id => 'save_snapshot',-style=>"$saveSessionStyle"},
-			      $snapshot_form,
-				input({ -type => "button",
-					-name => "Save",
-					-value => "Save",
-					-onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'; Controller.saveSnapshot();',
-					-style => 'margin-left:35px;',}),
-				input({ -type => "button",
-					-name => "Cancel",
-					-value => "Cancel",
-					-onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'',}),
-						    ),;
+			$snapshot_form,
+			input({ -type => "button",
+				-name => "Save",
+				-value => "Save",
+				-onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'; Controller.saveSnapshot();',
+				-style => 'margin-left:35px;',}),
+			input({ -type => "button",
+				-name => "Cancel",
+				-value => "Cancel",
+				-onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'',}),
+      ),;
 
-  my $snapshot_options = div({-id => 'snapshot_options', -style => 'width:230px; float:right;'},$saveSessionButton . $save_prompt . $restoreSessionButton);
+#  my $snapshot_options = div({-id => 'snapshot_options', -style => 'width:230px; float:right;'},$saveSessionButton . $save_prompt . $restoreSessionButton);
+  my $snapshot_options = div({-id => 'snapshot_options'},$saveSessionButton . $save_prompt . $restoreSessionButton);
 
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
@@ -1132,7 +1134,7 @@ my $self = shift;
 my $title = 'Save Snapshot';
 
  return button({-name=>$title,
-		           -onClick => '$(\'save_snapshot\').show(); $(\'snapshot_name\').select();',
+		-onClick => '$(\'save_snapshot\').show(); $(\'snapshot_name\').select();',
 		          },	   
 	        );
 }

@@ -77,7 +77,6 @@ sub new {
   $self->data_source($data_source);
   $self->session($session);
   $self->state($session->page_settings);
-  warn "render(start = ",$self->state->{start},")";
   $self->set_language();
   $self->set_signal_handlers();
   $self;
@@ -1866,7 +1865,8 @@ sub set_default_state {
 sub update_state {
   my $self   = shift;
   warn "[$$] update_state()" if DEBUG;
-  return if param('gbgff'); # don't let gbgff requests update our coordinates!!!
+  return if param('gbgff');          # don't let gbgff requests update our coordinates!!!
+  return if url() =~ /gbrowse_img/;  # don't let gbrowse_img requests update our coordinates either!!
   $self->_update_state;
 }
 

@@ -89,14 +89,11 @@ sub ACTION_navigate {
     my $source   = $self->data_source;
     my $settings = $self->settings;
 
-    warn "navigate name WAS = $settings->{name}";
-
     my $action = $q->param('navigate') or croak "for the navigate action, a CGI argument named \"navigate\" must be present";
 
     my $view_start = $q->param('view_start');
     my $view_stop  = $q->param('view_stop');
     unless (!defined $view_start or $view_start eq 'NaN' or $view_stop eq 'NaN') {
-	warn "updating view_start etc";
 	$render->state->{view_start} = ($view_start && $view_start >= 0)? $view_start : $render->state->{view_start},
 	$render->state->{view_stop}  = ($view_stop  && $view_stop  >= 0)? $view_stop  : $render->state->{view_stop},
     }
@@ -132,7 +129,6 @@ sub ACTION_navigate {
 	region_scale_bar   => $region_scale_return_object,
 	detail_scale_bar   => $detail_scale_return_object,
     };
-    warn "navigate name NOW = $settings->{name}";
     $self->session->flush;
     return (200,'application/json',$return_object);
 }
@@ -374,8 +370,6 @@ sub ACTION_save_snapshot {
     $snapshot->{image_url}            = $imageURL;
     $snapshots->{$name}{data}         = $snapshot;
     $snapshots->{$name}{session_time} = $UTCtime;
-
-    warn "save_snapshot(start=",$snapshots->{$name}{data}{start},')';
 
     # Each snapshot has a unique snapshot_id (currently just an md5 sum of the unix time it is created
     my $snapshot_id = md5_hex(time);

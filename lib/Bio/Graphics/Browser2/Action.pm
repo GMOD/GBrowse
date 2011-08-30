@@ -387,7 +387,7 @@ sub ACTION_set_snapshot {
      my $settings  = $self->settings;
      my $snapshots = $self->session->snapshots;
 
-     warn "[$$] get snapshot $name: $snapshots->{$name}";
+     warn "[$$] get snapshot $name: $snapshots->{$name}" if DEBUG;
 
      %{$settings} = %{dclone $snapshots->{$name}{data}};
 

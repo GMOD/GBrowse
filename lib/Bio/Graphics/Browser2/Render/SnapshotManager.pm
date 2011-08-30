@@ -14,13 +14,16 @@ use constant DEBUG => 0;
 use constant HAVE_SVG => eval "require GD::SVG; 1";
 
 sub new {
-    my $class = shift;
-    return bless {}, $class;
+    my $class  = shift;
+    my $render =  shift;
+    return bless {render=>$render}, $class;
 }
+
+sub render { shift->{render} }
 
 sub render_snapshots_listing {
  my $self      = shift; 
- my $render    = shift;
+ my $render    = shift || $self->render;
  my $source    = $render->data_source->name;
  my $settings  = $render->state;
  my $snapshots = $render->session->snapshots;
@@ -189,6 +192,87 @@ sub render_snapshots_listing {
  
  $html 	  .=  qq(</div>);
  return $html;
+}
+
+# *** Function to render the snapshot title.
+sub render_title {
+    my $self  = shift;
+    my $render = $self->render;
+    my $currentSnapshot = $render->translate('CURRENT_SNAPSHOT');
+    my $settings = $render->state;
+
+  if ($settings->{snapshot_active}){
+      return h1({-id=>'snapshot_page_title',-class=>'normal'},"");
+  } else {
+      return h1({-id=>'snapshot_page_title',-class=>'normal', -style=>'display: none;'},"");}
+}
+
+sub snapshot_form {
+    my $self = shift;
+    # %% Adding form %%
+    return div({
+	-id=>'snapshot_form',},
+	input({-type => "text",
+	       -name => "snapshot_name",
+	       -id => "snapshot_name",
+	       -style => "width:180px",
+	       -maxlength => "50",
+	       -value =>  $self->render->translate('SNAPSHOT_FORM'), 	 
+	       -onDblclick => "this.value='';",
+	      })
+	);
+}
+
+# *** Render select snapshots. ****
+sub render_snapshots_section {
+    my $self = shift;
+    my $render = $self->render;
+    my $userdata = $render->user_tracks;
+    my $html = $render->is_admin ? h2({-style=>'font-style:italic;background-color:yellow'}, 
+				   $render->translate('ADMIN_MODE_WARNING')) 
+	                       : "";
+    $html .= div({-id => "snapshots_page"}, $self->render_snapshots_listing());
+    return div({-style => 'margin: 1em;'}, $html);
+}
+
+# *** Render the save session button ***
+sub render_select_saveSession {
+    my $self = shift;
+    my $title = $self->render->translate('SAVE_SNAPSHOT');
+    return button({-name=>$title,
+		   -onClick => '$(\'save_snapshot\').show(); $(\'snapshot_name\').select();',
+		  },	   
+	);
+}
+
+sub render_select_loadSession {
+    my $self = shift;
+    my $title = $self->render->translate('LOAD_SNAPSHOT');
+    return button({-name=>$title,
+		   -onClick => "Controller.select_tab('snapshots_page');",
+		  },	   
+	);
+}
+
+sub snapshot_options {
+    my $self = shift;
+    my $snapshot_form = div({-id=>'snapshot_form'},$self->snapshot_form());
+    my $saveSessionButton    = span({-id=>'unsessionbutton'},$self->render_select_saveSession());
+    my $restoreSessionButton = span({-id=>'loadbutton'},     $self->render_select_loadSession());
+    my $saveSessionStyle = "position:fixed;left;width:184px;height:50px;background:whitesmoke;z-index:1; border:2px solid gray;display:none; padding: 5px;";
+    my $save_prompt = div({-id => 'save_snapshot',-style=>"$saveSessionStyle"},
+			  $snapshot_form,
+			  input({ -type => "button",
+				  -name => "Save",
+				  -value => "Save",
+				  -onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'; Controller.saveSnapshot();'}),
+			  input({ -type => "button",
+				  -name => "Cancel",
+				  -value => "Cancel",
+				  -onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'',}),
+	),;
+    
+    return div({-id => 'snapshot_options'},$saveSessionButton . $save_prompt . $restoreSessionButton);
 }
 
 1;

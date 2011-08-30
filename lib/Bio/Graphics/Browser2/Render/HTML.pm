@@ -5,7 +5,6 @@ use warnings;
 use base 'Bio::Graphics::Browser2::Render';
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Browser2::SubtrackTable;
-use Bio::Graphics::Browser2::Render::SnapshotManager;
 use Bio::Graphics::Karyotype;
 use Bio::Graphics::Browser2::Render::TrackConfig;
 use Bio::Graphics::Browser2::Util qw[citation url_label segment_str];
@@ -49,7 +48,7 @@ sub render_top {
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
 	# ***Render the snapshot title***
-    $html   .=  $self->render_snapshotTitle;
+    $html   .=  $self->snapshot_manager->render_title;
     $html   .=  $self->html_frag('html1',$self->state);
 
     return  $err
@@ -187,32 +186,12 @@ sub render_navbar {
   my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
 
   # *** Checks the state to see if a snapshot is active and assigns it ***
-  #my $isSnapshotActive = $settings->{snapshot_active};
   my $source_form = div({-id=>'source_form'},$self->source_form());
 
-  # *** Creates a variable to store the snapshot form ***
-  my $snapshot_form = div({-id=>'snapshot_form'},$self->snapshot_form());
-  my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
+  my $sliderform    = div({-id=>'slider_form'},$self->sliderform($segment));
 
   # *** Creates the save session button and assigns it to save_prompt ***
-  my $saveSessionButton    = span({-id=>'unsessionbutton'},$self->render_select_saveSession());
-  my $restoreSessionButton = span({-id=>'loadbutton'},$self->render_select_loadSession());
-  my $saveSessionStyle = "position:fixed;left;width:184px;height:50px;background:whitesmoke;z-index:1; border:2px solid gray;display:none; padding: 5px;";
-  my $save_prompt = div({-id => 'save_snapshot',-style=>"$saveSessionStyle"},
-			$snapshot_form,
-			input({ -type => "button",
-				-name => "Save",
-				-value => "Save",
-				-onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'; Controller.saveSnapshot();'}),
-			input({ -type => "button",
-				-name => "Cancel",
-				-value => "Cancel",
-				-onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'',}),
-      ),;
-
-#  my $snapshot_options = div({-id => 'snapshot_options', -style => 'width:230px; float:right;'},$saveSessionButton . $save_prompt . $restoreSessionButton);
-  my $snapshot_options = div({-id => 'snapshot_options'},$saveSessionButton . $save_prompt . $restoreSessionButton);
-
+  my $snapshot_options     = $self->snapshot_manager->snapshot_options;
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
 			   table({-border=>0,-width=>'95%'},
@@ -264,20 +243,7 @@ sub source_form {
 
 # *** Create the snapshot_form ***
 sub snapshot_form {
-    my $self = shift;
-    # %% Adding form %%
-		div({
-		    -id=>'snapshot_form',},
-		    input({
-			    -type => "text",
-			    -name => "snapshot_name",
-			    -id => "snapshot_name",
-			    -style => "width:180px",
-			    -maxlength => "50",
-			    -value =>  $self->translate('SNAPSHOT_FORM'), 	 
-			    -onDblclick => "this.value='';",
-			},),
-    		);
+    return shift->snapshot_manager->snapshot_form;
 }
 
 # Slider Form - Returns the HTML for the zooming controls with the "Flip" checkbox.
@@ -397,9 +363,7 @@ sub render_html_head {
   }
 
   # our own javascript files
-  push @scripts,{src=>"$js/$_"}
- #*** Using SnapshotManager for snapshots ***
-    foreach qw(
+  push @scripts,map { {src=>"$js/$_"} } qw(
       buttons.js
       trackFavorites.js
       karyotype.js
@@ -668,19 +632,6 @@ sub render_title {
     return $settings->{head}
         ? h1({-id=>'page_title',-class=>$error ? 'error' : 'normal'},$title)
 	: '';
-}
-
-# *** Function to render the snapshot title. This is not used ***
-sub render_snapshotTitle {
-    my $self  = shift;
-    my $error = shift;
-    my $currentSnapshot = $self->translate('CURRENT_SNAPSHOT');
-    my $settings = $self->state;
-
-  if ($settings->{snapshot_active}){
-     return h1({-id=>'snapshot_page_title',-class=>'normal'},"");
-      }else{
-      return h1({-id=>'snapshot_page_title',-class=>'normal', -style=>'display: none;'},"");}
 }
 
 # Renders the search & navigation instructions & examples.
@@ -1118,27 +1069,6 @@ sub render_select_clear_link {
 		 $title),$showicon);
 }
 
-# *** Render the save session button ***
-sub render_select_saveSession {
-my $self = shift;
-my $title = 'Save Snapshot';
-
- return button({-name=>$title,
-		-onClick => '$(\'save_snapshot\').show(); $(\'snapshot_name\').select();',
-		          },	   
-	        );
-}
-
-sub render_select_loadSession {
-my $self = shift;
-my $title = 'Load Snapshot';
-
- return button({-name=>$title,
-		           -onClick => "Controller.select_tab('snapshots_page');",
-		          },	   
-	        );
-}
-
 sub render_select_favorites_link {
     my $self  = shift;
 
@@ -1187,20 +1117,6 @@ sub render_community_tracks_section {
 	$html .= div({-id => "community_tracks"}, $self->render_community_track_listing);
 	$html = div({-style => 'margin: 1em;'}, $html);
 	return $html;
-}
-
-# *** Render select snapshots. ****
-sub render_snapshots_section {
-    my $self = shift;
-    my $userdata = $self->user_tracks;
-    my $html = $self->is_admin ? h2({-style=>'font-style:italic;background-color:yellow'}, 
-				   $self->translate('ADMIN_MODE_WARNING')) 
-	                       : "";
-# Snapshot page rendering is done in the snapshotmanager.pm file
-    my $snapshot_manager = Bio::Graphics::Browser2::Render::SnapshotManager->new();
-    $html .= div({-id => "snapshots_page"}, $snapshot_manager->render_snapshots_listing($self));
-    $html = div({-style => 'margin: 1em;'}, $html);
-    return $html;
 }
 
 # Render Custom Tracks Section - Returns the content of the "Custom Tracks" tab.

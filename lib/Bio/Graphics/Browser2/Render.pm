@@ -843,7 +843,7 @@ sub render_body {
   }
   
   my $tracks        = $self->render_tracks_section;
-  my $snapshots     = $self->render_snapshots_section;
+  my $snapshots     = $self->snapshot_manager->render_snapshots_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;
   my $global_config = $self->render_global_config;
@@ -2644,7 +2644,7 @@ sub asynchronous_update_sections {
 
     # Saved Snapshot Section
     if ( $handle_section_name{'snapshots_page'}) {
-	$return_object->{'snapshots_page'} = Bio::Graphics::Browser2::Render::SnapshotManager->render_snapshots_listing($self);
+	$return_object->{'snapshots_page'} = $self->snapshot_manager->render_snapshots_listing($self);
     }
 
     # Handle Remaining and Undefined Sections
@@ -4268,6 +4268,11 @@ sub login_manager {
     eval "require Bio::Graphics::Browser2::Render::Login" unless
 	Bio::Graphics::Browser2::Render::Login->can('new');
     return $self->{login_manager} = Bio::Graphics::Browser2::Render::Login->new($self);
+}
+
+sub snapshot_manager {
+    my $self = shift;
+    return $self->{snapshot_manager} ||= Bio::Graphics::Browser2::Render::SnapshotManager->new($self);
 }
 
 sub tr {

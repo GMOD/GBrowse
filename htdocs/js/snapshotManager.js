@@ -101,6 +101,7 @@ GBrowseController.addMethods({
 		    onSuccess: function(transport) { 
 		      var results = transport.responseJSON;
 		      Controller.reload_panels(results.segment_info);
+		      Controller.update_sections(new Array(track_listing_id));
 		      TrackPan.make_details_draggable();
 		      console.log(results.segment_info.detail_start);
 		      Controller.select_tab('main_page');

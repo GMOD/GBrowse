@@ -184,7 +184,7 @@ sub render_navbar {
   my $search = $self->setting('no search')
                ? '' : b($self->translate('Landmark')).':'.br().$searchform.$self->examples();
 
-  my $plugin_form = div({-id=>'plugin_form', -style=>'width:380px;float:left;'},$self->plugin_form());
+  my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
 
   # *** Checks the state to see if a snapshot is active and assigns it ***
   #my $isSnapshotActive = $settings->{snapshot_active};
@@ -195,16 +195,15 @@ sub render_navbar {
   my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
 
   # *** Creates the save session button and assigns it to save_prompt ***
-  my $saveSessionButton = div({-id=>'unsessionbutton', -style=>"width: 100px; position: relative; float:left;"},$self->render_select_saveSession());
-  my $restoreSessionButton = div({-id=>'loadbutton', -style=>"width: 100px; position:relative;float:right;"},$self->render_select_loadSession());
+  my $saveSessionButton    = span({-id=>'unsessionbutton'},$self->render_select_saveSession());
+  my $restoreSessionButton = span({-id=>'loadbutton'},$self->render_select_loadSession());
   my $saveSessionStyle = "position:fixed;left;width:184px;height:50px;background:whitesmoke;z-index:1; border:2px solid gray;display:none; padding: 5px;";
   my $save_prompt = div({-id => 'save_snapshot',-style=>"$saveSessionStyle"},
 			$snapshot_form,
 			input({ -type => "button",
 				-name => "Save",
 				-value => "Save",
-				-onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'; Controller.saveSnapshot();',
-				-style => 'margin-left:35px;',}),
+				-onclick => '$(\'save_snapshot\').hide(); this.style.zIndex = \'0\'; Controller.saveSnapshot();'}),
 			input({ -type => "button",
 				-name => "Cancel",
 				-value => "Cancel",
@@ -217,7 +216,7 @@ sub render_navbar {
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
 			   table({-border=>0,-width=>'95%'},
-				 TR(td({-width=>'50%'},$search),td({-width=>'45%'},$plugin_form . $snapshot_options)),
+				 TR(td({-width=>'50%'},$search),td({-width=>'45%'},$plugin_form,$snapshot_options)),
 				 TR(td({-align=>'left'},
 				       $source_form,
 				    ),

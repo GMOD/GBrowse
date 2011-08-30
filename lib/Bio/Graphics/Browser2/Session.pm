@@ -245,7 +245,7 @@ sub delete {
 sub flush {
   my $self = shift;
   return unless $$ == $self->{pid};
-  carp "[$$] session flush" if DEBUG;
+  carp "[$$] session flush";# if DEBUG;
   $self->{session}->flush if $self->{session};
   $self->unlock;
   warn "[$$] SESSION FLUSH ERROR: ",$self->{session}->errstr 

@@ -216,7 +216,8 @@ sub destroy {
 	$lm->destroy;
 	delete $self->{login_manager};
     }
-    $self->session->flush if $self->session;
+    $self->session->unlock if $self->session;
+#    $self->session->flush if $self->session;
 }
 
 ###################################################################################
@@ -1866,7 +1867,7 @@ sub update_state {
   my $self   = shift;
   warn "[$$] update_state()" if DEBUG;
   return if param('gbgff');          # don't let gbgff requests update our coordinates!!!
-  return if url() =~ /gbrowse_img/;  # don't let gbrowse_img requests update our coordinates either!!
+#  return if url() =~ /gbrowse_img/;  # don't let gbrowse_img requests update our coordinates either!!
   $self->_update_state;
 }
 
@@ -2808,8 +2809,6 @@ sub asynchronous_update_coordinates {
 	# update our "name" state and the CGI parameter
 	$state->{name} = $self->region_string;
     }
-
-    $self->session->flush();
     $position_updated;
 }
 

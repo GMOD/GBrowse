@@ -122,6 +122,9 @@ sub run {
     $render->add_user_tracks($render->data_source);
     $render->update_state();
 
+    # notice that there is no explicit flush() of the session/state, and therefore the
+    # changes to the session are not stored.
+
     warn join ' ',$render->potential_tracks if DEBUG;
 
     # self-documentation feature: dump out tab-delimited list of mnemonics and keys

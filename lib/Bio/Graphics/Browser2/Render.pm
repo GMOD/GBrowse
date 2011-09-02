@@ -236,8 +236,7 @@ sub run {
        query_string() if $debug || TRACE_RUN;
   warn "[$$] session id = ",$self->session->id if $debug;
 
-  # The redirect in set_source() kills plack
-#  $self->set_source() && return;
+  $self->set_source() && return;
 
   my $session = $self->session;
   my $source  = $self->data_source;

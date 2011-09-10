@@ -35,6 +35,7 @@ Changes
 conf/detail_select_menu.conf
 conf/enzymes.txt
 conf/GBrowse.conf
+conf/GBrowse.psgi
 conf/languages/de.pm
 conf/languages/en.pm
 conf/languages/es.pm

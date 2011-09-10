@@ -49,6 +49,15 @@ my $build = GBrowseInstall->new(
 	'Math::BigInt'             => 0,
 	'Net::OpenID::Consumer'    => 0,
 	'Net::SMTP::SSL'           => 0,
+	'Plack'                    => 0,  	# Plack prereqs
+	'Plack::App::CGIBin'       => 0,
+	'Plack::App::WrapCGI'      => 0,
+	'Plack::Builder'           => 0,
+	'Plack::Middleware::ReverseProxy' => 0,
+	'Plack::Middleware::Debug' => 0,
+	'CGI::Emulate::PSGI'       => 0,
+	'CGI::Compile'             => 0,
+        'Module::Versions'         => 0,        
 	$] <= 5.008 ? ('Safe::World'  => 0)
                     : ()               ,
 	'Template'                 => 2.20,

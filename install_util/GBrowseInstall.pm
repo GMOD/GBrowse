@@ -84,6 +84,7 @@ sub ACTION_demo {
 
     # fix GBrowse.conf to point to correct directories
     for my $f ("$dir/conf/GBrowse.conf",
+	       "$dir/conf/GBrowse.psgi",
 	       "$dir/conf/yeast_simple.conf",
 	       "$dir/conf/yeast_chr1+2.conf",
 	       "$dir/conf/pop_demo.conf",
@@ -92,6 +93,8 @@ sub ACTION_demo {
 	my $in  = IO::File->new($f)         or die "$dir/conf/$f: $!";
 	my $out = IO::File->new("$f.new",'>') or die $!;
 	while (<$in>) {
+	    
+	    s!\$ROOT!$dir!g;
 	    s!\$CONF!$dir/conf!g;
 	    s!\$HTDOCS!$dir/htdocs!g;
 	    s!\$DATABASES!$dir/htdocs/databases!g;
@@ -547,7 +550,6 @@ sub process_conf_files {
 	next unless m!^conf/!;
 	chomp;
 	my $base = $_;
-
 	my $copied = $self->copy_if_modified($_=>'blib');
 	$self->substitute_in_place("blib/$_")
 	    if $copied
@@ -682,6 +684,56 @@ sub process_database_files {
 sub substitute_in_place {
     my $self = shift;
     my $path = shift;
+
+    return if $path =~ /\.\w+$/ && $path !~ /\.(html|txt|conf|psgi)$/;
+
+    my $in   = IO::File->new($path) or return;
+    my $out  = IO::File->new("$path.$$",'>') or return;
+
+    print STDERR "Performing variable substitutions in $path\n";
+
+    my $htdocs     = $self->config_data('htdocs');
+    my $conf       = $self->config_data('conf');
+    my $cgibin     = $self->config_data('cgibin');
+    my $persistent = $self->config_data('persistent');
+    my $databases  = $self->config_data('databases');
+    my $tmp        = $self->config_data('tmp');
+    my $wwwuser    = $self->config_data('wwwuser');
+    my $perl5lib   = $self->perl5lib || '';
+    my $installscript =  $self->install_destination('script');
+    my $etc         =  $self->install_path->{'etc'} ||= GBrowseGuessDirectories->etc;
+    my $cgiurl        = $self->cgiurl;
+
+    $persistent ||= $databases;
+
+    while (<$in>) {
+	s/\$INSTALLSCRIPT/$installscript/g;
+	s/\$ETC/$etc/g;
+	s/\$PERL5LIB/$perl5lib/g;
+	s/\$HTDOCS/$htdocs/g;
+	s/\$CONF/$conf/g;
+	s/\$CGIBIN/$cgibin/g;
+	s/\$CGIURL/$cgiurl/g;
+	s/\$WWWUSER/$wwwuser/g;
+	s/\$DATABASES/$databases/g;
+	s/\$PERSISTENT/$persistent/g;
+	s/\$VERSION/$self->dist_version/eg;
+	s/\$CAN_USER_ACCOUNTS_OPENID/$self->has_openid/eg;
+	s/\$CAN_USER_ACCOUNTS_REG/$self->has_smtp/eg;
+	s/\$CAN_USER_ACCOUNTS/$self->has_mysql_or_sqlite/eg;
+	s/\$USER_ACCOUNT_DB/$self->guess_user_account_db/eg;
+	s/\$SMTP_GATEWAY/$self->guess_smtp_gateway/eg;
+	s/\$TMP/$tmp/g;
+	$out->print($_);
+    }
+    $in->close;
+    $out->close;
+    rename("$path.$$",$path);
+}
+
+sub generate_psgi_file {
+    my $self = shift;
+    my $path = shift;
     return if $path =~ /\.\w+$/ && $path !~ /\.(html|txt|conf)$/;
     my $in   = IO::File->new($path) or return;
     my $out  = IO::File->new("$path.$$",'>') or return;
@@ -726,6 +778,7 @@ sub substitute_in_place {
     $out->close;
     rename("$path.$$",$path);
 }
+
 
 sub has_mysql_or_sqlite {
     my $self = shift;

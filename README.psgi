@@ -1,36 +1,44 @@
 RUNNING GBROWSE UNDER PSGI/PLACK
 
-
-INTRODUCTION
----------------------------------------------
-
 Here's a simple approach for installing and running a local instance
 of GBrowse leveraging the PSGI/Plack webserver <-> web application stack.
 You don't need root access, you don't need Apache, and you don't need
 to request any firewall exceptions (for now). Later, you can run this instance
 with a variety of HTTP servers: starman, nginx, apache, etc.
 
-Both the current implementation and installer of GBrowse are loosely tied 
-to Apache. The installer generates suitable configuration and installation
-paths compatible with an Apache deployment.  The implementation is a suite
-of CGIs. Although a perfectly reasonable approach, this structure increases
-the administrative effort required for running a local instance and 
-decreases its portability for use in other environments.
 
-Enter PSGI (Perl Web Server Gateway Interface), a specification for glueing
+BACKGROUND
+---------------------------------------------
+
+Both the current implementation and installer of GBrowse are loosely tied 
+to Apache. By loosely, I mean that the installer generates suitable
+configuration and assumes installation paths as if the instance will be
+run under Apache. The implementation is tightly tied to the CGI specification;
+it's a suite of CGI scripts.  Although GBrowse will run under any webserver
+that implements the CGI specification (are there any that DON'T?), this approach
+increases the administrative effort required for running a local instance,
+increases the complexity of configuration, makes it more difficult to run 
+GBrowse under other environments, and makes it impossible to leverage
+powerful advances in Perl web application development.
+
+Enter PSGI (the Perl Web Server Gateway Interface), a specification for glueing
 Perl applications to webservers. Plack is a reference implementation of this
 specification.  PSGI as implemented by Plack makes it simple to run Perl-based
 applications (even CGI based ones like GBrowse) in a variety of environments.
 
-The core Plack distribution contains a light-weight webserver 
-(HTTP::Server::PSGI) and handlers for other environments (Apache, CGI, FCGI,
-mod_perl).  Other webservers also implement the PSGI specification, including
-the high-performance preforking server Starman.
+In other words, PSGI abstracts the request/response cycle so that you can focus
+on your application.  Running your application under CGI, Fast CGI, or mod_perl
+is just a matter of changing the application handler.  The core Plack
+distribution provides a number of handlers out of the box (CGI, FCGI, mod_perl,
+for example) and even includes a light-weight webserver (HTTP::Server::PSGI)
+which is perfect for development.  Other webservers also implement the PSGI
+specification, including the high-performance preforking server Starman.
 
 You can also do cool things via middleware handlers like mapping multiple 
-applications to different URLs with ease (how about running the best 10 versions
-of GBrowse all without touching Apache config or dealing with library conflicts),
-handle tasks like serving static files, mangle requests and responses, etc.
+applications to different URLs with ease (how about running the last 10 versions
+of GBrowse from the same host all without touching Apache config or 
+dealing with library conflicts), handle tasks like serving static files, 
+mangle requests and responses, etc.
 
     Read more at: http://plackperl.org
 
@@ -40,7 +48,8 @@ WHAT THIS ISN'T (YET)
 
 This isn't a rewrite of GBrowse using PSGI. It's just some modifications to 
 the current GBrowse to make it possible to wrap the CGI components so 
-that they can be used via servers that implement the PSGI specification.
+that they can be used via servers that implement the PSGI specification. There
+is a project to rewrite GBrowse as a pure PSGI app. Stay tuned for details.
 
 
 CONVENTIONS
@@ -48,7 +57,7 @@ CONVENTIONS
 
 1. Installation root
 
-   Our working installation root is ~/gbrowse.
+   Our working installation root is set by the environment variable GBROWSE_ROOT.
 
 2. No root privileges required.
 
@@ -61,15 +70,20 @@ CONVENTIONS
    management and configuration.  This path corresponds to the version of GBrowse
    being installed.
 
-   The current version of GBrowse is specified by either environment variables
-   and/or the presence of a symlink (~/gbrowse/current -> ~/gbrowse/gbrowse-2.XX).
-   If something goes wrong, it's easy to roll back to an older version.
+   The current version of GBrowse is specified by environment variable
+   (GBROWSE_VERSION).  If you want to use the same installation path, you can
+   also create and update symlinks (~/gbrowse/current -> ~/gbrowsw/gbrowse-2.40, for 
+   example, and set GBROWSE_VERSION=current). This isn't necessarily required but 
+   means that you won't need to set GBROWSE_VERSION every time you update to a
+   new version of GBrowse. At any rate, maintaining installations by version is
+   a Good Practice and makes it easy to revert to older versions should the need
+   arise.
 
 4. Each installation has it's own set of local libraries.
 
    In keeping with the self-contained non-privileged design gestalt, 
    we'll install all required libraries to a local path tied to the 
-   installed version of GBrowse (~/gbrowse/current/extlib).  This makes 
+   installed version of GBrowse ($GBROWSE_ROOT/$GBROWSE_VERSION/extlib).  This makes 
    it dead simple to run many possibly conflicting variants of GBrowse,
    all with their own dedicated suite of libraries.
 

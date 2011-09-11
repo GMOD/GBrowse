@@ -77,38 +77,37 @@ CONVENTIONS
 INSTALLATION
 ---------------------------------------------
 
-1. Create your installation root.
+1. Set up your environment.
 
-  > mkdir ~/gbrowse
+  // Set an environment variables for the your installation root and the version of GBrowse you are installing.
+  > export GBROWSE_ROOT=~/gbrowse
+  > export GBROWSE_VERSION=2.40
 
-2. Prepare your library directory and path.
+2. Prepare your library directory.
 
   // You may need to install the local::lib library first
   > (sudo) perl -MCPAN -e 'install local::lib'
-  
-  > cd ~/gbrowse 
-  // Set an environment variable for the version of GBrowse you will be installing.
-  > export GBROWSE_VERSION=2.40
-  > mkdir gbrowse-${GBROWSE_VERSION}
-  > cd gbrowse-${GBROWSE_VERSION}          
+
+  > mkdir -p ${GBROWSE_ROOT}/${GBROWSE_VERSION}
+  > cd ${GBROWSE_ROOT}/${GBROWSE_VERSION}          
   > mkdir extlib ; cd extlib
   > perl -Mlocal::lib=./
   > eval $(perl -Mlocal::lib=./)
 
 3. Check out GBrowse fork with modifications for running under PSGI/Plack
 
-  > cd ~/gbrowse
-  > mkdir build ; cd build
-  > git clone git@github.com:tharris/GBrowse-PSGI.git gbrowse-plack-fork.git
-  > cd gbrowse-plack-fork.git
+  > cd ${GBROWSE_ROOT}
+  > mkdir src ; cd src
+  > git clone git@github.com:tharris/GBrowse-PSGI.git
+  > cd GBrowse-PSGI.git
   # Here, the wwwuser is YOU, not the Apache user.
-  > perl Build.PL --conf         ~/gbrowse/gbrowse-${GBROWSE_VERSION}/conf \
-                  --htdocs       ~/gbrowse/gbrowse-${GBROWSE_VERSION}/html \
-                  --cgibin       ~/gbrowse/gbrowse-${GBROWSE_VERSION}/cgi \
+  > perl Build.PL --conf         ${GBROWSE_ROOT}/${GBROWSE_VERSION}/conf \
+                  --htdocs       ${GBROWSE_ROOT}/${GBROWSE_VERSION}/html \
+                  --cgibin       ${GBROWSE_ROOT}/${GBROWSE_VERSION}/cgi \
                   --wwwuser      $LOGNAME \
-                  --tmp          ~/gbrowse/gbrowse-${GBROWSE_VERSION}/tmp \
-                  --persistent   ~/gbrowse/gbrowse-${GBROWSE_VERSION}/tmp/persistent \
-  		  --databases    ~/gbrowse/gbrowse-${GBROWSE_VERSION}/databases \
+                  --tmp          ${GBROWSE_ROOT}/${GBROWSE_VERSION}/tmp \
+                  --persistent   ${GBROWSE_ROOT}/${GBROWSE_VERSION}/tmp/persistent \
+  		  --databases    ${GBROWSE_ROOT}/${GBROWSE_VERSION}/databases \
 		  --installconf  n \
 		  --installetc   n
   > ./Build installdeps   # Be sure to install all components of the Plack stack:
@@ -135,7 +134,7 @@ INSTALLATION
    The Build script will have installed a suitable .psgi file at conf/GBrowse.psgi.
 
    Launch a simple plack HTTP server via:
-   > plackup -p 9001 ~/gbrowse/gbrowse-${GBROWSE_VERSION}/conf/GBrowse.psgi
+   > plackup -p 9001 ${GBROWSE_ROOT}/${GBROWSE_VERSION}/conf/GBrowse.psgi
 
    Now open:
    http://localhost:9001/
@@ -152,15 +151,14 @@ of configuration already in the conf/GBrowse.psgi file.
 Enable the Plack debugging middleware:
 
    > export GBROWSE_DEVELOPMENT=true
-   > plackup -p 9001 ~/gbrowse/gbrowse-${GBROWSE_VERSION}/conf/GBrowse.psgi
+   > plackup -p 9001 ${GBROWSE_ROOT}/${GBROWSE_VERSION}/conf/GBrowse.psgi
    Visit http://localhost:9001/ and see all the handy debugging information.
 
    Or, directly from the command line.
 
 Run GBrowse under the preforking, lightweight HTTP server Starman
    > perl -MCPAN -e 'install Starman'
-   > starman -p 9001 ~/gbrowse/gbrowse-${GBROWSE_VERSION}/conf/GBrowse.psgi
-
+   > starman -p 9001 ${GBROWSE_VERSION}/${GBROWSE_VERSION}/conf/GBrowse.psgi
 
 
 

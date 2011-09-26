@@ -2,12 +2,26 @@
 # $Id: load_alignments_msa.pl,v 1.1.2.2 2009-07-19 09:15:43 sheldon_mckay Exp $
 # This script will load the gbrowse_syn alignment database directly from a
 # multiple sequence alignment file.
+BEGIN {
+  #Check for DBI before running the script
+  # Doing this here will allow the "compile" tests to pass for GBrowse
+  # even if DBI is not installed.
+  eval {
+      require DBI;
+      DBI->import;
+  };
+
+  if ($@) {
+      die "The DBI perl module is required to run this script\n";
+  }
+}
+
 
 use strict;
 use Bio::AlignIO;
 use List::Util 'sum';
 use Getopt::Long;
-use DBI;
+#use DBI;
 use Bio::DB::GFF::Util::Binning 'bin';
 
 use Data::Dumper;

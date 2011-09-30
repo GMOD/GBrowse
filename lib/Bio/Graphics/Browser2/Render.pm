@@ -1020,6 +1020,7 @@ sub scale_bar {
     my $self         = shift;
     my $seg          = shift;
     my $this_section = shift || 'detail';
+    my $extra_args   = shift; 
 
     my $label = '';
     my ( $url, $height, $width );
@@ -1047,7 +1048,8 @@ sub scale_bar {
         ( $url, $height, $width ) = $renderer->render_scale_bar(
             section => 'detail',
             segment => $seg,
-            state   => $self->state
+            state   => $self->state,
+	    @$extra_args 
         );
     }
     my $html = $renderer->wrap_rendered_track(

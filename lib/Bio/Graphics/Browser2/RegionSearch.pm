@@ -397,9 +397,9 @@ sub _search_features_locally {
     my %seenit;
 
     for my $dbid (@dbids) {
-	my $opts      = $self->source->search_options($dbid);
-	next if $opts =~ /none/;
-	warn "[$$] searching in ",$dbid if DEBUG;
+	my $opts = $self->source->search_options($dbid);
+	next if $opts =~ /none/i;
+	warn "searching in ",$dbid if DEBUG;
 	my $db = $self->source->open_database($dbid);
 	next if $seenit{$db}++;
 	my $region   = Bio::Graphics::Browser2::Region->new(

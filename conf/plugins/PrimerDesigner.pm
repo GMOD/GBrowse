@@ -68,11 +68,14 @@ primer3 (http://frodo.wi.mit.edu/primer3/primer3_code.html)
 package Bio::Graphics::Browser2::Plugin::PrimerDesigner;
 
 use strict;
+use Data::Dumper;
+use POSIX qw/isdigit/;
+use Bio::Graphics::Panel;
 use Bio::PrimerDesigner;
 use Bio::PrimerDesigner::Tables;
 use Bio::Graphics::Browser2::Plugin;
 use Bio::Graphics::Browser2::Util;
-use Bio::Graphics::Browser;
+#use Bio::Graphics::Browser; #No longer available in Gbrowse 2
 use Bio::Graphics::Feature;
 use Bio::Graphics::FeatureFile;
 use CGI qw/:standard escape/;
@@ -80,6 +83,7 @@ use CGI::Pretty 'html3';
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
 use Math::Round 'nearest';
+use Carp qw/cluck/;
 
 use constant BINARY            => 'primer3';
 use constant BINPATH           => '/usr/local/bin';
@@ -88,36 +92,95 @@ use constant IMAGE_PAD         => 25;
 use constant MAXRANGE          => 300;
 use constant IMAGEWIDTH        => 800;
 use constant DEFAULT_SEG_SIZE  => 10000;
-use constant STYLE             => '/gbrowse/gbrowse.css';
+use constant STYLE             => '/gbrowse2/css/gbrowse.css';
 
-use vars '@ISA';
+#use vars '@ISA';
+use vars qw/@ISA $PNG $CALL/;
 
-@ISA = qw / Bio::Graphics::Browser2::Plugin /;
+@ISA = qw/Bio::Graphics::Browser2::Plugin/;
+
 
 # Arg, modperl
 END {
+	
   CGI::Delete_all();
 }
+
+
 
 sub name {
   'PCR primers';
 }
 
 sub description {
+
   p(      "This plugin uses PRIMER3 to pick PCR primers to amplify selected "
 	.  "features or sequences."
-        . " This plugin was written by Sheldon McKay (mckays\@cshl.edu)" );
+	. " This plugin was written by Sheldon McKay (mckays\@cshl.edu)" );
+
 }
 
 sub type {
-  'dumper';
+   'dumper';
 }
 
 sub verb {
+
+#Remove the Configure button when designing primers. The plugin doesn't need 
+#the option anyway, and it will only confuse people if left on the page.
+
+#$CALL keeps track of how many times the module is run so it doesn't attach 
+#multiple events. Otherwise, the javascript will run about 3 times.
+
+#This is a cheat. Since there's no way to make javascript calls from ajax, 
+#code gets inserted here instead because GBrowse runs this no matter what.
+    #unless ($CALL) {
+
+#my $detail_select_menu = detail_select_menu();
+
+#print <<JS;
+
+
+    #<script type="text/javascript"> 
+
+	#var oPrimerDesigner = { };
+
+	#oPrimerDesigner.removeConfigureButton = function () {
+	    #var plugin_select = document.getElementById('plugin');
+	    #var config_button = document.getElementsByName('plugin_action')[0];
+
+	    #var i = plugin_select.selectedIndex;
+	    #if (plugin_select.options[i].text == 'Design PCR primers')
+		#config_button.style.display = 'none';
+
+	    #plugin_select.onchange = function () { 
+
+		#var i = this.selectedIndex;
+		#if (this.options[i].text == 'Design PCR primers') {
+		    #config_button.style.display = 'none';
+		#} else {
+		    #config_button.style.display = 'inline';
+		#}
+
+	    #}
+
+	#}
+	#if (window.addEventListener) {  // W3C standard
+	    #window.addEventListener('load', oPrimerDesigner.removeConfigureButton, false); // NB **not** 'onload'
+	#} 
+	#else if (window.attachEvent) {  // Microsoft
+	    #window.attachEvent('onload', oPrimerDesigner.removeConfigureButton);
+	#}
+    #</script>
+#JS
+	#$CALL++;
+    #}
+
   'Design';
 }
 
 sub mime_type {
+
   'text/html';
 }
 
@@ -145,6 +208,7 @@ sub reconfigure {
     # round to nearest 50 bp
     $conf->{size_range} = join '-', map {$_||=50} nearest(50, $min_size, $max_size);
 
+
     # make sure target is within the selected region
     if (!$target || $target < $lb || $target > $rb) {
       $target = int( ($lb+$rb)/2 );
@@ -169,10 +233,13 @@ sub my_url {
 }
 
 sub configure_form {
-  my $self = shift;
+  my $self    = shift;
   my ($segment,$target,$lb,$rb,$feats) = @_;
-  ($segment) = @{ $self->segments } unless $segment;
-  $segment ||= fatal_error "This plugin requires a sequence region";
+
+
+  #($segment) = @{ $self->segments } unless $segment;
+  ($segment) = $self->segments unless $segment;
+  $segment ||= fatal_error("This plugin requires a sequence region");
   my $browser = $self->browser_config;
   my $conf = $self->configuration;
 
@@ -192,8 +259,10 @@ sub configure_form {
   my $atts = $self->primer3_params($lb,$rb) unless $no_buttons;
 
   my $table_width = IMAGEWIDTH + 50;
+
   my ( $image, $map, $zoom_menu )
-      = $self->segment_map( \$segment, $feats, $lb, $rb );
+      = $self->new_segment_map( $segment, $feats, $lb, $rb );
+
   my $message = '';
 
   my $start  = $segment->start;
@@ -203,13 +272,13 @@ sub configure_form {
 
   my $length = unit_label( $segment->length );
 
-  my $html   =  h2("Showing $length from $ref, positions $start to $end");
+ my $html   =  h2("Showing $length from $ref, positions $start to $end");
 
   $html .= hidden( -name => 'plugin',        -value => 'PrimerDesigner' )
-        . hidden( -name => 'plugin_action', -value => 'Go' )
-        . hidden( -name => 'ref', -value => $segment->ref )
-        . hidden( -name => 'start', -value => $segment->start )
-        . hidden( -name => 'stop', -value => $segment->stop );
+	. hidden( -name => 'plugin_action', -value => 'Go' )
+	. hidden( -name => 'ref', -value => $segment->ref )
+	. hidden( -name => 'start', -value => $segment->start )
+	. hidden( -name => 'stop', -value => $segment->stop );
   $html .= hidden( -name => $self->config_name('lb'), -value => $lb) if $lb;
   $html .= hidden( -name => $self->config_name('rb'), -value => $rb) if $rb;
   $html .= hidden( -name => $self->config_name('target'), -value => $target) if $target;
@@ -219,6 +288,7 @@ sub configure_form {
   my $on = 1 unless $feats;
   my $no_target = li("There currently is no target region selected.")
       if ($rb - $lb) < 3;
+  #my $no_target = li("Click and drag on the ruler to select a PCR target.");
   my $has_buttons = li("The size of potential PCR products can be adjusted via the 'Product size range' option below")
       unless $no_buttons;
   my $flanked = $no_target ? 'red line' : 'shaded region';
@@ -227,8 +297,8 @@ sub configure_form {
   my $click_feat = $no_target ? li("Click on a sequence feature to select")
       : li("Click on a different sequence feature to change the selection");
       
-
-  my $zone = $self->toggle( { on => $on, override => 0 },
+  my $zone = 
+	    $self->toggle( { on => $on, override => 0 },
 		     'Targetting information',
 		     font( {-size => -1},
 			   ul( $no_target, 
@@ -237,15 +307,21 @@ sub configure_form {
 			       $boundaries,
 			       $has_buttons
 			   ) )
-		     ) . br;
+		     ) 
+		    . br;
+
 
   $html .= table(
 		 { -style => "width:${table_width}px" },
     Tr(
        { -class => 'searchtitle' },
-      [ th($map_text) . th($zoom_menu),
-        td( { -class => 'searchbody', -colspan => 2 }, $image . br),
-        td( { -class => 'searchbody', -colspan => 2}, $zone )
+      [ 
+#NML: map text does nothing at the moment. not even sure what it's supposed to do
+#It doesn't appear in the functional 1.7 version
+	#th($map_text) . 
+	th($zoom_menu),
+	td( { -class => 'searchbody', -colspan => 2 }, $image . br),
+	td( { -class => 'searchbody', -colspan => 2}, $zone )
       ]
     )
 		 );
@@ -271,10 +347,10 @@ sub configure_form {
     $html .= table( { -style => "width:${table_width}px" }, Tr( \@rows ) );
     $html .= br
 	  . submit( -name => 'configured', -value => 'Design Primers' )
-          . '&nbsp;'
-          . reset
-          . '&nbsp;'
-          . $self->back_button;
+	  . '&nbsp;'
+	  . reset('Reset Parameters')
+	  . '&nbsp;'
+	  . $self->back_button;
   }
   
   (my $action = self_url()) =~ s/\?.+//;
@@ -283,9 +359,9 @@ sub configure_form {
 		     -name   => 'mainform',
 		     -action => $action
 		     ).
-		     $html.
-		     end_form;
-
+	$html
+	.  end_form;
+	#die Dumper  $html;
 
   # if this is the first config, exit before form and buttons
   # are printed by gbrowse
@@ -295,6 +371,15 @@ sub configure_form {
       $html, $map, $browser->footer;
     exit;
   }
+
+
+
+    #my $form = textfield(-name  => $self->config_name('foo'),
+			#-value => $conf->{foo})
+		#.
+		#textfield(-name  => $self->config_name('bar'),
+			#-value => $conf->{bar});
+    #return $form;
 
   return $feats ? ($html,$map) : $html.$map;
 }
@@ -319,13 +404,16 @@ sub map_header {
 sub dump {
   my ( $self, $segment ) = @_;
   my $conf = $self->configuration;
+  #print Dumper $conf;
   $self->reconfigure;
 
+  #print Dumper $conf;
   # dumpers provide their own headers, so make sure boiler plate
   # stuff is included
-  my $style_sheet = $self->browser_config->setting('stylesheet') || STYLE;
+  #my $style_sheet = $self->browser_config->setting('stylesheet') || STYLE;
+  my $style_sheet = $self->browser_config->plugin_setting('stylesheet') || STYLE;
   print start_html( -style => $style_sheet, -title => 'PCR Primers' );
-  print $self->browser_config->header;
+  print $self->browser_config->header_html;
 
   # reset off-scale target if required
   delete $conf->{target} if $conf->{target} 
@@ -335,7 +423,8 @@ sub dump {
   delete $conf->{rb} if $conf->{rb} 
     && ($conf->{rb} < $segment->start + 1000 || $conf->{rb} > $segment->end);
   delete $conf->{target} unless $conf->{lb} && $conf->{rb};
-  
+  #print Dumper $conf;
+
   my $target = $self->focus($segment);
   my $lb = $conf->{lb} || $target;
   my $rb = $conf->{rb} || $target;
@@ -351,19 +440,356 @@ sub dump {
   if ($lb <= $segment->start + 500) {
     $new_start = $lb - 500;
   }
-  if ($new_start || $new_end) {
-    $segment = $self->database->segment( -name  => $segment->ref,
-					 -start => ($new_start || $segment->start),
-					 -end   => ($new_end   || $segment->end) );
-    $segment_size = $segment->length;
-  }
+  #print 'dump 1: '.$segment->start.' '.$segment->end.'<br>';
+
+# NML: this is causing the panel to zoom beyond the segment boundaries
+  #if ($new_start || $new_end) {
+    #$segment = $self->database->segment( -name  => $segment->ref,
+					 #-start => ($new_start || $segment->start),
+					 #-end   => ($new_end   || $segment->end) );
+    #$segment_size = $segment->length;
+  #}
+
+    #NML: kludgy fix to get details panel to draw at an appropriate length
+    #Otherwise, it spills past the browser window
+    $self->renderer->set_details_multiplier(1);
+
+my $maxrange = MAXRANGE;
+print <<JS;
+<script type="text/javascript">
+
+    var oPrimerDesigner = { };
+
+    oPrimerDesigner.removePanButtons = function () {
+
+	/*Get rid of panleft and panright buttons         */
+	/*until I can figure out a way to get them working*/
+	var imgs = document.getElementsByTagName('img');
+
+	for (i=0; i<imgs.length; i++) {
+	    if (imgs[i].className == 'panleft' 
+		|| imgs[i].className == 'panright' 
+		) {
+		imgs[i].style.display='none';
+	    }
+	}
+    }
+
+    oPrimerDesigner.scroll = function (direction,length_units) {
+
+	oPrimerDesigner.unselectRegion();
+
+	var plugin = document.getElementsByName('plugin')[0].value;
+
+	var detail_start = parseInt(Controller.segment_info.detail_start) 
+	var detail_stop = parseInt(Controller.segment_info.detail_stop) 
+
+	var overview_start = Controller.segment_info.overview_start;
+	var overview_stop = Controller.segment_info.overview_stop;
+
+	var view_length = 
+	    (
+	    parseInt(Controller.segment_info.detail_stop) 
+	    - parseInt(Controller.segment_info.detail_start)
+	    ) 
+	    / parseFloat(Controller.segment_info.details_mult);
+
+	var bits = Math.round(length_units*view_length);
+
+	var action = direction + ' ' + bits;
+	var mainform = document.getElementsByName('mainform')[0];
+
+	var newStart, newStop;
+
+	if (direction == 'left') {
+	    newStart = Math.round(detail_start - bits);
+	    newStop = Math.round(detail_stop - bits);
+	    if (newStart < overview_start) {
+		newStart = overview_start;
+		newStop = view_length;
+		newStop = Math.round(overview_start + view_length);
+	    }
+	}
+	else if (direction == 'right') {
+	    newStart = Math.round(detail_start + bits);
+	    newStop = Math.round(detail_stop + bits);
+	    if (newStop > overview_stop) {
+		newStart = Math.round(overview_stop - view_length);
+		newStop = overview_stop;
+	    }
+
+	}
+	else { 
+	    if (direction == 'zoom') {
+
+		var detail_length = detail_stop - detail_start;
+		var value = detail_length * length_units;
+
+		var addMargin = Math.round((value - detail_length)/2);
+
+		newStart = Math.round(detail_start - addMargin);
+		newStop = Math.round(detail_stop + addMargin);
+
+	    }	
+	    else if (direction == 'set span') {
+		var value = length_units*1;
+		var addMargin = Math.floor((value - (detail_stop - detail_start))/2);
+
+		newStart = Math.round(detail_start - addMargin);
+		newStop = Math.round(detail_stop + addMargin);
+
+	    }
+
+	    if ((newStop - newStart) > (overview_stop - overview_start)) {
+		newStart = overview_start;
+		newStop = overview_stop;
+	    }
+
+	    if (newStart < overview_start ) {
+		newStart = overview_start;
+		newStop = newStart + value - 1; 
+	    }
+	    else if (newStop > overview_stop ) {
+		newStart = overview_stop - value + 1; 
+		newStop = overview_stop;
+	    }
+	}
+
+	oPrimerDesigner.createNewFormElement(mainform, "view_start", newStart);
+	oPrimerDesigner.createNewFormElement(mainform, "view_stop", newStop);
+
+	mainform.action = mainform.action 
+	    + '?plugin='+plugin+';action=Go;view_start='+newStart+';view_stop='+newStop;
+
+	mainform.submit();
+
+
+    }
+
+    oPrimerDesigner.designPrimers = function () {
+	//var mainform = document.getElementsByName('mainform')[0];
+	//var conf = oPrimerDesigner.createNewFormElement(mainform, "configured", "Design Primers");
+
+	//mainform.setAttribute("target", "_blank");
+	//mainform.submit();
+
+	/*Remove these after submit or else will generate a bug where user*/
+	/*tries to scroll or zoom without closing rubber band menu first, */
+	/*causing form to unintentionally be resubmitted                  */
+	//mainform.removeChild(conf);
+	//mainform.removeAttribute("target");
+    }
+
+    oPrimerDesigner.selectRegion = function () {
+
+	SelectArea.prototype.cancelRubber();
+
+	var size_range = document.getElementById('product_size_range');
+
+	var plugin = document.getElementsByName('plugin')[0].value;
+
+	var select_start = currentSelectArea.selectSequenceStart;
+	var select_end = currentSelectArea.selectSequenceEnd;
+
+	var min_size = select_end - select_start + 40;
+	var max_size = min_size + $maxrange;
+
+	var x = [];
+	var sizes = [min_size, max_size];
+	for (i=0;i < sizes.length;i++) {
+	    var n = sizes[i];
+	    x.push(Math.ceil(sizes[i]/50.0) * 50);
+
+	}
+
+	var lb = document.getElementsByName(plugin+'.lb')[0]
+	var rb = document.getElementsByName(plugin+'.rb')[0];
+	var target = document.getElementsByName(plugin+'.target')[0];
+
+
+	oPrimerDesigner.lb = lb.value;
+	oPrimerDesigner.rb = rb.value;
+	oPrimerDesigner.target = target.value;
+	oPrimerDesigner.size_range = size_range.value;
+
+	size_range.value = x[0]+'-'+x[1];
+
+	lb.value = select_start;
+	rb.value = select_end;
+
+	if (target.value == undefined || target.value < select_start || target.value > select_end) {
+	    target.value = parseInt( (select_start+select_end)/2 );
+	}
+
+	var mainform = document.getElementsByName('mainform')[0];
+	mainform.submit();
+    }
+
+    oPrimerDesigner.unselectRegion = function () {
+
+	var plugin = document.getElementsByName('plugin')[0].value;
+	var size_range = document.getElementById('product_size_range');
+
+	if (oPrimerDesigner.size_range != undefined) {
+	    size_range.value = oPrimerDesigner.size_range;
+	}
+
+	if (oPrimerDesigner.lb != undefined) {
+	    document.getElementsByName(plugin+'.lb')[0].value = oPrimerDesigner.lb;
+	}
+	if (oPrimerDesigner.rb != undefined) {
+	    document.getElementsByName(plugin+'.rb')[0].value = oPrimerDesigner.rb;
+	}
+	if (oPrimerDesigner.target != undefined) {
+	    document.getElementsByName(plugin+'.target')[0].value = oPrimerDesigner.target;
+	}
+
+	SelectArea.prototype.cancelRubber();
+    }
+
+    if (window.addEventListener) {  // W3C standard
+	window.addEventListener('load', oPrimerDesigner.removePanButtons, false); // NB **not** 'onload'
+    } 
+    else if (window.attachEvent) {  // Microsoft
+	window.attachEvent('onload', oPrimerDesigner.removePanButtons);
+    }
+
+</script>
+JS
+#if (param('configured') ) {
+#print 'param configured<br>';
+#}
+#if ($self->get_primer3_params()) {
+    #print 'got primer3 params<br>';
+#} else {
+    #print Dumper param();
+#}
+#if (param('configured') && $self->get_primer3_params()) {
+  #print Dumper $conf;
+  #}
+
 
   # design the primers if required
   $self->design_primers( $segment, $lb, $rb)
       if param('configured') && $self->get_primer3_params();
 
+
   # or print the config form
   print $self->configure_form($segment,$target,$lb,$rb);
+
+    my $render = $self->renderer;
+
+    my $segment_info = $render->segment_info_object;
+
+    my $div = $render->render_search_form_objects();
+    $div = join('', split("\n", $div));
+    $div =~ s/'/\\'/g;
+
+    my $segment_info_string = 
+    join(',', map { 
+	my $val = $segment_info->{$_};
+	$val = isdigit($val) ? $val : "\'$val\'";
+	"'$_': $val"
+    } (keys %$segment_info) );
+
+#my $detail_select_menu = detail_select_menu();
+
+print <<JS;
+
+
+<script type="text/javascript">
+
+
+    Controller.segment_info = { $segment_info_string };
+
+    /*helper function to create a form*/
+    oPrimerDesigner.getNewSubmitForm = function (){
+	var submitForm = document.createElement("form");
+	document.body.appendChild(submitForm);
+	submitForm.method = "post";
+	return submitForm;
+    }
+
+    /*helper function to add elements to the form*/
+    oPrimerDesigner.createNewFormElement = function (inputForm, elementName, elementValue){
+	var newElement = document.createElement('input');
+	newElement.name = elementName;
+	newElement.type = 'hidden';
+	newElement.value= elementValue
+	inputForm.appendChild(newElement);
+	return newElement;
+    }
+
+    /*Create submit form to get rubberband working*/
+    //oPrimerDesigner.submitForm = oPrimerDesigner.getNewSubmitForm();
+    //oPrimerDesigner.createNewFormElement(oPrimerDesigner.submitForm, "force_submit", "0");
+    //oPrimerDesigner.createNewFormElement(oPrimerDesigner.submitForm, "plugin_action", "Go");
+
+    //oPrimerDesigner.createNewFormElement(oPrimerDesigner.submitForm, "plugin", document.getElementsByName('plugin')[0].value);
+    //oPrimerDesigner.submitForm.style.display = 'none';
+
+    //var div = document.createElement('div');
+    //div.innerHTML = '$div';
+    //div.setAttribute('id', 'search_form_objects');
+    //oPrimerDesigner.submitForm.appendChild(div);
+
+    //document.searchform = oPrimerDesigner.submitForm;
+
+    oPrimerDesigner.details_panel = document.getElementById('primer_panel');
+
+    if (window.addEventListener) {  // W3C standard
+	oPrimerDesigner.details_panel.addEventListener('mouseup', oPrimerDesigner.selectRegion, false); 
+    } 
+    else if (window.attachEvent) {  // Microsoft
+	oPrimerDesigner.details_panel.attachEvent('onmouseup', oPrimerDesigner.selectRegion);
+    }
+
+</script>
+JS
+
+
+
+}
+
+sub detail_select_menu {
+
+<<DETAILS;
+<div id="detailSelectMenu">
+    <table style="width:100%">
+	<tr>
+	<th style="background:lightgrey;cell-padding:5">
+	    SELECTION
+	    <a style="right:0px;position:absolute;color:blue;cursor:pointer" 
+		onclick="oPrimerDesigner.unselectRegion()">
+	    [X]
+	    </a> 
+	</th>
+	</tr>
+	<tr>
+	<td>
+	    <a style="color:blue;cursor:pointer" onclick="oPrimerDesigner.designPrimers()" target="_BLANK">
+	    Design primers for this region
+	    </a>
+	</td>
+	</tr>
+	<tr>
+	<td>
+	    <a style="color:blue;cursor:pointer" onclick="SelectArea.prototype.clearAndSubmit()">
+	    Zoom in
+	    </a>
+	</td>
+	</tr>
+	<tr>
+	<td>
+	    <a style="color:blue;cursor:pointer" onclick="SelectArea.prototype.clearAndRecenter()">
+	    Recenter on this region
+	    </a>
+	</td>
+	</tr>
+    </table>
+</div>
+DETAILS
+
 }
 
 sub design_primers {
@@ -389,11 +815,12 @@ sub design_primers {
     $dna = $dna->seq;
   }
   elsif ( ref $dna ) {
-    fatal_error
+    fatal_error(
 	"Unsure what to do with object $dna. I was expecting a sequence string"
+	)
   }
   elsif ( !$dna ) {
-    fatal_error "There is no DNA sequence in the database";
+    fatal_error("There is no DNA sequence in the database");
   }
 
   # unless a product size range range is specified, just keep looking
@@ -412,19 +839,19 @@ sub design_primers {
   # get a PCR object
   my $pcr = Bio::PrimerDesigner->new( program => BINARY,
 				      method  => METHOD );
-  $pcr or fatal_error  pre(Bio::PrimerDesigner->error);
+  $pcr or fatal_error(pre(Bio::PrimerDesigner->error));
 
   my $binpath = BINPATH;
   my $method = $binpath =~ /http/i ? 'remote' : METHOD;
 
   if ( $method eq 'local' && $binpath ) {
-    $pcr->binary_path($binpath) or fatal_error pre($pcr->error);
+    $pcr->binary_path($binpath) or fatal_error(pre($pcr->error));
   }
   else {
-    $pcr->url($binpath) or fatal_error pre($pcr->error);
+    $pcr->url($binpath) or fatal_error(pre($pcr->error));
   }
 
-  my $res = $pcr->design(%atts) or fatal_error pre($pcr->error);
+  my $res = $pcr->design(%atts) or fatal_error(pre($pcr->error));
 
   $self->primer_results( $res, $segment, $lb, $rb );
 }
@@ -441,7 +868,7 @@ sub primer_results {
   $raw_output =~ s/^(SEQUENCE=\w{25}).+$/$1... \(truncated for display only\)/m;
 
   # Give up if primer3 failed
-  fatal_error "No primers found:".pre($raw_output) unless $res->left;
+  fatal_error("No primers found:".pre($raw_output)) unless $res->left;
 
   my @attributes = qw/ left right startleft startright tmleft tmright
       qual lqual rqual leftgc rightgc lselfany lselfend rselfany rselfend/;
@@ -449,7 +876,8 @@ sub primer_results {
   my ( @rows, @feats );
   
   my $text = "This value should be less than 1 for best results but don\'t worry too much";
-  my $Primer_Pair_Quality = 'Primer_Pair_Quality '.a( { -href => 'javascript:void(0)', -title => $text}, '[?]'); 
+  #my $Primer_Pair_Quality = 'Primer_Pair_Quality '.a( { -href => 'javascript:void(0)', -title => $text}, '[?]'); 
+  my $Primer_Pair_Quality = 'Primer_Pair_Quality '.a( { -href => "javascript:alert(\"$text\")" }, '[?]'); 
   my $spacer = td( {-width => 25}, '&nbsp;');
   
   for my $n ( 1 .. $num ) {
@@ -529,7 +957,13 @@ sub primer_results {
     label   => 1
   };
 
-  $featurefile->add_type( 'Primers' => $options );
+ $featurefile->set('primers',glyph=>'primers');
+ $featurefile->set('primers',label=>'1');
+ $featurefile->set('primers',height=>'10');
+ $featurefile->set('primers',bgcolor=>'red');
+
+
+  #$featurefile->add_type( 'Primers' => $options );
 
   for my $f (@feats) {
     $featurefile->add_feature( $f => 'Primers' );
@@ -674,39 +1108,57 @@ sub unit_label {
       : sprintf( "%.4g bp", $value );
 }
 
-sub segment_map {
+sub new_segment_map {
   my ( $self, $segment, $feats, $lb, $rb ) = @_;
-  my $conf        = $self->configuration;
-  my @tracks      = grep !/overview/, $self->selected_tracks;
+
+  my $render = $self->renderer;
+
+    my $seg = $render->region->seg;
+
+  #my @tracks      = grep !/overview/, $self->selected_tracks;
 
   my $config = $self->browser_config;
-  my $render = $self->renderer($$segment);
-
   my $zoom_levels = $config->setting('zoom levels') || '1000 10000 100000 200000';
   my @zoom_levels = split /\s+/, $zoom_levels;
   my %zoom_labels;
   for my $zoom (@zoom_levels) {
     $zoom_labels{$zoom} = $render->unit_label($zoom);
   }
-  my $zoom_menu = $self->zoom_menu($$segment);
 
+  my $zoom_menu = $self->zoom_menu($segment);
+ 
   # if the primer design is done, zoom in to the PCR products
   my $target;
+
+  my @extra_args;
+
   if ($feats) {
-    $target = $self->focus($$segment);
+
+    $zoom_menu = '';
+
+   
+    my @feature_types = $feats->types;
+
+    for my $type (@feature_types) {
+        my $features = $feats->features($type);
+        my %options  = $feats->style($type);
+    }    
+ 
+
+    push @extra_args, ('tracks', $feats);
+
+    $target = $self->focus($segment);
     my ($longest)
         = map {$_->length} sort { $b->length <=> $a->length } $feats->features('Primers');
-    $$segment = $self->refocus( $$segment, $target, $longest+2000 );
+    $segment = $self->refocus( $segment, $target, $longest+2000 );
+
   }
   else {
-    $target = $self->focus($$segment);
+
+    $target = $self->focus($segment);
   }
 
-  unshift @tracks, 'Primers' if $feats;
-  my $postgrid_callback;
-  my $ref = $$segment->ref;
-
-  $postgrid_callback = sub {
+  my $postgrid_callback = sub {
     my $gd     = shift;
     my $panel  = shift;
     my $left   = $panel->pad_left;
@@ -717,11 +1169,13 @@ sub segment_map {
     my ($hstart, $hend) = $panel->location2pixel($lb,$rb);
 
     # first shaded
-    unless ( $hend-$hstart < 2 ) {
-      $gd->filledRectangle( $left + $hstart,
-			    $top, $left + $hend,
-			    $bottom, $panel->translate_color('lightgrey'));
-    }
+    #if ($feats) {
+	unless ( $hend-$hstart < 2 ) {
+	$gd->filledRectangle( $left + $hstart,
+				$top, $left + $hend,
+				$bottom, $panel->translate_color('lightgrey'));
+	}
+    #}
 
     # then the red center line
     $gd->filledRectangle( $left + $mstart,
@@ -729,60 +1183,16 @@ sub segment_map {
 			  $bottom, $panel->translate_color('red'));
   };
 
-  # we will be adding custom scale_bars ourselves
-  my %feature_files;
-  $feature_files{Primers} = $feats if $feats;
-  my $topscale    = Bio::Graphics::FeatureFile->new;
-  my $bottomscale = Bio::Graphics::FeatureFile->new;
-  $feature_files{topscale} = $topscale;
-  $feature_files{bottomscale} = $bottomscale;
+    push @extra_args, ('postgrid', $postgrid_callback);
 
-  my $options     = { glyph   => 'arrow',
-		      double  => 1,
-		      tick    => 2,
-		      label   => 1,
-		      units        => $render->setting('units') || '',
-		      unit_divider => $render->setting('unit_divider') || 1 };
 
-  my $options2 = {%$options};
-  $options2->{no_tick_label} = 1 if @tracks < 5;
+    #my $panel = $render->render_panel($segment,\%args);
+    my $panel = $render->render_panel($segment,\@extra_args);
+    
+    return ($panel, ' ', $zoom_menu);
 
-  $topscale->add_type( topscale => $options );
-  $bottomscale->add_type( bottomscale => $options2 );
-
-  my $toptext = 'Click here to recenter the image';
-  my $bottomtext = 'Click here to create or adjust the target boundaries';
-
-  my $scalebar1 = Bio::Graphics::Feature->new( -start => $$segment->start,
-					       -stop  => $$segment->end,
-					       -type  => 'topscale',
-					       -name  => $toptext,
-					       -ref   => $$segment->ref );
-  my $scalebar2 = Bio::Graphics::Feature->new( -start => $$segment->start,
-                                               -stop  => $$segment->end,
-                                               -type  => 'bottomscale',
-					       -name  => $bottomtext,
-					       -ref   => $$segment->ref );
-  
-  $topscale->add_feature( $scalebar1 => 'topscale' );
-  $bottomscale->add_feature( $scalebar2 => 'bottomscale' );
-  unshift @tracks, 'topscale';
-  push @tracks, 'bottomscale';
-
-  my @options = ( segment          => $$segment,
-		  do_map           => 1,
-		  do_centering_map => 1,
-		  tracks           => \@tracks,
-		  postgrid         => $postgrid_callback,
-		  noscale          => 1,
-		  keystyle         => 'none');
-  
-  push @options, ( feature_files => \%feature_files );
-  
-  my ( $image, $image_map ) = $render->render_html(@options);
-
-  return ( $image, $image_map, $zoom_menu );
 }
+
 
 # center the segment on the target coordinate
 sub refocus {
@@ -875,7 +1285,7 @@ sub primer3_params {
     b(qq(<a name="PRIMER_PRODUCT_SIZE_RANGE" href="javascript:void(0)"
            onclick="alert('$msg')">Product size range:</a>)
     ),
-    qq(<input type="text" size="8" name="PRIMER_PRODUCT_SIZE_RANGE" value=$sr>),
+    qq(<input type="text" size="8" id="product_size_range" name="PRIMER_PRODUCT_SIZE_RANGE" value=$sr>),
     b(qq(<a name="PRIMER_MAX_END_STABILITY_INPUT" target="_new" href="$help\#PRIMER_MAX_END_STABILITY">
        Max 3\' Stability:</a>)
     ),
@@ -909,8 +1319,70 @@ sub primer3_params {
 sub toggle {
   my $self = shift;
   my ($state,$section_head,@body) = @_;
-  my ($label) = $self->browser_config->tr($section_head) || $section_head;
-  return toggle_section($state,$label,b($label),@body);
+  #my ($label) = $self->browser_config->tr($section_head) || $section_head;
+  my ($label) = $self->renderer->tr($section_head) || $section_head;
+  #return $self->renderer->toggle_section($state,$label,b($label),@body);
+  return $self->toggle_section($state,$label,b($label),@body);
+}
+
+
+#Gbrowse's toggle function isn't displaying the $show_ctrl html for 
+#PrimerDesigner when hidden. When a section is minimized, everything 
+#including the header disappears making it impossible to re-toggle
+#This fixes the problem.
+sub toggle_section {
+
+  my $self = shift;
+  my %config = ref $_[0] eq 'HASH' ? %{shift()} : ();
+  my ($name,$section_title,@section_body) = @_;
+
+  my $visible = $config{on};
+
+  my $buttons = $self->renderer->data_source->button_url;
+  my $plus  = "$buttons/plus.png";
+  my $minus = "$buttons/minus.png";
+  my $break = div({-id=>"${name}_break",
+		   -style=>$visible ? 'display:none' : 'display:block'
+		  },'&nbsp;');
+
+  my $show_ctl = div({-id=>"${name}_show",
+		       -class=>'ctl_hidden',
+		       -style=>$visible ? 'display:none' : 'display:inline',
+		       -onClick=>"visibility('$name',1)"
+		     },
+		     img({-src=>$plus,-alt=>'+'}).'&nbsp;'.span({-class=>'tctl'},$section_title));
+
+my $js = <<"JS";
+
+var d = document.getElementById('$name').style.display;
+var i = this.childNodes[1];
+if (d == 'inline' || d == 'block') {
+    document.getElementById('$name').style.display = 'none';
+    i.src = '$plus';
+} else {
+    document.getElementById('$name').style.display = 'inline';
+    i.src = '$minus';
+}
+
+JS
+
+  my $hide_ctl = div({-id=>"${name}_hide",
+		       -class=>'ctl_visible',
+		       -style=>$visible ? 'display:inline' : 'display:none',
+		       #-onClick=>"visibility('$name',0)"
+		       -onClick=> $js
+		     },
+		     img({-src=>$minus,-alt=>'-'}).'&nbsp;'.span({-class=>'tctl',-id=>"${name}_title"},$section_title));
+  my $content  = div({-id    => $name,
+		      -style=>$visible ? 'display:inline' : 'display:none',
+		      -class => 'el_visible'},
+		     @section_body);
+  my @result =  $config{nodiv} ? (div({-style=>'float:left'},
+				      $show_ctl.$hide_ctl),$content)
+		:$config{tight}? (div({-style=>'float:left;position:absolute;z-index:10'},
+				      $show_ctl.$hide_ctl).$break,$content)
+		: div($show_ctl.$hide_ctl,$content);
+  return wantarray ? @result : "@result";
 }
 
 sub quality_warning {
@@ -938,21 +1410,30 @@ END
 sub zoom_menu {
   my $self    = shift;
   my $segment = shift;
-  my $render  = $self->renderer($segment);
-  return $render->slidertable(1);
+  #my $render  = $self->renderer($segment);
+  my $render  = $self->renderer;
+  return $render->slidertable($segment);
 }
 
 sub renderer {
   my $self    = shift;
   my $segment = shift;
-  my $config  = $self->browser_config;
+  my $config  = $self->browser_config || {};
   my $render  = $self->{render};
   if ($render) {
     $render->current_segment($segment);
     return $render;
   }
   
-  $self->{render} = Bio::Graphics::Browser2::faux->new($config);
+
+  my $globals = Bio::Graphics::Browser2->open_globals;
+
+  $self->{render} = PrimerDesigner::Render->new($config);
+
+
+
+  $self->{render} = bless $segment, 'PrimerDesigner::Render';
+
   $self->{render}->current_segment($segment);
   return $self->{render};
 }
@@ -963,16 +1444,24 @@ sub back_button {
           -name    => 'Return to Browser' );
 }
 
+sub fatal_error {
+    #my $self = shift;
+    print CGI::header('text/plain'),"@_\n";
+    exit 0;
+}
+
+
 1;
 
 
-# A package to override some Bio::Graphics::Browser
+# A package to override some Bio::Graphics::Browser2::Render
 # image mapping methods
-package Bio::Graphics::Browser2::faux;
-use Bio::Graphics::Browser;
+#package Bio::Graphics::Browser2::faux;
+package PrimerDesigner::Render;
 use CGI qw/:standard unescape/;
 use warnings;
 use strict;
+use Carp qw/cluck/;
 use Bio::Root::Storable;
 use Data::Dumper;
 
@@ -984,9 +1473,10 @@ use constant DEFAULT_SEG_SIZE  => 10000;
 use constant DEFAULT_FINE_ZOOM => '20%';
 use constant BUTTONSDIR        => '/gbrowse/images/buttons';
 use constant OVERVIEW_RATIO    => 0.9;
-use constant DEBUG             => 1;
+use constant DEBUG             => 0;
+use constant DEFAULT_RANGES      => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 
-@ISA = qw/Bio::Graphics::Browser/;
+@ISA = qw/Bio::Graphics::Browser2::Render::HTML/;
 
 sub new {
   my $class    = shift;
@@ -994,6 +1484,7 @@ sub new {
   my %browser_data = %{$browser};  # just the config data, not the object
   return bless \%browser_data, $class;
 }
+
 
 sub error {
   '';
@@ -1234,66 +1725,78 @@ sub unit_label {
 }
 
 sub slidertable {
-  my $self       = shift;
-  my $small_pan  = shift;    
-  my $buttons    = $self->setting('buttons') || BUTTONSDIR;
-  my $segment    = $self->current_segment or fatal_error("No segment defined");
-  my $span       = $small_pan ? int $segment->length/2 : $segment->length;
-  my $half_title = $self->unit_label( int $span / 2 );
-  my $full_title = $self->unit_label($span);
-  my $half       = int $span / 2;
+  my $self    = shift;
+  my $state   = $self->state;
+  my $segment    = shift;
+
+  # try to avoid reopening the database -- recover segment
+  # and whole segment lengths from our stored state if available
+  my $span  = $state->{view_stop} - $state->{view_start} + 1;
+  my $max   = $self->thin_whole_segment->length;
+
+  my $buttonsDir    = $self->data_source->button_url;
+
+  my $half_title = $self->data_source->unit_label(int $span/2);
+  my $full_title = $self->data_source->unit_label($span);
+  my $half       = int $span/2;
   my $full       = $span;
   my $fine_zoom  = $self->get_zoomincrement();
-  Delete($_) foreach qw(ref start stop);
-  my @lines;
-  push @lines,
-  hidden( -name => 'start', -value => $segment->start, -override => 1 );
-  push @lines,
-  hidden( -name => 'stop', -value => $segment->end, -override => 1 );
-  push @lines,
-  hidden( -name => 'ref', -value => $segment->seq_id, -override => 1 );
-  push @lines, (
-		image_button(
-			     -src    => "$buttons/green_l2.gif",
-			     -name   => "left $full",
-			     -border => 0,
-			     -title  => "left $full_title"
-			     ),
-		image_button(
-			     -src    => "$buttons/green_l1.gif",
-			     -name   => "left $half",
-			     -border => 0,
-			     -title  => "left $half_title"
-			     ),
-		'&nbsp;',
-		image_button(
-			     -src    => "$buttons/minus.gif",
-			     -name   => "zoom out $fine_zoom",
-			     -border => 0,
-			     -title  => "zoom out $fine_zoom"
-			     ),
-		'&nbsp;', $self->zoomBar, '&nbsp;',
-		image_button(
-			     -src    => "$buttons/plus.gif",
-			     -name   => "zoom in $fine_zoom",
-			     -border => 0,
-			     -title  => "zoom in $fine_zoom"
-			     ),
-		'&nbsp;',
-		image_button(
-			     -src    => "$buttons/green_r1.gif",
-			     -name   => "right $half",
-			     -border => 0,
-			     -title  => "right $half_title"
-			     ),
-		image_button(
-			     -src    => "$buttons/green_r2.gif",
-			     -name   => "right $full",
-			     -border => 0,
-			     -title  => "right $full_title"
-			     ),
-		);
-  return join( '', @lines );
+
+  my $fine_point = do { no warnings 'numeric'; $fine_zoom/100 };
+
+  my $show   = $self->translate('Show').' ';
+
+  my @lines =
+    (image_button(
+		    -src     => "$buttonsDir/green_l2.gif",
+		  -name=>"left $full",
+		  -title   => "left $full_title",
+		  #-onClick => "Controller.scroll('left', 1)"
+		  -onClick => "oPrimerDesigner.scroll('left', 1)"
+     ),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
+		  -title=>"left $half_title",
+		  #-onClick => "Controller.scroll('left', 0.5)"
+		  -onClick => "oPrimerDesigner.scroll('left', 0.5)"
+     ),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/mminus.png",
+		  -name=>"zoom out $fine_zoom",
+		  -style=>'background-color: transparent',
+		  -title=>"zoom out $fine_zoom",
+		  #-onClick => "Controller.update_coordinates(this.name)"
+		  -onClick => "oPrimerDesigner.scroll('zoom', $fine_point+1)" 
+     ),
+     '&nbsp;',
+     $self->zoomBar($span,$max,$show),
+     #$self->zoomBar($segment),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/mplus.png",
+		  -name=>"zoom in $fine_zoom",
+		  -style=>'background-color: transparent',
+		  -title=>"zoom in $fine_zoom",
+		  #-onClick => "Controller.update_coordinates(this.name)",
+		  -onClick => "oPrimerDesigner.scroll('zoom',1-$fine_point)" 
+     ),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
+		  -title=>"right $half_title",
+		  #-onClick => "Controller.scroll('right', 0.5)"
+		  -onClick => "oPrimerDesigner.scroll('right', 0.5)"
+     ),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
+		  -title=>"right $full_title",
+		  #-onClick => "Controller.scroll('right', 1)"
+		  -onClick => "oPrimerDesigner.scroll('right', 1)"
+     ),
+     '&nbsp;',
+    );
+
+  my $str	= join('', @lines);
+  return span({-id=>'span'},$str);
+
 }
 
 sub get_zoomincrement {
@@ -1303,22 +1806,101 @@ sub get_zoomincrement {
 }
 
 sub zoomBar {
-  my $self    = shift;
-  my $segment = $self->current_segment;
-  my ($show)  = $self->tr('Show');
-  my %seen;
-  my @ranges = grep { !$seen{$_}++ } sort { $b <=> $a } ($segment->length, $self->get_ranges());
-  my %labels = map { $_ => $show . ' ' . $self->unit_label($_) } @ranges;
+  my $self = shift;
+  my ($length,$max,$item_label) = @_;
+  $item_label ||= '';
 
-  return popup_menu(
-    -class    => 'searchtitle',
-    -name     => 'span',
-    -values   => \@ranges,
-    -labels   => \%labels,
-    -default  => $segment->length,
-    -force    => 1,
-    -onChange => 'document.mainform.submit()',
-  );
+  my %seen;
+  my @r         = sort {$a<=>$b} $self->data_source->get_ranges();
+  $max         *= $self->data_source->unit_divider;
+
+  my @ranges	= grep {!$seen{$self->data_source->unit_label($_)}++ && $_<=$max} sort {$b<=>$a} @r,$length;
+  my %labels    = map {$_=>$item_label.$self->data_source->unit_label($_)} @ranges;
+  return popup_menu(-class   => 'searchtitle',
+		    -name    => 'span',
+		    -values  => \@ranges,
+		    -labels  => \%labels,
+		    -default => $length,
+		    -force   => 1,
+		    -onChange => "oPrimerDesigner.scroll('set span',this.options[this.selectedIndex].value)",
+		   );
+}
+
+#NML: holdovers from Bio::Graphics::Browser
+#need to see if there are contemporary versions in new modules
+sub fatal_error {
+    #my $self = shift;
+    print CGI::header('text/plain'),"@_\n";
+    exit 0;
+}
+
+sub render_panel {
+
+    my $render = shift;
+    my $segment = shift;
+    #my $postgrid = shift;
+    my $extra_args = shift;
+    my @panels;
+
+    my $region   = $render->region;
+    my $features = $region->features;
+    my $title    = $render->generate_title($features);
+    my $output;
+    my @post_load = $render->get_post_load_functions;
+
+    $output .= $render->render_html_start($title,@post_load);
+    $output .= $render->render_busy_signal;
+
+    push @panels, $output;
+
+    #my %extra_args = @$extra_args;
+    #my $postgrid = $extra_args{'postgrid'};
+
+    my $scale_bar_html = $render->scale_bar( $segment, 'detail', $extra_args );
+
+    push @panels, 
+	div({-id=>'primer_panel', -style=>'padding:12px;position:relative'},
+	    $scale_bar_html,
+	    $render->render_detailview_panels($segment)
+	);
+
+    my $main_page = join('',@panels);
+
+    my $tracks        = $render->render_tracks_section;
+
+    return $render->sender_tabbed_pages($main_page,$tracks);
+
+    return $main_page;
+
+}
+
+sub sender_tabbed_pages {
+    my $self = shift;
+    my ($main_html,$tracks_html,$community_tracks_html,$custom_tracks_html,$settings_html,) = @_;
+    my $uses_database = $self->user_tracks->database;
+    
+    my $main_title             = $self->translate('MAIN_PAGE');
+    my $tracks_title           = $self->translate('SELECT_TRACKS');
+    my $community_tracks_title = $self->translate('COMMUNITY_TRACKS_PAGE') if $uses_database;
+    my $custom_tracks_title    = $self->translate('CUSTOM_TRACKS_PAGE');
+    my $settings_title         = $self->translate('SETTINGS_PAGE');
+
+    my $html = '';
+    $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
+		   #div({-id=>'tabbed_menu',-class=>'tabmenu'},
+	           span({style=>'display:none', id=>'main_page_select'},               $main_title),
+	           span({style=>'display:none', id=>'track_page_select'},              $tracks_title),
+		   #$uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
+		   #span({id=>'custom_tracks_page_select'},      $custom_tracks_title),
+		   #span({id=>'settings_page_select'},           $settings_title),
+	       #),
+	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
+	   #div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
+	   #$uses_database?div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html) : "",
+	   #div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
+	   #div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),
+	);
+    return $html;
 }
 
 1;

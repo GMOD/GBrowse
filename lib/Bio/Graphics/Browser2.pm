@@ -96,7 +96,8 @@ sub config_base {$ENV{GBROWSE_CONF}
 		    || eval {shift->setting(general=>'config_base')}
 			|| GBrowse::ConfigData->config('conf')
 		              || '/etc/GBrowse2' }
-sub htdocs_base {eval{shift->setting(general=>'htdocs_base')}
+sub htdocs_base {$ENV{GBROWSE_HTDOCS}
+		 || eval{shift->setting(general=>'htdocs_base')}
                     || GBrowse::ConfigData->config('htdocs')
 		        || '/var/www/gbrowse2'     }
 sub url_base    {eval{shift->setting(general=>'url_base')}   

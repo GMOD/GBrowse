@@ -517,16 +517,17 @@ sub wrap_rendered_track {
 	$title = $source->setting($l=>'key') || $label;
     }
     $title =~ s/:(overview|region|detail)$//;
-    my $fav_click      =  "toggle_titlebar_stars('$label')";
    
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
     my $favorite      = $settings->{favorites}{$label};
     my $starIcon      = $favorite ? $favicon_2 : $favicon;
     my $starclass     = $favorite ? "toolbarStar favorite" : "toolbarStar";
     (my $l = $label) =~ s/:(overview|detail|regionview)$//;
+    my $fav_click      =  "toggle_titlebar_stars('$l')";
+
     my @images = (
         $fav_click ? img({   	-src         => $starIcon,
-				-id          =>"barstar_${label}",
+				-id          =>"barstar_${l}",
 				-class       => $starclass,
 				-style       => 'cursor:pointer',
 				-onmousedown => $fav_click,
@@ -543,7 +544,7 @@ sub wrap_rendered_track {
 
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
-		-onClick     => "ShowHideTrack('$label',false)",
+		-onClick     => "ShowHideTrack('$l',false)",
                 -style       => 'cursor:pointer',
                 $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
             }

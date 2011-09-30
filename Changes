@@ -1,4 +1,6 @@
 2.40
+   * Fix inability to toggle visibility & favorite status of plugin tracks from the
+     track titlebar.
    * Added caching of inverted configuration file data structure to speed up track
      rendering on really huge configuration files with many stanzas. Cache structure
      is stored in /tmp/bio_graphics_ff_cache_$UID

@@ -2261,7 +2261,7 @@ sub do_bump {
   my $self = shift;
   my ($track_name,$option,$count,$max,$length) = @_;
 
-  my $source              = $self->source;
+  my $source            = $self->source;
   my $maxb              = $source->code_setting($track_name => 'bump density');
   $maxb                 = $max unless defined $maxb;
 

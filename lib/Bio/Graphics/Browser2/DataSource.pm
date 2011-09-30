@@ -280,7 +280,7 @@ sub details_multiplier {
 
 sub unit_label {
   my $self  = shift;
-  my $value = shift;
+  my $value = shift || 0;
 
   my $unit     = $self->setting('units')        || 'bp';
   my $divider  = $self->setting('unit_divider') || 1;

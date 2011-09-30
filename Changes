@@ -1,4 +1,5 @@
 2.40
+   * Quash a few uninitialized variable warnings when bringing up track configuration dialog.
    * Fix inability to toggle visibility & favorite status of plugin tracks from the
      track titlebar.
    * Added caching of inverted configuration file data structure to speed up track

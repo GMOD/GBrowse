@@ -563,6 +563,7 @@ END
 sub region_size_menu {
   my $self = shift;
   my ($name,$length,$extra_val) = @_;
+  $extra_val ||= 0;
 
   my $source =  $self->render->data_source;
   my %seen;

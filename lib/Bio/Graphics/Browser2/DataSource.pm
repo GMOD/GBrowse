@@ -74,6 +74,10 @@ sub new {
   $self->config_file($config_file_path);
   $self->add_scale_tracks();
   $self->precompile_glyphs;
+
+  # this generates the invert_types data structure which will then get cached to disk
+  $self->type2label('foo',0,'bar');
+
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
   $CONFIG_CACHE{$config_file_path}{ctime}  = time();
@@ -763,32 +767,6 @@ sub invert_types {
     }
     lock_store(\%inverted,$inv_path);
     return  $self->{_inverted}{$keys} = \%inverted;
-}
-
-sub old_invert_types {
-  my $self    = shift;
-  my $config  = shift;
-  return unless $config;
-
-  my $multiplier = $self->global_setting('details multiplier') || 1;
-
-  my %inverted;
-  for my $label (sort keys %{$config}) {
-      my $length = 0;
-      if ($label =~ /^(.+):(\d+)$/) {
-       	  $label  = $1;
-       	  $length = $2;
-      }
-
-      $length    *= $multiplier;
-      my $feature = $self->semantic_setting($label => 'feature',$length) or next;
-      my ($dbid)  = $self->db_settings($label      => $length) or next;
-      $dbid =~ s/:database$//;
-      foreach (shellwords($feature||'')) {
-	  $inverted{lc $_}{$dbid}{$label}++;
-      }
-  }
-  \%inverted;
 }
 
 sub default_labels {

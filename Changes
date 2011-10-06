@@ -1,3 +1,6 @@
+2.41
+   * Quash bugs related to miscalculating semantic zooming settings.
+
 2.40
    * Quash a few uninitialized variable warnings when bringing up track configuration dialog.
    * Fix inability to toggle visibility & favorite status of plugin tracks from the

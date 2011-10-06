@@ -297,6 +297,7 @@ sub unit_label {
          : $abs >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
          : $abs >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
 	 : $abs >= 1    ? sprintf("%.4g %s", $value,    $unit)
+	 : $abs == 0    ? sprintf("%.4g %s", $value,    $unit)
 	 : $abs >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
 	 : $abs >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
 	 : $abs >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
@@ -480,6 +481,7 @@ sub i18n_style {
 sub show_summary {
     my $self = shift;
     my ($label,$length,$settings) = @_;
+
     $settings ||= {};
     return 0 if defined $settings->{features}{$label}{summary_mode_len} &&
 	!$settings->{features}{$label}{summary_mode_len};
@@ -492,6 +494,10 @@ sub show_summary {
 	        or $class->isa('Bio::Graphics::Glyph::minmax');
     return 0 if $self->semantic_fallback_setting($label=>'global feature',$length);
     return 0 unless $c;
+
+    my $section =  Bio::Graphics::Browser2::Render->get_section_from_label($label) || 'detail';
+    $length /= $self->details_multiplier if $section eq 'detail';
+
     $c =~ s/_//g;  
     return 0 unless $c <= $length;
     my $db = $self->open_database($label,$length) or return;
@@ -601,9 +607,9 @@ sub semantic_label {
   my ($self,$label,$length) = @_;
   return $label unless defined $length && $length > 0;
 
-  my $mult = $self->global_setting('details multiplier') || 1;
-  # round a bit
-  $length = int(0.5+($length+1)/$mult);
+  # adjust for details_mult of we are on a 'details' label
+  my $section =  Bio::Graphics::Browser2::Render->get_section_from_label($label) || 'detail';
+  $length    /= $self->details_multiplier if $section eq 'detail';
 
   # look for:
   # 1. a section like "Gene:100000" where the cutoff is <= the length of the segment
@@ -747,7 +753,7 @@ sub invert_types {
 	return $self->{_inverted}{$keys} = lock_retrieve($inv_path);
     }
 
-    my $multiplier = $self->global_setting('details multiplier') || 1;
+#    my $multiplier = $self->global_setting('details multiplier') || 1;
 
     my %inverted;
     for my $label (sort keys %{$config}) {
@@ -757,7 +763,7 @@ sub invert_types {
 	    $length = $2;
 	}
 
-	$length    *= $multiplier;
+#	$length    *= $multiplier;
 	my $feature = $self->semantic_setting($label => 'feature',$length) or next;
 	my ($dbid)  = $self->db_settings($label      => $length) or next;
 	$dbid =~ s/:database$//;

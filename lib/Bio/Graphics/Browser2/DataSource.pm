@@ -495,7 +495,7 @@ sub show_summary {
     return 0 if $self->semantic_fallback_setting($label=>'global feature',$length);
     return 0 unless $c;
 
-    my $section =  Bio::Graphics::Browser2::Render->get_section_from_label($label) || 'detail';
+    my $section =  $self->get_section_from_label($label) || 'detail';
     $length /= $self->details_multiplier if $section eq 'detail';
 
     $c =~ s/_//g;  
@@ -608,7 +608,7 @@ sub semantic_label {
   return $label unless defined $length && $length > 0;
 
   # adjust for details_mult of we are on a 'details' label
-  my $section =  Bio::Graphics::Browser2::Render->get_section_from_label($label) || 'detail';
+  my $section =  $self->get_section_from_label($label) || 'detail';
   $length    /= $self->details_multiplier if $section eq 'detail';
 
   # look for:
@@ -1325,6 +1325,22 @@ sub fix_sqlite {
     return if $SQLITE_FIXED++;
     no warnings;
     *Bio::DB::SeqFeature::Store::DBI::SQLite::_has_spatial_index = sub { return };
+}
+
+sub get_section_from_label {
+    my $self   = shift;
+    my $label  = shift;
+
+    return 'detail' if ref $label;  # work around a DAS bug
+
+    if ($label eq 'overview' || $label =~ /:overview$/){
+        return 'overview';
+    }
+    elsif ($label eq 'region' || $label =~  /:region$/){
+        return 'region';
+    }
+    return 'detail'
+
 }
 
 1;

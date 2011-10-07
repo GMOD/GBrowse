@@ -581,7 +581,7 @@ sub add_tracks {
 		    = $self->background_individual_track_render($track_id);
 	    
 		my $track_key        = $track_keys->{$track_id};
-		my $track_section    = $self->get_section_from_label($track_id);
+		my $track_section    = $self->data_source->get_section_from_label($track_id);
 		my $image_width      = $self->get_image_width($self->state);
 		my $image_element_id = $track_name . "_image";
 		
@@ -3360,22 +3360,6 @@ sub expand_track_names {
 
     return @results;
  }
-
-sub get_section_from_label {
-    my $self   = shift;
-    my $label  = shift;
-
-    return 'detail' if ref $label;  # work around a DAS bug
-
-    if ($label eq 'overview' || $label =~ /:overview$/){
-        return 'overview';
-    }
-    elsif ($label eq 'region' || $label =~  /:region$/){
-        return 'region';
-    }
-    return 'detail'
-
-}
 
 # This turns track names into IDs for use at the client side.
 # This is necessary because tracks from external files/URLs

@@ -1976,7 +1976,7 @@ sub wrap_track_in_track_div {
     # track_type used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
 
-    my $section = $self->get_section_from_label($track_id);
+    my $section = $self->data_source->get_section_from_label($track_id);
     my $class   = $track_id =~ /scale/i ? 'scale' : 'track';
 
     return div(

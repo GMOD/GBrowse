@@ -648,7 +648,7 @@ sub wrap_rendered_track {
     # when the track is collapsed. Otherwise the track labels get moved
     # to the center of the page!
     my $pad     = $self->render_image_pad(
-	$args{section}||Bio::Graphics::Browser2::Render->get_section_from_label($label),
+	$args{section}||Bio::Graphics::Browser2::DataSource->get_section_from_label($label),
 	);
     my $pad_url = $self->source->generate_image($pad);
     my $pad_img = img(
@@ -2463,7 +2463,7 @@ sub segment_length {
     my $self    = shift;
     my $label   = shift;
     my $section = $label 
-	           ? Bio::Graphics::Browser2::Render->get_section_from_label($label) 
+	           ? Bio::Graphics::Browser2::DataSource->get_section_from_label($label) 
 		   : 'detail';
     return eval {$section eq 'detail'   ? $self->segment->length
 	        :$section eq 'region'   ? $self->region_segment->length

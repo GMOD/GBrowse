@@ -415,12 +415,12 @@ sub email_sharee {
 							    $gbrowse_readd_link);
     $contents = CGI::unescapeHTML($contents);
     $subject = CGI::unescapeHTML($subject);
-    $self->Bio::Graphics::Browser2::SendMail::do_sendmail($globals, {
+    $self->Bio::Graphics::Browser2::SendMail::do_sendmail({
 	from       => $globals->email_address,
 	from_title => $globals->application_name,
 	to         => $to_email,
 	subject    => $subject,
-	msg        => $contents});
+	msg        => $contents},$globals);
 }
 
 # Field (Field, File ID[, Value]) - Returns (or, if defined, sets to the new value) the specified field of a file.

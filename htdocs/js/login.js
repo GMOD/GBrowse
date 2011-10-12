@@ -423,7 +423,7 @@ function validate_info() {
         if(user==0) {
             $('loginWarning').innerHTML = Controller.translate('ALL_FIELDS_REQUIRED') + '<br>' + html;
         } else {
-            add_openid_user(CurrentUser,html);
+            add_openid_user(CurrentUser,openid);
             return;
         }
         break;
@@ -1228,10 +1228,17 @@ function confirm_openid(session,page,logged_in,email,gecos) {
 	    login_blackout(false,'');
             var results = transport.responseJSON;
 	    if(results[0].error != null && results[0].error != 'Success') {
-		if (results[0].error.indexOf('not unique') >= 0)
+		if (results[0].error.indexOf('not unique') >= 0) {
 		    alert(Controller.translate('OPENID_ADD_FAILED','OpenID already in use.'));
-		  else
-		      alert(Controller.translate('OPENID_ADD_FAILED',results[0].error));
+		}
+		else if (results[0].error.indexOf('has not been used before')) {
+		    // get the openid
+		    confirm_openid_error(session,page,logged_in,results[0].error,results[0].user,results[0].only);
+		    return;
+		} 
+		else {
+		    alert(Controller.translate('OPENID_ADD_FAILED',results[0].error));
+		}
 		reload_login_script();
 	    }
 	    else if (page == 'edit' || page == 'openid-add') {
@@ -1252,7 +1259,7 @@ function confirm_openid_error(session,page,logged_in,error,openid,only,email,gec
     var event  = new fakeEvent();
     (only == 0 || logged_in) ? OpenIDMenu = false : OpenIDMenu = true;
     load_login_balloon(event,session,false,false);
-    login_blackout(false,'');
+    login_blackout(true,'');
 
     if(only == 1) {UsingOpenID=true;}
     if(page == 'openid-add') {login_page_change('edit');}

@@ -566,7 +566,8 @@ sub do_validate {
   # remove dangling unconfirmed accounts here
   $self->check_old_confirmations();
 
-  return $self->string_result('Usernames cannot contain any backslashes, whitespace or non-ascii characters.')
+#  return $self->string_result('Usernames cannot contain any backslashes, whitespace or non-ascii characters.')
+  return $self->code_result('INVALID_NAME'=>'Usernames cannot contain any backslashes, whitespace or non-ascii characters.')
       unless $self->check_user($user);
 
   my $userid = $self->userid_from_username($user);
@@ -1013,8 +1014,6 @@ sub do_check_openid {
     my ($openid, $sessionid, $source, $option) = @_;
     
     my $return_to  = $globals->gbrowse_url($source)."/?openid_confirm=1;page=$option;s=$sessionid";
-    # $return_to .= "id=logout;" if $option ne "openid-add";
-       #id=logout needed in case another user is already signed in
 
     my $csr = Net::OpenID::Consumer->new(
         ua              => LWP::UserAgent->new,
@@ -1046,7 +1045,7 @@ sub do_check_openid {
 # Confirm OpenID - Checks that the returned credentials are valid.
 sub do_confirm_openid {
     my $self = shift;
-    my ($callbacks, $sessionid, $option) = @_;
+    my ($callbacks, $sessionid, $option,$email,$fullname) = @_;
     
     my $userdb = $self->{dbi};
     
@@ -1086,7 +1085,7 @@ sub do_confirm_openid {
             if($option eq "openid-add") {
 		push @results,$self->do_add_openid_to_account($sessionid, $user, $vident->url, $only)
             } else {
-		push @results,$self->do_get_openid($vident->url);
+		push @results,$self->do_get_openid($vident->url,$email,$fullname);
             }
         },
         error => sub {
@@ -1116,11 +1115,11 @@ sub do_get_email {
 # Get OpenID - Check to see if the provided openid is unused
 sub do_get_openid {
     my $self   = shift;
-    my $openid = shift;
+    my ($openid,$email,$fullname) = @_;
 
     my $userdb = $self->{dbi};
     
-    my ($error,$userinfo);
+    my $error;
 
     my $from = <<END;
 FROM users as A, openid_users as B, session as C
@@ -1143,7 +1142,7 @@ END
         } else {
             $error  = "Error: $rows rows returned, please consult your service host.";
         }
-        return {error=>$error,openid=>$openid,userinfo=>$userinfo};
+        return {error=>$error,openid=>$openid,email=>$email,fullname=>$fullname};
     }
 
     my $select = $userdb->prepare("SELECT C.username, C.sessionid, A.remember, A.openid_only, A.userid $from");
@@ -1237,8 +1236,6 @@ sub do_add_openid_user {
     my $self = shift;
     my ($user, $email, $gecos, $openid, $sessionid, $remember) = @_;
 
-    warn "do_add_openid_user(",join(',',@_),')';
-    
     my $userdb = $self->{dbi};
 
     return $self->string_result("Usernames cannot contain any backslashes, whitespace or non-ascii characters.")
@@ -1325,6 +1322,11 @@ sub dbi_err {
     return (200,'text/plain',"Error: $error");
 }
 
+sub code_result {
+    my $self = shift;
+    my ($code,@msg) = @_;
+    return (200,'application/json',{code=>$code,message=>join('',@msg)});
+}
 sub string_result {
     my $self = shift;
     my @msg  = @_;

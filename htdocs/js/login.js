@@ -76,16 +76,16 @@ function load_login_balloon(event,session,username,openid) {
                        'id=loginUser type=text maxlength=32 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginFRow style=display:none><td>' + Controller.translate('REALNAME') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginFullName type=text maxlength=32 style=font-size:9pt size=30></td></tr>' +
+                       'id=loginFullName type=text  maxlength=32 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginERow style=display:none><td>' + Controller.translate('EMAIL_TO_VALIDATE') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginEmail type=text maxlength=64 style=font-size:9pt size=30></td></tr>' +
+                       'id=loginEmail type=text  maxlength=64 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginPRow><td>' + Controller.translate('PASSWORD') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginPass type=password maxlength=32 style=font-size:9pt size=30></td></tr>' +
+                       'id=loginPass type=password  maxlength=32 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginP2Row style=display:none><td>' + Controller.translate('RETYPE_PASSWORD') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginPass2 type=password maxlength=32 style=font-size:9pt size=30></td></tr>' +
+                       'id=loginPass2 type=password  maxlength=32 style=font-size:9pt size=30></td></tr>' +
                  '</tbody>' +
 
                    //"Edit Details" input text boxes
@@ -1222,7 +1222,9 @@ function confirm_openid(session,page,logged_in,email,gecos) {
 		    callback: callback,
 		    id:       session,
 		    session:  session,
-		    option:   page
+		    option:   page,
+		    email:    email,
+		    fullname: gecos
         },
         onSuccess: function (transport) {
 	    login_blackout(false,'');
@@ -1232,8 +1234,7 @@ function confirm_openid(session,page,logged_in,email,gecos) {
 		    alert(Controller.translate('OPENID_ADD_FAILED','OpenID already in use.'));
 		}
 		else if (results[0].error.indexOf('has not been used before')) {
-		    // get the openid
-		    confirm_openid_error(session,page,logged_in,results[0].error,results[0].user,results[0].only);
+		    confirm_openid_error(session,page,logged_in,results[0].error,results[0].openid,true,results[0].email,results[0].fullname);
 		    return;
 		} 
 		else {

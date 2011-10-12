@@ -522,7 +522,7 @@ sub wrap_rendered_track {
     my $favorite      = $settings->{favorites}{$label};
     my $starIcon      = $favorite ? $favicon_2 : $favicon;
     my $starclass     = $favorite ? "toolbarStar favorite" : "toolbarStar";
-    (my $l = $label) =~ s/:(overview|detail|regionview)$//;
+    (my $l = $label) =~ s/:detail$//;
     my $fav_click      =  "toggle_titlebar_stars('$l')";
 
     my @images = (

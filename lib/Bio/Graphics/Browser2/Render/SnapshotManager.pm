@@ -113,7 +113,7 @@ sub render_snapshots_listing {
 	my $mail_snapshot = $self->render->globals->smtp_enabled ? (
 	    span({-id=>"mail_$snapshot_name"},  img({   -src         => $mailSnapshotPath, 
 							-id          => "mail",
-							-onClick     => "\$('mail_snapshot_$escapedKey').show();" 
+							-onClick     => "\$('mail_snapshot_dialog_$escapedKey').show();" 
 							                 . "Controller.pushForward('$escapedKey')",
 							    -title 	   => 'Email',	
 							    -class 	   => 'snapshot_icon',
@@ -139,7 +139,7 @@ sub render_snapshots_listing {
 						   -onclick => '$(\'' . "send_snapshot_$escapedKey" . '\').hide(); this.style.zIndex = \'0\'',}),
 				       ));
     
-	my $mail_snapshot_dialog = div({-id	=>"mail_snapshot_$escapedKey",
+	my $mail_snapshot_dialog = div({-id	=>"mail_snapshot_dialog_$escapedKey",
 					-class =>"mail_snapshot"},  
 				       div(
 					   {-id => "mail_snapshot_contents"},

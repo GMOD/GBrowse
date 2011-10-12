@@ -25,7 +25,6 @@ sub config_dialog {
 	          :$label =~ /:region$/   ? $render->thin_region_segment
                   :$render->thin_segment;
     my $length = eval{$seg->length}||0;
-    $length   /= $data_source->global_setting('details multiplier');
 
     eval 'require Bio::Graphics::Browser2::OptionPick; 1'
         unless Bio::Graphics::Browser2::OptionPick->can('new');
@@ -68,46 +67,38 @@ sub config_dialog {
     my $title   = div({-class=>'config-title'},$key);
     my $dynamic = $render->translate('DYNAMIC_VALUE');
 
-    my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 10;
-    my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
-    my $glyph    = $data_source->semantic_fallback_setting( $label => 'glyph',          $length )   || 'box';
-    my $stranded = $data_source->semantic_fallback_setting( $label => 'stranded',       $length);
-    my $variance_band = $data_source->semantic_fallback_setting( $label => 'variance_band',$length);
-    my $limit    = $data_source->semantic_fallback_setting( $label => 'feature_limit' , $length)    || 0;
-    my $summary_length  = $data_source->semantic_fallback_setting( $label => 'show summary' , $length) || 0;
+    my $height        = $self->setting( $label => 'height' ,        $length, $summary_mode)    || 10;
+    my $width         = $self->setting( $label => 'linewidth',      $length, $summary_mode )   || 1;
+    my $glyph         = $self->setting( $label => 'glyph',          $length, $summary_mode )   || 'box';
+    my $stranded      = $self->setting( $label => 'stranded',       $length, $summary_mode);
+    my $variance_band = $self->setting( $label => 'variance_band',$length, $summary_mode);
+    my $limit         = $self->setting( $label => 'feature_limit' , $length, $summary_mode)    || 0;
+    my $summary_length= $self->setting( $label => 'show summary' , $length, $summary_mode) || 0;
 
     # options for wiggle & xy plots
-    my $min_score= $data_source->semantic_fallback_setting( $label => 'min_score' ,     $length);
-    my $max_score= $data_source->semantic_fallback_setting( $label => 'max_score' ,     $length);
+    my $min_score= $self->setting( $label => 'min_score' ,     $length, $summary_mode);
+    my $max_score= $self->setting( $label => 'max_score' ,     $length, $summary_mode);
     $min_score = -1 unless defined $min_score;
     $max_score = +1 unless defined $max_score;
-    my $autoscale = $data_source->semantic_fallback_setting( $label => 'autoscale' ,     $length);
-    $autoscale    = 'local' if $summary_mode;
+    my $autoscale = $self->setting( $label => 'autoscale' ,     $length, $summary_mode);
     $autoscale  ||= 'local';
 
-    my $sd_fold   = $data_source->semantic_fallback_setting( $label => 'z_score_bound' ,     $length);
+    my $sd_fold   = $self->setting( $label => 'z_score_bound' ,     $length, $summary_mode);
     $sd_fold    ||= 4;
 
-    my $bicolor_pivot = $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,  $length);
-    my $graph_type    = $data_source->semantic_fallback_setting( $label => 'graph_type' ,     $length);
-    my $glyph_subtype = $data_source->semantic_fallback_setting( $label => 'glyph_subtype' ,  $length);
+    my $bicolor_pivot = $self->setting( $label => 'bicolor_pivot' ,  $length, $summary_mode);
+    my $graph_type    = $self->setting( $label => 'graph_type' ,     $length, $summary_mode);
+    my $glyph_subtype = $self->setting( $label => 'glyph_subtype' ,  $length, $summary_mode);
 
     # options for wiggle_whiskers
-    my $max_color   = $data_source->semantic_fallback_setting( $label => 'max_color' ,   $length);
-    my $mean_color  = $data_source->semantic_fallback_setting( $label => 'mean_color' ,  $length);
-    my $stdev_color = $data_source->semantic_fallback_setting( $label => 'stdev_color' , $length);
+    my $max_color   = $self->setting( $label => 'max_color' ,   $length, $summary_mode);
+    my $mean_color  = $self->setting( $label => 'mean_color' ,  $length, $summary_mode);
+    my $stdev_color = $self->setting( $label => 'stdev_color' , $length, $summary_mode);
 
-    my @glyph_select;
-
-    if ($summary_mode) {
-	$glyph        = $override->{glyph} || 'wiggle_density';
-	@glyph_select = qw(wiggle_xyplot wiggle_density);
-    } else {
-	@glyph_select = shellwords(
-	    $data_source->semantic_fallback_setting( $label => 'glyph select', $length )
-	    );
-	unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
-    }
+    my @glyph_select = shellwords(
+	    $self->setting( $label => 'glyph select', $length, $summary_mode )
+	);
+    unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
 
     my $db           = $data_source->open_database($label,$length);
     my $quantitative = $glyph =~ /wiggle|vista|xy|density/ || ref($db) =~ /bigwig/i;
@@ -269,7 +260,7 @@ END
 		  th( { -align => 'right' }, $render->translate('BICOLOR_PIVOT_POS_COLOR')),
 		   td( $picker->color_pick(
 			   'conf_pos_color',
-			   $data_source->semantic_fallback_setting( $label => 'pos_color', $length ),
+			   $self->setting( $label => 'pos_color', $length, $summary_mode ),
 			   $override->{'pos_color'}
 		       )
 		   )
@@ -279,7 +270,7 @@ END
 		   th( { -align => 'right' }, $render->translate('BICOLOR_PIVOT_NEG_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_neg_color',
-			   $data_source->semantic_fallback_setting( $label => 'neg_color', $length ),
+			   $self->setting( $label => 'neg_color', $length, $summary_mode ),
 			   $override->{'neg_color'}
 		       )
 		   )
@@ -291,7 +282,7 @@ END
 		   th( { -align => 'right' }, $render->translate('BACKGROUND_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_bgcolor',
-			   $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
+			   $self->setting( $label => 'bgcolor', $length, $summary_mode ),
 			   $override->{'bgcolor'}
 		       )
 		   )
@@ -302,7 +293,7 @@ END
 		   th( { -align => 'right' }, 'Peak gradient start'),
 		   td( $picker->color_pick(
 			   'conf_start_color',
-			    $data_source->semantic_fallback_setting( $label => 'start_color', $length ),
+			    $self->setting( $label => 'start_color', $length, $summary_mode ),
 			   $override->{'start_color'}
 		       )
 		   )
@@ -313,7 +304,7 @@ END
 		   th( { -align => 'right' }, 'Peak gradient end'),
 		   td( $picker->color_pick(
 			   'conf_end_color',
-			    $data_source->semantic_fallback_setting( $label => 'end_color', $length ),
+			    $self->setting( $label => 'end_color', $length, $summary_mode ),
 			   $override->{'end_color'}
 		       )
 		   )
@@ -322,7 +313,7 @@ END
 		   th( { -align => 'right' }, $render->translate('FG_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_fgcolor',
-			   $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
+			   $self->setting( $label => 'fgcolor', $length, $summary_mode ),
 			   $override->{'fgcolor'}
 		       )
 		   )
@@ -464,7 +455,7 @@ END
 		   td( $picker->popup_menu(
 			   -name    => 'conf_height',
 			   -current => $override->{'height'},
-			   -default => $summary_mode ? 15 : $height,
+			   -default => $height,
 			   -values  => [
 				sort { $a <=> $b }
 				( $height, map { $_ * 5 } ( 1 .. 20 ) )
@@ -558,6 +549,26 @@ END
     $return_html .= script({-type=>'text/javascript'},"track_configure.glyph_select(\$('config_table'),\$('glyph_picker_id'))");
     $return_html .= end_html();
     return $return_html;
+}
+
+sub setting {
+    my $self = shift;
+    my ($label,$option,$length,$is_summary) = @_;
+    my $data_source = $self->render->data_source();
+
+    # bad hack
+    if ($is_summary) {
+	if ($data_source->Bio::Graphics::FeatureFile::setting("$label:summary")) {
+	    return $data_source->semantic_fallback_setting("$label:summary",$option,$length);
+	} else {
+	    return 'wiggle_density' if $option eq 'glyph';
+	    return 15               if $option eq 'height';
+	    return 0                if $option eq 'min_score';
+	    return 'local'          if $option eq 'autoscale';
+	}
+    }
+
+    return $data_source->semantic_fallback_setting($label,$option,$length);
 }
 
 sub region_size_menu {

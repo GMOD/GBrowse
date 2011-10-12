@@ -1149,7 +1149,7 @@ sub make_scale_feature {
     my ($segment,$width) = @_;
     return unless $segment;
 
-    my $length   = $segment->length / $self->details_mult;
+    my $length   = $segment->length;
 
     my ($guesstimate, $label) = $self->calculate_scale_size($length, $width);
 
@@ -1638,7 +1638,7 @@ sub add_features_to_track {
       my (@full_types,@summary_types);
       for my $l (@labels) {
 	  my @types = $source->label2type($l,$length) or next;
-	  if ($source->show_summary($l,$self->vis_length,$self->settings)) {
+	  if ($source->show_summary($l,$length,$self->settings)) {
 	      $is_summary{$l}++;
 	      push @summary_types,@types;
 	  } else {
@@ -1687,7 +1687,7 @@ sub add_features_to_track {
           $l =~ s/:\d+//;  # get rid of semantic zooming tag
 
 	  my $track = $tracks->{$l}  or next;
-	  
+
 	  my $stt        = $self->subtrack_manager($l);
 	  my $is_summary = $is_summary{$l};
 
@@ -2089,13 +2089,12 @@ sub create_track_args {
   my $source          = $self->source;
   my $lang            = $self->language;
 
-  my $is_summary      = $source->show_summary($label,$self->vis_length,$self->settings);
-  
+  my $is_summary      = $source->show_summary($label,$length,$self->settings);
   my $state            = $self->settings;
 
   my $semantic_override = Bio::Graphics::Browser2::Render->find_override_region(
       $state->{features}{$label}{semantic_override},
-      $length/$self->details_mult);
+      $length);
   my $override  = $is_summary           ? $state->{features}{$label}{summary_override}
                    : $semantic_override ? $state->{features}{$label}{semantic_override}{$semantic_override}
                    : {};
@@ -2105,14 +2104,15 @@ sub create_track_args {
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
   push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
 
+  my @summary_args = ();
   if ($is_summary) {
-      unshift @override,(
-	  -glyph     => 'wiggle_density',
-	  -height    => 15,
-	  -min_score => 0,
-	  -autoscale => 'local',
-      );
-      push @override, $source->i18n_style("$label:summary",$lang) if $source->Bio::Graphics::FeatureFile::setting("$label:summary");
+      @summary_args = $source->Bio::Graphics::FeatureFile::setting("$label:summary") 
+	  ? $source->i18n_style("$label:summary",$lang)
+	  : (-glyph     => 'wiggle_density',
+	     -height    => 15,
+	     -min_score => 0,
+	     -autoscale => 'local',
+	  );
   }
   my $hilite_callback = $args->{hilite_callback};
 
@@ -2157,12 +2157,14 @@ sub create_track_args {
 	       @default_args,
 	       $source->default_style,
 	       $source->i18n_style($label,$lang),
+	       @summary_args,
 	       @override,
 	  );
   } else {
     @args = (@default_args,
 	     $source->default_style,
 	     $source->i18n_style($label,$lang,$length),
+	     @summary_args,
 	     @override,
 	    );
   }

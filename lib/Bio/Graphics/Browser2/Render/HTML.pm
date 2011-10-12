@@ -2166,8 +2166,6 @@ sub source_menu {
 # This is currently somewhat hacky, hard to extend and needs to be generalized.
 # NOTE: to add new configuration rows, the name of the form element must begin with "conf_" and
 # the rest must correspond to a valid glyph option.
-
-# BUG: MOVE THIS INTO ITS OWN MODULE!
 sub track_config {
     my $self        = shift;
     my $label              = shift;

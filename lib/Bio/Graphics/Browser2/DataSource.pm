@@ -753,7 +753,7 @@ sub invert_types {
 	return $self->{_inverted}{$keys} = lock_retrieve($inv_path);
     }
 
-#    my $multiplier = $self->global_setting('details multiplier') || 1;
+    my $multiplier = $self->global_setting('details multiplier') || 1;
 
     my %inverted;
     for my $label (sort keys %{$config}) {
@@ -763,7 +763,10 @@ sub invert_types {
 	    $length = $2;
 	}
 
-#	$length    *= $multiplier;
+	#  sigh... reverse multiplier effect for semantic zooming....
+	my $section =  $self->get_section_from_label($label) || 'detail';
+	$length    *= $multiplier if $section eq 'detail';
+
 	my $feature = $self->semantic_setting($label => 'feature',$length) or next;
 	my ($dbid)  = $self->db_settings($label      => $length) or next;
 	$dbid =~ s/:database$//;

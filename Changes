@@ -1,3 +1,7 @@
+2.43
+  * Fix semantic zooming bug which caused features to disappear when feature type changed between
+     semantic zooming levels. Also speeded up rendering process.
+
 2.42
    * Improve user interface when a new openid user first logs in.
    * Fix outgoing mail, which was broken.

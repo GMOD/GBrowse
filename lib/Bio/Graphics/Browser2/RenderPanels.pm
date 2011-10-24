@@ -688,6 +688,7 @@ sub wrap_rendered_track {
 
     my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
 
+
     my $subtrack_labels = join '',map {
 	my ($label,$left,$top) = @$_;
 	$left = PAD_DETAIL_SIDES;
@@ -1800,8 +1801,7 @@ sub add_features_to_track {
         $tempFeature->add_segment(($tempSubFeature));
         $track->add_feature($tempFeature);
         
-        foreach (values %$g) {
-            my $f = $_;
+        for my $f (values %$g) {
             my @colours = ( qw(aqua black blue fuchsia gray green lime maroon navy olive purple red silver teal yellow) );
             my @subFeatures = $f->get_SeqFeatures;
             my $subf = $subFeatures[0];

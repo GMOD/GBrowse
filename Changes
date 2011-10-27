@@ -1,4 +1,12 @@
-2.41 Fri Oct  7 09:23:45 EDT 2011
+2.43
+  * Fix semantic zooming bug which caused features to disappear when feature type changed between
+     semantic zooming levels. Also speeded up rendering process.
+
+2.42
+   * Improve user interface when a new openid user first logs in.
+   * Fix outgoing mail, which was broken.
+
+2.41
    * Quash bugs related to miscalculating semantic zooming settings.
    * Fix inability to close tracks in the overview by clicking on their close box.
 

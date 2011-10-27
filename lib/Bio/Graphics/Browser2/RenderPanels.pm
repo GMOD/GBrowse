@@ -688,6 +688,7 @@ sub wrap_rendered_track {
 
     my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
 
+
     my $subtrack_labels = join '',map {
 	my ($label,$left,$top) = @$_;
 	$left = PAD_DETAIL_SIDES;
@@ -1631,7 +1632,7 @@ sub add_features_to_track {
     $db2db{$db}  =  $db;  # cache database object
   }
 
-  my (%iterators,%iterator2dbid,%is_summary);
+  my (%iterators,%iterator2dbid,%is_summary,%type2label);
   for my $db (keys %db2db) {
       my @labels           = keys %{$db2label{$db}};
 
@@ -1644,7 +1645,9 @@ sub add_features_to_track {
 	  } else {
 	      push @full_types,@types;
 	  }
+	  $type2label{$_}{$l}++ foreach @types;
       }
+      $self->{_type2label}=\%type2label;
       
       warn "[$$] RenderPanels->get_iterator(@full_types)"  if DEBUG;
       warn "[$$] RenderPanels->get_summary_iterator(@summary_types)" if DEBUG;
@@ -1678,7 +1681,7 @@ sub add_features_to_track {
       }
 
       $source->add_dbid_to_feature($feature,$iterator2dbid{$iterator});
-      my @labels = $source->feature2label($feature,$length);
+      my @labels = $self->feature2label($feature);
 
       warn "[$$] $iterator->next_seq() returns $feature, will assign to @labels" if DEBUG;
 
@@ -1798,8 +1801,7 @@ sub add_features_to_track {
         $tempFeature->add_segment(($tempSubFeature));
         $track->add_feature($tempFeature);
         
-        foreach (values %$g) {
-            my $f = $_;
+        for my $f (values %$g) {
             my @colours = ( qw(aqua black blue fuchsia gray green lime maroon navy olive purple red silver teal yellow) );
             my @subFeatures = $f->get_SeqFeatures;
             my $subf = $subFeatures[0];
@@ -2319,6 +2321,17 @@ sub do_description {
         : 0;
 }
 
+sub feature2label {
+    my $self = shift;
+    my $feature = shift;
+    my $type2label = $self->{_type2label} or die "no type2label map defined";
+    my $type = eval {$feature->type} || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
+    (my $basetype = $type) =~ s/:.+$//;
+    my $labels = $type2label->{$type}||$type2label->{$basetype} or return;
+    my @labels = keys %$labels;
+    return @labels;
+}
+
 # override make_link to allow for code references
 sub make_link {
   my $self     = shift;
@@ -2346,9 +2359,8 @@ sub make_link {
       && $label->isa('Bio::Graphics::FeatureFile');
   }
 
-
   $panel ||= 'Bio::Graphics::Panel';
-  $label ||= $data_source->feature2label($feature);
+  $label ||= eval {$self->feature2label($feature)};
   $label ||= 'general';
 
   # most specific -- a configuration line
@@ -2412,7 +2424,7 @@ sub make_title {
     }
 
     else {
-      $label     ||= $source->feature2label($feature) or last TRY;
+      $label     ||= eval {$self->feature2label($feature)} or last TRY;
       $key       ||= $source->setting($label,'key') || $label;
       $key         =~ s/s$//;
       $key         = "source = ".$feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
@@ -2482,7 +2494,7 @@ sub make_link_target {
     return $dsn;
   }
 
-  $label    ||= $source->feature2label($feature) or return;
+  $label    ||= eval{$self->feature2label($feature)} or return;
   my $link_target = $source->code_setting($label,'link_target')
     || $source->code_setting('TRACK DEFAULTS' => 'link_target')
     || $source->globals->code_setting(general => 'link_target')

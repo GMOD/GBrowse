@@ -176,76 +176,6 @@ sub nowfun {
   return $globals->user_account_db =~ /sqlite/i ? "datetime('now','localtime')" : 'now()';
 }
 
-# Do Sendmail - Handles outgoing email using either Net::SMTP or Net::SMTP::SSL as required.
-# The format of the smtp argument is:
-#
-#      smtp.server.com:port:encryption:username:password
-#
-# This has up to five fields. Only the first field is required.
-# The port is assumed to be 25 unless ssl encryption is specified, in which case it defaults to 465.
-# The protocol is either "plain" or "ssl", "plain" assumed.
-# The username and password may be required by the SMTP server to send outgoing mail.
-#sub do_sendmail {
-#  my $self = shift;
-#  my $args = shift;
-#  my $globals = $self->{globals};
-
-
-#  eval {
-#	  $globals->smtp or die "No SMTP server found in globals";
-#
-#	  my ($server, $port, $protocol, $username, $password) = split ':', $globals->smtp;
-#	  $protocol ||= 'plain';
-#	  $port     ||= $protocol eq 'plain' ? 25 : 465;
-#	  $protocol =~ /plain|ssl/ or die 'encryption must be either "plain" or "ssl"';
-#	
-#	  # At least some SMTP servers will refuse to accept mail
-#	  # unless From matches the authentication username.
-#	  my $smtp_from   = $username ? $username : $args->{from};
-#
-#	  my $smtp_sender;
-#	  if ($protocol eq 'plain') {
-#	      eval "require Net::SMTP" unless Net::SMTP->can('new');
-#	      $smtp_sender = 'Net::SMTP';
-#	  } else {
-#	      eval "require Net::SMTP::SSL" unless Net::SMTP::SSL->can('new');
-#	      $smtp_sender = 'Net::SMTP::SSL';
-#	  }
-#
-#	  my $smtp_obj = $smtp_sender->new(
-#	      $server,
-#	      Port    => $port,
-#	      Debug   => 1,
-#	      )
-#	      or die "Could not connect to outgoing mail server $server";
-#	  
-#	  if ($username) {
-#	      $smtp_obj->auth($username, $password) 
-#		  or die "Could not authenticate with outgoing mail server $server"
-#	  }
-	  
-#	  $smtp_obj->mail("$smtp_from\n")                    or die $smtp_obj->message;
-#	  $smtp_obj->to("$args->{to}\n")                     or die $smtp_obj->message;
-#	  $smtp_obj->data()                                  or die $smtp_obj->message;
-#	  $smtp_obj->datasend("From: \"$args->{from_title}\" <$args->{from}>\n")
-#	                                                     or die $smtp_obj->message;
-#	  $smtp_obj->datasend("To: $args->{to}\n")           or die $smtp_obj->message;
-#	  $smtp_obj->datasend("Reply-to: $args->{from}\n")   or die $smtp_obj->message;
-#	  $smtp_obj->datasend("Subject: $args->{subject}\n") or die $smtp_obj->message;
-#	  $smtp_obj->datasend("Content-type: text/html; charset=ISO-8859-1\n") 
-#	                                                     or die $smtp_obj->message
-#							     if $args->{HTML};
-#	  $smtp_obj->datasend("\n")                          or die $smtp_obj->message;
-#	  $smtp_obj->datasend($args->{msg})                  or die $smtp_obj->message;
-#	  $smtp_obj->datasend("\n")                          or die $smtp_obj->message;
-#	  $smtp_obj->dataend()                               or die $smtp_obj->message;
-#	  $smtp_obj->quit();
-#  };
-#  warn $@ if $@;
-#  return (0, $@) if $@;
-#  return (1,'');
-#}
-
 #################### N O N - O P E N I D   F U N C T I O N S #####################
 # Get User ID (User) - Returns a confirmed user's ID
 sub get_user_id {
@@ -636,7 +566,8 @@ sub do_validate {
   # remove dangling unconfirmed accounts here
   $self->check_old_confirmations();
 
-  return $self->string_result('Usernames cannot contain any backslashes, whitespace or non-ascii characters.')
+#  return $self->string_result('Usernames cannot contain any backslashes, whitespace or non-ascii characters.')
+  return $self->code_result('INVALID_NAME'=>'Usernames cannot contain any backslashes, whitespace or non-ascii characters.')
       unless $self->check_user($user);
 
   my $userid = $self->userid_from_username($user);
@@ -806,7 +737,7 @@ END
      subject    => $globals->application_name . " Account Activation",
      msg        => $message,
      HTML       => 1,
-  });
+  },$globals);
   unless ($status) {
       warn $err;
        return $self->string_result('Mail Error');
@@ -987,7 +918,7 @@ sub do_email_info {
 			     to         => $email,
 			     subject    => $globals->application_name . " Account Information",
 			     msg        => $message
-			    });
+			    },$globals);
   return $self->string_result($err) unless $status;
 
   my $secret = $self->generate_salted_digest($pass);
@@ -1083,8 +1014,6 @@ sub do_check_openid {
     my ($openid, $sessionid, $source, $option) = @_;
     
     my $return_to  = $globals->gbrowse_url($source)."/?openid_confirm=1;page=$option;s=$sessionid";
-    # $return_to .= "id=logout;" if $option ne "openid-add";
-       #id=logout needed in case another user is already signed in
 
     my $csr = Net::OpenID::Consumer->new(
         ua              => LWP::UserAgent->new,
@@ -1116,7 +1045,7 @@ sub do_check_openid {
 # Confirm OpenID - Checks that the returned credentials are valid.
 sub do_confirm_openid {
     my $self = shift;
-    my ($callbacks, $sessionid, $option) = @_;
+    my ($callbacks, $sessionid, $option,$email,$fullname) = @_;
     
     my $userdb = $self->{dbi};
     
@@ -1156,7 +1085,7 @@ sub do_confirm_openid {
             if($option eq "openid-add") {
 		push @results,$self->do_add_openid_to_account($sessionid, $user, $vident->url, $only)
             } else {
-		push @results,$self->do_get_openid($vident->url);
+		push @results,$self->do_get_openid($vident->url,$email,$fullname);
             }
         },
         error => sub {
@@ -1186,11 +1115,11 @@ sub do_get_email {
 # Get OpenID - Check to see if the provided openid is unused
 sub do_get_openid {
     my $self   = shift;
-    my $openid = shift;
+    my ($openid,$email,$fullname) = @_;
 
     my $userdb = $self->{dbi};
     
-    my ($error,$userinfo);
+    my $error;
 
     my $from = <<END;
 FROM users as A, openid_users as B, session as C
@@ -1207,13 +1136,13 @@ END
 	or return {error=>'Error: '.$userdb->errstr.'.'};
 
     if($rows != 1) {
-        if($rows != 0) {
-            $error  = "Error: $rows rows returned, please consult your service host.";
-        } else {
+        if($rows == 0) {
             $error  = "The OpenID provided has not been used before. ";
             $error .= "Please create an account first before trying to edit your information.";
+        } else {
+            $error  = "Error: $rows rows returned, please consult your service host.";
         }
-        return {error=>$error,openid=>$openid,userinfo=>$userinfo};
+        return {error=>$error,openid=>$openid,email=>$email,fullname=>$fullname};
     }
 
     my $select = $userdb->prepare("SELECT C.username, C.sessionid, A.remember, A.openid_only, A.userid $from");
@@ -1306,7 +1235,7 @@ sub do_add_openid_to_account {
 sub do_add_openid_user {
     my $self = shift;
     my ($user, $email, $gecos, $openid, $sessionid, $remember) = @_;
-    
+
     my $userdb = $self->{dbi};
 
     return $self->string_result("Usernames cannot contain any backslashes, whitespace or non-ascii characters.")
@@ -1393,6 +1322,11 @@ sub dbi_err {
     return (200,'text/plain',"Error: $error");
 }
 
+sub code_result {
+    my $self = shift;
+    my ($code,@msg) = @_;
+    return (200,'application/json',{code=>$code,message=>join('',@msg)});
+}
 sub string_result {
     my $self = shift;
     my @msg  = @_;

@@ -55,7 +55,7 @@ sub do_sendmail {
 	  
 	  if ($username) {
 	      $smtp_obj->auth($username, $password) 
-		  or die "Could not authenticate with outgoing mail server $server"
+		  or die "Could not authenticate with outgoing mail server $server: ",$smtp_obj->message
 	  }
 	  
 	  $smtp_obj->mail("$smtp_from\n")                    or die $smtp_obj->message;

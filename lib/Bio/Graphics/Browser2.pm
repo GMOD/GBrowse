@@ -2,7 +2,7 @@ package Bio::Graphics::Browser2;
 # $Id$
 # Globals and utilities for GBrowse and friends
 
-our $VERSION = '2.43';
+our $VERSION = '2.44';
 
 use strict;
 use warnings;
@@ -395,6 +395,13 @@ sub create_data_source {
       $source->add_conf_files($expr);
   }
   return $source;
+}
+
+sub max_features {
+    my $self = shift;
+    my $max = $self->setting(general => 'maximum features');
+    return 5000 unless defined $max;
+    return $max;
 }
 
 sub default_source {

@@ -1668,7 +1668,7 @@ sub add_features_to_track {
   # The effect of this loop is to fetch a feature from each iterator in turn
   # using a queueing scheme. This allows streaming iterators to parallelize a
   # bit. This may not be worth the effort.
-  my (%feature2dbid,%classes,%max_features,%limit_hit,%has_subtracks);
+  my (%feature2dbid,%classes,%limit_hit,%has_subtracks);
 
   while (keys %iterators) {
     for my $iterator (values %iterators) {
@@ -1858,10 +1858,11 @@ sub add_features_to_track {
       if $limit && $limit > 0;
 
     if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
-	my $max   = $tracks->{$l}->feature_limit;
-	my $count = $tracks->{$l}->feature_count;
+	my $max       = $tracks->{$l}->feature_limit;
+	my $count     = $tracks->{$l}->feature_count;
+	my $message   = $count == $self->source->globals->max_features ? 'FEATURES_CLIPPED_MAX' : 'FEATURES_CLIPPED';
 	$tracks->{$l}->panel->key_style('between');
-	$tracks->{$l}->configure(-key => $self->language->translate('FEATURES_CLIPPED',$max,$count));
+	$tracks->{$l}->configure(-key => $self->language->translate($message,$max,$count));
     }
   }
 
@@ -1869,7 +1870,7 @@ sub add_features_to_track {
 
 sub get_iterator {
   my $self = shift;
-  my ($db,$segment,$feature_types,$max) = @_;
+  my ($db,$segment,$feature_types) = @_;
 
   # The Bio::DB::SeqFeature::Store database supports correct
   # semantics for directly retrieving features that overlap
@@ -1877,13 +1878,13 @@ sub get_iterator {
   # and then to query the segment! This is a problem, because it
   # means that the reference sequence (e.g. the chromosome) is
   # repeated in each database, even if it isn't the primary one :-(
+  my $max = $self->source->globals->max_features;
   if ($db->can('get_seq_stream')) {
       my @args = (-type   => $feature_types,
 		  -seq_id => $segment->seq_id,
 		  -start  => $segment->start,
-		  -end    => $segment->end,
-		  -max_features => $max,  # some adaptors allow this
-	  );
+		  -end    => $segment->end);
+      push @args,(-max_features => $max) if $max > 0;  # some adaptors allow this
       return $db->get_seq_stream(@args);
   }
 

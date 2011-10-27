@@ -763,7 +763,6 @@ sub invert_types {
 	    $length = $2;
 	}
 
-	#  sigh... reverse multiplier effect for semantic zooming....
 	my $section =  $self->get_section_from_label($label) || 'detail';
 	$length    *= $multiplier if $section eq 'detail';
 

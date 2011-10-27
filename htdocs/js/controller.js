@@ -524,8 +524,9 @@ var GBrowseController = Class.create({
                 var track_keys = new Object();
                 var get_tracks = false;
 
-		for (var i = 0; i < track_names.length; i++) {
-                    var ret_track_id = track_names[i];	
+		//		for (var i = 0; i < track_names.length; i++) {
+		// var ret_track_id = track_names[i];	
+                for (var ret_track_id in track_data) {
 
                     if (Controller.gbtracks.get(ret_track_id) != null)
                         continue; //oops already know this one

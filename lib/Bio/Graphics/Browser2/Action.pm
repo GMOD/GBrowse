@@ -838,7 +838,7 @@ sub ACTION_delete_upload {
     foreach (@tracks) {
 	my (undef,@db_args) = $self->data_source->db_settings($_);
 	Bio::Graphics::Browser2::DataBase->delete_database(@db_args);
-	$render->remove_track_frdata__state($_);
+	$render->remove_track_from_state($_);
     }
     $usertracks->delete_file($file);
     $self->render->data_source->clear_cached_config;

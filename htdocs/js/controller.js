@@ -1357,7 +1357,12 @@ show_info_message:
   function(event, url) {
     GBox.showTooltip(event, url);
 	Controller.update_sections(new Array(custom_tracks_id));
-  }
+  },
+
+  callback:
+	function(element,fid) {
+	    alert('element = '+element+' id= '+fid);
+	}
 
 });
 

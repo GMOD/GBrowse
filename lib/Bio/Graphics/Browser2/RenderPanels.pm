@@ -1188,82 +1188,25 @@ sub make_map {
   }
 
   foreach my $box (@$boxes){
-    next unless $box->[0]->can('primary_tag');
-
-    my $label  = $box->[5] ? $trackmap->{$box->[5]} : '';
-
-    my $href   = $self->make_link($box->[0],$panel,$label,$box->[5]);
-    my $title  = unescape($self->make_title($box->[0],$panel,$label,$box->[5]));
-    my $target = $self->make_link_target($box->[0],$panel,$label,$box->[5]);
-
-    my ($mouseover,$mousedown,$style);
-    if ($tips) {
-
-      #retrieve the content of the balloon from configuration files
-      # if it looks like a URL, we treat it as a URL.
-      my ($balloon_ht,$balloonhover)     =
-	$self->balloon_tip_setting('balloon hover',$label,$box->[0],$panel,$box->[5]);
-      my ($balloon_ct,$balloonclick)     =
-	$self->balloon_tip_setting('balloon click',$label,$box->[0],$panel,$box->[5]);
-
-      my $sticky             = $source->setting($label,'balloon sticky');
-      my $height             = $source->setting($label,'balloon height') || 300;
-
-      if ($use_titles_for_balloons) {
-	$balloonhover ||= $title;
+      my $feature = $box->[0];
+      next unless $feature->can('primary_tag');
+      my $id = eval {CGI::escape($feature->primary_id)} or next;
+      my %attributes = (
+#	onmouseover => "Controller.callback(this,'$id')",
+	onmousedown => "Controller.callback(this,'$id')",
+	style       => 'cursor:pointer'
+	);
+      my $fname = eval {$feature->display_name} || eval{$box->[0]->name} || 'unnamed';
+      my $ftype = $feature->primary_tag || 'feature';
+      $ftype   =  "$ftype:$fname";
+      my $line = join("\t",$ftype,@{$box}[1..4]);
+      for my $att (keys %attributes) {
+	  next unless defined $attributes{$att} && length $attributes{$att};
+	  $line .= "\t$att\t$attributes{$att}";
       }
-
-      $balloon_ht ||= $source->global_setting('balloon style') || 'GBubble';
-      $balloon_ct ||= $balloon_ht;
-
-      if ($balloonhover) {
-        my $stick = defined $sticky ? $sticky : 0;
-        $mouseover = $balloonhover =~ /^(https?|ftp):/
-	    ? "$balloon_ht.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 " .
-	      "src=$balloonhover></iframe>',$stick)"
-	    : "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
-	undef $title;
-      }
-      if ($balloonclick) {
-	my $stick = defined $sticky ? $sticky : 1;
-        $style = "cursor:pointer";
-	$mousedown = $balloonclick =~ /^(http|ftp):/
-	    ? "$balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
-	      "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
-	    : "$balloon_ct.showTooltip(event,'$balloonclick',$stick)";
-	undef $href;
-	undef $target;
-      }
-    }
-
-    # workarounds to accomodate observation that some browsers don't respect cursor:pointer styles in
-    # <area> tags unless there is an href defined
-    $href    ||=     'javascript:void(0)';
-
-    my %attributes = (
-		      title       => $title,
-	              href        => $href,
-	              target      => $target,
-		      onmouseover => $mouseover,
-		      onmousedown => $mousedown,
-		      style       => $style,
-		      );
-
-    my $ftype = $box->[0]->primary_tag || 'feature';
-    my $fname = $box->[0]->display_name if $box->[0]->can('display_name');
-    $fname  ||= $box->[0]->name if $box->[0]->can('name');
-    $fname  ||= 'unnamed';
-    $ftype = "$ftype:$fname";
-    my $line = join("\t",$ftype,@{$box}[1..4]);
-    for my $att (keys %attributes) {
-      next unless defined $attributes{$att} && length $attributes{$att};
-      $line .= "\t$att\t$attributes{$att}";
-    }
-    push @map, $line;
+      push @map, $line;
   }
-
   return \@map;
-
 }
 
 # this creates image map for rulers and scales, where clicking on the scale

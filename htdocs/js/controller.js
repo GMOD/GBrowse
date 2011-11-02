@@ -1347,8 +1347,23 @@ show_info_message:
   },
 
   callback:
-	function(element,fid) {
-	    alert('element = '+element+' id= '+fid);
+	function(element,dbid,fid) {
+	    // find track information
+	    var track_element = element.up(1).id;
+	    var track         = track_element.sub(/^track_/,'');
+	    new Ajax.Request(Controller.url, {
+		    method:      'post',
+			parameters:{  
+			action: 'get_feature_info',
+			    track:       track,
+			    dbid:        dbid,
+			    feature_id:  fid,
+			    },
+			onSuccess: function(transport) {
+			  var data  = transport.responseText;
+			  alert(data);
+		    }
+	    });
 	}
 
 });

@@ -1190,10 +1190,11 @@ sub make_map {
   foreach my $box (@$boxes){
       my $feature = $box->[0];
       next unless $feature->can('primary_tag');
-      my $id = eval {CGI::escape($feature->primary_id)} or next;
+      my $id    = eval {CGI::escape($feature->primary_id)} or next;
+      my $dbid  = eval {CGI::escape($feature->gbrowse_dbid)};
       my %attributes = (
 #	onmouseover => "Controller.callback(this,'$id')",
-	onmousedown => "Controller.callback(this,'$id')",
+	onmousedown => "Controller.callback(this,'$dbid','$id')",
 	style       => 'cursor:pointer'
 	);
       my $fname = eval {$feature->display_name} || eval{$box->[0]->name} || 'unnamed';

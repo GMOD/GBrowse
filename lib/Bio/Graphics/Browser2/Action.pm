@@ -671,6 +671,20 @@ sub ACTION_autocomplete_user_search {
     return (200,'text/html',$autocomplete);
 }
 
+sub ACTION_get_feature_info {
+    my $self = shift;
+    my $q    = shift;
+    my $track = CGI::unescape($q->param('track'))      or croak;
+    my $dbid  = CGI::unescape($q->param('dbid'))       or croak;
+    my $fid   = CGI::unescape($q->param('feature_id')) or croak;
+    my $state = $self->state;
+    local $state->{dbid} = $dbid;
+    my $search   = $self->render->get_search_object();
+    my $features = $search->search_features({-name=>"id:$fid"});
+    warn "dbid=$dbid, fid=$fid", scalar @$features;
+    return (200,'text/plain',"@$features");
+}
+
 sub ACTION_reset_dsn {
     my $self = shift;
     $self->data_source->clear_cached_config();

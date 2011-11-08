@@ -12,7 +12,7 @@ use HTTP::Request::Common 'POST';
 use Carp 'cluck','croak';
 use Storable 'nfreeze','thaw';
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 # search multiple databases using crazy heuristics
 

@@ -6,7 +6,7 @@ package Bio::Graphics::Browser2::Region;
 use strict;
 use warnings;
 use Bio::Graphics::Browser2::Shellwords;
-use constant DEBUG=>1;
+use constant DEBUG=>0;
 
 sub new {
     my $self  = shift;
@@ -217,7 +217,6 @@ sub search_db {
 
 sub lookup_features {
   my $self  = shift;
-  warn join ',',@_;
   my ($name,$start,$stop,$class,$literal_name,$id) = @_;
   my $source = $self->source;
 
@@ -235,7 +234,6 @@ sub lookup_features {
 
   if (defined $id && $db->can('get_feature_by_id')) { # this overrides everything else
       my $f = $db->get_feature_by_id($id);
-      warn "\$db->get_feature_by_id($id) got $f";
       return $f ? [$f] : [];
   }
 

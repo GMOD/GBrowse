@@ -730,7 +730,9 @@ var GBrowseController = Class.create({
                         Controller.get_remaining_tracks(track_keys,time_out*decay,decay,time_key)
                     } ,time_out);
                 } else {
-		    //		    Controller.linkTrackLegend();   try to find different workaround
+		    var area = $$('area');
+		    area.invoke('observe', 'mousedown', Controller.feature_callback);
+		    area.invoke('observe', 'mouseover', Controller.feature_callback);
                     Controller.idle();
                 }
             } // end onSuccess
@@ -1359,24 +1361,29 @@ show_info_message:
 	Controller.update_sections(new Array(custom_tracks_id));
   },
 
-  callback:
-	function(element,dbid,fid) {
+  feature_callback:
+	function(event) {
 	    // find track information
+	    var element = event.element();
 	    var track_element = element.up(1).id;
 	    var track         = track_element.sub(/^track_/,'');
+	    var javascript;
 	    new Ajax.Request(Controller.url, {
 		    method:      'post',
+			asynchronous: false,
 			parameters:{  
-			action: 'get_feature_info',
+			    action:      'get_feature_info',
+			    event_type:  event.type,
 			    track:       track,
-			    dbid:        dbid,
-			    feature_id:  fid,
+			    dbid:        element.getAttribute('dbid'),
+			    feature_id:  element.getAttribute('fid')
 			    },
-			onSuccess: function(transport) {
-			  var data  = transport.responseText;
-			  alert(data);
+		    onSuccess: function(transport) {
+			javascript  = transport.responseText;
 		    }
 	    });
+	    if (javascript != '')
+		eval(javascript);
 	}
 
 });

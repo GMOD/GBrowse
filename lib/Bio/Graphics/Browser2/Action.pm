@@ -674,6 +674,7 @@ sub ACTION_autocomplete_user_search {
 sub ACTION_get_feature_info {
     my $self = shift;
     my $q    = shift;
+    my $etype = CGI::unescape($q->param('event_type')) or croak;
     my $track = CGI::unescape($q->param('track'))      or croak;
     my $dbid  = CGI::unescape($q->param('dbid'))       or croak;
     my $fid   = CGI::unescape($q->param('feature_id')) or croak;
@@ -681,8 +682,10 @@ sub ACTION_get_feature_info {
     local $state->{dbid} = $dbid;
     my $search   = $self->render->get_search_object();
     my $features = $search->search_features({-name=>"id:$fid"});
-    warn "dbid=$dbid, fid=$fid", scalar @$features;
-    return (200,'text/plain',"@$features");
+    return (204,'text/plain','nothing at all') unless @$features;
+    my ($mime_type,$payload)  = $self->render->feature_interaction($etype,$track,$features->[0]);
+    warn "$mime_type => $payload";
+    return (200,$mime_type,$payload);
 }
 
 sub ACTION_reset_dsn {

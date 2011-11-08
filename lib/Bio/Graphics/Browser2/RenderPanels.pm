@@ -1176,8 +1176,6 @@ sub make_map {
   my $source = $self->source;
 
   my $flip = $panel->flip;
-  my $tips = $source->global_setting('balloon tips') && $self->settings->{'show_tooltips'};
-  my $use_titles_for_balloons = $source->global_setting('titles are balloons');
   my ($track_dbid) = $source->db_settings($label,$self->segment->length);
 
   my $did_map;
@@ -1191,11 +1189,12 @@ sub make_map {
   foreach my $box (@$boxes){
       my $feature = $box->[0];
       next unless $feature->can('primary_tag');
-      my $id    = eval {CGI::escape($feature->primary_id)} or next;
-      my $dbid  = eval {CGI::escape($feature->gbrowse_dbid)} || $track_dbid;
+      my $id    = eval {CGI::escape($feature->primary_id || $feature->name)} or next;
+#      my $dbid  = eval {CGI::escape($feature->gbrowse_dbid)} || $track_dbid;
+      my $dbid  = $track_dbid;
       my %attributes = (
-#	onmouseover => "Controller.callback(this,'$id')",
-	onmousedown => "Controller.callback(this,'$dbid','$id')",
+        dbid        => $dbid,
+        fid         => $id,
 	href        => 'javascript:void(0)',
 	);
       my $fname = eval {$feature->display_name} || eval{$box->[0]->name} || 'unnamed';

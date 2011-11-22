@@ -481,7 +481,7 @@ END
 
  CONFIGURE_THIS_TRACK   => '<b>Configure this track</b>',
 
- DOWNLOAD_THIS_TRACK   => '<b>Download this track test</b>',
+ DOWNLOAD_THIS_TRACK   => '<b>Download this track</b>',
 
  ABOUT_THIS_TRACK   => '<b>About this track</b>',
 

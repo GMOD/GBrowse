@@ -1175,8 +1175,10 @@ sub make_map {
 
   my $source = $self->source;
 
-  my $flip = $panel->flip;
-  my ($track_dbid) = $source->db_settings($label,$self->segment->length);
+  my $length   = $self->segment->length;
+  my $settings = $self->settings;
+  my $flip    = $panel->flip;
+  my ($track_dbid) = $source->db_settings($label,$length);
 
   my $did_map;
 
@@ -1186,11 +1188,12 @@ sub make_map {
     push @map, $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale);
   }
 
+  return if $source->show_summary($label,$length,$settings);
+
   foreach my $box (@$boxes){
       my $feature = $box->[0];
       next unless $feature->can('primary_tag');
       my $id    = eval {CGI::escape($feature->primary_id || $feature->name)} or next;
-#      my $dbid  = eval {CGI::escape($feature->gbrowse_dbid)} || $track_dbid;
       my $dbid  = $track_dbid;
       my %attributes = (
         dbid        => $dbid,

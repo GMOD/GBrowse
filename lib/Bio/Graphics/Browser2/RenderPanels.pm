@@ -1177,6 +1177,7 @@ sub make_map {
 
   my $flip = $panel->flip;
   my $length = $self->segment->length;
+  my $settings = $self->settings;
   my ($track_dbid) = $source->db_settings($label,$length);
 
   my $did_map;
@@ -1188,6 +1189,7 @@ sub make_map {
   }
 
   my $inline = $source->use_inline_imagemap($label,$length);
+  return if $source->show_summary($label,$length,$settings);
 
   foreach my $box (@$boxes){
       my $feature = $box->[0];

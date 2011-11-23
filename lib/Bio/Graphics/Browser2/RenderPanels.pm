@@ -1176,7 +1176,8 @@ sub make_map {
   my $source = $self->source;
 
   my $flip = $panel->flip;
-  my ($track_dbid) = $source->db_settings($label,$self->segment->length);
+  my $length = $self->segment->length;
+  my ($track_dbid) = $source->db_settings($label,$length);
 
   my $did_map;
 
@@ -1186,17 +1187,14 @@ sub make_map {
     push @map, $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale);
   }
 
+  my $inline = $source->use_inline_imagemap($label,$length);
+
   foreach my $box (@$boxes){
       my $feature = $box->[0];
       next unless $feature->can('primary_tag');
-      my $id    = eval {CGI::escape($feature->primary_id || $feature->name)} or next;
-#      my $dbid  = eval {CGI::escape($feature->gbrowse_dbid)} || $track_dbid;
-      my $dbid  = $track_dbid;
-      my %attributes = (
-        dbid        => $dbid,
-        fid         => $id,
-	href        => 'javascript:void(0)',
-	);
+      my $attributes = $inline ? $self->make_imagemap_element_inline($feature,$panel,$label,$box->[5])
+	                       : $self->make_imagemap_element_callback($feature);
+      $attributes or next;
       my $fname = eval {$feature->display_name} || eval{$box->[0]->name} || 'unnamed';
       my $ftype = $feature->primary_tag || 'feature';
       $ftype   =  "$ftype:$fname";
@@ -1208,6 +1206,82 @@ sub make_map {
       push @map, $line;
   }
   return \@map;
+}
+
+sub make_imagemap_element_callback {
+    my $self = shift;
+    my $feature = shift;
+    my $id    = eval {CGI::escape($feature->primary_id || $feature->name)} or return;
+    my $dbid  = $track_dbid;
+    return {
+        dbid        => $dbid,
+        fid         => $id,
+	href        => 'javascript:void(0)',
+	};
+}
+
+sub make_imagemap_element_inline {
+    my $self    = shift;
+    my ($feature,$panel,$label,$box5) = @_;
+
+    my $href   = $self->make_link($feature,$panel,$label,$box5);
+    my $title  = unescape($self->make_title($feature,$panel,$label,$box5));
+    my $target = $self->make_link_target($feature,$panel,$label,$box5);
+
+    my ($mouseover,$mousedown,$style);
+    if ($tips) {
+
+      #retrieve the content of the balloon from configuration files
+      # if it looks like a URL, we treat it as a URL.
+      my ($balloon_ht,$balloonhover)     =
+        $self->balloon_tip_setting('balloon hover',$label,$feature,$panel,$box5);
+      my ($balloon_ct,$balloonclick)     =
+        $self->balloon_tip_setting('balloon click',$label,$feature,$panel,$box5);
+
+      my $sticky             = $source->setting($label,'balloon sticky');
+      my $height             = $source->setting($label,'balloon height') || 300;
+
+      if ($use_titles_for_balloons) {
+        $balloonhover ||= $title;
+      }
+
+      $balloon_ht ||= $source->global_setting('balloon style') || 'GBubble';
+      $balloon_ct ||= $balloon_ht;
+
+      if ($balloonhover) {
+        my $stick = defined $sticky ? $sticky : 0;
+        $mouseover = $balloonhover =~ /^(https?|ftp):/
+            ? "$balloon_ht.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 " .
+              "src=$balloonhover></iframe>',$stick)"
+            : "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
+        undef $title;
+      }
+      if ($balloonclick) {
+        my $stick = defined $sticky ? $sticky : 1;
+        $style = "cursor:pointer";
+        $mousedown = $balloonclick =~ /^(http|ftp):/
+            ? "$balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
+              "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
+            : "$balloon_ct.showTooltip(event,'$balloonclick',$stick)";
+        undef $href;
+        undef $target;
+      }
+    }
+
+    # workarounds to accomodate observation that some browsers don't respect cursor:pointer styles in
+    # <area> tags unless there is an href defined
+    $href    ||=     'javascript:void(0)';
+
+    my %attributes = (
+                      title       => $title,
+                      href        => $href,
+                      target      => $target,
+                      onmouseover => $mouseover,
+                      onmousedown => $mousedown,
+                      style       => $style,
+                      );
+
+    return \%attributes;
 }
 
 # this creates image map for rulers and scales, where clicking on the scale

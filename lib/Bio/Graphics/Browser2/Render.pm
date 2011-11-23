@@ -4278,7 +4278,7 @@ sub feature_interaction {
 	$stick     ||= 0;
 	my ($balloon_style,$balloon_action) 
 	    = $self->balloon_tip_setting($event_type eq 'mousedown' ? 'balloon click' : 'balloon hover',$label,$feature);
-	$balloon_action ||= $self->feature_title($label,$feature) 
+	$balloon_action ||= $renderer->make_title($feature,undef,$label,undef) 
 	    if $source->global_setting('titles are balloons') && $event_type eq 'mouseover';
 	$balloon_style  ||= 'GBubble';
 
@@ -4294,141 +4294,11 @@ sub feature_interaction {
 
     my $renderer = $self->get_panel_renderer($self->segment);
 
-    my $link   = $self->feature_link($feature,$label);
+    my $link   = $renderer->make_link($feature,undef,$label,undef);
     my $target = $renderer->make_link_target($feature,undef,$label,undef);
     return ('text/plain',$target ? "window.open('$link','$target')" : "document.location='$link'") if $link;
     return;
 }
-
-sub feature_link {
-    my $self     = shift;
-    my ($feature,$label,$panel)  = @_;
-
-    my $label_fix = $label;
-    if (ref $label && $label->{name}){ 
-	$label_fix = $label->{name};
-	if ($label_fix =~/^(plugin)\:/){$label_fix = join(":",($POSTMATCH,$1));}
-    }
-
-    my $data_source = $self->data_source;
-    my $ds_name     = $data_source->name;
-    my $link     = $data_source->code_setting($label_fix,'link');
-
-    if (! defined $link) {
-	if ($feature->can('url')) {
-	    my $link = $feature->url;
-	    return $link if defined $link;
-	}
-	return $label->make_link($feature)
-	    if $label
-	    && $label =~ /^[a-zA-Z_]/
-	    && $label->isa('Bio::Graphics::FeatureFile');
-    }
-
-    $panel ||= 'Bio::Graphics::Panel';
-    $label ||= 'general';
-
-    # most specific -- a configuration line
-
-    # less specific - a smart feature
-    $link        = $feature->make_link if $feature->can('make_link') && !defined $link;
-
-    # general defaults
-    $link        = $data_source->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
-    $link        = $data_source->code_setting(general=>'link')          unless defined $link;
-    $link        = $data_source->globals->setting(general=>'link')      unless defined $link;
-    
-    return unless $link;
-
-    if (ref($link) eq 'CODE') {
-	my $val = eval {$link->($feature)};
-	$data_source->_callback_complain($label=>'link') if $@;
-	return $val;
-    }
-    elsif (!$link || $link eq 'AUTO') {
-	my $n     = $feature->display_name || '';
-	my $c     = $feature->seq_id       || '';
-	my $name  = CGI::escape("$n");  # workaround CGI.pm bug
-	my $class = eval {CGI::escape($feature->class)}||'';
-	my $ref   = CGI::escape("$c");  # workaround again
-	my $start = CGI::escape($feature->start);
-	my $end   = CGI::escape($feature->end);
-	my $src   = CGI::escape(eval{$feature->source} || '');
-	my $url   = CGI->request_uri || '../..';
-	my $id    = eval {CGI::escape($feature->primary_id)};
-	my $dbid  = eval {$feature->gbrowse_dbid} || ($data_source->db_settings($label))[0];
-	$dbid     = CGI::escape($dbid);
-	$url      =~ s/\?.+//;
-	$url      =~ s! /gbrowse[^/]* / [^/]+ /? [^/]*  $!!x;
-	$url      .= "/gbrowse_details/$ds_name?ref=$ref;start=$start;end=$end";
-	$url      .= ";name=$name"     if defined $name;
-	$url      .= ";class=$class"   if defined $class;
-	$url      .= ";feature_id=$id" if defined $id;
-	$url      .= ";db_id=$dbid"    if defined $dbid;
-	return $url;
-    }
-    return $data_source->link_pattern($link,$feature);
-}
-
-sub feature_title {
-    my $self = shift;
-    my ($label,$feature) = @_;
-      local $^W = 0;  # tired of uninitialized variable warnings
-    my $source = $self->data_source;
-    my $length = eval {$self->segment->length} || 0;
-    my ($title,$key) = ('','');
-
-  TRY: {
-      if ($label && eval { $label->isa('Bio::Graphics::FeatureFile') }) {
-	  $key = $label->name;
-	  $title = $label->make_title($feature) or last TRY;
-	  return $title;
-      }
-      
-      else {
-	  $label     ||= eval {$self->feature2label($feature)} or last TRY;
-	  $key       ||= $source->setting($label,'key') || $label;
-	  $key         =~ s/s$//;
-	  $key         = "source = ".$feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
-	  my $link     = $source->semantic_fallback_setting($label,'title',$length);
-	  if (defined $link && ref($link) eq 'CODE') {
-	      $title       = eval {$link->($feature)};
-	      $source->_callback_complain($label=>'title') if $@;
-	      return $title if defined $title;
-	  }
-	  return $source->link_pattern($link,$feature) if defined $link && $link ne 'AUTO';
-      }
-    }
-
-    # otherwise, try it ourselves
-    $title = eval {
-	if ($feature->can('target') && (my $target = $feature->target)) {
-	    join (' ',
-		  "$key:",
-		  $feature->seq_id.':'.
-		  $feature->start."..".$feature->end,
-		  $feature->target->seq_id.':'.
-		  $feature->target->start."..".$feature->target->end);
-	} else {
-	    my ($start,$end) = ($feature->start,$feature->end);
-	    ($start,$end)    = ($end,$start) if $feature->strand < 0;
-	    my $name         = $feature->can('info') 
-		? $feature->info
-		: $feature->display_name;
-	    my $result;
-	    $result .= "$key "  if defined $key;
-	    $result .= "$name " if defined $name;
-	    $result .= '['.$feature->seq_id.":" if defined $feature->seq_id;
-	    $result .= $feature->start      if defined $feature->start;
-	    $result .= '..' . $feature->end if defined $feature->end;
-	    $result .= ']' if defined $feature->seq_id;
-	    $result;
-	}
-    };
-    warn $@ if $@;
-    return $title;
-}
-
 sub balloon_tip_setting {
   my $self = shift;
   my ($option,$label,$feature) = @_;

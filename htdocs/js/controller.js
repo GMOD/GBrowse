@@ -730,7 +730,7 @@ var GBrowseController = Class.create({
                         Controller.get_remaining_tracks(track_keys,time_out*decay,decay,time_key)
                     } ,time_out);
                 } else {
-		    var area = $$('area');
+		    var area = $$('area[inline!=1]');
 		    area.invoke('observe', 'mousedown', Controller.feature_callback);
 		    area.invoke('observe', 'mouseover', Controller.feature_callback);
                     Controller.idle();

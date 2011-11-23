@@ -266,91 +266,94 @@ sub print_features {
 				 "Length",
 				 $f->length);
 	
-	if ($f->can('hit') && (my $hit = $f->hit)) {
-	    # try to correct for common GFF2 error of indicating a -/- alignment
-	    # using a (-) src strand and a hit_start > hit_end
-	    my $bug  = $f->strand < 0 && $f->hit->strand < 0;
-	    $string .= $self->print_multiple($f,
-				     $options,
-				     'Query',
-				     $hit->seq_id);
-	    $string .= $self->print_multiple(
-		                     $f->hit,
-				     $options,
-				     'Matches',
-				     $hit->seq_id.':'.$hit->start.'..'.$hit->end.
-		                     ($hit->strand >= 0 ? ' (+)':' (-)')
-		);
-	    $string .= $self->print_multiple($f,
-				     $options,
-				     '',
-				     $self->print_matches($f,$hit,$bug));# if $subf;
+	eval {
+	    local $^W = 0;
+	    if ($f->can('hit') && (my $hit = $f->hit)) {
+		# try to correct for common GFF2 error of indicating a -/- alignment
+		# using a (-) src strand and a hit_start > hit_end
+		my $bug  = $f->strand < 0 && $f->hit->strand < 0;
+		$string .= $self->print_multiple($f,
+						 $options,
+						 'Query',
+						 $hit->seq_id);
+		$string .= $self->print_multiple(
+		    $f->hit,
+		    $options,
+		    'Matches',
+		    $hit->seq_id.':'.$hit->start.'..'.$hit->end.
+		    ($hit->strand >= 0 ? ' (+)':' (-)')
+		    );
+		$string .= $self->print_multiple($f,
+						 $options,
+						 '',
+						 $self->print_matches($f,$hit,$bug));# if $subf;
+		
+	    }
 	    
-	}
-	
-	$string .= $self->print_multiple($f,
-				 $options,
-				 "Score",
-				 $f->score) if $f->can('score') && defined $f->score;
-	
-	my %attributes = $f->attributes if $f->can('attributes');
-
-	for my $a (sort grep {!/Hit/} keys %attributes) {
 	    $string .= $self->print_multiple($f,
-				     $options,
-				     $a,
-				     $f->attributes($a));
+					     $options,
+					     "Score",
+					     $f->score) if $f->can('score') && defined $f->score;
+	    
+	    my %attributes = $f->attributes if $f->can('attributes');
+	    
+	    for my $a (sort grep {!/Hit/} keys %attributes) {
+		$string .= $self->print_multiple($f,
+						 $options,
+						 $a,
+						 $f->attributes($a));
+	    }
+	    
+	    $string   .= $self->print_multiple($f,
+					       $options,
+					       'primary_id',
+					       $f->primary_id) if $f->can('primary_id');
+	    
+	    $string   .= $self->print_multiple($f,
+					       $options,
+					       'gbrowse_dbid',
+					       $f->gbrowse_dbid) if $f->can('gbrowse_dbid');
+	    
+	    $string   .= TR({-valign=>'top',-class=>'databody'},
+			    th({-height=>3},''),
+			    td({-height=>3},'')
+		);
+	    
+	    # try to sort features with hits so that hit is in order.
+	    # But, subfeatures don't always have the hit, so check for
+	    # that too
+	    my @subfeatures = $f->get_SeqFeatures;
+	    if ($f->can('hit') && $f->hit && $subfeatures[0] && $subfeatures[0]->hit) {
+		@subfeatures  = sort {$a->hit->start <=> $b->hit->start} @subfeatures;
+	    } else {
+		@subfeatures = sort {$a->start <=> $b->start} @subfeatures;
+	    }
+	    
+	    my $subtable = $self->print_multiple($f,
+						 $options,
+						 'Parts',
+						 $self->print_features(\@subfeatures,$subf+1)
+		) if @subfeatures;
+	
+	    $string .= $subtable || '';  # prevent uninit variable warning
+	    $string .= CGI::end_table();
+	
+	    if ($subtable or $subf==0) {
+		if ($f->length > MAX_DNA) {
+		    $string .= "<b><i>Sequence display limited to ".MAX_DNA." bases</i></b>";
+		} else {
+		    my $dna = $self->get_seq($f);
+		    $dna    = $dna->seq if ref $dna;  # compensate for API changes
+		    $string .= $self->print_dna($f,
+						$dna,
+						$f->start,
+						$f->strand,
+						\@subfeatures,
+						$subf+1) if $dna;
+		}
+	    }
 	}
-
-	$string   .= $self->print_multiple($f,
-					   $options,
-					   'primary_id',
-					   $f->primary_id) if $f->can('primary_id');
-	
-	$string   .= $self->print_multiple($f,
-					   $options,
-					   'gbrowse_dbid',
-					   $f->gbrowse_dbid) if $f->can('gbrowse_dbid');
-	
-	$string   .= TR({-valign=>'top',-class=>'databody'},
-			th({-height=>3},''),
-			td({-height=>3},'')
-	    );
-	
-	# try to sort features with hits so that hit is in order.
-	# But, subfeatures don't always have the hit, so check for
-	# that too
-	my @subfeatures = $f->get_SeqFeatures;
-	if ($f->can('hit') && $f->hit && $subfeatures[0] && $subfeatures[0]->hit) {
-	    @subfeatures  = sort {$a->hit->start <=> $b->hit->start} @subfeatures;
-	} else {
-	    @subfeatures = sort {$a->start <=> $b->start} @subfeatures;
-	}
-
- 	my $subtable = $self->print_multiple($f,
- 				     $options,
- 				     'Parts',
- 				     $self->print_features(\@subfeatures,$subf+1)
- 	    ) if @subfeatures;
-	
-	$string .= $subtable || '';  # prevent uninit variable warning
-	$string .= CGI::end_table();
-	
-	if ($subtable or $subf==0) {
-	   if ($f->length > MAX_DNA) {
-	      $string .= "<b><i>Sequence display limited to ".MAX_DNA." bases</i></b>";
-	   } else {
-	      my $dna = $self->get_seq($f);
-	      $dna    = $dna->seq if ref $dna;  # compensate for API changes
-	      $string .= $self->print_dna($f,
-	  				  $dna,
-					  $f->start,
-					  $f->strand,
-					  \@subfeatures,
-					  $subf+1) if $dna;
-	   }
-        }
-    }
+   }
     return $string;
 }
 

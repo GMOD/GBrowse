@@ -1190,20 +1190,30 @@ sub make_map {
 
   my $inline = $source->use_inline_imagemap($label,$length);
   return if $source->show_summary($label,$length,$settings);
+  warn "inline = $inline";
+  my $inline_options = {};
+  if ($inline) {
+      $inline_options = {tips                    => $source->global_setting('balloon tips') && $settings->{'show_tooltips'},
+			 use_titles_for_balloons => $source->global_setting('titles are balloons'),
+			 balloon_style           => $source->global_setting('balloon style') || 'GBubble',
+			 balloon_sticky          => $source->semantic_fallback_setting($label,'balloon sticky',$length),
+			 balloon_height          => $source->semantic_fallback_setting($label,'balloon height',$length) || 300,
+      }
+  }
 
   foreach my $box (@$boxes){
       my $feature = $box->[0];
       next unless $feature->can('primary_tag');
-      my $attributes = $inline ? $self->make_imagemap_element_inline($feature,$panel,$label,$box->[5])
-	                       : $self->make_imagemap_element_callback($feature);
+      my $attributes = $inline ? $self->make_imagemap_element_inline($feature,$panel,$label,$box->[5],$inline_options)
+	                       : $self->make_imagemap_element_callback($feature,$track_dbid);
       $attributes or next;
       my $fname = eval {$feature->display_name} || eval{$box->[0]->name} || 'unnamed';
       my $ftype = $feature->primary_tag || 'feature';
       $ftype   =  "$ftype:$fname";
       my $line = join("\t",$ftype,@{$box}[1..4]);
-      for my $att (keys %attributes) {
-	  next unless defined $attributes{$att} && length $attributes{$att};
-	  $line .= "\t$att\t$attributes{$att}";
+      for my $att (keys %$attributes) {
+	  next unless defined $attributes->{$att} && length $attributes->{$att};
+	  $line .= "\t$att\t$attributes->{$att}";
       }
       push @map, $line;
   }
@@ -1212,9 +1222,8 @@ sub make_map {
 
 sub make_imagemap_element_callback {
     my $self = shift;
-    my $feature = shift;
+    my ($feature,$dbid) = @_;
     my $id    = eval {CGI::escape($feature->primary_id || $feature->name)} or return;
-    my $dbid  = $track_dbid;
     return {
         dbid        => $dbid,
         fid         => $id,
@@ -1224,30 +1233,30 @@ sub make_imagemap_element_callback {
 
 sub make_imagemap_element_inline {
     my $self    = shift;
-    my ($feature,$panel,$label,$box5) = @_;
+    my ($feature,$panel,$label,$track,$options) = @_;
+    my $tips                    = $options->{tips};
+    my $use_titles_for_balloons = $options->{use_titles_for_balloons};
+    my $balloon_style           = $options->{balloon_style};
+    my $sticky                  = $options->{balloon_sticky};
+    my $height                  = $options->{balloon_height};
 
-    my $href   = $self->make_link($feature,$panel,$label,$box5);
-    my $title  = unescape($self->make_title($feature,$panel,$label,$box5));
-    my $target = $self->make_link_target($feature,$panel,$label,$box5);
+    my $source = $self->source;
+    my $href   = $self->make_link($feature,$panel,$label,$track);
+    my $title  = unescape($self->make_title($feature,$panel,$label,$track));
+    my $target = $self->make_link_target($feature,$panel,$label,$track);
 
     my ($mouseover,$mousedown,$style);
-    if ($tips) {
 
+    if ($tips) {
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
       my ($balloon_ht,$balloonhover)     =
-        $self->balloon_tip_setting('balloon hover',$label,$feature,$panel,$box5);
+        $self->balloon_tip_setting('balloon hover',$label,$feature,$panel,$track);
       my ($balloon_ct,$balloonclick)     =
-        $self->balloon_tip_setting('balloon click',$label,$feature,$panel,$box5);
+        $self->balloon_tip_setting('balloon click',$label,$feature,$panel,$track);
 
-      my $sticky             = $source->setting($label,'balloon sticky');
-      my $height             = $source->setting($label,'balloon height') || 300;
-
-      if ($use_titles_for_balloons) {
-        $balloonhover ||= $title;
-      }
-
-      $balloon_ht ||= $source->global_setting('balloon style') || 'GBubble';
+      $balloonhover ||= $title if $use_titles_for_balloons;
+      $balloon_ht ||= $balloon_style;
       $balloon_ct ||= $balloon_ht;
 
       if ($balloonhover) {
@@ -1281,6 +1290,7 @@ sub make_imagemap_element_inline {
                       onmouseover => $mouseover,
                       onmousedown => $mousedown,
                       style       => $style,
+	              inline      => 1,
                       );
 
     return \%attributes;

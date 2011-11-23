@@ -1358,7 +1358,7 @@ sub use_inline_imagemap {
     my $inline = $self->semantic_fallback_setting($label=>'inline imagemaps',$length);
     return $inline if defined $inline;
     my $db = $self->open_database($label,$length) or return 1;
-    return $db->can('get_feature_by_id');
+    return !$db->can('get_feature_by_id');
 }
 
 1;

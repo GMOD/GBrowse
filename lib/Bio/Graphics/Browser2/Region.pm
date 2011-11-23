@@ -198,7 +198,6 @@ sub get_whole_segment {
 sub search_db {
   my $self = shift;
   my $args = shift;
-  warn join ' ',%$args;
   my ($features);
   if (my $name = $args->{-search_term}) {
       $name =~ tr/a-zA-Z0-9|.'"_*?: ;+-\/\#\[\]//cd;  # remove rude/naughty characters

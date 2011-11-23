@@ -4265,10 +4265,10 @@ sub snapshot_manager {
 sub feature_interaction {
     my $self = shift;
     my ($event_type,$label,$feature) = @_;
-    warn "$event_type, $label, $feature";
     my $source    = $self->data_source;
     my $settings  = $self->state;
-    my $tips = $source->global_setting('balloon tips') && $settings->{'show_tooltips'};
+    my $tips      = $source->global_setting('balloon tips') && $settings->{'show_tooltips'};
+    my $renderer  = $self->get_panel_renderer($self->segment);
 
     if ($tips) {
 	my $sticky  = $source->setting($label,'balloon sticky');
@@ -4277,7 +4277,7 @@ sub feature_interaction {
 	my $stick   = defined $sticky ? $sticky : $event_type eq 'mousedown';
 	$stick     ||= 0;
 	my ($balloon_style,$balloon_action) 
-	    = $self->balloon_tip_setting($event_type eq 'mousedown' ? 'balloon click' : 'balloon hover',$label,$feature);
+	    = $renderer->balloon_tip_setting($event_type eq 'mousedown' ? 'balloon click' : 'balloon hover',$label,$feature,undef,undef);
 	$balloon_action ||= $renderer->make_title($feature,undef,$label,undef) 
 	    if $source->global_setting('titles are balloons') && $event_type eq 'mouseover';
 	$balloon_style  ||= 'GBubble';
@@ -4292,45 +4292,11 @@ sub feature_interaction {
 	}
     }
 
-    my $renderer = $self->get_panel_renderer($self->segment);
-
     my $link   = $renderer->make_link($feature,undef,$label,undef);
     my $target = $renderer->make_link_target($feature,undef,$label,undef);
     return ('text/plain',$target ? "window.open('$link','$target')" : "document.location='$link'") if $link;
     return;
 }
-sub balloon_tip_setting {
-  my $self = shift;
-  my ($option,$label,$feature) = @_;
-  my $length = eval{$self->segment->length}||0;
-  $option ||= 'balloon tip';
-  my $source = $self->data_source;
-  my $value  = $source->semantic_setting($label=>$option,$length||0);
-  $value     = $source->code_setting('TRACK DEFAULTS' => $option) unless defined $value;
-  $value     = $source->code_setting('general' => $option)        unless defined $value;
-
-  return unless $value;
-  my $val;
-  my $balloon_type = $source->global_setting('balloon style') || 'GBubble';
-
-  if (ref($value) eq 'CODE') {
-    $val = eval {$value->($feature)};
-    $source->_callback_complain($label=>$option) if $@;
-  } else {
-    $val = $source->link_pattern($value,$feature);
-  }
-
-  if ($val=~ /^\s*\[([\w\s]+)\]\s+(.+)/s) {
-    $balloon_type = $1;
-    $val          = $2;
-  }
-  # escape quotes
-  $val =~ s/'/\\'/g;
-  $val =~ s/"/&quot;/g;
-
-  return ($balloon_type,$val);
-}
-
 sub tr {
 	my $self = shift;
 	my $lang = $self->language or return @_;

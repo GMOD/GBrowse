@@ -4262,6 +4262,14 @@ sub snapshot_manager {
     return $self->{snapshot_manager} ||= Bio::Graphics::Browser2::Render::SnapshotManager->new($self);
 }
 
+sub feature_summary_message {
+    my $self = shift;
+    my ($event_type,$label) = @_;
+    my $sticky = $event_type eq 'mousedown' || 0;
+    my $message= $self->data_source->setting($label=>'key'). ' '.lc($self->tr('FEATURE_SUMMARY'));
+    return "GBubble.showTooltip(event,'$message',$sticky)";
+}
+
 sub feature_interaction {
     my $self = shift;
     my ($event_type,$label,$feature) = @_;
@@ -4281,8 +4289,6 @@ sub feature_interaction {
 	$balloon_action ||= $renderer->make_title($feature,undef,$label,undef) 
 	    if $source->global_setting('titles are balloons') && $event_type eq 'mouseover';
 	$balloon_style  ||= 'GBubble';
-
-	warn "($balloon_style,$balloon_action)";
 	if ($balloon_action) {
 	    my $action = $balloon_action =~ /^(http|ftp):/
 		? "$balloon_style.showTooltip(event,'<iframe width='+$balloon_style.maxWidth+' height=$height " .

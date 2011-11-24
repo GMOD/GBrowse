@@ -1184,16 +1184,17 @@ sub make_map {
 
   local $^W = 0; # avoid uninit variable warnings due to poor coderefs
 
-  if ($first_box_is_scale) {
-    push @map, $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale);
-  }
+  push @map, $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale)
+      if $first_box_is_scale;
 
   my $inline = $source->use_inline_imagemap($label,$length);
   return if $source->show_summary($label,$length,$settings);
   warn "inline = $inline";
   my $inline_options = {};
+
   if ($inline) {
       $inline_options = {tips                    => $source->global_setting('balloon tips') && $settings->{'show_tooltips'},
+			 summary                 => $source->show_summary($label,$length,$self->settings),
 			 use_titles_for_balloons => $source->global_setting('titles are balloons'),
 			 balloon_style           => $source->global_setting('balloon style') || 'GBubble',
 			 balloon_sticky          => $source->semantic_fallback_setting($label,'balloon sticky',$length),
@@ -1204,6 +1205,7 @@ sub make_map {
   foreach my $box (@$boxes){
       my $feature = $box->[0];
       next unless $feature->can('primary_tag');
+
       my $attributes = $inline ? $self->make_imagemap_element_inline($feature,$panel,$label,$box->[5],$inline_options)
 	                       : $self->make_imagemap_element_callback($feature,$track_dbid);
       $attributes or next;
@@ -1223,7 +1225,9 @@ sub make_map {
 sub make_imagemap_element_callback {
     my $self = shift;
     my ($feature,$dbid) = @_;
-    my $id    = eval {CGI::escape($feature->primary_id || $feature->name)} or return;
+    my $id       = eval {CGI::escape($feature->primary_id || $feature->name)};
+    $id        ||= '*summary*' if eval {$feature->has_tag('coverage')};
+    return unless $id;
     return {
         dbid        => $dbid,
         fid         => $id,
@@ -1234,11 +1238,21 @@ sub make_imagemap_element_callback {
 sub make_imagemap_element_inline {
     my $self    = shift;
     my ($feature,$panel,$label,$track,$options) = @_;
+
     my $tips                    = $options->{tips};
     my $use_titles_for_balloons = $options->{use_titles_for_balloons};
     my $balloon_style           = $options->{balloon_style};
     my $sticky                  = $options->{balloon_sticky};
     my $height                  = $options->{balloon_height};
+    my $summary                 = $options->{summary};
+
+    if ($summary) {
+	return {onmouseover => $self->render->feature_summary_message('mouseover',$label),
+		onmouseeown => $self->render->feature_summary_message('mousedown',$label),
+		href        => 'javascript:void(0)',
+		inline      => 1
+	}
+    }
 
     my $source = $self->source;
     my $href   = $self->make_link($feature,$panel,$label,$track);

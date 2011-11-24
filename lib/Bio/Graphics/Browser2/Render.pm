@@ -3995,6 +3995,7 @@ sub fork {
 sub prepare_modperl_for_fork {
     my $self = shift;
     my $r    = modperl_request() or return;
+    $SIG{CHLD} = 'IGNORE';
     if ($ENV{MOD_PERL_API_VERSION} < 2) {
 	eval {
 	    require Apache::SubProcess;

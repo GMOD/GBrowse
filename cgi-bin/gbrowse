@@ -3,9 +3,6 @@
 eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
-eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 use strict;
 use CGI;
 use Bio::Graphics::Browser2;
@@ -21,7 +18,7 @@ if ($modperl && !$init++) {
     $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
 	my $sig  = shift;
 	my $time = localtime;
-	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+	print STDERR "[$time] [notice] GBrowse modPerl process caught sig$sig. Exiting... (pid $$)\n";
 	CORE::exit 0
     };
 }

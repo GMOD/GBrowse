@@ -161,6 +161,7 @@ sub request_panels {
       my $child = Bio::Graphics::Browser2::Render->fork();
 
       if ($child) {
+	  warn "[$$] Forked new rendering panel $child for $args->{section}" if DEBUG;
 	  return $data_destinations;
       }
 
@@ -181,11 +182,14 @@ sub request_panels {
           }
       }
       elsif ($do_local) {
+	  warn "[$$] run_local_requests (@$local_labels)" if DEBUG;
           $self->run_local_requests( $data_destinations, $args,$local_labels );
       }
       elsif ($do_remote) {
           $self->run_remote_requests( $data_destinations, $args,$remote_labels );
       }
+
+      warn "[$$] $args->{section} RENDERER EXITING" if DEBUG;
       CORE::exit 0;
   }
 
@@ -1435,11 +1439,11 @@ sub run_local_requests {
     my (%children,%reaped);
 
     local $SIG{CHLD} = sub {
-	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {
-	    warn "[$$] reaped child $pid" if DEBUG;
-	    $reaped{$pid}++;
-	    delete $children{$pid} if $children{$pid};
-	}
+    	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {
+    	    print STDERR "[$$] reaped render child $pid\n" if DEBUG;
+    	    $reaped{$pid}++;
+    	    delete $children{$pid} if $children{$pid};
+    	}
     };
 
     my $max_processes = $self->source->global_setting('max_render_processes')
@@ -1460,7 +1464,7 @@ sub run_local_requests {
 	my $child = Bio::Graphics::Browser2::Render->fork();
 	croak "Can't fork: $!" unless defined $child;
 	if ($child) {
-	    warn "Launched rendering process $child for $label" if DEBUG;
+	    warn "[$$] Launched rendering process $child for $label" if DEBUG;
 	    $children{$child}++ unless $reaped{$child}; # in case child was reaped before it was sown
 	    next;
 	}
@@ -1562,7 +1566,6 @@ sub run_local_requests {
 	    }
 
 	    $requests->{$label}->put_data($gd, $map, $titles );
-	    alarm(0);
 	};
 	alarm(0);
 
@@ -1579,9 +1582,14 @@ sub run_local_requests {
 	}
 	CORE::exit 0; # in child;
     }
-    warn "waiting for children" if DEBUG;
-    sleep while %children;
+    warn "[$$] waiting for children" if DEBUG;
+    if ($ENV{MOD_PERL}) {
+	$SIG{CHLD}->(); # hacky workaround
+    } else {
+	sleep while %children;
+    }
     warn "done waiting" if DEBUG;
+
     my $elapsed = time() - $time;
     warn "[$$] run_local_requests (@$labels): $elapsed seconds" if DEBUG;
 

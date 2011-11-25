@@ -500,7 +500,7 @@ END
 		      $render->translate('APPLY_CONFIG')
 		      ),
 		  td(
-		      $self->region_size_menu('apply_semantic_low',$length,MIN),
+		      $self->region_size_menu('apply_semantic_low',$length,MIN,$low),
 		      '-',
 		      $self->region_size_menu('apply_semantic_hi',$hi,MAX),
 		  )
@@ -573,7 +573,7 @@ sub setting {
 
 sub region_size_menu {
   my $self = shift;
-  my ($name,$length,$extra_val) = @_;
+  my ($name,$length,$extra_val,$default) = @_;
   $extra_val ||= 0;
 
   my $source =  $self->render->data_source;
@@ -584,12 +584,13 @@ sub region_size_menu {
 
   $labels{MIN()}   = $self->render->translate('MIN');
   $labels{MAX()}   = $self->render->translate('MAX');
-  @ranges = sort {$b||0<=>$a||0} @ranges;
+  @ranges  = sort {$b||0<=>$a||0} @ranges;
+  $default = $length unless defined $default;
 
   return popup_menu(-name    => $name,
 		    -values  => \@ranges,
 		    -labels  => \%labels,
-		    -default => $length,
+		    -default => $default,
 		    -force   => 1,
 		   );
 }

@@ -407,6 +407,7 @@ ScriptAlias  "/gb2"      "$cgibin"
   FastCgiConfig -idle-timeout 600 -maxClassProcesses 20 $fcgi_inc -initial-env GBROWSE_CONF=$conf 
 </IfModule>
 
+# Use of mod_perl is no longer supported. Use at your own risk.
 <IfModule mod_perl.c>
    Alias /mgb2 "$cgibin"
    $modperl_switches

@@ -711,7 +711,6 @@ var GBrowseController = Class.create({
                         }
                     }
                 }
-                Controller.reset_after_track_load();
                 if (continue_requesting) {
                     setTimeout( function() {
                         Controller.get_remaining_tracks(track_keys,time_out*decay,decay,time_key)
@@ -722,6 +721,7 @@ var GBrowseController = Class.create({
 		    area.invoke('observe', 'mouseover', Controller.feature_callback);
                     Controller.idle();
                 }
+                Controller.reset_after_track_load();
             } // end onSuccess
         }); // end new Ajax.Request
 

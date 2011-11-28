@@ -31,7 +31,7 @@ use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
-use constant TRACE_RUN            => 0;
+use constant TRACE_RUN            => 1;
 use constant TRACE                => 0; # shows top level events
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
 use constant REGION_SCALE_LABEL   => 'Region Scale';

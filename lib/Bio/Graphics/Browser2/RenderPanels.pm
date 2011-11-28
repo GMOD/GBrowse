@@ -1193,7 +1193,6 @@ sub make_map {
 
   my $inline = $source->use_inline_imagemap($label,$length);
   return if $source->show_summary($label,$length,$settings);
-  warn "inline = $inline";
   my $inline_options = {};
 
   if ($inline) {

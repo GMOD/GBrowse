@@ -1179,12 +1179,10 @@ sub make_map {
 
   my $source = $self->source;
 
-  my $flip = $panel->flip;
-  my $length = $self->segment->length;
+  my $length   = $self->segment->length;
   my $settings = $self->settings;
+  my $flip     = $panel->flip;
   my ($track_dbid) = $source->db_settings($label,$length);
-
-  my $did_map;
 
   local $^W = 0; # avoid uninit variable warnings due to poor coderefs
 
@@ -1255,7 +1253,6 @@ sub make_imagemap_element_inline {
 		inline      => 1
 	}
     }
-
     my $source = $self->source;
     my $href   = $self->make_link($feature,$panel,$label,$track);
     my $title  = unescape($self->make_title($feature,$panel,$label,$track));

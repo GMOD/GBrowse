@@ -1267,9 +1267,9 @@ sub make_imagemap_element_inline {
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
       my ($balloon_ht,$balloonhover)     =
-        $self->balloon_tip_setting('balloon hover',$label,$feature,$panel,$track);
+        $self->balloon_tip_setting('balloon hover',$label,$feature,$panel,$track,'inline');
       my ($balloon_ct,$balloonclick)     =
-        $self->balloon_tip_setting('balloon click',$label,$feature,$panel,$track);
+        $self->balloon_tip_setting('balloon click',$label,$feature,$panel,$track,'inline');
 
       $balloonhover ||= $title if $use_titles_for_balloons;
       $balloon_ht ||= $balloon_style;
@@ -2557,7 +2557,7 @@ sub make_link_target {
 
 sub balloon_tip_setting {
   my $self = shift;
-  my ($option,$label,$feature,$panel,$track) = @_;
+  my ($option,$label,$feature,$panel,$track,$inline) = @_;
   my $length = $self->segment_length($label);
   $option ||= 'balloon tip';
   my $source = $self->source;
@@ -2582,7 +2582,11 @@ sub balloon_tip_setting {
   }
   # escape quotes
   $val =~ s/'/\\'/g;
-  $val =~ s/"/&quot;/g;
+  if ($inline) {
+      $val =~ s/"/&quot;/g;
+  } else {
+      $val =~ s/"/\\"/g;
+  }
 
   return ($balloon_type,$val);
 }

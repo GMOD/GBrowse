@@ -6,6 +6,7 @@
     mouse hovers or clicks on the feature. This noticeably speeds up track generation time. Drawback
     is that this increases the delay before balloon pops up on the hover operation when run in
     cgi-bin mode (still fast in FastCGI mode). Restore original behavior by setting "inline imagemaps"
+    (or "inline imagemap").
     to true in [TRACK DEFAULTS] or individual track definitions.
   * Can now close tracks from main view even when corresponding track checkbox not showing
     in the track listing.

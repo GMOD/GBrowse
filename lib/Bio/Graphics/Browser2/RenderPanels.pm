@@ -1192,7 +1192,6 @@ sub make_map {
       if $first_box_is_scale;
 
   my $inline = $source->use_inline_imagemap($label,$length);
-  return if $source->show_summary($label,$length,$settings);
   my $inline_options = {};
 
   if ($inline) {

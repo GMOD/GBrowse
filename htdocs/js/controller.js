@@ -245,30 +245,17 @@ var GBrowseController = Class.create({
         //element back out.  This keeps the other tracks intact.
         if (onTop == null) onTop = false;
 
-        var tmp_element       = document.createElement("tmp_element");
-        tmp_element.innerHTML = child_html;
+//        var tmp_element       = document.createElement("tmp_element");
+//        tmp_element.innerHTML = child_html;
 
         var tracks      = parent_obj.getElementsByClassName('track');
         var first_track = tracks[0];
 
         if (onTop && first_track != null)
-	    parent_obj.insert(tmp_element,{before: first_track[0]});
+	    first_track.insert({before: child_html});
         else
-            parent_obj.insert(tmp_element);
+            parent_obj.insert(child_html);
         
-        // Move each child node but skip if it is a comment (class is undef)
-        if (tmp_element.hasChildNodes()) {
-            var children = tmp_element.childNodes;
-            for (var i = 0; i < children.length; i++) {
-                if (children[i].className == undefined)
-                    continue;
-                if (onTop && first_track != null)
-                    parent_obj.insert(children[i],{before:first_track});
-                else
-                    parent_obj.insert(children[i]);
-            }
-        }
-        parent_obj.removeChild(tmp_element);
     },
 
     // Update Section Methods *****************************************

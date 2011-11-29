@@ -519,7 +519,7 @@ sub wrap_rendered_track {
     }
     else {
 	(my $l = $label) =~ s/:\w+$//;
-	$title = $source->setting($l=>'key') || $label;
+	$title = $source->setting( $label => 'key') || $l;
     }
     $title =~ s/:(overview|region|detail)$//;
    

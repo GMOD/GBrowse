@@ -1459,6 +1459,7 @@ sub run_local_requests {
 	    sleep 1;
 	}
 
+	$render ||= 'Bio::Graphics::Browser2::Render';
 	my $child = $render->fork();
 	croak "Can't fork: $!" unless defined $child;
 	if ($child) {

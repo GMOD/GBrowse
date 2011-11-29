@@ -10,8 +10,9 @@
     or individual track definitions.
   * Can now close tracks from main view even when corresponding track checkbox not showing
     in the track listing.
-  * Default to flock locking instead of NFS locking due to apparent race conditions
-    discovered in File::NFSLock code.
+  * Default to flock locking instead of NFS locking; the former seems to be faster.
+  * Enable shared session locking to improve performance.
+  * Fix bad database pathnames in yeast configuration file examples.
   * mod_perl is no longer supported due to unfixable issues with zombie processes.
 
 2.43

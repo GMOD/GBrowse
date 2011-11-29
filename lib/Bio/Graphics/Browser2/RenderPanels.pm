@@ -1438,7 +1438,7 @@ sub run_local_requests {
 
     local $SIG{CHLD} = sub {
     	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {
-    	    print STDERR "[$$] reaped render child $pid\n" if DEBUG;
+    	    print STDERR "[$$] reaped render child $pid" if DEBUG;
     	    $reaped{$pid}++;
     	    delete $children{$pid} if $children{$pid};
     	}

@@ -199,6 +199,7 @@ sub lock_nfs {
 sub lock_mysql {
     my $self = shift;
     my ($type,$id) = @_;
+    $SIG{PIPE} = 'IGNORE';
     return if $type eq 'shared';
     my $lock_name  = $self->mysql_lock_name($id);
     (my $dsn       = $self->{locktype}) =~ s/^mysql://;
@@ -222,7 +223,7 @@ sub unlock {
     warn '[',$self->time,'] ',"[$$] session unlock" if DEBUG_LOCK;
     if ($lock->isa('DBI::db')) {
 	my $lock_name = $self->mysql_lock_name($self->id);
-	$lock->do("SELECT RELEASE_LOCK('$lock_name')");
+	my $result = $lock->do("SELECT RELEASE_LOCK('$lock_name')");
     }
     $self->lockobj(undef);
     warn "[$$] lock released after ",sprintf("%2.1f",$self->time() - $self->locktime)," s" if DEBUG;

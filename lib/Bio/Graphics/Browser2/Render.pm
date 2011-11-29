@@ -3971,7 +3971,7 @@ sub fcgi_request {
 
 sub fork {
     my $self = shift;
-
+    
     $self->prepare_modperl_for_fork();
     $self->prepare_fcgi_for_fork('starting');
 

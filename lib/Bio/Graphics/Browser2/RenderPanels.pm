@@ -128,6 +128,7 @@ sub request_panels {
   my $args    = shift;
 
   my $data_destinations = $self->make_requests($args);
+  my $render            = $args->{render};
 
   # sort the requests out into local and remote ones
   my ($local_labels,
@@ -158,7 +159,7 @@ sub request_panels {
 	  my $db = eval { $source->open_database($l,$length)};
       }
 
-      my $child = Bio::Graphics::Browser2::Render->fork();
+      my $child = $render->fork();
 
       if ($child) {
 	  warn "[$$] Forked new rendering panel $child for $args->{section}" if DEBUG;
@@ -170,7 +171,7 @@ sub request_panels {
       POSIX::setsid()          or die "Couldn't start new session";
 
       if ( $do_local && $do_remote ) {
-          if ( Bio::Graphics::Browser2::Render->fork() ) {
+          if ( $render->fork() ) {
               $self->run_local_requests( $data_destinations,
 					 $args,
 					 $local_labels );
@@ -746,6 +747,7 @@ sub run_remote_requests {
   my ($requests,$args,$labels) = @_;
 
   warn "[$$] run_remote_requests on @$labels" if DEBUG;
+  my $render = $args->{render};
 
   my @labels_to_generate = @$labels;
   return unless @labels_to_generate;
@@ -806,7 +808,7 @@ sub run_remote_requests {
 
   for my $url (keys %renderers) {
 
-      my $child   = Bio::Graphics::Browser2::Render->fork();
+      my $child   = $render->fork();
       next if $child;
 
       my $total_time = time();
@@ -1400,6 +1402,7 @@ sub run_local_requests {
     my $cache_extra    = $args->{cache_extra} || [];
     my $section        = $args->{section}     || 'detail';
     my $nocache        = $args->{nocache};
+    my $render         = $args->{render};
 
     my $settings       = $self->settings;
     my $segment        = $self->segment;
@@ -1456,7 +1459,7 @@ sub run_local_requests {
 	    sleep 1;
 	}
 
-	my $child = Bio::Graphics::Browser2::Render->fork();
+	my $child = $render->fork();
 	croak "Can't fork: $!" unless defined $child;
 	if ($child) {
 	    warn "[$$] Launched rendering process $child for $label" if DEBUG;

@@ -31,7 +31,7 @@ use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
-use constant TRACE_RUN            => 1;
+use constant TRACE_RUN            => 0;
 use constant TRACE                => 0; # shows top level events
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
 use constant REGION_SCALE_LABEL   => 'Region Scale';
@@ -46,6 +46,7 @@ use constant LABEL_SEPARATOR      => "\x1e";
 my %PLUGINS;       # cache initialized plugins
 my $FCGI_REQUEST;  # stash fastCGI request handle
 my $STATE;         # stash state for use by callbacks
+
 
 # new() can be called with two arguments: ($data_source,$session)
 # or with one argument: ($globals)
@@ -65,8 +66,10 @@ sub new {
     my $globals = shift;
     $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     $authority    = param('authority') || CGI::cookie('authority');
-
-    $session = $globals->authorized_session($requested_id, $authority);
+    my $shared_ok = Bio::Graphics::Browser2::Action->shared_lock_ok(param('action'));
+    $session      = $globals->authorized_session($requested_id, 
+						 $authority,
+						 $shared_ok);
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
   } else {
@@ -555,7 +558,7 @@ sub add_tracks {
     my $self        = shift;
     my $track_names = shift;
 
-    warn "add_tracks(@$track_names)" if DEBUG; 
+    warn "[$$] add_tracks(@$track_names)" if DEBUG; 
 
     my %track_data;
     my $segment = $self->segment;
@@ -2025,7 +2028,7 @@ sub add_track_to_state {
   my $label = shift;
   my $state = $self->state;
 
-  cluck "add_track_to_state($label)" if DEBUG;
+  warn '[',Bio::Graphics::Browser2::Session->time,'] ',"[$$] add_track_to_state($label)" if DEBUG;
 
   return unless length $label; # refuse to add empty tracks!
 
@@ -2058,6 +2061,7 @@ sub add_track_to_state {
 sub remove_track_from_state {
   my $self  = shift;
   my $label = shift;
+  warn '[',Bio::Graphics::Browser2::Session->time,'] ',"[$$] remove_track_from_state($label)" if DEBUG;
   delete $self->state->{features}{$label};
 }
 
@@ -3533,6 +3537,7 @@ sub render_deferred {
             cache_extra      => $cache_extra,
 	    nocache          => $nocache || 0,
 	    remotes          => $self->remote_sources,
+	    render           => $self,
             flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
         }
     );
@@ -3975,10 +3980,12 @@ sub fork {
     die "Couldn't fork: $!" unless defined $child;
 
     if ($child) { # parent process
+	$self->session->was_forked('parent') if ref $self;
 	$self->prepare_fcgi_for_fork('parent');
     }
 
     else {
+	$self->session->was_forked('child')  if ref $self;
 	Bio::Graphics::Browser2::DataBase->clone_databases();
 	Bio::Graphics::Browser2::Render->prepare_fcgi_for_fork('child');
 	if (ref $self) {

@@ -50,7 +50,7 @@ sub configure_form {
 				       -onKeyDown => "Controller.busy();if (typeof(timeOutID) != 'undefined') clearTimeout(timeOutID);timeOutID= setTimeout('Controller.idle();doPluginUpdate()',500)",
 				       -override   => 1,
 				       -value      => $current_config->{keywords},
-				       -onChange   => 'Controller.busy();doPluginUpdate();Controller.idle()',
+				       -onBlur     => 'clearTimeout(timeOutID)',
 	       ),
 	       input({-type => 'checkbox',
 		      -id => 'stickySearch',

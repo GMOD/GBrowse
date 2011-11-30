@@ -562,7 +562,7 @@ sub process_conf_files {
 	    (my $new = $base) =~ s/^conf\///;
 	    my $installed = File::Spec->catfile($install_path,$new);
 	    if (-e $installed && $base =~ /\.conf$/ && (compare($base,$installed) != 0)) {
-		warn "$installed conf file is already installed. New version will be installed as $installed.new\n";
+		warn "$installed is already installed. New version will be installed as $installed.new\n";
 		rename ("blib/$base","blib/$base.new");
 		print $skip '^',"blib/",quotemeta($base),'$',"\n";
 	    }

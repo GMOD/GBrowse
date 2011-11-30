@@ -13,6 +13,7 @@
   * Default to flock locking instead of NFS locking; the former seems to be faster.
   * Enable shared session locking to improve performance.
   * Fix bad database pathnames in yeast configuration file examples.
+  * Fix track finder plugin to avoid annoying extra refresh after leaving text entry field.
   * mod_perl is no longer supported due to unfixable issues with zombie processes.
 
 2.43

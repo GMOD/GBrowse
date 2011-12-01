@@ -2127,10 +2127,11 @@ sub reconfigure_track {
     $state->{features}{$label}{options}          = param('format_option');
     my $dynamic = $self->translate('DYNAMIC_VALUE');
     my $mode    = param('mode');
+    my $mult    = $self->details_mult;
 
-    my $length            = param('segment_length')       || 0;
-    my $semantic_low      = param('apply_semantic_low')   || 0;
-    my $semantic_hi       = param('apply_semantic_hi')    || 0;
+    my $length            = param('segment_length') * $mult       || 0;
+    my $semantic_low      = param('apply_semantic_low') * $mult   || 0;
+    my $semantic_hi       = param('apply_semantic_hi')  * $mult   || 0;
     my $delete_semantic   = param('delete_semantic');
     my $summary           = param('summary_mode');
 

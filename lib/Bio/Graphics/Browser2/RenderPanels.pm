@@ -2191,11 +2191,6 @@ sub create_track_args {
       );
   }
 
-  if (my $stt = $self->subtrack_manager($label)) {
-      my $sub = $stt->sort_feature_sub;
-      push @default_args,(-sort_order => $sub);
-  }
-
   my @args;
   if ($source->semantic_setting($label=>'global feature',$length)) {
       eval { # honor the database indicated in the track config
@@ -2222,6 +2217,12 @@ sub create_track_args {
 	     @override,
 	    );
   }
+
+  if (my $stt = $self->subtrack_manager($label)) {
+      my $sub = $stt->sort_feature_sub;
+      push @args,(-sort_order => $sub);
+  }
+
   return @args;
 }
 

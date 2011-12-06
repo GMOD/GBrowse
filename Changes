@@ -14,6 +14,7 @@
   * Enable shared session locking to improve performance.
   * Fix bad database pathnames in yeast configuration file examples.
   * Fix track finder plugin to avoid annoying extra refresh after leaving text entry field.
+  * Fix broken sorting of subtracks.
   * mod_perl is no longer supported due to unfixable issues with zombie processes.
 
 2.43

@@ -1,4 +1,5 @@
 2.44
+  * Modest performance improvements when rendering multiple tracks.
   * Set absolute cap of 5000 features per track to avoid performance issues on NGS data.
     This cap can be changed by setting "maximum features" in the [GENERAL] section. Set
     to 0 to return to unlimited behavior.
@@ -15,6 +16,7 @@
   * Fix bad database pathnames in yeast configuration file examples.
   * Fix track finder plugin to avoid annoying extra refresh after leaving text entry field.
   * Fix broken sorting of subtracks.
+  * Improve dynamic range of wiggle tracks.
   * mod_perl is no longer supported due to unfixable issues with zombie processes.
 
 2.43

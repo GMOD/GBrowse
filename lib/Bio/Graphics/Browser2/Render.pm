@@ -2182,7 +2182,7 @@ sub reconfigure_track {
 	    }
 	}
     }
-    if (defined $o->{autoscale} && $o->{autoscale} eq 'local') { 
+    if (defined $o->{autoscale} && $o->{autoscale}=~/local|global|chromosome/) { 
 	undef $o->{min_score}; 
 	undef $o->{max_score} 
     }

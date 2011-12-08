@@ -66,7 +66,7 @@ sub config_dialog {
     my $return_html = start_html();
 
     my $showing = $render->data_source->unit_label($scaled_length);
-    my $title   = div({-class=>'config-title'},$key,br(),div({-style=>'font-size:9pt'},"(Currently showing $showing)"));
+    my $title   = div({-class=>'config-title'},$key,br(),div({-style=>'font-size:9pt'},$render->translate('Currently_Showing',$showing)));
     my $dynamic = $render->translate('DYNAMIC_VALUE');
 
     my $height        = $self->setting( $label => 'height' ,        $length, $summary_mode)    || 10;
@@ -86,7 +86,7 @@ sub config_dialog {
     $autoscale  ||= 'local';
 
     my $sd_fold   = $self->setting( $label => 'z_score_bound' ,     $length, $summary_mode);
-    $sd_fold    ||= 4;
+    $sd_fold    ||= 8;
 
     my $bicolor_pivot = $self->setting( $label => 'bicolor_pivot' ,  $length, $summary_mode);
     my $graph_type    = $self->setting( $label => 'graph_type' ,     $length, $summary_mode);
@@ -395,13 +395,16 @@ END
 		    th( { -align => 'right' },$render->translate('SD_MULTIPLES')),
 		    td( $picker->popup_menu(
 			    -name    => "conf_z_score_bound",
-			    -values  => [qw(1 2 3 4 5 6)],
+			    -values  => [qw(1 2 3 4 5 6 8 10 20)],
 			    -labels  => {1   =>'1 SD',
 					 2   =>'2 SD',
 					 3   =>'3 SD',
 					 4   =>'4 SD',
 					 5   =>'5 SD',
 					 6   =>'6 SD',
+					 8   =>'8 SD',
+					 10   =>'10 SD',
+					 20   =>'20 SD',
 					 },
 			    -default => $sd_fold,
 			    -current => $override->{z_score_bound}

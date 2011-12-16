@@ -1,11 +1,5 @@
 #!/usr/bin/perl -w
 
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 # $Id: gbrowse_img,v 1.7 2009-08-31 19:46:38 lstein Exp $
 
 use strict;
@@ -64,7 +58,6 @@ if ($fcgi) {
 	my $gbi = GBrowse_img->new($globals);
 	$gbi->run();
 	$gbi->destroy;
-#	$fcgi->Finish();
     }
 }
 
@@ -208,6 +201,11 @@ sub render_image {
     my $flip     = param('flip')   || 0;
     my $embed    = param('embed');
 
+    if (my @regions = param('h_region')) {
+	$render->state->{h_region} = \@regions;
+    }
+
+
     my $convert_to_pdf;
     if ($format eq 'PDF' && `which inkscape`) {
 	$convert_to_pdf++;
@@ -302,10 +300,9 @@ sub render_tracks {
     my @labels   = $render->expand_track_names($render->detail_tracks);
 
     warn "labels = ",join ',',@labels if DEBUG;
-#    my @types           = (param('t'),param('type'),param('track'));
-#    my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
-#                          map { split /[ +-]/ } @types;
     my @track_types      = map {shellwords($_)} (param('t'),param('type'),param('track'));
+
+    my $h_callback = make_hilite_callback(param('h_feat'));
 
     # If no tracks specified, we want to see all tracks with this feature
     if (!@track_types) { @track_types = @labels; } 
@@ -316,9 +313,10 @@ sub render_tracks {
 						      labels            => \@track_types,
 						      external_features => $external,
 						      section           => 'detail',
-						      cache_extra       => [$format],
+						      cache_extra       => [$format,param('h_feat'),param('h_region')],
 						      image_class       => $format,
 						      flip              => $flip,
+						      hilite_callback   => $h_callback || undef,
 						      -key_style        => 'between',
 						      -suppress_key     => 0,
 						      }
@@ -378,6 +376,28 @@ sub consolidate_images {
     return $gds->[0]->isa('GD::SVG::Image') 
 	                         ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
                                  : $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
+}
+
+sub make_hilite_callback {
+    my @feature_names = @_;
+    return unless @feature_names;
+    my %colors;
+    foreach (@feature_names) {
+	my ($name,$color) = split '@';
+	$color ||= 'yellow';
+	$colors{$name} = $color;
+    }
+    return sub {
+	my $feature = shift;
+	my $color;
+	# if we get here, we select the search term for highlighting
+	my %names = map {lc $_=> 1}
+	                $feature->display_name,
+	                eval{$feature->get_tag_values('Alias')};
+	return unless %names;
+	$color ||= $colors{$_} foreach keys %names;
+	return $color;
+    }
 }
 
 sub _consolidate_gd {

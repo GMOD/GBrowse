@@ -396,6 +396,9 @@ sub _search_features_locally {
     warn "dbs = @dbids" if DEBUG;
     my %seenit;
 
+    # prevent uninit variable warnings here
+    $args->{-name} ||= '';
+
     for my $dbid (@dbids) {
 	my $opts = $self->source->search_options($dbid);
 	next if $opts =~ /none/i && $args->{-name} !~ /^id:/;
@@ -409,18 +412,18 @@ sub _search_features_locally {
 	      searchopts => $opts,
 	    }
 	    ); 
- 	my $features = $region->search_features($args);
+	my $features = $region->search_features($args);
 	warn $features && @$features ? "[$$] got @$features" : "[$$] got no features" if DEBUG;
 	next unless $features && @$features;
 	$features = $self->filter_features($dbid,$features);
 	$self->add_dbid_to_features($dbid,$features);
 	push @found,@$features;
-
+	
 	if ($dbid eq $default_dbid && $shortcircuit) {
 	    warn "hit @found in the default database, so short-circuiting" if DEBUG;
 	    last;
 	}
-
+	    
     }
 
     return \@found;		

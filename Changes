@@ -1,3 +1,6 @@
+2.45
+  * Restore h_feat & h_region functionality to gbrowse_img.
+
 2.44
   * Modest performance improvements when rendering multiple tracks.
   * Set absolute cap of 5000 features per track to avoid performance issues on NGS data.

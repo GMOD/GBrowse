@@ -87,11 +87,12 @@ sub render_snapshots_listing {
     my $innerHTML = '';
     for my $snapshot_name (@sortedSnapshots) { 
 	next unless $snapshot_name && $snapshot_name =~ /\S/;
-	
+
 	$timeStamp  = $snapshots->{$snapshot_name}{session_time};
 	$imageURL   = $snapshots->{$snapshot_name}{data}{image_url};
 	($base,$s)  = $render->globals->gbrowse_base;
 	($escapedKey = $snapshot_name) =~ s/(['"])/\\$1/g;
+	my $readable_name = CGI::unescape($snapshot_name);  # ugly, but easier to fix here than where the real bug is 
 	 
 	warn "time = $timeStamp" if DEBUG;
 	
@@ -162,7 +163,7 @@ sub render_snapshots_listing {
 						   -value => "Cancel",
 						   -onclick => '$(\'' . "mail_snapshot_$escapedKey" . '\').hide(); this.style.zIndex = \'0\'',}),
 				       ));
-	my $snapshot_image = span({-class=>'snapshot_image_frame'},span({-class => "snapshot_names"}, (substr $escapedKey, 5))).
+	my $snapshot_image = span({-class=>'snapshot_image_frame'},span({-class => "snapshot_names"}, (substr $readable_name, 5))).
 				  span({-class => "timestamps"},$timeStamp,
 					img({-src => $imageURL, -width=>"50",-height=>"30",-class=>'snapshot_image',
 					     -onclick => 'Controller.enlarge_image(' . "'${imageURL}'" . '); $(' . "'$escapedKey'" . ').style.zIndex = \'0\';',

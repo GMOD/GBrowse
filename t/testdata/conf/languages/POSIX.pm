@@ -30,6 +30,8 @@ END
 
    SHOWING_FROM_TO => '%s from %s:%s..%s',
 
+   CURRENTLY_SHOWING => '(Currently showing %s)',
+
    INSTRUCTIONS      => 'Instructions',
 
    HIDE              => 'Hide',

@@ -1,6 +1,7 @@
 2.45
   * Restore h_feat & h_region functionality to gbrowse_img.
   * Fix gbrowse_img documentation to point to correct example URLs on WormBase.
+  * Fix persistent grey screen when clicking on snapshot thumbnail.
 
 2.44
   * Modest performance improvements when rendering multiple tracks.

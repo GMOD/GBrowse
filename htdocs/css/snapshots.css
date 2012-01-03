@@ -4,7 +4,6 @@
     background:whitesmoke;
     z-index:1; 
     border:2px solid gray;
-    display:none; 
     padding: 5px; 
     position: fixed; 
     left: 140px; 
@@ -16,7 +15,6 @@
     margin-right: 1em;
 }
 #enlarge_image {
-    display: none; 
     position:absolute; 
     left: 155px; 
     top:100px; 
@@ -26,6 +24,11 @@
 }
 #enlarge_image>img {
     cursor:pointer;
+}
+#large_snapshot_close {
+    position: relative;
+    top:16px;
+    left:2px;
 }
 #headingRow>h1 {
     position:relative;

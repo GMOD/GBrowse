@@ -380,6 +380,9 @@ sub infer_settings_from_source {
     my $package          = shift;
     my ($source,$label)  = @_;
 
+    my $bump = $source->setting($label=>'bump');
+    return if defined $bump && ($bump eq 'overlap' || $bump == 0);
+
     my (@dimensions,@rows);
   TRY: {
 

@@ -1904,7 +1904,8 @@ sub add_features_to_track {
 			     -label       => $do_label,
 			     -description => $do_description,
 			      );
-    $tracks->{$l}->configure(-connector  => 'none') if !$do_bump;
+#    $tracks->{$l}->configure(-connector  => 'none') if !$do_bump;
+    $tracks->{$l}->configure(-label  => 0) if !$do_bump;
     $tracks->{$l}->configure(-bump_limit    => $limit)
       if $limit && $limit > 0;
 

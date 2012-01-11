@@ -83,6 +83,14 @@ sub elements {
     return $self->{_elements}=\%elements;
 }
 
+# flag indicates that subtracks are overlapping
+sub overlap {
+    my $self = shift;
+    my $d = $self->{_overlap};
+    $self->{_overlap} = shift if @_;
+    return $d;
+}
+
 # return two element list consisting of # selected/# total
 sub counts {
     my $self = shift;
@@ -132,6 +140,7 @@ sub selection_table {
     my $aliases   = $self->subtrack_aliases;
     my @selectors = $self->selectors;
     my $elements  = $self->elements;
+    my $overlap   = $self->overlap;
     my (@popups,@sort_type,@boolean);
 
     my $tbody_id = "${label}_subtrack_id";
@@ -223,10 +232,15 @@ sub selection_table {
     }
     my $tbody = tbody({-id=>$tbody_id,-class=>'sortable'},@table_rows);
 
-    my $tbottom = div(button(-name=>$render->tr('Cancel'),
-			     -onClick => 'Balloon.prototype.hideTooltip(1)'),
-		      button(-name    => $render->tr('Change'),
-			     -onclick => "Table.sendTableState('$label',\$('$tbody_id'));ShowHideTrack('$label',true);Controller.rerender_track('$label',false,true);Controller.update_sections(new Array(track_listing_id));Balloon.prototype.hideTooltip(1);"));
+    my $tbottom = div(
+	checkbox(-id=>'overlap_track',
+		 -label    => $render->tr('OVERLAP'),
+		 -checked  => $overlap,
+	),
+	button(-name=>$render->tr('Cancel'),
+	       -onClick => 'Balloon.prototype.hideTooltip(1)'),
+	button(-name    => $render->tr('Change'),
+	       -onclick => "Table.sendTableState('$label',\$('$tbody_id'));Controller.toggle_subtrack_overlapping('$label',\$('overlap_track').checked);ShowHideTrack('$label',true);Controller.rerender_track('$label',false,true);Controller.update_sections(new Array(track_listing_id));Balloon.prototype.hideTooltip(1);"));
 
 
     my $table_id = "${label}_subtrack_table";
@@ -255,6 +269,11 @@ END
                    -id    => $table_id,
 		   @style},
 		  $thead,$tbody)).$tbottom.$script;
+}
+
+sub track_args {
+    my $self = shift;
+    return $self->overlap ? (-bump => 'overlap',-opacity=>0.25) : ();
 }
 
 # summarize rows that are active vs inactive
@@ -381,7 +400,9 @@ sub infer_settings_from_source {
     my ($source,$label)  = @_;
 
     my $bump = $source->setting($label=>'bump');
-    return if defined $bump && ($bump eq 'overlap' || $bump == 0);
+
+# use this to test prototype overlap functionality
+#    return if defined $bump && ($bump eq 'overlap' || $bump == 0);
 
     my (@dimensions,@rows);
   TRY: {

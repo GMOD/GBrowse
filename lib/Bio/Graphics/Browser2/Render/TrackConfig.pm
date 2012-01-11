@@ -143,22 +143,12 @@ END
         -id   => $form_name,
     );
 
+    # NOTE: the -class option determines which form elements are shown for
+    # which track types. See htdocs/js/track_config.js
     my @rows;
     push @rows, TR({-class=>'general'},
 		   td( {-colspan => 2}, $title));
 
-    push @rows, TR({-class=>'general'},
-		   th( { -align => 'right' }, $render->translate('Show') ),
-		   td( checkbox(
-			   -name     => 'show_track',
-			   -value    => $label,
-			   -override => 1,
-			   -checked  => $state->{features}{$label}{visible},
-			   -label    => ''
-		       )
-		   ),
-        );
-    
     push @rows,TR( {-class=>'general'},
 		   th( { -align => 'right' }, $render->translate('GLYPH') ),
 		   td($picker->popup_menu(
@@ -207,12 +197,12 @@ END
 	}
     }
 
-    push @rows,TR( {-class => 'features',
+    push @rows,TR( {-class => 'general',
 		    -id    => 'packing'},
 		   th( { -align => 'right' }, $render->translate('Packing') ),
 		   td( popup_menu(
 			   -name     => 'format_option',
-			   -values   => [ 0 .. 3 ],
+			   -values   => ($quantitative ? [0,4] : [ 0..4 ]),
 			   -override => 1,
 			   -default  => $state->{features}{$label}{options},
 			   -labels   => {
@@ -220,6 +210,7 @@ END
 			       1 => $render->translate('Compact'),
 			       2 => $render->translate('Expand'),
 			       3 => $render->translate('Expand_Label'),
+			       4 => $render->translate('Overlap'),
 			   }
 		       )
 		   )
@@ -459,6 +450,7 @@ END
 		       { -align => 'right' }, $render->translate('HEIGHT') ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_height',
+			   -id      => 'conf_height',
 			   -current => $override->{'height'},
 			   -default => $height,
 			   -values  => [

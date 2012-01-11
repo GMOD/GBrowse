@@ -43,10 +43,12 @@ var TrackConfigure = Class.create({
     }
     if (glyph_element.value.match(/density/)){
        config_container.select('tr.density').each(function(a){a.show()});
+       this.adjust_height(5,30);
        specific = true;
     }
     if (glyph_element.value.match(/wiggle/)){
        config_container.select('tr.wiggle').each(function(a){a.show()});
+       this.adjust_height(50,500);
        var x = $('conf_xyplot_subtype');
        if (x != null) x.hide();
        specific = true;
@@ -83,6 +85,30 @@ var TrackConfigure = Class.create({
 
  set_minmax: function(el) { 
 	$F('autoscale_popup').selectedIndex=0;   
+ },
+
+ adjust_height: function(min,max) {
+    var el = $('conf_height');
+    if (el==null) return;
+    var current = el.value;
+    if (current >= min && current <= max) return;
+    var options = el.options;
+    if (current < min) {
+	for (var i=0;i<options.length;i++) {
+	    if (options[i].value >= min) {
+		el.value = options[i].value;
+		return;
+	    }
+	}
+    }
+    else {
+	for (var i=options.length-1;i>0;i--) {
+	    if (options[i].value <= max) {
+		el.value = options[i].value;
+		return;
+	    }
+	}
+    }
  },
 
  autoscale_select: function(scale_element,glyph_element) {

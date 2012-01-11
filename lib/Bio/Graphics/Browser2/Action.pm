@@ -236,12 +236,24 @@ sub ACTION_scan {
 sub ACTION_reconfigure_track {
     my $self = shift;
     my $q    = shift;
-
     my $track_name     = $q->param('track') or croak;
     my $semantic_label = $q->param('semantic_label');
+    warn "reconfiguring $track_name";
+
     $self->render->reconfigure_track($track_name,$semantic_label);
     $self->session->flush;
     return ( 200, 'application/json', {} );
+}
+
+sub ACTION_track_overlapping {
+    my $self = shift;
+    my $q    = shift;
+    my $track_name     = $q->param('track') or croak;
+    my $overlapping    = $q->param('overlapping') or croak;
+    my $state          = $self->state;
+    $state->{features}{$track_name}{options}  = $overlapping eq 'true' ? 4 : 1;
+    $self->session->flush;
+    return ( 200, 'application/json', {} );    
 }
 
 sub ACTION_share_track {
@@ -1073,6 +1085,7 @@ sub ACTION_set_subtracks {
     my $q    = shift;
     my $label= $q->param('label');
     my $subtracks = JSON::from_json($q->param('subtracks'));
+    my $overlap   = $q->param('overlap');
     my $settings  = $self->state;
     $self->state->{subtracks}{$label} = $subtracks;
     $self->session->flush;

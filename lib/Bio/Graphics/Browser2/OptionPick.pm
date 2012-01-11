@@ -128,6 +128,7 @@ sub popup_menu {
   my $current = $args{-current};
   my $default = $args{-default};
   my $values  = $args{-values};
+  my $id      = $args{-id};
   my $labels  = $args{-labels}  || {};
   my $scripts = $args{-scripts} || {};
 
@@ -139,12 +140,14 @@ sub popup_menu {
   my $def    = $self->translate('DEFAULT');
   my $def_label = $labels->{$default} || $default;
   my %labels    = (%$labels,$default => "$def_label $def");
+  my @extra     = $id ? (-id => $id) : ();
 
   return CGI::popup_menu(-name    => $name,
 			 -values  => \@values,
 			 -default => $current,
 			 -labels  => \%labels,
                          %$scripts,
+                         @extra,
 			 -override=>1);
 }
 

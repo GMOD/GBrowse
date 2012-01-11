@@ -332,6 +332,7 @@ sub make_requests {
 			     $label ],
 	    -cache_time => $cache_time
         );
+
         $d{$label} = $cache_object;
     }
 
@@ -1481,7 +1482,6 @@ sub run_local_requests {
 	my $key = $source->setting( $base => 'key' ) || '' ;
 	my @nopad = ();
         my $panel_args = $requests->{$label}->panel_args;
-
 	
         my $panel
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
@@ -1794,14 +1794,6 @@ sub add_features_to_track {
 							       -seq_id     => $segment->seq_id,
 		  );
 	      $has_subtracks{$l}++;
-
-	      if ($source->setting($l=>'subtrack single plot')) {
-	          $tracks->{$l}->configure(
-	                 -scale     => 'none',
-	                 -no_grid   => 1,
-	          );
-	      }
-
 	      $groups{$l}{$id}->add_segment($feature);
 	      next;
 	  }
@@ -1836,39 +1828,8 @@ sub add_features_to_track {
 	    foreach @ids
     }
 
-    if ($source->setting($l=>'subtrack single plot')) {
-        my $tempFeature = Bio::Graphics::Feature->new(-type       => 'group',
-                                                      -start      => $segment->start,
-                                                      -end        => $segment->end,
-                                                      -seq_id     => $segment->seq_id,
-                      );
-        my $tempSubFeature = Bio::Graphics::Feature->new(-type       => 'scale',
-                                                         -scale      => 'three',
-                                                         -name       => 'scales',
-                                                         -start      => $segment->start,
-                                                         -end        => $segment->end,
-                                                         -seq_id     => $segment->seq_id,
-                      );
-        $tempFeature->add_segment(($tempSubFeature));
-        $track->add_feature($tempFeature);
-        
-        for my $f (values %$g) {
-            my @colours = ( qw(aqua black blue fuchsia gray green lime maroon navy olive purple red silver teal yellow) );
-            my @subFeatures = $f->get_SeqFeatures;
-            my $subf = $subFeatures[0];
-            if ($subf) {
-                my $feature_colour = $colours[rand @colours];
-                $subf->{attributes}{'bgcolor'} = $feature_colour;
-                $subf->{attributes}{'labelcolor'} = $feature_colour;
-            }
-            $track->add_feature($f);
-        }
-    } else {
-        $track->add_feature($_) foreach values %$g;
-    }
-
+    $track->add_feature($_) foreach values %$g;
     $feature_count{$l} += keys %$g;
-
   }
 
   # now reconfigure the tracks based on their counts
@@ -1900,14 +1861,16 @@ sub add_features_to_track {
 					       $max_labels,
 					       $length);
 
-    $tracks->{$l}->configure(-bump        => ($has_subtracks{$l} && ($source->setting($l=>'subtrack single plot'))) ? 0 : $do_bump,
+    $tracks->{$l}->configure(-bump        => $do_bump,
 			     -label       => $do_label,
 			     -description => $do_description,
 			      );
-#    $tracks->{$l}->configure(-connector  => 'none') if !$do_bump;
     $tracks->{$l}->configure(-label  => 0) if !$do_bump;
     $tracks->{$l}->configure(-bump_limit    => $limit)
       if $limit && $limit > 0;
+
+    # essentially make label invisible if we are going to get the label position
+    $tracks->{$l}->configure(-fontcolor   => 'white:0.0') if $tracks->{$l}->option('record_label_positions');
 
     if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
 	my $max       = $tracks->{$l}->feature_limit;
@@ -2145,19 +2108,15 @@ sub create_track_args {
   my $lang            = $self->language;
 
   my $is_summary      = $source->show_summary($label,$length,$self->settings);
-  my $state            = $self->settings;
+  my $overlaps        = $self->settings->{features}{$label}{options} == 4
+                     || ($source->semantic_setting($label => 'bump',$length)||'') eq 'overlap';
 
-  my $semantic_override = Bio::Graphics::Browser2::Render->find_override_region(
-      $state->{features}{$label}{semantic_override},
-      $length);
-  my $override  = $is_summary           ? $state->{features}{$label}{summary_override}
-                   : $semantic_override ? $state->{features}{$label}{semantic_override}{$semantic_override}
-                   : {};
-
+  my $override        = $self->render->override_settings($label);
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
   push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
+  push @override,(-opacity => 0.25) if $overlaps;
 
   my @summary_args = ();
   if ($is_summary) {
@@ -2175,7 +2134,7 @@ sub create_track_args {
   push @default_args,(-key   => $label)        unless $label =~ /^\w+:/;
   push @default_args,(-hilite => $hilite_callback) if $hilite_callback;
 
-  if ($self->subtrack_manager($label)) {
+  if (my $stt = $self->subtrack_manager($label)) {
       push @default_args,(-connector   => '');
       my $left_label = 
 	  $source->semantic_setting($label=>'label_position',$length)||'' eq 'left';
@@ -2188,8 +2147,9 @@ sub create_track_args {
       push @default_args,(
 	  -group_label          => $group_label||0,
 	  -group_label_position => $left_label ? 'top' : 'left',
-	  -group_subtracks      => $source->setting($label=>'subtrack single plot') ? 0 : 1,
+	  -group_subtracks      => !$overlaps,
       );
+      push @default_args,$stt->track_args;
   }
 
   my @args;
@@ -2222,6 +2182,7 @@ sub create_track_args {
   if (my $stt = $self->subtrack_manager($label)) {
       my $sub = $stt->sort_feature_sub;
       push @args,(-sort_order => $sub);
+      push @args,(-color_series => 1) if $overlaps;
   }
 
   return @args;
@@ -2331,8 +2292,7 @@ sub do_bump {
       :  $option == 1 ? 0
       :  $option == 2 ? 1
       :  $option == 3 ? 1
-      :  $option == 4 ? 2
-      :  $option == 5 ? 2
+      :  $option == 4 ? 'overlap'
       :  0;
 }
 

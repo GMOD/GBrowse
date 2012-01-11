@@ -2112,6 +2112,7 @@ sub create_subtrack_manager {
 								     -aliases => $aliases,
 								     -comment => $comment);
     $stt->set_selected($selected) if $selected;
+    eval {$stt->overlap(($state->{features}{$label}{options}||0)==4)};  # options == 4 means "overlap", for legacy reasons
     return $stt;
 }
 
@@ -2123,15 +2124,14 @@ sub reconfigure_track {
     my $state  = $self->state();
     my $source = $self->data_source;
 
-    $state->{features}{$label}{visible}          = param('show_track') ? 1 : 0;
-    $state->{features}{$label}{options}          = param('format_option');
+    $state->{features}{$label}{options}  = param('format_option');
     my $dynamic = $self->translate('DYNAMIC_VALUE');
-    my $mode    = param('mode');
+    my $mode    = param('mode') || 'details';
     my $mult    = $self->details_mult;
 
-    my $length            = param('segment_length') * $mult       || 0;
-    my $semantic_low      = param('apply_semantic_low') * $mult   || 0;
-    my $semantic_hi       = param('apply_semantic_hi')  * $mult   || 0;
+    my $length            = (param('segment_length')||0)     * $mult;
+    my $semantic_low      = (param('apply_semantic_low')||0) * $mult;
+    my $semantic_hi       = (param('apply_semantic_hi')||0)  * $mult   || $self->get_max_segment;
     my $delete_semantic   = param('delete_semantic');
     my $summary           = param('summary_mode');
 
@@ -2186,6 +2186,23 @@ sub reconfigure_track {
 	undef $o->{min_score}; 
 	undef $o->{max_score} 
     }
+}
+
+# this returns semantically-correct override configuration
+# as a hash ref
+sub override_settings {
+    my $self  = shift;
+    my $label = shift;
+    my $source = $self->data_source;
+    my $state  = $self->state;
+    my $length = eval {$self->segment->length} || 0;
+    my $is_summary    = $source->show_summary($label,$length,$state);
+    my $semantic_override = $self->find_override_region(
+	$state->{features}{$label}{semantic_override},
+	$length);
+    return $is_summary           ? $state->{features}{$label}{summary_override}
+                                 : $semantic_override ? $state->{features}{$label}{semantic_override}{$semantic_override}
+                                 : {};
 }
 
 #        low                    hi

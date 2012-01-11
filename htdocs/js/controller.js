@@ -740,9 +740,6 @@ var GBrowseController = Class.create({
         if (mode==null)
             mode='normal';
 
-        var show_box   = form_element['show_track'];
-        var show_track = $(show_box).getValue();
-
         new Ajax.Request(Controller.url, {
                 method:     'post',
                 parameters: form_element.serialize() +"&"+ $H({
@@ -753,17 +750,22 @@ var GBrowseController = Class.create({
             onSuccess: function(transport) {
                 var track_div_id = Controller.gbtracks.get(track_id).track_div_id;
                 Balloon.prototype.hideTooltip(1);
-                if (show_track == track_id){
-                    Controller.rerender_track(track_id,false,false);
-                } else {
-                    if ($(track_div_id) != null) {
-                        actually_remove(track_div_id);
-                    }
-                    Controller.update_sections(new Array(track_listing_id),null,null,true);
-                }
+		Controller.rerender_track(track_id,false,false);
+		Controller.update_sections(new Array(track_listing_id),null,null,true);
             } // end onSuccess
         });
     },
+
+    toggle_subtrack_overlapping:
+	function(track_id,overlapping) {
+	    new Ajax.Request(Controller.url, {
+		    method:     'post',
+		    parameters: {
+			action:  'track_overlapping',
+			track:   track_id,
+		        overlapping: overlapping }
+            })
+     },
 
     filter_subtrack:
     function(track_id, form_element) {

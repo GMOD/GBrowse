@@ -492,6 +492,8 @@ END
 
  SHOWING_SUBTRACKS  => '(<i>Showing %d of %d subtracks</i>)',
 
+ OVERLAP            => 'Semi-transparent overlap',
+
  SHARE_THIS_TRACK   => '<b>Share this track</b>',
 
  SHARE_ALL          => 'Share these tracks',

@@ -445,7 +445,6 @@ sub infer_settings_from_source {
       }
 
     my (undef,$adaptor) = $source->db_settings($label);
-    last TRY unless $adaptor =~ /BigWigSet/;
 
     my $db   = $source->open_database($label) or last TRY;
     my $meta = eval {$db->metadata}           or last TRY;

@@ -1855,6 +1855,8 @@ sub add_features_to_track {
 				   $max_labels,
 				   $length);
 
+    warn "do_label=$do_label";
+
     my $do_description = $self->do_description($l,
 					       $pack_options,
 					       $count,
@@ -1865,12 +1867,13 @@ sub add_features_to_track {
 			     -label       => $do_label,
 			     -description => $do_description,
 			      );
-    $tracks->{$l}->configure(-label  => 0) if !$do_bump;
+    $tracks->{$l}->configure(-label         => 0     ) if !$do_bump;
     $tracks->{$l}->configure(-bump_limit    => $limit)
       if $limit && $limit > 0;
 
     # essentially make label invisible if we are going to get the label position
-    $tracks->{$l}->configure(-fontcolor   => 'white:0.0') if $tracks->{$l}->option('record_label_positions');
+    warn $tracks->{$l}->parts->[0];
+    $tracks->{$l}->configure(-fontcolor   => 'white:0.0') if $tracks->{$l}->parts->[0]->record_label_positions;
 
     if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
 	my $max       = $tracks->{$l}->feature_limit;
@@ -2108,14 +2111,14 @@ sub create_track_args {
   my $lang            = $self->language;
 
   my $is_summary      = $source->show_summary($label,$length,$self->settings);
-  my $overlaps        = $self->settings->{features}{$label}{options} == 4
-                     || ($source->semantic_setting($label => 'bump',$length)||'') eq 'overlap';
+  my $overlaps        =    ($self->settings->{features}{$label}{options}||0) == 4
+                        || ($source->semantic_setting($label => 'bump',$length)||'') eq 'overlap';
 
   my $override        = $self->render->override_settings($label);
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
-  push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
+#  push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
   push @override,(-opacity => 0.25) if $overlaps;
 
   my @summary_args = ();
@@ -2310,9 +2313,10 @@ sub do_label {
   $conf_label           = 1 unless defined $conf_label;
 
   $option ||= 0;
+  warn "option =$option, conf_label=$conf_label";
   return  $option == 0 ? $maxed_out && $conf_label
         : $option == 3 ? $conf_label || 1
-	: $option == 5 ? $conf_label || 1
+	: $option == 4 ? $conf_label || 1
         : 0;
 }
 

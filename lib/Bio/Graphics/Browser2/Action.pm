@@ -251,7 +251,7 @@ sub ACTION_track_overlapping {
     my $track_name     = $q->param('track') or croak;
     my $overlapping    = $q->param('overlapping') or croak;
     my $state          = $self->state;
-    $state->{features}{$track_name}{options}  = $overlapping eq 'true' ? 4 : 1;
+    $state->{features}{$track_name}{options}  = $overlapping eq 'true' ? 4 : 0;
     $self->session->flush;
     return ( 200, 'application/json', {} );    
 }

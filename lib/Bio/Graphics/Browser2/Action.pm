@@ -242,6 +242,7 @@ sub ACTION_reconfigure_track {
 
     $self->render->reconfigure_track($track_name,$semantic_label);
     $self->session->flush;
+    $self->session->unlock;
     return ( 200, 'application/json', {} );
 }
 

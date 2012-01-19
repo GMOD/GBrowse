@@ -414,7 +414,7 @@ END
 
  HEIGHT           => 'Height',
 
- PACKING          => 'Packing',
+ PACKING          => 'Spacing',
 
  GLYPH            => 'Shape',
 

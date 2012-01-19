@@ -696,9 +696,12 @@ sub wrap_rendered_track {
 
 
     my $subtrack_labels = join '',map {
-	my ($label,$left,$top) = @$_;
-	$left = PAD_DETAIL_SIDES;
-	div({-class=>'subtrack',-style=>"top:${top}px;left:${left}px;background-color:white"},$label);
+	my ($label,$left,$top,undef,undef,$color) = @$_;
+	$left -= $source->global_setting('pad_left') + PAD_DETAIL_SIDES;
+	my ($r,$g,$b,$a) = $color =~ /rgba\((\d+),(\d+),(\d+),([\d.]+)/;
+	$a = 0.60 if $a > 0.75;
+	my $fgcolor = $a <= 0.5 ? 'black' : ($r+$g+$b)/3 > 128 ? 'black' : 'white';
+	div({-class=>'subtrack',-style=>"top:${top}px;left:${left}px;color:$fgcolor;background-color:rgba($r,$g,$b,$a)"},$label);
     } @$titles;
 
     my $html = div({-class=>'centered_block',
@@ -1549,8 +1552,15 @@ sub run_local_requests {
 		$gd     = $panel->gd;
 		warn "render gd($label): ",time()-$time," seconds " if BENCHMARK;
 
-		$titles = $panel->key_boxes;
-		foreach (@$titles) {splice (@$_,-1)}  # don't want to store all track config data to cache!
+		$titles    = $panel->key_boxes;
+		foreach (@$titles) {
+		    my $index = $_->[5]->bgcolor;  # record track config bgcolor
+		    my ($r,$g,$b) = $gd->rgb($index);
+		    my $alpha     = $_->[5]->default_opacity;
+		    $_->[5]       =  "rgba($r,$g,$b,$alpha)";
+		    warn " assigning = $_->[5]";
+		}  # don't want to store all track config data to cache!
+
 		$self->debugging_rectangles($gd,scalar $panel->boxes)
 		    if DEBUGGING_RECTANGLES;
 		warn "render titles($label): ",time()-$time," seconds " if BENCHMARK;
@@ -2119,7 +2129,7 @@ sub create_track_args {
 
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
 #  push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
-  push @override,(-opacity => 0.25) if $overlaps;
+  push @override,(-opacity => 1.0) unless $overlaps;
 
   my @summary_args = ();
   if ($is_summary) {
@@ -2313,7 +2323,6 @@ sub do_label {
   $conf_label           = 1 unless defined $conf_label;
 
   $option ||= 0;
-  warn "option =$option, conf_label=$conf_label";
   return  $option == 0 ? $maxed_out && $conf_label
         : $option == 3 ? $conf_label || 1
 	: $option == 4 ? $conf_label || 1

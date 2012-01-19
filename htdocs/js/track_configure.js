@@ -57,7 +57,6 @@ var TrackConfigure = Class.create({
     if (glyph_element.value.match(/xyplot|whiskers/)) {
        this.adjust_height(40,200);
     }
-
     if (!specific) {
        config_container.select('tr.features').each(function(a){a.show()});
     }
@@ -80,6 +79,15 @@ var TrackConfigure = Class.create({
 	config_container.select('tr.graphtype').each(function(a){a.hide()});
 	config_container.select('tr.autoscale').each(function(a){a.hide()});
     }
+    this.adjust_format($('format_option'));
+ },
+
+ adjust_format: function(el) {
+   var option = el.value;
+   if (option == 4)
+       $('opacity').show();
+   else
+       $('opacity').hide();
  },
 
  set_autoscale: function(el) {
@@ -149,9 +157,48 @@ var TrackConfigure = Class.create({
      f.each(function(a){a.show()});
      $('bgcolor_picker').hide();
    }
- }
+  },
 
+
+ set_opacity: function (opacity) {
+	    var num = new Number(opacity);
+	    if (isNaN(num)) num=0.5;
+	    if (num > 1.0) num=1.0;
+	    if (num < 0.0) num=0.0;
+	    var thumb = $('opacity_thumb');
+	    var right = $('opacity_box').getDimensions().width-thumb.getDimensions().width;    
+	    thumb.style.left = num*right + 'px';
+	    $$('img.opacity').each(function (e) {e.setOpacity(num)});
+	    $('opacity_value').value=num.toFixed(2);
+	},
+
+ init: function (opacity) {
+	    new Draggable('opacity_thumb',
+                          {constraint:'horizontal',
+			   snap: function(x,y,draggable) {
+				  var parentDimensions = draggable.element.parentNode.getDimensions();
+				  var left = 0;
+				  var right=parentDimensions.width-draggable.element.getDimensions().width;
+				  if (x < left)  x = left;
+				  if (x > right) x = right;
+				  return [x,y];
+			      },
+			   change: function(draggable) {
+				  var el    = draggable.element;
+				  var right = draggable.element.parentNode.getDimensions().width-el.getDimensions().width;
+				  var percent = el.offsetLeft/right;
+				  track_configure.set_opacity(percent);
+			      }
+			  }
+			  );
+	    this.set_opacity(opacity);
+	    $('opacity_value').observe('change',function() {track_configure.set_opacity(this.value)});
+	    $('format_option').observe('change',function() {track_configure.adjust_format(this)});
+	    this.glyph_select($('config_table'),$('glyph_picker_id'));
+
+	}
 });
 
 
 var track_configure = new TrackConfigure;
+

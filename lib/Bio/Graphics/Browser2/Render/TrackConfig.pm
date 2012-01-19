@@ -76,6 +76,7 @@ sub config_dialog {
     my $variance_band = $self->setting( $label => 'variance_band',$length, $summary_mode);
     my $limit         = $self->setting( $label => 'feature_limit' , $length, $summary_mode)    || 0;
     my $summary_length= $self->setting( $label => 'show summary' , $length, $summary_mode) || 0;
+    my $opacity       = $override->{'opacity'} || $self->setting($label => 'opacity',$length,$summary_mode) || 0.3;
 
     # options for wiggle & xy plots
     my $min_score= $self->setting( $label => 'min_score' ,     $length, $summary_mode);
@@ -96,6 +97,12 @@ sub config_dialog {
     my $max_color   = $self->setting( $label => 'max_color' ,   $length, $summary_mode);
     my $mean_color  = $self->setting( $label => 'mean_color' ,  $length, $summary_mode);
     my $stdev_color = $self->setting( $label => 'stdev_color' , $length, $summary_mode);
+
+    # packing images
+    my $buttons     = $data_source->globals->button_url;
+    my $red_peaks   = "$buttons/red_peaks.png";
+    my $blue_peaks  = "$buttons/blue_peaks.png";
+    my $opacity_thumb  = "$buttons/opacity_thumb.png";
 
     my @glyph_select = shellwords(
 	    $self->setting( $label => 'glyph select', $length, $summary_mode )
@@ -149,6 +156,51 @@ END
     push @rows, TR({-class=>'general'},
 		   td( {-colspan => 2}, $title));
 
+    push @rows,TR( {-class => 'general',
+		    -id    => 'packing'},
+		   th( { -align => 'right' }, $render->translate('Packing') ),
+		   td( popup_menu(
+			   -name     => 'format_option',
+			   -id       => 'format_option',
+			   -values   => ($quantitative ? [0,4] : [ 0..4 ]),
+			   -override => 1,
+			   -default  => $state->{features}{$label}{options},
+			   -labels   => {
+			       0 => $render->translate('Auto'),
+			       1 => $render->translate('Compact'),
+			       2 => $render->translate('Expand'),
+			       3 => $render->translate('Expand_Label'),
+			       4 => $render->translate('Overlap'),
+			   }
+		       )
+		   )
+        );
+
+    push @rows,TR( {-class => 'general',
+		    -id    => 'opacity'},
+		   th( {-align => 'right' }, 'Opacity'),
+		   td( input({-type  => 'text',
+			      -name => 'conf_opacity',
+			      -id    => 'opacity_value',
+			      -style => "display:inline-block;position:relative;top:-4",
+			      -value => '0.00',
+			      -size  => 2,
+			      -maxlength => 4}),
+		       div({-id=>'opacity_box',
+			    -style => 'display:inline-block;position:relative;background:beige;width:100px;height:16px;border:inset 1px',
+			   },
+			   img({-id=>'opacity_thumb',
+				-style=>'position:absolute;left:0',
+				-src  => $opacity_thumb})),
+		       div({-style=>'display:inline-block;position:relative;width:20px;height:20px'},
+			   img({-class=>'opacity',
+				-src  => $red_peaks,
+				-style => 'position:absolute;left:2px;top:0px'}),
+			   img({-class=>'opacity',
+				-src  => $blue_peaks,
+				-style => 'position:absolute;left:0px;top:5px'}),
+		       )));
+
     push @rows,TR( {-class=>'general'},
 		   th( { -align => 'right' }, $render->translate('GLYPH') ),
 		   td($picker->popup_menu(
@@ -197,24 +249,6 @@ END
 	}
     }
 
-    push @rows,TR( {-class => 'general',
-		    -id    => 'packing'},
-		   th( { -align => 'right' }, $render->translate('Packing') ),
-		   td( popup_menu(
-			   -name     => 'format_option',
-			   -values   => ($quantitative ? [0,4] : [ 0..4 ]),
-			   -override => 1,
-			   -default  => $state->{features}{$label}{options},
-			   -labels   => {
-			       0 => $render->translate('Auto'),
-			       1 => $render->translate('Compact'),
-			       2 => $render->translate('Expand'),
-			       3 => $render->translate('Expand_Label'),
-			       4 => $render->translate('Overlap'),
-			   }
-		       )
-		   )
-        );
 
     #######################
     # bicolor pivot stuff
@@ -544,7 +578,8 @@ END
     $form .= end_form();
     $return_html
         .= table( TR( td( { -valign => 'top' }, [ $form ] ) ) );
-    $return_html .= script({-type=>'text/javascript'},"track_configure.glyph_select(\$('config_table'),\$('glyph_picker_id'))");
+
+    $return_html .= script({-type=>'text/javascript'},"track_configure.init($opacity)");
     $return_html .= end_html();
     return $return_html;
 }

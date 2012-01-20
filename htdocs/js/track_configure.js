@@ -79,20 +79,41 @@ var TrackConfigure = Class.create({
 	config_container.select('tr.graphtype').each(function(a){a.hide()});
 	config_container.select('tr.autoscale').each(function(a){a.hide()});
     }
-    this.adjust_format($('format_option'));
  },
 
- adjust_format: function(el) {
-   var option = el.value;
+ adjust_opacity: function(option) {
    if (option == 4)
        $('opacity').show();
    else
        $('opacity').hide();
  },
 
+ adjust_format: function(el) {
+   var option = el.value;
+   this.adjust_opacity(option);
+   if (option == 4) {
+       this.set_autocolors(true);
+   }
+   else {
+       this.set_autocolors(false);
+   }
+ },
+
  set_autoscale: function(el) {
     if (el.value != 'none')
 	$$('input.score_bounds').each(function(a){a.value=''});
+ },
+
+ set_autocolors: function(flag) {
+            $('conf_color_series').checked=flag;
+	    if (flag) {
+		$$('select.color_picker').each(function(a){a.disable()});
+		$$('tr.color_picker').each(function(a){a.style.opacity=0.5});
+	    } else {
+		$$('select.color_picker').each(function(a){a.enable()});
+		$$('tr.color_picker').each(function(a){a.style.opacity=1.0});
+	    }
+	    this.glyph_select($('config_table'),$('glyph_picker_id'));
  },
 
  set_minmax: function(el) { 
@@ -194,8 +215,10 @@ var TrackConfigure = Class.create({
 	    this.set_opacity(opacity);
 	    $('opacity_value').observe('change',function() {track_configure.set_opacity(this.value)});
 	    $('format_option').observe('change',function() {track_configure.adjust_format(this)});
+	    $('conf_color_series').observe('change',function() {track_configure.set_autocolors(this.checked)});
 	    this.glyph_select($('config_table'),$('glyph_picker_id'));
-
+	    this.adjust_opacity($('format_option').value);
+	    this.set_autocolors($('conf_color_series').checked);
 	}
 });
 

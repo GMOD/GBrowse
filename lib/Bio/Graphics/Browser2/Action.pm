@@ -173,12 +173,13 @@ sub ACTION_update_sections {
     my @section_names = $q->param('section_names');
     my $keyword = $q->param('keyword');
     my $offset = $q->param('offset');
+
+    # no state changing occurs here
+    $self->session->unlock;
     
     my @args = (\@section_names);
     my $section_html = $render->asynchronous_update_sections(\@section_names, $keyword, $offset);
-
     my $return_object = { section_html => $section_html, };
-    $self->session->flush;
 
     return ( 200, 'application/json', $return_object );
 }
@@ -238,7 +239,6 @@ sub ACTION_reconfigure_track {
     my $q    = shift;
     my $track_name     = $q->param('track') or croak;
     my $semantic_label = $q->param('semantic_label');
-    warn "reconfiguring $track_name";
 
     $self->render->reconfigure_track($track_name,$semantic_label);
     $self->session->flush;

@@ -465,13 +465,13 @@ sub wrap_rendered_track {
     my $share_this_track = $self->language->translate('SHARE_THIS_TRACK')
         || "Share this track";
 
-    my $configure_this_track = '';
-    $configure_this_track .= $self->language->translate('CONFIGURE_THIS_TRACK')
-        || "Configure this track";
-
     my $download_this_track = '';
     $download_this_track .= $self->language->translate('DOWNLOAD_THIS_TRACK')
         || "<b>Download this track</b>";
+
+    my $configure_this_track = '';
+    $configure_this_track .= $self->language->translate('CONFIGURE_THIS_TRACK')
+        || "Configure this track";
 
     my $about_this_track = '';
     $about_this_track .= $self->language->translate('ABOUT_THIS_TRACK',$label)
@@ -563,12 +563,6 @@ sub wrap_rendered_track {
             }
         ),
 
-        $config_click ? img({   -src         => $configure,
-				-style       => 'cursor:pointer',
-				-onmousedown => $config_click,
-				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
-			    })
-	              : '',
         $download_click ? img({   -src         => $download,
 				  -style       => 'cursor:pointer',
 				  -onmousedown => $download_click,
@@ -576,6 +570,14 @@ sub wrap_rendered_track {
 						     "$balloon_style.showTooltip(event,'$download_this_track')"),
 			      })
 	                 : '',
+
+        $config_click ? img({   -src         => $configure,
+				-style       => 'cursor:pointer',
+				-onmousedown => $config_click,
+				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
+			    })
+	              : '',
+
         img({   -src         => $help,
                  -style       => 'cursor:pointer',
                  -onmousedown => $help_click,
@@ -1558,7 +1560,6 @@ sub run_local_requests {
 		    my ($r,$g,$b) = $gd->rgb($index);
 		    my $alpha     = $_->[5]->default_opacity;
 		    $_->[5]       =  "rgba($r,$g,$b,$alpha)";
-		    warn " assigning = $_->[5]";
 		}  # don't want to store all track config data to cache!
 
 		$self->debugging_rectangles($gd,scalar $panel->boxes)
@@ -1865,8 +1866,6 @@ sub add_features_to_track {
 				   $max_labels,
 				   $length);
 
-    warn "do_label=$do_label";
-
     my $do_description = $self->do_description($l,
 					       $pack_options,
 					       $count,
@@ -1882,7 +1881,6 @@ sub add_features_to_track {
       if $limit && $limit > 0;
 
     # essentially make label invisible if we are going to get the label position
-    warn $tracks->{$l}->parts->[0];
     $tracks->{$l}->configure(-fontcolor   => 'white:0.0') if $tracks->{$l}->parts->[0]->record_label_positions;
 
     if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
@@ -2195,7 +2193,7 @@ sub create_track_args {
   if (my $stt = $self->subtrack_manager($label)) {
       my $sub = $stt->sort_feature_sub;
       push @args,(-sort_order => $sub);
-      push @args,(-color_series => 1) if $overlaps;
+#      push @args,(-color_series => 1) if $overlaps;
   }
 
   return @args;
@@ -2322,10 +2320,13 @@ sub do_label {
   my $conf_label        = $source->semantic_setting($track_name => 'label',$length);
   $conf_label           = 1 unless defined $conf_label;
 
+  my $glyph             = $source->semantic_setting($track_name => 'glyph',$length);
+  my $overlap_label     = $glyph =~ /xyplot|vista|wiggle|density/;
+
   $option ||= 0;
   return  $option == 0 ? $maxed_out && $conf_label
         : $option == 3 ? $conf_label || 1
-	: $option == 4 ? $conf_label || 1
+	: $option == 4 ? ($overlap_label ? $conf_label : 0)
         : 0;
 }
 

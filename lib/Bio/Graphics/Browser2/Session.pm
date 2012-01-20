@@ -155,7 +155,8 @@ sub lock {
 	      CGI::url(-path=>1),' ',
 	      CGI::query_string());
     } else {
-	warn '[',$self->time,'] ',"[$$] ...$type lock obtained after $elapsed" if DEBUG_LOCK;
+	my $action = CGI::param('action');
+	warn '[',$self->time,'] ',"[$$] ...$type lock obtained after $elapsed (action=$action)" if DEBUG_LOCK;
     }
     $self->locktime($self->time());
     return $self->{session} ||= $self->load_session();
@@ -226,7 +227,8 @@ sub unlock {
 	my $result = $lock->do("SELECT RELEASE_LOCK('$lock_name')");
     }
     $self->lockobj(undef);
-    warn "[$$] lock released after ",sprintf("%2.1f",$self->time() - $self->locktime)," s" if DEBUG;
+    my $action = CGI::param('action');
+    warn "[$$] lock released after ",sprintf("%2.1f",$self->time() - $self->locktime)," s (action=$action)" if DEBUG;
 }
 
 sub lockfile {

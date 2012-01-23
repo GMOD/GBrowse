@@ -716,6 +716,11 @@ var Table = (function(){
 			for (var j=0,L2=tb.rows.length; j<L2; j++) {
 				row = tb.rows[j];
 				hideRow = false;
+				//Interactive selection: unselect all rows here and select those which are in filter later
+                                if (row.hasClassName('selected')) {
+                                 row.addClassName('unselected');
+                                 row.removeClassName('selected');
+                                }
 
 				// Test if filters will hide the row
 				if (tdata.filters && row.cells) {
@@ -744,6 +749,12 @@ var Table = (function(){
 				// Keep track of the total rows scanned and the total runs _not_ filtered out
 				totalrows++;
 				if (!hideRow) {
+				 //Interactive select - select row if hideRow is negative
+				 if (row.hasClassName('unselected')) {
+                                         row.addClassName('selected');
+                                         row.removeClassName('unselected');
+				         row.cells[0].childNodes[0].childNodes[0].checked = 'true';
+                                 }
 					unfilteredrowcount++;
 					if (def(page)) {
 						// Temporarily keep an array of unfiltered rows in case the page we're on goes past
@@ -754,7 +765,6 @@ var Table = (function(){
 						}
 					}
 				}
-
 				row.style.display = hideRow?"none":"";
 			}
 		}

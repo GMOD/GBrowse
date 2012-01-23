@@ -284,6 +284,31 @@ function visibility (element_name,is_visible) {
    return false;
 }
 
+function show_active_tracks (me) {
+    var e = $(track_listing_id);// all e._____ objects are visual effects
+    var active = me.hasClassName('show_active');
+    if (active)
+	me.removeClassName('show_active');
+    else
+	me.addClassName('show_active');
+    active = active;
+    me.innerHTML = active ? Controller.translate('SHOW_ACTIVE_INACTIVE') : Controller.translate('SHOW_ACTIVE');
+    e.hide();
+    e.setOpacity(0.3);
+    new Ajax.Request(
+		     document.URL, {
+			 method: 'POST',
+			     asynchronous:false,
+			     parameters: {
+			     action:    'show_active_tracks',
+			     active: active,
+			 }
+		       }
+		     );
+    e.show();
+    Controller.update_sections(new Array(track_listing_id));
+}
+
 //same as updatetitle(below) but will refresh the favorites if the user 
 //decides to unclick a favorite while it is in show favorites mode
 function clearallfav(clear){

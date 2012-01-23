@@ -851,6 +851,7 @@ sub render_toggle_track_table {
 
   $html .= div({-style=>'font-weight:bold'},
 	       span({-style=>'padding-right:80px'},'<<',$self->render_select_browser_link('link')),
+	       span({-id=>'showselectedtext',-style=>'padding-right:80px'},$self->render_show_active_tracks_link()),
 	       span({-id => 'showfavoritestext',-style=>'padding-right:80px'},
 		    $self->render_select_favorites_link('link')),
 	       span({-id => 'clearfavs'},
@@ -1068,6 +1069,15 @@ sub render_select_clear_link {
 		  -onClick => "clearallfav($clear);",
 		 },
 		 $title),$showicon);
+}
+
+sub render_show_active_tracks_link {
+    my $self = shift;
+    my $active = $self->state->{active_only} ? 'true' : 'false';
+    return a({-href    => 'javascript:void(0)',
+	      -class   => $active ? 'show_active' : 'inactive',
+	      -onClick => "show_active_tracks(this,$active)"},
+	     $self->translate('SHOW_ACTIVE_TRACKS'));
 }
 
 sub render_select_favorites_link {

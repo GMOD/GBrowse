@@ -380,11 +380,23 @@ sub ACTION_clear_favorites {
     my $q     = shift;
     my $clear = $q->param('clear');
     my $settings = $self->state;
-    $settings->{favorites}={} if $clear;	
+    $settings->{favorites}={} if $clear;
     warn "show_favorites($settings->{show_favorites})" if DEBUG;
     $self->session->flush;
     return (204,'text/plain',undef);
 }
+
+sub ACTION_show_active_tracks {
+    my $self = shift;
+    my $q     = shift;
+    my $active_only = $q->param('active') eq 'true';
+    my $settings    = $self->state;
+    $settings->{active_only}=$active_only;
+    warn "show_active_tracks($settings->{active_only})" if DEBUG;
+    $self->session->flush;
+    return (204,'text/plain',undef);
+}
+
 
 # *** The Snapshot actions
 sub ACTION_delete_snapshot {

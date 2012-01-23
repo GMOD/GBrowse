@@ -100,11 +100,17 @@ END
 # FAVORITE MENU LINKS
    FAVORITES => 'Show Favorites Only',		
     
-   SHOWALL   => 'Show All',
+   SHOWALL   => 'Show Favorites and Others',
+
+   SHOW_ACTIVE => 'Show Active Tracks Only',
+
+   SHOW_ACTIVE_INACTIVE => 'Show Active & Inactive Tracks',
 
    REFRESH_FAV   => 'Refresh Favorites',
     
    CLEAR_FAV     => 'Clear All Favorites',
+
+   SHOW_ACTIVE_TRACKS     => 'Show Active Tracks Only',
 
    ADDED_TO     => 'Add track to favorites',
 
@@ -493,6 +499,8 @@ END
  SHOWING_SUBTRACKS  => '(<i>Showing %d of %d subtracks</i>)',
 
  OVERLAP            => 'Semi-transparent overlap',
+
+ AUTO_COLORS        => 'Set colors automatically',
 
  SHARE_THIS_TRACK   => '<b>Share this track</b>',
 

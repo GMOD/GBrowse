@@ -258,7 +258,7 @@ END
 	-id   => 'color_series',
 	-class=> 'general'
 		  },
-		  th ( { -align=>'right' }, 'Set colors automatically'),
+		  th ( { -align=>'right' }, $render->tr('AUTO_COLORS') ),
 		  td(hidden(-name => 'conf_color_series',-value=>0),
 		     checkbox(-name => 'conf_color_series',
 			      -id   => 'conf_color_series',

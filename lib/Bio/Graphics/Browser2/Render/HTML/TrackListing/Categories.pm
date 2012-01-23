@@ -21,10 +21,15 @@ sub render_track_listing {
     my @labels = $render->potential_tracks;
     
     warn "favorites = {$settings->{show_favorites}} " if DEBUG;
+    warn "active    = {$settings->{active_only}} "    if DEBUG;
 
     if( $settings->{show_favorites}){
 	warn "favorites = @labels = $settings->{show_favorites}" if DEBUG;	
 	@labels= grep {$settings->{favorites}{$_}} @labels;
+    }
+
+    if ($settings->{active_only}) {
+	@labels = grep {$settings->{features}{$_}{visible}} @labels;
     }
 
     warn "label = @labels" if DEBUG;
@@ -38,6 +43,8 @@ sub render_track_listing {
 	warn $@ if $@;
 	$filter_active = @labels<$tracks;  # mark filter active if the filter has changed the track count
     }
+
+    $filter_active++ if $settings->{active_only} || $settings->{show_favorites};
 
     my %labels     = map {$_  => $self->render_one_track($_,\@hilite)} @labels;
     my %label_sort = map {$_  => $render->label2key($_)              } @labels;

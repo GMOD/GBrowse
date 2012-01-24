@@ -252,8 +252,11 @@ sub ACTION_track_overlapping {
     my $track_name     = $q->param('track') or croak;
     my $overlapping    = $q->param('overlapping') or croak;
     my $state          = $self->state;
-    $state->{features}{$track_name}{options}  = $overlapping eq 'true' ? 4 : 0;
+    $q->param('format_option'     => $overlapping eq 'true' ? 4 : 0);
+    $q->param('conf_color_series' => $overlapping eq 'true' ? 1 : 0);
+    $self->render->reconfigure_track($track_name);
     $self->session->flush;
+    $self->session->unlock;
     return ( 200, 'application/json', {} );    
 }
 

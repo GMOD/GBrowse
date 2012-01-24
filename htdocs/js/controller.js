@@ -761,8 +761,8 @@ var GBrowseController = Class.create({
 	    new Ajax.Request(Controller.url, {
 		    method:     'post',
 		    parameters: {
-			action:  'track_overlapping',
-			track:   track_id,
+			action:      'track_overlapping',
+			track:       track_id,
 		        overlapping: overlapping }
             })
      },

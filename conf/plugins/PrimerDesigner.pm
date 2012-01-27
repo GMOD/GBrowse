@@ -1330,29 +1330,31 @@ sub toggle {
 #PrimerDesigner when hidden. When a section is minimized, everything 
 #including the header disappears making it impossible to re-toggle
 #This fixes the problem.
-sub toggle_section {
+{
+no warnings 'redefine';
+    sub toggle_section {
 
-  my $self = shift;
-  my %config = ref $_[0] eq 'HASH' ? %{shift()} : ();
-  my ($name,$section_title,@section_body) = @_;
+    my $self = shift;
+    my %config = ref $_[0] eq 'HASH' ? %{shift()} : ();
+    my ($name,$section_title,@section_body) = @_;
 
-  my $visible = $config{on};
+    my $visible = $config{on};
 
-  my $buttons = $self->renderer->data_source->button_url;
-  my $plus  = "$buttons/plus.png";
-  my $minus = "$buttons/minus.png";
-  my $break = div({-id=>"${name}_break",
-		   -style=>$visible ? 'display:none' : 'display:block'
-		  },'&nbsp;');
+    my $buttons = $self->renderer->data_source->button_url;
+    my $plus  = "$buttons/plus.png";
+    my $minus = "$buttons/minus.png";
+    my $break = div({-id=>"${name}_break",
+		    -style=>$visible ? 'display:none' : 'display:block'
+		    },'&nbsp;');
 
-  my $show_ctl = div({-id=>"${name}_show",
-		       -class=>'ctl_hidden',
-		       -style=>$visible ? 'display:none' : 'display:inline',
-		       -onClick=>"visibility('$name',1)"
-		     },
-		     img({-src=>$plus,-alt=>'+'}).'&nbsp;'.span({-class=>'tctl'},$section_title));
+    my $show_ctl = div({-id=>"${name}_show",
+			-class=>'ctl_hidden',
+			-style=>$visible ? 'display:none' : 'display:inline',
+			-onClick=>"visibility('$name',1)"
+			},
+			img({-src=>$plus,-alt=>'+'}).'&nbsp;'.span({-class=>'tctl'},$section_title));
 
-my $js = <<"JS";
+    my $js = <<"JS";
 
 var d = document.getElementById('$name').style.display;
 var i = this.childNodes[1];
@@ -1366,23 +1368,24 @@ if (d == 'inline' || d == 'block') {
 
 JS
 
-  my $hide_ctl = div({-id=>"${name}_hide",
-		       -class=>'ctl_visible',
-		       -style=>$visible ? 'display:inline' : 'display:none',
-		       #-onClick=>"visibility('$name',0)"
-		       -onClick=> $js
-		     },
-		     img({-src=>$minus,-alt=>'-'}).'&nbsp;'.span({-class=>'tctl',-id=>"${name}_title"},$section_title));
-  my $content  = div({-id    => $name,
-		      -style=>$visible ? 'display:inline' : 'display:none',
-		      -class => 'el_visible'},
-		     @section_body);
-  my @result =  $config{nodiv} ? (div({-style=>'float:left'},
-				      $show_ctl.$hide_ctl),$content)
-		:$config{tight}? (div({-style=>'float:left;position:absolute;z-index:10'},
-				      $show_ctl.$hide_ctl).$break,$content)
-		: div($show_ctl.$hide_ctl,$content);
-  return wantarray ? @result : "@result";
+    my $hide_ctl = div({-id=>"${name}_hide",
+			-class=>'ctl_visible',
+			-style=>$visible ? 'display:inline' : 'display:none',
+			#-onClick=>"visibility('$name',0)"
+			-onClick=> $js
+			},
+			img({-src=>$minus,-alt=>'-'}).'&nbsp;'.span({-class=>'tctl',-id=>"${name}_title"},$section_title));
+    my $content  = div({-id    => $name,
+			-style=>$visible ? 'display:inline' : 'display:none',
+			-class => 'el_visible'},
+			@section_body);
+    my @result =  $config{nodiv} ? (div({-style=>'float:left'},
+					$show_ctl.$hide_ctl),$content)
+		    :$config{tight}? (div({-style=>'float:left;position:absolute;z-index:10'},
+					$show_ctl.$hide_ctl).$break,$content)
+		    : div($show_ctl.$hide_ctl,$content);
+    return wantarray ? @result : "@result";
+    }
 }
 
 sub quality_warning {

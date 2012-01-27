@@ -84,6 +84,10 @@ span.clickable {
 span.clickable:hover {
        text-decoration: underline;
     }
+span.expand_all {
+    font-size: 9pt;
+    font-weight: bold;
+}
 .reset_button     { color: red;           
 		    font-weight: bold;
                   }

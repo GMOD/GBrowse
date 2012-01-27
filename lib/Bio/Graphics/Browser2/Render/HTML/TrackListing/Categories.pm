@@ -138,8 +138,8 @@ sub render_track_listing {
 		)."&nbsp;".span({-class => "list",
 				 -id => "${id}_list",
 				 -style => "display: " . ($visible? "none" : "inline") . ";"},"")
-		.br()   if exists $track_groups{$category};
-	    $section_contents{$category} = div($control.$section);
+		.br();
+	    $section_contents{$category} = div({-class=>'track_section'},$control.$section);
 	}
 	else {
 	    next;
@@ -148,10 +148,13 @@ sub render_track_listing {
 
     autoEscape(1);
     my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories,$filter_active);
+    # temporary
+    my $expand_all = span({-class  =>  'clickable expand_all range_expand',
+			   -onClick => "gbExpandAll(this,'range',event)"},'&nbsp;&nbsp;expand all');
     return join( "\n",
 		 start_form(-name=>'trackform',
 			    -id=>'trackform'),
-		 div({-class=>'searchbody',-id=> 'range', -style=>'padding-left:1em'},$slice_and_dice),
+		 div({-class=>'searchbody',-id=> 'range', -style=>'padding-left:1em'},$expand_all,br(),$slice_and_dice),
 		 end_form);
 }
 
@@ -266,22 +269,26 @@ sub nest_toggles {
     for my $key (sort { 
 	           ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b
 		      }  keys %$hash) {
-	    if ($key eq '__contents__') {
-	        $result .= $hash->{$key}."\n";
-	    } elsif ($key eq '__next__') {
-	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
-	    } elsif ($hash->{$key}{__next__}) {
-	        my $id =  "${key}_section";
-	        $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
-		$result .= $render->toggle_section({on=>$force_open||$settings->{section_visible}{$id}},
-						   $id,
-						   b($key).span({-class => "list",
-								 -id => "${id}_list"},""),
-						   div({-style=>'margin-left:1.5em;margin-right:1em'},
-						       $self->nest_toggles($hash->{$key},$sort,$force_open)));
-	    } else {
-	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
-	    }
+	if ($key eq '__contents__') {
+	    $result .= $hash->{$key}."\n";
+	} elsif ($key eq '__next__') {
+	    $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
+	} elsif ($hash->{$key}{__next__}) {
+	    my $id =  "${key}_section";
+	    my $ea = span({-class  =>  "clickable expand_all ${id}_expand",
+			   -onClick => "gbExpandAll(this,'$id',event)"},' expand all');
+	    $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
+	    $result .= $render->toggle_section({on=>$force_open||$settings->{section_visible}{$id}},
+					       $id,
+					       b($key).
+					       $ea.
+					       span({-class   => "list",
+						     -id      => "${id}_list"},''),
+					       div({-style=>'margin-left:1.5em;margin-right:1em'},
+						   $self->nest_toggles($hash->{$key},$sort,$force_open)));
+	} else {
+	    $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
+	}
     }
     return $result;
 }

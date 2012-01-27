@@ -253,14 +253,18 @@ function getName(node) {
   }
 }
 
-// visibility toggles a node as open or closed.
+// visibility toggles a track listing node as open or closed.
 function visibility (element_name,is_visible) {
    var element       = $(element_name);
+   if (element == null) return;
+
    var show_control  = $(element_name + "_show");
+   if (show_control == null) return;
+
    var hide_control  = $(element_name + "_hide");
    var title_control = $(element_name + "_title");
    var break_element = $(element_name + "_break");
-   var track_list    = $(element_name).up().down("span.list");
+   var track_list    = element.up().down("span.list");
    if (is_visible == 1) {
       element.show();
       show_control.hide();

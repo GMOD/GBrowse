@@ -863,7 +863,7 @@ sub render_toggle_track_table {
 							   $self->render_track_filter($filter)));
   }
 
-  $html .= $self->toggle('Tracks',$self->render_track_table);
+  $html .= $self->toggle({nodiv=>1},'Tracks',$self->render_track_table);
   $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));
   return $html;
 }

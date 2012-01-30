@@ -4,6 +4,8 @@
  bgcolor and border but is otherwise meant to be simple and lightweight.
 */
 
+var Modal=false; // true if a modal dialog is on screen
+
 //////////////////////////////////////////////////////////////////////////
 // This is constructor that is called to initialize the Balloon object  //
 //////////////////////////////////////////////////////////////////////////
@@ -14,17 +16,17 @@ var Box = function () {
   // scrolling aborts unsticky balloons
   document.onscroll    = Balloon.prototype.hideTooltip;
 
-  // make balloons go away if the page is unloading or waiting
-  // to unload.
-  window.onbeforeunload = function(){
-    Balloon.prototype.hideTooltip(1);
-    balloonIsSuppressed = true;
-  };
-
-  // for IE, the box can't start until the page is finished loading
+  // for IE, the balloons can;t start until the page is finished loading
   // set a flag that will get toggled when loading is finished
   if (this.isIE()) {
-    this.suppress = true;
+      this.suppress = true;
+  } else {
+      // make balloons go away if the page is unloading or waiting
+      // to unload.
+      window.onbeforeunload = function(){
+            Balloon.prototype.hideTooltip(1);
+            balloonIsSuppressed = true;
+      };
   }
 
   return this;
@@ -43,8 +45,9 @@ Box.prototype.makeBalloon = function() {
   if (box) self.parent.removeChild(box);
   box = document.createElement('div');
   box.setAttribute('id','balloon');
+
   self.parent.appendChild(box);
-  self.activeBalloon = box;
+  self.activeBalloon    = box;
 
   var contents = document.createElement('div');
   contents.setAttribute('id','contents');
@@ -157,24 +160,24 @@ Box.prototype.setBalloonStyle = function(vOrient,hOrient) {
   // Make sure the box is vertically contained in the window
   var boxTop    = self.getLoc(box,'y1');
   var boxBottom = self.getLoc(box,'y2');
-  var deltaTop      = boxTop < self.pageTop ? self.pageTop - boxTop : 0;
-  var deltaBottom   = boxBottom > self.pageBottom ? boxBottom - self.pageBottom : 0;
+  
+  if (boxBottom > self.pageBottom) {
+      var delta    = boxBottom - self.pageBottom;
+      var newTop   = boxTop - delta;
+      self.setStyle(box,'top',newTop);
+      boxBottom = self.pageBottom;
+      boxTop    = newTop;
+  } 
 
-  if (vOrient == 'up' && deltaTop) {
-    var newHeight = boxHeight - deltaTop;
-    if (newHeight > (self.padding*2)) {
-      self.setStyle('contents','height',newHeight);
+  if (boxTop < self.pageTop) {
       self.setStyle(box,'top',self.pageTop+self.padding);
-      self.setStyle(box,'height',newHeight);
-    }
-  }
-
-  if (vOrient == 'down' && deltaBottom) {
-    var newHeight = boxHeight - deltaBottom - scrollBar;
-    if (newHeight > (self.padding*2) + scrollBar) {
-      self.setStyle('contents','height',newHeight);
-      self.setStyle(box,'height',newHeight);
-    }
+      boxTop    = self.pageTop+self.padding;
+      boxBottom = boxTop + boxHeight;
+      if (boxBottom > self.pageBottom) {
+	  var newHeight = (self.pageBottom - boxTop) - 2*self.padding;
+	  self.setStyle(box,'height',newHeight);
+	  self.setStyle('contents','height',newHeight - 2*self.padding);
+      }
   }
 
   self.hOrient = hOrient;
@@ -190,13 +193,13 @@ Box.prototype.addCloseButton = function () {
   var balloonRight = self.getLoc('balloon','x2') - margin - self.closeButtonWidth;
   var closeButton = document.getElementById('closeButton');
 
-
   if (!closeButton) {
     closeButton = new Image;
     closeButton.setAttribute('id','closeButton');
     closeButton.setAttribute('src',self.closeButton);
     closeButton.onclick = function() {
       Balloon.prototype.hideTooltip(1);
+      self.greyout(false);
     };
     self.setStyle(closeButton,'position','absolute');
     document.body.appendChild(closeButton);
@@ -211,4 +214,46 @@ Box.prototype.addCloseButton = function () {
   self.setStyle(closeButton,'display','inline');
   self.setStyle(closeButton,'cursor','pointer');
   self.setStyle(closeButton,'z-index',999999999);
+}
+
+Box.prototype.greyout = function (turnOn) {
+    //Adapted from http://www.hunlock.com/blogs/Snippets:_Howto_Grey-Out_The_Screen
+    var greyout  = $('greyout');
+    if(!greyout) {
+        var contents = $$('body')[0];
+        var div      = document.createElement('div');
+	div.id                    = 'greyout';
+	div.style.backgroundColor = '#000000';
+	div.style.display         = 'none';
+	div.style.filter          = 'alpha(opacity=70)';
+	div.style.height          = '100%';
+	div.style.left            = '0px';
+	div.style.MozOpacity      = '0.7';
+	div.style.opacity         = '0.7';
+	div.style.overflow        = 'hidden';
+	div.style.position        = 'absolute';
+	div.style.top             = '0px';
+	div.style.width           = '100%';
+	div.style.zIndex          = 0;
+	contents.appendChild(div);
+	greyout=$('greyout');
+    }
+    if (turnOn && !Modal) {
+        document.body.style.overflow = 'hidden';
+        greyout.style.display         = 'block';
+    } else if (Modal) {
+        document.body.style.overflow = 'auto';
+        greyout.style.display         = 'none';
+    }
+    Modal=turnOn;
+}
+
+Box.prototype.modalDialog = function(evt,caption,width,height) {
+    this.showTooltip(evt,caption,true,width,height);
+    this.greyout(true);
+}
+
+Box.prototype.hideTooltip = function(override) {
+    this.greyout(false);
+    Balloon.prototype.hideTooltip(override);
 }

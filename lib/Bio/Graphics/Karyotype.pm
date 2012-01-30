@@ -347,7 +347,7 @@ sub hits_table {
     my $na   = $self->trans('NOT_APPLICABLE') || '-';
 
     my $sort_order = $self->seqid_order;
-    my $url  = url(-path_info=>1)."?name=";
+    my $url  = url(-absolute=>1,-path_info=>1)."?name=";
 
     # a way long map call here
     my @rows      = map {

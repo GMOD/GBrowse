@@ -32,7 +32,10 @@ Overview.prototype = new SelectArea();
 Overview.prototype.initialize = function() {
   var self = new Overview;
 
-  var i = document.getElementById(self.imageId);
+  // not ready for non drag and drop implementation
+  //var dnd = document.mainform.drag_and_drop;
+  //if (!dnd || !dnd.checked) return false;
+  var i = $(self.imageId);
   if (!i) return false;
 
   var img = document.getElementsByName('overview');
@@ -43,13 +46,9 @@ Overview.prototype.initialize = function() {
     }
   }
 
-  var p = i.parentNode;
+  var p = i.parentNode.parentNode;
   i = self.replaceImage(i);
 
-  self.top     = self.elementLocation(i,'y1');
-  self.bottom  = self.elementLocation(i,'y2');
-  self.left    = self.elementLocation(i,'x1');
-  self.right   = self.elementLocation(i,'x2');
   self.selectLayer = p.parentNode.parentNode;
 
   self.scalebar = i;
@@ -83,13 +82,13 @@ Overview.prototype.getSegment = function(i) {
   if (actualWidth > expectedWidth) {
     this.padLeft     += actualWidth - expectedWidth;
   }
-  this.pixelStart   = this.left  + this.padLeft;
+  this.pixelStart   = this.padLeft;
 }
 
 Overview.prototype.loadSegmentInfo = function() {
   // get the segment info from gbrowse CGI parameters
-  
-  var i = document.getElementById(self.imageId);
+  var self = overviewObject;
+  var i = $(self.imageId);
 
   // Uh oh! We must be in GBrowse_syn!
   if (Controller.gbrowse_syn) {
@@ -116,20 +115,16 @@ Overview.prototype.loadSegmentInfo = function() {
     this.padLeft     += actualWidth - expectedWidth;
   }
 
-  // We fetch the left margin again because the controller can change 
-  // the size & position of the section after it is created.
-  this.left       = this.elementLocation(document.getElementById(this.imageId),'x1');
-
-  this.pixelStart = this.left  + this.padLeft;
+  this.pixelStart = this.padLeft;
 }
 
 Overview.prototype.formatMenu = function() {
   this.menuHTML = this.selectMenu.innerHTML || '\
    <div style="padding:5px;text-align:center">\
      <b>SELECTION</b><hr>\
-     <a href="javascript:SelectArea.prototype.clearAndSubmit()">Zoom</a>\
+     <a href="javascript:SelectArea.prototype.clearAndSubmit()">' + Controller.translate('ZOOM') + '</a>\
      &nbsp;&nbsp;|&nbsp;&nbsp;\
-     <a href="javascript:SelectArea.prototype.cancelRubber()">Cancel</a>\
+     <a href="javascript:SelectArea.prototype.cancelRubber()">' + Controller.translate('CANCEL') + '</a>\
   </div>';
 }
 

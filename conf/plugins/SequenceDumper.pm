@@ -72,7 +72,7 @@ my @FORMATS = ( 'fasta'   => ['Fasta',        undef],
 		'raw'     => ['Raw sequence', undef],
 		'game'    => ['GAME (XML)',   'xml'],
 		'bsml'    => ['BSML (XML)',   'xml'],
-		'gff'     => ['GFF',          undef],
+		'gff'     => ['GFF3',          undef],
 	      );
 
 # initialize @ORDER using the even-numbered elements of the array
@@ -91,7 +91,7 @@ unshift @ORDER,'gff';
 my %FORMATS = @FORMATS;
 my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 @ISA = qw(Bio::Graphics::Browser2::Plugin);
 
@@ -181,7 +181,7 @@ sub dump {
       $nf;
   } $segment->features(-types => \@filter) );
 
-  my $out = new Bio::SeqIO(-format => $config->{fileformat});
+  my $out = new Bio::SeqIO(-format => $config->{fileformat},-fh=>\*STDOUT);
   my $mime_type = $self->mime_type;
   if ($mime_type =~ /html/) {
     print start_html($segment->desc),h1($segment->desc), start_pre;
@@ -268,7 +268,7 @@ sub gff_dump {
   print start_html($segment) if $html;
   
   print h1($segment),start_pre() if $html;
-  print "##gff-version 2\n";
+  print "##gff-version 3\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
   print "##source gbrowse SequenceDumper\n";
@@ -278,11 +278,12 @@ sub gff_dump {
   $segment->absolute(0);
   my $iterator = $segment->get_seq_stream(-types => \@feature_types) or return;
   while (my $f = $iterator->next_seq) {
-    print $f->gff_string,"\n";
-    for my $s ($f->sub_SeqFeature) {
-      print $s->gff_string,"\n";
-    }
+      eval{$f->version(3)};
+      my $s =$f->gff_string(1);
+      chomp($s);
+      print $s,"\n";
   }
+
   print end_pre() if $html;
   print end_html() if $html;
 }

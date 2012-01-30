@@ -12,8 +12,9 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 43;
+use constant TEST_COUNT => 47;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
+use constant DEBUG => 0;
 
 my $PID;
 
@@ -56,12 +57,12 @@ use TemplateCopy; # for the template_copy() function
 
 # alignments requires the server at 8100
 my $alignment_server = Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic');
-$alignment_server->debug(0);
+$alignment_server->debug(DEBUG);
 $alignment_server->run();
 
 # cleavage sites track requires the server at 8101
 my $cleavage_server  = Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic');
-$cleavage_server->debug(0);
+$cleavage_server->debug(DEBUG);
 $cleavage_server->run();
 
 # rewrite the template config files
@@ -76,7 +77,7 @@ for ('volvox_final.conf','yeast_chr1.conf') {
 # Test remote rendering
 my $server = Bio::Graphics::Browser2::Render::Slave->new(LocalPort=>'dynamic');
 ok($server);
-$server->debug(0);
+$server->debug(DEBUG);
 my $server_pid = $server->run;
 ok($server_pid);
 
@@ -147,11 +148,11 @@ for my $img (@images) {
     ok (-e $img && -s _);
 }
 
-ok (scalar @images,4);
+ok (scalar @images,8);
 
 # uncomment to see the images
-# warn join ' ',@images;
-# sleep 20;
+#warn join ' ',@images;
+#sleep 5000;
 
 exit 0;
 

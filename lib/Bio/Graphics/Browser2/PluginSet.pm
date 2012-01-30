@@ -17,6 +17,10 @@ sub new {
 
   warn "initializing plugins with $config..." if DEBUG;
   my @plugins = shellwords($config->plugins);
+  # only one authorization plugin allowed, from globals
+  if (my $auth = $config->auth_plugin) {
+      unshift @plugins,$auth; # first one
+  }
   warn "PLUGINS = @plugins" if DEBUG;
 
  PLUGIN:
@@ -40,11 +44,11 @@ sub new {
     }
     warn $@ if !$plugin_list{$plugin} && $@ =~ /^Can\'t locate/;
   }
-
-  return bless {
+  my $self = bless {
 		config        => $config,
 		plugins       => \%plugin_list
 	       },ref $package || $package;
+  return $self;
 }
 
 sub config        { shift->{config}         }
@@ -64,6 +68,13 @@ sub language {
   my $d = $self->{language};
   $self->{language} = shift if @_;
   $d;
+}
+
+sub auth_plugin {
+    my $self = shift;
+    my @a    = grep {$_->type eq 'authenticator'} values %{$self->{plugins}};
+    return unless @a;
+    return $a[0];
 }
 
 sub configure {
@@ -114,6 +125,11 @@ sub configure {
 	  $p->page_settings->{features}{$setting_name}{visible} = 1;
       }
 
+      if ($p->type eq 'authenticator') {
+	  my $source = $self->config;
+	  $source->set_authenticator($p);
+	  $source->set_username($render->session->username);
+      }
     };
 
     warn "$name: $@" if $@;

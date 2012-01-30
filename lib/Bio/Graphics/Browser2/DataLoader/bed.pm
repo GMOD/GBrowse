@@ -29,6 +29,7 @@ sub load_line {
 
 sub finish_load {
     my $self = shift;
+
     my $line_count = shift;
 
     $self->set_status('creating database');
@@ -45,6 +46,11 @@ sub finish_load {
     my $trackno   = 0;
     my $loadid    = $self->loadid;
     my $summary   = $line_count < TOO_SMALL_FOR_SUMMARY_MODE ? 'show summary = 0' : '';
+    eval {
+	$self->set_status('calculating summary statistics');
+	$self->loader->build_summary;
+    } unless $line_count < TOO_SMALL_FOR_SUMMARY_MODE;
+    warn $@ if $@;
 
     $self->set_status('creating configuration');
 

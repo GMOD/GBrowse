@@ -27,6 +27,7 @@ sub create_conf_file {
 db_adaptor = Bio::DB::Sam
 db_args    = -bam    "$bam_file"
              -fasta  "$fasta"
+	     -split_splices 1
 search options = none
 END
 
@@ -99,6 +100,7 @@ END
 sub get_fasta_file {
     my $self = shift;
     my @fasta      = $self->get_fasta_files;
+    warn "FASTA (before filtering) = @fasta";
     my $fasta      = (grep {!/\.fai$/} @fasta)[0];
     return $fasta;
 }
@@ -188,7 +190,10 @@ sub create_big_wig {
     my $dir    = $self->data_path;
     my $fasta  = $self->get_fasta_file or return;
     my $wigout = Bio::DB::Sam::SamToGBrowse->new($dir,$fasta,0);
-    $wigout->bam_to_wig;  # this creates the wig files
+    warn "start bam_to_wig()";
+    $wigout->bam_to_wig($self->chrom_sizes);  # this creates the wig files
+    warn "end bam_to_wig";
+    die $wigout->last_error if $wigout->last_error;
     1;
 }
 

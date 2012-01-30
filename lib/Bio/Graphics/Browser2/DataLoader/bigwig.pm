@@ -150,7 +150,7 @@ END
 	$options->{name}       ||= sprintf("%s.%03d",$self->track_name,$trackno++);
 	$options->{visibility} ||= 'full';
         $options->{maxHeightPixels} ||= $options->{visibility} eq 'full' ? 50 : 20;
-	$options->{autoScale}  ||= 'on';
+	$options->{autoScale}  ||= 'off';
 	my @options;
 	push @options,"database = $dbid";
 	push @options,"feature  = summary";
@@ -160,7 +160,7 @@ END
 				       : 'wiggle_whiskers' );
 	push @options,'autoscale = '.($options->{autoScale}  eq 'on'   
 	                               ? 'local' 
-				       : 'global');
+				       : 'chromosome');
 	if (exists $options->{viewLimits} && 
 	    (my ($low,$hi) = split ':',$options->{viewLimits})) {
 	    push @options,"min_score = $low";

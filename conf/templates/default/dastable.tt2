@@ -38,7 +38,7 @@
   </tr>
   <tr class="uploadbody">
     <th>&nbsp;</th>
-    <th align="left"><input type=submit name=[% config.tr("Update_urls") %]></th>
+    <th align="left"><input type=submit name=[% config.tr("Update") %]></th>
   </tr>
 </table>
 

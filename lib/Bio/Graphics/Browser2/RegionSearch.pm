@@ -93,7 +93,6 @@ sub init_databases {
 
     my $source = $self->source;
     my $labels = $track_labels || [$source->labels];
-#    my $labels = $track_labels || [$source->dbs];
 
     my $renderfarm = $self->source->global_setting('renderfarm');
 
@@ -287,7 +286,7 @@ sub search_features {
     my $self        = shift;
     my $args        = shift;
     my $state       = $self->state;
-    $args          ||= {};
+    $args         ||= {};
 
     if ($args && !ref($args)) {
 	$args = {-search_term=>$args};  #adjust for changed API
@@ -297,8 +296,6 @@ sub search_features {
 	return unless $state->{name};
 	$args->{-search_term} = $state->{name}
     }
-
-    warn "search_features (",join ' ',%$args,')' if DEBUG;
 
     local $self->{shortcircuit} = 0;
     my $local   = $self->search_features_locally($args);  # if default db has a hit, then we short circuit
@@ -399,7 +396,12 @@ sub _search_features_locally {
     warn "dbs = @dbids" if DEBUG;
     my %seenit;
 
+    # prevent uninit variable warnings here
+    $args->{-name} ||= '';
+
     for my $dbid (@dbids) {
+	my $opts = $self->source->search_options($dbid);
+	next if $opts =~ /none/i && $args->{-name} !~ /^id:/;
 	warn "searching in ",$dbid if DEBUG;
 	my $db = $self->source->open_database($dbid);
 	next if $seenit{$db}++;
@@ -407,22 +409,34 @@ sub _search_features_locally {
 	    { source     => $self->source,
 	      state      => $self->state,
 	      db         => $db,
-	      searchopts => $self->source->search_options($dbid),
+	      searchopts => $opts,
 	    }
 	    ); 
- 	my $features = $region->search_features($args);
-	warn $features ? "got @$features" : "got no features" if DEBUG;
+	my $features = $region->search_features($args);
+	warn $features && @$features ? "[$$] got @$features" : "[$$] got no features" if DEBUG;
 	next unless $features && @$features;
+	$features = $self->filter_features($dbid,$features);
 	$self->add_dbid_to_features($dbid,$features);
 	push @found,@$features;
-
+	
 	if ($dbid eq $default_dbid && $shortcircuit) {
 	    warn "hit @found in the default database, so short-circuiting" if DEBUG;
 	    last;
 	}
+	    
     }
 
-    return \@found;
+    return \@found;		
+}
+
+# remove any features in the database's "exclude types" list
+sub filter_features {
+    my $self = shift;
+    my ($dbid,$features) = @_;
+    my %exclude = map {lc $_=> 1} $self->source->exclude_types($dbid);
+    return $features unless %exclude;
+    my @f = grep {!$exclude{lc $_->primary_tag}} @$features;
+    return \@f;
 }
 
 =head2 $found = $db->search_features_remotely($args)

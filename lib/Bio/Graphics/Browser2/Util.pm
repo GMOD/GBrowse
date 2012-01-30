@@ -31,6 +31,8 @@ use Digest::MD5;
 our @EXPORT    = qw(modperl_request error citation shellwords url_label);
 our @EXPORT_OK = qw(modperl_request error citation shellwords url_label segment_str);
 
+my $CURRENT_LANGUAGE;
+
 use constant DEBUG => 0;
 
 =over 4
@@ -161,6 +163,18 @@ sub segment_str {
 	   $s->commas($segment->end);
 }
 
+sub set_language {
+    my $self = shift;
+    $CURRENT_LANGUAGE = shift;
+}
+
+sub translate {
+    my $self = shift;
+    return 'untranslatable' unless $CURRENT_LANGUAGE;
+    return $CURRENT_LANGUAGE->translate(@_);
+}
+
+1;
 
 =back
 

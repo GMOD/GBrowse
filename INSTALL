@@ -1,3 +1,13 @@
+This document is out of date and only applies to pre-GBrowse2 releases.
+It will be removed from this distribution and replaced with a link to 
+the GMOD wiki:
+
+  http://gmod.org/wiki/GBrowse_2.0_Install_HOWTO
+
+
+-------------------------------------------------------------------------
+
+
 Generic Genome Browser Installation
     GBrowse is distributed as binary packages for Windows and Macintosh OS
     X, and as source code for Unix systems.

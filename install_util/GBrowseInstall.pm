@@ -16,11 +16,15 @@ use File::Compare 'compare';
 use File::Copy    'copy';
 use GBrowseGuessDirectories;
 
+use overload '""' => 'asString',
+    fallback => 1;
+
 use constant REGISTRATION_SERVER => 'http://modencode.oicr.on.ca/cgi-bin/gbrowse_registration';
 
 my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
 		htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
 		tmp           => 'Directory for GBrowse\'s temporary data',
+		persistent    => 'Directory for GBrowse\'s sessions, uploaded tracks and other persistent data',
 		databases     => 'Directory for GBrowse\'s example databases',
 		cgibin        => 'Directory for GBrowse\'s CGI script executables?',
 		portdemo      => 'Internet port to run demo web site on (for demo)?',
@@ -46,7 +50,10 @@ sub ACTION_demo {
 	|| GBrowseGuessDirectories->portdemo();
     my $modules = $self->config_data('apachemodules')
 	|| GBrowseGuessDirectories->apachemodules;
+    my $db      = $self->config_data('databases')
+	|| GBrowseGuessDirectories->databases;
     my $cgiurl  = $self->cgiurl;
+    my $persistent = $self->config_data('persistent');
 
     mkdir "$dir/conf";
     mkdir "$dir/htdocs";
@@ -91,10 +98,17 @@ sub ACTION_demo {
 	    s!\$CONF!$dir/conf!g;
 	    s!\$HTDOCS!$dir/htdocs!g;
 	    s!\$DATABASES!$dir/htdocs/databases!g;
+	    s!\$PERSISTENT!$dir/$persistent!g;
 	    s!\$TMP!$dir/tmp!g;
 	    s/\$CGIURL/$cgiurl/g;
 	    s!\$VERSION!$self->dist_version!eg;
+	    s/\$CAN_USER_ACCOUNTS_OPENID/$self->has_openid/eg;
+	    s/\$CAN_USER_ACCOUNTS_REG/$self->has_smtp/eg;
+	    s/\$CAN_USER_ACCOUNTS/$self->has_mysql_or_sqlite/eg;
+	    s/\$USER_ACCOUNT_DB/$self->guess_user_account_db/eg;
+	    s/\$SMTP_GATEWAY/$self->guess_smtp_gateway/eg;
 	    s!^url_base\s*=.+!url_base               = /!g;
+	    s!^user_accounts[^=]+=.*!user_accounts = 0!;
 	    $out->print($_);
 	}
 	close $out;
@@ -122,7 +136,6 @@ sub ACTION_demo {
     my $apache =  GBrowseGuessDirectories->apache
 	or die "Could not find apache executable on this system. Can't run demo";
 
-    print STDERR "Starting apache....\n";
     system "$apache -k start -f $dir/conf/httpd.conf";
     sleep 3;
     if (-e "$dir/logs/apache2.pid") {
@@ -210,7 +223,8 @@ sub ACTION_config {
     my $self  = shift;
     local $^W = 0;
 
-    my $prefix = $self->prefix || $self->install_base || '/';
+    my $prefix = $self->install_base || $self->prefix || '';
+    GBrowseGuessDirectories->prefix($prefix);
 
     # $self->depends_on('build');
     return if $self->config_done;
@@ -234,7 +248,7 @@ sub ACTION_config {
 			     $opts{$key} ||
 			     ($conf_dir 
 			     ? File::Spec->canonpath(
-				 File::Spec->catfile($prefix,GBrowseGuessDirectories->$key($opts{apache})))
+				 File::Spec->catfile(GBrowseGuessDirectories->$key($opts{apache})))
 			     : GBrowseGuessDirectories->$key($opts{apache})));
 	if ($conf_dir) {
 	    my ($volume,$dir) = File::Spec->splitdir($opts{$key});
@@ -289,10 +303,10 @@ sub ACTION_register {
 	}
     } else {
 	print STDERR "If you wish to register at a later time please \"./Build register\"\n";
+	print STDERR "Press any key to continue\n";
+	my $h = <STDIN>;
     }
     $self->registration_done(1);
-    print STDERR "Press any key to continue\n";
-    my $h = <STDIN>;
 }
 
 
@@ -323,15 +337,16 @@ END
 
 sub apache_conf {
     my $self = shift;
-    my $dir     = $self->config_data('htdocs');
-    my $conf    = $self->config_data('conf');
-    my $cgibin  = $self->config_data('cgibin');
-    my $tmp     = $self->config_data('tmp');
+    my $dir       = $self->config_data('htdocs');
+    my $conf      = $self->config_data('conf');
+    my $cgibin    = $self->config_data('cgibin');
+    my $tmp       = $self->config_data('tmp');
+    my $databases = $self->config_data('databases');
     my $cgiroot = basename($cgibin);
     my $perl5lib= $self->added_to_INC;
     my $inc      = $perl5lib ? "SetEnv PERL5LIB \"$perl5lib\"" : '';
     my $fcgi_inc = $perl5lib ? "-initial-env PERL5LIB=$perl5lib"        : '';
-    my $fcgid_inc= $perl5lib ? "DefaultInitEnv PERL5LIB $perl5lib"        : '';
+    my $fcgid_inc= $perl5lib ? "FcgidInitialEnv PERL5LIB $perl5lib"        : '';
     my $modperl_switches = $perl5lib
 	? "PerlSwitches ".join ' ',map{"-I$_"} split ':',$perl5lib
         : '';
@@ -348,13 +363,23 @@ ScriptAlias  "/gb2"      "$cgibin"
   Allow from all
 </Directory>
 
+<Directory "$dir/tutorial">
+  Options +Indexes
+</Directory>
+
 <Directory "$tmp/images/">
   Order allow,deny
   Allow from all
 </Directory>
 
+<Directory "$databases">
+  Order allow,deny
+  Deny from all
+</Directory>
+
 <Directory "$cgibin">
   ${inc}
+  Options ExecCGI
   SetEnv GBROWSE_CONF   "$conf"
 </Directory>
 
@@ -362,9 +387,13 @@ ScriptAlias  "/gb2"      "$cgibin"
   Alias /fgb2 "$cgibin"
   <Location /fgb2>
     SetHandler   fcgid-script
-    Options      ExecCGI
   </Location>
-  DefaultInitEnv GBROWSE_CONF $conf
+  FcgidInitialEnv GBROWSE_CONF $conf
+  # these directives prevent idle/busy timeouts and may need to be
+  # adjusted up or down
+  FcgidMinProcessesPerClass 6
+  FcgidIOTimeout   600
+  FcgidBusyTimeout 600
   $fcgid_inc
 </IfModule>
 
@@ -372,11 +401,13 @@ ScriptAlias  "/gb2"      "$cgibin"
   Alias /fgb2 "$cgibin"
   <Location /fgb2>
     SetHandler   fastcgi-script
-    Options      ExecCGI
   </Location>
-  FastCgiConfig $fcgi_inc -initial-env GBROWSE_CONF=$conf
+  # Note: you may need to increase -idle-timeout if file uploads are timing out and returning server
+  # errors.
+  FastCgiConfig -idle-timeout 600 -maxClassProcesses 20 $fcgi_inc -initial-env GBROWSE_CONF=$conf 
 </IfModule>
 
+# Use of mod_perl is no longer supported. Use at your own risk.
 <IfModule mod_perl.c>
    Alias /mgb2 "$cgibin"
    $modperl_switches
@@ -391,23 +422,26 @@ END
 
 sub ACTION_install {
     my $self = shift;
-    my $prefix = $self->prefix || $self->install_base || '';
+    my $prefix = $self->install_base || $self->prefix || '';
+    GBrowseGuessDirectories->prefix($prefix);
 
     $self->depends_on('config_data');
     $self->install_path->{conf} 
-        ||= $self->config_data('conf')
-	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->conf);
+        ||= $self->config_data('conf') || GBrowseGuessDirectories->conf;
     $self->install_path->{htdocs}
         ||= $self->config_data('htdocs')
-	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->htdocs);
+	    || GBrowseGuessDirectories->htdocs;
     $self->install_path->{'cgi-bin'} 
         ||= $self->config_data('cgibin')
-	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->cgibin);
+	    || GBrowseGuessDirectories->cgibin;
     $self->install_path->{'etc'} 
-        ||= File::Spec->catfile($prefix,GBrowseGuessDirectories->etc);
+        ||= GBrowseGuessDirectories->etc;
     $self->install_path->{'databases'} 
         ||= $self->config_data('databases')
-	    || File::Spec->catfile($prefix,GBrowseGuessDirectories->databases);
+	    || GBrowseGuessDirectories->databases;
+    $self->install_path->{'persistent'} 
+        ||= $self->config_data('persistent')
+	    || GBrowseGuessDirectories->persistent;
     
     $self->SUPER::ACTION_install();
 
@@ -438,6 +472,11 @@ sub ACTION_install {
     }
     chown $>,-1,$self->install_path->{htdocs};
 
+    my $persistent = $self->install_path->{'persistent'};
+    my $sessions   = File::Spec->catfile($persistent,'sessions');
+    my $userdata   = File::Spec->catfile($persistent,'userdata');
+    mkpath([$sessions,$userdata],0711);
+
     my $databases = $self->install_path->{'databases'};
     
     unless (chown $uid,$gid,glob(File::Spec->catfile($databases,'').'*')) {
@@ -449,20 +488,30 @@ sub ACTION_install {
 
     my $base = basename($self->install_path->{htdocs});
 
+    # Configure the databases, if needed.
+    print STDERR "Updating user account database...\n";
+    my $metadb_script = File::Spec->catfile("bin", "gbrowse_metadb_config.pl");
+    my $perl          = $self->perl;
+    my @inc           = map{"-I$_"} split ':',$self->added_to_INC;
+    system $perl,@inc,$metadb_script;
+    system 'sudo','chown','-R',"$uid.$gid",$sessions,$userdata;
+
     if (Module::Build->y_n(
 	    "It is recommended that you restart Apache. Shall I try this for you?",'y'
 	)) {
 	system "sudo /etc/init.d/apache2 restart";
     }
-
+    
     print STDERR "\n***INSTALLATION COMPLETE***\n";
-    print STDERR "Load http://localhost/$base for demo and documentation\n";
+    print STDERR "Load http://localhost/$base for demo and documentation.\n";
+    print STDERR "Visit the http://gmod.org for more information on setting up databases for users and custom tracks.\n";
 }
 
 sub ACTION_install_slave {
     my $self = shift;
-    $self->install_path->{'etc'} 
-        ||= File::Spec->catfile($self->prefix||'',GBrowseGuessDirectories->etc);
+    my $prefix = $self->install_base || $self->prefix ||'';
+    GBrowseGuessDirectories->prefix($prefix);
+    $self->install_path->{'etc'} ||= GBrowseGuessDirectories->etc;
     $self->SUPER::ACTION_install();
 }
 
@@ -493,9 +542,9 @@ sub process_conf_files {
     my $self = shift;
     my $f    = IO::File->new('MANIFEST');
 
-    my $prefix = $self->prefix || $self->install_base || '';
-    my $install_path = $self->config_data('conf')
-	|| File::Spec->catfile($prefix,GBrowseGuessDirectories->conf);
+    my $prefix = $self->install_base || $self->prefix || '';
+    GBrowseGuessDirectories->prefix($prefix);
+    my $install_path = $self->config_data('conf') || GBrowseGuessDirectories->conf;
     my $skip;
 
     while (<$f>) {
@@ -513,8 +562,8 @@ sub process_conf_files {
 	    (my $new = $base) =~ s/^conf\///;
 	    my $installed = File::Spec->catfile($install_path,$new);
 	    if (-e $installed && $base =~ /\.conf$/ && (compare($base,$installed) != 0)) {
-		warn "$installed conf file is already installed. New version will be installed as $installed.new\n";
-		copy ("blib/$base","blib/$base.new");
+		warn "$installed is already installed. New version will be installed as $installed.new\n";
+		rename ("blib/$base","blib/$base.new");
 		print $skip '^',"blib/",quotemeta($base),'$',"\n";
 	    }
 	}
@@ -533,10 +582,6 @@ sub process_htdocs_files {
 	$self->substitute_in_place("blib/$_")
 	    if $copied
 	    or !$self->up_to_date('_build/config_data',"blib/$_");
-# was  trying to do something about localizing installed perl, but forget what it was
-#	if (/\.pl$/ && $copied) {
-#	    
-#	}
     }
 }
 
@@ -558,8 +603,9 @@ sub process_cgibin_files {
 sub process_etc_files {
     my $self = shift;
 
-    my $prefix = $self->prefix || $self->install_base || '';
-    my $install_path = File::Spec->catfile($prefix,GBrowseGuessDirectories->etc);
+    my $prefix = $self->install_base || $self->prefix || '';
+    GBrowseGuessDirectories->prefix($prefix);
+    my $install_path = GBrowseGuessDirectories->etc;
 
     my $skip;
 
@@ -582,7 +628,7 @@ sub process_etc_files {
 		my $installed = File::Spec->catfile($install_path,$new);
 		if (-e $installed) {
 		    warn "$installed is already installed. New version will be installed as $installed.new\n";
-		    copy ("blib/$base","blib/$base.new");
+		    rename ("blib/$base","blib/$base.new");
 		    print $skip '^',"blib/",quotemeta($base),'$',"\n";
 		}
 	    }
@@ -649,15 +695,20 @@ sub substitute_in_place {
     my $htdocs     = $self->config_data('htdocs');
     my $conf       = $self->config_data('conf');
     my $cgibin     = $self->config_data('cgibin');
+    my $persistent = $self->config_data('persistent');
     my $databases  = $self->config_data('databases');
     my $tmp        = $self->config_data('tmp');
-    my $wwwuser  = $self->config_data('wwwuser');
-    my $perl5lib = $self->perl5lib || '';
-    my $installscript = $self->scriptdir;
-    my $cgiurl   = $self->cgiurl;
+    my $wwwuser    = $self->config_data('wwwuser');
+    my $perl5lib   = $self->perl5lib || '';
+    my $installscript =  $self->install_destination('script');
+    my $etc         =  $self->install_path->{'etc'} ||= GBrowseGuessDirectories->etc;
+    my $cgiurl        = $self->cgiurl;
+
+    $persistent ||= $databases;
 
     while (<$in>) {
 	s/\$INSTALLSCRIPT/$installscript/g;
+	s/\$ETC/$etc/g;
 	s/\$PERL5LIB/$perl5lib/g;
 	s/\$HTDOCS/$htdocs/g;
 	s/\$CONF/$conf/g;
@@ -665,13 +716,51 @@ sub substitute_in_place {
 	s/\$CGIURL/$cgiurl/g;
 	s/\$WWWUSER/$wwwuser/g;
 	s/\$DATABASES/$databases/g;
+	s/\$PERSISTENT/$persistent/g;
 	s/\$VERSION/$self->dist_version/eg;
+	s/\$CAN_USER_ACCOUNTS_OPENID/$self->has_openid/eg;
+	s/\$CAN_USER_ACCOUNTS_REG/$self->has_smtp/eg;
+	s/\$CAN_USER_ACCOUNTS/$self->has_mysql_or_sqlite/eg;
+	s/\$USER_ACCOUNT_DB/$self->guess_user_account_db/eg;
+	s/\$SMTP_GATEWAY/$self->guess_smtp_gateway/eg;
 	s/\$TMP/$tmp/g;
 	$out->print($_);
     }
     $in->close;
     $out->close;
     rename("$path.$$",$path);
+}
+
+sub has_mysql_or_sqlite {
+    my $self = shift;
+    return eval "require DBD::mysql; 1" || eval "require DBD::SQLite; 1" || 0;
+}
+
+sub has_smtp {
+    my $self = shift;
+    return eval "require Net::SMTP; 1" || 0;
+}
+
+sub has_openid {
+    my $self = shift;
+    return eval "require Net::OpenID::Consumer; require LWP::UserAgent; 1" || 0;
+}
+
+sub guess_user_account_db {
+    my $self = shift;
+    if (eval "require DBD::SQLite; 1") {
+	my $databases = $self->config_data('databases');
+	return "DBI:SQLite:$databases/users.sqlite";
+    } elsif (eval "require DBD::mysql; 1") {
+	return 'DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse';
+    } else {
+	return "no database defined # please correct this";
+    }
+}
+
+sub guess_smtp_gateway {
+    my $self = shift;
+    return 'localhost  # this assumes that a correctly configured smtp server is running on current machine; change if necessary';
 }
 
 sub private_props {
@@ -825,8 +914,10 @@ sub added_to_INC {
     my $self       = shift;
     my @inc        = grep {!/install_util/} eval {$self->_added_to_INC};  # not in published API
     my $lib_base   = $self->install_destination('lib');
+    my $arch_base  = $self->install_destination('arch');
     my %standard   = map {$_=>1} @INC;
-    push @inc,$lib_base unless $standard{$lib_base};
+    push @inc,$lib_base  unless $standard{$lib_base};
+    push @inc,$arch_base unless $standard{$arch_base};
     return @inc ? join(':',@inc) : '';
 }
 
@@ -848,7 +939,8 @@ sub scriptdir {
 sub ownership_warning {
     my $self = shift;
     my ($path,$owner) = @_;
-    warn "*** WARNING: Could not change ownership of $path to '$owner'.\n\tPlease change manually using 'sudo chown -R $owner $path' ***\n";
+    warn "*** WARNING: Using sudo to change ownership of $path to '$owner'. You may be prompted for your login password ***\n";
+    system "sudo chown -R $owner $path";
 }
 
 sub cgiurl {
@@ -873,7 +965,10 @@ sub check_prereq {
 
 END
     }
+    return $result;
 }
+
+sub asString { return 'GBrowse installer' }
 
 1;
 

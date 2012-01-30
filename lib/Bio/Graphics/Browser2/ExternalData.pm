@@ -12,6 +12,8 @@ use constant DEBUG => 0;
 sub new {
   croak 'virtual base class';
 }
+
+sub uploadid      { croak "virtual method" }
 sub config        { shift->{config}        }
 sub state         { shift->{state}         }
 
@@ -121,7 +123,7 @@ sub name_file {
 
   my $state     = $self->state;
   my $config    = $self->config;
-  my $id        = $state->{uploadid} || $state->{userid} or return;
+  my $id        = $self->uploadid || $state->{userid} or return;
 
   my ($url,$path) = $self->file2path($config,$id,$filename,$strip);
   warn "name_file() returns => ($url,$path)" if DEBUG;
@@ -136,7 +138,7 @@ sub file2path {
     # keep last non-[\\\/:] part of name
     my ($name) = $strip ? $filename =~ /([^:\\\/]+)$/ : $filename;
     $name                  =~ tr!-/!__!; # get rid of hyphens and slashes
-    my $tmpdir    = $config->userdata('uploads',$id);
+    my $tmpdir    = $config->userdata($id);
     my $path      = File::Spec->catfile($tmpdir,$name);
     my $url       = "file:$name";
     return wantarray ? ($url,$path) : $path;

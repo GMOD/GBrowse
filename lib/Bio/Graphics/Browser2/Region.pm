@@ -200,9 +200,12 @@ sub search_db {
   my $args = shift;
   my ($features);
   if (my $name = $args->{-search_term}) {
-      $name =~ tr/a-zA-Z0-9.'"_*?: ;+-\/\#//cd;  # remove rude characters
+      $name =~ tr/a-zA-Z0-9|.'"_*?: ;+-\/\#\[\]//cd;  # remove rude/naughty characters
       my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
       $features =  $self->lookup_features($ref,$start,$stop,$class,$name,$id);
+  }
+  elsif ($args->{-name} && $args->{-name}=~/^id:(.+)/) {
+      $features =  $self->lookup_features(undef,undef,undef,undef,undef,$1);
   }
   else {
       my @features = $self->db->features(%$args);
@@ -215,8 +218,6 @@ sub lookup_features {
   my $self  = shift;
   my ($name,$start,$stop,$class,$literal_name,$id) = @_;
   my $source = $self->source;
-
-  warn "lookup_features(@_)" if DEBUG;
 
   my $refclass = $source->global_setting('reference class') || 'Sequence';
 
@@ -243,7 +244,12 @@ sub lookup_features {
   {
 
       warn "searchopts = ",join ',',%$searchopts if DEBUG;
-      last SEARCHING unless %$searchopts;
+      unless (%$searchopts) {
+	  warn "segment(-name => $name,-start=>$start,-end=>$stop)" if DEBUG;
+	  my @f = $db->segment(-name => $name,-start=>$start,-end=>$stop);
+	  $features = \@f;
+	  last SEARCHING;
+      }
 
       for my $n ([$name,$start,$stop],
 		 [$literal_name,undef,undef]) {
@@ -309,6 +315,16 @@ sub lookup_features {
       warn "try a keyword search for $literal_name" if DEBUG;
       $features = $self->_feature_keyword_search($literal_name);
   }
+
+  if ($class) {
+      my $regex = quotemeta($class);
+      my @f;
+      foreach (@$features) {
+	  my $c = eval {$_->class};
+	  push @f,$_ if ($c && $c =~ /^$regex/i) or $_->primary_tag =~ /^$regex/i;
+      }
+      $features = \@f;
+  }
   
   return $features;
 }
@@ -337,8 +353,6 @@ sub _feature_get {
       && $db->can('get_features_by_alias');
 
   warn "get_features_by_alias(@argv) => @features" if DEBUG;
-
-#  warn "get_feature_by_alias(@argv) => @features";
 
   @features  = grep {$_->length} $db->segment(@argv)               
       if !@features && $name !~ /[*?]/;
@@ -429,16 +443,11 @@ sub parse_feature_name {
   }
 
   my ($class,$ref,$start,$stop);
-  if ( ($name !~ /\.\./ and $name =~ /([\w._\/-]+):\s*(-?[-e\d.]+)\s*,\s*(-?[-e\d.]+)\s*$/) or
-      $name =~ /([\w._\/-]+):\s*(-?[-e\d,.]+?)\s*(?:-|\.\.)\s*(-?[-e\d,.]+)\s*$/) {
-    $ref  = $1;
-    $start = $2;
-    $stop  = $3;
-    $start =~ s/,//g; # get rid of commas
-    $stop  =~ s/,//g;
+  if (my @a = $self->is_chromosome_region($name)) {
+      ($ref,$start,$stop) = @a;
   }
 
-  elsif ($name =~ /^(\w+):(.+)$/) {
+  elsif ($name =~ /^(\w+):([^:]+)$/) {
     $class = $1;
     $ref   = $2;
   }
@@ -447,6 +456,21 @@ sub parse_feature_name {
     $ref = $name;
   }
   return ($ref,$start,$stop,$class);
+}
+
+sub is_chromosome_region {
+    my $self = shift;
+    my $name = shift;
+    if ( ($name !~ /\.\./ and $name =~ /([\w._\/-]+):\s*(-?[-e\d.]+)\s*,\s*(-?[-e\d.]+)\s*$/) or
+	 $name =~ /([\w._\/-]+):\s*(-?[-e\d,.]+?)\s*(?:-|\.\.)\s*(-?[-e\d,.]+)\s*$/) {
+	my $ref  = $1;
+	my $start = $2;
+	my $stop  = $3;
+	$start =~ s/,//g; # get rid of commas
+	$stop  =~ s/,//g;
+	return ($ref,$start,$stop);
+    }
+    return;
 }
 
 =head2 $whole = $db->whole_segment ($segment,$settings);

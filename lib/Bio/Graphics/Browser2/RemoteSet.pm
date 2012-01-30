@@ -6,6 +6,7 @@ use base 'Bio::Graphics::Browser2::ExternalData';
 
 use Bio::Graphics::Browser2::Util 'shellwords';
 use IO::File;
+use File::Path 'mkpath';
 use CGI 'cookie','param','unescape';
 use Digest::MD5 'md5_hex';
 use File::Spec;
@@ -17,17 +18,21 @@ use constant DEBUG=>0;
 
 sub new {
   my $package = shift;
-  my $config  = shift;
-  my $state   = shift;
-  my $lang    = shift;
+  my $config   = shift;
+  my $state    = shift;
+  my $lang     = shift;
+  my $uploadid = shift;
   my $self = bless {
-		    config        => $config,
-		    language      => $lang,
-		    state         => $state,
-		    sources       => {},
-		   },ref $package || $package;
+      config        => $config,
+      language      => $lang,
+      state         => $state,
+      uploadid      => $uploadid,
+      sources       => {},
+  },ref $package || $package;
   $self;
 }
+
+sub uploadid { shift->{uploadid} }
 
 sub add_files_from_state {
     my $self  = shift;
@@ -43,6 +48,8 @@ sub add_files_from_state {
 	}
 
 	my $remote_url = $config->setting($track=>'remote feature') or next;
+	$remote_url    = &$remote_url() 
+	    if ref $remote_url && ref $remote_url eq 'CODE';
 	warn "adding remote_url = $remote_url" if DEBUG;
 	$self->add_source($track,$remote_url);
     }
@@ -282,6 +289,7 @@ sub mirror {
   $file = "$file-$$";
   my $tmpfile  = File::Spec->catfile($volume,$dirs,$file);
 
+  mkpath($dirs) unless -e $dirs && -d _;
   my $response = $ua->request($request,$tmpfile);
 
   if ($response->is_success) {  # we got a new file, so need to process it

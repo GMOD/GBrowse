@@ -141,7 +141,7 @@ sub dump {
 	CORE::exit 0;
     }
 
-    my $out = new Bio::SeqIO(-format => $config->{fileformat});
+    my $out = new Bio::SeqIO(-format => $config->{fileformat},-fh=>\*STDOUT);
     my $mime_type = $self->mime_type;
     if ($mime_type =~ /html/) {
 	print start_html($segment->desc),h1($segment->desc), start_pre;

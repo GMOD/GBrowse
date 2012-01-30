@@ -12,6 +12,8 @@ sub template_copy {
     my ($infile,$outfile,$replacements) = @_;
     local $_;
 
+    chmod 0644,$outfile
+	unless -w $outfile;
     my $in      = IO::File->new($infile)      or die "$infile: $!";
     my $out     = IO::File->new($outfile,'>') or die "$outfile: $!";
     my $pattern = '('.join('|',map {quotemeta($_)} keys %$replacements).')' if %$replacements;

@@ -1,7 +1,8 @@
 package Bio::Graphics::Browser2::RenderPanels;
-
 use strict;
 use warnings;
+
+use GD 'gdTransparent','gdStyled';
 
 use Bio::Graphics;
 use Digest::MD5 'md5_hex';
@@ -12,8 +13,8 @@ use Bio::Graphics::Browser2::Util qw[shellwords url_label];
 use Bio::Graphics::Browser2::Render::Slave::Status;
 use IO::File;
 use Time::HiRes 'sleep','time';
+use Data::Dumper;
 use POSIX 'WNOHANG','setsid';
-
 use CGI qw(:standard param escape unescape);
 
 use constant TRUE  => 1;
@@ -127,6 +128,7 @@ sub request_panels {
   my $args    = shift;
 
   my $data_destinations = $self->make_requests($args);
+  my $render            = $args->{render};
 
   # sort the requests out into local and remote ones
   my ($local_labels,
@@ -157,9 +159,10 @@ sub request_panels {
 	  my $db = eval { $source->open_database($l,$length)};
       }
 
-      my $child = Bio::Graphics::Browser2::Render->fork();
+      my $child = $render->fork();
 
       if ($child) {
+	  warn "[$$] Forked new rendering panel $child for $args->{section}" if DEBUG;
 	  return $data_destinations;
       }
 
@@ -168,7 +171,7 @@ sub request_panels {
       POSIX::setsid()          or die "Couldn't start new session";
 
       if ( $do_local && $do_remote ) {
-          if ( Bio::Graphics::Browser2::Render->fork() ) {
+          if ( $render->fork() ) {
               $self->run_local_requests( $data_destinations,
 					 $args,
 					 $local_labels );
@@ -180,11 +183,14 @@ sub request_panels {
           }
       }
       elsif ($do_local) {
+	  warn "[$$] run_local_requests (@$local_labels)" if DEBUG;
           $self->run_local_requests( $data_destinations, $args,$local_labels );
       }
       elsif ($do_remote) {
           $self->run_remote_requests( $data_destinations, $args,$remote_labels );
       }
+
+      warn "[$$] $args->{section} RENDERER EXITING" if DEBUG;
       CORE::exit 0;
   }
 
@@ -259,6 +265,8 @@ sub make_requests {
     my @cache_extra = @{ $args->{cache_extra} || [] };
     my %d;
 
+    warn "panel_args = @panel_args, cache_extra=@cache_extra" if DEBUG;
+
     foreach my $label ( @{ $labels || [] } ) {
 
         my @track_args = $self->create_track_args( $label, $args );
@@ -277,7 +285,8 @@ sub make_requests {
 	(my $track = $label) =~ s/:(overview|region|details?)$//;
 	if ($feature_files && exists $feature_files->{$track}) {
 
-	    my $feature_file = $feature_files->{$track};
+	    # some broken logic here...
+	    my $feature_file = $feature_files->{$track} || $feature_files->{$label};
 
 	    unless (ref $feature_file) { # upload problem!
 		my $cache_object = Bio::Graphics::Browser2::CachedTrack->new(
@@ -291,13 +300,15 @@ sub make_requests {
 				     $format_option, 
 				     $label ],
 		    );
+    
 		my $msg = eval {$args->{remotes}->error($track)};
 		$cache_object->flag_error($msg || "Could not fetch data for $track");
 		$d{$track} = $cache_object;
 		next;
 	    }
-
-	    next unless $label =~ /:$args->{section}$/;
+	    
+	    # broken logic here?
+	    # next unless $label =~ /:$args->{section}$/;
 	    @featurefile_args =  eval {
 		$feature_file->isa('Bio::Das::Segment')||$feature_file->types, 
 		$feature_file->mtime;
@@ -321,7 +332,6 @@ sub make_requests {
 			     $label ],
 	    -cache_time => $cache_time
         );
-
         $d{$label} = $cache_object;
     }
 
@@ -356,17 +366,18 @@ sub drag_and_drop {
   1;
 }
 
+# Returns the full HTML listing of all requested tracks.
 sub render_tracks {
     my $self     = shift;
     my $requests = shift;
     my $args     = shift;
-    
     my %result;
     
     for my $label ( keys %$requests ) {
         my $data   = $requests->{$label};
         my $gd     = eval{$data->gd} or next;
         my $map    = $data->map;
+        my $titles = $data->titles;
         my $width  = $data->width;
         my $height = $data->height;
         my $url    = $self->source->generate_image($gd);
@@ -380,14 +391,17 @@ sub render_tracks {
             width    => $width,
             height   => $height,
             url      => $url,
+	    titles   => $titles,
             status   => $status,
 	    section  => $args->{section},
         );
     }
     
     return \%result;
+ 
 }
 
+# Returns the HMTL to show a track with controls, title, arrows, etc.
 sub wrap_rendered_track {
     my $self   = shift;
     my %args   = @_;
@@ -396,7 +410,8 @@ sub wrap_rendered_track {
     my $width  = $args{'width'};
     my $height = $args{'height'};
     my $url    = $args{'url'};
-
+    my $titles = $args{'titles'};
+  
     # track_type Used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
     my $status = $args{'status'};    # for debugging
@@ -409,7 +424,11 @@ sub wrap_rendered_track {
     my $help     = "$buttons/query.png";
     my $download = "$buttons/download.png";
     my $configure= "$buttons/tools.png";
-
+    my $menu 	 = "$buttons/menu.png";
+    my $favicon  = "$buttons/fmini.png";
+    my $favicon_2= "$buttons/fmini_2.png";
+    my $add_or_remove = $self->language->translate('ADDED_TO') || 'Add track to favorites';
+    
     my $settings = $self->settings;
     my $source   = $self->source;
 
@@ -422,7 +441,7 @@ sub wrap_rendered_track {
     # Work around bug in google chrome which is manifested by the <area> link information
     # on all EVEN reloads of the element by ajax calls. Weird.
     my $agent  = CGI->user_agent || '';
-    $map_id   .= "_".int(rand(1000)) if $agent =~ /chrome/i;  
+    $map_id   .= "_".int(rand(1000)) ;
 
     my $img = img(
         {   -src    => $url,
@@ -433,27 +452,28 @@ sub wrap_rendered_track {
             -border => 0,
             -name   => $label,
             -style  => $img_style
+	    
         }
     );
 
     my $icon = $collapsed ? $plus : $minus;
-    my $show_or_hide = $self->language->tr('SHOW_OR_HIDE_TRACK')
+    my $show_or_hide = $self->language->translate('SHOW_OR_HIDE_TRACK')
         || "Show or Hide";
-    my $kill_this_track = $self->language->tr('KILL_THIS_TRACK')
+    my $kill_this_track = $self->language->translate('KILL_THIS_TRACK')
 	|| "Turn off this track.";
-    my $share_this_track = $self->language->tr('SHARE_THIS_TRACK')
+    my $share_this_track = $self->language->translate('SHARE_THIS_TRACK')
         || "Share this track";
 
     my $configure_this_track = '';
-    $configure_this_track .= $self->language->tr('CONFIGURE_THIS_TRACK')
+    $configure_this_track .= $self->language->translate('CONFIGURE_THIS_TRACK')
         || "Configure this track";
 
     my $download_this_track = '';
-    $download_this_track .= $self->language->tr('DOWNLOAD_THIS_TRACK')
+    $download_this_track .= $self->language->translate('DOWNLOAD_THIS_TRACK')
         || "<b>Download this track</b>";
 
     my $about_this_track = '';
-    $about_this_track .= $self->language->tr('ABOUT_THIS_TRACK')
+    $about_this_track .= $self->language->translate('ABOUT_THIS_TRACK',$label)
         || "<b>About this track</b>";
 
     my $escaped_label = CGI::escape($label);
@@ -473,10 +493,6 @@ sub wrap_rendered_track {
 	$config_click    = qq[Controller.edit_upload('$escaped_file')];
     }
 
-    elsif ( $label =~ /^(http|ftp)/ ) {
-	$config_click    = '';
-    }
-
     else {
         my $config_url = "url:?action=configure_track;track=$escaped_label";
         $config_click
@@ -484,9 +500,11 @@ sub wrap_rendered_track {
     }
 
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
-    my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
+    my $help_click     = "GBox.showTooltip(event,'$help_url',1)"; 
 
-    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label',true)" unless $label =~ /^(http|ftp)/;
+    
+
+    my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
     my $title;
     if ($label =~ /^file:/) {
@@ -501,68 +519,127 @@ sub wrap_rendered_track {
     }
     else {
 	(my $l = $label) =~ s/:\w+$//;
-	$title = $source->setting($l=>'key') || $label;
+	$title = $source->setting( $label => 'key') || $l;
     }
     $title =~ s/:(overview|region|detail)$//;
-
+   
     my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
+    my $favorite      = $settings->{favorites}{$label};
+    my $starIcon      = $favorite ? $favicon_2 : $favicon;
+    my $starclass     = $favorite ? "toolbarStar favorite" : "toolbarStar";
+    (my $l = $label) =~ s/:detail$//;
+    my $fav_click      =  "toggle_titlebar_stars('$l')";
+
     my @images = (
-	img({   -src         => $icon,
+        $fav_click ? img({   	-src         => $starIcon,
+				-id          =>"barstar_${l}",
+				-class       => $starclass,
+				-style       => 'cursor:pointer',
+				-onmousedown => $fav_click,
+				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$add_or_remove')"),
+			    })
+	              : '',
+	img({   -src         => $icon, 
                 -id          => "${label}_icon",
-                -onClick     => "collapse('$label')",
+                -onClick     =>  "collapse('$label')",
                 -style       => 'cursor:pointer',
-                -onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')",
+		$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$show_or_hide')"),
             }
         ),
+
 	img({   -src         => $kill,
                 -id          => "${label}_kill",
-		-onClick     => "ShowHideTrack('$label',false)",
+		-onClick     => "ShowHideTrack('$l',false)",
                 -style       => 'cursor:pointer',
-                -onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')",
+                $self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$kill_this_track')"),
             }
         ),
         img({   -src   => $share,
                 -style => 'cursor:pointer',
-                -onMouseOver =>
-                    "$balloon_style.showTooltip(event,'$share_this_track')",
-		    -onMousedown =>
-                    "GBox.showTooltip(event,'url:?action=share_track;track=$escaped_label',true)",
+		-onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",
+                $self->if_not_ipad(-onMouseOver =>
+                    "$balloon_style.showTooltip(event,'$share_this_track')"),
             }
         ),
 
         $config_click ? img({   -src         => $configure,
 				-style       => 'cursor:pointer',
 				-onmousedown => $config_click,
-				-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')",
+				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
 			    })
 	              : '',
         $download_click ? img({   -src         => $download,
 				  -style       => 'cursor:pointer',
 				  -onmousedown => $download_click,
-				  -onMouseOver =>
-				      "$balloon_style.showTooltip(event,'$download_this_track')",
+				  $self->if_not_ipad(-onMouseOver =>
+						     "$balloon_style.showTooltip(event,'$download_this_track')"),
 			      })
 	                 : '',
-
         img({   -src         => $help,
-                -style       => 'cursor:pointer',
-                -onmousedown => $help_click,
-                -onMouseOver =>
-	    "$balloon_style.showTooltip(event,'$about_this_track')",
-            }
+                 -style       => 'cursor:pointer',
+                 -onmousedown => $help_click,
+                 -onMouseOver =>
+             "$balloon_style.showTooltip(event,'$about_this_track')",
+             }
         )
-	);
+	); 
 
+    my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
+    my $cancel_ipad = 'Turn off';
+    my $share_ipad = 'Share'; 
+    my $configure_ipad = 'Configure';
+    my $download_ipad = 'Download';
+    my $about_ipad = 'About track';
+
+    my $bookmark = 'Favorite'; 
+    my $menuicon = img ({-src => $menu, 
+			 -style => 'padding-right:15px;',},),
+   
+    my $popmenu = div({-id =>"popmenu_${title}", -style => 'display:none'},
+		      div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
+		      div({-class => 'ipadcollapsed', 
+			   -id    => "${label}_icon", 
+			   -onClick =>  "collapse('$label')",
+			  },
+			  div({-class => 'linkbg', 
+			       -onClick => "swap(this,'Collapse','Expand')", 
+			       -id => "${label}_expandcollapse", },$ipad_collapse)),
+		      div({-class => 'ipadcollapsed',
+			   -id => "${label}_kill",
+			   -onClick     => "ShowHideTrack('$label',false)",
+			  }, div({-class => 'linkbg',},
+				 $cancel_ipad)),
+		      div({-class => 'ipadcollapsed',  
+			   -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, 
+			  div({-class => 'linkbg',},$share_ipad)),
+		      div({-class => 'ipadcollapsed',  -
+			       onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
+		      div({-class => 'ipadcollapsed',  
+			   -onmousedown => $fav_click,}, 
+			  div({-class => 'linkbg', -onClick => "swap(this,'Favorite','Unfavorite')"},$bookmark)),
+		      div({-class => 'ipadcollapsed',  
+			   -onmousedown => $download_click,}, 
+			  div({-class => 'linkbg',},$download_ipad)),
+		      div({-class => 'ipadcollapsed', 
+			   -style => 'width:200px',  
+			   -onmousedown => $help_click,}, 
+			  div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
+ 		  );
+    
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
+    
+    my $titlebar = 
+	span(
+		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
+		    -id => "${label}_title",
+				},
 
-    my $titlebar = span(
-        {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
-            -id => "${label}_title"
-        },
-	@images,
-	$title
-    );
+ 	    $self->if_not_ipad(@images,),
+	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
+	    span({-class => 'drag_region',},$title),
+
+	);
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
@@ -576,63 +653,77 @@ sub wrap_rendered_track {
     # when the track is collapsed. Otherwise the track labels get moved
     # to the center of the page!
     my $pad     = $self->render_image_pad(
-	$args{section}||Bio::Graphics::Browser2::Render->get_section_from_label($label),
+	$args{section}||Bio::Graphics::Browser2::DataSource->get_section_from_label($label),
 	);
     my $pad_url = $self->source->generate_image($pad);
     my $pad_img = img(
         {   -src    => $pad_url,
             -width  => $pad->width,
-            -height => $pad->height,
             -border => 0,
             -id     => "${label}_pad",
             -style  => $collapsed ? "display:inline" : "display:none",
         }
     );
 
+    my $overlay_div = '';
 
-    # Add arrows for pannning to details scalebar panel
+    # Add arrows for panning to details scalebar panel
     if ($is_scalebar && $is_detail) {
 	my $style    = 'opacity:0.35;position:absolute;border:none;cursor:pointer';
-# works with IE7, but looks awful. IE8 should support standard css opacity.
-#	$style      .= ';filter:alpha(opacity=30);moz-opacity:0.35';
         my $pan_left   =  img({
-	    -style   => $style . ';left:10px',
+	    -style   => $style . ';left:5px',
 	    -class   => 'panleft',
 	    -src     => "$buttons/panleft.png",
 	    -onClick => "Controller.scroll('left',0.5)"
-			      },
-	    );
- 	my $pan_left2  =  img({
-             -style   => $style . ';left:-3px',
-             -class   => 'panleft',
-             -src     => "$buttons/panleft2.png",
-             -onClick => "Controller.scroll('left',1)",
-                               },
-             );
+	});
 
-	my $pan_right  = img({ -style   => $style . ';right:10px',
-			       -class   => 'panright',
-			       -src     => "$buttons/panright.png",
-			       -onClick => "Controller.scroll('right',0.5)",
-			     }
-	    );
-        my $pan_right2  = img({ -style   => $style . ';right:-3px',
-                               -class   => 'panright',
-                               -src     => "$buttons/panright2.png",
-                               -onClick => "Controller.scroll('right',1)",
-                             }
-            );
+	my $pan_right  = img({ 
+	    -style   => $style . ';right:5px',
+	    -class   => 'panright',
+	    -src     => "$buttons/panright.png",
+	    -onClick => "Controller.scroll('right',0.5)",
+	});
+	
+	my $scale_div = div( { -id => "detail_scale_scale", 
+			       -style => "position:absolute; top:12px", }, "" );
 
-	$img = $pan_left2 . $pan_left . $img . $pan_right . $pan_right2;
+        $overlay_div = div( { -id => "${label}_overlay_div", 
+			      -style => "position:absolute; top:0px; width:100%; left:0px", }, $pan_left . $pan_right . $scale_div);
     }
-     return div({-class=>'centered_block',
-		 -style=>"width:${width}px;position:relative"
-		},
- 	       ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
-         . ( $map_html || '' );
 
+    my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
+
+
+    my $subtrack_labels = join '',map {
+	my ($label,$left,$top) = @$_;
+	$left = PAD_DETAIL_SIDES;
+	div({-class=>'subtrack',-style=>"top:${top}px;left:${left}px;background-color:white"},$label);
+    } @$titles;
+
+    my $html = div({-class=>'centered_block',
+		 -style=>"position:relative;overflow:hidden"
+		},
+         ($show_titlebar ? $titlebar : '' ) . $popmenu .  $subtrack_labels . $inner_div . $overlay_div ) . ( $map_html || '' );
+    return $html;
 }
 
+sub if_not_ipad {
+    my $self = shift;
+    my @args = @_;
+    my $agent = CGI->user_agent || '';
+    my $probably_ipad = $agent =~ /Mobile.+Safari/i;
+    return if $probably_ipad;
+    return @args;
+}
+
+sub if_ipad {
+    my $self = shift;
+    my @args = @_;
+    my $agent = CGI->user_agent || '';
+    my $probably_ipad = $agent =~ /Mobile.+Safari/i;
+    return  if !$probably_ipad;
+    return @args;
+}
 # This routine is called to hand off the rendering to a remote renderer. 
 # The remote processor does not have to have a copy of the config file installed;
 # the entire DataSource object is sent to it in serialized form via
@@ -655,11 +746,10 @@ sub run_remote_requests {
   my $self      = shift;
   my ($requests,$args,$labels) = @_;
 
+  warn "[$$] run_remote_requests on @$labels" if DEBUG;
+  my $render = $args->{render};
+
   my @labels_to_generate = @$labels;
-  foreach (@labels_to_generate) {
-      $requests->{$_}->lock();   # flag that request is in process
-  }
-  
   return unless @labels_to_generate;
 
   eval { use HTTP::Request::Common; } unless HTTP::Request::Common->can('POST');
@@ -668,7 +758,7 @@ sub run_remote_requests {
   my $settings   = $self->settings;
   my $lang       = $self->language;
   my %env        = map {$_=>$ENV{$_}}    grep /^(GBROWSE|HTTP)/,keys %ENV;
-  my %args       = map {$_=>$args->{$_}} grep /^-/,keys %$args;
+  my %args       = map {$_=>$args->{$_}} grep /^-/,keys %$args;									#/
 
   $args{$_}  = $args->{$_} foreach ('section','image_class','cache_extra');
 
@@ -696,7 +786,7 @@ sub run_remote_requests {
 
   my %renderers;
   for my $label (@labels_to_generate) {
-      my $url     = $source->fallback_setting($label => 'remote renderer') or next;
+      my $url     = $source->remote_renderer or next;
       my @urls    = shellwords($url);
       $url        = $slave_status->select(@urls);
       warn "label => $url (selected)" if DEBUG;
@@ -718,7 +808,7 @@ sub run_remote_requests {
 
   for my $url (keys %renderers) {
 
-      my $child   = Bio::Graphics::Browser2::Render->fork();
+      my $child   = $render->fork();
       next if $child;
 
       my $total_time = time();
@@ -727,6 +817,10 @@ sub run_remote_requests {
       my @labels   = keys %{$renderers{$url}};
       my $s_track  = Storable::nfreeze(\@labels);
 
+      foreach (@labels) {
+	  $requests->{$_}->lock();   # flag that request is in process
+      }
+  
     FETCH: {
 	my $request = POST ($url,
 			    Content_Type => 'multipart/form-data',
@@ -752,10 +846,12 @@ sub run_remote_requests {
 	    my $contents = Storable::thaw($response->content);
 	    for my $label (keys %$contents) {
 		my $map = $contents->{$label}{map}        
-		or die "Expected a map from remote server, but got nothing!";
+		  or die "Expected a map from remote server, but got nothing!";
+		my $titles = $contents->{$label}{titles}        
+		  or die "Expected titles from remote server, but got nothing!";
 		my $gd2 = $contents->{$label}{imagedata}  
-		or die "Expected imagedata from remote server, but got nothing!";
-		$requests->{$label}->put_data($gd2,$map);
+		  or die "Expected imagedata from remote server, but got nothing!";
+		$requests->{$label}->put_data($gd2,$map,$titles);
 	    }
 	    $slave_status->mark_up($url);
 	}
@@ -773,7 +869,7 @@ sub run_remote_requests {
 	    # right if all of the tracks there are multiple equivalent slaves for the tracks
 	    my %urls    = map {$_=>1} 
   	                    map {
-				shellwords($source->fallback_setting($_ => 'remote renderer'))
+				shellwords($source->remote_renderer)
 			    } @labels;
 	    my $alternate_url = $slave_status->select(keys %urls);
 	    if ($alternate_url) {
@@ -826,7 +922,8 @@ sub sort_local_remote {
 			      !/file:/   &&
 			      !/^(ftp|http|das):/ &&
 			      !$source->is_usertrack($_) &&
-			      (($url = $source->fallback_setting($_=>'remote renderer') ||0) &&
+			      !$source->is_remotetrack($_) &&
+			      (($url = $source->remote_renderer||0) &&
 			      ($url ne 'none') &&
 			      ($url ne 'local')))
                         } @uncached;
@@ -907,7 +1004,8 @@ sub render_scale_bar {
     else {
         $wide_segment         = $segment;
         %add_track_extra_args = (
-            -bgcolor => $source->global_setting('detail bgcolor') || 'wheat',
+            -bgcolor    => $source->global_setting('detail bgcolor') || 'wheat',
+            -pad_top    => 18,
             -pad_bottom => 0,
             -label_font => $image_class->gdMediumBoldFont,
 	    -label      => eval{$segment->seq_id.
@@ -918,6 +1016,8 @@ sub render_scale_bar {
     }
 
     my $flip = ( $section eq 'detail' and $state->{'flip'} ) ? 1 : 0;
+
+    $add_track_extra_args{'-postgrid'} = $args{'postgrid'} if $args{'postgrid'};
 
     my @panel_args = $self->create_panel_args(
         {   section        => $section, 
@@ -930,32 +1030,13 @@ sub render_scale_bar {
 
     my $panel = Bio::Graphics::Panel->new( @panel_args, );
 
-    # I don't understand why I need to add the pad to the width, since the
-    # other panels don't do it but in order for the scale bar to be the same
-    # size as the other panels, I need to do it.
-    my $image_pad = $self->image_padding;
-    my $padl      = $source->global_setting('pad_left');
-    my $padr      = $source->global_setting('pad_right');
-    $padl = $image_pad unless defined $padl;
-    $padr = $image_pad unless defined $padr;
-    my $width = $state->{'width'} * $self->overview_ratio() + $padl + $padr;
+    my $width = ($section eq 'detail')? $self->render->get_detail_image_width($state) : $self->render->get_image_width($state);
 
     # no cached data, so do it ourselves
     unless ($gd) {
         my $units = $source->global_setting('units') || '';
         my $no_tick_units = $source->global_setting('no tick units');
 
-	if ($args{section} eq 'detail') {
-	    my $scale_feature = $self->make_scale_feature($wide_segment,
-							  $state->{width});
-	    $panel->add_track(
-		$scale_feature,
-		-glyph    => 'span',
-		-label    => 1,
-		-height   => 6,
-		-label_position => 'left'
-		);
-	}
 
         $panel->add_track(
              $wide_segment,
@@ -967,6 +1048,18 @@ sub render_scale_bar {
             -unit_divider   => $source->unit_divider,
             %add_track_extra_args,
         );
+
+	if (my $feats = $args{'tracks'}) {
+
+	    my @feature_types = $feats->types;
+
+	    for my $type (@feature_types) {
+	    my $features = $feats->features($type);
+	    my %options  = $feats->style($type);
+	    $panel->add_track($features,%options);  
+	    }
+
+	}
 
         # add uploaded files that have the "(over|region)view" option set
 
@@ -1009,7 +1102,7 @@ sub render_image_pad {
 	my $panel = Bio::Graphics::Panel->new(@panel_args);
 	$cache->lock;
 	my $gd = $panel->gd;
-	$cache->put_data($gd,'');
+	$cache->put_data($gd,'',[]);
     }
 
     my $gd = $cache->gd;
@@ -1019,24 +1112,24 @@ sub render_image_pad {
 sub bump_density {
   my $self     = shift;
   my $conf = $self->source;
-  return $conf->global_setting('bump density')
+  my $bd = $conf->global_setting('bump density')
       || $conf->setting('TRACK DEFAULTS' =>'bump density')
       || 50;
+  return int($bd * $self->details_mult);
 }
 
 sub label_density {
   my $self = shift;
   my $conf = $self->source;
-  return $conf->global_setting('label density')
+  my $ld = $conf->global_setting('label density')
       || $conf->setting('TRACK DEFAULTS' =>'label density')
       || 10;
+  return int($ld * $self->details_mult);
 }
 
-sub make_scale_feature {
+sub calculate_scale_size {
     my $self      = shift;
-    my ($segment,$width) = @_;
-    return unless $segment;
-    my $length = $segment->length;
+    my ($length,$width) = @_;
 
     # how long is 1/5 of the width?
     my $scale        = $length/$width;
@@ -1050,12 +1143,29 @@ sub make_scale_feature {
     elsif ($base < 5) { $base = 5 }
     else              { $base = 10};
     $guesstimate = $base * $exp;
-
     my $label    = $self->source->unit_label($guesstimate);
+
+    return ($guesstimate, $label);
+}
+
+sub log10 { return eval {log(shift)/log(10)} || 0 }
+
+# Deprecated. This method was used to add the scale to the detail scale track. This is now done in javascript.
+sub make_scale_feature {
+    my $self      = shift;
+    my ($segment,$width) = @_;
+    return unless $segment;
+
+    my $length   = $segment->length;
+
+    my ($guesstimate, $label) = $self->calculate_scale_size($length, $width);
+
+    my $scale = $segment->length/$width;
+
     $label       .= ' '; # more attractive
     my $size     = $guesstimate/$scale;
     my $left     = ($width-$size)/2;
-    my $start    = int ($segment->start + $left * $scale);
+    my $start    = int (($segment->start + $segment->end)/2 - $guesstimate/2);
     my $end      = $start + $guesstimate - 1;
 
     return Bio::Graphics::Feature->new(-display_name => $label,
@@ -1064,104 +1174,141 @@ sub make_scale_feature {
 				       -seq_id       => $segment->seq_id);
 }
 
-sub log10 { log(shift)/log(10) }
-
 sub make_map {
   my $self = shift;
-  my ($boxes,$panel,$map_name,$trackmap,$first_box_is_scale) = @_;
-  my @map = ($map_name);
+  my ($boxes,$panel,$label,$trackmap,$first_box_is_scale) = @_;
+  my @map = ($label);
 
   my $source = $self->source;
 
-  my $flip = $panel->flip;
-  my $tips = $source->global_setting('balloon tips') && $self->settings->{show_tooltips};
-  my $use_titles_for_balloons = $source->global_setting('titles are balloons');
-
-  my $did_map;
+  my $length   = $self->segment->length;
+  my $settings = $self->settings;
+  my $flip     = $panel->flip;
+  my ($track_dbid) = $source->db_settings($label,$length);
 
   local $^W = 0; # avoid uninit variable warnings due to poor coderefs
 
-  if ($first_box_is_scale) {
-    push @map, $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale);
+  push @map, $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale)
+      if $first_box_is_scale;
+
+  my $inline = $source->use_inline_imagemap($label,$length);
+  my $inline_options = {};
+
+  if ($inline) {
+      $inline_options = {tips                    => $source->global_setting('balloon tips') && $settings->{'show_tooltips'},
+			 summary                 => $source->show_summary($label,$length,$self->settings),
+			 use_titles_for_balloons => $source->global_setting('titles are balloons'),
+			 balloon_style           => $source->global_setting('balloon style') || 'GBubble',
+			 balloon_sticky          => $source->semantic_fallback_setting($label,'balloon sticky',$length),
+			 balloon_height          => $source->semantic_fallback_setting($label,'balloon height',$length) || 300,
+      }
   }
 
   foreach my $box (@$boxes){
-    next unless $box->[0]->can('primary_tag');
+      my $feature = $box->[0];
+      next unless $feature->can('primary_tag');
 
-    my $label  = $box->[5] ? $trackmap->{$box->[5]} : '';
+      my $attributes = $inline ? $self->make_imagemap_element_inline($feature,$panel,$label,$box->[5],$inline_options)
+	                       : $self->make_imagemap_element_callback($feature,$track_dbid);
+      $attributes or next;
+      my $fname = eval {$feature->display_name} || eval{$box->[0]->name} || 'unnamed';
+      my $ftype = $feature->primary_tag || 'feature';
+      $ftype   =  "$ftype:$fname";
+      my $line = join("\t",$ftype,@{$box}[1..4]);
+      for my $att (keys %$attributes) {
+	  next unless defined $attributes->{$att} && length $attributes->{$att};
+	  $line .= "\t$att\t$attributes->{$att}";
+      }
+      push @map, $line;
+  }
+  return \@map;
+}
 
-    my $href   = $self->make_link($box->[0],$panel,$label,$box->[5]);
-    my $title  = unescape($self->make_title($box->[0],$panel,$label,$box->[5]));
-    my $target = $self->make_link_target($box->[0],$panel,$label,$box->[5]);
+sub make_imagemap_element_callback {
+    my $self = shift;
+    my ($feature,$dbid) = @_;
+    my $id       = eval {CGI::escape($feature->primary_id || $feature->name)};
+    $id        ||= '*summary*' if eval {$feature->has_tag('coverage')};
+    return unless $id;
+    return {
+        dbid        => $dbid,
+        fid         => $id,
+	href        => 'javascript:void(0)',
+	};
+}
+
+sub make_imagemap_element_inline {
+    my $self    = shift;
+    my ($feature,$panel,$label,$track,$options) = @_;
+
+    my $tips                    = $options->{tips};
+    my $use_titles_for_balloons = $options->{use_titles_for_balloons};
+    my $balloon_style           = $options->{balloon_style};
+    my $sticky                  = $options->{balloon_sticky};
+    my $height                  = $options->{balloon_height};
+    my $summary                 = $options->{summary};
+
+    if ($summary) {
+	return {onmouseover => $self->render->feature_summary_message('mouseover',$label),
+		onmouseeown => $self->render->feature_summary_message('mousedown',$label),
+		href        => 'javascript:void(0)',
+		inline      => 1
+	}
+    }
+    my $source = $self->source;
+    my $href   = $self->make_link($feature,$panel,$label,$track);
+    my $title  = unescape($self->make_title($feature,$panel,$label,$track));
+    my $target = $self->make_link_target($feature,$panel,$label,$track);
 
     my ($mouseover,$mousedown,$style);
-    if ($tips) {
 
+    if ($tips) {
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
       my ($balloon_ht,$balloonhover)     =
-	$self->balloon_tip_setting('balloon hover',$label,$box->[0],$panel,$box->[5]);
+        $self->balloon_tip_setting('balloon hover',$label,$feature,$panel,$track,'inline');
       my ($balloon_ct,$balloonclick)     =
-	$self->balloon_tip_setting('balloon click',$label,$box->[0],$panel,$box->[5]);
+        $self->balloon_tip_setting('balloon click',$label,$feature,$panel,$track,'inline');
 
-      my $sticky             = $source->setting($label,'balloon sticky');
-      my $height             = $source->setting($label,'balloon height') || 300;
-
-      if ($use_titles_for_balloons) {
-	$balloonhover ||= $title;
-      }
-
-      $balloon_ht ||= $source->global_setting('balloon style') || 'GBubble';
+      $balloonhover ||= $title if $use_titles_for_balloons;
+      $balloon_ht ||= $balloon_style;
       $balloon_ct ||= $balloon_ht;
 
       if ($balloonhover) {
         my $stick = defined $sticky ? $sticky : 0;
         $mouseover = $balloonhover =~ /^(https?|ftp):/
-	    ? "$balloon_ht.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 " .
-	      "src=$balloonhover></iframe>',$stick)"
-	    : "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
-	undef $title;
+            ? "$balloon_ht.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 " .
+              "src=$balloonhover></iframe>',$stick)"
+            : "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
+        undef $title;
       }
       if ($balloonclick) {
-	my $stick = defined $sticky ? $sticky : 1;
+        my $stick = defined $sticky ? $sticky : 1;
         $style = "cursor:pointer";
-	$mousedown = $balloonclick =~ /^(http|ftp):/
-	    ? "$balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
-	      "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
-	      : "$balloon_ct.showTooltip(event,'$balloonclick',$stick)";
-	undef $target;
-	# workarounds to accomodate observation that some browsers don't respect cursor:pointer styles in
-	# <area> tags unless there is an href defined
-	my $agent =  CGI->user_agent || '';
-	$href     =  $agent =~ /msie/i    ? undef
-                     : $agent =~ /firefox/i ? undef
-                     : 'javascript:void(0)';
+        $mousedown = $balloonclick =~ /^(http|ftp):/
+            ? "$balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
+              "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
+            : "$balloon_ct.showTooltip(event,'$balloonclick',$stick)";
+        undef $href;
+        undef $target;
       }
     }
+
+    # workarounds to accomodate observation that some browsers don't respect cursor:pointer styles in
+    # <area> tags unless there is an href defined
+    $href    ||=     'javascript:void(0)';
+
     my %attributes = (
-		      title       => $title,
-		      href        => $href,
-		      target      => $target,
-		      onmouseover => $mouseover,
-		      onmousedown => $mousedown,
-		      style       => $style,
-		      );
+                      title       => $title,
+                      href        => $href,
+                      target      => $target,
+                      onmouseover => $mouseover,
+                      onmousedown => $mousedown,
+                      style       => $style,
+	              inline      => 1,
+                      );
 
-    my $ftype = $box->[0]->primary_tag || 'feature';
-    my $fname = $box->[0]->display_name if $box->[0]->can('display_name');
-    $fname  ||= $box->[0]->name if $box->[0]->can('name');
-    $fname  ||= 'unnamed';
-    $ftype = "$ftype:$fname";
-    my $line = join("\t",$ftype,@{$box}[1..4]);
-    for my $att (keys %attributes) {
-      next unless defined $attributes{$att} && length $attributes{$att};
-      $line .= "\t$att\t$attributes{$att}";
-    }
-    push @map, $line;
-  }
-
-  return \@map;
-
+    return \%attributes;
 }
 
 # this creates image map for rulers and scales, where clicking on the scale
@@ -1246,7 +1393,7 @@ sub run_local_requests {
 
     my $time     = time();
 
-    warn "[$$] run_local_requests" if DEBUG;
+    warn "[$$] run_local_requests on @$labels" if DEBUG;
 
     $labels    ||= [keys %$requests];
 
@@ -1255,6 +1402,7 @@ sub run_local_requests {
     my $cache_extra    = $args->{cache_extra} || [];
     my $section        = $args->{section}     || 'detail';
     my $nocache        = $args->{nocache};
+    my $render         = $args->{render};
 
     my $settings       = $self->settings;
     my $segment        = $self->segment;
@@ -1280,11 +1428,6 @@ sub run_local_requests {
     my %feature_file_offsets;
 
     my @labels_to_generate = @$labels;
-
-    foreach (@labels_to_generate) {
-	$requests->{$_}->lock();   # flag that request is in process
-    }
-
     my @ordinary_tracks    = grep {!$feature_files->{$_}} @labels_to_generate;
     my @feature_tracks     = grep {$feature_files->{$_} } @labels_to_generate;
 
@@ -1294,11 +1437,11 @@ sub run_local_requests {
     my (%children,%reaped);
 
     local $SIG{CHLD} = sub {
-	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {
-	    warn "[$$] reaped child $pid" if DEBUG;
-	    $reaped{$pid}++;
-	    delete $children{$pid} if $children{$pid};
-	}
+    	while ((my $pid = waitpid(-1, WNOHANG)) > 0) {
+    	    print STDERR "[$$] reaped render child $pid" if DEBUG;
+    	    $reaped{$pid}++;
+    	    delete $children{$pid} if $children{$pid};
+    	}
     };
 
     my $max_processes = $self->source->global_setting('max_render_processes')
@@ -1316,10 +1459,11 @@ sub run_local_requests {
 	    sleep 1;
 	}
 
-	my $child = Bio::Graphics::Browser2::Render->fork();
+	$render ||= 'Bio::Graphics::Browser2::Render';
+	my $child = $render->fork();
 	croak "Can't fork: $!" unless defined $child;
 	if ($child) {
-	    warn "Launched rendering process $child for $label" if DEBUG;
+	    warn "[$$] Launched rendering process $child for $label" if DEBUG;
 	    $children{$child}++ unless $reaped{$child}; # in case child was reaped before it was sown
 	    next;
 	}
@@ -1330,14 +1474,12 @@ sub run_local_requests {
 	my $multiple_tracks = $base =~ /^(http|ftp|file|das|plugin):/ 
 	    || $source->code_setting($base=>'remote feature');
 
-        my @keystyle = ( -key_style => 'between' )
+        my @keystyle = ( -key_style    => 'between',
+	    )
             if $multiple_tracks;
 
 	my $key = $source->setting( $base => 'key' ) || '' ;
-	my @nopad = (($key eq '') || ($key eq 'none')) 
-	    && !$multiple_tracks
-             ? (-pad_top => 0)
-             : ();
+	my @nopad = ();
         my $panel_args = $requests->{$label}->panel_args;
 
 	
@@ -1348,36 +1490,26 @@ sub run_local_requests {
 
 	my $timeout         = $source->global_setting('global_timeout');
 	
-# this was causing more problems than it was worth
-#	my $has_sigset = $] >= 5.008;
-	my $has_sigset = undef;
 	my $oldaction;
-	if ($has_sigset) {
-	    eval "use POSIX ':signal_h'" unless defined &SIGALRM;
-	    my $mask = POSIX::SigSet->new(SIGALRM());
-	    my $action = POSIX::SigAction->new(sub {die "timeout"},$mask);
-	    $oldaction = POSIX::SigAction->new();
-	    sigaction(SIGALRM(),$action,$oldaction);
-	}
-
 	my $time = time();
 	eval {
-	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" } unless $has_sigset;
+	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" };
 	    alarm($timeout);
 
-	    my ($gd,$map);
+	    $requests->{$label}->lock();
+	    my ($gd,$map,$titles);
 
 	    if (my $hide = $source->semantic_setting($label=>'hide',$self->segment_length)) {
-		$gd  = $self->render_hidden_track($hide,$args);
-		$map = [];
+		$gd     = $self->render_hidden_track($hide,$args);
+		$map    = [];
+		$titles = [];
 	    }
 
 	    else {
 
 		if ( exists $feature_files->{$base} ) {
-		    
 		    my $file = $feature_files->{$base};
-		
+
 		    # Add feature files, including remote annotations
 		    my $featurefile_select = $args->{featurefile_select}
 		    || $self->feature_file_select($section);
@@ -1397,6 +1529,8 @@ sub run_local_requests {
 		    my $track_args = $requests->{$label}->track_args;
 		    my $track      = $panel->add_track(@$track_args);
 
+		    warn "track_setup($label): ",time()-$time," seconds " if BENCHMARK;
+
 		    # == populate the tracks with feature data ==
 		    $self->add_features_to_track(
 			-labels    => [ $label, ],
@@ -1405,31 +1539,40 @@ sub run_local_requests {
 			-segment   => $segment,
 			-fsettings => $settings->{features},
 			);
-		    %trackmap = ($track=>$label);
 
+		    warn "add_features($label): ",time()-$time," seconds " if BENCHMARK;
+
+		    %trackmap = ($track=>$label);
 		}
 
 		# == generate the images and maps in background==
-		$gd  = $panel->gd;
+		$gd     = $panel->gd;
+		warn "render gd($label): ",time()-$time," seconds " if BENCHMARK;
+
+		$titles = $panel->key_boxes;
+		foreach (@$titles) {splice (@$_,-1)}  # don't want to store all track config data to cache!
 		$self->debugging_rectangles($gd,scalar $panel->boxes)
 		    if DEBUGGING_RECTANGLES;
-		$map = $self->make_map( scalar $panel->boxes,
+		warn "render titles($label): ",time()-$time," seconds " if BENCHMARK;
+
+		my $boxes = $panel->boxes;
+		warn "boxes($label): ",time()-$time," seconds " if BENCHMARK;
+
+		$map = $self->make_map( $boxes,
 					$panel, $label,
 					\%trackmap, 0 );
+		warn "make_map($label): ",time()-$time," seconds " if BENCHMARK;
 	    }
 
-	    $requests->{$label}->put_data($gd, $map );
-	    alarm(0);
+	    $requests->{$label}->put_data($gd, $map, $titles );
 	};
 	alarm(0);
-	sigaction(SIGALRM(),$oldaction) if $has_sigset;
 
 	my $elapsed = time()-$time;
 	warn "render($label): $elapsed seconds ", ($@ ? "(error)" : "(ok)") if BENCHMARK;
 	
 	if ($@) {
 	    warn "RenderPanels error: $@";
-#	    warn $@;
 	    if ($@ =~ /timeout/) {
 		$requests->{$label}->flag_error('Timeout; Try turning off tracks or looking at a smaller region.');
 	    } else {
@@ -1438,9 +1581,14 @@ sub run_local_requests {
 	}
 	CORE::exit 0; # in child;
     }
-    warn "waiting for children" if DEBUG;
-    sleep while %children;
+    warn "[$$] waiting for children" if DEBUG;
+    if ($ENV{MOD_PERL}) {
+	$SIG{CHLD}->(); # hacky workaround
+    } else {
+	sleep while %children;
+    }
     warn "done waiting" if DEBUG;
+
     my $elapsed = time() - $time;
     warn "[$$] run_local_requests (@$labels): $elapsed seconds" if DEBUG;
 
@@ -1474,10 +1622,10 @@ sub select_features_menu {
 
     # modify the title to show that some subtracks are hidden
     $$titleref .= " ".span({-class       =>'clickable',
-			   -onMouseOver  => "GBubble.showTooltip(event,'Click to modify subtrack selections.')",
+			   -onMouseOver  => "GBubble.showTooltip(event,'" . $self->language->translate('CLICK_MODIFY_SUBTRACK_SEL') . "')",
 			   -onClick      => $subtrack_click
 			  },
-			  $self->language->tr('SHOWING_SUBTRACKS',$selected,$total));
+			  $self->language->translate('SHOWING_SUBTRACKS',$selected,$total));						#;
     
 }
 
@@ -1535,7 +1683,7 @@ sub add_features_to_track {
     $db2db{$db}  =  $db;  # cache database object
   }
 
-  my (%iterators,%iterator2dbid,%is_summary);
+  my (%iterators,%iterator2dbid,%is_summary,%type2label);
   for my $db (keys %db2db) {
       my @labels           = keys %{$db2label{$db}};
 
@@ -1548,7 +1696,9 @@ sub add_features_to_track {
 	  } else {
 	      push @full_types,@types;
 	  }
+	  $type2label{$_}{$l}++ foreach @types;
       }
+      $self->{_type2label}=\%type2label;
       
       warn "[$$] RenderPanels->get_iterator(@full_types)"  if DEBUG;
       warn "[$$] RenderPanels->get_summary_iterator(@summary_types)" if DEBUG;
@@ -1569,7 +1719,7 @@ sub add_features_to_track {
   # The effect of this loop is to fetch a feature from each iterator in turn
   # using a queueing scheme. This allows streaming iterators to parallelize a
   # bit. This may not be worth the effort.
-  my (%feature2dbid,%classes,%max_features,%limit_hit,%has_subtracks);
+  my (%feature2dbid,%classes,%limit_hit,%has_subtracks);
 
   while (keys %iterators) {
     for my $iterator (values %iterators) {
@@ -1582,15 +1732,16 @@ sub add_features_to_track {
       }
 
       $source->add_dbid_to_feature($feature,$iterator2dbid{$iterator});
+      my @labels = $self->feature2label($feature);
 
-      my @labels = $source->feature2label($feature,$length);
+      warn "[$$] $iterator->next_seq() returns $feature, will assign to @labels" if DEBUG;
 
       for my $l (@labels) {
 
           $l =~ s/:\d+//;  # get rid of semantic zooming tag
 
 	  my $track = $tracks->{$l}  or next;
-	  
+
 	  my $stt        = $self->subtrack_manager($l);
 	  my $is_summary = $is_summary{$l};
 
@@ -1607,7 +1758,7 @@ sub add_features_to_track {
 	  }
 	  
 	  # Handle generic grouping (needed for GFF3 database)
-	  $group_field{$l} = $source->semantic_setting($l => 'group_on',$length) 
+ 	  $group_field{$l} = $source->semantic_setting($l => 'group_on',$length) 
 	      unless exists $group_field{$l};
 	  
 	  if (my $pattern = $group_pattern{$l}) {
@@ -1640,8 +1791,17 @@ sub add_features_to_track {
 							       -name       => $stt->id2label($id),
 							       -start      => $segment->start,
 							       -end        => $segment->end,
-							       -seq_id    => $segment->seq_id);
+							       -seq_id     => $segment->seq_id,
+		  );
 	      $has_subtracks{$l}++;
+
+	      if ($source->setting($l=>'subtrack single plot')) {
+	          $tracks->{$l}->configure(
+	                 -scale     => 'none',
+	                 -no_grid   => 1,
+	          );
+	      }
+
 	      $groups{$l}{$id}->add_segment($feature);
 	      next;
 	  }
@@ -1675,8 +1835,38 @@ sub add_features_to_track {
 						 -seq_id => $segment->seq_id) 
 	    foreach @ids
     }
-    
-    $track->add_feature($_) foreach values %$g;
+
+    if ($source->setting($l=>'subtrack single plot')) {
+        my $tempFeature = Bio::Graphics::Feature->new(-type       => 'group',
+                                                      -start      => $segment->start,
+                                                      -end        => $segment->end,
+                                                      -seq_id     => $segment->seq_id,
+                      );
+        my $tempSubFeature = Bio::Graphics::Feature->new(-type       => 'scale',
+                                                         -scale      => 'three',
+                                                         -name       => 'scales',
+                                                         -start      => $segment->start,
+                                                         -end        => $segment->end,
+                                                         -seq_id     => $segment->seq_id,
+                      );
+        $tempFeature->add_segment(($tempSubFeature));
+        $track->add_feature($tempFeature);
+        
+        for my $f (values %$g) {
+            my @colours = ( qw(aqua black blue fuchsia gray green lime maroon navy olive purple red silver teal yellow) );
+            my @subFeatures = $f->get_SeqFeatures;
+            my $subf = $subFeatures[0];
+            if ($subf) {
+                my $feature_colour = $colours[rand @colours];
+                $subf->{attributes}{'bgcolor'} = $feature_colour;
+                $subf->{attributes}{'labelcolor'} = $feature_colour;
+            }
+            $track->add_feature($f);
+        }
+    } else {
+        $track->add_feature($_) foreach values %$g;
+    }
+
     $feature_count{$l} += keys %$g;
 
   }
@@ -1710,7 +1900,7 @@ sub add_features_to_track {
 					       $max_labels,
 					       $length);
 
-    $tracks->{$l}->configure(-bump        => $do_bump,
+    $tracks->{$l}->configure(-bump        => ($has_subtracks{$l} && ($source->setting($l=>'subtrack single plot'))) ? 0 : $do_bump,
 			     -label       => $do_label,
 			     -description => $do_description,
 			      );
@@ -1719,10 +1909,11 @@ sub add_features_to_track {
       if $limit && $limit > 0;
 
     if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
-	my $max   = $tracks->{$l}->feature_limit;
-	my $count = $tracks->{$l}->feature_count;
+	my $max       = $tracks->{$l}->feature_limit;
+	my $count     = $tracks->{$l}->feature_count;
+	my $message   = $count == $self->source->globals->max_features ? 'FEATURES_CLIPPED_MAX' : 'FEATURES_CLIPPED';
 	$tracks->{$l}->panel->key_style('between');
-	$tracks->{$l}->configure(-key => $self->language->tr('FEATURES_CLIPPED',$max,$count));
+	$tracks->{$l}->configure(-key => $self->language->translate($message,$max,$count));
     }
   }
 
@@ -1730,7 +1921,7 @@ sub add_features_to_track {
 
 sub get_iterator {
   my $self = shift;
-  my ($db,$segment,$feature_types,$max) = @_;
+  my ($db,$segment,$feature_types) = @_;
 
   # The Bio::DB::SeqFeature::Store database supports correct
   # semantics for directly retrieving features that overlap
@@ -1738,13 +1929,13 @@ sub get_iterator {
   # and then to query the segment! This is a problem, because it
   # means that the reference sequence (e.g. the chromosome) is
   # repeated in each database, even if it isn't the primary one :-(
+  my $max = $self->source->globals->max_features;
   if ($db->can('get_seq_stream')) {
       my @args = (-type   => $feature_types,
 		  -seq_id => $segment->seq_id,
 		  -start  => $segment->start,
-		  -end    => $segment->end,
-		  -max_features => $max,  # some adaptors allow this
-	  );
+		  -end    => $segment->end);
+      push @args,(-max_features => $max) if $max > 0;  # some adaptors allow this
       return $db->get_seq_stream(@args);
   }
 
@@ -1772,7 +1963,7 @@ sub get_summary_iterator {
 	      -seq_id => $segment->seq_id,
 	      -start  => $segment->start,
 	      -end    => $segment->end,
-	      -bins   => $self->settings->{width},
+	      -bins   => $self->get_detail_width_no_pad,
 	      -iterator=>1,
       );
   return $db->feature_summary(@args);
@@ -1848,13 +2039,13 @@ sub create_panel_args {
   my $detail_start = $settings->{start};
   my $detail_stop  = $settings->{stop};
   my $h_region_str     = '';
-#  warn "disabling highlighted regions";
+
   if (1 && ($section eq 'overview' or $section eq 'region')){
     $postgrid  = hilite_regions_closure(
 	            [$detail_start,
 		     $detail_stop,
-		     $self->hilite_fill(),
-		     $self->hilite_outline()
+		     $self->loaded_segment_fill(),
+		     $self->loaded_segment_outline()
 		    ]);
   }
   elsif ($section eq 'detail'){
@@ -1867,13 +2058,15 @@ sub create_panel_args {
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
   my @argv = (
 	      -grid         => $section eq 'detail' ? $settings->{'grid'} : 0,
+              -seqid        => $segment->seq_id,
 	      -start        => $seg_start,
 	      -end          => $seg_stop,
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
 	      -key_color    => $source->global_setting('key bgcolor')      || 'moccasin',
 	      -bgcolor      => $source->global_setting("$section bgcolor") || 'wheat',
-	      -width        => $settings->{width},
+              -width        => $section eq 'detail'? $self->get_detail_width_no_pad : $settings->{width},
 	      -key_style    => $keystyle,
+              -suppress_key => 1,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $image_class->gdMediumBoldFont->height+2,
               -pad_bottom   => 3,
@@ -1881,6 +2074,7 @@ sub create_panel_args {
 	      -postgrid     => $postgrid,
 	      -background   => $args->{background} || '',
 	      -truecolor    => $source->global_setting('truecolor') || 0,
+	      -map_fonts_to_truetype    => $source->global_setting('truetype') || 0,
 	      -extend_grid  => 1,
               -gridcolor    => $source->global_setting('grid color') || 'lightcyan',
               -gridmajorcolor    => $source->global_setting('grid major color') || 'cyan',
@@ -1950,24 +2144,29 @@ sub create_track_args {
   my $lang            = $self->language;
 
   my $is_summary      = $source->show_summary($label,$length,$self->settings);
-  
   my $state            = $self->settings;
-  my ($semantic_override) = sort {$b<=>$a} grep {$_ < $length} 
-                    keys %{$state->{features}{$label}{semantic_override}};
-  $semantic_override ||= 0;
-  my $override         = $is_summary ? $state->{features}{$label}{summary_override}
-                                     : $state->{features}{$label}{semantic_override}{$semantic_override};
+
+  my $semantic_override = Bio::Graphics::Browser2::Render->find_override_region(
+      $state->{features}{$label}{semantic_override},
+      $length);
+  my $override  = $is_summary           ? $state->{features}{$label}{summary_override}
+                   : $semantic_override ? $state->{features}{$label}{semantic_override}{$semantic_override}
+                   : {};
 
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
-  push @override,(-feature_limit => $override->{limit}) if $override->{limit};
 
+  push @override,(-feature_limit => $override->{limit}) if $override->{limit};
+  push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
+
+  my @summary_args = ();
   if ($is_summary) {
-      unshift @override,(-glyph     => 'wiggle_density',
-			 -height    => 15,
-			 -bgcolor   => 'black',
-			 -min_score => 0,
-			 -autoscale => 'local'
-      );
+      @summary_args = $source->Bio::Graphics::FeatureFile::setting("$label:summary") 
+	  ? $source->i18n_style("$label:summary",$lang)
+	  : (-glyph     => 'wiggle_density',
+	     -height    => 15,
+	     -min_score => 0,
+	     -autoscale => 'local',
+	  );
   }
   my $hilite_callback = $args->{hilite_callback};
 
@@ -1987,11 +2186,9 @@ sub create_track_args {
 
       push @default_args,(
 	  -group_label          => $group_label||0,
-	  -group_label_position => $left_label ? 'top' : 'left');
-  }
-
-  if (my $stt = $self->subtrack_manager($label)) {
-      push @default_args,(-sort_order => $stt->sort_feature_sub);
+	  -group_label_position => $left_label ? 'top' : 'left',
+	  -group_subtracks      => $source->setting($label=>'subtrack single plot') ? 0 : 1,
+      );
   }
 
   my @args;
@@ -1999,7 +2196,7 @@ sub create_track_args {
       eval { # honor the database indicated in the track config
 	  my $db    = $self->source->open_database($label,$length);
 	  my $class = eval {$segment->seq_id->class} || eval{$db->refclass};
-	  $segment  = $db->segment(-name  => $segment->seq_id,
+	  ($segment)= $db->segment(-name  => $segment->seq_id,
 				   -start => $segment->start,
 				   -end   => $segment->end,
 				   -class => $class);
@@ -2008,21 +2205,32 @@ sub create_track_args {
       @args = ($segment,
 	       @default_args,
 	       $source->default_style,
-	       $source->i18n_style($label,
-				   $lang),
+	       $source->i18n_style($label,$lang),
+	       @summary_args,
 	       @override,
 	  );
   } else {
     @args = (@default_args,
 	     $source->default_style,
-	     $source->i18n_style($label,
-			       $lang,
-			       $length),
+	     $source->i18n_style($label,$lang,$length),
+	     @summary_args,
 	     @override,
 	    );
   }
 
+  if (my $stt = $self->subtrack_manager($label)) {
+      my $sub = $stt->sort_feature_sub;
+      push @args,(-sort_order => $sub);
+  }
+
   return @args;
+}
+
+sub vis_length {
+    my $self = shift;
+    my $segment = $self->segment;
+    my $length  = $segment->length;
+    return $length/$self->details_mult;
 }
 
 sub subtrack_manager {
@@ -2030,7 +2238,7 @@ sub subtrack_manager {
     my $label = shift;
     return $self->{_stt}{$label} if exists $self->{_stt}{$label};
     return $self->{_stt}{$label} = undef
-	if $self->source->show_summary($label,$self->segment->length,$self->settings);
+	if $self->source->show_summary($label,$self->vis_length,$self->settings);
     return $self->{_stt}{$label} = Bio::Graphics::Browser2::Render->create_subtrack_manager($label,
 											    $self->source,
 											    $self->settings);
@@ -2052,8 +2260,7 @@ sub get_cache_base {
     return $path;
 }
 
-# Convert the cached image map data
-# into HTML.
+# Returns the HTML image map from the cached image map data.
 sub map_html {
   my $self = shift;
   my $map  = shift;
@@ -2111,7 +2318,7 @@ sub do_bump {
   my $self = shift;
   my ($track_name,$option,$count,$max,$length) = @_;
 
-  my $source              = $self->source;
+  my $source            = $self->source;
   my $maxb              = $source->code_setting($track_name => 'bump density');
   $maxb                 = $max unless defined $maxb;
 
@@ -2167,6 +2374,17 @@ sub do_description {
         : 0;
 }
 
+sub feature2label {
+    my $self = shift;
+    my $feature = shift;
+    my $type2label = $self->{_type2label} or die "no type2label map defined";
+    my $type = eval {$feature->type} || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
+    (my $basetype = $type) =~ s/:.+$//;
+    my $labels = $type2label->{$type}||$type2label->{$basetype} or return;
+    my @labels = keys %$labels;
+    return @labels;
+}
+
 # override make_link to allow for code references
 sub make_link {
   my $self     = shift;
@@ -2194,9 +2412,8 @@ sub make_link {
       && $label->isa('Bio::Graphics::FeatureFile');
   }
 
-
   $panel ||= 'Bio::Graphics::Panel';
-  $label ||= $data_source->feature2label($feature);
+  $label ||= eval {$self->feature2label($feature)};
   $label ||= 'general';
 
   # most specific -- a configuration line
@@ -2260,7 +2477,7 @@ sub make_title {
     }
 
     else {
-      $label     ||= $source->feature2label($feature) or last TRY;
+      $label     ||= eval {$self->feature2label($feature)} or last TRY;
       $key       ||= $source->setting($label,'key') || $label;
       $key         =~ s/s$//;
       $key         = "source = ".$feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
@@ -2311,7 +2528,7 @@ sub segment_length {
     my $self    = shift;
     my $label   = shift;
     my $section = $label 
-	           ? Bio::Graphics::Browser2::Render->get_section_from_label($label) 
+	           ? Bio::Graphics::Browser2::DataSource->get_section_from_label($label) 
 		   : 'detail';
     return eval {$section eq 'detail'   ? $self->segment->length
 	        :$section eq 'region'   ? $self->region_segment->length
@@ -2330,7 +2547,7 @@ sub make_link_target {
     return $dsn;
   }
 
-  $label    ||= $source->feature2label($feature) or return;
+  $label    ||= eval{$self->feature2label($feature)} or return;
   my $link_target = $source->code_setting($label,'link_target')
     || $source->code_setting('TRACK DEFAULTS' => 'link_target')
     || $source->globals->code_setting(general => 'link_target')
@@ -2342,7 +2559,7 @@ sub make_link_target {
 
 sub balloon_tip_setting {
   my $self = shift;
-  my ($option,$label,$feature,$panel,$track) = @_;
+  my ($option,$label,$feature,$panel,$track,$inline) = @_;
   my $length = $self->segment_length($label);
   $option ||= 'balloon tip';
   my $source = $self->source;
@@ -2367,7 +2584,11 @@ sub balloon_tip_setting {
   }
   # escape quotes
   $val =~ s/'/\\'/g;
-  $val =~ s/"/&quot;/g;
+  if ($inline) {
+      $val =~ s/"/&quot;/g;
+  } else {
+      $val =~ s/"/\\"/g;
+  }
 
   return ($balloon_type,$val);
 }
@@ -2420,22 +2641,38 @@ sub hilite_regions_closure {
             # -- otherwise it looks funny.
             if ( $fgcolor && $fgcolor ne 'none' ) {
                 my $c = $panel->translate_color($fgcolor);
-                $gd->line( $left + $start, 0, $left + $start, $bottom, $c );
-                $gd->line( $left + $end,   0, $left + $end,   $bottom, $c );
+                $gd->setStyle($c,$c,gdTransparent,gdTransparent);#,gdTransparent,gdTransparent,gdTransparent);
+                $gd->line( $left + $start, 0, $left + $start, $bottom, gdStyled );
+                $gd->line( $left + $end,   0, $left + $end,   $bottom, gdStyled );
             }
         }
 
     };
 }
 
-sub hilite_fill {
+sub loaded_segment_fill {
     my $self = shift;
-    return $self->source->global_setting('hilite fill') || 'yellow';
+    return $self->source->global_setting('loaded segment fill') || 'none';
 }
 
-sub hilite_outline {
+sub loaded_segment_outline {
     my $self = shift;
-    return $self->source->global_setting('hilite outline') || 'yellow';
+    return $self->source->global_setting('loaded segment outline') || 'gray';
+}
+
+sub details_mult { 
+    my $self = shift;
+    my $render = $self->render;
+    return $render->details_mult if $render;
+
+    # workaround for Slave processes, which have no render object
+    return $self->source->details_multiplier($self->settings);
+}
+
+sub get_detail_width_no_pad {
+    my $self = shift;
+    my $settings = $self->settings;
+    return int($settings->{width} * $self->details_mult);
 }
 
 1;

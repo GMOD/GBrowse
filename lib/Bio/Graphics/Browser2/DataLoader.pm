@@ -5,7 +5,7 @@ use strict;
 use IO::File;
 use File::Basename 'basename','dirname';
 use Fcntl ':flock';
-use Carp 'croak';
+use Carp 'croak', 'cluck';
 use Digest::MD5 'md5_hex';
 
 # for mysql to work, you must do something like this:
@@ -14,8 +14,7 @@ use Digest::MD5 'md5_hex';
 
 sub new {
     my $class = shift;
-    my ($track_name,$data_path,$conf_path,$settings,$userid) = @_;
-
+    my ($track_name, $data_path, $conf_path, $settings, $userid) = @_;
     my $loadid = substr($userid,0,6).'_'.$track_name;
     my $self = bless
     { name     => $track_name,
@@ -23,7 +22,7 @@ sub new {
       conf     => $conf_path,
       settings => $settings,
       loadid   => $loadid,
-    },ref $class || $class;
+    }, ref $class || $class;
     return $self;
  }
 
@@ -114,8 +113,7 @@ sub get_fasta_files {
 	next unless -e $fasta;
 	if (-d _) {
 	    push @fastai, glob("$fasta/*.fai");
-	    push @fasta, $fasta
-		if glob("$fasta/*.{fa,FA,fasta,FASTA}");
+	    push @fasta,  glob("$fasta/*.{fa,FA,fasta,FASTA}");
 	} else {
 	    push @fastai,$fasta if -e "$fasta.fai";     # points at an indexed fasta file
 	    push @fasta, $fasta if $fasta =~ /\.(fa|fasta)$/i;
@@ -170,7 +168,7 @@ sub generate_chrom_sizes {
       my @seqids  = eval {$db->seq_ids}    or last TRY;
       my $result = eval {
 	  for (@seqids) {
-	      my $segment = $db->segment($_) or die "Can't find chromosome $_ in default database";
+	      my ($segment) = $db->segment($_) or die "Can't find chromosome $_ in default database";
 	      print $s "$_\t",$segment->length,"\n";
 	  }
 	  close $s;
@@ -243,46 +241,45 @@ sub close_conf {
 
 sub source_file {
     my $self = shift;
-    return File::Spec->catfile($self->sources_path,$self->track_name);
+    return File::Spec->catfile($self->sources_path, $self->track_name);
 }
 
 sub load {
     my $self                = shift;
-    my ($initial_lines,$fh) = @_;
-
+    my ($initial_lines, $fh) = @_;
+    
     $self->flag_busy(1);
     eval {
-	$self->set_status('starting load');
+	    $self->set_status('starting load');
 	
-	mkdir $self->sources_path or die $!;
-	my $source_file = IO::File->new($self->source_file,'>');
+	    mkdir $self->sources_path or die "Couldn't make ",$self->sources_path," directory: $!";
+	    my $source_file = IO::File->new($self->source_file, '>');
 
-	$self->open_conf;
-	$self->start_load;
+	    $self->open_conf;
+	    $self->start_load;
 
-	$self->set_status('load data');
+	    $self->set_status('load data');
 
-	my $count = 0;
-	my $eol   = $self->eol_char;
-	{
-	    local $/  = $eol if $eol;
+	    my $count = 0;
+	    my $eol   = $self->eol_char;
+	    {
+	        local $/  = $eol if $eol;
+	        foreach (@$initial_lines) {
+		        $source_file->print($_) if $source_file;
+		        $self->load_line($_);
+	        }
 
-	    foreach (@$initial_lines) {
-		$source_file->print($_) if $source_file;
-		$self->load_line($_);
+	        $count = @$initial_lines;
+	        while (<$fh>) {
+		        $source_file->print($_) if $source_file;
+		        $self->load_line($_);
+		        $self->set_status("loaded $count lines") if $count++ % 1000 == 0;
+	        }
+	        $source_file->close;
 	    }
 
-	    $count = @$initial_lines;
-	    while (<$fh>) {
-		$source_file->print($_) if $source_file;
-		$self->load_line($_);
-		$self->set_status("loaded $count lines") if $count++ % 1000 == 0;
-	    }
-	    $source_file->close;
-	}
-
-	$self->finish_load($count);
-	$self->close_conf;
+	    $self->finish_load($count);
+	    $self->close_conf;
     };
     $self->flag_busy(0);
 
@@ -346,12 +343,12 @@ sub load_line {
 
 sub category {
     my $self = shift;
-    return $self->force_category || "My Tracks:Uploaded Tracks:".$self->track_name;
+    return $self->force_category || (Bio::Graphics::Browser2::Util->translate('UPLOADED_TRACKS')||'').':'.$self->track_name;
 }
 
 sub backend {
     my $self = shift;
-    my $backend   = $self->globals->upload_db_adaptor;
+    my $backend = $self->globals->upload_db_adaptor;
     $backend = $self->guess_backend if $backend && $backend eq 'auto';
     unless ($backend) {
 	$backend = $self->guess_backend;
@@ -376,45 +373,45 @@ sub dsn {
     $d;
 }
 
+# Create a new database to hold a user's uploaded file.
 sub create_database {
     my $self      = shift;
     my $data_path = shift;
 
     my $backend   = $self->backend;
 
-    if ($backend eq 'DBI::mysql') {
-	my $globals    = $self->settings->globals;
-	my $db_name    = 'userdata_'.md5_hex($data_path);
-	$data_path     = $db_name;
-	$db_name      .= ";host=".$globals->upload_db_host;
-	$db_name      .= ";user=".$globals->upload_db_user;
-	$db_name      .= ";password=".$globals->upload_db_pass;
-	$self->dsn($db_name);
-	my $mysql_admin = $self->mysql_admin;
+    if ($backend =~ /DBI:+mysql/) {
+		my $globals    = $self->settings->globals;
+		my $db_name    = 'userdata_'.md5_hex($data_path);
+		$data_path     = $db_name;
+		$db_name      .= ";host=".$globals->upload_db_host;
+		$db_name      .= ";user=".$globals->upload_db_user;
+		$db_name      .= ";password=".$globals->upload_db_pass;
+		$self->dsn($db_name);
+		my $mysql_admin = $self->mysql_admin;
 
-	my $mysql_usage = <<END;
+		my $mysql_usage = <<END;
 For mysql to work as a backend to stored user data, you must set up the server
 so that the web server user (e.g. "www-data") has the privileges to create databases
 named "userdata_*". The usual way to do this is with the mysql shell:
 
  mysql> grant create on `userdata\_%`.* to www-data\@localhost
 END
-
-	my $dbh = DBI->connect($mysql_admin)
-	    or die DBI->errstr,".\n",$mysql_usage;
-	$dbh->do("drop database if exists `$data_path`");
-	$dbh->do("create database `$data_path`")
+		my $dbh = DBI->connect($mysql_admin)
+			or die DBI->errstr,".\n",$mysql_usage;
+		$dbh->do("drop database if exists `$data_path`");
+		$dbh->do("create database `$data_path`")
 	    or die "Could not create $data_path:",DBI->errstr,".\n",$mysql_usage;
-	
     } elsif ($backend eq 'DBI::SQLite') {
-	$self->dsn(File::Spec->catfile($data_path,'index.SQLite'));
+		$self->dsn(File::Spec->catfile($data_path,'index.SQLite'));
     } else {
-	$self->dsn($data_path);
+		$self->dsn($data_path);
     }
 
-    return Bio::DB::SeqFeature::Store->new(-adaptor=> $backend,
-					   -dsn    => $self->dsn,
-					   -create => 1);
+    return Bio::DB::SeqFeature::Store->new(
+                       -adaptor => $backend,
+					   -dsn     => $self->dsn,
+					   -create  => 1);
 }
 
 sub drop_databases {
@@ -424,10 +421,10 @@ sub drop_databases {
     my (@dsns,$using_mysql);
     open my $f,$conf_path or (warn "Couldn't open $conf_path: $!" && return);
     while (<$f>) {
-	if (/-adaptor/) {
-	    $using_mysql = /DBI::mysql/;
-	}
-	push @dsns,$1 if /-dsn\s+(.+)/i && $using_mysql;
+		if (/-adaptor/) {
+			$using_mysql = /DBI::mysql/;
+		}
+		push @dsns,$1 if /-dsn\s+(.+)/i && $using_mysql;
     }
     close $f;
     
@@ -442,6 +439,7 @@ sub drop_databases {
     }
 }
 
+# MySQL Admin - Returns the string which defines the custom uploads DB MySQL connection details.
 sub mysql_admin {
     my $self = shift;
     my $globals    = $self->globals;
@@ -449,7 +447,7 @@ sub mysql_admin {
     my $db_user    = $globals->upload_db_user;
     my $db_pass    = $globals->upload_db_pass;
     eval "require DBI" unless DBI->can('connect');
-    my $dsn        = 'DBI:mysql:';
+    my $dsn        = 'DBI:mysql:gbrowse_login;';
     my @options;
     push @options,"host=$db_host"     if $db_host;
     push @options,"user=$db_user"     if $db_user;

@@ -36,7 +36,7 @@ Region.prototype.initialize = function() {
   //if (!dnd || !dnd.checked) return false;
 
 
-  var i = document.getElementById(self.imageId);;
+  var i = $(self.imageId);;
   if (!i) return false;
 
 
@@ -49,13 +49,9 @@ Region.prototype.initialize = function() {
   }
 
 
-  var p = i.parentNode;
+  var p = i.parentNode.parentNode;
   i = self.replaceImage(i);
 
-  self.top     = self.elementLocation(i,'y1');
-  self.bottom  = self.elementLocation(i,'y2');
-  self.left    = self.elementLocation(i,'x1');
-  self.right   = self.elementLocation(i,'x2');
   self.selectLayer = p.parentNode.parentNode;
   self.scalebar = i;
   self.addSelectMenu('region');
@@ -71,8 +67,8 @@ Region.prototype.startSelection = function(event) {
 
 Region.prototype.loadSegmentInfo = function() {
   // get the segment info from gbrowse CGI parameters
-  
-  var i = document.getElementById(self.imageId);
+  var self = regionObject;
+  var i = $(self.imageId);
   
   var segment_info = Controller.segment_info;
   
@@ -93,20 +89,16 @@ Region.prototype.loadSegmentInfo = function() {
     this.padLeft     += actualWidth - expectedWidth;
   }
 
-  // We fetch the left margin again because the controller can change 
-  // the size & position of the section after it is created.
-  this.left       = this.elementLocation(document.getElementById(this.imageId),'x1');
-
-  this.pixelStart   = this.left  + this.padLeft;
+  this.pixelStart   = this.padLeft;
 }
 
 Region.prototype.formatMenu = function() {
   this.menuHTML = this.selectMenu.innerHTML || '\
    <div style="padding:5px;text-align:center">\
      <b>SELECTION</b><hr>\
-     <a href="javascript:SelectArea.prototype.clearAndSubmit()">Zoom</a>\
+     <a href="javascript:SelectArea.prototype.clearAndSubmit()">' + Controller.translate('ZOOM') + '</a>\
      &nbsp;&nbsp;|&nbsp;&nbsp;\
-     <a href="javascript:SelectArea.prototype.cancelRubber()">Cancel</a>\
+     <a href="javascript:SelectArea.prototype.cancelRubber()">' + Controller.translate('CANCEL') + '</a>\
   </div>';
 }
 

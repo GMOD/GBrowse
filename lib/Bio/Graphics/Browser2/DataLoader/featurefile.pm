@@ -59,7 +59,10 @@ sub handle_feature {
     my $attr = $self->parse_attributes($attributes);
 
     # @parts is an array of ([ref,start,end],[ref,start,end],...)
-    my @parts = map { [/(?:(\w+):)?(-?\d+)(?:-|\.\.)(-?\d+)/]} split /(?:,| )\s*/,$bounds;
+    my @parts =
+        map { [/ (?:([^:\s]+):)? (-?\d+) (?:-|\.\.) (-?\d+) /x ] }
+        split /(?:,| )\s*/,
+        $bounds;
 
     # deal with groups -- a group is ending if $type is defined
     # and CurrentGroup is set

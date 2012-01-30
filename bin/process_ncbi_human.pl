@@ -434,7 +434,7 @@ sub dbConnect
 {
     my $dsn = shift;
     my $dbh;
-    use DBI;
+    eval "require DBI; 1" or die "DBI module not installed. Cannot continue";
     eval{$dbh = DBI->connect($dsn,
 			     {
 				 RaiseError => 1,

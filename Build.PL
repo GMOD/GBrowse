@@ -17,23 +17,27 @@ my $build = GBrowseInstall->new(
 
     requires     => {
 	'perl'                => '5.008',
-	'Bio::Root::Version'  => '1.005009001',
-	'Bio::Graphics'       => '2.09',
+	'Bio::Root::Version'  => '1.0069',
+	'Bio::Graphics'       => '2.24',
 	'CGI::Session'        => '4.02',
 	'Date::Parse'         => 0,
 	'Digest::MD5'         => 0,	
         'ExtUtils::CBuilder'  => 0,
 	'File::Temp'          => 0,
 	'GD'                  => '2.07',
+	'Text::ParseWords'    => '3.27',
 	'IO::String'          => 0,
 	'JSON'                => 0,
 	'LWP'                 => 0,
 	'Statistics::Descriptive'  => 0,
 	'Storable'            => 0,
+        'Time::HiRes'         => 0,
+        'Digest::SHA'         => 0,
+        'Date::Parse'         => 0,
+        'Term::ReadKey'       => 0,
     },
     build_requires => {'Capture::Tiny'       => 0,},
     recommends  => {
-        'Ace'                      => 0,
 	'Bio::Das'                 => 0,
 	'Bio::DB::Sam'             => 1.20,
 	'Bio::DB::BigFile'         => 1.00,
@@ -48,32 +52,48 @@ my $build = GBrowseInstall->new(
 	'File::NFSLock'            => 0,
 	'GD::SVG'                  => 0,
 	'Math::BigInt'             => 0,
-#	'MOBY::Client::Central'    => 0,
 	'Net::OpenID::Consumer'    => 0,
 	'Net::SMTP::SSL'           => 0,
 	$] <= 5.008 ? ('Safe::World'  => 0)
                     : ()               ,
 	'Template'                 => 2.20,
+        'Term::ReadKey'            => 0,
     },
     script_files => [
 	'bin/gbrowse_clean.pl',
-	'bin/gbrowse_create_useraccount_db.pl',
 	'bin/gbrowse_set_admin_passwd.pl',
+	'bin/gbrowse_create_account.pl',
+	'bin/gbrowse_change_passwd.pl',
+	'bin/gbrowse_metadb_config.pl',
 	'bin/gbrowse_slave',
         'bin/gbrowse_syn_load_alignment_database.pl',
         'bin/gbrowse_syn_load_alignments_msa.pl',
 	'bin/make_das_conf.pl',
+	'bin/scan_gbrowse.pl',
 	'bin/wiggle2gff3.pl',
-# not sure if these still work
-#	'bin/register_moby_services.pl',
-#	'bin/process_wormbase.pl',
-#	'bin/process_sgd.pl',
-#	'bin/load_genbank.pl',
+	'bin/gtf2gff3.pl',
+	'bin/bed2gff3.pl',
+	'bin/ucsc_genes2gff.pl',
+	'bin/load_genbank.pl',
     ],
 
     create_makefile_pl => 'passthrough',
 
     );
+
+print STDERR <<END;
+**** WARNING *****************************************************************************************
+If you are upgrading from an earlier version of GBrowse and wish to use named user accounts, please 
+set "user_accounts" to 1 in /etc/gbrowse2/GBrowse.conf and run bin/gbrowse_metadb_config.pl to 
+create/update your user account database.
+
+See /etc/gbrowse2/GBrowse.conf.new for suggested settings.
+******************************************************************************************************
+END
+
+#print STDERR "Continue? [y/n] ";
+#my $line = <>;
+#exit 0 unless $line =~ /[yY]/;
 
 if(-e '/proc/filesystems' 
    && `grep selinux /proc/filesystems`) {

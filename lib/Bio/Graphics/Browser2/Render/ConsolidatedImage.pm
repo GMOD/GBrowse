@@ -16,7 +16,10 @@ as opposed to the standard GBrowse2 single-track images and maps.
 sub new {
     my $class   = shift;
     my $globals = shift;
+
     my $render  = Bio::Graphics::Browser2::Render::HTML->new($globals);
+    $render->set_details_multiplier(1);
+
     return bless {render => $render},ref $class || $class;
 }
 
@@ -24,6 +27,12 @@ sub render  { shift->{render}               }
 sub session { shift->render->session        }
 sub cookie  { shift->render->create_cookie  }
 sub source  { shift->render->data_source    }
+
+sub destroy {
+    my $self = shift;
+    $self->{render}->destroy;
+    undef $self->{render};
+}
 
 sub render_multiple {
     my $self = shift;
@@ -58,6 +67,8 @@ sub render_tracks {
     warn "labels = ",join ',',@labels if DEBUG;
     my @track_types = @$track_types;
 
+    my $h_callback = make_hilite_callback(param('h_feat'));
+
     # If no tracks specified, we want to see all tracks with this feature
     if (!@track_types) { @track_types = @labels; } 
     unshift @track_types,'_scale';
@@ -67,12 +78,14 @@ sub render_tracks {
 						      labels            => \@track_types,
 						      external_features => $external,
 						      section           => 'detail',
-						      cache_extra       => [$format],
+						      cache_extra       => [$format,param('h_feat'),param('h_region')]],
 						      image_class       => $format,
 						      flip              => $flip,
+                                                      hilite_callback   => $h_callback || undef,
 						      -key_style        => 'between',
-						      }
-						  );
+                                                      -suppress_key     => 0,
+                                                  }
+						 );
 
     warn "returned labels = ",join ',',%$result if DEBUG;
 
@@ -114,7 +127,7 @@ sub calculate_composite_bounds {
 	    $width    += ($g->getBounds)[0];
 	}
     }
-    
+
     return ($width,$height);
 }
 
@@ -129,12 +142,31 @@ sub consolidate_images {
 
     warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
 
-    my $img_format = ref($gds->[0]);
-    warn "format = $img_format" if DEBUG;
+    return $gds->[0]->isa('GD::SVG::Image')
+              ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
+              : $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
+}
 
-    return $img_format =~ /^GD::SVG/ ?
-      $self->_consolidate_svg($width,$height,$gds,$orientation,$labels):
-      $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
+sub make_hilite_callback {
+    my ( $self, @feature_names ) = @_;
+    return unless @feature_names;
+    my %colors;
+    foreach (@feature_names) {
+       my ($name,$color) = split '@';
+       $color ||= 'yellow';
+       $colors{$name} = $color;
+    }
+    return sub {
+       my $feature = shift;
+       my $color;
+       # if we get here, we select the search term for highlighting
+       my %names = map {lc $_=> 1}
+                       $feature->display_name,
+                       eval{$feature->get_tag_values('Alias')};
+       return unless %names;
+       $color ||= $colors{$_} foreach keys %names;
+       return $color;
+    }
 }
 
 sub _consolidate_gd {
@@ -148,7 +180,7 @@ sub _consolidate_gd {
     my $charwidth  = $fontclass->gdMediumBoldFont->width;
     $height += $lineheight if $orientation eq 'horizontal';
 
-    my $gd = $class->new($width,$height);
+    my $gd = $class->new($width,$height,1);
     my $white = $gd->colorAllocate(255,255,255);
     my $black = $gd->colorAllocate(0,0,0);
 

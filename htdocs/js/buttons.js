@@ -1,5 +1,3 @@
-var GlobalDrag;
-
 // gbTurnOff turns off any "All On" or "All Off" checkboxes which are checked.
 function gbTurnOff (section_name) {
   if ($(section_name+"_a"))
@@ -14,41 +12,52 @@ function gbCheck (button,state) {
   if (!$(a))
     return false;
   
-  var checkboxes = $(a).select("input");
+  var checkboxes = $(a).select(".track_title");
   if (!checkboxes)
     return false;
 
-  var added_tracks = false;
-
-  if (state == 1) {
-    var track_names = new Array();
-    for (var i=0; i<checkboxes.length; i++) {
-      checkboxes[i].checked=state;
-      track_names.push(checkboxes[i].value)
-    }
-    added_tracks = Controller.add_tracks(track_names);
-  }
-
-  if  (!added_tracks) {
-    for (var i=0; i<checkboxes.length; i++) {
-       checkboxes[i].checked=state;
-       gbToggleTrack(checkboxes[i]);
-    }
+  for (var i=0; i<checkboxes.length; i++) {
+      var track_name = checkboxes[i].id.substring(0,checkboxes[i].id.lastIndexOf("_"));
+      ShowHideTrack(track_name,state);
   }
   gbTurnOff(a);
   button.checked = true;
-  list(a.substring(0, (a.length - "_section".length))); //The substring trims "_section" from the end of a list.
-  return false;
+  updateList($(a));
+  return true;
 }
 
-function gbToggleTrack (button) {
-  var track_name = button.value;
-  var visible    = button.checked;
-  ShowHideTrack(track_name,visible);
+function gbToggleTrack (track_name) {
+    ShowHideTrack(track_name);
 }
 
 // ShowHideTrack toggles the visibility of "track", based on the "visible" flag.
 function ShowHideTrack(track_name,visible) {
+  var track_title = $(track_name+'_check');
+  var track_img   = $(track_name+'_img');
+
+  if (track_title) {
+      var ancestor    = track_title.ancestors().find(
+						     function (el) {
+							 return el.nodeName == 'TD'
+						     });
+      if (visible == null) {
+	  visible = !ancestor.hasClassName('activeTrack');
+      }
+      if (visible) {
+	  ancestor.addClassName('activeTrack');
+	  track_title.addClassName('activeTrack');
+	  track_img.src=Controller.button_url('check.png');
+      }  else {
+	  ancestor.removeClassName('activeTrack');
+	  track_title.removeClassName('activeTrack');
+	  track_img.src=Controller.button_url('square.png');
+      }
+
+      checkSummaries();
+      _checkAllToggles(track_title);
+  }
+  else if (visible == null) return false;
+
   if (visible && !Controller.track_exists(track_name)) {
       Controller.add_track(track_name);
       return false;
@@ -57,7 +66,7 @@ function ShowHideTrack(track_name,visible) {
   Controller.each_track(track_name,function(gbtrack) {
        var el_id   = gbtrack.track_div_id;
        var element = $(el_id);
-
+       
        if (visible) {
            if (element.style.display == "none") { 
              element.style.display="block";
@@ -71,10 +80,6 @@ function ShowHideTrack(track_name,visible) {
           }
        }
      });
-
-     if ($(track_name+'_check') == null)
-         track_name = track_name.sub(/:(overview|region|detail)$/,'');
-     $(track_name + '_check').checked = visible ? true : false;
 }
 
 function update_segment (formdata) {
@@ -90,26 +95,5 @@ function update_segment (formdata) {
                      evalScripts:  true
 		   }
                   );
-}
-
-function create_drag (div_name) {
-   GlobalDrag = div_name;
-   Sortable.create(
-		  div_name,
-		  {
-		      tag:     'div',
-		      constraint:  'vertical',
-  		      only:    'track',
-		      handle:  'titlebar',
-		      scroll:   window,
-		      onUpdate: function() {
-		      var items   = $(div_name).select('[class="track"]');
-		      var ids     = items.map(function(e){return e.id});
-		      ids         = ids.map(function(i) {return 'label[]='+escape(i.sub(/^track_/,''))});
-		      var postData= ids.join('&')+';action=change_track_order';
-		      new Ajax.Request(document.URL,{method:'post',postBody:postData});
-		    }
-		  }
-		 );
 }
 

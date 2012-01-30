@@ -41,7 +41,7 @@ var balloonIsSticky;
 var balloonInvisibleSelects;
 var balloonIsSuppressed;
 var tooltipIsSuppressed;
-
+var supportsTouch = ('createTouch' in document);
 
 //////////////////////////////////////////////////////////////////////////
 // This is constructor that is called to initialize the Balloon object  //
@@ -61,17 +61,20 @@ var Balloon = function () {
   // scrolling aborts unsticky balloons
   document.onscroll    = Balloon.prototype.hideTooltip;
 
-  // make balloons go away if the page is unloading or waiting
-  // to unload.
-  window.onbeforeunload = function(){
-    Balloon.prototype.hideTooltip(1);
-    balloonIsSuppressed = true;
-  };
-
   // for IE, the balloons can;t start until the page is finished loading
   // set a flag that will get toggled when loading is finished
   if (this.isIE()) {
-    this.suppress = true;
+      this.suppress = true;
+  } else {
+      // make balloons go away if the page is unloading or waiting
+      // to unload. Note that we do not call this for IE because
+      // IE8 has a bug which triggers beforeunload event every time
+      // an anchor is clicked, and stopping event propagation doesn't
+      // seem to fix it.
+      window.onbeforeunload = function(){
+            Balloon.prototype.hideTooltip(1);
+            balloonIsSuppressed = true;
+      };
   }
 
   return this;
@@ -82,8 +85,7 @@ var Balloon = function () {
 // delay time to avoid balloons popping up on rapid mouseover events    //
 //////////////////////////////////////////////////////////////////////////
 Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
-			      
-	
+
   // If the object is not configured by now, fall back to default
   if (!this.configured) {
     BalloonConfig(this,'GBubble');
@@ -198,8 +200,8 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
   document.body.appendChild(this.container);
   this.setStyle(this.container,'position','absolute');
   this.setStyle(this.container,'top',-8888);
-  this.setStyle(this.container,'font-family',this.fontFamily);
-  this.setStyle(this.container,'font-size',this.fontSize);
+  this.setStyle(this.container,'fontFamily',this.fontFamily);
+  this.setStyle(this.container,'fontSize',this.fontSize);
   this.container.innerHTML = unescape(this.currentHelpText);
 
   // make sure balloon image path is complete
@@ -267,6 +269,8 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width,height) {
   var delay = mouseOver ? this.delayTime : 1;
   this.timeoutTooltip = window.setTimeout(this.doShowTooltip,delay);
   this.pending = true;
+
+  return false;
 }
 
 
@@ -295,7 +299,7 @@ Balloon.prototype.doShowTooltip = function() {
 
   if (!self.parent) {
     if (self.parentID) {
-      self.parent = document.getElementById(self.parentID);
+      self.parent = $(self.parentID);
     }
     else {
       self.parent = document.body;
@@ -316,11 +320,11 @@ Balloon.prototype.doShowTooltip = function() {
   var balloon = self.makeBalloon();
 
   // window dimensions
-  var pageWidth   = YAHOO.util.Dom.getViewportWidth();
+  var pageWidth   = document.viewport.getWidth();
   var pageCen     = Math.round(pageWidth/2);
-  var pageHeight  = YAHOO.util.Dom.getViewportHeight();
-  var pageLeft    = YAHOO.util.Dom.getDocumentScrollLeft();
-  var pageTop     = YAHOO.util.Dom.getDocumentScrollTop();
+  var pageHeight  = document.viewport.getHeight()
+  var pageLeft    = document.viewport.getScrollOffsets().left;
+  var pageTop     = document.viewport.getScrollOffsets().top;
   var pageMid     = pageTop + Math.round(pageHeight/2);
   self.pageBottom = pageTop + pageHeight;
   self.pageTop    = pageTop;
@@ -328,10 +332,9 @@ Balloon.prototype.doShowTooltip = function() {
   self.pageRight  = pageLeft + pageWidth;
 
   // do we have a cursor position?
-  if (!(self.activeTop && self.activeRight)) {
-//     self.setActiveCoordinates();
-  }
-
+  //  if (!(self.activeTop && self.activeRight)) {
+  // self.setActiveCoordinates();
+  // }
 
   // balloon orientation
   var vOrient = self.activeTop > pageMid ? 'up' : 'down';
@@ -344,7 +347,11 @@ Balloon.prototype.doShowTooltip = function() {
   var wrapper = document.createElement('div');
   wrapper.id = 'contentWrapper';
   self.contents.appendChild(wrapper);
-  wrapper.innerHTML = helpText;
+  if ('createTouch' in document) {
+      wrapper.innerHTML = helpText + Controller.translate('IPAD_BALLOON');
+  }else{
+    wrapper.innerHTML = helpText;
+  }
 
   // run any javascript in the thing -- sorry Sheldon
   if (self.evalScripts) {
@@ -369,6 +376,8 @@ Balloon.prototype.doShowTooltip = function() {
   self.startY = self.activeTop;
 
   self.fade(0,self.opacity,self.fadeIn);
+
+  return false;
 }
 
 Balloon.prototype.addCloseButton = function () {
@@ -377,7 +386,7 @@ Balloon.prototype.addCloseButton = function () {
   var closeWidth   = self.closeButtonWidth || 16;
   var balloonTop   = self.getLoc('balloon','y1') + margin + self.shadow;
   var BalloonLeft  = self.getLoc('topRight','x2') - self.closeButtonWidth - self.shadow - margin;
-  var closeButton  = document.getElementById('closeButton');
+  var closeButton  = $('closeButton');
 
   if (!closeButton) {
     closeButton = new Image;
@@ -399,7 +408,7 @@ Balloon.prototype.addCloseButton = function () {
   self.setStyle(closeButton,'left',BalloonLeft);
   self.setStyle(closeButton,'display','inline');
   self.setStyle(closeButton,'cursor','pointer');
-  self.setStyle(closeButton,'z-index',999999999);
+  self.setStyle(closeButton,'zIndex',999999999);
 }
 
 // use a fresh object every time to make sure style 
@@ -407,7 +416,7 @@ Balloon.prototype.addCloseButton = function () {
 Balloon.prototype.makeBalloon = function() {
   var self = currentBalloonClass;
 
-  var balloon = document.getElementById('balloon');
+  var balloon = $('balloon');
   if (balloon) {
     self.cleanup();
   }
@@ -429,7 +438,7 @@ Balloon.prototype.makeBalloon = function() {
   //self.parts.push(balloon);
 
   if (self.displayTime)  {
-    self.timeoutAutoClose = window.setTimeout(this.hideTooltip,self.displayTime);
+      self.timeoutAutoClose = window.setTimeout(this.hideTooltip,self.displayTime);
   }
   return balloon;
 }
@@ -448,7 +457,7 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
 
   self.setStyle(balloon,'position','absolute');
   self.setStyle(balloon,'top',-9999);
-  self.setStyle(balloon,'z-index',1000000);
+  self.setStyle(balloon,'zIndex',1000000);
 
   if (self.height) {
     self.setStyle('contentWrapper','height',self.height-fullPadding);
@@ -478,13 +487,13 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
     self.setStyle('contentWrapper','width',self.minWidth-fullPadding);
   }
   
-  self.setStyle('contents','z-index',2);
+  self.setStyle('contents','zIndex',2);
   self.setStyle('contents','color',self.fontColor);
-  self.setStyle('contents','font-family',self.fontFamily);
-  self.setStyle('contents','font-size',self.fontSize);
+  self.setStyle('contents','fontFamily',self.fontFamily);
+  self.setStyle('contents','fontSize',self.fontSize);
   self.setStyle('contents','background','url('+self.balloonImage+') top left no-repeat');
-  self.setStyle('contents','padding-top',fullPadding);
-  self.setStyle('contents','padding-left',fullPadding);
+  self.setStyle('contents','paddingTop',fullPadding);
+  self.setStyle('contents','paddingLeft',fullPadding);
 
   self.setStyle('bottomRight','background','url('+self.balloonImage+') bottom right no-repeat');
   self.setStyle('bottomRight','position','absolute');
@@ -492,7 +501,7 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   self.setStyle('bottomRight','bottom',0-fullPadding);
   self.setStyle('bottomRight','height',fullPadding);
   self.setStyle('bottomRight','width',fullPadding);
-  self.setStyle('bottomRight','z-index',-1);
+  self.setStyle('bottomRight','zIndex',-1);
 
   self.setStyle('topRight','background','url('+self.balloonImage+') top right no-repeat');
   self.setStyle('topRight','position','absolute');
@@ -505,7 +514,7 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   self.setStyle('bottomLeft','left',0);
   self.setStyle('bottomLeft','bottom',0-fullPadding);
   self.setStyle('bottomLeft','height',fullPadding);
-  self.setStyle('bottomLeft','z-index',-1);
+  self.setStyle('bottomLeft','zIndex',-1);
 
   if (this.stem) {
     var stem = document.createElement('img');
@@ -647,11 +656,20 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   }
 
   // Make edges match the main balloon body
-  self.setStyle('topRight','height', self.getLoc(balloon,'height'));
+  self.setStyle('topRight', 'height', self.getLoc(balloon,'height'));
   self.setStyle('bottomLeft','width', self.getLoc(balloon,'width'));
 
+  // next section is some debugging for IE8 problem
+  //  var b = self.activeBalloon;
+  //  var bwidth  = self.getLoc(b,'width');
+  //  self.setStyle(b,'right',null);
+  //  var newLeft = self.activeLeft - bwidth;
+  //  self.setStyle(b,'left',newLeft);
+  
   self.hOrient = hOrient;
   self.vOrient = vOrient;
+
+  self.adjustBalloonPosition();  // for IE8
 }
 
 
@@ -706,9 +724,12 @@ Balloon.prototype.doOpacity = function(op,opc,el) {
   self.setStyle(el,'KhtmlOpacity',op);
 }
 
-Balloon.prototype.hideTooltip = function(override) { 
+Balloon.prototype.hideTooltip = function(override) {
+
   // some browsers pass the event object == we don't want it
+  if (override == null)  override = false;
   if (override && typeof override == 'object') override = false;
+
   if (balloonIsSticky && !override) return false;
 
   var self = currentBalloonClass;
@@ -736,16 +757,16 @@ Balloon.prototype.cleanup = function() {
   var body;
   if (self) {
     body = self.parent   ? self.parent 
-         : self.parentID ? document.getElementById(self.parentID) || document.body
+         : self.parentID ? $(self.parentID) || document.body
          : document.body;
   }
   else {
     body = document.body;
   }
-
-  var bubble = document.getElementById('balloon');
-  var close  = document.getElementById('closeButton');
-  var cont   = document.getElementById('container');
+  
+  var bubble = $('balloon');
+  var close  = $('closeButton');
+  var cont   = $('container');
   if (bubble) { body.removeChild(bubble) } 
   if (close)  { body.removeChild(close)  }
   if (cont)   { body.removeChild(cont)   }
@@ -783,11 +804,6 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
 
   var scrollTop  = 0;
   var scrollLeft = 0;
-//  Why?  I do not know. perhaps a vestigial patch?
-//  if (self.isIE()) {
-//    var scrollTop  = window.pageYOffset || document.documentElement.scrollTop  || 0; 
-//    var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || 0;
-//  }
 
   var XY = self.eventXY(evt);
   adjustment   = self.hOffset < 20 ? 10 : 0;
@@ -803,9 +819,18 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
     var deltaY = Math.abs(self.activeTop - self.startY);
 
     if (deltaX > self.stopTrackingX || deltaY > self.stopTrackingY) {
-      self.hideTooltip();
+	self.hideTooltip();
     }
     else {
+	self.adjustBalloonPosition();
+    }
+  }
+
+  return true;
+}
+
+Balloon.prototype.adjustBalloonPosition = function() {
+      var self = currentBalloonClass;
       var b = self.activeBalloon;
       var bwidth  = self.getLoc(b,'width');
       var bheight = self.getLoc(b,'height');
@@ -827,10 +852,6 @@ Balloon.prototype.setActiveCoordinates = function(evt) {
       else if (self.vOrient == 'down') {
         self.setStyle(b,'top',self.activeBottom);
       }
-    }
-  }
-
-  return true;
 }
 
 ////
@@ -859,7 +880,9 @@ Balloon.prototype.getEventTarget = function(event) {
   var e = event || window.event;
   if (e.target) targ = e.target;
   else if (e.srcElement) targ = e.srcElement;
-  if (targ.nodeType == 3) targ = targ.parentNode; // Safari
+  if (targ==null) targ=document.createElement('div');
+  if (targ.nodeType == 3) 
+      targ = targ.parentNode; // Safari
   return targ;
 }
 ////
@@ -870,11 +893,12 @@ Balloon.prototype.setStyle = function(el,att,val) {
     return false;
   }
   if (typeof(el) != 'object') {
-    el = document.getElementById(el);
+    el = $(el);
   }
   if (!el) {
     return false;
   }
+  el = Element.extend(el);
 
   if (val && att.match(/left|top|bottom|right|width|height|padding|margin/)) {
     val = new String(val);
@@ -884,31 +908,37 @@ Balloon.prototype.setStyle = function(el,att,val) {
   }
 
   // z-index does not work as expected
-  if (att == 'z-index') {
+  if (att == 'zIndex') {
     if (el.style) {
       el.style.zIndex = parseInt(val);
     }
   }
   else {
-    YAHOO.util.Dom.setStyle(el,att,val);
+    var style = {};
+    style[att] = val;
+    el.setStyle(style);
   }
 }
 
-// Uses YAHOO's region class for element coordinates
+
 Balloon.prototype.getLoc = function(el,request) {
-  var region = YAHOO.util.Dom.getRegion(el);
-
+  var offset = $(el).cumulativeOffset();
+  var dimensions = $(el).getDimensions();
   switch(request) {
-    case ('y1') : return parseInt(region.top);
-    case ('y2') : return parseInt(region.bottom);
-    case ('x1') : return parseInt(region.left);
-    case ('x2') : return parseInt(region.right);
-    case ('width')  : return (parseInt(region.right)  - parseInt(region.left));
-    case ('height') : return (parseInt(region.bottom) - parseInt(region.top));
-    case ('region') : return region; 
+    case ('y1') : return offset.top;
+    case ('y2') : return offset.top + dimensions.height;
+    case ('x1') : return offset.left;
+    case ('x2') : return offset.left + dimensions.width;
+    case ('width')  : return dimensions.width;
+    case ('height') : return dimensions.height;
+    case ('region') : 
+      var region = new Object;
+      region.y1 = offset.top;
+      region.y2 = offset.top + dimensions.height;
+      region.x1 = offset.left;
+      region.x2 = offset.left + dimensions.width;
+      return region; 
   }
-
-  return region;
 }
 
 // We don't know if numbers are overridden with strings
@@ -934,7 +964,7 @@ Balloon.prototype.showHide = function(visible) {
 
   // IE z-index bug fix (courtesy of Lincoln Stein)
   if (self.isOldIE()) {
-    var balloonContents = document.getElementById('contentWrapper');
+    var balloonContents = $('contentWrapper');
     if (!visible && balloonContents) {
       var balloonSelects = balloonContents.getElementsByTagName('select');
       var myHash = new Object();
@@ -978,21 +1008,18 @@ Balloon.prototype.isOverlap = function(el1,el2) {
   var R1 = this.getLoc(el1,'region');
   var R2 = this.getLoc(el2,'region');
   if (!R1 || !R2) return false;
-  var intersect = R1.intersect(R2);
-  if (intersect) {
-    // extent of overlap;
-    intersect = new Array((intersect.right - intersect.left),(intersect.bottom - intersect.top));
+
+  if ((R1.x1 < R2.x2) && (R1.x2 > R2.x1) && (R1.y1 < R2.y2) && (R1.y2 > R2.y1)) { 
+    return new Array((R1.x1 < R2.x1 ? R1.x2 - R2.x1 : R2.x2 - R1.x1),(R1.y1 < R2.y1 ? R1.y2 - R2.y1 : R2.y2 - R1.y1));
+  } else {
+    return false;
   }
-  return intersect;
 }
 
-// Coordinate-based test for the same element
+// Test for the same element
 Balloon.prototype.isSameElement = function(el1,el2) {
   if (!el1 || !el2) return false;
-  var R1 = this.getLoc(el1,'region');
-  var R2 = this.getLoc(el2,'region');
-  var same = R1.contains(R2) && R2.contains(R1);
-  return same ? true : false;
+  return el1 == el2;
 }
 
 
@@ -1033,10 +1060,16 @@ Please contact the site administrator for assistance.';
   // check if the contents are to be retrieved from an element
   if (caption.match(/^load:/)) {
     var load = caption.split(':');
-    if (!document.getElementById(load[1])) alert ('problem locating element '+load[1]);
-    caption = document.getElementById(load[1]).innerHTML;
+    if (!$(load[1])) alert ('problem locating element '+load[1]);
+    caption = $(load[1]).innerHTML;
     this.loadedFromElement = true;
   }
+
+   // check if the contents are to be generated by javascript
+   if (caption.match(/^javascript:/)) {
+     var jsFunctionCall = caption.substring(11);
+     caption = eval(jsFunctionCall);
+   }
 
   // check if iframes are allowed
   if (caption.match(/\<\s*iframe/i) && !this.allowIframes) {
@@ -1060,7 +1093,7 @@ Please contact the site administrator for assistance.';
   this.currentHelpText = this.getContents(caption);
   this.loadedFromElement = false;
   
-  return this.currentHelpText;;
+  return this.currentHelpText;
 }
 
 

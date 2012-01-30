@@ -23,7 +23,7 @@ var GBrowseTrack = Class.create({
     this.track_image_id  = track_id + "_image";
     this.last_update_key = 0;
     this.expired_count   = 0;
-
+//  alert(track_section);
     if (track_type == 'scale_bar') {
       this.standard_track  = false;
     }
@@ -36,11 +36,17 @@ var GBrowseTrack = Class.create({
   set_last_update_key:
   function (time_key) {
     this.last_update_key = time_key;
+   
   },
 
   get_last_update_key:
   function () {
     return this.last_update_key;
+  },
+
+  get_image_div:
+  function () {
+    return $(this.track_id+'_inner_div');
   },
 
   is_standard_track:

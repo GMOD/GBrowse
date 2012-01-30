@@ -10,7 +10,9 @@ The 2.X versions are now considered stable. You may download it from
 CPAN at http://search.cpan.org/~lds/GBrowse/ or get the developer's
 version via SVN:
 
-svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/trunk Generic-Genome-Browser
+Checkout read-only
+git clone git://github.com/GMOD/GBrowse.git
+
 
 The older 1.X version is still available for download here:
 
@@ -19,7 +21,6 @@ http://sourceforge.net/projects/gmod/files/Generic%20Genome%20Browser/GBrowse-1.
 or via SVN here:
 
 svn co https://gmod.svn.sourceforge.net/svnroot/gmod/Generic-Genome-Browser/branches/stable Generic-Genome-Browser
-
 
 **************************
 
@@ -60,6 +61,19 @@ that. What follows here is a brief synopsis.
     prerequisites. All of these are available on CPAN (www.cpan.org),
     or by using the CPAN shell ("perl -MCPAN -e shell").
 
+- If you wish to take advantage of user accounts (which lets users share
+  tracks with each other), you must have:
+
+    Module                  Version
+    ---------------------+----------
+    DBI                     any
+    Net::SMTP               any
+
+  -and either-
+    DBD::mysql              any
+  -or-
+    DBD::SQLite             any
+
 - You should install BioPerl from CPAN (currently version 1.6.9) or, to
   take advantage of additional features and performance boosts, get a
   snapshot of the current developer version:
@@ -76,9 +90,11 @@ that. What follows here is a brief synopsis.
 
      perl -I /home/fred/build/bioperl-live Build.PL
 
-   To install in a custom location, pass the --install_base argument:
+   To install in a custom location, pass the --install_base (preferred) or
+   --prefix argument (deprecated):
 
-     perl Build.PL --install_base=/home/fred/software
+     perl Build.PL --install_base=/home/fred/gbrowse
+     perl Build.PL --prefix=/home/fred/gbrowse
 
 3) Run the command:
 
@@ -164,6 +180,9 @@ Ian Davies <i.davies2@rogers.com>
 Lincoln Stein <lincoln.stein@gmail.com>
 Peter Ruzanov <peter.ruzanov@oicr.on.ca>
 Chris Vandevelde <Christopher.Vandevelde@oicr.on.ca>
+Tony deCatanzaro <tonydecat@gmail.com>
+Sukhwinder Lall <sukhwinder.lall@oicr.on.ca>
+Ahmed Einalem <aelnaiem@gmail.com>
 
 Special thanks go to the authors of the translations, who include:
 

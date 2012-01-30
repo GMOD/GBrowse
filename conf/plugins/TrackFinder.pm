@@ -45,20 +45,20 @@ sub configure_form {
   my $html = '';
 
   $html .= div({-class=>'searchbody'}, 
-	   	   b('Search: ').textfield(-id         => 'plugin_TrackFinderKeywords',
-					   -name       => $self->config_name('keywords'),
- 					   -onKeyPress => "if (typeof(timeOutID) != 'undefined') clearTimeout(timeOutID);timeOutID= setTimeout('doPluginUpdate()',1000)",
-					   -override   => 1,
-					   -value      => $current_config->{keywords},
-					   -onChange   => 'doPluginUpdate()',
-      		),
-      	 input({-type => 'checkbox',
-      	        -id => 'stickySearch',
-      	        -value => 'Stick to top when scrolled'
-      	       }
-      	 ),
-      	 label({-for => 'stickySearch'}, 'Stick to top when scrolled')
-	);
+	       b('Search: ').textfield(-id         => 'plugin_TrackFinderKeywords',
+				       -name       => $self->config_name('keywords'),
+				       -onKeyDown => "Controller.busy();if (typeof(timeOutID) != 'undefined') clearTimeout(timeOutID);timeOutID= setTimeout('Controller.idle();doPluginUpdate()',500)",
+				       -override   => 1,
+				       -value      => $current_config->{keywords},
+				       -onBlur     => 'clearTimeout(timeOutID)',
+	       ),
+	       input({-type => 'checkbox',
+		      -id => 'stickySearch',
+		      -value => 'Stick to top when scrolled'
+		     }
+	       ),
+	       label({-for => 'stickySearch'}, 'Stick to top when scrolled')
+      );
   $html .= button(-value   => 'Clear',
 		  -onClick => "\$('plugin_TrackFinderKeywords').clear();doPluginUpdate()",
       );
@@ -79,7 +79,8 @@ sub filter_tracks {
   for my $l (@$track_labels) {
       do {push @result,$l; next LABEL} if $l =~ /^(plugin|file|http|das)/;
 
-      my $aggregate_text = join ' ',map {$source->code_setting($l=>$_)} qw(key citation keywords select);
+      my $aggregate_text = join ' ',map {$source->code_setting($l=>$_)} qw(key keywords select);
+      $aggregate_text   ||= $l;
       my $labels         = $source->subtrack_scan_list($l);
       $aggregate_text   .= " @$labels" if $labels && @$labels;
 

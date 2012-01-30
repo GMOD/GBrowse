@@ -38,7 +38,7 @@ BEGIN {
 	       );
 }
 
-$VERSION = '0.20';
+$VERSION = '0.30';
 
 @ISA = qw(Bio::Graphics::Browser2::Plugin);
 
@@ -60,9 +60,6 @@ sub dump {
       print end_html if $mime_type =~ /html/;
       exit 0;
     }
-
-    my $render = $self->renderer;
-    my $f      = $render->external_data;
 
     my $config  = $self->configuration;
     my $dna = lc $segment->dna;
@@ -222,7 +219,7 @@ sub configure_form {
 				     ))));
     }
     autoEscape(1);
-    my $html= table(@choices);
+    my $html= table({-width=>'100%'},@choices);
     $html;
 }
 
@@ -256,6 +253,7 @@ sub make_markup {
       my $start = $p->start - $segment_start;
       my $end   = $start + $p->length;
 
+      $start++ if $p->strand < 0;
       ($start,$end) = map {$segment_length-$_} ($end,$start) if $flip;
 
       warn("$p ". $p->location->to_FTstring() . " type is ".$p->primary_tag) if DEBUG;

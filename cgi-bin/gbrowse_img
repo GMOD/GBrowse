@@ -26,6 +26,18 @@ use Digest::MD5 'md5_hex';
 umask 022;
 
 my $fcgi = Bio::Graphics::Browser2::Render->fcgi_request;
+my $modperl = $ENV{MOD_PERL};
+my $init;
+
+if ($modperl && !$init++) {
+    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+	my $sig  = shift;
+	my $time = localtime;
+	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+	CORE::exit 0
+    };
+}
+
 if ($fcgi) {
 
     my $FCGI_DONE = 0;
@@ -43,8 +55,9 @@ if ($fcgi) {
         %ENV = ( %sys_env, %ENV );
 	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
-	GBrowse_img->new($globals)->run();
-	$fcgi->Finish();
+	my $gbi = GBrowse_img->new($globals);
+	$gbi->run();
+	$gbi->destroy;
     }
 }
 
@@ -63,6 +76,7 @@ use CGI qw(param start_html end_html
 	   p h1 path_info escape img);
 
 use File::Temp 'tmpnam','tempfile','tempdir';
+use Bio::Graphics::Browser2::Shellwords;
 
 use Bio::Graphics::Browser2::Render::ConsolidatedImage;
 
@@ -73,6 +87,7 @@ use constant DEBUG => 0;
 sub run {
     my $self   = shift;
     my $render = $self->render;
+    $render->set_details_multiplier(1);
 
     unless (param()) {
 	print $self->header();
@@ -83,8 +98,19 @@ sub run {
     $render->set_source() && exit;  # may cause a redirect and exit 
     $render->init();
 
+    if ($render->data_source->must_authenticate
+	&& !$self->session->private) {
+	my $base = $render->globals->gbrowse_url;
+	print $self->header();
+	print CGI->h1('Authentication required. Please log into',CGI->a({-href=>$base},'GBrowse'),'from this computer.');
+	return;
+    }
+
     $render->add_user_tracks($render->data_source);
     $render->update_state();
+
+    # notice that there is no explicit flush() of the session/state, and therefore the
+    # changes to the session are not stored.
 
     warn join ' ',$render->potential_tracks if DEBUG;
 
@@ -109,13 +135,14 @@ sub render_image {
     my $render   = $self->render;
     my $renderer = $render->get_panel_renderer;
 
-    my $format   = param('format') || 'GD';
-    my $flip     = param('flip')   || 0;
-    my $embed    = param('embed');
-    my @track_types =
-        map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
-        map { split /[+-]/ }
-        ( param('type') );
+    my $format      = param('format') || 'GD';
+    my $flip        = param('flip')   || 0;
+    my $embed       = param('embed');
+    my @track_types = map shellwords(param($_)), qw/ t type track /;
+
+    if (my @regions = param('h_region')) {
+	$render->state->{h_region} = \@regions;
+    }
 
     my $convert_to_pdf;
     if ($format eq 'PDF' && `which inkscape`) {
@@ -125,6 +152,8 @@ sub render_image {
 
     $format = 'GD::SVG' if $format eq 'SVG';
     $format      = 'GD' if $embed;
+
+    $render->state->{details_mult} = 1;
 
     my ($img_data,$map) = $render->region->feature_count > 1 
                                  ? $self->render_multiple($renderer,$format,$flip,$embed)
@@ -172,12 +201,12 @@ sub render_image {
 	close $fh;
 	unlink $in,$out;
     }
-    elsif ($format eq 'GD::SVG') {
-	print $self->header(-type => 'image/svg+xml',
+    elsif ($format eq 'GD:SVG') {
+	print $self->header(-type => 'application/svg+xml',
 			    -content_disposition => "filename=$fname.svg");
 	print $img_data;
-    } 
-    else { 
+    }
+    else {
 	print $self->header('text/plain');
 	print "unknown format $format\n";
     }
@@ -240,13 +269,13 @@ sub usage {
 
 <pre>
 
-  &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
+  &lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
 <blockquote>
   <i>Will generate this picture:</i>
- <img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;width=400">
+ <img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;width=400">
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/db/gb2/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Sources
@@ -268,7 +297,7 @@ sub usage {
   yeast
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Feature types for source c_elegans
@@ -296,7 +325,7 @@ can be used as the destination of an &lt;img&gt; tag like this:
 </p>
 
 <blockquote><pre>
-&lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=III:1..1000"&gt;
+&lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=III:1..1000"&gt;
 </pre></blockquote>
 
 <p>
@@ -359,12 +388,12 @@ lengths.
       image showing the position of each landmark.  The alias "q" can be used to
       shorten the length of the URL.
       <p>
-  <dt><b>type</b> (Alias: <b>t</b>)
+  <dt><b>type</b> (Aliases: <b>t</b>, <b>track</b>)
   <dd>This argument lists the feature types to display.  The value of this argument is
       a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
       <p>
       <pre>
-      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;
+      &lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;
                    type=tRNA+NG+WABA+CG+ESTB"&gt;
       </pre>
       Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
@@ -424,7 +453,7 @@ lengths.
   <dt><b>style</b>
   <dd>The style argument can be used to control the rendering of additional features added
       with "add".  It is a flattened version of the style configuration sections described
-      in <a href="http://www.wormbase.org/db/seq/gbrowse?help=annotation">this document</a>
+      in <a href="http://www.wormbase.org/db/gb2/gbrowse?help=annotation">this document</a>
       For example, if you have added a "Blast Hit" annotation, then you can tell the
       renderer to use a red arrow for this glyph in this way:
       style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
@@ -497,7 +526,7 @@ lengths.
 </dl>
 <p>
 Putting it all together, here's a working (very long) URL:
-<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
+<pre><a href="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
 <p>

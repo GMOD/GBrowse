@@ -1,3 +1,255 @@
+2.45
+  * Restore h_feat & h_region functionality to gbrowse_img.
+  * Fix gbrowse_img documentation to point to correct example URLs on WormBase.
+  * Fix persistent grey screen when clicking on snapshot thumbnail.
+  * Fix URL-escaped characters appearing in snapshot name.
+
+2.44
+  * Modest performance improvements when rendering multiple tracks.
+  * Set absolute cap of 5000 features per track to avoid performance issues on NGS data.
+    This cap can be changed by setting "maximum features" in the [GENERAL] section. Set
+    to 0 to return to unlimited behavior.
+  * Imagemap is now generated in such a way that time-consuming callbacks are only executed when
+    mouse hovers or clicks on the feature. This noticeably speeds up track generation time. Drawback
+    is that this increases the delay before balloon pops up on the hover operation when run in
+    cgi-bin mode (still fast in FastCGI mode). Restore original behavior by setting 
+    "inline imagemaps" (or "inline imagemap") to true in [TRACK DEFAULTS] 
+    or individual track definitions.
+  * Can now close tracks from main view even when corresponding track checkbox not showing
+    in the track listing.
+  * Default to flock locking instead of NFS locking; the former seems to be faster.
+  * Enable shared session locking to improve performance.
+  * Fix bad database pathnames in yeast configuration file examples.
+  * Fix track finder plugin to avoid annoying extra refresh after leaving text entry field.
+  * Fix broken sorting of subtracks.
+  * Improve dynamic range of wiggle tracks.
+  * mod_perl is no longer supported due to unfixable issues with zombie processes.
+
+2.43
+  * Fix semantic zooming bug which caused features to disappear when feature type changed between
+     semantic zooming levels. Also speeded up rendering process.
+
+2.42
+   * Improve user interface when a new openid user first logs in.
+   * Fix outgoing mail, which was broken.
+
+2.41
+   * Quash bugs related to miscalculating semantic zooming settings.
+   * Fix inability to close tracks in the overview by clicking on their close box.
+
+2.40
+   * Quash a few uninitialized variable warnings when bringing up track configuration dialog.
+   * Fix inability to toggle visibility & favorite status of plugin tracks from the
+     track titlebar.
+   * Added caching of inverted configuration file data structure to speed up track
+     rendering on really huge configuration files with many stanzas. Cache structure
+     is stored in /tmp/bio_graphics_ff_cache_$UID
+   * Add ability to save and restore named snapshots of current state.
+   * Changed behavior of render slave to a prefork model. Activate by including
+      PREFORK=5 (or other desired number of servers) in /etc/default/gbrowse-slave.
+   * Added support script for Amazon cloud image: gbrowse_attach_slaves.pl creates
+     slave instances for AMI ami-c6ca31af.
+   * Change default tmpfile location to /var/tmp/gbrowse2 (was /tmp/gbrowse2).
+
+2.39
+   * Download SVG images as type application/svg+xml rather than triggering
+     inline display behavior.
+   * Update prerequisites to Text::ParseWords 3.27 in order to fix problem with
+     subtrack configuration parsing.
+   * Fix bug which prevented add tracks from working properly under IE8.
+   * Fix bug which prevented "download all data from this track" from working for BAM/SAM
+     tracks.
+   * Fix bug in English translation that was causing other languages to take precedence
+     even when browser was configured to accept them with lower precedence.
+
+2.38
+   * Fix more semantic zooming bugs, particularly when zooming out from a BAM track.
+   * Fix blank tracks when viewing a datasource composed of only a single BAM database.
+   * Fix "can't take log of negative number" bug when zoomed way in.
+
+2.37
+   * Preparations for faceted track searching
+     * deprecate "subtrack select" and "subtrack table" options in favor of "subtrack facets",
+       which introspects values from database (will require updates to Bio::DB::SeqFeature and friends)
+     * add "facet labels" and "facet values" options
+     * allow options to be tagged with "ex:option_name" to identify facets
+   * Fix subtracks to prevent features from appearing in the subtrack manager that won't be
+     displayed in the track panel because the feature type doesn't match the configured "feature"
+     option.
+   * Add option "track listing style" to select style of the track listing. Options are "categories" (default)
+     and "facets". Currently only "categories" works.
+
+2.36
+   * Make semantic zooming work again when database option changed.
+
+2.35
+   * Fix internal server error caused by certain semantic zooming declarations.
+   * Preparations for faceted track searching
+     * deprecate "subtrack select" and "subtrack table" options in favor of "subtrack facets",
+       which introspects values from database (will require updates to Bio::DB::SeqFeature and friends)
+     * add "facet labels" and "facet values" options
+     * allow options to be tagged with "ex:option_name" to identify facets
+   * Fix subtracks to prevent features from appearing in the subtrack manager that won't be
+     displayed in the track panel because the feature type doesn't match the configured "feature"
+     option.
+   * Add option "track listing style" to select style of the track listing. Options are "categories" (default)
+     and "facets". Currently only "categories" works.
+
+2.34
+   * Fix broken https:// links in karyotype summary table; patch courtesy Dan Bolser
+   * Fix behavior of "q" parameter to match the documented behavior.
+   * Fix RemoteSet to avoid failures due to nonexistence of download directory.
+   * Fix bug that allowed unauthorized users to view restricted tracks under
+     following circumstances: FastCGI activated, track configuration changed, server
+     not restarted.
+   * Added an LDAP authentication plugin (LDAPAuthenticate).
+   * Clean up appearance of favorite stars and checkboxes to deconfuse users.
+
+2.33
+   * Fixed plugin authentication system to prevent an all-dark screen during authentication
+     dialog on Firefox and Opera platforms.
+   * Fixed fasta and genbank track dumping so that "download all data" option works properly
+     rather than returning an empty file.  
+   * Fixed sigPIPE warnings appearing in error log after an openid authentication.
+   * Removed some stray debugging messages.
+
+2.32
+   * Fixed help menu so that "About GBrowse" works correctly again.
+   * Worked around issue of disappearing balloons under IE8.
+   * Fixed issue of malpositioned balloons under IE8.
+   * Fixed off-by-one error in decorated FASTA dumper when displaying borders
+     of minus strand features.
+
+2.31
+   * Fixed "testdata/conf/languages/POSIX.pm: Permission denied" error when running Build test.
+   * Removed outdated instructions to install bioperl 1.6.9 from source.
+
+2.30
+   * Improved behavior of track dumper so that when the user aborts the download the server
+     exits gracefully.
+
+2.29
+   * Updated mod_fcgid "FcgidInitialEnv" directive to current recommended name.
+   * You can now narrow the search to features with a desired primary tag using the syntax
+     "desired_tag:feature_name"
+   * You can exclude a list of primary tags from search results in the database definition stanza
+      using the syntax:
+         [foo:database]
+	 exclude types = type1 type2 type3
+   * The appearance of the track selection table has been updated to be less "busy".
+   * Uploaded track names assigned automatically (e.g. "upload_6842") can now be edited by
+     shift-clicking on the track name.
+   * You can now select the format for track data generated by clicking on the "disk" icon in
+     the track title bar.
+   * Fixed unwanted behavior in which searches that returned multiple features would open up all 
+     tracks corresponding to those features even if user did not select them.
+   * Fixed "permission denied" error opening cgisess.db when installing on a fresh system.
+
+2.28
+   * Added compile-time warnings about the bioperl version.
+
+2.27
+   * THIS VERSION REQUIRES BIOPERL 1.0069 IN ORDER FOR SOME FEATURES TO WORK PROPERLY. 
+   * Fixed account registration confirm code URL so that it doesn't get mangled by GBrowse redirection.
+   * Fixed the "restrict" argument so that you can restrict access to a track even if the datasource
+     as a whole does not require authentication.
+   * Changed default location of uploaded userdata to /var/lib/gbrowse2/userdata. This
+     avoids destruction of userdata on systems that clear /tmp on reboots. You may wish to copy existing
+     userdata to this location, or use symbolic links.
+   * The apache configuration file, /etc/apache2/conf.d/gbrowse2.conf, now contains a stanza that
+     makes the databases directory inaccessible to the web server unless explicitly enabled.
+   * All newly-added tracks now appear at top of panel rather than at bottom, as per user request.
+   * "remote renderer" option can now appear in GBrowse.conf as a global default 
+   * Fixed handling of uploaded .gz files under FastCGI so that they don't result in a server error message.
+   * Changed handling of uploaded wiggle files so that autoscaling is set to per-chromosome by default.
+   * Added the ability to designate certain tracks as "favorites."
+
+2.26
+   * Fixed account registration confirmation screen, which was blacked out on all
+     platforms.
+   * Fixed account registration error messages to be more informative.
+   * Removed Ace as a recommended library. Was only used for process_wormbase.pl,
+   which is no longer relevant anyway.
+   * Fixed problem calculating maximum length of displayed segment when details_multiplier>1.
+
+2.25
+   * Fixed broken image generation.
+   * Made it easier to install GBrowse as an unprivileged user.
+   * Allow searching for features with pipe symbols in their names.
+   * Allow searching for features defined in uploaded tracks.
+
+2.24
+   * Fixed gbrowse_metadb_config.pl script so that it no longer fails when creating a user database
+     from scratch.
+
+2.23
+   * Added an "example_scripts" directory that contains a perl scripts that show how to manipulate
+     sessions, upload custom tracks, and get basic information about services. This directory accompanies
+     new REST API documentation located at http://gmod.oicr.on.ca/wiki/GBrowse2_REST_API.
+   * Fixed missing "registration" link in login dialog. This occurred when openid was unavailable.
+   * Fixed popup dialogs in the "Help" menu so that they appear again.
+   * Fixed file upload status display to prevent upload details section from disappearing when
+     uploading very small files.
+   * Tinkered with session settings to minimize session lock timeouts.
+   * Removed some dangling warnings in the track sharing module.
+   * Made SQLite the default user account database.
+   * Fixed default SQLite user account database to be created in /var/www/gbrowse2/databases rather
+     than in / (root) directory.
+
+2.22
+   * Fixed gbrowse_img to reactivate documented ability to list multiple tracks with t=track1+track2+track3
+   * Fixed startup to avoid Javascript crashing on autocomplete initiation when user accounts turned off. This
+     had caused the "eurl" param (used to import external data tracks via URL) to fail.
+
+2.21
+   * Fix all references to File::Path 'remove_tree" to "rm_tree" in order to work
+   with older versions of File::Path.
+   * Fixed display bug in Safari (popup balloons not working after zooming into a track).
+   * Fixed Internet Explorer crash when uploading new files.
+   * Fixed 'eurl=url' remote feature addition.
+   * Added basic ipad functionality.
+   * Newly-added uploaded tracks appear on the top now.
+
+2.20
+    * User uploads can be run in the usual file-based mode or with a new database-driven system that
+      supports sharing files between users based on public, group, casual (with a sharing link)
+      and private permissions.
+    * Added the ability to load wider details images. Detail tracks can then be dragged left and right
+      without having to load more data from the server. To enable, add a property to the conf file
+      called "details multiplier" and give it a value greater than 1 (3 is recommended).
+    * Overview and scale tracks now show markers for both the currently viewed segment and the entire segment
+      that is loaded.  The loaded segment colours can be set with the settings "loaded_segment_fill" and 
+      "loaded_segment_outline"
+    * Currently viewed position markers are now drawn with javascript with opacity set to 0.5 (this was 
+      necessary so that position markers can move as the user drags tracks). Therefore the markers will 
+      show up as a lighter colour than before, so settings 'hilite fill' and 'hilite outline' may need to
+      be updated
+    * Internationalization has been updated so that almost all strings in GBrowse can now be translated,
+      including strings in javascript.
+    * Subtrack labels now float on top of the underlying image data so that they show even when
+      scrolling around.
+    * Added a ruler option, which shows a draggable vertical ruler floating over the details tracks which helps 
+      users to line things up.
+    * Track configuration dialog handles the vista plot in addition to regular and quantitative
+      tracks.
+    * Added a simple authentication plugin framework that allows you to authenticate against external
+      authentication systems.
+    * Added the PamAuthenticator plugin, which will authenticate against any Pluggable Authentication
+      Module compatible data source (e.g. Unix, NIS, LDAP, Kerberbos, AD).
+    * The ability to register new accounts can be disabled by setting "user accounts registration=0"
+      in GBrowse.conf.
+    * Support for Open ID can be disabled by setting "user accounts openid=0"
+      in GBrowse.conf.
+    * Fixed bug that caused regions with identical start and end coordinates but different chromosomes to be
+      inappropriately cached to the same location.
+    * Fixed bug in which tracks with a "remote feature" did not display correctly the very first time they
+      are added to the session.
+
+2.17
+     * Track configuration dialog now allows for control of autoscaling behavior in quantitative
+       glyphs.
+     * Support for vista_plot glyph added to config dialog.
+     * Fixed behavior of GBox balloons so that the scroll bar doesn't overrun the contents.
 2.16
      * Added code to recognize and strip whitespace from search coordinates. This 
        allows "chr1:2,000 .. 1,180,000" to work as a search term.
@@ -20,6 +272,10 @@
      * uploaded files won't use the summary mode unless the number of lines loaded exceeds 10,000
      * Modified plugin base class to make it possible to get at the underlying renderer object
        by calling renderer() method.
+     * Fixed regression in which database option wasn't propagating from base track to semantic 
+       zoom tracks.
+     * Fixed SequenceDumper behavior on GFF dumping.
+     * Removed brackets from list of naughty search characters to fix bug 3030462
 
 2.15 Mon Sep 13 11:22:40 EDT 2010
      * Set the "DNA accessor" for databases to the default database. Assuming that the backend supports

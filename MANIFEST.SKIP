@@ -76,3 +76,8 @@ BUGS_TO_FIX
 slave\.pid
 ^MYMETA.yml$
 ^[^/]+\.(js|css|html|txt)
+^genes[^/]+\.gff3
+^gbrowse_users.*
+.*\.new
+^META\.
+^nytprof

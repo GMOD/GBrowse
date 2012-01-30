@@ -326,6 +326,8 @@ object that drives gbrowse.  This object allows you to interrogate
 (and change!)  the values set in the current gbrowse configuration
 file.
 
+=item $value = $self->setting('setting name')
+
 The recommended use for this object is to recover plugin-specific
 settings from the gbrowse configuration file.  These can be defined by
 the gbrowse administrator by placing the following type of stanza into
@@ -342,13 +344,17 @@ configuration section.
 You can now access these settings from within the plugin by using the
 following idiom:
 
-   my $browser_config = $self->browser_config; 
-   my $traverse_isa   = $browser_config->plugin_setting('traverse_isa');
-   my $server         = $browser_config->plugin_setting('use_server');
+   my $traverse_isa   = $self->setting('traverse_isa');
+   my $server         = $self->setting('use_server');
 
 This facility is intended to be used for any settings that should not
 be changed by the end user.  Persistent user preferences should be
 stored in the hash returned by configuration().
+
+If your plugin inherits from another one, then the inheritance path will
+be searched for settings. For example, if the GOSearch plugin inherits
+from the OntologySearch plugin, then setting() will search first for a stanza named
+"GOSearch:plugin" and then for "OntologySearch:plugin".
 
 =item $search = $self->db_search
 
@@ -748,7 +754,7 @@ use CGI qw(url header p);
 $Data::Dumper::Sortkeys = 1;
 
 use vars '$VERSION','@ISA','@EXPORT';
-$VERSION = '0.20';
+$VERSION = '0.30';
 
 # currently doesn't inherit
 @ISA = ();
@@ -793,9 +799,8 @@ sub suppress_title {
 
 sub description {
   my $self = shift;
-  return p("This is the base class for all GBrowse plugins.",
-	   "The fact that you're seeing this means that the author of",
-	   "this plugin hasn't yet entered a real description");
+  my $language = $self->language;
+  return p($self->language->tr('PLUGIN_BASE_CLASS_DESC'));
 }
 
 sub type {
@@ -835,6 +840,16 @@ sub configure_form {
 sub reconfigure {
   my $self = shift;
   # do nothing
+}
+
+sub authenticate {
+    my $self = shift;
+    # do nothing
+}
+
+sub authentication_hint {
+    my $self = shift;
+    # return nothing
 }
 
 # get/store database
@@ -906,10 +921,9 @@ sub db_search {
 sub dump {
   my $self    = shift;
   my $segment = shift;
+  my $language = $self->language;
   print header('text/plain');
-  print "This is the base class for all GBrowse plugins.\n",
-    "The fact that you're seeing this means that the author of ",
-      "this plugin hasn't yet implemented a real dump() method.\n";
+  print $self->language->tr('PLUGIN_BASE_CLASS_DUMP');
 }
 
 sub find {
@@ -989,6 +1003,35 @@ sub new_feature_list {
 # off by default
 sub hide {}
 
+# front end to $self->browser_config->plugin_setting
+sub setting {
+    my $self = shift;
+    my $setting_name = shift;
+
+    eval "use Class::ISA";
+    
+    my $config  = $self->browser_config;
+    my $globals = $config->globals;
+
+    my @classes = Class::ISA->can('self_and_super_path') 
+	        ? Class::ISA::self_and_super_path(ref $self)
+		: ref $self;
+    for (@classes) {
+	my ($last_name)   = /(\w+)$/;
+	my $option_name   = "${last_name}:plugin";
+	if ($setting_name) {
+	    my $result = $config->setting($option_name => $setting_name) 
+		     || $globals->setting($option_name=>$setting_name);
+	    return $result if defined $result;
+	} else {
+	    my @options = $config->label_options($option_name);
+	    @options    = $globals->label_options($option_name) unless @options;
+	    return @options if @options;
+	}
+    }
+    return;
+}
+
 sub config_hash {
   return md5_hex( Dumper( shift->configuration ) );
 }
@@ -1004,6 +1047,7 @@ sub stylesheets {
   my $self = shift;
   return;
 }
+
 
 # A list of all Javascript commands to be run once the page or tab is loaded (in either the body's onLoad section, or the callback event from the tab's rendering animation).
 # Should return a hash, key is the section which contains the elements plus "_select", value is the function (e.g. "track_page_select", "some.function();").

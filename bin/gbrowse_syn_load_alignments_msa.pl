@@ -14,13 +14,15 @@ gbrowse_syn_load_alignments_msa.pl -a DBI::mysql -u user -p pass -d rice_synteny
 
 =item -a DBI::mysql
 
-Adaptor backend.
+Adaptor backend to use for loading.
 
 =item -u username
 
 =item -p password
 
 =item -d dbi_dsn
+
+The DBI DSN to use for connecting to the database.
 
 =item -c
 

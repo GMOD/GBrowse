@@ -12,31 +12,31 @@ var scrollfix = {
 
 	// setup - initialises the window.onscroll handler
 	setup: function() {
-    // Calculate & set the dimensions.
-    scrollfix.setDims();
+        // Calculate & set the dimensions.
+        scrollfix.setDims();
 
-    // If an internal link was called externally (not through an anchor but an address like x.html#y), the link position will be behind the scrollfix element so the page needs to be scrolled down accordingly.
-    var anchor = scrollfix.internalCheck(window.location);
-    if (anchor) {
-	    var allLinks = $$('a');
-	    allLinks.each(function(link) {
-		    if (link.readAttribute('name') == anchor) {
-			    window.scrollBy(0, (link.offsetTop + scrollfix.size['height']));
-		    }
-	    });
-    }
-    
-    $('stickySearch').checked = true;
-    
-    // Fix all the links (see scrollfix.rewriteLinks() for details).
-    scrollfix.rewriteLinks();
-    
-    //Attach the events for the window scrolling or resizing.
-    Event.observe(window, 'scroll', scrollfix.checkState);
-	  Event.observe(window, 'resize', scrollfix.setDims);
-    	  
-	  //Remove the scroller when the checkbox is unchecked.
-	  Event.observe($('stickySearch'), 'click', scrollfix.checkState);
+        // If an internal link was called externally (not through an anchor but an address like x.html#y), the link position will be behind the scrollfix element so the page needs to be scrolled down accordingly.
+        var anchor = scrollfix.internalCheck(window.location);
+        if (anchor) {
+            var allLinks = $$('a');
+            allLinks.each(function(link) {
+                if (link.readAttribute('name') == anchor) {
+	                window.scrollBy(0, (link.offsetTop + scrollfix.size['height']));
+                }
+            });
+        }
+
+        $('stickySearch').checked = true;
+
+        // Fix all the links (see scrollfix.rewriteLinks() for details).
+        scrollfix.rewriteLinks();
+
+        //Attach the events for the window scrolling or resizing.
+        Event.observe(window, 'scroll', scrollfix.checkState);
+        Event.observe(window, 'resize', scrollfix.setDims);
+          
+        //Remove the scroller when the checkbox is unchecked.
+        Event.observe($('stickySearch'), 'click', scrollfix.checkState);
 	},
 
 	// setDims - initializes the dimensions of the scrollfix element.
@@ -62,9 +62,9 @@ var scrollfix = {
     
 		// Add the invisible placeholder div, and hide it
 		if ($('placeholder') == null) {
-  		$(scrollfix.element_id).parentNode.insertBefore( new Element('div', {'id': 'placeholder'}), $(scrollfix.element_id) );  //Prototype's insert function is buggy in IE7.
-	  	$('placeholder').setStyle("margin-left: " + $(scrollfix.element_id).getStyle('margin-left'));	//This is the "internal margin", not the total offset, hence the getStyle.
-	  }
+      		$(scrollfix.element_id).parentNode.insertBefore( new Element('div', {'id': 'placeholder'}), $(scrollfix.element_id) );  //Prototype's insert function is buggy in IE7.
+	      	$('placeholder').setStyle("margin-left: " + $(scrollfix.element_id).getStyle('margin-left'));	//This is the "internal margin", not the total offset, hence the getStyle.
+	    }
 	  
 		$('placeholder').hide();
 		scrollfix.checkState();
@@ -89,10 +89,10 @@ var scrollfix = {
 	
   // scroll - Changes the scrollfix element to normal behaviour, scrolling with the page.	
 	scroll: function() {
-	  $(scrollfix.element_id).setStyle("position: static;");
-	  scrollfix.state = 'static';
-	  if ($('placeholder') != null)
-	    $('placeholder').hide();
+        $(scrollfix.element_id).setStyle("position: static;");
+        scrollfix.state = 'static';
+        if ($('placeholder') != null)
+            $('placeholder').hide();
 	},
 	
 	// stick - Changes the scrollfix element to fixed behavior, sticking to the top of the page.

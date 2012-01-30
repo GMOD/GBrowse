@@ -61,10 +61,10 @@ sub tr_table {
   my $self = shift;
   my @languages = @_;
   my $table;
-  for my $lang (@languages) {
-    $self->{tr}{$lang} = $self->read_table($lang)
-      unless exists $self->{tr}{$lang};
-    return $self->{tr}{$lang} if $self->{tr}{$lang};
+   for my $lang (@languages) {
+      $self->{tr}{$lang} = $self->read_table($lang)
+	  unless exists $self->{tr}{$lang};
+       return $self->{tr}{$lang} if $self->{tr}{$lang};
   }
   return {};  # language could not be loaded
 }

@@ -2,10 +2,11 @@ package Bio::Graphics::Browser2::AuthorizedFeatureFile;
 
 use strict;
 use warnings;
+use Bio::Graphics 2.24;
 use base 'Bio::Graphics::FeatureFile';
 
 use Socket 'AF_INET','inet_aton';  # for inet_aton() call
-use Carp 'croak';
+use Carp 'croak','cluck';
 use CGI();
 
 =head1 NAME
@@ -40,18 +41,39 @@ sub label_options {
     return $self->SUPER::_setting($label);
 }
 
+# get or set the authenticator used to map usernames onto groups
+sub set_authenticator { 
+    my $self = shift;
+    $self->{'.authenticator'} = shift;
+}
+sub authenticator     { 
+    shift->{'.authenticator'};             
+}
+
+# get or set the username used in authentication processes
+sub set_username { 
+    my $self = shift;
+    my $username = shift;
+    $self->{'.authenticated_username'} = $username;
+}
+
+sub username     { 
+    my $self = shift;
+    return $self->{'.authenticated_username'} || CGI->remote_user;
+}
+
 # implement the "restrict" option
 sub authorized {
   my $self  = shift;
   my $label = shift;
-
+  
   my $restrict = $self->code_setting($label=>'restrict')
     || ($label ne 'general' && $self->code_setting('TRACK DEFAULTS' => 'restrict'));
-
   return 1 unless $restrict;
+
   my $host     = CGI->remote_host;
-  my $user     = CGI->remote_user;
   my $addr     = CGI->remote_addr;
+  my $user     = $self->username;
 
   undef $host if $host eq $addr;
   return $restrict->($host,$addr,$user) if ref $restrict eq 'CODE';
@@ -70,7 +92,7 @@ sub authorized {
       $mode = $value;
       next;
     }
-    my @values = split /[^\w.-]/,$value;
+    my @values = split /[^\w.@-]/,$value;
 
     if ($directive eq 'allow from') {
       push @allow,@values;
@@ -99,10 +121,18 @@ sub authorized {
       $user_directive++;
       $users{$user}++ if defined $user;
     }
-    if ($directive eq 'require group') {
-      croak "Sorry, but gbrowse does not support the require group limit.  Use a subroutine to implement role-based authentication.";
+    if ($directive eq 'require group' && defined $user) {
+	$user_directive++;
+	if (my $auth_plugin = $self->authenticator) {
+	    for my $grp (@values) {
+		$users{$user} ||= $auth_plugin->user_in_group($user,$grp);
+	    }
+	} else {
+	   warn "To use the 'require group' limit you must load an authentication plugin. Otherwise use a subroutine to implement role-based authentication.";
+	}
     }
   }
+
   my $allow = $mode eq  'allow,deny' ? match_host(\@allow,$host,$addr) && !match_host(\@deny,$host,$addr)
                       : 'deny,allow' ? !match_host(\@deny,$host,$addr) ||  match_host(\@allow,$host,$addr)
 		      : croak "$mode is not a valid authorization mode";

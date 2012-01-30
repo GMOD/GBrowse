@@ -4,7 +4,7 @@ use strict;
 
 =head1 NAME
 
-load_alignment_database.pl - a script to load the database for gbrowse_syn.
+gbrowse_syn_load_alignment_database.pl - a script to load the database for gbrowse_syn.
 
 =head1 DESCRIPTION
 

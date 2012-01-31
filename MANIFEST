@@ -548,6 +548,15 @@ lib/Bio/DB/GFF/Aggregator/reftranscript.pm
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
 lib/Bio/DB/SeqFeature/Store/BedLoader.pm
+lib/Bio/DB/Synteny/Block.pm
+lib/Bio/DB/Synteny/Store.pm
+lib/Bio/DB/Synteny/Store/DBI.pm
+lib/Bio/DB/Synteny/Store/DBI/mysql.pm
+lib/Bio/DB/Synteny/Store/DBI/Pg.pm
+lib/Bio/DB/Synteny/Store/DBI/SQLite.pm
+lib/Bio/DB/Synteny/Store/Loader.pm
+lib/Bio/DB/Synteny/Store/Loader/MSA.pm
+lib/Bio/DB/Synteny/Store/Loader/Tabular.pm
 lib/Bio/DB/Tagger.pm
 lib/Bio/DB/Tagger/mysql.pm
 lib/Bio/DB/Tagger/Tag.pm
@@ -583,6 +592,7 @@ lib/Bio/Graphics/Browser2/Region.pm
 lib/Bio/Graphics/Browser2/RegionSearch.pm
 lib/Bio/Graphics/Browser2/RemoteSet.pm
 lib/Bio/Graphics/Browser2/Render.pm
+lib/Bio/Graphics/Browser2/Render/ConsolidatedImage.pm
 lib/Bio/Graphics/Browser2/Render/HTML.pm
 lib/Bio/Graphics/Browser2/Render/HTML/TrackListing.pm
 lib/Bio/Graphics/Browser2/Render/HTML/TrackListing/Categories.pm
@@ -590,6 +600,7 @@ lib/Bio/Graphics/Browser2/Render/Login.pm
 lib/Bio/Graphics/Browser2/Render/Slave.pm
 lib/Bio/Graphics/Browser2/Render/Slave/Status.pm
 lib/Bio/Graphics/Browser2/Render/SnapshotManager.pm
+lib/Bio/Graphics/Browser2/Render/Synteny/HTML.pm
 lib/Bio/Graphics/Browser2/Render/TrackConfig.pm
 lib/Bio/Graphics/Browser2/RenderPanels.pm
 lib/Bio/Graphics/Browser2/SendMail.pm
@@ -645,6 +656,11 @@ t/05.deferredrendering.t
 t/06.featuresearch.t
 t/07.karyotype.t
 t/08.calign.t
+t/data/rice_subset.aln
+t/data/TOMvsPOT.subset.syntab
+t/synteny_store/compile.t
+t/synteny_store/load_msa.t
+t/synteny_store/load_tabular.t
 t/Test.pm
 t/testdata/conf/enzymes.txt
 t/testdata/conf/GBrowse.conf
@@ -665,3 +681,4 @@ t/testdata/phylo_align/volvox_phyloalign.gff
 t/testdata/TemplateCopy.pm
 META.yml
 META.json
+xt/09.gbsyn_mech.t

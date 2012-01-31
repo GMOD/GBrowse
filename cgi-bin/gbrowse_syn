@@ -22,7 +22,11 @@ if ($fcgi) {
 	$FCGI_DONE = 1;
     };
 
+    # override exit so Ye Olde Legacy Libraries don't break FCGI
+    local *CORE::exit = sub { next FCGI_MAIN_LOOP };
+
     my %sys_env = %ENV;
+  FCGI_MAIN_LOOP:
     while (!$FCGI_DONE) {
 	my $status = $fcgi->Accept;
 	next unless $status >= 0;

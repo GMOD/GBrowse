@@ -78,7 +78,7 @@ sub render_tracks {
 						      labels            => \@track_types,
 						      external_features => $external,
 						      section           => 'detail',
-						      cache_extra       => [$format,param('h_feat'),param('h_region')]],
+						      cache_extra       => [$format,param('h_feat'),param('h_region')],
 						      image_class       => $format,
 						      flip              => $flip,
                                                       hilite_callback   => $h_callback || undef,

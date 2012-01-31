@@ -148,7 +148,7 @@ sub print_top {
   my $b_tips        = $CONFIG->setting('balloon tips') || $drag_and_drop;
   my $js            = $CONFIG->relative_path_setting('js')||JS;
   my @js            = ('buttons.js','prototype.js');
-  push @js, qw(yahoo-dom-event.js balloon.config.js balloon.js)     if $b_tips;
+  push @js, qw( balloon.config.js balloon.js )  if $b_tips;
   push @js, qw(rubber.js overviewSelect.js detailSelect.js);
   #push @js, 'scriptaculous.js' if $drag_and_drop;
   #push @js, 'bookmark.js';

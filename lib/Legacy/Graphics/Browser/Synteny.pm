@@ -763,8 +763,9 @@ sub print_page_top {
   # push all needed javascript files onto top of page
   my $js            = $self->globals->js_url || '/gbrowse2/js';
   my @js;
-  push @js, qw(yahoo-dom-event.js balloon.config.js balloon.js);
-  push @js, qw(rubber.js overviewSelect.js detailSelect.js);
+  push @js, qw( prototype.js );
+  push @js, qw( balloon.config.js balloon.js );
+  push @js, qw( rubber.js overviewSelect.js detailSelect.js );
 
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args, (-script => \@scripts);
@@ -778,7 +779,7 @@ sub print_page_top {
  <script type="text/javascript">
    var Controller;
    Controller = new Object();
-   Controller.gbrowse_syn = true;    
+   Controller.gbrowse_syn = true;
    Controller.update_coordinates = function (segment) {
      document.mainform.name.value = segment;
      document.mainform.submit();

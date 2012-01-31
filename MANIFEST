@@ -616,8 +616,6 @@ lib/Bio/Graphics/Browser2/Util.pm
 lib/Bio/Graphics/GBrowseFeature.pm
 lib/Bio/Graphics/Karyotype.pm
 lib/CGI/Toggle.pm
-lib/Legacy/DB/SyntenyBlock.pm
-lib/Legacy/DB/SyntenyIO.pm
 lib/Legacy/Graphics/Browser.pm
 lib/Legacy/Graphics/Browser/I18n.pm
 lib/Legacy/Graphics/Browser/PageSettings.pm

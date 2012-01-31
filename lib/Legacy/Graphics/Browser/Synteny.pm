@@ -784,6 +784,24 @@ sub print_page_top {
      document.mainform.name.value = segment;
      document.mainform.submit();
    };
+
+   // huge hack to pretend we can translate things.
+   Controller.translate = function(trans) {
+     var known = ({
+         ZOOM:   'Zoom',
+         CANCEL: 'Cancel'
+     })[trans];
+
+     if( known )
+        return known;
+
+     // if we don't have a builtin translation, pretend that the
+     // translation key is what we want to print and munge its
+     // capitalization and change the spaces to underscores
+     trans = trans.toLowerCase().replace( /_/g, ' ');
+     return trans.charAt(0).toUpperCase() + trans.slice(1);
+
+   };
  </script>
 END
 ;

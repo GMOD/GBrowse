@@ -5,7 +5,6 @@ our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
 use strict;
 use Carp;
 use CGI qw/:standard Map Area delete_all/;
-use CGI::Toggle;
 use Digest::MD5 'md5_hex';
 use File::Glob ':glob';
 use List::Util qw/min max sum/;

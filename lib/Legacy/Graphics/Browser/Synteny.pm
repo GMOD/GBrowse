@@ -10,7 +10,6 @@ use Bio::Graphics::Browser2;
 use Legacy::Graphics::Browser;
 use Legacy::Graphics::Browser::Util;
 use CGI qw/:standard escape/;
-use CGI::Toggle;
 use GD;
 
 our @ISA = ('Legacy::Graphics::Browser');
@@ -89,15 +88,6 @@ sub show_examples {
   }
  
  return b( $self->tr('Examples') ) . ': ' . join( ', ', @urls ) . ". ";
-}
-
-sub toggle {
-  my $self = shift;
-  my ($state,$title,@contents) = @_;
-  toggle_section( {on=>$state},
-                        "${title}_panel",
-                        b($title),
-		  @contents);
 }
 
 sub source_menu {

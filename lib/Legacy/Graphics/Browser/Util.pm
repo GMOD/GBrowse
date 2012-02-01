@@ -6,7 +6,6 @@ use strict;
 use Legacy::Graphics::Browser;
 use Legacy::Graphics::Browser::I18n;
 use CGI qw(:standard);
-use CGI::Toggle;
 use Carp 'carp','cluck';
 use Text::ParseWords ();
 

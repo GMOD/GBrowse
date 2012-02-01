@@ -16,7 +16,6 @@ use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak cluck);
 use CGI qw(img param escape unescape url div span image_button);
-use CGI::Toggle 'toggle_section';
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use IO::File;

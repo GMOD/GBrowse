@@ -119,10 +119,13 @@ sub source_menu {
       . ( $sources ? $popup : $self->description( $self->source ) );
 }
 
+sub button_url {
+    shift->globals->button_url || BUTTONSDIR;
+}
 sub slidertable {
   my $self       = shift;
-  my $small_pan  = shift;    
-  my $buttons    = $self->globals->button_url || BUTTONSDIR;
+  my $small_pan  = shift;
+  my $buttons    = $self->button_url;
   my $segment    = $self->current_segment or fatal_error("No segment defined");
   my $span       = $small_pan ? int $segment->length/2 : $segment->length;
   my $half_title = $self->unit_label( int $span / 2 );

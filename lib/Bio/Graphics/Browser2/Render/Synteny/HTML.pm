@@ -1327,23 +1327,60 @@ sub overview {
   return div({-id => $wide ? 'referenceview' : 'overview',-class=>'track'},$overview);
 }
 
+
 sub toggle {
-  my $self  = shift;
-  my $title = shift;
-  my @body  = @_;
+  my $self = shift;
+  my ($section_head,@body) = @_;
+  my ($label) = $self->syn_conf->tr($section_head);
+  $label ||= $section_head;
+  return $self->toggle_section( { on => 1 }, lc $section_head, b($label), @body );
+}
 
-  my $id      = "\L${title}_panel\E";
-  my ($label) = $self->syn_conf->tr($title)              or return '';
-  my $state   = $self->syn_conf->section_setting($title) || 'open';
-  return '' if $state eq 'off';
-  my $settings = $self->syn_conf->page_settings;
-  my $visible = exists $settings->{section_visible}{$id} ? $settings->{section_visible}{$id} : $state eq 'open';
-  $settings->{section_visible}{$id} = $state eq 'open';
+# this hack adapted from nathan's hack in the primerdesigner plugin
+{
+no warnings 'redefine';
+    sub toggle_section {
 
-  return toggle_section({on=>$visible},
-			$id,
-			b($label),
-			@body);
+        my $self = shift;
+        my %config = ref $_[0] eq 'HASH' ? %{shift()} : ();
+        my ($name,$section_title,@section_body) = @_;
+
+        my $visible = $config{on};
+
+        my $buttons = $self->syn_conf->button_url;
+        my $plus  = "$buttons/plus.png";
+        my $minus = "$buttons/minus.png";
+        my $break = div({-id=>"${name}_break",
+                         -style=>$visible ? 'display:none' : 'display:block'
+                         },
+                        '&nbsp;');
+
+        my $show_ctl = div({-id      => "${name}_show",
+                        -class   => 'ctl_hidden',
+                        -style   => $visible ? 'display:none' : 'display:inline',
+                        -onClick => "this.style.display = 'none'; document.getElementById('${name}_hide').style.display = 'inline'; document.getElementById('${name}_content').style.display = 'block'",
+                        },
+                        img({-src=>$plus,-alt=>'+'}).'&nbsp;'.span({-class=>'tctl'},$section_title));
+
+        my $hide_ctl = div({-id      => "${name}_hide",
+                            -class   => 'ctl_visible',
+                            -style   => $visible ? 'display:inline' : 'display:none',
+                            -onClick => "this.style.display = 'none'; document.getElementById('${name}_show').style.display = 'inline'; document.getElementById('${name}_content').style.display = 'none'",
+                        },
+                           img({-src=>$minus,-alt=>'-'}).'&nbsp;'.span({-class=>'tctl',-id=>"${name}_title"},$section_title)
+                        );
+
+        my $content  = div({-id    => "${name}_content",
+                            -style => $visible ? 'display:block' : 'display:none',
+                            -class => 'el_visible'},
+                           @section_body);
+
+        my @result   =  $config{nodiv} ? (div({-style=>'float:left'}, $show_ctl.$hide_ctl),$content)                                    :
+                        $config{tight} ? (div({-style=>'float:left;position:absolute;z-index:10'},$show_ctl.$hide_ctl).$break,$content) :
+                                         div($show_ctl.$hide_ctl,$content);
+
+        return wantarray ? @result : "@result";
+    }
 }
 
 sub get_options {

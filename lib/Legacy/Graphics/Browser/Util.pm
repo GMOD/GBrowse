@@ -15,8 +15,8 @@ require Exporter;
 @ISA = 'Exporter';
 @EXPORT = qw( open_config open_database
 	     print_header print_top print_bottom html_frag
-	     error fatal_error redirect_legacy_url
-	     parse_feature_str modperl_request is_safari
+	     error fatal_error
+	     parse_feature_str is_safari
              shellwords
 	    );
 
@@ -29,7 +29,6 @@ sub modperl_request {
    $ENV{MOD_PERL_API_VERSION} >= 2 ) ? Apache2::RequestUtil->request
                                      : Apache->request;
 }
-
 
 sub open_config {
   my $dir    = shift;
@@ -423,35 +422,6 @@ END
   }
 }
 
-sub redirect_legacy_url {
-  my $source      = shift;
-  my @more_args   = @_;
-
-  if ($source && path_info() ne "/$source/") {
-
-    my $q = new CGI '';
-    if (request_method() eq 'GET') {
-      foreach (param()) {
-	next if $_ eq 'source';
-	$q->param($_=>param($_)) if defined param($_);
-      }
-    }
-
-    # This is infinitely more difficult due to horrible bug in Apache version 2
-    # It is fixed in CGI.pm versions 3.11 and higher, but this version is not guaranteed
-    # to be available.
-    my ($script_name,$path_info) = _broken_apache_hack();
-    my $query_string = $q->query_string;
-    my $protocol     = $q->protocol;
-
-    my $new_url      = $script_name;
-    $new_url        .= "/$source/";
-    $new_url        .= "?$query_string" if $query_string;
-
-    print redirect(-uri=>$new_url,-status=>"301 Moved Permanently");
-    exit 0;
-  }
-}
 
 sub parse_feature_str {
   my $f      = shift;

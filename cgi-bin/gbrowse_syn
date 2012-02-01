@@ -6,8 +6,6 @@ use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::Render;
 use Bio::Graphics::Browser2::Render::Synteny::HTML;
 
-use CGI::Carp qw(fatalsToBrowser);
-
 umask 022;
 
 my $fcgi   = Bio::Graphics::Browser2::Render->fcgi_request;
@@ -22,9 +20,6 @@ if ($fcgi) {
 	$FCGI_DONE = 1;
     };
 
-    # override exit so Ye Olde Legacy Libraries don't break FCGI
-    local *CORE::exit = sub { next FCGI_MAIN_LOOP };
-
     my %sys_env = %ENV;
   FCGI_MAIN_LOOP:
     while (!$FCGI_DONE) {
@@ -33,7 +28,15 @@ if ($fcgi) {
         %ENV = (%sys_env, %ENV);
 	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
-	Bio::Graphics::Browser2::Render::Synteny::HTML->new($globals)->run();
+        eval {
+            Bio::Graphics::Browser2::Render::Synteny::HTML->new($globals)->run();
+        }; if( $@ ) {
+
+            die $@ unless ref $@ eq 'ARRAY' && $@->[0] eq 'EXIT';
+
+            $@->[1] == 0
+                or warn "WARNING: gbrowse_syn tried to exit with code $@->[1]";
+        }
     }
 }
 else {

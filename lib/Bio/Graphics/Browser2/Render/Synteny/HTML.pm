@@ -322,7 +322,7 @@ sub draw_image {
   if ( $segment->length > $max_segment) {
     my $units = $self->syn_conf->unit_label($max_segment);
     print h2("Sorry: the size of region $segment exceeds the maximum ($units)");
-    exit;
+    die [ EXIT => 0 ];
   }
 
   my $max_gap = $segment->length * ($self->syn_conf->setting('max_span') || MAX_SPAN);
@@ -1605,6 +1605,36 @@ sub page_settings {
 
   my $settings = $self->get_settings($session);
   return ($settings,$session);
+}
+
+sub redirect_legacy_url {
+  my $source      = shift;
+  my @more_args   = @_;
+
+  if ($source && path_info() ne "/$source/") {
+
+    my $q = new CGI '';
+    if (request_method() eq 'GET') {
+      foreach (param()) {
+	next if $_ eq 'source';
+	$q->param($_=>param($_)) if defined param($_);
+      }
+    }
+
+    # This is infinitely more difficult due to horrible bug in Apache version 2
+    # It is fixed in CGI.pm versions 3.11 and higher, but this version is not guaranteed
+    # to be available.
+    my ($script_name,$path_info) = ($q->script_name, $q->path_info);
+    my $query_string = $q->query_string;
+    my $protocol     = $q->protocol;
+
+    my $new_url      = $script_name;
+    $new_url        .= "/$source/";
+    $new_url        .= "?$query_string" if $query_string;
+
+    print redirect(-uri=>$new_url,-status=>"301 Moved Permanently");
+    die [ EXIT => 0 ];
+  }
 }
 
 sub get_settings {

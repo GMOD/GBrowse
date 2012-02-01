@@ -756,9 +756,9 @@ sub print_page_top {
   # push all needed javascript files onto top of page
   my $js            = $self->globals->js_url || '/gbrowse2/js';
   my @js;
-  push @js, qw( prototype.js );
+  push @js, qw( prototype.js gbrowse_syn/yahoo-dom-event.js );
   push @js, qw( balloon.config.js balloon.js );
-  push @js, qw( rubber.js overviewSelect.js detailSelect.js );
+  push @js, qw( gbrowse_syn/rubber.js gbrowse_syn/overviewSelect.js gbrowse_syn/detailSelect.js );
 
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args, (-script => \@scripts);

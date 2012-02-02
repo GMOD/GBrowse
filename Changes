@@ -1,3 +1,7 @@
+2.46
+  * Support for transparent overlay tracks.
+  * When downloading vista tracks, default download format to "vista_wiggle".
+
 2.45
   * Restore h_feat & h_region functionality to gbrowse_img.
   * Fix gbrowse_img documentation to point to correct example URLs on WormBase.

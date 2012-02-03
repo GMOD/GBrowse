@@ -9,7 +9,6 @@ use Digest::MD5 'md5_hex';
 use File::Glob ':glob';
 use List::Util qw/min max sum/;
 
-use Bio::Graphics::Browser2;
 use Bio::Graphics;
 
 # Legacy libraries from 1.7 branch

@@ -11,6 +11,13 @@ B::G::B2::Render::HTML that makes a consolidated image and imagemap,
 for use by frontends that require a consolidated image and imagemap,
 as opposed to the standard GBrowse2 single-track images and maps.
 
+=head1 METHODS
+
+=cut
+
+
+=head2 new( $globals )
+
 =cut
 
 sub new {
@@ -34,6 +41,12 @@ sub destroy {
     undef $self->{render};
 }
 
+sub DESTROY { shift->destroy }
+
+=head2 render_multiple( $renderer, $format, $flip, $embed )
+
+=cut
+
 sub render_multiple {
     my $self = shift;
     my ($renderer,$format,$flip,$embed) = @_;
@@ -53,6 +66,10 @@ sub render_multiple {
         consolidate_images( \@gds, undef, undef, 'horizontal', \@seqids);
     return ($img_data,undef);
 }
+
+=head2 render_tracks( $renderer, $format, $flip, $embed, \@track_types )
+
+=cut
 
 sub render_tracks {
     my $self = shift;
@@ -131,6 +148,10 @@ sub calculate_composite_bounds {
     return ($width,$height);
 }
 
+=head2 consolidate_images( \@gds, $width, $height, $orientation, \@labels )
+
+=cut
+
 sub consolidate_images {
     my $self = shift;
     my ($gds,$width,$height,$orientation,$labels) = @_;
@@ -146,6 +167,10 @@ sub consolidate_images {
               ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
               : $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
 }
+
+=head2 make_hilite_callback( @feature_names )
+
+=cut
 
 sub make_hilite_callback {
     my ( $self, @feature_names ) = @_;
@@ -293,6 +318,10 @@ sub _consolidate_svg {
     $svg    =~ s/font-size="13"/font-size="12"/gi;
     return $svg;
 }
+
+=head2 consolidate_maps( \@maps, \@gds )
+
+=cut
 
 sub consolidate_maps {
     my $self = shift;

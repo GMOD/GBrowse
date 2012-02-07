@@ -291,7 +291,7 @@ function visibility (element_name,is_visible) {
       sections.each(function(s) {
 	      s.select('.expand_all').each(function(s){s.removeClassName('expanded')})
 		  });
-      $('.range_expand').removeClassName('expanded');
+      $$('.range_expand').each(function(s){s.removeClassName('expanded')});
       
    }
    setVisState(element_name, is_visible);

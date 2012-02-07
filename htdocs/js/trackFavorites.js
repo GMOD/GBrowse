@@ -283,6 +283,16 @@ function visibility (element_name,is_visible) {
         track_list.show();
       if (break_element != null)
         break_element.show();
+
+      // the next three lines enable the "expand all" icons
+      var sections = element.ancestors().findAll(function(s) {
+	      return s.hasClassName('toggleable');
+	  });
+      sections.each(function(s) {
+	      s.select('.expand_all').each(function(s){s.removeClassName('expanded')})
+		  });
+      $('.range_expand').removeClassName('expanded');
+      
    }
    setVisState(element_name, is_visible);
    return false;

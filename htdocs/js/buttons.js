@@ -30,21 +30,12 @@ function gbExpandAll(title_element,parent_element_id,event) {
     var el = $(parent_element_id);
     if (el == null) return;
     var subsections = el.select('div.el_visible');
-    var titles      = $$('span.'+parent_element_id+'_expand');
-    if (titles[0].hasClassName('expanded')) {
-	titles.each(function(s){
-		s.removeClassName('expanded');
-		s.update('&nbsp;&nbsp;expand all');
-	    });
-	subsections.each(function(s){if (s.id!=null) visibility(s.id,0)});
-	if (parent_element_id != null) visibility(parent_element_id,0);
-    } else {
-	titles.each(function(s){s.addClassName('expanded');
-		s.update('&nbsp;&nbsp;collapse all');
-	    });
-	subsections.each(function(s){if (s.id!=null) visibility(s.id,1)});
-	if (parent_element_id != null) visibility(parent_element_id,1);
-    }
+    var titles      = $$('img.'+parent_element_id+'_expand');
+    titles.each(function(s){
+	    s.addClassName('expanded');
+	});
+    subsections.each(function(s){if (s.id!=null) visibility(s.id,1)});
+    if (parent_element_id != null) visibility(parent_element_id,1);
     Event.stop(event);
 }
 

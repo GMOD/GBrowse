@@ -148,9 +148,10 @@ sub render_track_listing {
 
     autoEscape(1);
     my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories,$filter_active);
-    # temporary
-    my $expand_all = span({-class  =>  'clickable expand_all range_expand',
-			   -onClick => "gbExpandAll(this,'range',event)"},'&nbsp;&nbsp;expand all');
+
+    my $expand_all = '&nbsp;' .img({-class  =>  'clickable expand_all range_expand',
+				    -src    => $source->globals->button_url .'/open_open.png',
+				    -onClick => "gbExpandAll(this,'range',event)"});
     return join( "\n",
 		 start_form(-name=>'trackform',
 			    -id=>'trackform'),
@@ -275,8 +276,9 @@ sub nest_toggles {
 	    $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
 	} elsif ($hash->{$key}{__next__}) {
 	    my $id =  "${key}_section";
-	    my $ea = span({-class  =>  "clickable expand_all ${id}_expand",
-			   -onClick => "gbExpandAll(this,'$id',event)"},' expand all');
+	    my $ea = '&nbsp;' . img({-class  =>  "clickable expand_all ${id}_expand",
+				     -src    => $source->globals->button_url .'/open_open.png',
+				     -onClick => "gbExpandAll(this,'$id',event)"});
 	    $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
 	    $result .= $render->toggle_section({on=>$force_open||$settings->{section_visible}{$id}},
 					       $id,

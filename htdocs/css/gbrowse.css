@@ -81,6 +81,13 @@ span.clickable {
     color: blue;
     cursor: pointer;
                   }
+img.clickable {
+    cursor: pointer;
+}
+img.expanded {
+    cursor:  default;
+    opacity: 0.25;
+}
 span.clickable:hover {
        text-decoration: underline;
     }

@@ -2534,11 +2534,12 @@ sub toggle_section {
 		      -style=>$visible ? 'display:inline' : 'display:none',
 		      -class => 'el_visible'},
 		     @section_body);
-  my @result =  $config{nodiv} ? (div({-style=>'float:left'},
+  my @class  = (-class=>'toggleable');
+  my @result =  $config{nodiv} ? (div({-style=>'float:left',@class},
 				      $show_ctl.$hide_ctl),$content)
-                :$config{tight}? (div({-style=>'float:left;position:absolute;z-index:10'},
+                :$config{tight}? (div({-style=>'float:left;position:absolute;z-index:10',@class},
 				      $show_ctl.$hide_ctl).$break,$content)
-                : div($show_ctl.$hide_ctl,$content);
+                : div({@class},$show_ctl.$hide_ctl,$content);
   return wantarray ? @result : "@result";
 }
 

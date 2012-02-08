@@ -1,6 +1,10 @@
 2.46
-  * Support for transparent overlay tracks.
+  * Support for transparent overlay tracks. These will appear as a user settable formatting option	
+    for any track with subtracks. To make this default for a track set "bump = overlap" and consider
+    setting "color_series = 1" in order for background colors to be assigned automatically;
   * When downloading vista tracks, default download format to "vista_wiggle".
+  * Fix signal handling under FastCGI in order to kill runaway rendering processes
+    when server restarted.
 
 2.45
   * Restore h_feat & h_region functionality to gbrowse_img.

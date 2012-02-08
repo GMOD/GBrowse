@@ -382,7 +382,7 @@ sub render_tracks {
         my $height = $data->height;
         my $url    = $self->source->generate_image($gd);
 
-        # for debugging
+	# for debugging
         my $status = $data->status;
 
         $result{$label} = $self->wrap_rendered_track(
@@ -699,6 +699,7 @@ sub wrap_rendered_track {
     my $subtrack_labels = join '',map {
 	my ($label,$left,$top,undef,undef,$color) = @$_;
 	$left -= $source->global_setting('pad_left') + PAD_DETAIL_SIDES;
+	$left = 3 if $left < 3;
 	my ($r,$g,$b,$a) = $color =~ /rgba\((\d+),(\d+),(\d+),([\d.]+)/;
 	$a = 0.60 if $a > 0.75;
 	my $fgcolor = $a <= 0.5 ? 'black' : ($r+$g+$b)/3 > 128 ? 'black' : 'white';
@@ -1667,6 +1668,8 @@ sub subtrack_select_filter {
     return $stt->filter_feature_sub;
 }
 
+
+# this routine is too long and needs to be modularized
 sub add_features_to_track {
   my $self = shift;
   my %args = @_;
@@ -1881,7 +1884,8 @@ sub add_features_to_track {
       if $limit && $limit > 0;
 
     # essentially make label invisible if we are going to get the label position
-    $tracks->{$l}->configure(-fontcolor   => 'white:0.0') if $tracks->{$l}->parts->[0]->record_label_positions;
+    $tracks->{$l}->configure(-fontcolor   => 'white:0.0') 
+	if $tracks->{$l}->parts->[0]->record_label_positions;
 
     if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
 	my $max       = $tracks->{$l}->feature_limit;

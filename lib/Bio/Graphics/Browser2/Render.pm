@@ -89,8 +89,9 @@ sub new {
 sub set_signal_handlers {
     my $self = shift;
     $SIG{CHLD} = sub {
-	my $kid; 
-	do { $kid = waitpid(-1, WNOHANG) } while $kid > 0;
+	while ((my $kid = waitpid(-1,WNOHANG))>0) {
+	    1;
+	}
     };
 }
 
@@ -4014,7 +4015,6 @@ sub fork {
 
     return $child;
 }
-
 
 sub prepare_modperl_for_fork {
     my $self = shift;

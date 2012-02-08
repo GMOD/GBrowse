@@ -29,7 +29,7 @@ if ($fcgi) {
         %ENV = (%sys_env, %ENV);
 	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
-	my $render =Bio::Graphics::Browser2::Render::HTML->new($globals);
+	my $render = Bio::Graphics::Browser2::Render::HTML->new($globals);
 	eval {
 	    local $SIG{PIPE} = sub {die "pipe"};
 	    $render->run();
@@ -37,6 +37,10 @@ if ($fcgi) {
 	warn $@ if $@;
 	$render->destroy;
     }
+
+    my $pgrp = getpgrp();
+    kill TERM => -$pgrp;
+
 } else {
     $SIG{TERM} = sub { warn "gbrowse going down..."; CORE::exit 0 };
     my $globals = Bio::Graphics::Browser2->open_globals;

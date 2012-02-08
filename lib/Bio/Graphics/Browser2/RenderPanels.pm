@@ -168,7 +168,6 @@ sub request_panels {
 
       open STDIN, "</dev/null" or die "Couldn't reopen stdin";
       open STDOUT,">/dev/null" or die "Couldn't reopen stdout";
-      POSIX::setsid()          or die "Couldn't start new session";
 
       if ( $do_local && $do_remote ) {
           if ( $render->fork() ) {
@@ -373,7 +372,7 @@ sub render_tracks {
     my $requests = shift;
     my $args     = shift;
     my %result;
-    
+
     for my $label ( keys %$requests ) {
         my $data   = $requests->{$label};
         my $gd     = eval{$data->gd} or next;
@@ -1449,6 +1448,7 @@ sub run_local_requests {
     	    delete $children{$pid} if $children{$pid};
     	}
     };
+    local $SIG{TERM}    = sub { warn "[$$] GBrowse render process terminated"; exit 0; };
 
     my $max_processes = $self->source->global_setting('max_render_processes')
 	|| MAX_PROCESSES;
@@ -1519,7 +1519,7 @@ sub run_local_requests {
 		    my $featurefile_select = $args->{featurefile_select}
 		    || $self->feature_file_select($section);
 			
-		    if ( ref $file and $panel ) {
+ 		    if ( ref $file and $panel ) {
 			$self->add_feature_file(
 			    file     => $file,
 			    panel    => $panel,

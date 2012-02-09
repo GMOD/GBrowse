@@ -398,12 +398,6 @@ sub sort_feature_sub {
 sub infer_settings_from_source {
     my $package          = shift;
     my ($source,$label)  = @_;
-
-    my $bump = $source->setting($label=>'bump');
-
-# use this to test prototype overlap functionality
-#    return if defined $bump && ($bump eq 'overlap' || $bump == 0);
-
     my (@dimensions,@rows);
   TRY: {
 
@@ -419,8 +413,8 @@ sub infer_settings_from_source {
 	  @rows           = map {[shellwords($_)]}  split ';',$r;
 	last TRY;  
       }
-      
-      if (my $s = $source->setting($label=>'select')) {
+       
+     if (my $s = $source->setting($label=>'select')) {
 	  my %defaults = map {$_=>1} shellwords($source->setting($label=>'select default'));
 	  
 	  if ($s =~ /;/) { # new syntax
@@ -443,26 +437,23 @@ sub infer_settings_from_source {
 	  }
 	  last TRY;
       }
+      my (undef,$adaptor) = $source->db_settings($label);
 
-    my (undef,$adaptor) = $source->db_settings($label);
-
-    my $db   = $source->open_database($label) or last TRY;
-    my $meta = eval {$db->metadata}           or last TRY;
-
-    # get all the tags that are consistently used
-    my %tags;
-    my @keys       = map {keys %$_} values %$meta;
-    for my $k (@keys) {
-	$tags{$k}++;
+      my $db   = $source->open_database($label) or last TRY;
+      my $meta = eval {$db->metadata}           or last TRY;
+      
+      # get all the tags that are consistently used
+      my %tags;
+      my @keys       = map {keys %$_} values %$meta;
+      for my $k (@keys) {
+	  $tags{$k}++;
+      }
+      my $count = keys %$meta;
+      
+      my @tags    = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
+      @dimensions = map {[ucfirst($_),'tag_value',$_]} @tags;
+      @rows       = $package->get_facet_values($source,$label,@tags);
     }
-    my $count = keys %$meta;
-    
-    my @tags    = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
-    @dimensions = map {[ucfirst($_),'tag_value',$_]} @tags;
-    @rows       = $package->get_facet_values($source,$label,@tags);
-
-    }
-
     return unless @dimensions && @rows;
     
     # apply "facet labels" setting on top of dimensions

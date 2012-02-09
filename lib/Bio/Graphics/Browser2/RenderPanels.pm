@@ -2324,7 +2324,7 @@ sub do_label {
   my $conf_label        = $source->semantic_setting($track_name => 'label',$length);
   $conf_label           = 1 unless defined $conf_label;
 
-  my $glyph             = $source->semantic_setting($track_name => 'glyph',$length);
+  my $glyph             = $source->semantic_setting($track_name => 'glyph',$length) || 'generic';
   my $overlap_label     = $glyph =~ /xyplot|vista|wiggle|density/;
 
   $option ||= 0;

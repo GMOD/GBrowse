@@ -46,9 +46,11 @@ sub render_track_listing {
 
     $filter_active++ if $settings->{active_only} || $settings->{show_favorites};
 
-    my %labels     = map {$_  => $self->render_one_track($_,\@hilite)} @labels;
-    my %label_sort = map {$_  => $render->label2key($_)              } @labels;
-
+    my (%labels,%label_sort);
+    foreach (@labels) {
+	$labels{$_}     = $self->render_one_track($_,\@hilite) ||'';
+	$label_sort{$_} = $render->label2key($_);
+    }
     my @defaults   = grep {$settings->{features}{$_}{visible}        } @labels;
     
     # Sort the tracks into categories:

@@ -46,8 +46,13 @@ sub render_track_listing {
 
     $filter_active++ if $settings->{active_only} || $settings->{show_favorites};
 
-    my %labels     = map {$_  => $self->render_one_track($_,\@hilite)} @labels;
-    my %label_sort = map {$_  => $render->label2key($_)              } @labels;
+    # for unknown reasons, replacing the below loop with "map" 
+    # causes lots of undefined variable warnings.
+    my (%labels,%label_sort);
+    for my $l (@labels) {
+	$labels{$l}      = $self->render_one_track($l,\@hilite);
+	$label_sort{$l}  = $render->label2key($l);
+    }
 
     my @defaults   = grep {$settings->{features}{$_}{visible}        } @labels;
     
@@ -140,6 +145,7 @@ sub render_track_listing {
 				 -style => "display: " . ($visible? "none" : "inline") . ";"},"")
 		.br();
 	    $section_contents{$category} = div({-class=>'track_section'},$control.$section);
+	    
 	}
 	else {
 	    next;
@@ -187,22 +193,22 @@ sub categorize_track {
     return $render->translate('EXTERNAL') if $label =~ /^(http|ftp|file):/;
     return $render->translate('ANALYSIS') if $label =~ /^plugin:/;
 
-  if ($user_labels->{$label}) {
-      my $cat = $render->user_tracks->is_mine($user_labels->{$label}) 
-	  ? $render->translate('UPLOADED_TRACKS_CATEGORY')
-	  : $render->translate('SHARED_WITH_ME_CATEGORY');
-      return "$cat:".$render->user_tracks->title($user_labels->{$label});
-  }
-
-  my $category;
-  for my $l ($render->language->language) {
-    $category      ||= $render->setting($label=>"category:$l");
-  }
-  $category        ||= $render->setting($label => 'category');
-  $category        ||= '';  # prevent uninit variable warnings
-  $category         =~ s/^["']//;  # get rid of leading quotes
-  $category         =~ s/["']$//;  # get rid of trailing quotes
-  return $category ||= $render->translate('GENERAL');
+    if ($user_labels->{$label}) {
+	my $cat = $render->user_tracks->is_mine($user_labels->{$label}) 
+	    ? $render->translate('UPLOADED_TRACKS_CATEGORY')
+	    : $render->translate('SHARED_WITH_ME_CATEGORY');
+	return "$cat:".$render->user_tracks->title($user_labels->{$label});
+    }
+    
+    my $category;
+    for my $l ($render->language->language) {
+	$category      ||= $render->setting($label=>"category:$l");
+    }
+    $category        ||= $render->setting($label => 'category');
+    $category        ||= '';  # prevent uninit variable warnings
+    $category         =~ s/^["']//;  # get rid of leading quotes
+    $category         =~ s/["']$//;  # get rid of trailing quotes
+    return $category ||= $render->translate('GENERAL');
 }
 
 # Category Table - This returns the hash of the category table.

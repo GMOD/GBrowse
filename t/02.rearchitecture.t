@@ -119,6 +119,7 @@ ok($session->source eq 'yeast_chr1');
 # try whether we can update the data source via CGI
 $ENV{REQUEST_METHOD} = 'GET';
 $ENV{QUERY_STRING}   = 'source=volvox';
+CGI->_reset_globals;
 ok($globals->update_data_source($session));
 ok($session->source eq 'volvox');
 

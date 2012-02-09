@@ -2104,6 +2104,23 @@ sub segment_coordinates {
   return ($seg_start,$seg_stop,$flip);
 }
 
+# this returns semantically-correct override configuration
+# as a hash ref
+sub override_settings {
+    my $self  = shift;
+    my $label = shift;
+    my $source            = $self->source;
+    my $state             = $self->settings;
+    my $length            = eval {$self->segment->length} || 0;
+    my $is_summary        = $source->show_summary($label,$length,$state);
+    my $semantic_override = Bio::Graphics::Browser2::Render->find_override_region(
+	$state->{features}{$label}{semantic_override},
+	$length);
+    return $is_summary           ? $state->{features}{$label}{summary_override}
+                                 : $semantic_override ? $state->{features}{$label}{semantic_override}{$semantic_override}
+                                 : {};
+}
+
 =head2 create_track_args()
 
   @args = $self->create_track_args($label,$args);
@@ -2126,11 +2143,10 @@ sub create_track_args {
   my $overlaps        =    ($self->settings->{features}{$label}{options}||0) == 4
                         || ($source->semantic_setting($label => 'bump',$length)||'') eq 'overlap';
 
-  my $override        = $self->render->override_settings($label);
+  my $override        = $self->override_settings($label);
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
   push @override,(-feature_limit => $override->{limit}) if $override->{limit};
-#  push @override,(-record_label_positions => 0) unless $args->{section} && $args->{section} eq 'detail';
   push @override,(-opacity => 1.0) unless $overlaps;
 
   my @summary_args = ();
@@ -2324,7 +2340,7 @@ sub do_label {
   my $conf_label        = $source->semantic_setting($track_name => 'label',$length);
   $conf_label           = 1 unless defined $conf_label;
 
-  my $glyph             = $source->semantic_setting($track_name => 'glyph',$length);
+  my $glyph             = $source->semantic_setting($track_name => 'glyph',$length) || 'generic';
   my $overlap_label     = $glyph =~ /xyplot|vista|wiggle|density/;
 
   $option ||= 0;

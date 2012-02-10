@@ -10,6 +10,7 @@ use Carp qw(croak cluck);
 use File::Basename 'dirname','basename';
 use Text::Tabs;
 use Data::Dumper;
+use English;
 
 use Bio::Graphics::Browser2::I18n;
 use Bio::Graphics::Browser2::PluginSet;
@@ -25,6 +26,7 @@ use Bio::Graphics::Browser2::Util qw[modperl_request url_label];
 use Bio::Graphics::Browser2::UserTracks;
 use Bio::Graphics::Browser2::UserDB;
 use Bio::Graphics::Browser2::Session;
+use Bio::Graphics::Browser2::Render::SnapshotManager;
 use POSIX ":sys_wait_h";
 
 use constant VERSION              => 2.0;
@@ -45,6 +47,7 @@ my %PLUGINS;       # cache initialized plugins
 my $FCGI_REQUEST;  # stash fastCGI request handle
 my $STATE;         # stash state for use by callbacks
 
+
 # new() can be called with two arguments: ($data_source,$session)
 # or with one argument: ($globals)
 # in the latter case, it will invoke this code:
@@ -63,8 +66,10 @@ sub new {
     my $globals = shift;
     $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     $authority    = param('authority') || CGI::cookie('authority');
-
-    $session = $globals->authorized_session($requested_id, $authority);
+    my $shared_ok = Bio::Graphics::Browser2::Action->shared_lock_ok(param('action'));
+    $session      = $globals->authorized_session($requested_id, 
+						 $authority,
+						 $shared_ok);
     $globals->update_data_source($session);
     $data_source = $globals->create_data_source($session->source);
   } else {
@@ -84,8 +89,9 @@ sub new {
 sub set_signal_handlers {
     my $self = shift;
     $SIG{CHLD} = sub {
-    	my $kid; 
-		do { $kid = waitpid(-1, WNOHANG) } while $kid > 0;
+	while ((my $kid = waitpid(-1,WNOHANG))>0) {
+	    1;
+	}
     };
 }
 
@@ -215,7 +221,8 @@ sub destroy {
 	$lm->destroy;
 	delete $self->{login_manager};
     }
-    $self->session->flush if $self->session;
+    $self->session->unlock if $self->session;
+#    $self->session->flush if $self->session;
 }
 
 ###################################################################################
@@ -347,7 +354,7 @@ sub run_asynchronous_event {
     my $self = shift;
     my ($status, $mime_type, $data, %headers) = $self->asynchronous_event or return;
 
-    warn "[$$] asynchronous event returning status=$status, mime-type=$mime_type" if DEBUG;
+    warn "[$$] asynchronous event returning status=$status, mime-type=$mime_type" if TRACE_RUN;
 
     # add the cookies!
     $headers{-cookie} = [$self->state_cookie,$self->auth_cookie];
@@ -386,7 +393,7 @@ sub asynchronous_event {
     my $settings = $self->state;
     my $events;
 
-    warn "event(",(join ' ',param()),")" if DEBUG;
+    warn "[$$] asynchronous event(",query_string(),")" if TRACE_RUN;
 
     # TO ADD AN ASYNCHRONOUS REQUEST...
     # 1. Give the request a unique name, such as "foo"
@@ -552,7 +559,7 @@ sub add_tracks {
     my $self        = shift;
     my $track_names = shift;
 
-    warn "add_tracks(@$track_names)" if DEBUG;
+    warn "[$$] add_tracks(@$track_names)" if DEBUG; 
 
     my %track_data;
     my $segment = $self->segment;
@@ -565,7 +572,7 @@ sub add_tracks {
     }
 
     $self->init_remote_sources if $remote;
-    
+	
     if ($segment) {
 	foreach my $track_name ( @$track_names ) {
 
@@ -579,7 +586,7 @@ sub add_tracks {
 		    = $self->background_individual_track_render($track_id);
 	    
 		my $track_key        = $track_keys->{$track_id};
-		my $track_section    = $self->get_section_from_label($track_id);
+		my $track_section    = $self->data_source->get_section_from_label($track_id);
 		my $image_width      = $self->get_image_width($self->state);
 		my $image_element_id = $track_name . "_image";
 		
@@ -627,8 +634,7 @@ sub add_tracks {
 		};
 	    }
 	}
-    }
-
+    }	
     return \%track_data;
 }
 
@@ -842,11 +848,12 @@ sub render_body {
   }
   
   my $tracks        = $self->render_tracks_section;
+  my $snapshots     = $self->snapshot_manager->render_snapshots_section;
   my $community     = $self->user_tracks->database? $self->render_community_tracks_section : "";
   my $custom        = $self->render_custom_tracks_section;
   my $global_config = $self->render_global_config;
 
-  $output .= $self->render_tabbed_pages($main_page,$tracks,$community,$custom,$global_config);
+  $output .= $self->render_tabbed_pages($main_page,$tracks,$snapshots,$community,$custom,$global_config);
   $output .= $self->login_manager->render_confirm;
   $output .= $self->render_bottom($features);
 
@@ -947,16 +954,16 @@ sub render_panels {
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
         my $panels_html    = $self->get_blank_panels( [$self->overview_tracks],
 						      'overview' );
-		my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
-		$html .= div(
-			$self->toggle({tight=>1},
-	 			  'Overview',
-	 			  div({ -id => 'overview_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px' },
-	 			      $scale_bar_html, $panels_html,
-	 			  ))
-	 	    ) . $drag_script;
+	my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
+	$html .= div(
+	    $self->toggle({tight=>1},
+			  'Overview',
+			  div({ -id => 'overview_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px' },
+			      $scale_bar_html, $panels_html,
+			  ))
+	    ) . $drag_script;
     }
-
+    
     if ( $section->{'regionview'} and $self->state->{region_size} ) {
 
         my $scale_bar_html = $self->scale_bar( $seg, 'region' );
@@ -966,12 +973,13 @@ sub render_panels {
 
         $html .= div(
             $self->toggle({tight=>1},
-                'Region',
-                div({ -id => 'region_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px'  },
-                    $scale_bar_html, $panels_html,
-                )
+			  'Region',
+			  div({ -id => 'region_panels', -class => 'track', 
+				-style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px'  },
+			      $scale_bar_html, $panels_html,
+			  )
             )
-        ) . $drag_script;
+	    ) . $drag_script;
     }
 
     if ( $section->{'detailview'} ) {
@@ -981,7 +989,7 @@ sub render_panels {
 						      'detail');
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
         my $details_msg    = span({ -id => 'details_msg', },'');
-		my $clear_hilites  = $self->clear_highlights;
+	my $clear_hilites  = $self->clear_highlights;
         $html .= div(
             $self->toggle({tight=>1},
 			  'Details',
@@ -999,7 +1007,7 @@ sub render_panels {
             )
 	    ) . $drag_script;
     }
-    return $html;
+    return div({-id=>'panels'},$html);
 }
 
 sub get_post_load_functions {
@@ -1865,7 +1873,8 @@ sub set_default_state {
 sub update_state {
   my $self   = shift;
   warn "[$$] update_state()" if DEBUG;
-  return if param('gbgff'); # don't let gbgff requests update our coordinates!!!
+  return if param('gbgff');          # don't let gbgff requests update our coordinates!!!
+#  return if url() =~ /gbrowse_img/;  # don't let gbrowse_img requests update our coordinates either!!
   $self->_update_state;
 }
 
@@ -2020,7 +2029,7 @@ sub add_track_to_state {
   my $label = shift;
   my $state = $self->state;
 
-  cluck "add_track_to_state($label)" if DEBUG;
+  warn '[',Bio::Graphics::Browser2::Session->time,'] ',"[$$] add_track_to_state($label)" if DEBUG;
 
   return unless length $label; # refuse to add empty tracks!
 
@@ -2053,6 +2062,7 @@ sub add_track_to_state {
 sub remove_track_from_state {
   my $self  = shift;
   my $label = shift;
+  warn '[',Bio::Graphics::Browser2::Session->time,'] ',"[$$] remove_track_from_state($label)" if DEBUG;
   delete $self->state->{features}{$label};
 }
 
@@ -2065,7 +2075,7 @@ sub track_visible {
 sub update_state_from_cgi {
   my $self  = shift;
   my $state = $self->state;
-warn "state = $state" if DEBUG;
+  warn "state = $state" if DEBUG;
   $self->update_options($state);
   $self->update_coordinates($state);
   $self->update_region($state);
@@ -2103,6 +2113,7 @@ sub create_subtrack_manager {
 								     -aliases => $aliases,
 								     -comment => $comment);
     $stt->set_selected($selected) if $selected;
+    eval {$stt->overlap(($state->{features}{$label}{options}||0)==4)};  # options == 4 means "overlap", for legacy reasons
     return $stt;
 }
 
@@ -2114,14 +2125,14 @@ sub reconfigure_track {
     my $state  = $self->state();
     my $source = $self->data_source;
 
-    $state->{features}{$label}{visible}          = param('show_track') ? 1 : 0;
-    $state->{features}{$label}{options}          = param('format_option');
+    $state->{features}{$label}{options}  = param('format_option');
     my $dynamic = $self->translate('DYNAMIC_VALUE');
-    my $mode    = param('mode');
+    my $mode    = param('mode') || 'details';
+    my $mult    = $self->details_mult;
 
-    my $length            = param('segment_length')       || 0;
-    my $semantic_low      = param('apply_semantic_low')   || 0;
-    my $semantic_hi       = param('apply_semantic_hi')    || 0;
+    my $length            = (param('segment_length')||0)     * $mult;
+    my $semantic_low      = (param('apply_semantic_low')||0) * $mult;
+    my $semantic_hi       = (param('apply_semantic_hi')||0)  * $mult   || $self->get_max_segment;
     my $delete_semantic   = param('delete_semantic');
     my $summary           = param('summary_mode');
 
@@ -2136,7 +2147,6 @@ sub reconfigure_track {
                                : $state->{features}{$label}{semantic_override}{"$semantic_low:$semantic_hi"} = {};
 
     my $glyph = param('conf_glyph') || '';
-  
     for my $s ( grep {/^conf_/} param()) {
         my @values = param($s);
 	my $value  = $values[-1]; # last one wins
@@ -2173,7 +2183,7 @@ sub reconfigure_track {
 	    }
 	}
     }
-    unless (defined $o->{autoscale} && $o->{autoscale} eq 'none') { 
+    if (defined $o->{autoscale} && $o->{autoscale}=~/local|global|chromosome/) { 
 	undef $o->{min_score}; 
 	undef $o->{max_score} 
     }
@@ -2641,6 +2651,11 @@ sub asynchronous_update_sections {
 	$return_object->{'community_tracks'} = $self->render_community_track_listing(@_); #Passing on any search terms.
     }
 
+    # Saved Snapshot Section
+    if ( $handle_section_name{'snapshots_page'}) {
+	$return_object->{'snapshots_page'} = $self->snapshot_manager->render_snapshots_listing($self);
+    }
+
     # Handle Remaining and Undefined Sections
     foreach my $section_name ( keys %handle_section_name ) {
         next if ( defined $return_object->{$section_name} );
@@ -2728,9 +2743,6 @@ sub asynchronous_update_coordinates {
 
     my $state  = $self->state;
 
-#    warn "asynchronous_update_coordinates, session id = ",$self->session->id;
-#    warn "asynchronous_update_coordinates: \$state->{ref} = $state->{ref}";
-
     my $whole_segment_start = $state->{seg_min};
     my $whole_segment_stop  = $state->{seg_max};
 
@@ -2755,16 +2767,16 @@ sub asynchronous_update_coordinates {
 	$position_updated++;
     }
     if ( $action =~ /flip (\S+)/ ) {
-    if ( $action =~ /name/) {
-        $self->move_to_name($state, $action);
-        $position_updated++;
-    }
-        if ( $1 eq 'true' ) {
-            $state->{'flip'} = 1;
-        }
-        else {
-            $state->{'flip'} = 0;
-        }
+	if ( $action =~ /name/) {
+	    $self->move_to_name($state, $action);
+	    $position_updated++;
+	}
+	if ( $1 eq 'true' ) {
+	    $state->{'flip'} = 1;
+	}
+	else {
+	    $state->{'flip'} = 0;
+	}
     }
 
     if ($position_updated) { # clip and update param
@@ -2806,8 +2818,6 @@ sub asynchronous_update_coordinates {
 	# update our "name" state and the CGI parameter
 	$state->{name} = $self->region_string;
     }
-
-    $self->session->flush();
     $position_updated;
 }
 
@@ -2846,12 +2856,12 @@ sub region_string {
     my $state   = $self->state;
     my $source  = $self->data_source;
     my $divider = $source->unit_divider || 1;
-    $state->{view_start} ||= 0;
+    $state->{view_start}  ||= 0;
     $state->{view_stop}   ||= 0;
-    $state->{name} = "$state->{ref}:".
-	              $source->commas($state->{view_start}/$divider).
-		      '..'.
-		      $source->commas($state->{view_stop}/$divider);
+    return "$state->{ref}:".
+	$source->commas($state->{view_start}/$divider).
+	'..'.
+	$source->commas($state->{view_stop}/$divider);
 }
 
 sub zoom_to_span {
@@ -3358,22 +3368,6 @@ sub expand_track_names {
     return @results;
  }
 
-sub get_section_from_label {
-    my $self   = shift;
-    my $label  = shift;
-
-    return 'detail' if ref $label;  # work around a DAS bug
-
-    if ($label eq 'overview' || $label =~ /:overview$/){
-        return 'overview';
-    }
-    elsif ($label eq 'region' || $label =~  /:region$/){
-        return 'region';
-    }
-    return 'detail'
-
-}
-
 # This turns track names into IDs for use at the client side.
 # This is necessary because tracks from external files/URLs
 # may generate more than one track
@@ -3535,7 +3529,6 @@ sub render_deferred {
 	);
 
     my $h_callback = $self->make_hilite_callback();
-
     my $requests = $renderer->request_panels(
         {   labels           => $labels,
             section          => $section,
@@ -3546,6 +3539,7 @@ sub render_deferred {
             cache_extra      => $cache_extra,
 	    nocache          => $nocache || 0,
 	    remotes          => $self->remote_sources,
+	    render           => $self,
             flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
         }
     );
@@ -3935,6 +3929,7 @@ sub image_link {
     $img_url    .= ";keystyle=$keystyle" if $keystyle;
     $img_url    .= ";grid=$grid";
     $self->add_hilites($settings,\$img_url);
+
     return $img_url
 }
 
@@ -3978,7 +3973,7 @@ sub fcgi_request {
 
 sub fork {
     my $self = shift;
-
+    
     $self->prepare_modperl_for_fork();
     $self->prepare_fcgi_for_fork('starting');
 
@@ -3987,10 +3982,12 @@ sub fork {
     die "Couldn't fork: $!" unless defined $child;
 
     if ($child) { # parent process
+	$self->session->was_forked('parent') if ref $self;
 	$self->prepare_fcgi_for_fork('parent');
     }
 
     else {
+	$self->session->was_forked('child')  if ref $self;
 	Bio::Graphics::Browser2::DataBase->clone_databases();
 	Bio::Graphics::Browser2::Render->prepare_fcgi_for_fork('child');
 	if (ref $self) {
@@ -4001,7 +3998,6 @@ sub fork {
 
     return $child;
 }
-
 
 sub prepare_modperl_for_fork {
     my $self = shift;
@@ -4024,6 +4020,7 @@ sub prepare_fcgi_for_fork {
 	$req->Attach();
     } elsif ($state eq 'child') {
 	$req->LastCall();
+	$FCGI_REQUEST = 0;
 	undef *FCGI::DESTROY;
     }
 }
@@ -4268,6 +4265,52 @@ sub login_manager {
     return $self->{login_manager} = Bio::Graphics::Browser2::Render::Login->new($self);
 }
 
+sub snapshot_manager {
+    my $self = shift;
+    return $self->{snapshot_manager} ||= Bio::Graphics::Browser2::Render::SnapshotManager->new($self);
+}
+
+sub feature_summary_message {
+    my $self = shift;
+    my ($event_type,$label) = @_;
+    my $sticky = $event_type eq 'mousedown' || 0;
+    my $message= $self->data_source->setting($label=>'key'). ' '.lc($self->tr('FEATURE_SUMMARY'));
+    return "GBubble.showTooltip(event,'$message',$sticky)";
+}
+
+sub feature_interaction {
+    my $self = shift;
+    my ($event_type,$label,$feature) = @_;
+    my $source    = $self->data_source;
+    my $settings  = $self->state;
+    my $tips      = $source->global_setting('balloon tips') && $settings->{'show_tooltips'};
+    my $renderer  = $self->get_panel_renderer($self->segment);
+
+    if ($tips) {
+	my $sticky  = $source->setting($label,'balloon sticky');
+	my $height  = $source->setting($label,'balloon height') || 300;
+
+	my $stick   = defined $sticky ? $sticky : $event_type eq 'mousedown';
+	$stick     ||= 0;
+	my ($balloon_style,$balloon_action) 
+	    = $renderer->balloon_tip_setting($event_type eq 'mousedown' ? 'balloon click' : 'balloon hover',$label,$feature,undef,undef);
+	$balloon_action ||= $renderer->make_title($feature,undef,$label,undef) 
+	    if $source->global_setting('titles are balloons') && $event_type eq 'mouseover';
+	$balloon_style  ||= 'GBubble';
+	if ($balloon_action) {
+	    my $action = $balloon_action =~ /^(http|ftp):/
+		? "$balloon_style.showTooltip(event,'<iframe width='+$balloon_style.maxWidth+' height=$height " .
+		"frameborder=0 src=$balloon_action></iframe>',$stick,$balloon_style.maxWidth)"
+		: "$balloon_style.showTooltip(event,'$balloon_action',$stick)";
+	    return ('text/plain',$action)
+	}
+    }
+
+    my $link   = $renderer->make_link($feature,undef,$label,undef);
+    my $target = $renderer->make_link_target($feature,undef,$label,undef);
+    return ('text/plain',$target ? "window.open('$link','$target')" : "document.location='$link'") if $link;
+    return;
+}
 sub tr {
 	my $self = shift;
 	my $lang = $self->language or return @_;

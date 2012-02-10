@@ -253,14 +253,18 @@ function getName(node) {
   }
 }
 
-// visibility toggles a node as open or closed.
+// visibility toggles a track listing node as open or closed.
 function visibility (element_name,is_visible) {
    var element       = $(element_name);
+   if (element == null) return;
+
    var show_control  = $(element_name + "_show");
+   if (show_control == null) return;
+
    var hide_control  = $(element_name + "_hide");
    var title_control = $(element_name + "_title");
    var break_element = $(element_name + "_break");
-   var track_list    = $(element_name).up().down("span.list");
+   var track_list    = element.up().down("span.list");
    if (is_visible == 1) {
       element.show();
       show_control.hide();
@@ -279,9 +283,44 @@ function visibility (element_name,is_visible) {
         track_list.show();
       if (break_element != null)
         break_element.show();
+
+      // the next three lines enable the "expand all" icons
+      var sections = element.ancestors().findAll(function(s) {
+	      return s.hasClassName('toggleable');
+	  });
+      sections.each(function(s) {
+	      s.select('.expand_all').each(function(s){s.removeClassName('expanded')})
+		  });
+      $$('.range_expand').each(function(s){s.removeClassName('expanded')});
+      
    }
    setVisState(element_name, is_visible);
    return false;
+}
+
+function show_active_tracks (me) {
+    var e = $(track_listing_id);// all e._____ objects are visual effects
+    var active = me.hasClassName('show_active');
+    if (active)
+	me.removeClassName('show_active');
+    else
+	me.addClassName('show_active');
+    active = active;
+    me.innerHTML = active ? Controller.translate('SHOW_ACTIVE_INACTIVE') : Controller.translate('SHOW_ACTIVE');
+    e.hide();
+    e.setOpacity(0.3);
+    new Ajax.Request(
+		     document.URL, {
+			 method: 'POST',
+			     asynchronous:false,
+			     parameters: {
+			     action:    'show_active_tracks',
+			     active: active,
+			 }
+		       }
+		     );
+    e.show();
+    Controller.update_sections(new Array(track_listing_id));
 }
 
 //same as updatetitle(below) but will refresh the favorites if the user 

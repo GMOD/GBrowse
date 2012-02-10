@@ -1,4 +1,58 @@
+2.46
+  * Support for transparent overlay tracks. These will appear as a user settable formatting option	
+    for any track with subtracks. To make this default for a track set "bump = overlap" and consider
+    setting "color_series = 1" in order for background colors to be assigned automatically;
+  * When downloading vista tracks, default download format to "vista_wiggle".
+  * Fix signal handling under FastCGI in order to kill runaway rendering processes
+    when server restarted.
+
+2.45
+  * Restore h_feat & h_region functionality to gbrowse_img.
+  * Fix gbrowse_img documentation to point to correct example URLs on WormBase.
+  * Fix persistent grey screen when clicking on snapshot thumbnail.
+  * Fix URL-escaped characters appearing in snapshot name.
+
+2.44
+  * Modest performance improvements when rendering multiple tracks.
+  * Set absolute cap of 5000 features per track to avoid performance issues on NGS data.
+    This cap can be changed by setting "maximum features" in the [GENERAL] section. Set
+    to 0 to return to unlimited behavior.
+  * Imagemap is now generated in such a way that time-consuming callbacks are only executed when
+    mouse hovers or clicks on the feature. This noticeably speeds up track generation time. Drawback
+    is that this increases the delay before balloon pops up on the hover operation when run in
+    cgi-bin mode (still fast in FastCGI mode). Restore original behavior by setting 
+    "inline imagemaps" (or "inline imagemap") to true in [TRACK DEFAULTS] 
+    or individual track definitions.
+  * Can now close tracks from main view even when corresponding track checkbox not showing
+    in the track listing.
+  * Default to flock locking instead of NFS locking; the former seems to be faster.
+  * Enable shared session locking to improve performance.
+  * Fix bad database pathnames in yeast configuration file examples.
+  * Fix track finder plugin to avoid annoying extra refresh after leaving text entry field.
+  * Fix broken sorting of subtracks.
+  * Improve dynamic range of wiggle tracks.
+  * mod_perl is no longer supported due to unfixable issues with zombie processes.
+
+2.43
+  * Fix semantic zooming bug which caused features to disappear when feature type changed between
+     semantic zooming levels. Also speeded up rendering process.
+
+2.42
+   * Improve user interface when a new openid user first logs in.
+   * Fix outgoing mail, which was broken.
+
+2.41
+   * Quash bugs related to miscalculating semantic zooming settings.
+   * Fix inability to close tracks in the overview by clicking on their close box.
+
 2.40
+   * Quash a few uninitialized variable warnings when bringing up track configuration dialog.
+   * Fix inability to toggle visibility & favorite status of plugin tracks from the
+     track titlebar.
+   * Added caching of inverted configuration file data structure to speed up track
+     rendering on really huge configuration files with many stanzas. Cache structure
+     is stored in /tmp/bio_graphics_ff_cache_$UID
+   * Add ability to save and restore named snapshots of current state.
    * Changed behavior of render slave to a prefork model. Activate by including
       PREFORK=5 (or other desired number of servers) in /etc/default/gbrowse-slave.
    * Added support script for Amazon cloud image: gbrowse_attach_slaves.pl creates
@@ -22,13 +76,32 @@
    * Fix "can't take log of negative number" bug when zoomed way in.
 
 2.37
-   * Fix summary mode to work again when no explicit configuration given.
+   * Preparations for faceted track searching
+     * deprecate "subtrack select" and "subtrack table" options in favor of "subtrack facets",
+       which introspects values from database (will require updates to Bio::DB::SeqFeature and friends)
+     * add "facet labels" and "facet values" options
+     * allow options to be tagged with "ex:option_name" to identify facets
+   * Fix subtracks to prevent features from appearing in the subtrack manager that won't be
+     displayed in the track panel because the feature type doesn't match the configured "feature"
+     option.
+   * Add option "track listing style" to select style of the track listing. Options are "categories" (default)
+     and "facets". Currently only "categories" works.
 
 2.36
    * Make semantic zooming work again when database option changed.
 
 2.35
    * Fix internal server error caused by certain semantic zooming declarations.
+   * Preparations for faceted track searching
+     * deprecate "subtrack select" and "subtrack table" options in favor of "subtrack facets",
+       which introspects values from database (will require updates to Bio::DB::SeqFeature and friends)
+     * add "facet labels" and "facet values" options
+     * allow options to be tagged with "ex:option_name" to identify facets
+   * Fix subtracks to prevent features from appearing in the subtrack manager that won't be
+     displayed in the track panel because the feature type doesn't match the configured "feature"
+     option.
+   * Add option "track listing style" to select style of the track listing. Options are "categories" (default)
+     and "facets". Currently only "categories" works.
 
 2.34
    * Fix broken https:// links in karyotype summary table; patch courtesy Dan Bolser

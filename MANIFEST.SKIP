@@ -80,3 +80,4 @@ slave\.pid
 ^gbrowse_users.*
 .*\.new
 ^META\.
+^nytprof

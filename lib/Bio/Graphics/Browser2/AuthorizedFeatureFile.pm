@@ -2,6 +2,7 @@ package Bio::Graphics::Browser2::AuthorizedFeatureFile;
 
 use strict;
 use warnings;
+use Bio::Graphics 2.24;
 use base 'Bio::Graphics::FeatureFile';
 
 use Socket 'AF_INET','inet_aton';  # for inet_aton() call

@@ -47,7 +47,10 @@ sub render_top {
     $features ||= [];
     $html   .=  $self->render_title($title,$self->state->{name} 
 				    && @$features == 0);
+	# ***Render the snapshot title***
+    $html   .=  $self->snapshot_manager->render_title;
     $html   .=  $self->html_frag('html1',$self->state);
+
     return  $err
 	  . $self->toggle({nodiv=>1},'banner','',$html);
 }
@@ -91,30 +94,35 @@ sub render_login_required {
 # Render Tabbed Pages - Returns the HTML containing the tabs & the page DIVs to hold the content.
 sub render_tabbed_pages {
     my $self = shift;
-    my ($main_html,$tracks_html,$community_tracks_html,$custom_tracks_html,$settings_html,) = @_;
+    my ($main_html,$tracks_html,$snapshot_html,$community_tracks_html,$custom_tracks_html,$settings_html) = @_;
     my $uses_database = $self->user_tracks->database;
     
     my $main_title             = $self->translate('MAIN_PAGE');
     my $tracks_title           = $self->translate('SELECT_TRACKS');
+    my $snapshot_title	       = $self->translate('SNAPSHOT_SELECT');
     my $community_tracks_title = $self->translate('COMMUNITY_TRACKS_PAGE') if $uses_database;
     my $custom_tracks_title    = $self->translate('CUSTOM_TRACKS_PAGE');
     my $settings_title         = $self->translate('SETTINGS_PAGE');
 
     my $html = '';
+	
     $html   .= div({-id=>'tabbed_section', -class=>'tabbed'},
 	           div({-id=>'tabbed_menu',-class=>'tabmenu'},
-	           span({id=>'main_page_select'},               $main_title),
-	           span({id=>'track_page_select'},              $tracks_title),
-	           $uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
-	           span({id=>'custom_tracks_page_select'},      $custom_tracks_title),
-	           span({id=>'settings_page_select'},           $settings_title),
-	       ),
-	   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
-	   div({-id=>'track_page',           -class=>'tabbody'}, $tracks_html),
-	   $uses_database?div({-id=>'community_tracks_page',-class=>'tabbody'}, $community_tracks_html) : "",
-	   div({-id=>'custom_tracks_page',   -class=>'tabbody'}, $custom_tracks_html),
-	   div({-id=>'settings_page',        -class=>'tabbody'}, $settings_html),
+		       span({id=>'main_page_select'},               $main_title),
+		       span({id=>'track_page_select'},              $tracks_title),
+		       span({id=>'snapshots_page_select'},           $snapshot_title),
+		       $uses_database? span({id=>'community_tracks_page_select'},   $community_tracks_title) : "",
+		       span({id=>'custom_tracks_page_select'},      $custom_tracks_title),,
+		       span({id=>'settings_page_select'},           $settings_title)
+		   ),
+		   div({-id=>'main_page',            -class=>'tabbody'}, $main_html),
+		   div({-id=>'track_page',           -class=>'tabbody' ,-style=>'display:none'}, $tracks_html),
+		   div({-id=>'snapshots_page',       -class=>'tabbody' ,-style=>'display:none'}, $snapshot_html),
+		   $uses_database?div({-id=>'community_tracks_page',-class=>'tabbody',-style=>'display:none'}, $community_tracks_html) : "",
+		   div({-id=>'custom_tracks_page',   -class=>'tabbody',-style=>'display:none'}, $custom_tracks_html),
+		   div({-id=>'settings_page',        -class=>'tabbody',-style=>'display:none'}, $settings_html),
 	);
+	
     return $html;
 }
 
@@ -177,14 +185,17 @@ sub render_navbar {
 
   my $plugin_form = div({-id=>'plugin_form'},$self->plugin_form());
 
+  # *** Checks the state to see if a snapshot is active and assigns it ***
   my $source_form = div({-id=>'source_form'},$self->source_form());
 
-  my $sliderform  = div({-id=>'slider_form'},$self->sliderform($segment));
+  my $sliderform    = div({-id=>'slider_form'},$self->sliderform($segment));
 
+  # *** Creates the save session button and assigns it to save_prompt ***
+  my $snapshot_options     = $self->snapshot_manager->snapshot_options;
   return $self->toggle('Search',
 		       div({-class=>'searchbody'},
-			   table({-border=>0,-width=>'100%'},
-				 TR(td({-width=>'50%'},$search),td($plugin_form)),
+			   table({-border=>0,-width=>'95%'},
+				 TR(td({-width=>'50%'},$search),td({-width=>'45%'},$plugin_form,$snapshot_options)),
 				 TR(td({-align=>'left'},
 				       $source_form,
 				    ),
@@ -228,6 +239,11 @@ sub source_form {
 	$self->source_menu(),
 	end_form
     );
+}
+
+# *** Create the snapshot_form ***
+sub snapshot_form {
+    return shift->snapshot_manager->snapshot_form;
 }
 
 # Slider Form - Returns the HTML for the zooming controls with the "Flip" checkbox.
@@ -292,7 +308,7 @@ sub render_html_head {
   my ($dsn,$title,@other_initialization) = @_;
   my @plugin_list = $self->plugins->plugins;
   my $uses_database = $self->user_tracks->database;
-  
+
   return if $self->{started_html}++;
 
   $title =~ s/<[^>]+>//g; # no markup in the head
@@ -347,9 +363,8 @@ sub render_html_head {
   }
 
   # our own javascript files
-  push @scripts,{src=>"$js/$_"}
-    foreach qw(
-      buttons.js 
+  push @scripts,map { {src=>"$js/$_"} } qw(
+      buttons.js
       trackFavorites.js
       karyotype.js
       rubber.js
@@ -365,7 +380,8 @@ sub render_html_head {
       track_configure.js
       track_pan.js
       ruler.js
-      controller.js
+      controller.js 
+      snapshotManager.js
     );
 
   # add scripts needed by plugins. Looks in /js folder unless specified.
@@ -384,6 +400,7 @@ sub render_html_head {
   my $stylesheet = $self->setting('stylesheet')||'/gbrowse2/css/gbrowse.css';
   push @stylesheets,{src => $self->globals->resolve_path('css/tracks.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/subtracktable.css','url')};
+  push @stylesheets,{src => $self->globals->resolve_path('css/snapshots.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/karyotype.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/dropdown.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path('css/dropdown/default_theme.css','url')};
@@ -436,10 +453,9 @@ sub render_html_head {
   # add body's onload arguments, including ones used by plugins
   my $autocomplete = '';
 
-  my $plugin_onloads  = join ';',map {eval{$_->body_onloads}} @plugin_list;
-  my $other_actions   = join ';',@other_initialization;
+  my $plugin_onloads   = join ';',map {eval{$_->body_onloads}} @plugin_list;
+  my $other_actions    = join ';',@other_initialization;
   push @args,(-onLoad => "initialize_page(); $set_dragcolors; $set_units; $plugin_onloads; $other_actions");
-
   return start_html(@args);
 }
 
@@ -835,6 +851,7 @@ sub render_toggle_track_table {
 
   $html .= div({-style=>'font-weight:bold'},
 	       span({-style=>'padding-right:80px'},'<<',$self->render_select_browser_link('link')),
+	       span({-id=>'showselectedtext',-style=>'padding-right:80px'},$self->render_show_active_tracks_link()),
 	       span({-id => 'showfavoritestext',-style=>'padding-right:80px'},
 		    $self->render_select_favorites_link('link')),
 	       span({-id => 'clearfavs'},
@@ -846,320 +863,17 @@ sub render_toggle_track_table {
 							   $self->render_track_filter($filter)));
   }
 
-  $html .= $self->toggle('Tracks',$self->render_track_table);
+  $html .= $self->toggle({nodiv=>1},'Tracks',$self->render_track_table);
   $html .= div({-style=>'text-align:center'},$self->render_select_browser_link('button'));
   return $html;
 }
 
-# Render Track Table - Invoked to draw the checkbox group in the "Select Tracks" tab. It creates a hyperlinked set of feature names.
 sub render_track_table {
-    my $self     = shift;
-    my $settings = $self->state;
-    my $source   = $self->data_source;
-
-    # read category table information
-    my $category_table_labels = $self->category_table();
-    my $an;
-    # tracks beginning with "_" are special, and should not appear in the
-    # track table.
-    my @labels = $self->potential_tracks;
-    
-    warn "favorites = {$settings->{show_favorites}} " if DEBUG;
-
-    if( $settings->{show_favorites}){
-	warn "favorites = @labels = $settings->{show_favorites}" if DEBUG;	
-	@labels= grep {$settings->{favorites}{$_}} @labels;
-    }
-
-    warn "label = @labels" if DEBUG;
-
-    my ($filter_active,@hilite);
-    if (my $filter = $self->track_filter_plugin) {
-	my $tracks = @labels;
-	eval {@labels    = $filter->filter_tracks(\@labels,$source)};
-	warn $@ if $@;
-	eval {@hilite    = $filter->hilite_terms};
-	warn $@ if $@;
-	$filter_active = @labels<$tracks;  # mark filter active if the filter has changed the track count
-    }
-
-    # add citation link, favorite stars and other markup
-    my $button_url = $self->data_source->button_url;
-    my (%labels,%label_sort);
-    for my $label (@labels) {
-	my $key = $self->label2key($label);
-	my ($link,$mouseover);
-	if ($label =~ /^plugin:/) {
-	    $key   = $self->plugin_name($label);
-	    #$labels{$label} = $self->plugin_name($label);
-	    #next;
-	}
-	elsif ($label =~ /^file:/){
-	    $link = "?Download%20File=$key";
-	}
-	elsif ($self->data_source->setting($label=>'citation')){
-	    $link = "?display_citation=$label";#;source=" . $settings->{source};
-	    my $cit_txt = citation( $source, $label, $self->language ) || '';
-	    if ( length $cit_txt > 100) {
-		$cit_txt =~ s/\<[^\>]+\>//g;     # truncate and strip tags for preview
-		$cit_txt =~ s/(.{100}).+/$1/; 
-		$cit_txt =~ s/\s+\S+$//; 
-		$cit_txt =~ s/\'/\&\#39;/g;
-		$cit_txt =~ s/\"/\&\#34;/g;
-		$cit_txt .= '... <i>' . ($self->translate('CLICK_FOR_MORE')||'') . '</i>';
-	    }
-	    $mouseover = "<b>$key</b>";
-	    $mouseover .= ": $cit_txt"  if $cit_txt;
-	}
-
-	my $track_on    = $settings->{features}{$label}{visible};
-	my $favorite    = $settings->{favorites}{$label};
-	my $balloon = $source->setting('balloon style') || 'GBubble';
-	my $cellid = 'datacell';
-
-	my @classes = 'track_title';
-	push @classes,'activeTrack' if $track_on;
-	push @classes,'favorite'    if $favorite;
-	push @classes,'remote'      if $label =~ /^(http|ftp|file):/;
-
-	# add hilighting if requested
-	for my $h (@hilite) {
-	    $key =~ s!($h)!<span class='text_match'>$1</span>!gi;
-	}
-
-	my $name =  $self->{$category_table_labels}->{label};
-	warn "section = $name" if DEBUG;
-
-	#if the track has already been favorited, the image source is made into the yellow star
-	my $star      = $favorite ? 'ficon_2.png' : 'ficon.png';
-	my $class     = $favorite ? 'star favorite' : 'star';
-	my $show_fav  = $self->translate('ADDED_TO');
-	my $favoriteicon  = img({-class =>  $class,
-				-id      => "star_$label",
-				-onClick => "togglestars('$label')",
-				-onMouseOver => "GBubble.showTooltip(event,'$show_fav')",
-				-style => 'cursor:pointer;',
-				-src   => "$button_url/$star"}
-	    );
-	my $category = $self->categorize_track($label);
-	my @args;
-	push @args, (-class => "@classes");
-	push @args, (-onClick     => "gbTurnOff('${category}_section');gbToggleTrack('$label')");
-	push @args, (-onmouseover => "$balloon.showTooltip(event,'$mouseover')") if $mouseover;
-
-	my $title  = span({-id=>"${label}_check",@args},$key);
-
-	my $checkicon =   img({-id=>"${label}_img",
-			       -onClick => "gbToggleTrack('$label')",
-			       -src=>$track_on ? "$button_url/check.png" 
-				               : "$button_url/square.png"});
-	my $help     = $link ?
-	    a({-href=>$link,
-	       -target=>'_new',
-	       -onmouseover => "$balloon.showTooltip(event,'$mouseover')",
-	      }, '[?]')
-	    : '';
-	
-	$label_sort{$label}  = $key;
-	$labels{$label}      = join(' ',$favoriteicon,span({-class=>'track_label'},$checkicon,$title),$help);
-	
-	if (my ($selected,$total) = $self->subtrack_counts($label)) {
-	    my $escaped_label = CGI::escape($label);
-	    $labels{$label} .= ' ['. span({-class       =>'clickable',
-					   -onMouseOver  => "GBubble.showTooltip(event,'".$self->translate('CLICK_MODIFY_SUBTRACK_SEL')."')",
-					   -onClick      => "GBox.showTooltip(event,'url:?action=select_subtracks;track=$escaped_label',true)"
-					  },i($self->translate('SELECT_SUBTRACKS',$selected,$total))).']';
-	}
-    }
-
-    my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
-    
-    # Sort the tracks into categories:
-    # Overview tracks
-    # Region tracks
-    # Regular tracks (which may be further categorized by user)
-    # Plugin tracks
-    # External tracks
-    my %track_groups;
-    foreach (@labels) {
-	my $category = $self->categorize_track($_);
-	push @{$track_groups{$category}},$_;
-    }
-
-    autoEscape(0);
-
-    # Get the list of all the categories needed.
-    my %exclude = map {$_=>1} map {$self->translate($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
-
-    (my $usertrack_cat = $self->translate('UPLOADED_TRACKS_CATEGORY')||'') =~ s/:.+$//;
-    $usertrack_cat    ||= '';
-    my @user_tracks    = grep {/^$usertrack_cat/i} keys %track_groups;
-    $exclude{$_}++ foreach @user_tracks;
-
-    my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
-
-    my $all_on  = $self->translate('ALL_ON');
-    my $all_off = $self->translate('ALL_OFF');
-
-    my (%seenit,%section_contents);
-
-    my @categories = (@user_keys,
-		      $self->translate('OVERVIEW'),
-		      $self->translate('REGION'),
-		      $self->translate('ANALYSIS'),
-	);
-    unshift @categories,@user_tracks if @user_tracks;
-
-    my $c_default = $source->category_default;
-
-    my @titles; # for sorting
-    
-    # For each category, create the appropriately-nested node. "My Tracks" node positions comes from the track's config file.
-    my $usertracks = $self->user_tracks;
-    foreach my $category (@categories) {
-	next if $seenit{$category}++;
-	my $id = "${category}_section";
-	my $category_title   = (split m/(?<!\\):/,$category)[-1];
-	$category_title      =~ s!($_)!<span style="background-color:yellow">$1</span>!gi foreach @hilite;    
-
-	my $file_id;
-
-	if ($category eq $self->translate('REGION') 
-	    && !$self->setting('region segment')) {
-	    next;
-	}
-
-	elsif  (exists $track_groups{$category}) {
-	    my @track_labels = @{$track_groups{$category}};
-
-	    $settings->{sk} ||= 'sorted'; # get rid of annoying warning
-
-	    # if these tracks are in a grid, then don't sort them
-	  BLOCK: {
-	      no warnings;  # kill annoying uninit warnings under modperl
-	      @track_labels = sort {lc ($label_sort{$a}) cmp lc ($label_sort{$b})} @track_labels
-		  if $settings->{sk} eq 'sorted' && !defined $category_table_labels->{$category};
-	    }
-
-	    my $visible =  $filter_active                            ? 1
-		         : exists $settings->{section_visible}{$id}  ? $settings->{section_visible}{$id} 
-	                 : $c_default;
-	    
-	    my @entries = map {$labels{$_}} @track_labels;
-	    my $table   = $self->tableize(\@entries,$category,undef, \@track_labels);
-
-	    # Get the content for this track.
-	    my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
-							 $id,
-							 b(ucfirst $category_title),
-							 div({-style=>'padding-left:1em'},
-							     span({-id=>$id},$table)));
-	    $control .= '&nbsp;'.i({-class=>'nojs'},
-				   checkbox(-id=>"${id}_a",-name=>"${id}_a",
-					    -label=>$all_on,-onClick=>"gbCheck(this,1);"),
-				   checkbox(-id=>"${id}_n",-name=>"${id}_n",
-					    -label=>$all_off,-onClick=>"gbCheck(this,0);")
-		)."&nbsp;".span({-class => "list",
-				 -id => "${id}_list",
-				 -style => "display: " . ($visible? "none" : "inline") . ";"},"")
-		.br()   if exists $track_groups{$category};
-	    $section_contents{$category} = div($control.$section);
-	}
-	else {
-	    next;
-	}
-    }
-
-    autoEscape(1);
-    my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories,$filter_active);
-    return join( "\n",
-		 start_form(-name=>'trackform',
-			    -id=>'trackform'),
-		 div({-class=>'searchbody',-id=> 'range', -style=>'padding-left:1em'},$slice_and_dice),
-		 end_form,
-		 $self->html_frag('html5',$settings),
-	);
-}
-
-# Category Table - This returns the hash of the category table.
-sub category_table {
-    my $self   = shift;
-    my $tabledata  = $self->data_source->setting('category tables');
-    my @tabledata  = shellwords($tabledata||'');
-    my %categorytable=();
-    while (@tabledata) {
-	    my $category=shift(@tabledata);
-	    my $rows=shift(@tabledata);
-	    my @rows=split(/\s+/,$rows);
-	    my $cols=shift(@tabledata);
-	    my @cols=split(/\s+/,$cols);
-	    $categorytable{$category}{row_labels}=\@rows;
-	    $categorytable{$category}{col_labels}=\@cols;
-    }
-    
-    return \%categorytable; 
-}
-
-sub indent_categories {
     my $self = shift;
-    my ($contents,$categories,$force_open) = @_;
-
-    my $category_hash = {};
-    my %sort_order;
-    my $sort_index = 0;
-
-    for my $category (@$categories) {
-	    my $cont   = $contents->{$category} || '';
-
-	    my @parts  = map {s/\\//g; $_} split m/(?<!\\):/,$category;
-	    $sort_order{$_} = $sort_index++ foreach @parts;
-
-	    my $i      = $category_hash;
-
-	    # we need to add phony __next__ and __contents__ keys to avoid
-	    # the case in which the track sections are placed at different
-	    # levels of the tree, for instance 
-	    # "category=level1:level2" and "category=level1"
-	    for my $index (0..$#parts) {
-	        $i = $i->{__next__}{$parts[$index]} ||= {};
-	        $i->{__contents__}                    = $cont 
-		                                        if $index == $#parts;
-	    }
-    }
-    my $i               = 1;
-    my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order,$force_open);
-}
-
-# Nest Toggles - This turns the nested category/subcategory hashes into a prettily-indented tracks table.
-sub nest_toggles {
-    my $self         = shift;
-    my ($hash,$sort,$force_open) = @_;
-    my $settings = $self->state;
-
-    my $result = '';
-    my $default = $self->data_source->category_default;
-
-    for my $key (sort { 
-	           ($sort->{$a}||0)<=>($sort->{$b}||0) || $a cmp $b
-		      }  keys %$hash) {
-	    if ($key eq '__contents__') {
-	        $result .= $hash->{$key}."\n";
-	    } elsif ($key eq '__next__') {
-	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
-	    } elsif ($hash->{$key}{__next__}) {
-	        my $id =  "${key}_section";
-	        $settings->{section_visible}{$id} = $default unless exists $settings->{section_visible}{$id};
-     	    $result .= $self->toggle_section({on=>$force_open||$settings->{section_visible}{$id}},
-					         $id,
-					         b($key).span({-class => "list",
-			                -id => "${id}_list"},""),
-					         div({-style=>'margin-left:1.5em;margin-right:1em'},
-						     $self->nest_toggles($hash->{$key},$sort,$force_open)));
-	    } else {
-	        $result .= $self->nest_toggles($hash->{$key},$sort,$force_open);
-	    }
-    }
-    return $result;
+    my $listing_class = $self->data_source->track_listing_class;
+    eval "require $listing_class;1" or die $@ unless $listing_class->can('new');
+    my $tlr = $listing_class->new($self);
+    return $tlr->render_track_listing.$self->html_frag('html5',$self->state);
 }
 
 # Render Multiple Choices - 
@@ -1357,6 +1071,15 @@ sub render_select_clear_link {
 		 $title),$showicon);
 }
 
+sub render_show_active_tracks_link {
+    my $self = shift;
+    my $active = $self->state->{active_only} ? 'true' : 'false';
+    return a({-href    => 'javascript:void(0)',
+	      -class   => $active ? 'show_active' : 'inactive',
+	      -onClick => "show_active_tracks(this,$active)"},
+	     $self->translate('SHOW_ACTIVE_TRACKS'));
+}
+
 sub render_select_favorites_link {
     my $self  = shift;
 
@@ -1460,7 +1183,8 @@ sub render_community_track_listing {
 	my $max_files = $globals->public_files;
 	my $total_tracks = $usertracks->public_count($search);
 	my $track_limit = $search? @requested_tracks : $max_files;
-	my $tracks_displayed = ($track_limit < (@requested_tracks? @requested_tracks : $total_tracks))? $track_limit : (@requested_tracks? @requested_tracks : $total_tracks);
+	my $tracks_displayed = ($track_limit < (@requested_tracks? @requested_tracks : $total_tracks))
+	                      ? $track_limit : (@requested_tracks? @requested_tracks : $total_tracks);
 	my $tracks_remaining = $total_tracks - ($offset + $tracks_displayed);
 	my $tracks_before = $offset;
 	
@@ -1984,7 +1708,7 @@ sub segment2link {
 
 sub tableize {
   my $self              = shift;
-   my ($array,$category,$cols,$labelnames) = @_;
+  my ($array,$cols,$labelnames,$row_labels,$column_labels) = @_;
   return unless @$array;
   my $settings = $self->state;
 
@@ -1994,12 +1718,11 @@ sub tableize {
 
   # gets the data for the defined 'category table(s)'
   my (@column_labels,@row_labels);
-  my $categorytable = $self->category_table();
-  if (defined $category and exists $categorytable->{$category} ) {
-      @column_labels = @{$categorytable->{$category}{row_labels}};
-      @row_labels    = @{$categorytable->{$category}{col_labels}};
-      $rows          = @row_labels;
-      $columns       = @column_labels;
+  if ($row_labels && $column_labels) {
+      @row_labels       = @$row_labels;
+      @column_labels    = @$column_labels;
+      $rows             = @row_labels;
+      $columns          = @column_labels;
   }
 
   my $cwidth = int(100/$columns+0.5) . '%';
@@ -2024,7 +1747,10 @@ sub tableize {
   
 	# de-couple the checkbox and label click behaviors
 	$checkbox =~ s/\<\/?label\>//gi;
-
+	if ($label =~/^=/) {
+          $label = '&nbsp;';
+          $checkbox = '&nbsp;';
+        }
 	my $class = $settings->{features}{$label}{visible} ? 'activeTrack' : '';
 
 	$html .= td({-width=>$cwidth,-style => 'visibility:visible',-class=>$class},
@@ -2260,7 +1986,7 @@ sub wrap_track_in_track_div {
     # track_type used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
 
-    my $section = $self->get_section_from_label($track_id);
+    my $section = $self->data_source->get_section_from_label($track_id);
     my $class   = $track_id =~ /scale/i ? 'scale' : 'track';
 
     return div(
@@ -2450,8 +2176,6 @@ sub source_menu {
 # This is currently somewhat hacky, hard to extend and needs to be generalized.
 # NOTE: to add new configuration rows, the name of the form element must begin with "conf_" and
 # the rest must correspond to a valid glyph option.
-
-# BUG: MOVE THIS INTO ITS OWN MODULE!
 sub track_config {
     my $self        = shift;
     my $label              = shift;
@@ -2536,14 +2260,16 @@ sub download_track_menu {
     my $byebye      = 'Balloon.prototype.hideTooltip(1)';
 
     my $segment_str = segment_str($segment);
+    my $glyph       = $data_source->setting($track=>'glyph') || 'generic';
     
     my @format_options = Bio::Graphics::Browser2::TrackDumper->available_formats($data_source,$track);
     my %foptions       = map {$_=>1} @format_options;
     my $default     = $foptions{$state->{preferred_dump_format}||''} ? $state->{preferred_dump_format}
-                                                                     : $foptions{gff3}  ? 'gff3'
-								     : $foptions{bed}   ? 'bed'
-								     : $foptions{sam}   ? 'sam'
-								     : $foptions{vista} ? 'vista'
+                                                                     : $glyph =~ /vista/ && $foptions{vista} ? 'vista'
+                                                                     : $foptions{gff3}   ? 'gff3'
+								     : $foptions{bed}    ? 'bed'
+								     : $foptions{sam}    ? 'sam'
+								     : $foptions{vista}  ? 'vista'
 								     : 'fasta';
     my @radios      = radio_group(-name   => 'format',
 				  -values => \@format_options,
@@ -2562,7 +2288,7 @@ sub download_track_menu {
 		   div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key).
 		   hr().
 		   start_form({-id=>'dump_form'}).
-		   div($self->tableize(\@radios,undef,3,undef)).
+		   div($self->tableize(\@radios,3)).
 		   end_form().
 		   hr().
 		   button(-value   => $self->translate('DOWNLOAD_TRACK_DATA_REGION',$segment_str),
@@ -2808,11 +2534,12 @@ sub toggle_section {
 		      -style=>$visible ? 'display:inline' : 'display:none',
 		      -class => 'el_visible'},
 		     @section_body);
-  my @result =  $config{nodiv} ? (div({-style=>'float:left'},
+  my @class  = (-class=>'toggleable');
+  my @result =  $config{nodiv} ? (div({-style=>'float:left',@class},
 				      $show_ctl.$hide_ctl),$content)
-                :$config{tight}? (div({-style=>'float:left;position:absolute;z-index:10'},
+                :$config{tight}? (div({-style=>'float:left;position:absolute;z-index:10',@class},
 				      $show_ctl.$hide_ctl).$break,$content)
-                : div($show_ctl.$hide_ctl,$content);
+                : div({@class},$show_ctl.$hide_ctl,$content);
   return wantarray ? @result : "@result";
 }
 

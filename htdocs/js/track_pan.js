@@ -192,7 +192,7 @@ var GBrowseTrackPan = Class.create({
 			return;
 		}
 		if (!Prototype.Browser.IE)
-		    gbtrack.get_image_div().setStyle({cursor: 'url('+Controller.button_url('cursor-ewmove.cur')+'), move'});
+		    gbtrack.get_image_div().setStyle({cursor: 'url('+Controller.button_url('cursor-ewmove.ico')+'), move'});
 		new Draggable(gbtrack.get_image_div(), {
 			constraint: 'horizontal',
 			zindex: 0, // defaults to 1000, which we don't want because it covers labels
@@ -315,9 +315,9 @@ var GBrowseTrackPan = Class.create({
 
 	get_start:
 	function () {
-		var len = this.detail_stop - this.detail_start;
-		var start = Math.round(this.detail_start + len * (this.details_mult - 1) / this.details_mult * this.x);
-		return start;
+	    var len = this.detail_stop - this.detail_start;
+	    var start = Math.round(this.detail_start + len * (this.details_mult - 1) / this.details_mult * this.x);
+	    return start;
 	},
 
 	get_stop:

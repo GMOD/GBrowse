@@ -28,18 +28,17 @@ var region_container_id     = 'region_panels';
 var detail_container_id     = 'detail_panels'; 
 var external_utility_div_id = 'external_utility_div'; 
 var page_title_id           = 'page_title';
-var galaxy_form_id          = 'galaxy_form';
+var galaxy_form_id          = 'galaxy_form';       
 var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
 var userdata_table_id       = 'userdata_table_div';
 var custom_tracks_id        = 'custom_tracks';
 var community_tracks_id     = 'community_tracks';
+var snapshot_table_id 	    = 'snapshots_page';
 var GlobalDrag;
 
 //  Sorta Constants
 var expired_limit  = 1;
-
-
 
 var GBrowseController = Class.create({
 
@@ -94,6 +93,7 @@ var GBrowseController = Class.create({
 	reset_after_track_load:
 	// This may be a little overkill to run these after every track update but
 	// since there is no "We're completely done with all the track updates for the
+
 	// moment" hook, I don't know of another way to make sure the tracks become
 	// draggable again
 	function () {
@@ -245,36 +245,23 @@ var GBrowseController = Class.create({
         //element back out.  This keeps the other tracks intact.
         if (onTop == null) onTop = false;
 
-        var tmp_element       = document.createElement("tmp_element");
-        tmp_element.innerHTML = child_html;
+//        var tmp_element       = document.createElement("tmp_element");
+//        tmp_element.innerHTML = child_html;
 
         var tracks      = parent_obj.getElementsByClassName('track');
         var first_track = tracks[0];
 
         if (onTop && first_track != null)
-	    parent_obj.insert(tmp_element,{before: first_track[0]});
+	    first_track.insert({before: child_html});
         else
-            parent_obj.insert(tmp_element);
+            parent_obj.insert(child_html);
         
-        // Move each child node but skip if it is a comment (class is undef)
-        if (tmp_element.hasChildNodes()) {
-            var children = tmp_element.childNodes;
-            for (var i = 0; i < children.length; i++) {
-                if (children[i].className == undefined)
-                    continue;
-                if (onTop && first_track != null)
-                    parent_obj.insert(children[i],{before:first_track});
-                else
-                    parent_obj.insert(children[i]);
-            }
-        }
-        parent_obj.removeChild(tmp_element);
     },
 
     // Update Section Methods *****************************************
     update_sections:
     function(section_names, param_str, scroll_there, spin, onSuccessFunc) {
-      
+
         if (param_str==null){
             param_str = '';
         }
@@ -284,7 +271,7 @@ var GBrowseController = Class.create({
         if (spin == null) {
             spin = false;
         }
-        
+
         var request_str = "action=update_sections" + param_str;
         for (var i = 0; i < section_names.length; i++) {
             if (spin)
@@ -293,8 +280,7 @@ var GBrowseController = Class.create({
 							alt: Controller.translate('WORKING')}) );
             request_str += "&section_names="+section_names[i];
         }
-
-        new Ajax.Request(Controller.url, {
+	new Ajax.Request(Controller.url, {
             method:     'post',
             parameters: request_str,
             onSuccess: function(transport) {
@@ -311,8 +297,9 @@ var GBrowseController = Class.create({
                         initAutocomplete();
                     if (section_name == page_title_id)
                         document.title = $(section_name).innerHTML;
-                    if (onSuccessFunc != null)
+                    if (onSuccessFunc != null) {
                         onSuccessFunc();
+		    }
                 }
                 checkSummaries();
             }
@@ -329,7 +316,7 @@ var GBrowseController = Class.create({
                 method: 'post', 
                 parameters: param,
                 onComplete:  function (transport) {
-                    Controller.update_coordinates('left 0'); // causes an elegant panel refresh
+                    Controller.refresh_tracks(); // causes an elegant panel refresh
                 } 
             }
         );
@@ -362,10 +349,41 @@ var GBrowseController = Class.create({
     },
 
     // Kick-off Render Methods ****************************************
+    reload_panels:  // called only to reload a snapshot
+	function (segment_info) {
+	    if (segment_info != null) {
+		this.segment_info = segment_info;
+	    }
+
+	    new Ajax.Request(Controller.url,{
+		    method: 'post',
+		    parameters: {
+			action: 'render_panels'
+		    },
+		    onSuccess: function(transport) { 
+			$('panels').innerHTML = transport.responseText;
+			$('panels').innerHTML.evalScripts();
+			var color = overviewObject.background;
+			var unit  = overviewObject.unit;
+			var divider = overviewObject.divider;
+			['overview','region','detail'].each(function(e) {
+				    var m = $(e+'SelectMenu');
+				    if (m) m.remove();
+			    });
+			this.initialize_page();
+			set_dragcolors(color);
+			set_dragunits(unit,divider);
+		    }
+		});
+	    
+	}, //end render_panels()
 
     update_coordinates:
-    function (action) {
-
+    function (action, snapshot) {
+	if (snapshot == null){
+		snapshot = false;
+	}
+	
         // submit search form if the detail panel doesn't exist
         if ( null == $(detail_container_id) ){
             document.searchform.force_submit.value = 1; 
@@ -386,14 +404,14 @@ var GBrowseController = Class.create({
             //  alert('REPORT THIS BUG: element '+gbtrack.track_image_id+' should not be null');
         });
 
-
         new Ajax.Request(Controller.url, {
             method:     'post',
             parameters: {
                 action:     'navigate',  // 'action'   triggers an async call
                 navigate:   action,      // 'navigate' is an argument passed to the async routine
                 view_start: Math.round(TrackPan.get_start()),
-                view_stop:  Math.round(TrackPan.get_stop())
+                view_stop:  Math.round(TrackPan.get_stop()),
+		snapshot:   snapshot // Is true when a snapshot is being loaded, and false otherwise
             },
             onSuccess: function(transport) {
                 var results                 = transport.responseJSON;
@@ -442,6 +460,12 @@ var GBrowseController = Class.create({
         }); // end Ajax.Request
     }, // end update_coordinates
 
+    refresh_tracks: 
+	function (snapshot) {
+	    // The snapshot flag indicates that a snapshot is being loaded and refreshes the tracks accordingly
+	    Controller.update_coordinates('left 0', snapshot);
+	}, // end refresh_tracks
+
     scroll:
     function (direction,length_units) {
         if (!TrackPan.scroll(direction,length_units)) {
@@ -458,23 +482,24 @@ var GBrowseController = Class.create({
 
     add_tracks:
     function(track_names, onSuccessFunc, force, onTop) {
-
         if (force == null)
             force = false;
-
         var request_str = "action=add_tracks";
         var found_track = false;
+	track_names.reverse();
         for (var i = 0; i < track_names.length; i++) {
             var track_name = track_names[i];
+		
             if ( force || !this.track_exists(track_name) ) {
                 request_str += "&track_names="+encodeURIComponent(track_name);
                 found_track = true;
             }
         }
-
+	//track_names.reverse();
         if (!found_track) return false;
-
+	
         this.busy();
+
         new Ajax.Request(Controller.url, {
             method:     'post',
             parameters: request_str,
@@ -486,7 +511,10 @@ var GBrowseController = Class.create({
                 var track_keys = new Object();
                 var get_tracks = false;
 
+		//		for (var i = 0; i < track_names.length; i++) {
+		// var ret_track_id = track_names[i];	
                 for (var ret_track_id in track_data) {
+
                     if (Controller.gbtracks.get(ret_track_id) != null)
                         continue; //oops already know this one
 
@@ -505,7 +533,7 @@ var GBrowseController = Class.create({
                     //Controller.append_child_from_html(html,$(panel_id),onTop);
 		    // force true - experimental
 		    Controller.append_child_from_html(html,$(panel_id),true);
-
+		
                     if (this_track_data.display_details == 0) {
                         $(ret_gbtrack.track_image_id).setOpacity(0);
                     } else {
@@ -683,14 +711,17 @@ var GBrowseController = Class.create({
                         }
                     }
                 }
-                Controller.reset_after_track_load();
                 if (continue_requesting) {
                     setTimeout( function() {
                         Controller.get_remaining_tracks(track_keys,time_out*decay,decay,time_key)
                     } ,time_out);
                 } else {
+		    var area = $$('area[inline!=1]');
+		    area.invoke('observe', 'mousedown', Controller.feature_callback);
+		    area.invoke('observe', 'mouseover', Controller.feature_callback);
                     Controller.idle();
                 }
+                Controller.reset_after_track_load();
             } // end onSuccess
         }); // end new Ajax.Request
 
@@ -709,9 +740,6 @@ var GBrowseController = Class.create({
         if (mode==null)
             mode='normal';
 
-        var show_box   = form_element['show_track'];
-        var show_track = $(show_box).getValue();
-
         new Ajax.Request(Controller.url, {
                 method:     'post',
                 parameters: form_element.serialize() +"&"+ $H({
@@ -722,17 +750,22 @@ var GBrowseController = Class.create({
             onSuccess: function(transport) {
                 var track_div_id = Controller.gbtracks.get(track_id).track_div_id;
                 Balloon.prototype.hideTooltip(1);
-                if (show_track == track_id){
-                    Controller.rerender_track(track_id,false,false);
-                } else {
-                    if ($(track_div_id) != null) {
-                        actually_remove(track_div_id);
-                    }
-                    Controller.update_sections(new Array(track_listing_id),null,null,true);
-                }
+		Controller.rerender_track(track_id,false,false);
+		Controller.update_sections(new Array(track_listing_id),null,null,true);
             } // end onSuccess
         });
     },
+
+    toggle_subtrack_overlapping:
+	function(track_id,overlapping) {
+	    new Ajax.Request(Controller.url, {
+		    method:     'post',
+		    parameters: {
+			action:      'track_overlapping',
+			track:       track_id,
+		        overlapping: overlapping }
+            })
+     },
 
     filter_subtrack:
     function(track_id, form_element) {
@@ -1094,9 +1127,6 @@ show_info_message:
             backgroundColor:'beige',
             padding:'5px 5px 5px 5px'
         });
-        // var r = document.createRange();
-        // r.selectNodeContents(container_element);
-        // window.getSelection().addRange(r);
         Event.observe(container_element,'keypress',this.set_upload_description);
         Event.observe(container_element,'blur',this.set_upload_description);
     },
@@ -1318,7 +1348,32 @@ show_info_message:
   function(event, url) {
     GBox.showTooltip(event, url);
 	Controller.update_sections(new Array(custom_tracks_id));
-  }
+  },
+
+  feature_callback:
+	function(event) {
+	    // find track information
+	    var element = event.element();
+	    var track_element = element.up(1).id;
+	    var track         = track_element.sub(/^track_/,'');
+	    var javascript;
+	    new Ajax.Request(Controller.url, {
+		    method:      'post',
+			asynchronous: false,
+			parameters:{  
+			    action:      'get_feature_info',
+			    event_type:  event.type,
+			    track:       track,
+			    dbid:        element.getAttribute('dbid'),
+			    feature_id:  element.getAttribute('fid')
+			    },
+		    onSuccess: function(transport) {
+			javascript  = transport.responseText;
+		    }
+	    });
+	    if (javascript != '')
+		eval(javascript);
+	}
 
 });
 
@@ -1329,7 +1384,6 @@ function using_database() {
 }
 
 function initialize_page() {
-
     if (Controller == null) Controller = new GBrowseController;
 
     // This oddity prevents ?id=logout from appearing in the url box.
@@ -1343,7 +1397,8 @@ function initialize_page() {
     var tabs = $$("div.tabbody").collect( function(element) {
 	    return element.id;
 	});
-    Controller.tabs = new TabbedSection(tabs);
+    if (Controller.tabs == null)
+	Controller.tabs = new TabbedSection(tabs);
 
     //event handlers
     [page_title_id,visible_span_id,galaxy_form_id,search_form_objects_id].each(function(el) {
@@ -1356,7 +1411,7 @@ function initialize_page() {
     // when manually advancing the browser with its forward/backward buttons.
     // Unfortunately it causes an infinite loop when there are multiple regions!
     if ($(detail_container_id) != null)
-	Controller.update_coordinates('left 0');
+	Controller.refresh_tracks();
     
     // These statements get the rubberbanding running.
     Overview.prototype.initialize();
@@ -1364,6 +1419,9 @@ function initialize_page() {
     Details.prototype.initialize();
     if ($('autocomplete_choices') != null) 
 	initAutocomplete();
+
+    Sortable.create('snapshotTable',{tag:'div',only:'draggable'});
+    Controller.checkSnapshot()
 }
 
 // set the colors for the rubberband regions
@@ -1376,7 +1434,7 @@ function set_dragcolors(color) {
      detailsObject.background  = color;
 }
 
-// set the colors for the rubberband regions
+// set the units for the rubberband regions
 function set_dragunits(unit,divider) {
     if (unit == null)    unit    = 'bp';
     if (divider == null) divider = 1;

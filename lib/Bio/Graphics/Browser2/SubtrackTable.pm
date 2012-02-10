@@ -83,6 +83,14 @@ sub elements {
     return $self->{_elements}=\%elements;
 }
 
+# flag indicates that subtracks are overlapping
+sub overlap {
+    my $self = shift;
+    my $d = $self->{_overlap};
+    $self->{_overlap} = shift if @_;
+    return $d;
+}
+
 # return two element list consisting of # selected/# total
 sub counts {
     my $self = shift;
@@ -91,7 +99,6 @@ sub counts {
     my $selected    = grep {$elements->{$_}{selected}} keys %$elements;
     return ($selected,$total);
 }
-
 
 sub set_selected {
     my $self          = shift;
@@ -133,6 +140,7 @@ sub selection_table {
     my $aliases   = $self->subtrack_aliases;
     my @selectors = $self->selectors;
     my $elements  = $self->elements;
+    my $overlap   = $self->overlap;
     my (@popups,@sort_type,@boolean);
 
     my $tbody_id = "${label}_subtrack_id";
@@ -170,7 +178,7 @@ sub selection_table {
     my $comment      = $self->track_comment;
     my $instructions = $render->tr('SUBTRACK_INSTRUCTIONS');
 
-       # it is possible for there to be more fields in the data table than among
+    # it is possible for there to be more fields in the data table than among
     # the selectors, so we create additional dummy columns in the header
     my $cols = 0;
     for (keys %$elements) {
@@ -224,10 +232,15 @@ sub selection_table {
     }
     my $tbody = tbody({-id=>$tbody_id,-class=>'sortable'},@table_rows);
 
-    my $tbottom = div(button(-name=>$render->tr('Cancel'),
-			     -onClick => 'Balloon.prototype.hideTooltip(1)'),
-		      button(-name    => $render->tr('Change'),
-			     -onclick => "Table.sendTableState('$label',\$('$tbody_id'));ShowHideTrack('$label',true);Controller.rerender_track('$label',false,true);Controller.update_sections(new Array(track_listing_id));Balloon.prototype.hideTooltip(1);"));
+    my $tbottom = div(
+	checkbox(-id=>'overlap_track',
+		 -label    => $render->tr('OVERLAP'),
+		 -checked  => $overlap,
+	),
+	button(-name=>$render->tr('Cancel'),
+	       -onClick => 'Balloon.prototype.hideTooltip(1)'),
+	button(-name    => $render->tr('Change'),
+	       -onclick => "Table.sendTableState('$label',\$('$tbody_id'));Controller.toggle_subtrack_overlapping('$label',\$('overlap_track').checked);ShowHideTrack('$label',true);Controller.rerender_track('$label',false,true);Controller.update_sections(new Array(track_listing_id));Balloon.prototype.hideTooltip(1);"));
 
 
     my $table_id = "${label}_subtrack_table";
@@ -249,13 +262,18 @@ END
 
     return div({-class=>'subtrack_table',
 		-id=>'subtrack_table_scroller'},
-	    table({-width=>$width,
+	    table({-width=>'98%',
 		   -class => "subtrack-table table-autosort table-autostripe table-stripeclass:alternate",
 		   -style => CGI->user_agent =~ /KHTML/ ? "border-collapse:collapse" 
 		                                        : "border-collapse:separate",
                    -id    => $table_id,
 		   @style},
 		  $thead,$tbody)).$tbottom.$script;
+}
+
+sub track_args {
+    my $self = shift;
+    return $self->overlap ? (-bump => 'overlap',-opacity=>0.25) : ();
 }
 
 # summarize rows that are active vs inactive
@@ -316,10 +334,13 @@ sub feature_to_id_sub {
 		my $bang = $val ? '' : '!';
 		$sub .= "\$found &&= $bang\$f->has_tag('$operand');\n";
 	    } else {
-		my $operation =  $val =~ /^~(.+)/                         ? "=~ m[$1]i" 
+		my $operation = $val eq ''                                ? undef
+		               : $val =~ /^~(.+)/                         ? "=~ m[$1]i" 
                                : $val =~ /^[+-]?\d*(\.\d+)?([eE]-?\d+)?$/ ? "== $val"
                                : "eq '$val'";
-		if ($op eq 'tag_value') {
+		if (!defined $operation) {
+		    $sub .= "\$found &&= length((\$f->get_tag_values('$operand'))[0])==0;\n";
+		} elsif ($op eq 'tag_value') {
 		    $sub .= "\$found &&= \$f->has_tag('$operand');\n";
 		    $sub .= "\$found &&= (\$f->get_tag_values('$operand'))[0] $operation;\n";
 		} else {
@@ -378,19 +399,30 @@ sub infer_settings_from_source {
     my $package          = shift;
     my ($source,$label)  = @_;
 
+    my $bump = $source->setting($label=>'bump');
+
+# use this to test prototype overlap functionality
+#    return if defined $bump && ($bump eq 'overlap' || $bump == 0);
+
     my (@dimensions,@rows);
   TRY: {
 
+      if (my @facets = shellwords $source->setting($label=>'subtrack facets')) {
+	  @dimensions = map {[$_,'tag_value',$_]} @facets;
+	  @rows       = $package->get_facet_values($source,$label,@facets);
+	  last TRY;
+      }
+      
       if ((my $d = $source->setting($label => 'subtrack select')) &&
 	  (my $r = $source->setting($label => 'subtrack table'))) {
 	  @dimensions     = map {[shellwords($_)]}  split ';',$d;
 	  @rows           = map {[shellwords($_)]}  split ';',$r;
 	last TRY;  
       }
-
+      
       if (my $s = $source->setting($label=>'select')) {
 	  my %defaults = map {$_=>1} shellwords($source->setting($label=>'select default'));
-
+	  
 	  if ($s =~ /;/) { # new syntax
 	      my @lines = split ';',$s;
 	      my ($method) = shellwords (shift @lines);
@@ -413,10 +445,10 @@ sub infer_settings_from_source {
       }
 
       my (undef,$adaptor) = $source->db_settings($label);
-      last TRY unless $adaptor =~ /BigWigSet/;
 
       my $db   = $source->open_database($label) or last TRY;
-      my $meta = eval {$db->metadata}           or last TRY;
+      $db->can('metadata') or last TRY;
+      my $meta = $db->metadata;
 
       # get all the tags that are consistently used
       my %tags;
@@ -425,28 +457,55 @@ sub infer_settings_from_source {
 	  $tags{$k}++;
       }
       my $count = keys %$meta;
-
-      my @tags       = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
+      
+      my @tags    = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
       @dimensions = map {[ucfirst($_),'tag_value',$_]} @tags;
-
-      # translate these into rows
-      for my $id (sort {$a<=>$b} keys %$meta) {
-	  my @vals = map {$_||0} @{$meta->{$id}}{@tags};
-	  push @vals,"=$id";
-	  push @rows,\@vals;
-      }
-      push @{$rows[0]},'*';
+      @rows       = $package->get_facet_values($source,$label,@tags);
+      
     }
 
-
-
     return unless @dimensions && @rows;
-
+    
+    # apply "facet labels" setting on top of dimensions
+    if (my %facet_dimensions = shellwords($source->setting(general=>'facet labels'))) {
+	for my $d (@dimensions) {
+	    $d->[0] = $facet_dimensions{$d->[0]} || $d->[0];
+	}
+    }
+    
+    my %facet_values = shellwords($source->setting(general=>'facet values'));
     my $aliases     = $source->setting($label=>'subtrack select labels') 
-	            ||$source->setting($label=>'subtrack labels') ; # deprecated API
-
+	||$source->setting($label=>'subtrack labels') ; # deprecated API
     my %aliases    = map {shellwords($_)} split ';',$aliases if $aliases;
+    %aliases       = (%facet_values,%aliases);
     return (\@dimensions,\@rows,\%aliases);
+}
+
+sub get_facet_values {
+    my $self = shift;
+    my ($source,$label,@facets) = @_;
+
+    my @types       = shellwords $source->setting($label=>'feature');
+    my $match       = join '|',map {$_="$_:?" unless /:/} @types;
+
+    my @rows;
+    my (undef,$adaptor) = $source->db_settings($label);
+    my $db   = $source->open_database($label) or return;
+    my $meta = eval {$db->metadata}           or return;
+
+    for my $id (sort {$a<=>$b} keys %$meta) {
+	my $method = $meta->{$id}{method} || eval {$db->feature_type} || 'feature';
+	my $source = $meta->{$id}{source} || '';
+	my $type = $meta->{$id}{type} || "$method:$source";
+
+	next unless $type =~ /$match/;
+	my @vals = map {$_||''} @{$meta->{$id}}{@facets};
+	push @vals,"=$id";
+	push @rows,\@vals;
+    }
+
+    push @{$rows[0]},'*';
+    return @rows;
 }
 
 1;

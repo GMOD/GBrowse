@@ -204,6 +204,7 @@ sub prefork {
 
     for (1..$copies) {
 	my $child = fork();
+	$DB::inhibit_exit = 0;
 	die "fork() error: $!" unless defined $child;
 	if ($child) {
 	    $self->Info("preforked pid $child");
@@ -294,6 +295,7 @@ sub process_request {
     if ($self->prefork_copies <= 1) {
 	$self->Bench('forking child');
 	my $child = fork();
+	$DB::inhibit_exit = 0;
 	$self->Fatal("Couldn't fork: $!") unless defined $child;
 	if ($child) {
 	    $self->Info("Forked child PID $child");

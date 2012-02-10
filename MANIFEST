@@ -1,6 +1,7 @@
 bin/auto_install_databases.pl
 bin/bed2gff3.pl
 bin/bp_load_gff.pl
+bin/gbrowse_attach_slaves.pl
 bin/gbrowse_change_passwd.pl
 bin/gbrowse_clean.pl
 bin/gbrowse_create_account.pl
@@ -29,6 +30,7 @@ cgi-bin/gbrowse
 cgi-bin/gbrowse_details
 cgi-bin/gbrowse_gmap
 cgi-bin/gbrowse_img
+cgi-bin/gbrowse_key_img
 cgi-bin/gbrowse_login
 cgi-bin/gbrowse_syn
 Changes
@@ -98,6 +100,7 @@ conf/synteny/wild_rice_synteny.conf
 conf/themes/solid_gray_colors
 conf/themes/transparent_colors
 conf/themes/warm_colors
+conf/volvox.conf
 conf/yeast_chr1+2.conf
 conf/yeast_renderfarm.conf
 conf/yeast_simple.conf
@@ -178,6 +181,7 @@ docs/pod/README-berkeley-gadfly.pod
 docs/pod/README-chado.pod
 docs/pod/README-gff-files.pod
 docs/pod/README-lucegene.pod
+docs/README.AWS
 docs/README.tutorial
 etc/default/gbrowse-slave
 etc/init.d/gbrowse-slave
@@ -211,6 +215,7 @@ htdocs/css/gbrowse_warm.css
 htdocs/css/karyotype.css
 htdocs/css/menulink.png
 htdocs/css/menulink_active.png
+htdocs/css/snapshots.css
 htdocs/css/subtracktable.css
 htdocs/css/titlebar-default.css
 htdocs/css/titlebar-safari.css
@@ -244,8 +249,9 @@ htdocs/images/balloons/GPlain/down_right.png
 htdocs/images/balloons/GPlain/up_left.png
 htdocs/images/balloons/GPlain/up_right.png
 htdocs/images/buttons/ajax-loader.gif
+htdocs/images/buttons/blue_peaks.png
 htdocs/images/buttons/check.png
-htdocs/images/buttons/cursor-ewmove.cur
+htdocs/images/buttons/cursor-ewmove.ico
 htdocs/images/buttons/dark_0.4_pixel.png
 htdocs/images/buttons/download.png
 htdocs/images/buttons/empty.png
@@ -276,6 +282,8 @@ htdocs/images/buttons/minus12.png
 htdocs/images/buttons/mminus.png
 htdocs/images/buttons/mplus.gif
 htdocs/images/buttons/mplus.png
+htdocs/images/buttons/opacity_thumb.png
+htdocs/images/buttons/open_open.png
 htdocs/images/buttons/panleft.png
 htdocs/images/buttons/panleft2.png
 htdocs/images/buttons/panright.png
@@ -292,9 +300,16 @@ htdocs/images/buttons/red5.gif
 htdocs/images/buttons/red6.gif
 htdocs/images/buttons/red7.gif
 htdocs/images/buttons/red8.gif
+htdocs/images/buttons/red_peaks.png
 htdocs/images/buttons/ruler-icon.png
 htdocs/images/buttons/ruler.png
 htdocs/images/buttons/share.png
+htdocs/images/buttons/snap_check.png
+htdocs/images/buttons/snap_down.png
+htdocs/images/buttons/snap_ex.png
+htdocs/images/buttons/snap_mail.png
+htdocs/images/buttons/snap_share.png
+htdocs/images/buttons/snap_trash.png
 htdocs/images/buttons/sortable.gif
 htdocs/images/buttons/sorted_down.gif
 htdocs/images/buttons/sorted_up.gif
@@ -361,6 +376,7 @@ htdocs/js/ruler.js
 htdocs/js/scriptaculous.js
 htdocs/js/scrollfix.js
 htdocs/js/slider.js
+htdocs/js/snapshotManager.js
 htdocs/js/sound.js
 htdocs/js/subtracktable.css
 htdocs/js/subtracktable.js
@@ -573,11 +589,15 @@ lib/Bio/Graphics/Browser2/RegionSearch.pm
 lib/Bio/Graphics/Browser2/RemoteSet.pm
 lib/Bio/Graphics/Browser2/Render.pm
 lib/Bio/Graphics/Browser2/Render/HTML.pm
+lib/Bio/Graphics/Browser2/Render/HTML/TrackListing.pm
+lib/Bio/Graphics/Browser2/Render/HTML/TrackListing/Categories.pm
 lib/Bio/Graphics/Browser2/Render/Login.pm
 lib/Bio/Graphics/Browser2/Render/Slave.pm
 lib/Bio/Graphics/Browser2/Render/Slave/Status.pm
+lib/Bio/Graphics/Browser2/Render/SnapshotManager.pm
 lib/Bio/Graphics/Browser2/Render/TrackConfig.pm
 lib/Bio/Graphics/Browser2/RenderPanels.pm
+lib/Bio/Graphics/Browser2/SendMail.pm
 lib/Bio/Graphics/Browser2/Session.pm
 lib/Bio/Graphics/Browser2/Shellwords.pm
 lib/Bio/Graphics/Browser2/SubtrackTable.pm
@@ -607,7 +627,6 @@ Makefile.PL
 MANIFEST
 README
 README.fedora_and_selinux
-README.GBrowse-2.00
 README.gff3
 README.IF.GBROWSE.ISNT.WORKING
 sample_data/admin_uploads/README
@@ -650,3 +669,4 @@ t/testdata/phylo_align/volvox_alignment.conf
 t/testdata/phylo_align/volvox_phyloalign.gff
 t/testdata/TemplateCopy.pm
 META.yml
+META.json

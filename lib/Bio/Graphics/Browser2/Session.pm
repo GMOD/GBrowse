@@ -15,7 +15,6 @@ use Carp 'carp';
 use constant LOCK_TIMEOUT => 10;
 eval "require Time::HiRes;";
 
-
 my $HAS_NFSLOCK;
 my $HAS_MYSQL;
 
@@ -32,11 +31,15 @@ use constant DEBUG_LOCK => DEBUG || 0;
 sub new {
 	my $class    = shift;
 	my %args     = @_;
-	my ($driver,$id,$session_args,$default_source,$lockdir,$locktype,$expire_time) 
-	  = @args{'driver','id','args','source','lockdir','locktype','expires'};
+	my ($driver,$id,$session_args,$default_source,$lockdir,$locktype,$expire_time,$mode) 
+	  = @args{'driver','id','args','source','lockdir','locktype','expires','mode'};
 
+	$mode ||= 'exclusive';
 	$CGI::Session::NAME = 'gbrowse_sess';     # custom cookie
-	$CGI::Session::Driver::file::NoFlock = 1; # flocking unnecessary because we roll our own
+
+	#Probably safe to uncomment, but must test exhaustively with mysql locking
+	#to determine.
+	#$CGI::Session::Driver::file::NoFlock = 1;; 
 
 	unless ($id) {
 	    my $cookie = CGI::Cookie->fetch();
@@ -49,8 +52,7 @@ sub new {
 	},$class;
 
 	$self->session_argv($driver,$id,$session_args);
-	$self->{session} = $self->lock_ex($id);
-
+	$self->{session} = $mode eq 'exclusive' ? $self->lock_ex($id) : $self->lock_sh($id);
 	warn "CGI::Session->new($driver,$id,$session_args)=>",$self->{session}->id if DEBUG;
 
 	# never expire private (authenticated) sessions
@@ -61,13 +63,21 @@ sub new {
 	warn "[$$] session fetch for ",$self->id if DEBUG;
 	$self->source($default_source) unless defined $self->source;
 	$self->{pid} = $$;
+
+	## DEBUG STARTS
+	if (DEBUG_LOCK) {
+	    my $state  = $self->page_settings;
+	    my @tracks = sort grep {$state->{features}{$_}{visible}} keys %{$state->{features}};
+	    warn '[',$self->time,'] ',"[$$] READING @tracks\n";
+	}
+	## DEBUG ENDS
+
 	$self;
 }
 
 sub load_session {
     my $self = shift;
     $self->session_argv(@_);
-#     print Dumper("session = "(\%{$self->session_argv(@_)});
     return CGI::Session->new($self->session_argv);
 }
 
@@ -91,11 +101,10 @@ sub locktime {
 sub locktype {
     my $self = shift;
     if ($self->{locktype} eq 'default') {
-	return 'nfs' if $HAS_NFSLOCK;
 	return 'flock';
     }
-    return 'nfs'   if $self->{locktype} eq 'nfs'        && $HAS_NFSLOCK;
-    return 'mysql' if $self->{locktype} =~ /^(dbi:mysql:|mysql):/    && $HAS_MYSQL;
+    return 'nfs'   if $self->{locktype} eq 'nfs'                     && $HAS_NFSLOCK;
+    return 'mysql' if $self->{locktype} =~ /^(dbi:mysql|mysql):/    && $HAS_MYSQL;
     return 'flock' if $self->{locktype} eq 'flock';
 }
 
@@ -115,7 +124,7 @@ sub lock {
     my $locktype = $self->locktype;
     my $start_time = $self->time();
 
-    warn "[$$] waiting on $type session lock...\n" if DEBUG_LOCK;
+    warn '[',$self->time,'] ',"[$$] waiting on $type session lock...\n" if DEBUG_LOCK;
 
     eval {
 	local $SIG{ALRM} = sub {die "timeout\n"};
@@ -136,8 +145,8 @@ sub lock {
 	else {
 	    die "unknown lock type $locktype";
 	}
-	alarm(0);
     };
+    alarm(0);
     my $elapsed = sprintf("%5.3fs",$self->time()-$start_time);
     if ($@) {
 	die $@ unless $@ eq "timeout\n";
@@ -146,7 +155,8 @@ sub lock {
 	      CGI::url(-path=>1),' ',
 	      CGI::query_string());
     } else {
-	warn "[$$] ...$type lock obtained after $elapsed" if DEBUG;
+	my $action = CGI::param('action');
+	warn '[',$self->time,'] ',"[$$] ...$type lock obtained after $elapsed (action=$action)" if DEBUG_LOCK;
     }
     $self->locktime($self->time());
     return $self->{session} ||= $self->load_session();
@@ -164,7 +174,7 @@ sub lock_flock {
     my $lockpath = File::Spec->catfile($lockdir,$lockfile);
     my $o_mode   = $mode eq 'exclusive' ? '>'
 	          :-e $lockpath ? "<" 
-		  : ">";
+		  : "+>";
 
     open my $fh,$o_mode,$lockpath 
 	or die "Couldn't open lockfile $lockpath: $!";
@@ -180,18 +190,18 @@ sub lock_nfs {
     my $lockpath = File::Spec->catfile($lockdir,$lockfile);
     my $lock     = File::NFSLock->new(
 	{file               => $lockpath,
-	 lock_type          => $type eq 'exclusive' ? LOCK_EX : LOCK_SH,
-	 blocking_timeout   => LOCK_TIMEOUT,  # 2 sec
-	 stale_lock_timeout => 60, # 1 min
+	 lock_type          => $type eq 'exclusive' ? LOCK_EX : LOCK_SH
 	});
-    warn  "[$$] ...timeout waiting for lock after ",sprintf("%5.3fs",LOCK_TIMEOUT)
-	unless $lock;
+    $lock or warn  "[$$] ...couldn't get lock: $File::NFSLock::errstr";
     $self->lockobj($lock);
+
 }
 
 sub lock_mysql {
     my $self = shift;
     my ($type,$id) = @_;
+    $SIG{PIPE} = 'IGNORE';
+    return if $type eq 'shared';
     my $lock_name  = $self->mysql_lock_name($id);
     (my $dsn       = $self->{locktype}) =~ s/^mysql://;
     my $dbh        = $self->{mysql} ||= DBI->connect($dsn)
@@ -211,17 +221,14 @@ sub lock_ex {
 sub unlock {
     my $self     = shift;
     my $lock = $self->lockobj or return;
-    warn "[$$] session unlock" if DEBUG_LOCK;
+    warn '[',$self->time,'] ',"[$$] session unlock" if DEBUG_LOCK;
     if ($lock->isa('DBI::db')) {
 	my $lock_name = $self->mysql_lock_name($self->id);
-	$lock->do("SELECT RELEASE_LOCK('$lock_name')");
-    } else {
-	$self->lockobj(undef);
-	unlink File::Spec->catfile($self->lockfile($self->id))
-	    if $self->locktype eq 'flock';
+	my $result = $lock->do("SELECT RELEASE_LOCK('$lock_name')");
     }
     $self->lockobj(undef);
-    warn "[$$] lock released after ",sprintf("%2.1f",$self->time() - $self->locktime)," s" if DEBUG;
+    my $action = CGI::param('action');
+    warn "[$$] lock released after ",sprintf("%2.1f",$self->time() - $self->locktime)," s (action=$action)" if DEBUG;
 }
 
 sub lockfile {
@@ -238,6 +245,22 @@ sub mysql_lock_name {
     return "gbrowse_session_lock.$id";
 }
 
+# handle the lock when forking occurs
+sub was_forked {
+    my $self  = shift;
+    my $state = shift;
+    my $obj  = $self->lockobj or return;
+    ref $obj or return;
+    if ($state eq 'child') {
+	if ($obj->isa('File::NFSLock')) {
+	    undef *File::NFSLock::DESTROY;
+	}
+	elsif ($obj->isa('DBI::db')) {
+	    $obj->{InactiveDestroy} = 1;
+	}
+    }
+}
+
 sub delete {
     my $self = shift;
     $self->{session}->delete if $self->{session};
@@ -248,8 +271,17 @@ sub flush {
   my $self = shift;
   return unless $$ == $self->{pid};
   carp "[$$] session flush" if DEBUG;
+
+  ## DEBUG STARTS
+  if (DEBUG_LOCK) {
+      my $state  = $self->page_settings;
+      my @tracks = sort grep {$state->{features}{$_}{visible}} keys %{$state->{features}};
+      warn '[',$self->time,'] ',"[$$] WRITING @tracks\n";
+  }
+  ## DEBUG ENDS
+
   $self->{session}->flush if $self->{session};
-  $self->unlock;
+#  $self->unlock;
   warn "[$$] SESSION FLUSH ERROR: ",$self->{session}->errstr 
       if $self->{session}->errstr;
 }
@@ -282,6 +314,12 @@ sub page_settings {
   $hash->{page_settings}         ||= {};
   $hash->{page_settings}{userid} ||= $self->id;     # store the id in our state
   return $hash->{page_settings};
+}
+
+sub snapshots {
+    my $self = shift;
+    my $hash = $self->config_hash;
+    return $hash->{snapshots}       ||= {};
 }
 
 sub plugin_settings {
@@ -370,7 +408,6 @@ sub config_hash {
   my $self = shift;
   my $source  = $self->source;
   my $session = $self->{session};
-
   $session->param($source=>{}) unless $session->param($source);
   return $session->param($source);
 }

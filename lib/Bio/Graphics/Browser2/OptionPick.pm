@@ -68,7 +68,8 @@ sub render_object { shift->{render_object} }
 
 sub color_pick {
   my $self = shift;
-  my ($form_name,$default_color,$current_color) = @_;
+  my ($form_name,$default_color,$current_color,$class) = @_;
+  $class ||= 'color_picker';
 
   my ($bgcolor,$fontcolor);
   my $dynamic    = $self->translate('DYNAMIC_VALUE');
@@ -98,6 +99,7 @@ sub color_pick {
   }
 
   my $menu = qq(<select name="$form_name"
+                class="$class",
                 style="background-color:$current_bg;color:$current_fg"
                 onChange="var s=this.options[this.selectedIndex];Element.extend(s);this.style.background=s.getStyle('background-color');this.style.color=s.style.color">\n);
 
@@ -128,6 +130,8 @@ sub popup_menu {
   my $current = $args{-current};
   my $default = $args{-default};
   my $values  = $args{-values};
+  my $id      = $args{-id};
+  my $class   = $args{-class};
   my $labels  = $args{-labels}  || {};
   my $scripts = $args{-scripts} || {};
 
@@ -139,12 +143,15 @@ sub popup_menu {
   my $def    = $self->translate('DEFAULT');
   my $def_label = $labels->{$default} || $default;
   my %labels    = (%$labels,$default => "$def_label $def");
+  my @extra     = $id ? (-id => $id) : ();
+  push @extra,(-class=>$class) if $class;
 
   return CGI::popup_menu(-name    => $name,
 			 -values  => \@values,
 			 -default => $current,
 			 -labels  => \%labels,
                          %$scripts,
+                         @extra,
 			 -override=>1);
 }
 

@@ -25,7 +25,6 @@ sub config_dialog {
 	          :$label =~ /:region$/   ? $render->thin_region_segment
                   :$render->thin_segment;
     my $length = eval{$seg->length}||0;
-    $length   /= $data_source->global_setting('details multiplier');
 
     eval 'require Bio::Graphics::Browser2::OptionPick; 1'
         unless Bio::Graphics::Browser2::OptionPick->can('new');
@@ -44,13 +43,14 @@ sub config_dialog {
 	delete $state->{features}{$label}{summary_mode_len};
     }
 
+    my $scaled_length  = $length/$render->details_mult;
     my $semantic_override = $render->find_override_region($state->{features}{$label}{semantic_override},$length);
     $semantic_override   ||= 0;
 
     my ($semantic_level)   = $slabel =~ /(\d+)$/;
     $semantic_level      ||= 0;
     my @level              = map {
-	scalar $render->data_source->unit_label($_)
+	scalar $render->data_source->unit_label($_/$render->details_mult)
     } split ':',($semantic_override || $semantic_level);
     my $level              = join '..',@level;
 
@@ -65,49 +65,50 @@ sub config_dialog {
 
     my $return_html = start_html();
 
-    my $title   = div({-class=>'config-title'},$key);
+    my $showing = $render->data_source->unit_label($scaled_length);
+    my $title   = div({-class=>'config-title'},$key,br(),div({-style=>'font-size:9pt'},$render->translate('Currently_Showing',$showing)));
     my $dynamic = $render->translate('DYNAMIC_VALUE');
 
-    my $height   = $data_source->semantic_fallback_setting( $label => 'height' ,        $length)    || 10;
-    my $width    = $data_source->semantic_fallback_setting( $label => 'linewidth',      $length )   || 1;
-    my $glyph    = $data_source->semantic_fallback_setting( $label => 'glyph',          $length )   || 'box';
-    my $stranded = $data_source->semantic_fallback_setting( $label => 'stranded',       $length);
-    my $variance_band = $data_source->semantic_fallback_setting( $label => 'variance_band',$length);
-    my $limit    = $data_source->semantic_fallback_setting( $label => 'feature_limit' , $length)    || 0;
-    my $summary_length  = $data_source->semantic_fallback_setting( $label => 'show summary' , $length) || 0;
+    my $height        = $self->setting( $label => 'height' ,        $length, $summary_mode)    || 10;
+    my $width         = $self->setting( $label => 'linewidth',      $length, $summary_mode )   || 1;
+    my $glyph         = $self->setting( $label => 'glyph',          $length, $summary_mode )   || 'box';
+    my $stranded      = $self->setting( $label => 'stranded',       $length, $summary_mode);
+    my $variance_band = $self->setting( $label => 'variance_band',  $length, $summary_mode);
+    my $color_series  = $self->setting( $label => 'color_series',   $length, $summary_mode);
+    my $limit         = $self->setting( $label => 'feature_limit' , $length, $summary_mode)    || 0;
+    my $summary_length= $self->setting( $label => 'show summary' , $length, $summary_mode) || 0;
+    my $opacity       = $override->{'opacity'} || $self->setting($label => 'opacity',$length,$summary_mode) || 0.3;
 
     # options for wiggle & xy plots
-    my $min_score= $data_source->semantic_fallback_setting( $label => 'min_score' ,     $length);
-    my $max_score= $data_source->semantic_fallback_setting( $label => 'max_score' ,     $length);
+    my $min_score= $self->setting( $label => 'min_score' ,     $length, $summary_mode);
+    my $max_score= $self->setting( $label => 'max_score' ,     $length, $summary_mode);
     $min_score = -1 unless defined $min_score;
     $max_score = +1 unless defined $max_score;
-    my $autoscale = $data_source->semantic_fallback_setting( $label => 'autoscale' ,     $length);
-    $autoscale    = 'local' if $summary_mode;
+    my $autoscale = $self->setting( $label => 'autoscale' ,     $length, $summary_mode);
     $autoscale  ||= 'local';
 
-    my $sd_fold   = $data_source->semantic_fallback_setting( $label => 'z_score_bound' ,     $length);
-    $sd_fold    ||= 4;
+    my $sd_fold   = $self->setting( $label => 'z_score_bound' ,     $length, $summary_mode);
+    $sd_fold    ||= 8;
 
-    my $bicolor_pivot = $data_source->semantic_fallback_setting( $label => 'bicolor_pivot' ,  $length);
-    my $graph_type    = $data_source->semantic_fallback_setting( $label => 'graph_type' ,     $length);
-    my $glyph_subtype = $data_source->semantic_fallback_setting( $label => 'glyph_subtype' ,  $length);
+    my $bicolor_pivot = $self->setting( $label => 'bicolor_pivot' ,  $length, $summary_mode);
+    my $graph_type    = $self->setting( $label => 'graph_type' ,     $length, $summary_mode);
+    my $glyph_subtype = $self->setting( $label => 'glyph_subtype' ,  $length, $summary_mode);
 
     # options for wiggle_whiskers
-    my $max_color   = $data_source->semantic_fallback_setting( $label => 'max_color' ,   $length);
-    my $mean_color  = $data_source->semantic_fallback_setting( $label => 'mean_color' ,  $length);
-    my $stdev_color = $data_source->semantic_fallback_setting( $label => 'stdev_color' , $length);
+    my $max_color   = $self->setting( $label => 'max_color' ,   $length, $summary_mode);
+    my $mean_color  = $self->setting( $label => 'mean_color' ,  $length, $summary_mode);
+    my $stdev_color = $self->setting( $label => 'stdev_color' , $length, $summary_mode);
 
-    my @glyph_select;
+    # packing images
+    my $buttons     = $data_source->globals->button_url;
+    my $red_peaks   = "$buttons/red_peaks.png";
+    my $blue_peaks  = "$buttons/blue_peaks.png";
+    my $opacity_thumb  = "$buttons/opacity_thumb.png";
 
-    if ($summary_mode) {
-	$glyph        = $override->{glyph} || 'wiggle_density';
-	@glyph_select = qw(wiggle_xyplot wiggle_density);
-    } else {
-	@glyph_select = shellwords(
-	    $data_source->semantic_fallback_setting( $label => 'glyph select', $length )
-	    );
-	unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
-    }
+    my @glyph_select = shellwords(
+	    $self->setting( $label => 'glyph select', $length, $summary_mode )
+	);
+    unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
 
     my $db           = $data_source->open_database($label,$length);
     my $quantitative = $glyph =~ /wiggle|vista|xy|density/ || ref($db) =~ /bigwig/i;
@@ -124,6 +125,7 @@ sub config_dialog {
                                          two_bolts wave);
     }
 
+    my $auto_packing_label = $quantitative ? $render->translate('Expand_Label') : $render->translate('Auto');
     my %glyphs       = map { $_ => 1 } ( $glyph, @glyph_select );
     my @all_glyphs   = sort keys %glyphs;
     my $g = $override->{'glyph'} || $glyph;
@@ -150,22 +152,57 @@ END
         -id   => $form_name,
     );
 
+    # NOTE: the -class option determines which form elements are shown for
+    # which track types. See htdocs/js/track_config.js
     my @rows;
     push @rows, TR({-class=>'general'},
 		   td( {-colspan => 2}, $title));
 
-    push @rows, TR({-class=>'general'},
-		   th( { -align => 'right' }, $render->translate('Show') ),
-		   td( checkbox(
-			   -name     => 'show_track',
-			   -value    => $label,
+    push @rows,TR( {-class => 'general',
+		    -id    => 'packing'},
+		   th( { -align => 'right' }, $render->translate('Packing') ),
+		   td( popup_menu(
+			   -name     => 'format_option',
+			   -id       => 'format_option',
+			   -values   => ($quantitative ? [0,4] : [ 0..4 ]),
 			   -override => 1,
-			   -checked  => $state->{features}{$label}{visible},
-			   -label    => ''
+			   -default  => $state->{features}{$label}{options},
+			   -labels   => {
+			       0 => $auto_packing_label,
+			       1 => $render->translate('Compact'),
+			       2 => $render->translate('Expand'),
+			       3 => $render->translate('Expand_Label'),
+			       4 => $render->translate('Overlap'),
+			   }
 		       )
-		   ),
+		   )
         );
-    
+
+    push @rows,TR( {-class => 'general',
+		    -id    => 'opacity'},
+		   th( {-align => 'right' }, 'Opacity'),
+		   td( input({-type  => 'text',
+			      -name => 'conf_opacity',
+			      -id    => 'opacity_value',
+			      -style => "display:inline-block;position:relative;top:-4",
+			      -value => '0.00',
+			      -size  => 2,
+			      -maxlength => 4}),
+		       div({-id=>'opacity_box',
+			    -style => 'display:inline-block;position:relative;background:beige;width:100px;height:16px;border:inset 1px',
+			   },
+			   img({-id=>'opacity_thumb',
+				-style=>'position:absolute;left:0',
+				-src  => $opacity_thumb})),
+		       div({-style=>'display:inline-block;position:relative;width:20px;height:20px'},
+			   img({-class=>'opacity',
+				-src  => $red_peaks,
+				-style => 'position:absolute;left:2px;top:0px'}),
+			   img({-class=>'opacity',
+				-src  => $blue_peaks,
+				-style => 'position:absolute;left:0px;top:5px'}),
+		       )));
+
     push @rows,TR( {-class=>'general'},
 		   th( { -align => 'right' }, $render->translate('GLYPH') ),
 		   td($picker->popup_menu(
@@ -214,23 +251,23 @@ END
 	}
     }
 
-    push @rows,TR( {-class => 'features',
-		    -id    => 'packing'},
-		   th( { -align => 'right' }, $render->translate('Packing') ),
-		   td( popup_menu(
-			   -name     => 'format_option',
-			   -values   => [ 0 .. 3 ],
-			   -override => 1,
-			   -default  => $state->{features}{$label}{options},
-			   -labels   => {
-			       0 => $render->translate('Auto'),
-			       1 => $render->translate('Compact'),
-			       2 => $render->translate('Expand'),
-			       3 => $render->translate('Expand_Label'),
-			   }
-		       )
-		   )
-        );
+    #######################
+    # cycling colors
+    #######################
+    push @rows,TR({
+	-id   => 'color_series',
+	-class=> 'general'
+		  },
+		  th ( { -align=>'right' }, $render->tr('AUTO_COLORS') ),
+		  td(hidden(-name => 'conf_color_series',-value=>0),
+		     checkbox(-name => 'conf_color_series',
+			      -id   => 'conf_color_series',
+			      -override=> 1,
+			      -value   => 1,
+			      -checked => defined $override->{'color_series'} 
+			                  ? $override->{'color_series'} 
+			                  : $color_series,
+			      -label   => '')));
 
     #######################
     # bicolor pivot stuff
@@ -238,10 +275,11 @@ END
     my $p = $override->{bicolor_pivot} || $bicolor_pivot || 'none';
     my $has_pivot = $g =~ /wiggle_xyplot|wiggle_density|xyplot/;
 
-    push @rows,TR( {-class=>'xyplot density',
+    push @rows,TR( {-class=>'xyplot density color_picker',
 		     -id   =>'bicolor_pivot_id'},
                    th( { -align => 'right'}, $render->translate('BICOLOR_PIVOT')),
 		   td( $picker->popup_menu(
+			   -class   => 'color_picker',
 			   -name    => 'conf_bicolor_pivot',
 			   -values  => [qw(none zero mean 1SD 2SD 3SD value)],
 			   -labels  => {value => 'value entered below',
@@ -258,71 +296,71 @@ END
         );
 
     my $pv    = $p =~ /^[\d.-eE]+$/ ? $p : 0.0;
-    push @rows,TR({-class =>'xyplot density',
+    push @rows,TR({-class =>'xyplot density color_picker',
 		   -id=>'switch_point_other'},
 		  th( {-align => 'right' },$render->translate('BICOLOR_PIVOT_VALUE')),
                   td( textfield(-name  => 'bicolor_pivot_value',
 				-value => $pv)));
     
 
-    push @rows,TR({-class=>'switch_point_color xyplot density'}, 
+    push @rows,TR({-class=>'switch_point_color xyplot density color_picker'}, 
 		  th( { -align => 'right' }, $render->translate('BICOLOR_PIVOT_POS_COLOR')),
 		   td( $picker->color_pick(
 			   'conf_pos_color',
-			   $data_source->semantic_fallback_setting( $label => 'pos_color', $length ),
+			   $self->setting( $label => 'pos_color', $length, $summary_mode ),
 			   $override->{'pos_color'}
 		       )
 		   )
         );
 
-    push @rows,TR( {-class=>'switch_point_color xyplot density'}, 
+    push @rows,TR( {-class=>'switch_point_color xyplot density color color_picker'}, 
 		   th( { -align => 'right' }, $render->translate('BICOLOR_PIVOT_NEG_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_neg_color',
-			   $data_source->semantic_fallback_setting( $label => 'neg_color', $length ),
+			   $self->setting( $label => 'neg_color', $length, $summary_mode ),
 			   $override->{'neg_color'}
 		       )
 		   )
         );
 
     push @rows,TR( { -id    => 'bgcolor_picker',
-		     -class => 'xyplot density features peaks',
+		     -class => 'xyplot density features peaks color_picker',
 		   },
 		   th( { -align => 'right' }, $render->translate('BACKGROUND_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_bgcolor',
-			   $data_source->semantic_fallback_setting( $label => 'bgcolor', $length ),
-			   $override->{'bgcolor'}
+			   $self->setting( $label => 'bgcolor', $length, $summary_mode ),
+			   $override->{'bgcolor'},
 		       )
 		   )
         );
     push @rows,TR( { -id    => 'startcolor_picker',
-		     -class => 'peaks',
+		     -class => 'peaks color_picker',
 		   },
 		   th( { -align => 'right' }, 'Peak gradient start'),
 		   td( $picker->color_pick(
 			   'conf_start_color',
-			    $data_source->semantic_fallback_setting( $label => 'start_color', $length ),
+			    $self->setting( $label => 'start_color', $length, $summary_mode ),
 			   $override->{'start_color'}
 		       )
 		   )
         );
     push @rows,TR( { -id    => 'endcolor_picker',
-		     -class => 'peaks',
+		     -class => 'peaks color_picker',
 		   },
 		   th( { -align => 'right' }, 'Peak gradient end'),
 		   td( $picker->color_pick(
 			   'conf_end_color',
-			    $data_source->semantic_fallback_setting( $label => 'end_color', $length ),
+			    $self->setting( $label => 'end_color', $length, $summary_mode ),
 			   $override->{'end_color'}
 		       )
 		   )
         );
-    push @rows,TR( {-class=>'xyplot features peaks'},
+    push @rows,TR( {-class=>'xyplot features peaks color_picker'},
 		   th( { -align => 'right' }, $render->translate('FG_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_fgcolor',
-			   $data_source->semantic_fallback_setting( $label => 'fgcolor', $length ),
+			   $self->setting( $label => 'fgcolor', $length, $summary_mode ),
 			   $override->{'fgcolor'}
 		       )
 		   )
@@ -332,7 +370,7 @@ END
     #######################
     # wiggle colors
     #######################
-    push @rows,TR( {-class=>'whiskers'}, 
+    push @rows,TR( {-class=>'whiskers color_picker'}, 
 		   th( { -align => 'right' }, $render->translate('WHISKER_MEAN_COLOR')),
 		   td( $picker->color_pick(
 			   'conf_mean_color',
@@ -342,7 +380,7 @@ END
 		   )
         );
 
-    push @rows,TR( {-class=>'whiskers'}, 
+    push @rows,TR( {-class=>'whiskers color_picker'}, 
 		   th( { -align => 'right' }, $render->translate('WHISKER_STDEV_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_stdev_color',
@@ -352,7 +390,7 @@ END
 		   )
         );
 
-    push @rows,TR( {-class=>'whiskers'}, 
+    push @rows,TR( {-class=>'whiskers color_picker'}, 
 		   th( { -align => 'right' }, $render->translate('WHISKER_MAX_COLOR') ),
 		   td( $picker->color_pick(
 			   'conf_max_color',
@@ -402,13 +440,16 @@ END
 		    th( { -align => 'right' },$render->translate('SD_MULTIPLES')),
 		    td( $picker->popup_menu(
 			    -name    => "conf_z_score_bound",
-			    -values  => [qw(1 2 3 4 5 6)],
+			    -values  => [qw(1 2 3 4 5 6 8 10 20)],
 			    -labels  => {1   =>'1 SD',
 					 2   =>'2 SD',
 					 3   =>'3 SD',
 					 4   =>'4 SD',
 					 5   =>'5 SD',
 					 6   =>'6 SD',
+					 8   =>'8 SD',
+					 10   =>'10 SD',
+					 20   =>'20 SD',
 					 },
 			    -default => $sd_fold,
 			    -current => $override->{z_score_bound}
@@ -463,8 +504,9 @@ END
 		       { -align => 'right' }, $render->translate('HEIGHT') ),
 		   td( $picker->popup_menu(
 			   -name    => 'conf_height',
+			   -id      => 'conf_height',
 			   -current => $override->{'height'},
-			   -default => $summary_mode ? 15 : $height,
+			   -default => $height,
 			   -values  => [
 				sort { $a <=> $b }
 				( $height, map { $_ * 5 } ( 1 .. 20 ) )
@@ -501,17 +543,18 @@ END
 		  )
         );
 
-    my ($low,$hi)   = $render->find_override_bounds($state->{features}{$label}{semantic_override},$length);
-    $low ||= $semantic_level;
+    my ($low,$hi)   = $render->find_override_bounds($state->{features}{$label}{semantic_override},$scaled_length);
+    $low = $semantic_level unless defined $low;
     $hi  ||= MAX;
+    my $mult = $render->details_mult;
     push @rows,TR({-class=>'general'},
 		  th( {-align => 'right' }, 
 		      $render->translate('APPLY_CONFIG')
 		      ),
 		  td(
-		      $self->region_size_menu('apply_semantic_low',$length,MIN),
+		      $self->region_size_menu('apply_semantic_low',$scaled_length,[$low/$mult,MIN],$low/$mult),
 		      '-',
-		      $self->region_size_menu('apply_semantic_hi',$hi,MAX),
+		      $self->region_size_menu('apply_semantic_hi',$scaled_length,[$hi/$mult,MAX],$hi/$mult),
 		  )
 	) unless $summary_mode;
 
@@ -553,31 +596,54 @@ END
 
     $form .= table({-id=>'config_table',-border => 0 },@rows);
     $form .= end_form();
-	$return_html
+    $return_html
         .= table( TR( td( { -valign => 'top' }, [ $form ] ) ) );
-    $return_html .= script({-type=>'text/javascript'},"track_configure.glyph_select(\$('config_table'),\$('glyph_picker_id'))");
+
+    $return_html .= script({-type=>'text/javascript'},"track_configure.init($opacity)");
     $return_html .= end_html();
     return $return_html;
 }
 
+sub setting {
+    my $self = shift;
+    my ($label,$option,$length,$is_summary) = @_;
+    my $data_source = $self->render->data_source();
+
+    # bad hack
+    if ($is_summary) {
+	if ($data_source->Bio::Graphics::FeatureFile::setting("$label:summary")) {
+	    return $data_source->semantic_fallback_setting("$label:summary",$option,$length);
+	} else {
+	    return 'wiggle_density' if $option eq 'glyph';
+	    return 15               if $option eq 'height';
+	    return 0                if $option eq 'min_score';
+	    return 'local'          if $option eq 'autoscale';
+	}
+    }
+
+    return $data_source->semantic_fallback_setting($label,$option,$length);
+}
+
 sub region_size_menu {
   my $self = shift;
-  my ($name,$length,$extra_val) = @_;
+  my ($name,$length,$extra_vals,$default) = @_;
+  $extra_vals ||= [];
 
   my $source =  $self->render->data_source;
   my %seen;
-  my @r         = sort {$a<=>$b} $source->get_ranges(),$length,$extra_val;
+  my @r         = sort {$a<=>$b} ($source->get_ranges(),$length,@$extra_vals);
   my @ranges	= grep {!$seen{$source->unit_label($_)}++} @r;
   my %labels    = map  {$_=> scalar $source->unit_label($_)} @ranges;
 
   $labels{MIN()}   = $self->render->translate('MIN');
   $labels{MAX()}   = $self->render->translate('MAX');
-  @ranges = sort {$b||0<=>$a||0} @ranges;
+  @ranges  = sort {$b||0<=>$a||0} @ranges;
+  $default = $length unless defined $default;
 
   return popup_menu(-name    => $name,
 		    -values  => \@ranges,
 		    -labels  => \%labels,
-		    -default => $length,
+		    -default => $default,
 		    -force   => 1,
 		   );
 }

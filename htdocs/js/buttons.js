@@ -26,6 +26,19 @@ function gbCheck (button,state) {
   return true;
 }
 
+function gbExpandAll(title_element,parent_element_id,event) {
+    var el = $(parent_element_id);
+    if (el == null) return;
+    var subsections = el.select('div.el_visible');
+    var titles      = $$('img.'+parent_element_id+'_expand');
+    titles.each(function(s){
+	    s.addClassName('expanded');
+	});
+    subsections.each(function(s){if (s.id!=null) visibility(s.id,1)});
+    if (parent_element_id != null) visibility(parent_element_id,1);
+    Event.stop(event);
+}
+
 function gbToggleTrack (track_name) {
     ShowHideTrack(track_name);
 }
@@ -34,26 +47,29 @@ function gbToggleTrack (track_name) {
 function ShowHideTrack(track_name,visible) {
   var track_title = $(track_name+'_check');
   var track_img   = $(track_name+'_img');
-  if (track_title == null) return;
-  var ancestor    = track_title.ancestors().find(
-					function (el) {
-					    return el.nodeName == 'TD'
-					});
-  if (visible == null) {
-      visible = !ancestor.hasClassName('activeTrack');
-  }
-  if (visible) {
-      ancestor.addClassName('activeTrack');
-      track_title.addClassName('activeTrack');
-      track_img.src=Controller.button_url('check.png');
-  }  else {
-      ancestor.removeClassName('activeTrack');
-      track_title.removeClassName('activeTrack');
-      track_img.src=Controller.button_url('square.png');
-  }
 
-  checkSummaries();
-  _checkAllToggles(track_title);
+  if (track_title) {
+      var ancestor    = track_title.ancestors().find(
+						     function (el) {
+							 return el.nodeName == 'TD'
+						     });
+      if (visible == null) {
+	  visible = !ancestor.hasClassName('activeTrack');
+      }
+      if (visible) {
+	  ancestor.addClassName('activeTrack');
+	  track_title.addClassName('activeTrack');
+	  track_img.src=Controller.button_url('check.png');
+      }  else {
+	  ancestor.removeClassName('activeTrack');
+	  track_title.removeClassName('activeTrack');
+	  track_img.src=Controller.button_url('square.png');
+      }
+
+      checkSummaries();
+      _checkAllToggles(track_title);
+  }
+  else if (visible == null) return false;
 
   if (visible && !Controller.track_exists(track_name)) {
       Controller.add_track(track_name);

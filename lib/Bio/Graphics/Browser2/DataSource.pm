@@ -14,6 +14,7 @@ use Data::Dumper 'Dumper';
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI 'pre';
+use Storable 'lock_store','lock_retrieve';
 
 my %CONFIG_CACHE; # cache parsed config files
 my %DB_SETTINGS;  # cache database settings
@@ -73,18 +74,14 @@ sub new {
   $self->config_file($config_file_path);
   $self->add_scale_tracks();
   $self->precompile_glyphs;
+
+  # this generates the invert_types data structure which will then get cached to disk
+  $self->type2label('foo',0,'bar');
+
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
   $CONFIG_CACHE{$config_file_path}{ctime}  = time();
   return $self;
-}
-
-sub _new {
-    my $class = shift;
-    my $self  = $class->SUPER::_new(@_);
-    # this generates the invert_types data structure which will then get cached to disk
-    $self->_type2label($self,'foo','bar');
-    return $self;
 }
 
 sub name {
@@ -287,7 +284,7 @@ sub details_multiplier {
 
 sub unit_label {
   my $self  = shift;
-  my $value = shift;
+  my $value = shift || 0;
 
   my $unit     = $self->setting('units')        || 'bp';
   my $divider  = $self->setting('unit_divider') || 1;
@@ -300,6 +297,7 @@ sub unit_label {
          : $abs >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
          : $abs >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
 	 : $abs >= 1    ? sprintf("%.4g %s", $value,    $unit)
+	 : $abs == 0    ? sprintf("%.4g %s", $value,    $unit)
 	 : $abs >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
 	 : $abs >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
 	 : $abs >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
@@ -361,7 +359,6 @@ sub remote_renderer {
     return $self->global_setting('remote renderer');
 }
 
-
 sub labels {
   my $self   = shift;
 
@@ -407,6 +404,15 @@ sub label2type {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);
   return shellwords($self->setting($l,'feature')||$self->setting($label,'feature')||'');
+}
+
+sub track_listing_class {
+    my $self = shift;
+    my $style    =  lc $self->global_setting('track listing style') || 'categories';
+    my $subclass =   $style eq 'categories' ? 'Categories'
+	           : $style eq 'facets'     ? 'Facets'
+		   : die "invalid track listing style '$style'";
+    return 'Bio::Graphics::Browser2::Render::HTML::TrackListing::'.$subclass;
 }
 
 sub seqid_prefix { shift->fallback_setting(general=>'seqid_prefix') }
@@ -475,6 +481,7 @@ sub i18n_style {
 sub show_summary {
     my $self = shift;
     my ($label,$length,$settings) = @_;
+
     $settings ||= {};
     return 0 if defined $settings->{features}{$label}{summary_mode_len} &&
 	!$settings->{features}{$label}{summary_mode_len};
@@ -487,6 +494,10 @@ sub show_summary {
 	        or $class->isa('Bio::Graphics::Glyph::minmax');
     return 0 if $self->semantic_fallback_setting($label=>'global feature',$length);
     return 0 unless $c;
+
+    my $section =  $self->get_section_from_label($label) || 'detail';
+    $length /= $self->details_multiplier if $section eq 'detail';
+
     $c =~ s/_//g;  
     return 0 unless $c <= $length;
     my $db = $self->open_database($label,$length) or return;
@@ -596,9 +607,9 @@ sub semantic_label {
   my ($self,$label,$length) = @_;
   return $label unless defined $length && $length > 0;
 
-  my $mult = $self->global_setting('details multiplier') || 1;
-  # round a bit
-  $length = int(0.5+($length+1)/$mult);
+  # adjust for details_mult of we are on a 'details' label
+  my $section =  $self->get_section_from_label($label) || 'detail';
+  $length    /= $self->details_multiplier if $section eq 'detail';
 
   # look for:
   # 1. a section like "Gene:100000" where the cutoff is <= the length of the segment
@@ -681,43 +692,25 @@ sub type2label {
   $dbid   ||= '';
   $type   ||= '';
   $length ||= 0;
+  $type = lc $type;
+  $dbid =~ s/:database//;
 
-  my @labels;
-
-  if (exists $self->{_type2labelmemo}{$type,$dbid}) {
-      @labels =  @{$self->{_type2labelmemo}{$type,$dbid}};
+  if (exists $self->{_type2label}{$type,$length,$dbid}) {
+      my @labels = @{$self->{_type2label}{$type,$length,$dbid}};
+      return wantarray ? @labels : $labels[0];
   }
 
-  else {
-      my @main_labels = $self->_type2label($self,
-					   $type,
-					   $dbid);
-      my @user_labels = $self->_type2label($self->{_user_tracks},
-					   $type,
-					   $dbid);
-      my %label_groups;
-      for my $label (@main_labels,@user_labels) {
-	  my ($label_base,$minlength) = $label =~ /(.+)(?::(\d+))?/;
-	  $minlength ||= 0;
-	  next if defined $length && $minlength > $length;
-	  $label_groups{$label_base}++;
-      }
-      @labels = keys %label_groups;
-      $self->{_type2labelmemo}{$type,$dbid} = \@labels;
-  }
+  my %labels;
+  my $main_inverted = $self->invert_types($self->{config});
+  my $user_inverted = $self->invert_types($self->{_user_tracks}{config});
 
+  for my $i ($main_inverted,$user_inverted) {
+      my @lengths = grep {$length >= $_} keys %{$i->{$type}{$dbid}};
+      $labels{$_}++ foreach map {keys %{$i->{$type}{$dbid}{$_}}} @lengths;
+  }
+  my @labels = keys %labels;
+  $self->{_type2label}{$type,$length,$dbid} = \@labels; #cache in memory
   return wantarray ? @labels : $labels[0];
-}
-
-sub _type2label {
-    my $self = shift;
-    my ($storage_hash,$type,$dbid) = @_;
-
-    my $type2label = $storage_hash->{_type2label}{$storage_hash}
-                 ||= $self->invert_types($storage_hash->{config});
-    $dbid =~ s/:database$//;
-    my @labels = keys %{$type2label->{lc $type}{$dbid}};
-    return wantarray ? @labels : $labels[0];
 }
 
 # override inherited in order to allow for semantic zooming
@@ -726,42 +719,62 @@ sub feature2label {
   my ($feature,$length) = @_;
   my $type  = eval {$feature->type}
     || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
-
   my $dbid = eval{$feature->gbrowse_dbid};
   
   (my $basetype = $type) =~ s/:.+$//;
-  my @label = $self->type2label($type,$length,$dbid);
-  push @label,$self->type2label($basetype,$length,$dbid);
+  my %label;
 
-  # remove duplicate labels
-  my %seen;
-  @label = grep {! $seen{$_}++ } @label; 
+  $label{$_}++ foreach $self->type2label($type,$length,$dbid);
+  $label{$_}++ foreach $self->type2label($basetype,$length,$dbid);
 
+  my @label = keys %label;
   wantarray ? @label : $label[0];
 }
 
 sub invert_types {
-  my $self    = shift;
-  my $config  = shift;
-  return unless $config;
+    my $self   = shift;
+    my $config = shift;
+    return unless $config;
 
-  my %inverted;
-  for my $label (sort keys %{$config}) {
-      my $length = 0;
-      if ($label =~ /^(.+):(\d+)$/) {
-       	  $label  = $1;
-       	  $length = $2;
-      }
+    my $keys         = md5_hex(keys %$config);
 
-      $length *= $self->global_setting('details multiplier') || 1;
-      my $feature = $self->semantic_setting($label => 'feature',$length) or next;
-      my ($dbid)  = $self->db_settings($label => $length) or next;
-      $dbid =~ s/:database$//;
-      foreach (shellwords($feature||'')) {
-	  $inverted{lc $_}{$dbid}{$label}++;
-      }
-  }
-  \%inverted;
+    # check in-memory cache
+    if (exists $self->{_inverted}{$keys}) {
+	return $self->{_inverted}{$keys};
+    }
+
+    # check for a valid cache file
+    (my $cache_name     = $self->config_file) =~ s!/!_!g;
+    my $master_cache = $self->cachefile($cache_name);  # inherited
+    $master_cache   or die "no bio::graphics cache file found at $master_cache? Shouldn't happen..";
+
+    my $inv_path     = $master_cache . ".${keys}.inverted";
+    if (-e $inv_path && -M $master_cache >= -M $inv_path) {
+	return $self->{_inverted}{$keys} = lock_retrieve($inv_path);
+    }
+
+    my $multiplier = $self->global_setting('details multiplier') || 1;
+
+    my %inverted;
+    for my $label (sort keys %{$config}) {
+	my $length = 0;
+	if ($label =~ /^(.+):(\d+)$/) {
+	    $label  = $1;
+	    $length = $2;
+	}
+
+	my $section =  $self->get_section_from_label($label) || 'detail';
+	$length    *= $multiplier if $section eq 'detail';
+
+	my $feature = $self->semantic_setting($label => 'feature',$length) or next;
+	my ($dbid)  = $self->db_settings($label      => $length) or next;
+	$dbid =~ s/:database$//;
+	foreach (shellwords($feature||'')) {
+	    $inverted{lc $_}{$dbid}{$length}{$label}++;
+	}
+    }
+    lock_store(\%inverted,$inv_path);
+    return  $self->{_inverted}{$keys} = \%inverted;
 }
 
 sub default_labels {
@@ -970,13 +983,13 @@ sub open_database {
   # do a little extra stuff the first time we see a new database
   unless ($self->{databases_seen}{$db}++) {
       my $refclass = $self->setting('reference class');
-      eval {$db->default_class($refclass)} if $refclass;
+      $db->default_class($refclass) if $refclass && $db->can('default_class');
       $db->strict_bounds_checking(1) if $db->can('strict_bounds_checking');
       $db->absolute(1)               if $db->can('absolute');
 
       unless ($track eq 'general') {
 	  my $default = $self->open_database();  # I hope we don't get into a loop here
-	  eval {$db->dna_accessor($default)} unless $default eq $db;
+	  $db->dna_accessor($default) if $default ne $db && $db->can('dna_accessor');
       }
 
   }
@@ -1314,6 +1327,39 @@ sub fix_sqlite {
     return if $SQLITE_FIXED++;
     no warnings;
     *Bio::DB::SeqFeature::Store::DBI::SQLite::_has_spatial_index = sub { return };
+}
+
+sub get_section_from_label {
+    my $self   = shift;
+    my $label  = shift;
+
+    return 'detail' if ref $label;  # work around a DAS bug
+
+    if ($label eq 'overview' || $label =~ /:overview$/){
+        return 'overview';
+    }
+    elsif ($label eq 'region' || $label =~  /:region$/){
+        return 'region';
+    }
+    return 'detail'
+}
+
+=head2 $boolean = $source->use_inline_imagemap($label=>$length)
+
+Given a track label and length (for semantic zooming) return true
+if we should generate an inline clickable imagemap vs one in which
+the actions are generated by Ajax callbacks
+
+=cut
+
+sub use_inline_imagemap {
+    my $self = shift;
+    my ($label,$length) = @_;
+    my $inline = $self->semantic_fallback_setting($label=>'inline imagemaps',$length) 
+	       ||$self->semantic_fallback_setting($label=>'inline imagemap', $length);
+    return $inline if defined $inline;
+    my $db = $self->open_database($label,$length) or return 1;
+    return !$db->can('get_feature_by_id');
 }
 
 1;

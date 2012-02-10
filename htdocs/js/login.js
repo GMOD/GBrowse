@@ -76,16 +76,16 @@ function load_login_balloon(event,session,username,openid) {
                        'id=loginUser type=text maxlength=32 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginFRow style=display:none><td>' + Controller.translate('REALNAME') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginFullName type=text maxlength=32 style=font-size:9pt size=30></td></tr>' +
+                       'id=loginFullName type=text  maxlength=32 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginERow style=display:none><td>' + Controller.translate('EMAIL_TO_VALIDATE') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginEmail type=text maxlength=64 style=font-size:9pt size=30></td></tr>' +
+                       'id=loginEmail type=text  maxlength=64 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginPRow><td>' + Controller.translate('PASSWORD') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginPass type=password maxlength=32 style=font-size:9pt size=30></td></tr>' +
+                       'id=loginPass type=password  maxlength=32 style=font-size:9pt size=30></td></tr>' +
                    '<tr id=loginP2Row style=display:none><td>' + Controller.translate('RETYPE_PASSWORD') + '</td>' +
                      '<td><input onKeyPress=if(event.keyCode==13){login_loading(true);validate_info();} ' +
-                       'id=loginPass2 type=password maxlength=32 style=font-size:9pt size=30></td></tr>' +
+                       'id=loginPass2 type=password  maxlength=32 style=font-size:9pt size=30></td></tr>' +
                  '</tbody>' +
 
                    //"Edit Details" input text boxes
@@ -423,7 +423,7 @@ function validate_info() {
         if(user==0) {
             $('loginWarning').innerHTML = Controller.translate('ALL_FIELDS_REQUIRED') + '<br>' + html;
         } else {
-            add_openid_user(CurrentUser,html);
+            add_openid_user(CurrentUser,openid);
             return;
         }
         break;
@@ -1222,16 +1222,24 @@ function confirm_openid(session,page,logged_in,email,gecos) {
 		    callback: callback,
 		    id:       session,
 		    session:  session,
-		    option:   page
+		    option:   page,
+		    email:    email,
+		    fullname: gecos
         },
         onSuccess: function (transport) {
 	    login_blackout(false,'');
             var results = transport.responseJSON;
 	    if(results[0].error != null && results[0].error != 'Success') {
-		if (results[0].error.indexOf('not unique') >= 0)
+		if (results[0].error.indexOf('not unique') >= 0) {
 		    alert(Controller.translate('OPENID_ADD_FAILED','OpenID already in use.'));
-		  else
-		      alert(Controller.translate('OPENID_ADD_FAILED',results[0].error));
+		}
+		else if (results[0].error.indexOf('has not been used before')) {
+		    confirm_openid_error(session,page,logged_in,results[0].error,results[0].openid,true,results[0].email,results[0].fullname);
+		    return;
+		} 
+		else {
+		    alert(Controller.translate('OPENID_ADD_FAILED',results[0].error));
+		}
 		reload_login_script();
 	    }
 	    else if (page == 'edit' || page == 'openid-add') {
@@ -1252,7 +1260,7 @@ function confirm_openid_error(session,page,logged_in,error,openid,only,email,gec
     var event  = new fakeEvent();
     (only == 0 || logged_in) ? OpenIDMenu = false : OpenIDMenu = true;
     load_login_balloon(event,session,false,false);
-    login_blackout(false,'');
+    login_blackout(true,'');
 
     if(only == 1) {UsingOpenID=true;}
     if(page == 'openid-add') {login_page_change('edit');}

@@ -1,8 +1,5 @@
 #!/usr/bin/perl -w
 
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 # $Id: gbrowse_img,v 1.7 2009-08-31 19:46:38 lstein Exp $
 
 use strict;
@@ -61,7 +58,6 @@ if ($fcgi) {
 	my $gbi = GBrowse_img->new($globals);
 	$gbi->run();
 	$gbi->destroy;
-#	$fcgi->Finish();
     }
 }
 
@@ -118,6 +114,9 @@ sub run {
 
     $render->add_user_tracks($render->data_source);
     $render->update_state();
+
+    # notice that there is no explicit flush() of the session/state, and therefore the
+    # changes to the session are not stored.
 
     warn join ' ',$render->potential_tracks if DEBUG;
 
@@ -201,6 +200,11 @@ sub render_image {
     my $format   = param('format') || 'GD';
     my $flip     = param('flip')   || 0;
     my $embed    = param('embed');
+
+    if (my @regions = param('h_region')) {
+	$render->state->{h_region} = \@regions;
+    }
+
 
     my $convert_to_pdf;
     if ($format eq 'PDF' && `which inkscape`) {
@@ -296,10 +300,9 @@ sub render_tracks {
     my @labels   = $render->expand_track_names($render->detail_tracks);
 
     warn "labels = ",join ',',@labels if DEBUG;
-#    my @types           = (param('t'),param('type'),param('track'));
-#    my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
-#                          map { split /[ +-]/ } @types;
     my @track_types      = map {shellwords($_)} (param('t'),param('type'),param('track'));
+
+    my $h_callback = make_hilite_callback(param('h_feat'));
 
     # If no tracks specified, we want to see all tracks with this feature
     if (!@track_types) { @track_types = @labels; } 
@@ -310,9 +313,10 @@ sub render_tracks {
 						      labels            => \@track_types,
 						      external_features => $external,
 						      section           => 'detail',
-						      cache_extra       => [$format],
+						      cache_extra       => [$format,param('h_feat'),param('h_region')],
 						      image_class       => $format,
 						      flip              => $flip,
+						      hilite_callback   => $h_callback || undef,
 						      -key_style        => 'between',
 						      -suppress_key     => 0,
 						      }
@@ -372,6 +376,28 @@ sub consolidate_images {
     return $gds->[0]->isa('GD::SVG::Image') 
 	                         ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
                                  : $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
+}
+
+sub make_hilite_callback {
+    my @feature_names = @_;
+    return unless @feature_names;
+    my %colors;
+    foreach (@feature_names) {
+	my ($name,$color) = split '@';
+	$color ||= 'yellow';
+	$colors{$name} = $color;
+    }
+    return sub {
+	my $feature = shift;
+	my $color;
+	# if we get here, we select the search term for highlighting
+	my %names = map {lc $_=> 1}
+	                $feature->display_name,
+	                eval{$feature->get_tag_values('Alias')};
+	return unless %names;
+	$color ||= $colors{$_} foreach keys %names;
+	return $color;
+    }
 }
 
 sub _consolidate_gd {
@@ -530,13 +556,13 @@ sub usage {
 
 <pre>
 
-  &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
+  &lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
 <blockquote>
   <i>Will generate this picture:</i>
- <img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;width=400">
+ <img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;width=400">
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/db/gb2/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Sources
@@ -558,7 +584,7 @@ sub usage {
   yeast
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Feature types for source c_elegans
@@ -586,7 +612,7 @@ can be used as the destination of an &lt;img&gt; tag like this:
 </p>
 
 <blockquote><pre>
-&lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=III:1..1000"&gt;
+&lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=III:1..1000"&gt;
 </pre></blockquote>
 
 <p>
@@ -654,7 +680,7 @@ lengths.
       a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
       <p>
       <pre>
-      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=mec-3;
+      &lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;
                    type=tRNA+NG+WABA+CG+ESTB"&gt;
       </pre>
       Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
@@ -714,7 +740,7 @@ lengths.
   <dt><b>style</b>
   <dd>The style argument can be used to control the rendering of additional features added
       with "add".  It is a flattened version of the style configuration sections described
-      in <a href="http://www.wormbase.org/db/seq/gbrowse?help=annotation">this document</a>
+      in <a href="http://www.wormbase.org/db/gb2/gbrowse?help=annotation">this document</a>
       For example, if you have added a "Blast Hit" annotation, then you can tell the
       renderer to use a red arrow for this glyph in this way:
       style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
@@ -787,7 +813,7 @@ lengths.
 </dl>
 <p>
 Putting it all together, here's a working (very long) URL:
-<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
+<pre><a href="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
 <p>

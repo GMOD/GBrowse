@@ -9,6 +9,9 @@ eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
 eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
 our $CONF_DIR  = "$ENV{GBROWSE_CONF}/synteny";
 our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
 our $BIOGRAPHICS_VERSION   = 1.8;

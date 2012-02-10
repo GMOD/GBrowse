@@ -8,6 +8,18 @@ use lib "$Bin/install_util";
 use File::Copy;
 use GBrowseInstall;
 
+if ($ARGV[0] && $ARGV[0] =~ /^--?h/i) {
+    print STDERR "Typical usage: perl ./Build.PL with no options.\n";
+    print STDERR "Optional command-line arguments: \n";
+	printf STDERR " %-18s %-60s\n","--prefix",'Prefix for local installation';
+    my @args = @GBrowseInstall::OK_PROPS;
+    while (@args) {
+	my ($key,$value) = splice(@args,0,2);
+	printf STDERR " %-18s %-60s\n","--$key",$value;
+    }
+    exit 0;
+}
+
 my $build = GBrowseInstall->new(
     module_name        => 'GBrowse',
     dist_version_from  => 'lib/Bio/Graphics/Browser2.pm',
@@ -98,10 +110,6 @@ create/update your user account database.
 See /etc/gbrowse2/GBrowse.conf.new for suggested settings.
 ******************************************************************************************************
 END
-
-#print STDERR "Continue? [y/n] ";
-#my $line = <>;
-#exit 0 unless $line =~ /[yY]/;
 
 if(-e '/proc/filesystems' 
    && `grep selinux /proc/filesystems`) {

@@ -21,17 +21,18 @@ use overload '""' => 'asString',
 
 use constant REGISTRATION_SERVER => 'http://modencode.oicr.on.ca/cgi-bin/gbrowse_registration';
 
-my @OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
-		htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
-		tmp           => 'Directory for GBrowse\'s temporary data',
-		persistent    => 'Directory for GBrowse\'s sessions, uploaded tracks and other persistent data',
-		databases     => 'Directory for GBrowse\'s example databases',
-		cgibin        => 'Directory for GBrowse\'s CGI script executables?',
-		portdemo      => 'Internet port to run demo web site on (for demo)?',
-		apachemodules => 'Apache loadable module directory (for demo)?',
-		wwwuser       => 'User account under which Apache daemon runs?',
-		installconf   => 'Automatically update Apache config files to run GBrowse?',
-		installetc    => 'Automatically update system config files to run gbrowse-slave?',
+our @OK_PROPS = (
+    conf          => 'Directory for GBrowse\'s config and support files?',
+    htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
+    tmp           => 'Directory for GBrowse\'s temporary data',
+    persistent    => 'Directory for GBrowse\'s sessions, uploaded tracks and other persistent data',
+    databases     => 'Directory for GBrowse\'s example databases',
+    cgibin        => 'Directory for GBrowse\'s CGI script executables?',
+    portdemo      => 'Internet port to run demo web site on (for demo)?',
+    apachemodules => 'Apache loadable module directory (for demo)?',
+    wwwuser       => 'User account under which Apache daemon runs?',
+    installconf   => 'Automatically update Apache config files to run GBrowse?',
+    installetc    => 'Automatically update system config files to run gbrowse-slave?',
     );
 my %OK_PROPS = @OK_PROPS;
 

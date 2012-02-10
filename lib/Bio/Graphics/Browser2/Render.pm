@@ -2189,23 +2189,6 @@ sub reconfigure_track {
     }
 }
 
-# this returns semantically-correct override configuration
-# as a hash ref
-sub override_settings {
-    my $self  = shift;
-    my $label = shift;
-    my $source = $self->data_source;
-    my $state  = $self->state;
-    my $length = eval {$self->segment->length} || 0;
-    my $is_summary    = $source->show_summary($label,$length,$state);
-    my $semantic_override = $self->find_override_region(
-	$state->{features}{$label}{semantic_override},
-	$length);
-    return $is_summary           ? $state->{features}{$label}{summary_override}
-                                 : $semantic_override ? $state->{features}{$label}{semantic_override}{$semantic_override}
-                                 : {};
-}
-
 #        low                    hi
 #          <--------------------->  current
 #  <-----------> A

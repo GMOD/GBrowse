@@ -440,8 +440,9 @@ sub infer_settings_from_source {
       my (undef,$adaptor) = $source->db_settings($label);
 
       my $db   = $source->open_database($label) or last TRY;
-      my $meta = eval {$db->metadata}           or last TRY;
-      
+      $db->can('metadata') or last TRY;
+      my $meta = $db->metadata;
+
       # get all the tags that are consistently used
       my %tags;
       my @keys       = map {keys %$_} values %$meta;
@@ -453,6 +454,10 @@ sub infer_settings_from_source {
       my @tags    = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
       @dimensions = map {[ucfirst($_),'tag_value',$_]} @tags;
       @rows       = $package->get_facet_values($source,$label,@tags);
+<<<<<<< HEAD
+=======
+      
+>>>>>>> master
     }
     return unless @dimensions && @rows;
     

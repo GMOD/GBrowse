@@ -248,6 +248,7 @@ htdocs/images/balloons/GPlain/down_right.png
 htdocs/images/balloons/GPlain/up_left.png
 htdocs/images/balloons/GPlain/up_right.png
 htdocs/images/buttons/ajax-loader.gif
+htdocs/images/buttons/blue_peaks.png
 htdocs/images/buttons/check.png
 htdocs/images/buttons/cursor-ewmove.ico
 htdocs/images/buttons/dark_0.4_pixel.png
@@ -280,6 +281,8 @@ htdocs/images/buttons/minus12.png
 htdocs/images/buttons/mminus.png
 htdocs/images/buttons/mplus.gif
 htdocs/images/buttons/mplus.png
+htdocs/images/buttons/opacity_thumb.png
+htdocs/images/buttons/open_open.png
 htdocs/images/buttons/panleft.png
 htdocs/images/buttons/panleft2.png
 htdocs/images/buttons/panright.png
@@ -296,6 +299,7 @@ htdocs/images/buttons/red5.gif
 htdocs/images/buttons/red6.gif
 htdocs/images/buttons/red7.gif
 htdocs/images/buttons/red8.gif
+htdocs/images/buttons/red_peaks.png
 htdocs/images/buttons/ruler-icon.png
 htdocs/images/buttons/ruler.png
 htdocs/images/buttons/share.png

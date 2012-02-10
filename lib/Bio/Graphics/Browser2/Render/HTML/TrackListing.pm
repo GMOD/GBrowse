@@ -116,7 +116,8 @@ sub render_one_track {
 	                 : '';
 	
     my $html             = join(' ',$favoriteicon,span({-class=>'track_label'},$checkicon,$title),$help);
-	
+
+
     if (my ($selected,$total) = $render->subtrack_counts($label)) {
 	my $escaped_label = CGI::escape($label);
 	$html .= ' ['. span({-class       =>'clickable',

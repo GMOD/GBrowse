@@ -1358,6 +1358,12 @@ sub use_inline_imagemap {
     my $inline = $self->semantic_fallback_setting($label=>'inline imagemaps',$length) 
 	       ||$self->semantic_fallback_setting($label=>'inline imagemap', $length);
     return $inline if defined $inline;
+    return 1 if not (Bio::Graphics::Browser2::Render->fcgi_request()
+		     ||
+		     $ENV{MOD_PERL_API_VERSION}
+		     ||
+		     $ENV{'psgi.version'}
+	);
     my $db = $self->open_database($label,$length) or return 1;
     return !$db->can('get_feature_by_id');
 }

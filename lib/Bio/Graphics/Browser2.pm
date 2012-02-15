@@ -140,6 +140,8 @@ sub gbrowse_base {
     my $url    = CGI::url();
     my $source = $self->get_source_from_cgi;
     $source    = CGI::escape($source);
+    # work around PSGI inconsistencies in CGI emulation
+    $url       =~ s!/$source/?!!;
     $url =~   s!/[^/]*$!!;
     return ($url,$source);
 }

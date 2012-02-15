@@ -98,11 +98,7 @@ sub run {
 
     # work around PSGI signal munging
     local *SIG       = *CORE::SIG;
-    local $SIG{CHLD} = sub {
-	while ((my $kid = waitpid(-1,WNOHANG))>0) {
-	    1;
-	}
-    };
+    local $SIG{CHLD} = sub {while ((my $kid = waitpid(-1,POSIX::WNOHANG))>0) {1}};
 
     my $render = $self->render;
     $render->set_details_multiplier(1);
@@ -145,6 +141,7 @@ sub run {
     }
 
     $self->render_image();
+    $self->session->unlock();
     return;
 }
 

@@ -239,6 +239,7 @@ sub run {
        url(-path=>1),' ',
        query_string() if $debug || TRACE_RUN;
   warn "[$$] session id = ",$self->session->id if $debug;
+  $self->set_source && return;
 
   my $session = $self->session;
   my $source  = $self->data_source;
@@ -322,13 +323,13 @@ sub set_source {
 
     my $request    = CGI::unescape(CGI::request_uri());
     my $source_str = CGI::unescape("/$source/");
-    if ($request !~ /$source_str/) {
+    if ($request !~ /$source_str($|\?)/) {
 	my $args = CGI::query_string();
 	my $url  = CGI::url(-absolute=>1,-path_info=>0);
 	$url     =~ s!(gbrowse[^/]*)(?\!.*gbrowse)/.+$!$1!;  # fix CGI/Apache bug
 	$url    .= "/$source/";
+	$url    =~ s!//!/!g;
 	$url .= "?$args" if $args && $args !~ /^source=/;
-	warn "redirect to $url";
 	print CGI::redirect($url);
 	return 1;
     }

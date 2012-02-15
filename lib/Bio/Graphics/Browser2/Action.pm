@@ -88,7 +88,8 @@ sub handle_legacy_calls {
 
     # redirect to the imagelink
     if (my $format = $q->param('make_image')) {
-	return (302,undef,$render->image_link($render->state,$format));
+	my $link = $render->image_link($render->state,$format);
+	return (302,undef,$link);
     }
 
     if ($q->param('clear_dsn') || $q->param('reset_dsn')) {

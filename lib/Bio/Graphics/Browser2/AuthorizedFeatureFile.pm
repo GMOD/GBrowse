@@ -31,6 +31,7 @@ GBrowse internal module.
 sub setting {
   my $self = shift;
   my ($label,$option,@rest) = @_ >= 2 ? @_ : ('general',@_);
+  $label ||= 'general';
   $label = 'general' if lc $label eq 'general';  # buglet
   $self->SUPER::setting($label,$option,@rest);
 }

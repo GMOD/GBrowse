@@ -40,6 +40,7 @@ my %OK_PROPS = @OK_PROPS;
 sub ACTION_demo {
     my $self = shift;
     $self->depends_on('config_data');
+    $self->depends_on('build');
 
     my $dir  = tempdir(
 	'GBrowse_demo_XXXX',

@@ -40,13 +40,12 @@ use constant EMPTY_IMAGE_HEIGHT   => 12;
 use constant MAX_SEGMENT          => 1_000_000;
 use constant TOO_MANY_SEGMENTS    => 5_000;
 use constant OVERVIEW_RATIO       => 1.0;
-use constant GROUP_SEPARATOR      => "\x1d";
-use constant LABEL_SEPARATOR      => "\x1e";
+use constant GROUP_SEPARATOR      => "\x80";
+use constant LABEL_SEPARATOR      => "\x81";
 
 my %PLUGINS;       # cache initialized plugins
 my $FCGI_REQUEST;  # stash fastCGI request handle
 my $STATE;         # stash state for use by callbacks
-
 
 # new() can be called with two arguments: ($data_source,$session)
 # or with one argument: ($globals)
@@ -82,17 +81,7 @@ sub new {
   $self->session($session);
   $self->state($session->page_settings);
   $self->set_language();
-  $self->set_signal_handlers();
   $self;
-}
-
-sub set_signal_handlers {
-    my $self = shift;
-    $SIG{CHLD} = sub {
-	while ((my $kid = waitpid(-1,WNOHANG))>0) {
-	    1;
-	}
-    };
 }
 
 sub data_source {
@@ -237,13 +226,19 @@ sub run {
 
   my $debug = $self->debug || TRACE;
 
+  # work around PSGI signal munging
+  local *SIG     = *CORE::SIG;
+  local $SIG{CHLD} = sub {
+      while ((my $kid = waitpid(-1,WNOHANG))>0) {
+	  1;
+      }
+  };
+
   warn "[$$] RUN(): ",
        request_method(),': ',
        url(-path=>1),' ',
        query_string() if $debug || TRACE_RUN;
   warn "[$$] session id = ",$self->session->id if $debug;
-
-#  $self->set_source() && return;
 
   my $session = $self->session;
   my $source  = $self->data_source;
@@ -263,6 +258,7 @@ sub run {
 	  # authentication required, but not a login session, so initiate authentication request
 	  $self->force_authentication;
 	  $session->flush;
+	  $session->unlock;
 	  return;
       }
   }
@@ -301,7 +297,8 @@ sub run {
 
   warn "[$$] session flush" if $debug;
   $self->session->flush;
-  
+  $session->unlock;  
+
   delete $self->{usertracks};
   warn "[$$] synchronous exit" if $debug;
 }
@@ -323,12 +320,15 @@ sub set_source {
 
     my $source = $self->session->source;
 
-    if (CGI::unescape(CGI::path_info()) ne CGI::unescape("/$source/")) {
+    my $request    = CGI::unescape(CGI::request_uri());
+    my $source_str = CGI::unescape("/$source/");
+    if ($request !~ /$source_str/) {
 	my $args = CGI::query_string();
 	my $url  = CGI::url(-absolute=>1,-path_info=>0);
 	$url     =~ s!(gbrowse[^/]*)(?\!.*gbrowse)/.+$!$1!;  # fix CGI/Apache bug
 	$url    .= "/$source/";
 	$url .= "?$args" if $args && $args !~ /^source=/;
+	warn "redirect to $url";
 	print CGI::redirect($url);
 	return 1;
     }

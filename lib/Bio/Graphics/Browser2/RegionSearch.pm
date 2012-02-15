@@ -348,7 +348,11 @@ sub search_features_locally {
 
     # My oh my. block eval is not working as expected here. Sometimes the die is not caught.
     my $status = eval <<'END';
-	local $SIG{ALRM} = sub { warn "alarm clock" ; die "The search timed out; try a more specific search\n"; die; };
+	# we set %CORE::GLOBAL::SIG here to work around PSGI signal munging
+	local $CORE::GLOBAL::SIG{ALRM} = sub { warn "alarm clock" ; 
+					       die "The search timed out; try a more specific search\n";
+					       die;
+	};
 	alarm($timeout);
 	$result = $self->_search_features_locally(@_);
 	1;

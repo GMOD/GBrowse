@@ -1499,7 +1499,8 @@ sub run_local_requests {
 	my $oldaction;
 	my $time = time();
 	eval {
-	    local $SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" };
+	    # we set %CORE::GLOBAL::SIG here to work around PSGI signal munging
+	    local $CORE::GLOBAL::SIG{ALRM}    = sub { warn "alarm clock"; die "timeout" };
 	    alarm($timeout);
 
 	    $requests->{$label}->lock();

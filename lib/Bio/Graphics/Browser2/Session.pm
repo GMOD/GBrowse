@@ -68,7 +68,7 @@ sub new {
 	if (DEBUG_LOCK) {
 	    my $state  = $self->page_settings;
 	    my @tracks = sort grep {$state->{features}{$_}{visible}} keys %{$state->{features}};
-	    warn '[',$self->time,'] ',"[$$] READING @tracks\n";
+	    warn '[',$self->time,'] ',"[$$] READING @tracks";
 	}
 	## DEBUG ENDS
 
@@ -127,7 +127,9 @@ sub lock {
     warn '[',$self->time,'] ',"[$$] waiting on $type session lock...\n" if DEBUG_LOCK;
 
     eval {
-	local $SIG{ALRM} = sub {die "timeout\n"};
+	# we set %CORE::GLOBAL::SIG here to work around PSGI signal munging
+	local $CORE::GLOBAL::SIG{ALRM} = sub {die "timeout\n";};
+
 	# timeout lock to avoid some process from keeping process open
 	# you may see some lock timeouts if a process is taking too long
 	# to release its session.
@@ -150,7 +152,7 @@ sub lock {
     my $elapsed = sprintf("%5.3fs",$self->time()-$start_time);
     if ($@) {
 	die $@ unless $@ eq "timeout\n";
-	warn ("[$$] session lock timed out on request after $elapsed\n",
+	warn ("[$$] session lock timed out on request after $elapsed. REQUEST=",
 	      CGI::request_method(),': ',
 	      CGI::url(-path=>1),' ',
 	      CGI::query_string());
@@ -172,7 +174,7 @@ sub lock_flock {
 
     mkpath($lockdir) unless -e $lockdir;
     my $lockpath = File::Spec->catfile($lockdir,$lockfile);
-    my $o_mode   = $mode eq 'exclusive' ? '>'
+    my $o_mode   = $type eq 'exclusive' ? '>'
 	          :-e $lockpath ? "<" 
 		  : "+>";
 
@@ -276,12 +278,11 @@ sub flush {
   if (DEBUG_LOCK) {
       my $state  = $self->page_settings;
       my @tracks = sort grep {$state->{features}{$_}{visible}} keys %{$state->{features}};
-      warn '[',$self->time,'] ',"[$$] WRITING @tracks\n";
+      warn '[',$self->time,'] ',"[$$] WRITING @tracks";
   }
   ## DEBUG ENDS
 
   $self->{session}->flush if $self->{session};
-#  $self->unlock;
   warn "[$$] SESSION FLUSH ERROR: ",$self->{session}->errstr 
       if $self->{session}->errstr;
 }

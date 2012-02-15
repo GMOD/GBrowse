@@ -808,8 +808,9 @@ HostnameLookups Off
    LoadModule log_config_module $modules/mod_log_config.so
  </IfModule>
 
- <IfModule !cgi_module>
-  LoadModule cgi_module         $modules/mod_cgi.so
+ <IfModule !cgid_module>
+  LoadModule cgid_module         $modules/mod_cgid.so
+  ScriptSock "$dir/logs/cgisock"
  </IfModule>
 
  <IfModule !authz_host_module>

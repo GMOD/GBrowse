@@ -1201,11 +1201,11 @@ sub make_map {
   my $inline_options = {};
 
   if ($inline) {
-      $inline_options = {tips                    => $source->global_setting('balloon tips') && $settings->{'show_tooltips'},
-			 summary                 => $source->show_summary($label,$length,$self->settings),
-			 use_titles_for_balloons => $source->global_setting('titles are balloons'),
+      $inline_options = {tips                    => $source->global_setting('balloon tips') && $settings->{'show_tooltips'} || 0,
+			 summary                 => $source->show_summary($label,$length,$self->settings) || 0,
+			 use_titles_for_balloons => $source->global_setting('titles are balloons') || 0,
 			 balloon_style           => $source->global_setting('balloon style') || 'GBubble',
-			 balloon_sticky          => $source->semantic_fallback_setting($label,'balloon sticky',$length),
+			 balloon_sticky          => $source->semantic_fallback_setting($label,'balloon sticky',$length) || 0,
 			 balloon_height          => $source->semantic_fallback_setting($label,'balloon height',$length) || 300,
       }
   }

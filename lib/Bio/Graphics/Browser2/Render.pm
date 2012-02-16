@@ -222,7 +222,6 @@ sub destroy {
 	delete $self->{login_manager};
     }
     $self->session->unlock if $self->session;
-#    $self->session->flush if $self->session;
 }
 
 ###################################################################################
@@ -263,6 +262,7 @@ sub run {
 	  # authentication required, but not a login session, so initiate authentication request
 	  $self->force_authentication;
 	  $session->flush;
+	  $session->unlock;
 	  return;
       }
   }
@@ -301,6 +301,7 @@ sub run {
 
   warn "[$$] session flush" if $debug;
   $self->session->flush;
+  $self->session->unlock;
   
   delete $self->{usertracks};
   warn "[$$] synchronous exit" if $debug;

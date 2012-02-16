@@ -1,3 +1,9 @@
+2.47
+  * Fix bugs in demo mode.
+  * Fix session locking bug; FastCGI performance subjectively improved.
+  * Revert to using inline imagemaps when not running in an accelerated environment.
+  * Require Bio::Graphics version 2.26, so that transparency is supported.
+
 2.46
   * Support for transparent overlay tracks. These will appear as a user settable formatting option	
     for any track with subtracks. To make this default for a track set "bump = overlap" and consider

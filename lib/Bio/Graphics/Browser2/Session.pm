@@ -172,7 +172,7 @@ sub lock_flock {
 
     mkpath($lockdir) unless -e $lockdir;
     my $lockpath = File::Spec->catfile($lockdir,$lockfile);
-    my $o_mode   = $mode eq 'exclusive' ? '>'
+    my $o_mode   = $type eq 'exclusive' ? '>'
 	          :-e $lockpath ? "<" 
 		  : "+>";
 

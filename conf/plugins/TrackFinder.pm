@@ -19,9 +19,8 @@ sub init { }
 sub config_defaults {
   my $self   = shift;
 
-  # this line gets all the options defined in the "[SourceTrackFinder:plugin]" stanza
+  # this line gets all the options defined in the "[TrackFinder:plugin]" stanza
   my %fields = map {$_=>undef} $self->get_fields;
-
   return \%fields;
 }
 
@@ -73,13 +72,14 @@ sub filter_tracks {
 
   my $config  = $self->configuration;
   my @keywords = map {quotemeta($_)} shellwords $config->{keywords};
-
+  my @searches = get_fields($self);
   my @result;
  LABEL:
   for my $l (@$track_labels) {
       do {push @result,$l; next LABEL} if $l =~ /^(plugin|file|http|das)/;
-
-      my $aggregate_text = join ' ',map {$source->code_setting($l=>$_)} qw(key keywords select);
+     
+      my @searched_fields = @searches ? @searches :(qw(key keywords select),"subtrack select labels");
+      my $aggregate_text = join ' ',map {$source->code_setting($l=>$_)} @searched_fields;
       $aggregate_text   ||= $l;
       my $labels         = $source->subtrack_scan_list($l);
       $aggregate_text   .= " @$labels" if $labels && @$labels;
@@ -122,29 +122,21 @@ Bio::Graphics::Browser2::Plugin::TrackFinder - Limit list of tracks to those tha
 
 In the appropriate gbrowse configuration file:
 
- plugin = SourceTrackFinder
+ plugin = TrackFinder
 
- [SourceTrackFinder:plugin]
- tissue source = brain pancreas kidney
- gender        = male female
+ [TrackFinder:plugin]
+ category      = 1
+ citation      = 1
+ keywords      = 1
 
- [track1]
- (usual config options)
- tissue source = brain
- gender        = male
 
- [track2]
- (usual config options)
- tissue source = pancreas
- gender        = female
 
 =head1 DESCRIPTION
 
 This plugin activates a panel above the tracks table that allows the
 user to filter the tracks according to typed keywords. The fields to
-search are hard-coded to "key", "citation" and "keywords". Simply add
-a space-delimited "keywords" field to each stanza in order to make it
-findable by this plugin.
+search are hard-coded to "key", "citation", "keywords", "subtack select labels".
+Or they can be configured as shown above
 
 Note that this only affects the display of track names. Tracks that
 were previously turned on will stay on, but their entries will be

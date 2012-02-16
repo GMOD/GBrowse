@@ -451,6 +451,9 @@ sub update_data_source {
     $session->source($new_source);
     $source = $new_source;
   } else {
+    # if we want to go to another page rather than the default source
+    # here's where we start
+
     my $fallback_source = $self->valid_source($old_source) 
 	? $old_source
 	: $self->default_source;

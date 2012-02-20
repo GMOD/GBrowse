@@ -411,6 +411,40 @@ sub default_source {
   return ($self->data_sources)[0];
 }
 
+#if admin set "database not found" in GBrowse.conf, give the user an error message about
+#putting a source in the url that doesn't exist
+sub database_not_found {
+  my $self        = shift;
+  my $old_source  = shift;  
+  my $notfound    = $self->setting(general => 'database not found');
+  return 0 if (!defined $notfound); #if it's not set, return false so the if structure will continue
+    
+  warn "User tried a nonexistant data source: $old_source.";
+
+  my ($url, $source) = $self->gbrowse_base;
+  $source            = $self->default_source;
+
+  #ask GBrowse cgi for list of available sources
+  my $curl_cmd = "curl $url/gbrowse/$source/?action=list";
+  my @source_list = `$curl_cmd`;
+ 
+  my @print_table; 
+  for (@source_list) {
+      next if /^#/;
+      s!^(.*?)\s(.*)!<tr><td><a href="/cgi-bin/gb2/gbrowse/$1">$1</a></td><td>$2</td></tr>!;
+      push @print_table, $_;
+  }
+
+  print CGI->header();
+  print "<h3>You tried to use a data source that doesn't exist ($old_source).  Please try one of the data sources below.</h3>";
+  print "<table>";
+  print @print_table;
+  print "</table>";
+  print CGI->end_html();
+  exit(0);
+  return 1; 
+}               
+
 sub valid_source {
   my $self            = shift;
   my $proposed_source = shift;
@@ -451,12 +485,21 @@ sub update_data_source {
     $session->source($new_source);
     $source = $new_source;
   } else {
-    # if we want to go to another page rather than the default source
-    # here's where we start
+    my $fallback_source;
+    if ($self->database_not_found($new_source)) {
+        #the script ends up terminiating before this can return true
+        # (or it will return false and continue on).
+    }
+    elsif ($self->valid_source($old_source)) {
+        $fallback_source = $old_source;
+    }
+    else {
+        $fallback_source = $self->default_source;
+    }
 
-    my $fallback_source = $self->valid_source($old_source) 
-	? $old_source
-	: $self->default_source;
+#    my $fallback_source = $self->valid_source($old_source) 
+#	? $old_source
+#	: $self->default_source;
     $session->source($fallback_source);
     $source = $fallback_source;
   }

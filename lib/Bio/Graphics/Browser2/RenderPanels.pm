@@ -1559,7 +1559,10 @@ sub run_local_requests {
 		foreach (@$titles) {
 		    my $index = $_->[5]->bgcolor;  # record track config bgcolor
 		    my ($r,$g,$b) = $gd->rgb($index);
-		    my $alpha     = $_->[5]->default_opacity;
+		    my $alpha     = 1;
+		    if ($_->[5]->can('default_opacity')) {
+			$alpha     = $_->[5]->default_opacity;
+		    }
 		    $_->[5]       =  "rgba($r,$g,$b,$alpha)";
 		}  # don't want to store all track config data to cache!
 

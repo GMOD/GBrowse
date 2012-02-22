@@ -2574,6 +2574,7 @@ sub balloon_tip_setting {
     $val = $source->link_pattern($value,$feature,$panel);
   }
 
+  $val ||= '';  # prevent uninit variable warning
   if ($val=~ /^\s*\[([\w\s]+)\]\s+(.+)/s) {
     $balloon_type = $1;
     $val          = $2;

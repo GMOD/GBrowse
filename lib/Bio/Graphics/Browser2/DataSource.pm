@@ -749,7 +749,7 @@ sub invert_types {
     $master_cache   or die "no bio::graphics cache file found at $master_cache? Shouldn't happen..";
 
     my $inv_path     = $master_cache . ".${keys}.inverted";
-    if (-e $inv_path && -M $master_cache >= -M $inv_path) {
+    if (-e $inv_path && (-M $master_cache||0) >= (-M $inv_path||0)) {
 	return $self->{_inverted}{$keys} = lock_retrieve($inv_path);
     }
 
@@ -1362,7 +1362,7 @@ sub use_inline_imagemap {
 		     ||
 		     $ENV{MOD_PERL_API_VERSION}
 		     ||
-		     $ENV{'psgi.version'}
+		     $ENV{'plack.file.SCRIPT_NAME'}
 	);
     my $db = $self->open_database($label,$length) or return 1;
     return !$db->can('get_feature_by_id');

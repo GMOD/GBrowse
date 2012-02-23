@@ -880,7 +880,7 @@ sub generate_title {
          : @$features == 0                   ? $self->translate('NOT_FOUND',$state->{name})
 	 : @$features == 1 ? "$description: ".
 				   $self->translate('SHOWING_FROM_TO',
-					     scalar $dsn->unit_label($state->{view_stop} - $state->{view_start}),
+					     scalar $dsn->unit_label($state->{view_stop} - $state->{view_start}+1),
 					     $state->{ref},
 					     $dsn->commas($state->{view_start}),
 					     $dsn->commas($state->{view_stop}))
@@ -923,7 +923,7 @@ sub segment_info_object {
         flip                 => $state->{flip},
         initial_view_start   => $state->{view_start},
         initial_view_stop    => $state->{view_stop},
-        length_label         => scalar $self->data_source->unit_label($state->{view_stop} - $state->{view_start}),
+        length_label         => scalar $self->data_source->unit_label($state->{view_stop} - $state->{view_start}+1),
         description          => $self->data_source->description,
     );
     if ( $state->{region_size} ) {

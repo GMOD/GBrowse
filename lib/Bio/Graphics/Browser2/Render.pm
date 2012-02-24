@@ -1091,6 +1091,14 @@ sub init_database {
   $db;
 }
 
+sub name2segments {
+    my $self = shift;
+    my $name = shift;
+    my $search   = $self->get_search_object();
+    my @features = $search->search_features($name);
+    return map {$search->segment($_)} map {$search->feature2segment($_)} @features;
+}
+
 sub region {
     my $self     = shift;
 
@@ -1470,7 +1478,6 @@ sub handle_plugins {
 
     ### FIND #####################################################
     if ( $plugin_action eq $self->translate('Find') ) {
-
         #$self->do_plugin_find( $state, $plugin_base, $features )
         #    or ( $plugin_action = 'Configure' );    #reconfigure
         return;

@@ -1,4 +1,4 @@
-package Bio::DB::SeqFeature::Store::MetaDB;
+package Bio::DB::SeqFeature::Store::Alias;
 
 use strict;
 use Carp 'croak';
@@ -10,11 +10,11 @@ use Bio::DB::SeqFeature::Store;
  # override feature type, method, source and attribute fields
  # with the contents of a simple text index file
 
- use Bio::DB::SeqFeature::Store::MetaDB;
+ use Bio::DB::SeqFeature::Store::Alias;
  use Bio::DB::SeqFeature::Store;
  my $db = Bio::DB::SeqFeature::Store->new(-adaptor=>'DBI::mysql',
                                           -dsn    =>'testdb');
- my $meta = Bio::DB::SeqFeature::Store::MetaDB->new(-store => $db,
+ my $meta = Bio::DB::SeqFeature::Store::Alias->new(-store => $db,
                                                     -index => '/usr/local/testdb/meta.index');
  my @features = $meta->get_seq_stream(-seq_id => 'I',
                                       -attributes => {foo => 'bar'});
@@ -103,16 +103,17 @@ sub get_seq_stream {
 	%options = @_;
     }
     $options{-type} ||= $options{-types};
+    $self->meta;  # load metadata
 
     my @ids = keys %{$self->{features}};
     @ids    = $self->_filter_ids_by_type($options{-type},           \@ids) if $options{-type};
     @ids    = $self->_filter_ids_by_attribute($options{-attributes},\@ids) if $options{-attributes};
     @ids    = $self->_filter_ids_by_name($options{-name},           \@ids) if $options{-name};
 
-    my %search_opts  = (-type => $self->feature_type);
+    my %search_opts;
     $search_opts{$_} = $options{$_} foreach qw(-seq_id -start -end);
 
-    return Bio::DB::SeqFeature::Store::MetaDB::Iterator->new($self,\@ids,\%search_opts);
+    return Bio::DB::SeqFeature::Store::Alias::Iterator->new($self,\@ids,\%search_opts);
 }
 
 sub get_features_by_location {
@@ -232,7 +233,7 @@ sub _parse_metadb {
 	# strip right-column comments unless they look like colors or html fragments
 	s/\s*\#.*$// unless /\#[0-9a-f]{6,8}\s*$/i || /\w+\#\w+/ || /\w+\"*\s*\#\d+$/;   
 	if (/^\[([^\]]+)\]/) {  # beginning of a configuration section
-	    my $current_feature = $1;
+	    $current_feature = $1;
 	}
 
 	elsif ($current_feature && /^([\w: -]+?)\s*=\s*(.*)/) {  # key value pair
@@ -259,12 +260,12 @@ sub set_feature_attributes {
     $self->{attributes}{$feature}    = $attributes;
 }
 
-package Bio::DB::SeqFeature::Store::MetaDB::Iterator;
+package Bio::DB::SeqFeature::Store::Alias::Iterator;
 
 sub new {
     my $class = shift;
-    my ($set,$ids,$search_opts) = @_;
-    return bless {set         => $set,
+    my ($db,$ids,$search_opts) = @_;
+    return bless {db          => $db,
 		  ids         => $ids,
 		  search_opts => $search_opts,
     },ref $class || $class;
@@ -272,28 +273,18 @@ sub new {
 
 sub next_seq {
     my $self = shift;
-    my $set  = $self->{set};
-    my $ids  = $self->{ids};
+    my $db   = $self->{db};
     my $opts = $self->{search_opts};
-
-    while (1) {
-	if (my $i = $self->{current_iterator}) {
-	    if (my $next = $i->next_seq) {
-		my $id   = $self->{current_id};
-		my $att  = $set->{attributes}{$id};
-		if ($att) {
-		    $next->set_attributes($att);
-		    my ($method,$source) = split(':',$att->{type}||'');
-		    $next->primary_tag($method || $att->{primary_tag}) if $method || $att->{primary_tag};
-		    $next->source_tag ($source || $att->{source}     ) if $source || $att->{source};
-		}
-		return $next;
-	    }
-	}
-	$self->{current_id}       = shift @$ids or return;  # leave when we run out of ids
-	my $bw                    = $set->get_feature($self->{current_id}) or next;
-	$self->{current_iterator} = $bw->get_seq_stream(%$opts,-type=>$set->feature_type);
+    my $name = shift @{$self->{ids}};
+    my ($next) = $db->store->get_features_by_name($name) or return;
+    my $att    = $db->{attributes}{$name};
+    if ($att) {
+	$next->add_tag_value($_=>$att->{$_}) foreach keys %$att;
+	my ($method,$source) = split(':',$att->{type}||'');
+	$next->primary_tag($method || $att->{primary_tag}) if $method || $att->{primary_tag};
+	$next->source_tag ($source || $att->{source}     ) if $source || $att->{source};
     }
+    return $next;
 }
 
 1;

@@ -461,7 +461,6 @@ sub infer_settings_from_source {
       my @tags    = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
       @dimensions = map {[ucfirst($_),'tag_value',$_]} @tags;
       @rows       = $package->get_facet_values($source,$label,@tags);
-      
     }
 
     return unless @dimensions && @rows;

@@ -1,3 +1,7 @@
+2.49
+  * Add new "metadata" [track] option for making subtracks selectable via
+    structured metadata.
+
 2.48
   * Fix track-level genbank and fasta dumping.
   * Fix (mostly) the batch and sequence dumping plugins.

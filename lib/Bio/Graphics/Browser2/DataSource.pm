@@ -7,6 +7,7 @@ use base 'Bio::Graphics::Browser2::AuthorizedFeatureFile';
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Browser2::Util 'modperl_request';
 use Bio::Graphics::Browser2::DataBase;
+use Bio::DB::SeqFeature::Store::Alias;
 use File::Basename 'dirname';
 use File::Path 'mkpath';
 use File::Spec;
@@ -992,6 +993,16 @@ sub open_database {
 	  $db->dna_accessor($default) if $default ne $db && $db->can('dna_accessor');
       }
 
+  }
+
+  # add extra semantic data if requested
+  if ($track ne 'general' && (my $metadata = $self->semantic_setting($track,'metadata',$length||0))) {
+      eval "require Bio::DB::SeqFeature::Store::Alias; 1;"
+	  unless Bio::DB::SeqFeature::Store::Alias->can('new');
+      my @feature_types = shellwords($self->semantic_setting($track,'feature',$length||0));
+      $db = Bio::DB::SeqFeature::Store::Alias->new(-store => $db,
+						   -index => $metadata,
+						   -type  => $feature_types[0]);
   }
 
   # remember mapping of this database to this track

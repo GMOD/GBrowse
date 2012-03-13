@@ -2176,7 +2176,7 @@ sub create_track_args {
       $left_label++ 
 	  if $source->semantic_setting($label=>'label_transcripts',$length);
 
-      my $group_label = $source->semantic_setting($label=>'glyph',$length) !~ /xyplot|wiggle|density|whisker/;
+      my $group_label = $source->semantic_setting($label=>'glyph',$length) !~ /xyplot|wiggle|density|whisker|vista/;
 
       push @default_args,(
 	  -group_label          => $group_label||0,
@@ -2216,7 +2216,6 @@ sub create_track_args {
   if (my $stt = $self->subtrack_manager($label)) {
       my $sub = $stt->sort_feature_sub;
       push @args,(-sort_order => $sub);
-#      push @args,(-color_series => 1) if $overlaps;
   }
 
   return @args;

@@ -15,7 +15,9 @@ use Bio::DB::SeqFeature::Store;
  my $db = Bio::DB::SeqFeature::Store->new(-adaptor=>'DBI::mysql',
                                           -dsn    =>'testdb');
  my $meta = Bio::DB::SeqFeature::Store::Alias->new(-store => $db,
-                                                    -index => '/usr/local/testdb/meta.index');
+                                                    -index => '/usr/local/testdb/meta.index',
+                                                    -default_type => 'example_feature',
+    );
  my @features = $meta->get_seq_stream(-seq_id => 'I',
                                       -attributes => {foo => 'bar'});
                                  
@@ -40,13 +42,15 @@ meta.index  has the following structure
 =cut
 
 our $AUTOLOAD;
+my %CACHE;
 
-sub AUTOLOAD {
-  my($pack,$func_name) = $AUTOLOAD=~/(.+)::([^:]+)$/;
-  return if $func_name eq 'DESTROY';
-  my $self = shift or die;
-  $self->store->$func_name(@_);
-}
+#sub AUTOLOAD {
+#  my($pack,$func_name) = $AUTOLOAD=~/(.+)::([^:]+)$/;
+#  return if $func_name eq 'DESTROY';
+#  my $self = shift or die;
+#  warn "AUTOLOAD: $self->$func_name";
+#  $self->{store}->$func_name(@_);
+#}
 
 sub isa {
     my $self = shift;
@@ -57,18 +61,49 @@ sub isa {
 sub new {
     my $self = shift;
     my %args = @_;
-    $args{-index} or croak __PACKAGE__.'->new(): -index argument required';
-    $args{-store} or croak __PACKAGE__.'->new(): -store argument required';
-    return bless {
-	store => $args{-store},
-	index => $args{-index}};
+    my $index = $args{-index} or croak __PACKAGE__.'->new(): -index argument required';
+    my $store = $args{-store} or croak __PACKAGE__.'->new(): -store argument required';
+    my $default_type = $args{-type}||$args{-default_type}||'';
+    return $CACHE{$index,$store,$default_type} ||=
+	bless {
+	    store => $store,
+	    index => $index,
+	    default_type => $default_type
+    };
 }
 
+sub feature_type { shift->default_type(@_) }
+
+sub default_type {
+    my $self = shift;
+    my $d = $self->{default_type};
+    $self->{default_type} = shift if @_;
+    return $d;
+}
 sub store {shift->{store}}
 sub index {shift->{index}}
-sub meta {
+sub parse_metadb {
     my $self = shift;
     return $self->{metadb} ||= $self->_parse_metadb;
+}
+
+sub metadata {
+    my $self = shift;
+
+    $self->parse_metadb;
+    my $att = $self->{attributes};
+
+    # obscure file names
+    my @indices = sort {
+		      $att->{$a}{display_name} cmp $att->{$b}{display_name}
+		  } keys %$att;
+    my @values  = @{$att}{@indices};
+    my @ids     = (1..@values);
+
+    my %result;
+    @result{@ids} = @values;
+
+    return \%result;
 }
 
 sub get_feature {
@@ -93,6 +128,25 @@ sub features {
     return @result;
 }
 
+sub segment {
+    my $self = shift;
+    my ($seqid,$start,$end) = @_;
+
+    if ($_[0] =~ /^-/) {
+	my %args = @_;
+	$seqid = $args{-seq_id} || $args{-name};
+	$start = $args{-start};
+	$end   = $args{-stop}    || $args{-end};
+    } else {
+	($seqid,$start,$end) = @_;
+    }
+
+    return Bio::DB::SeqFeature::Store::Alias::Segment->new(-aliasdb => $self,
+							   -seq_id => $seqid,
+							   -start  => $start,
+							   -end    => $end);
+}
+
 sub get_seq_stream {
     my $self    = shift;
     my %options;
@@ -103,7 +157,7 @@ sub get_seq_stream {
 	%options = @_;
     }
     $options{-type} ||= $options{-types};
-    $self->meta;  # load metadata
+    $self->parse_metadb;  # load metadata
 
     my @ids = keys %{$self->{features}};
     @ids    = $self->_filter_ids_by_type($options{-type},           \@ids) if $options{-type};
@@ -130,7 +184,7 @@ sub get_features_by_name {
     return $self->features(-name  => $name);
 }
 
-sub get_feature_by_name  { shift->get_features_by_name(@_) }
+sub get_feature_by_name   { shift->get_features_by_name(@_) }
 sub get_features_by_alias { shift->get_features_by_name(@_) }
 sub get_features_by_attribute { 
     my $self = shift;
@@ -147,12 +201,15 @@ sub _filter_ids_by_type {
     my %ok_types = map {lc $_=>1} @types;
   ID:
     for my $id (@$ids) {
-	my $att           = $self->{attributes}{$id};
-	my $type_base     = lc ($att->{type} || $att->{method} || $att->{primary_tag} || $self->feature_type);
+	my $att          = $self->{attributes}{$id};
+	my $type         = lc ($att->{type} || $att->{method} || $att->{primary_tag} || $self->default_type);
+	my ($method,$source) = split(':',$type||'');
+	$method ||= $att->{method};
+	$source ||= $att->{source};
 	{
 	    no warnings;
-	    my $type_extended = lc "$att->{method}:$att->{source}" if $att->{method};
-	    next ID unless $ok_types{$type_base} || $ok_types{$type_extended};
+	    my $type_extended = lc "$method:$source" if $method;
+	    next ID unless $ok_types{$method} || $ok_types{$type_extended};
 	}
 	$ids{$id}++;
     }
@@ -248,6 +305,7 @@ sub _parse_metadb {
 	$self->set_feature_attributes($f,$attributes);
     }
 
+    return $self->{attributes};
 }
 
 sub set_feature_attributes {
@@ -275,17 +333,58 @@ sub next_seq {
     my $self = shift;
     my $db   = $self->{db};
     my $opts = $self->{search_opts};
-    my $name = shift @{$self->{ids}};
-    my ($next) = $db->store->get_features_by_name($name) or return;
-    my $att    = $db->{attributes}{$name};
-    if ($att) {
-	$next->add_tag_value($_=>$att->{$_}) foreach keys %$att;
-	my ($method,$source) = split(':',$att->{type}||'');
-	$next->primary_tag($method || $att->{primary_tag}) if $method || $att->{primary_tag};
-	$next->source_tag ($source || $att->{source}     ) if $source || $att->{source};
+    while (1) {
+	return unless @{$self->{ids}};
+	my $name = shift @{$self->{ids}};
+	
+	my ($next) = $db->store->get_features_by_alias($name) or next;
+	if (my $att    = $db->{attributes}{$name}) {
+	    my ($method,$source) = split(':',$att->{type}||'');
+	    $next->primary_tag($method || $att->{primary_tag}) if $method || $att->{primary_tag};
+	    $next->source_tag ($source || $att->{source}     ) if $source || $att->{source};
+	    for my $key (keys %$att) {
+		if ($key =~ /(display_)?name/) {
+		    $next->name($att->{$key});
+		}
+		else {
+		    $next->add_tag_value($key=>$att->{$key})
+			unless $key =~ /^(display_name|name|type|method|source)/;
+		}
+	    }
+	}
+	return $next;
     }
-    return $next;
 }
+
+package Bio::DB::SeqFeature::Store::Alias::Segment;
+
+sub new {
+    my $self = shift;
+    my %args = @_;
+    return bless {
+	seq_id => $args{-seq_id},
+	start  => $args{-start},
+	end    => $args{-end},
+	aliasdb=> $args{-aliasdb},
+    },ref $self || $self;
+}
+
+sub features {
+    my $self = shift;
+    return $self->{aliasdb}->features(-seq_id => $self->{seq_id},
+				      -start  => $self->{start},
+				      -end    => $self->{end},
+				      -type   => $_[0]);
+}
+
+sub get_seq_stream {
+    my $self = shift;
+    return $self->{aliasdb}->get_seq_stream(-seq_id => $self->{seq_id},
+					    -start  => $self->{start},
+					    -end    => $self->{end},
+					    -type   => $_[0]);
+}
+
 
 1;
 

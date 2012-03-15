@@ -111,7 +111,7 @@ sub config_dialog {
     unshift @glyph_select,$dynamic if ref $data_source->fallback_setting($label=>'glyph') eq 'CODE';
 
     my $db           = $data_source->open_database($label,$length);
-    my $quantitative = $glyph =~ /wiggle|vista|xy|density/ || ref($db) =~ /bigwig/i;
+    my $quantitative = $glyph =~ /wiggle|vista|xy|density|hybrid/ || ref($db) =~ /bigwig/i;
     my $can_whisker  = $quantitative && ref($db) =~ /bigwig/i;
     my $vista        = $glyph =~ /vista/;
 
@@ -273,7 +273,7 @@ END
     # bicolor pivot stuff
     #######################
     my $p = $override->{bicolor_pivot} || $bicolor_pivot || 'none';
-    my $has_pivot = $g =~ /wiggle_xyplot|wiggle_density|xyplot/;
+    my $has_pivot = $g =~ /wiggle_xyplot|wiggle_density|xyplot|hybrid/;
 
     push @rows,TR( {-class=>'xyplot density color_picker',
 		     -id   =>'bicolor_pivot_id'},

@@ -13,7 +13,7 @@ var TrackConfigure = Class.create({
     all.each(function(a){a.hide()});
     var specific = false;
 
-    if (glyph_element.value.match(/xyplot/)) {
+    if (glyph_element.value.match(/xyplot|hybrid/)) {
        config_container.select('tr.xyplot').each(function(a){a.show()});
        specific = true;
     }
@@ -54,7 +54,7 @@ var TrackConfigure = Class.create({
        if (x != null) x.hide();
        specific = true;
     }
-    if (glyph_element.value.match(/xyplot|whiskers/)) {
+    if (glyph_element.value.match(/xyplot|whiskers|hybrid/)) {
        this.adjust_height(40,200);
     }
     if (!specific) {
@@ -63,7 +63,7 @@ var TrackConfigure = Class.create({
 
     config_container.select('tr.'+glyph_element.value).each(function(a){a.show()});
 
-    var signal = glyph_element.value.match(/xyplot|density|wiggle/)
+    var signal = glyph_element.value.match(/xyplot|density|wiggle|hybrid/)
                  || (glyph_element.value.match(/vista/) && subtype.value.match(/signal/));
     var can_pivot = !(glyph_element.value.match(/whiskers/) || (graphtype !=null && graphtype.value.match(/whiskers/)));
     can_pivot     = can_pivot || (glyph_element.value.match(/vista/) && subtype.value.match(/density/));
@@ -149,10 +149,10 @@ var TrackConfigure = Class.create({
 
    var autoscales = $('config_table').select('tr').findAll(function(a){return a.hasClassName('autoscale')});
    autoscales.each(function(a){a.hide()});
-   if (g.match(/wiggle/) || g.match(/vista/)) {
+   if (g.match(/wiggle/) || g.match(/vista/) || g.match(/hybrid/)) {
        $('wiggle_autoscale').show();
    }
-   else if (g.match(/xyplot/) || g.match(/density/)) {
+   else if (g.match(/xyplot/) || g.match(/density/) || g.match(/hybrid/)) {
        $('xyplot_autoscale').show();
    }
 

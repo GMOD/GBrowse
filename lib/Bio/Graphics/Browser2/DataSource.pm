@@ -1000,9 +1000,9 @@ sub open_database {
       eval "require Bio::DB::SeqFeature::Store::Alias; 1;"
 	  unless Bio::DB::SeqFeature::Store::Alias->can('new');
       my @feature_types = shellwords($self->semantic_setting($track,'feature',$length||0));
-      $db = Bio::DB::SeqFeature::Store::Alias->new(-store => $db,
-						   -index => $metadata,
-						   -type  => $feature_types[0]);
+      $db = Bio::DB::SeqFeature::Store::Alias->new(-store    => $db,
+						   -metadata => $metadata,
+						   -type     => $feature_types[0]);
   }
 
   # remember mapping of this database to this track

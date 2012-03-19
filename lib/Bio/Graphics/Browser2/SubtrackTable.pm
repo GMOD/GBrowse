@@ -458,7 +458,7 @@ sub infer_settings_from_source {
       }
       my $count = keys %$meta;
       
-      my @tags    = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
+      my @tags    = sort grep {defined $_ && $_ ne 'dbid' && !/^:/ && $tags{$_}==$count} keys %tags;
       @dimensions = map {[ucfirst($_),'tag_value',$_]} @tags;
       @rows       = $package->get_facet_values($source,$label,@tags);
     }
@@ -496,10 +496,10 @@ sub get_facet_values {
 	my $method = $meta->{$id}{method} || eval {$db->feature_type} || 'feature';
 	my $source = $meta->{$id}{source} || '';
 	my $type = $meta->{$id}{type} || "$method:$source";
-
 	next unless $type =~ /$match/;
 	my @vals = map {$_||''} @{$meta->{$id}}{@facets};
 	push @vals,"=$id";
+	push @vals,'*' if $meta->{$id}{':selected'};
 	push @rows,\@vals;
     }
 

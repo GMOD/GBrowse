@@ -24,7 +24,9 @@ use Bio::DB::SeqFeature::Store;
 meta.index  has the following structure
 
  [feature_name_1]
- display_name = foobar
+ :dbid        = f101
+ :selected    = 1
+ display_name = My First Feature
  type         = some_type1
  method       = my_method1
  source       = my_source1
@@ -32,13 +34,96 @@ meta.index  has the following structure
  another_attribute = value2
 
  [feature_name_2]
- display_name = barfoo
+ :dbid        = f102
+ :selected    = 1
+ display_name = My Second Feature
  type         = some_type2
  method       = my_method2
  source       = my_source2
  some_attribute    = value3
  another_attribute = value4
-    
+
+ [feature_name_3]
+ :dbid        = f103
+ type         = some_type2
+ method       = my_method2
+ source       = my_source2
+ some_attribute    = value5
+ another_attribute = value6
+
+=head1 DESCRIPTION
+
+This module can be used as a wrapper around any BioPerl database that
+supports the get_feature_by_name() method. It allows you to
+dynamically override the type, source, method and display name of each
+feature, as well as to assign new metadata attributes to each one.
+
+It is used by GBrowse to create subtracks for tracks that have a small
+number of named features, primarily wiggle tracks.
+
+=head2 Metadata Format
+
+The wrapper is associated with a text file that contains metadata
+about each feature. You can use any name for the text file, but it
+must follow this format:
+
+ [feature_name_1]
+ :dbid        = f101
+ :selected    = 1
+ type         = some_type1
+ method       = my_method1
+ source       = my_source1
+ some_attribute    = value1
+ another_attribute = value2
+
+ [feature_name_2]
+ :dbid        = f102
+ :selected    = 1
+ type         = some_type2
+ method       = my_method2
+ source       = my_source2
+ some_attribute    = value3
+ another_attribute = value4
+
+ [feature_name_3]
+ :dbid        = f103
+ type         = some_type2
+ method       = my_method2
+ source       = my_source2
+ some_attribute    = value5
+ another_attribute = value6
+
+Each [stanza] begins with the name of a feature as it is represented
+in the underlying database. A call to the database's
+get_feature_by_name() method with the [stanza] heading contents
+(e.g. "feature_name_2") and a genomic position should return one and
+only one feature.
+
+Below each [stanza] heading are a series of tag=value pairs. The
+following tag names have special meaning:
+
+ :dbid          Unique identifier for the feature, used by GBrowse to process
+                  clicks on the feature.
+ :selected      If true, this subtrack is selected by default when the
+                  containing track is turned on.
+ display_name   Display name for the feature. If not present, will
+                  default to the feature's native display name
+		  (i.e. the one in the [stanza]).
+ type           What is returned by calling the feature's type()
+                  method.
+ method         What is returned by calling the feature's method()
+                  method.
+ source         What is returned by calling the feature's source()
+                  method.
+ score         What is returned by calling the feature's score() method.
+
+Any other tags become sortable attributes which are displayed by the
+GBrowse subtrack selection dialog box. For this to work properly, each
+tag must be present in each stanza. Tags that are present in some
+stanzas and not others are ignored.
+
+=head1 METHODS
+
 =cut
 
 our $AUTOLOAD;
@@ -58,11 +143,23 @@ sub isa {
 	             : Bio::DB::SeqFeature::Store->isa(@_);
 }
 
+=head2 $aliasdb = Bio::DB::SeqFeature::Store::Alias->new(-metadata=>$path,-store=>$db,-type=>$type)
+
+new() creates the Alias database. The arguments are:
+
+  -metadata       Full path to the metadata file.
+  -store          Previously opened handle to the feature database
+  		    (e.g. Bio::SeqFeature::Store, Bio::DB::GFF,
+ 		     Bio::DB::Chado)
+  -type           Default type to use for features in this database.
+
+=cut
+
 sub new {
     my $self = shift;
     my %args = @_;
-    my $index = $args{-index} or croak __PACKAGE__.'->new(): -index argument required';
-    my $store = $args{-store} or croak __PACKAGE__.'->new(): -store argument required';
+    my $index = $args{-metadata} or croak __PACKAGE__.'->new(): -metadata argument required';
+    my $store = $args{-store}    or croak __PACKAGE__.'->new(): -store argument required';
     my $default_type = $args{-type}||$args{-default_type}||'';
     return $CACHE{$index,$store,$default_type} ||=
 	bless {
@@ -72,6 +169,12 @@ sub new {
     };
 }
 
+=head2 $type = $aliasdb->default_type([$type])
+
+Gets or sets the default type.
+
+=cut
+
 sub feature_type { shift->default_type(@_) }
 
 sub default_type {
@@ -80,12 +183,34 @@ sub default_type {
     $self->{default_type} = shift if @_;
     return $d;
 }
+
+=head2 $store = $aliasdb->store
+
+Gets the underlying feature database specified during new() (immutable).
+
+=cut
+
 sub store {shift->{store}}
+
+=head2 $index = $aliasdb->index
+
+Returns the path to the metadata description file.
+
+=cut
+
 sub index {shift->{index}}
 sub parse_metadb {
     my $self = shift;
     return $self->{metadb} ||= $self->_parse_metadb;
 }
+
+=head2 $meta = $aliasdb->metadata
+
+Return a hashref in which the keys are the feature IDs (or an
+arbitrary numeric value if :dbid was not specified), and the values
+are a hashref of attribute/value pairs.
+
+=cut
 
 sub metadata {
     my $self = shift;
@@ -98,7 +223,7 @@ sub metadata {
 		      $att->{$a}{display_name} cmp $att->{$b}{display_name}
 		  } keys %$att;
     my @values  = @{$att}{@indices};
-    my @ids     = (1..@values);
+    my @ids     = map {$att->{$indices[$_]}{':dbid'}||($_+1)} (0..@indices-1);
 
     my %result;
     @result{@ids} = @values;
@@ -106,11 +231,27 @@ sub metadata {
     return \%result;
 }
 
+=head2 $f = $aliasdb->get_feature($name)
+
+Calls the underlying database's get_feature_by_name() method and
+returns a list of response.
+
+=cut
+
 sub get_feature {
     my $self = shift;
     my $name = shift;
-    return ($self->store->get_features_by_name($name))[0];
+    return ($self->store->get_feature_by_name($name))[0];
 }
+
+=head2 @f = $aliasdb->features(@args)
+
+Same as calling the underlying database's features() method, except
+that the values you specified in the metadata file for display_name,
+type, method, source, score and other attributes will override the
+original values.
+
+=cut
 
 sub features {
     my $self    = shift;
@@ -127,6 +268,17 @@ sub features {
 
     return @result;
 }
+
+=head2 $segment = $aliasdb->segment(@args)
+
+Creates a segment object (see Bio::DB::SeqFeature::Store->segment()),
+which records a genomic range for use in further query refinement:
+
+  $chr1 = $aliasdb->segment(-seqid=>'chr1');
+  @f    = $chr1->features;
+
+=cut
+
 
 sub segment {
     my $self = shift;
@@ -146,6 +298,19 @@ sub segment {
 							   -start  => $start,
 							   -end    => $end);
 }
+
+=head2 $iterator = $aliasdb->get_seq_stream(@args)
+
+This method is similar to the underlying database's get_seq_stream()
+method, except that it wraps each feature. Example:
+
+ $iterator = $aliasdb->get_seq_stream(-type=>'some_type2');
+ while (my $seq = $iterator->next_seq) {
+    # do something with the seq object.
+ }
+
+=cut
+
 
 sub get_seq_stream {
     my $self    = shift;
@@ -170,6 +335,20 @@ sub get_seq_stream {
     return Bio::DB::SeqFeature::Store::Alias::Iterator->new($self,\@ids,\%search_opts);
 }
 
+
+
+=head2 @f = $aliasdb->get_features_by_location(@args)
+
+This method is similar to the underlying database's get_features_by_location()
+method.
+
+ $iterator = $aliasdb->get_seq_stream(-type=>'some_type2');
+ while (my $seq = $iterator->next_seq) {
+    # do something with the seq object.
+ }
+
+=cut
+
 sub get_features_by_location {
     my $self = shift;
     my ($seqid,$start,$end) = @_;
@@ -178,6 +357,13 @@ sub get_features_by_location {
 			   -end   => $end);
 }
 
+=head2 @f = $aliasdb->get_features_by_name(@args)
+
+This method is similar to the underlying database's get_features_by_location()
+method.
+
+=cut
+
 sub get_features_by_name {
     my $self = shift;
     my $name = shift;
@@ -185,7 +371,30 @@ sub get_features_by_name {
 }
 
 sub get_feature_by_name   { shift->get_features_by_name(@_) }
-sub get_features_by_alias { shift->get_features_by_name(@_) }
+
+=head2 @f = $aliasdb->get_features_by_name(@args)
+
+This method is similar to the underlying database's get_features_by_location()
+method.
+
+=cut
+
+=head2 @f = $aliasdb->get_features_by_alias(@args);
+
+This method is similar to the underlying database's get_features_by_alias()
+method.
+
+=cut
+
+sub get_features_by_alias {shift->get_features_by_attribute(@_) }
+
+=head2 @f = $aliasdb->get_features_by_attribute(@args);
+
+This method is similar to the underlying database's get_features_by_attribute()
+method.
+
+=cut
+
 sub get_features_by_attribute { 
     my $self = shift;
     my $att  = shift;
@@ -385,6 +594,28 @@ sub get_seq_stream {
 					    -type   => $_[0]);
 }
 
+=head1 BUGS
+
+Please report them.
+
+=head1 SEE ALSO
+
+L<Bio::SeqFeature::Store>,
+L<Bio::DB::GFF>,
+L<Bio::SeqI>,
+L<Bio::SeqFeatureI>,
+L<Bio::Das>,
+L<Bio::Graphics::Browser2>
+
+=head1 AUTHOR
+
+Copyright (c) 2012 Ontario Institute for Cancer Research
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.  See DISCLAIMER.txt for
+disclaimers of warranty.
+
+=cut
 
 1;
 

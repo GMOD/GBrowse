@@ -485,7 +485,7 @@ sub get_facet_values {
     my ($source,$label,@facets) = @_;
 
     my @types       = shellwords $source->setting($label=>'feature');
-    my $match       = join '|',map {$_="$_:?" unless /:/} @types;
+    my $match       = join '|',map {/:/ ? $_ : "$_:?"} @types;
 
     my @rows;
     my (undef,$adaptor) = $source->db_settings($label);

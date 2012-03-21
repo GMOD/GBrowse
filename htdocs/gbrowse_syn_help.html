@@ -14,9 +14,9 @@ The oryza data source contains genome annotations in GFF3 flat files
 for two rice species and blastz-derived whole genome aligment data between
  the two species.
 <ul>
-<li>$DATABASES/gbrowse_syn/rice/rice.gff3
-<li>$DATABASES/gbrowse_syn/wild_rice/wild_rice.gff3
-<li>$DATABASES/gbrowse_syn/alignments/rice.aln
+<li>/var/lib/gbrowse2/databases/gbrowse_syn/rice/rice.gff3
+<li>/var/lib/gbrowse2/databases/gbrowse_syn/wild_rice/wild_rice.gff3
+<li>/var/lib/gbrowse2/databases/gbrowse_syn/alignments/rice.aln
 </ul>
 
 
@@ -60,7 +60,7 @@ $ cd /var/www/gbrowse2/databases/gbrowse_syn/alignments
 $ sudo gunzip rice.aln.gz
 $ gbrowse_syn_load_alignments_msa.pl -u user -p pass -d rice_synteny -c -v rice.aln
 =======
-$ cd $DATABASES/gbrowse_syn/alignments
+$ cd /var/lib/gbrowse2/databases/gbrowse_syn/alignments
 $ gunzip -c rice.aln.gz | gbrowse_syn_load_alignments_msa.pl -u user -p pass -d rice_synteny -c -v -
 >>>>>>> master
 </pre>
@@ -77,7 +77,7 @@ $ sudo mv /etc/gbrowse2/synteny/oryza.synconf.disabled /etc/gbrowse2/synteny/ory
 # or as root
 % mv /etc/gbrowse2/synteny/oryza.synconf.disabled /etc/gbrowse2/synteny/oryza.synconf
 =======
-$ mv $CONF/synteny/oryza.synconf.disabled $CONF/synteny/oryza.synconf
+$ mv /etc/gbrowse2/synteny/oryza.synconf.disabled /etc/gbrowse2/synteny/oryza.synconf
 >>>>>>> master
 </pre>
 
@@ -144,7 +144,7 @@ changing the dsn argumant as required for each data source.
 <pre>
 $ bp_seqfeature_load.pl -u user -p pass -d rice -c -f /var/www/gbrowse2/$GBROWSE_ROOT/databases/gbrowse_syn/rice/rice.gff3
 =======
-$ bp_seqfeature_load.pl -u user -p pass -d rice -c -f $DATABASES/gbrowse_syn/rice/rice.gff3
+$ bp_seqfeature_load.pl -u user -p pass -d rice -c -f /var/lib/gbrowse2/databases/gbrowse_syn/rice/rice.gff3
 >>>>>>> master
 loading /var/www/html/gbrowse/databases/gbrowse_syn/rice/rice.gff3...
 Building object tree... 1.05s7s
@@ -154,7 +154,7 @@ load time: 31.40s
 <<<<<<< HEAD
 $ bp_seqfeature_load.pl -u user -p pass -d wild_rice -c -f /var/www/gbrowse2/$GBROWSE_ROOT/databases/gbrowse_syn/wild_rice/wild_rice.gff3
 =======
-$ bp_seqfeature_load.pl -u user -p pass -d wild_rice -c -f $DATABASES/gbrowse_syn/wild_rice/wild_rice.gff3
+$ bp_seqfeature_load.pl -u user -p pass -d wild_rice -c -f /var/lib/gbrowse2/databases/gbrowse_syn/wild_rice/wild_rice.gff3
 >>>>>>> master
 loading /var/www/html/gbrowse/databases/gbrowse_syn/wild_rice/wild_rice.gff3...
 Building object tree... 1.15s9s

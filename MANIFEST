@@ -602,6 +602,7 @@ lib/Bio/Graphics/Browser2/Session.pm
 lib/Bio/Graphics/Browser2/Shellwords.pm
 lib/Bio/Graphics/Browser2/SubtrackTable.pm
 lib/Bio/Graphics/Browser2/TrackDumper.pm
+lib/Bio/Graphics/Browser2/TrackDumper/RichSeqMaker.pm
 lib/Bio/Graphics/Browser2/UserDB.pm
 lib/Bio/Graphics/Browser2/UserTracks.pm
 lib/Bio/Graphics/Browser2/UserTracks/Database.pm

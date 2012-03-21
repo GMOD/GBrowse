@@ -241,7 +241,7 @@ sub ACTION_reconfigure_track {
     my $track_name     = $q->param('track') or croak;
     my $semantic_label = $q->param('semantic_label');
 
-    $self->render->reconfigure_track($track_name,$semantic_label);
+    $self->render->reconfigure_track($q,$track_name,$semantic_label);
     $self->session->flush;
     $self->session->unlock;
     return ( 200, 'application/json', {} );
@@ -255,7 +255,7 @@ sub ACTION_track_overlapping {
     my $state          = $self->state;
     $q->param('format_option'     => $overlapping eq 'true' ? 4 : 0);
     $q->param('conf_color_series' => $overlapping eq 'true' ? 1 : 0);
-    $self->render->reconfigure_track($track_name);
+    $self->render->reconfigure_track($q,$track_name);
     $self->session->flush;
     $self->session->unlock;
     return ( 200, 'application/json', {} );    
@@ -1102,7 +1102,6 @@ sub ACTION_set_subtracks {
     my $q    = shift;
     my $label= $q->param('label');
     my $subtracks = JSON::from_json($q->param('subtracks'));
-    my $overlap   = $q->param('overlap');
     my $settings  = $self->state;
     $self->state->{subtracks}{$label} = $subtracks;
     $self->session->flush;

@@ -1201,11 +1201,11 @@ sub make_map {
   my $inline_options = {};
 
   if ($inline) {
-      $inline_options = {tips                    => $source->global_setting('balloon tips') && $settings->{'show_tooltips'},
-			 summary                 => $source->show_summary($label,$length,$self->settings),
-			 use_titles_for_balloons => $source->global_setting('titles are balloons'),
+      $inline_options = {tips                    => $source->global_setting('balloon tips') && $settings->{'show_tooltips'} || 0,
+			 summary                 => $source->show_summary($label,$length,$self->settings) || 0,
+			 use_titles_for_balloons => $source->global_setting('titles are balloons') || 0,
 			 balloon_style           => $source->global_setting('balloon style') || 'GBubble',
-			 balloon_sticky          => $source->semantic_fallback_setting($label,'balloon sticky',$length),
+			 balloon_sticky          => $source->semantic_fallback_setting($label,'balloon sticky',$length) || 0,
 			 balloon_height          => $source->semantic_fallback_setting($label,'balloon height',$length) || 300,
       }
   }
@@ -1560,7 +1560,10 @@ sub run_local_requests {
 		foreach (@$titles) {
 		    my $index = $_->[5]->bgcolor;  # record track config bgcolor
 		    my ($r,$g,$b) = $gd->rgb($index);
-		    my $alpha     = $_->[5]->default_opacity;
+		    my $alpha     = 1;
+		    if ($_->[5]->can('default_opacity')) {
+			$alpha     = $_->[5]->default_opacity;
+		    }
 		    $_->[5]       =  "rgba($r,$g,$b,$alpha)";
 		}  # don't want to store all track config data to cache!
 
@@ -2174,7 +2177,7 @@ sub create_track_args {
       $left_label++ 
 	  if $source->semantic_setting($label=>'label_transcripts',$length);
 
-      my $group_label = $source->semantic_setting($label=>'glyph',$length) !~ /xyplot|wiggle|density|whisker/;
+      my $group_label = $source->semantic_setting($label=>'glyph',$length) !~ /xyplot|wiggle|density|whisker|vista/;
 
       push @default_args,(
 	  -group_label          => $group_label||0,
@@ -2214,7 +2217,6 @@ sub create_track_args {
   if (my $stt = $self->subtrack_manager($label)) {
       my $sub = $stt->sort_feature_sub;
       push @args,(-sort_order => $sub);
-#      push @args,(-color_series => 1) if $overlaps;
   }
 
   return @args;

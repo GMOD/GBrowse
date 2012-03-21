@@ -458,10 +458,9 @@ sub infer_settings_from_source {
       }
       my $count = keys %$meta;
       
-      my @tags    = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
+      my @tags    = sort grep {defined $_ && $_ ne 'dbid' && !/^:/ && $tags{$_}==$count} keys %tags;
       @dimensions = map {[ucfirst($_),'tag_value',$_]} @tags;
       @rows       = $package->get_facet_values($source,$label,@tags);
-      
     }
 
     return unless @dimensions && @rows;
@@ -486,7 +485,7 @@ sub get_facet_values {
     my ($source,$label,@facets) = @_;
 
     my @types       = shellwords $source->setting($label=>'feature');
-    my $match       = join '|',map {$_="$_:?" unless /:/} @types;
+    my $match       = join '|',map {/:/ ? $_ : "$_:?"} @types;
 
     my @rows;
     my (undef,$adaptor) = $source->db_settings($label);
@@ -497,10 +496,10 @@ sub get_facet_values {
 	my $method = $meta->{$id}{method} || eval {$db->feature_type} || 'feature';
 	my $source = $meta->{$id}{source} || '';
 	my $type = $meta->{$id}{type} || "$method:$source";
-
 	next unless $type =~ /$match/;
 	my @vals = map {$_||''} @{$meta->{$id}}{@facets};
 	push @vals,"=$id";
+	push @vals,'*' if $meta->{$id}{':selected'};
 	push @rows,\@vals;
     }
 

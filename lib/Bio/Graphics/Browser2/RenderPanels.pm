@@ -18,8 +18,7 @@ use POSIX 'WNOHANG','setsid';
 use CGI qw(:standard param escape unescape);
 
 use constant TRUE  => 1;
-use constant DEBUG => 1;
-use constant DEBUG_SQL => 0;
+use constant DEBUG => 0;
 use constant DEBUGGING_RECTANGLES => 0;  # outline the imagemap
 use constant BENCHMARK => 0;
 
@@ -1199,7 +1198,6 @@ sub make_map {
       if $first_box_is_scale;
 
   my $inline = $source->use_inline_imagemap($label,$length);
-  warn "inline = $inline";
   my $inline_options = {};
 
   if ($inline) {
@@ -1426,7 +1424,7 @@ sub run_local_requests {
     # FIXME: this has to be set somewhere
     my $hilite_callback= undef;
 
-    $segment->factory->debug(1) if DEBUG_SQL;
+    $segment->factory->debug(1) if DEBUG;
 
     #---------------------------------------------------------------------------------
     # Track and panel creation
@@ -1554,11 +1552,9 @@ sub run_local_requests {
 		}
 
 		# == generate the images and maps in background==
-		warn "[$$] calling panel->gd() for $label...." if DEBUG;
 		$gd     = $panel->gd;
 		warn "render gd($label): ",time()-$time," seconds " if BENCHMARK;
 
-		warn "[$$] calling panel->key_boxes() for $label..." if DEBUG;
 		$titles    = $panel->key_boxes;
 		foreach (@$titles) {
 		    my $index = $_->[5]->bgcolor;  # record track config bgcolor
@@ -1574,11 +1570,9 @@ sub run_local_requests {
 		    if DEBUGGING_RECTANGLES;
 		warn "render titles($label): ",time()-$time," seconds " if BENCHMARK;
 
-		warn "[$$] calling panel->boxes() for $label..." if DEBUG;
 		my $boxes = $panel->boxes;
 		warn "boxes($label): ",time()-$time," seconds " if BENCHMARK;
 
-		warn "[$$] calling panel->make_map() for $label..." if DEBUG;
 		$map = $self->make_map( $boxes,
 					$panel, $label,
 					\%trackmap, 0 );

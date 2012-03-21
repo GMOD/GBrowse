@@ -43,10 +43,10 @@ use constant OVERVIEW_RATIO       => 1.0;
 use constant GROUP_SEPARATOR      => "\x1d";
 use constant LABEL_SEPARATOR      => "\x1e";
 
-my %PLUGINS;       # cache initialized plugins
-my $FCGI_REQUEST;  # stash fastCGI request handle
-my $STATE;         # stash state for use by callbacks
-
+my %PLUGINS;         # cache initialized plugins
+my $FCGI_REQUEST;    # stash fastCGI request handle
+my $FCGI_RUNNING=0;  # true if fastCGI is running
+my $STATE;           # stash state for use by callbacks
 
 # new() can be called with two arguments: ($data_source,$session)
 # or with one argument: ($globals)
@@ -3979,8 +3979,13 @@ sub fcgi_request {
     }
 
     my $request  = FCGI::Request(\*STDIN,\*STDOUT,\*STDERR,\%ENV,0,FCGI::FAIL_ACCEPT_ON_INTR());
-    return $FCGI_REQUEST = ($request && $request->IsFastCGI ? $request : 0);
+    $FCGI_REQUEST = ($request && $request->IsFastCGI ? $request : 0);
+
+    $FCGI_RUNNING++ if $FCGI_REQUEST;
+    return $FCGI_REQUEST;
 }
+
+sub fcgi_running { return $FCGI_RUNNING }
 
 sub fork {
     my $self = shift;

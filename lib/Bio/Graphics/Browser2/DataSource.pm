@@ -1368,11 +1368,14 @@ sub use_inline_imagemap {
     my ($label,$length) = @_;
     my $inline = $self->semantic_fallback_setting($label=>'inline imagemaps',$length) 
 	       ||$self->semantic_fallback_setting($label=>'inline imagemap', $length);
+    warn "inline =>>>> $inline";
     return $inline if defined $inline;
-    return 1 if not (Bio::Graphics::Browser2::Render->fcgi_request()
+    warn "fcgi_request = ",Bio::Graphics::Browser2::Render->fcgi_running();
+    return 1 if not (Bio::Graphics::Browser2::Render->fcgi_running()
 		     ||
 		     $ENV{MOD_PERL_API_VERSION}
 	);
+    warn "open_database($label,$length) == ",$self->open_database($label,$length);
     my $db = $self->open_database($label,$length) or return 1;
     return !$db->can('get_feature_by_id');
 }

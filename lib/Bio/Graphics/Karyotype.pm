@@ -26,7 +26,12 @@ sub new {
 		},ref $class || $class;
 }
 
-sub db             { shift->data_source->open_database()    }
+sub db             { 
+    my $self = shift;
+    my $source = $self->data_source;
+    my $db     = $source->karyotype_setting('database');
+    return $source->open_database("$db:database");
+}
 sub data_source    { shift->{source}     }
 sub language       { shift->{language}   }
 

@@ -1,6 +1,10 @@
 2.49
   * Add new "metadata" [track] option for making subtracks selectable via
     structured metadata.
+  * Specify which database to use for search result karyotype display using following
+    syntax:
+           [builtin:karyotype]
+           database = my_database
 
 2.48
   * Fix track-level genbank and fasta dumping.

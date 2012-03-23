@@ -125,6 +125,7 @@ sub to_html {
   my $message   = $self->language->tr('HIT_COUNT',$hit_count);
   $html        .= CGI::h2($message);
 
+  my @panels;
   for my $seqid (
       sort {$sort_order->{$a} <=> $sort_order->{$b}} keys %$panels
       ) {
@@ -140,7 +141,7 @@ sub to_html {
                  : 5;
 
     my $imagemap  = $self->image_map(scalar $panel->boxes,"${seqid}.");
-    $html     .= 
+    push @panels,
 	div(
 	    {-style=>"cursor:default;float:left;margin-top:${margin}px;margin-left:0.5em;margin-right;0.5em"},
 	    div({-style=>'position:relative'},
@@ -150,6 +151,8 @@ sub to_html {
 	    div({-align=>'center'},b($seqid))
 	);
   }
+  my $bgcolor = $self->data_source->global_setting('overview bgcolor') || 'wheat:0.5';
+  $html    .= div({-style=>"background-color:$bgcolor"},@panels);
 
   my $table = $self->hits_table($terms2hilite);
 

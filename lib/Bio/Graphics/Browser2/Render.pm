@@ -2187,7 +2187,7 @@ sub reconfigure_track {
 	    my $bp = $q->param('bicolor_pivot_value');
 	    $o->{$s} =    $bp if !defined $configured_value or $bp != $configured_value;
 	} else {
-	    $o->{$s} = $value if !defined $configured_value or $value ne $configured_value;
+	    $o->{$s} = $value if !defined $configured_value or !defined $o->{$s} or $value ne $configured_value;
 	    if ($glyph eq 'wiggle_whiskers') {# workarounds for whisker options
 		$o->{"${s}_neg"}  = $value if $s =~ /^(mean_color|stdev_color)/; 
 		$o->{min_color}   = $value if $s eq 'max_color';

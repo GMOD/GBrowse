@@ -1359,9 +1359,8 @@ sub render_track_list_title {
 			    $key? (
 				'['.
 				span({-class => 'clickable',
-				      $is_mine ? (-title => $self->tr('EDIT_LABEL')) : (),
 				      -onClick         => $script,
-				      -contentEditable => $is_mine ? 'true' : 'false',
+				      -contentEditable => ($is_mine ? 'true' : 'false'),
 				     },
 				     b($key)
 				).

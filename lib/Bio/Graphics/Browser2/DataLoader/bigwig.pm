@@ -90,7 +90,7 @@ sub wig2bigwig {
 	local $SIG{CHLD} = 'DEFAULT';
 	my $fh;
 	if (my $wigtobigwig = $self->wigtobigwig_path) {
-	    open $fh,"$wigtobigwig -clip '$src' '$cs' '$dest' 2>&1 |";
+	    open $fh,"($wigtobigwig -clip '$src' '$cs' '$dest' && echo success) 2>&1 |";
 	} else {
 	    eval "use IO::Pipe" unless IO::Pipe->can('new');
 	    $fh  = IO::Pipe->new;
@@ -102,16 +102,18 @@ sub wig2bigwig {
 		open STDERR,">&$fileno";
 		open STDOUT,">&$fileno";
 		Bio::DB::BigFile->createBigWig($src,$cs,$dest,
-					       {clipDontDie=>1}
-		    );
+					       {clipDontDie=>1});
 		print STDERR "success";
 		exit 0;
+	    } else {
+		$fh->reader;
 	    }
-	    $fh->reader;
 	}
 	my @lines = <$fh>;
 	close $fh;
-	die @lines unless $? == 0 || $lines[-1] =~ /success/; 
+	unless ($lines[-1] =~ /success/) {
+	    die "PROCESSING ERROR: @lines";
+	}
     }
 
     unlink $self->{current_track}{wigfile};

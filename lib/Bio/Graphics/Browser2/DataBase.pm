@@ -49,7 +49,10 @@ sub open_database {
       $CACHE->clear();  # last ditch attempt to free filehandles
       $db = eval {$adaptor->new(@argv)};
   }
-  die "Could not open database: $@" unless $db;
+  unless ($db) {
+      warn "Could not open database: $@";
+      return;
+  }
 
   $db->strict_bounds_checking(1) if $db->can('strict_bounds_checking');
   $db->absolute(1)               if $db->can('absolute');

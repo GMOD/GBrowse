@@ -848,9 +848,9 @@ sub ACTION_upload_file {
 
     my $return_object = {
     	success		=> $result || 0,
-		error_msg	=> CGI::escapeHTML($msg),
-		tracks		=> $tracks,
-		uploadName	=> $name,
+	error_msg	=> CGI::escapeHTML($msg),
+	tracks		=> $tracks,
+	uploadName	=> $name,
     };
 
     if ($q->param('forcejson')) {

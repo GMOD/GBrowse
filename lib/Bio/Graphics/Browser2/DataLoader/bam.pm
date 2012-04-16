@@ -118,8 +118,6 @@ sub load {
 	my $source_file = IO::File->new(
 	    File::Spec->catfile($self->sources_path,$self->track_name),'>');
 
-	warn "sourcefile=",File::Spec->catfile($self->sources_path,$self->track_name);
-
 	$self->start_load;
 
 	$self->set_status('load data');

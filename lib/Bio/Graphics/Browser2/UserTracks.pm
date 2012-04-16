@@ -526,7 +526,7 @@ sub upload_file {
     my $result = eval {
 		local $SIG{TERM} = sub { die "cancelled" };
 		croak "Could not guess the type of the file $file_name"	unless $type;
-
+		croak "This server does not support BigWig upload" if $type =~ /bigwig/ && !$self->has_bigwig;
 		my $load = $self->get_loader($type, $file);
 		$load->eol_char($eol);
 		@tracks = $load->load($lines, $fh);
@@ -691,7 +691,7 @@ sub get_loader {
 sub guess_upload_type {
     my $self = shift;
     my ($type, $lines, $eol) = $self->_guess_upload_type(@_);
-    $type = 'bigwig' if $type eq 'wiggle' && $self->has_bigwig;
+    $type = 'wig2bigwig' if $type eq 'wiggle' && $self->has_bigwig;
     return ($type, $lines, $eol);
 }
 
@@ -704,9 +704,11 @@ sub _guess_upload_type {
     my $buffer;
     read($fh,$buffer,1024);
 
-    # first check for binary upload; currently only BAM
+    # first check for binary upload; currently only BAM & bigwig
     return ('bam',[$buffer],undef)
 	if substr($buffer,0,6) eq "\x1f\x8b\x08\x04\x00\x00";
+    return('bigwig',[$buffer],undef)
+	if substr($buffer,0,4) eq "\x26\xfc\x8f\x88";
     
     # everything else is text (for now)
     my $eol = $buffer =~ /\015\012/ ? "\015\012"  # MS-DOS
@@ -725,6 +727,7 @@ sub _guess_upload_type {
     my $ftype = $filename =~ /\.gff(\.(gz|bz2|Z))?$/i  ? 'gff'
 	       :$filename =~ /\.gff3(\.(gz|bz2|Z))?$/i ? 'gff3'
 	       :$filename =~ /\.bed(\.(gz|bz2|Z))?$/i  ? 'bed'
+	       :$filename =~ /\.bw$/i                  ? 'bigwig'
 	       :$filename =~ /\.wig(\.(gz|bz2|Z))?$/i  ? 'wiggle'
 	       :$filename =~ /\.fff(\.(gz|bz2|Z))?$/i  ? 'featurefile'
 	       :$filename =~ /\.bam(\.gz)?$/i          ? 'bam'
@@ -760,9 +763,6 @@ sub _guess_upload_type {
 
 sub has_bigwig {
     my $self = shift;
-    warn "bigwig loading OFF for debugging";
-    return;
-
     return $HASBIGWIG if defined $HASBIGWIG;
     return $HASBIGWIG = 1 if Bio::DB::BigWig->can('new');
     my $result = eval "require Bio::DB::BigWig; 1";

@@ -1,4 +1,4 @@
-package Bio::Graphics::Browser2::DataLoader::bigwig;
+package Bio::Graphics::Browser2::DataLoader::wig2bigwig;
 
 # $Id$
 use strict;

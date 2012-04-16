@@ -1,10 +1,13 @@
 2.49
-  * Add new "metadata" [track] option for making subtracks selectable via
-    structured metadata.
+  * Add new "metadata" option in track stanzas for making subtracks selectable via
+    structured metadata; see http://gmod.org/wiki/Creating_and_Managing_Subtracks_with_GBrowse2
+    for details.
   * Specify which database to use for search result karyotype display using following
     syntax:
            [builtin:karyotype]
            database = my_database
+  * Fixed error reporting when uploading badly-formatted WIG files.
+	   
 
 2.48
   * Fix track-level genbank and fasta dumping.

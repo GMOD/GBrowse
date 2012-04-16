@@ -760,6 +760,9 @@ sub _guess_upload_type {
 
 sub has_bigwig {
     my $self = shift;
+    warn "bigwig loading OFF for debugging";
+    return;
+
     return $HASBIGWIG if defined $HASBIGWIG;
     return $HASBIGWIG = 1 if Bio::DB::BigWig->can('new');
     my $result = eval "require Bio::DB::BigWig; 1";

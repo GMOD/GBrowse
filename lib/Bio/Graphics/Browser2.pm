@@ -284,7 +284,9 @@ sub openid_secret {
 sub upload_db_adaptor {
     my $self = shift;
     my $adaptor = $self->setting(general=>'upload_db_adaptor') || $self->setting(general=>'userdb_adaptor');
-    warn "The upload_db_adaptor in your Gbrowse.conf file isn't in the DBI::<module> format: remember, it's not a connection string." if $adaptor =~ /^DBI/ && $adaptor !~ /(^DBI::+)/i;
+    $adaptor or return;
+    warn "The upload_db_adaptor in your Gbrowse.conf file isn't in the DBI::<module> format: remember, it's not a connection string." 
+	if $adaptor =~ /^DBI/ && $adaptor !~ /(^DBI::+)/i;
     return $adaptor;
 }
 sub upload_db_host {

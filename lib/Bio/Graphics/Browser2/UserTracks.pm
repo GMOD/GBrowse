@@ -754,6 +754,7 @@ sub _guess_upload_type {
 	return ('gff2',\@lines,$eol)        if $line =~ /^\#\#gff-version\s+2/;
 	return ('gff3',\@lines,$eol)        if $line =~ /^\#\#gff-version\s+3/;
 	return ('wiggle',\@lines,$eol)      if $line =~ /type=wiggle/;
+	return ('bed',\@lines,$eol)         if $line =~ /^track type/;
 	return ('bed',\@lines,$eol)         if $line =~ /^\w+\s+\d+\s+\d+/;
 	return ('sam',\@lines,$eol)         if $line =~ /^\@[A-Z]{2}/;
 	return ('sam',\@lines,$eol)         if $line =~ /^[^ \t\n\r]+\t[0-9]+\t[^ \t\n\r@=]+\t[0-9]+\t[0-9]+\t(?:[0-9]+[MIDNSHP])+|\*/;

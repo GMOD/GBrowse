@@ -8,7 +8,7 @@
            database = my_database
   * Fixed error reporting when uploading badly-formatted WIG files.
   * Do something sensible when user tries to upload a bigwig file.
-	   
+  * Some support for UCSC-style uploads with "track type=bigWig bigDataUrl=http://something...".
 
 2.48
   * Fix track-level genbank and fasta dumping.

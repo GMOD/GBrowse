@@ -337,7 +337,7 @@ sub feature_to_id_sub {
 		my $operation = $val eq ''                                ? undef
 		               : $val =~ /^~(.+)/                         ? "=~ m[$1]i" 
                                : $val =~ /^[+-]?\d*(\.\d+)?([eE]-?\d+)?$/ ? "== $val"
-                               : "eq '$val'";
+			       : 'eq "'.quotemeta($val).'"';
 		if (!defined $operation) {
 		    $sub .= "\$found &&= length((\$f->get_tag_values('$operand'))[0])==0;\n";
 		} elsif ($op eq 'tag_value') {

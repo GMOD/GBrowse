@@ -946,7 +946,7 @@ function edit_details(details) {
         $('loginWarning').show();
         $('loginDCancel').value = Controller.translate('NO');
         $('loginDSubmit').value = Controller.translate('YES');
-	$('loginDOUser').value = CurrentUser;
+	if ($('loginDOUser') != undefined) { $('loginDOUser').value = CurrentUser; }
 	EditDetails = 'delete';
         return;
     case 'delete-confirm':

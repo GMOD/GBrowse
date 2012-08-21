@@ -34,8 +34,8 @@ my $data_dir = GBrowse::ConfigData->config('databases');
 my $dir       = create_database_dir($data_dir,$dsn);
 my $scaffolds = create_scaffold_db($dir,$dsn);
 my $genes     = create_gene_db($dir,$dsn);
-create_conf_file($conf_dir,$dsn,$scaffolds,$genes);
-create_source($conf_dir,$dsn);
+# create_conf_file($conf_dir,$dsn,$scaffolds,$genes);
+# create_source($conf_dir,$dsn);
 
 1;
 
@@ -138,6 +138,8 @@ END
     close $db;
 }
 
+# This subroutine is amazingly long and complicated looking.
+# It can't be correct... can it?
 sub write_transcript {
     my ($fh,$fields) = @_;
 
@@ -156,9 +158,12 @@ sub write_transcript {
     $cdsStart -= $ORIGIN;
     $cdsEnd   -= $ORIGIN;
 
+    # this is how noncoding genes are expressed (?!!!)
+    my $is_noncoding = $cdsStart >= $cdsEnd;
+
     # print the transcript
     print $fh join
-	("\t",$chrom,$SRC,'mRNA',$txStart,$txEnd,'.',$strand,'.',"ID=$id;Name=$name"),"\n";
+	("\t",$chrom,$SRC,($is_noncoding ? 'ncRNA' : 'mRNA'),$txStart,$txEnd,'.',$strand,'.',"ID=$id;Name=$name"),"\n";
 
     # now handle the CDS entries -- the tricky part is the need to keep
     # track of phase
@@ -166,7 +171,15 @@ sub write_transcript {
     my @exon_starts = map {$_-$ORIGIN} split ',',$exonStarts;
     my @exon_ends   = map {$_-$ORIGIN} split ',',$exonEnds;
 
-    if ($strand eq '+') {
+    if ($is_noncoding) {
+	for (my $i=0;$i<@exon_starts;$i++) {  # for each exon start
+	    print $fh join("\t",
+			   $chrom,$SRC,'exon',$exon_starts[$i],$exon_ends[$i],'.',$strand,'.',"Parent=$id"
+		),"\n";
+	}
+    }
+
+    elsif ($strand eq '+') {
 	for (my $i=0;$i<@exon_starts;$i++) {  # for each exon start
 	    my $exon_start = $exon_starts[$i] + 1;
 	    my $exon_end   = $exon_ends[$i];
@@ -201,12 +214,14 @@ sub write_transcript {
 	    }
 
 	    # If the CDS is within the exon
-	    if (defined $utr_start[0] == defined $utr_end[0] && 
-		$utr_start[0] < $cdsStart && $utr_end[0] > $cdsEnd) {
+	    if ($utr_start[0] && $utr_end[0] && 
+		$utr_start[0] < $cdsStart && 
+		$utr_end[0] > $cdsEnd) 
+	    {
 		$utr_end[0]= $cdsStart - 1;
 		$cds_start = $cdsStart;
 		$cds_end   = $cdsEnd;
-	
+		
 		push (@utr_start, $cdsEnd + 1);
 		push (@utr_end,   $exon_end);
 	    }
@@ -240,7 +255,7 @@ sub write_transcript {
 	} # end of for each exon
     } # matches if strand = +
     
-    if ($strand eq '-') {
+    elsif ($strand eq '-') {
 	my @lines;
 	for (my $i=@exon_starts-1; $i>=0; $i--) { # count backwards
 	    my $exon_start = $exon_starts[$i] + 1;
@@ -276,8 +291,11 @@ sub write_transcript {
 	    }
 
 	    # If the CDS is within the exon  
-	    if (defined $utr_start[0] == defined $utr_end[0] && 
-		$utr_start[0] < $cdsStart && $utr_end[0] > $cdsEnd) {
+	    if ($utr_start[0] && 
+		$utr_end[0]   && 
+		$utr_start[0] < $cdsStart && 
+		$utr_end[0] > $cdsEnd) 
+	    {
 		$utr_end[0]= $cdsStart - 1;
 		$cds_start = $cdsStart;
 		$cds_end   = $cdsEnd;

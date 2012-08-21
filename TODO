@@ -1,3 +1,4 @@
+* Specify intervals using unc-13..unc-30 (whatever..whatever)
 * Document the REST API; in particular the action=list and action=scan commands.
 * Reload globals when GBrowse.conf changes under FastCGI.
 * Bring internationalization support up to date.

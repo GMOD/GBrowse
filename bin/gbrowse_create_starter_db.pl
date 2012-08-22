@@ -7,9 +7,11 @@ use GBrowse::ConfigData;
 use DBI;
 use Bio::DB::Fasta;
 use LWP::Simple 'mirror','is_error','is_success';
+use File::Basename 'dirname';
 
 use constant HOST=>'genome-mysql.cse.ucsc.edu';
 use constant USER=>'genome';
+my $FEATURE_ID;
 
 my $host = HOST;
 my $dbh  = DBI->connect(
@@ -31,11 +33,26 @@ unless ($dsn) {
 my $conf_dir = GBrowse::ConfigData->config('conf');
 my $data_dir = GBrowse::ConfigData->config('databases');
 
+print STDERR "** During database creation, you may be asked for your password in order to set file permissions correctly.\n\n";
+
 my $dir       = create_database_dir($data_dir,$dsn);
 my $scaffolds = create_scaffold_db($dir,$dsn);
 my $genes     = create_gene_db($dir,$dsn);
-# create_conf_file($conf_dir,$dsn,$scaffolds,$genes);
-# create_source($conf_dir,$dsn);
+create_conf_file($conf_dir,$dsn,$scaffolds,$genes);
+create_source($conf_dir,$dsn);
+
+print STDERR <<END;
+
+** These files have been created for you:
+
+ $scaffolds -- database of chromosome sizes and sequences
+ $genes -- database of genes
+ $conf_dir/${dsn}.conf -- track configuration file for these databases
+ $conf_dir/GBrowse.conf -- updated data source configuration file
+END
+    ;
+
+print STDERR "\n** Please restart apache using 'sudo service apache2 restart' or 'sudo /etc/init.d/apache2 restart'\n";
 
 1;
 
@@ -100,12 +117,13 @@ END
 	print STDERR "$chr...";
 	my $code = mirror($url=>$file);
 	warn "Fetch of $url returned error code $code\n"
-	    unless is_success($code);
+	    if is_error($code);
     }
     print STDERR "done\n";
     print STDERR "Unpacking FASTA files...";
     for my $chr (sort @chroms) {
-	system "gunzip -f $path/$chr.fa.gz";
+	system "gunzip -c $path/$chr.fa.gz > $path/$chr.fa"
+	    unless -e "$path/$chr.fa" && -M "$path/$chr.fa" > -M "$path/$chr.fa.gz";
     }
 
     print STDERR "done\n";
@@ -120,7 +138,12 @@ sub create_gene_db {
     my ($dir,$dsn) = @_;
     my $path = "$dir/refGenes";
     mkdir $path unless -e $path;
-    open my $db,">$path/genes.gff3" or die "$path: $!";
+
+    my $src_path = "$path/genes.gff3";
+    my $db_path = "$path/genes.sqlite";
+    return $db_path if -e $db_path;
+
+    open my $db,'>',$src_path or die "$path: $!";
     print $db <<END;
 ##gff-version 3
 
@@ -129,6 +152,7 @@ END
     my $query = $dbh->prepare('select * from refFlat')
 	or die $dbh->errstr;
     $query->execute;
+    $FEATURE_ID='f0000';
     while (my $row = $query->fetchrow_arrayref) {
 	write_transcript($db,$row);
     }
@@ -136,6 +160,12 @@ END
     print STDERR "done\n";
 
     close $db;
+
+    print STDERR "Indexing...";
+    system "bp_seqfeature_load.pl -f -c -a DBI::SQLite -d $db_path $src_path";
+    print STDERR "done\n";
+
+    return $db_path;
 }
 
 # This subroutine is amazingly long and complicated looking.
@@ -143,8 +173,9 @@ END
 sub write_transcript {
     my ($fh,$fields) = @_;
 
-    my ($name,$id,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds) = @$fields;
+    my ($name1,$name2,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds) = @$fields;
     my ($utr5_start,$utr5_end,$utr3_start,$utr3_end);
+    my $id = $FEATURE_ID++;
 
     # adjust for Jim's 0-based coordinates
     my $ORIGIN = 1;
@@ -163,7 +194,7 @@ sub write_transcript {
 
     # print the transcript
     print $fh join
-	("\t",$chrom,$SRC,($is_noncoding ? 'ncRNA' : 'mRNA'),$txStart,$txEnd,'.',$strand,'.',"ID=$id;Name=$name"),"\n";
+	("\t",$chrom,$SRC,($is_noncoding ? 'ncRNA' : 'mRNA'),$txStart,$txEnd,'.',$strand,'.',"ID=$id;Name=$name1;Alias=$name2"),"\n";
 
     # now handle the CDS entries -- the tricky part is the need to keep
     # track of phase
@@ -336,3 +367,224 @@ sub write_transcript {
     }
 }
 
+sub log10 { log(shift())/log(10)}
+
+sub create_conf_file {
+    my ($conf_dir,$dsn,$scaffolds,$genes) = @_;
+    my $conf_path = "$conf_dir/${dsn}.conf";
+    create_writable_file($conf_path);
+
+    # figure size of chromosomes
+    open my $fh1,"$scaffolds/chrom_sizes.gff3" or die "$scaffolds/chrom_sizes.gff3: $!";
+    my $max_chrom = 0;
+    my ($first_chrom,$first_size);
+    while (<$fh1>) {
+	my ($chr,undef,undef,undef,$size) = split /\s+/;
+	next unless $size;
+	$max_chrom = $size if $max_chrom < $size;
+	$first_chrom ||= $chr;
+	$first_size  ||= $size;
+    }
+    close $fh1;
+
+    # from the max chromosome, figure out reasonable default sizes and zoom levels
+    my $log             = int log10($max_chrom);
+    my $max_segment     = $max_chrom;
+    my $default_segment = 10**($log-3);
+    my $region_segment  = $default_segment*10;
+    my @zoom_levels     = qw(100 200 1000 2000 5000 10000 20000 50000 100000 200000 500000);
+    for (my $i=6; $i<$log; $i++) {
+	push @zoom_levels,10**$i;
+    }
+    my @region_sizes    = @zoom_levels;
+    my $default_region  = $default_segment * 10;
+    my $summary_boundary= $default_segment * 100;
+
+    my $start = int(rand($first_size));
+    my $end   = $start + $default_segment -1;
+    my $initial_landmark = "$first_chrom:$start..$end";
+
+    # pick some random examples from the gff3 file
+    my @names;
+    my $dir = dirname($genes);
+    open my $fh2,"$dir/genes.gff3" or die "$dir/genes.gff3: $!";
+    while (<$fh2>) {
+	my ($name) = /Name=([^;]+)/ or next;
+	for (0..3) {
+	    $names[$_] = $name if rand($.) < 4;
+	}
+    }
+    close $fh2;
+    my $examples = "@names";
+
+    open my $fh3,'>',$conf_path or die "$conf_path: $!";
+    print $fh3 <<END;
+[GENERAL]
+description   = Starter genome from UCSC $dsn
+database      = scaffolds
+
+initial landmark = $initial_landmark
+plugins       = FilterTest RestrictionAnnotator TrackDumper FastaDumper
+autocomplete  = 1
+
+default tracks = Genes ncRNA
+
+# examples to show in the introduction
+examples = $examples
+
+# "automatic" classes to try when an unqualified identifier is given
+automatic classes = Gene
+
+# Limits on genomic regions (can be overridden in datasource config files)
+region segment         = $region_segment
+max segment            = $max_segment
+default segment        = $default_segment
+default region         = $default_region
+zoom levels            = @zoom_levels
+region sizes           = @region_sizes
+
+#################################
+# database definitions
+#################################
+
+[scaffolds:database]
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor memory
+                -dir    $scaffolds
+search options = default +autocomplete
+
+[genes:database]
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor DBI::SQLite
+                -dsn    $genes
+search options = default +autocomplete
+
+# Default glyph settings
+[TRACK DEFAULTS]
+glyph       = generic
+database    = scaffolds
+height      = 8
+bgcolor     = green
+fgcolor     = black
+label density = 25
+bump density  = 100
+show summary  = $summary_boundary
+
+### TRACK CONFIGURATION ####
+# the remainder of the sections configure individual tracks
+
+[Genes]
+database     = genes
+feature      = mRNA
+glyph        = gene
+bgcolor      = blue
+forwardcolor = red
+reversecolor = blue
+label        = sub { my \$f = shift;
+                     my \$name = \$f->display_name;
+                     my \@aliases = sort \$f->attributes('Alias');
+                     \$name .= " (\@aliases)" if \@aliases;
+		     \$name;
+  } 
+height       = 8
+description  = 0
+key          = Known Genes
+
+[ncRNA]
+database     = genes
+feature       = ncRNA
+fgcolor       = orange
+glyph         = generic
+description   = 1
+key           = Noncoding RNAs
+
+[CDS]
+database     = genes
+feature      = mRNA
+glyph        = cds
+description  = 0
+height       = 26
+sixframe     = 1
+label        = sub {shift->name . " reading frame"}
+key          = CDS
+citation     = This track shows CDS reading frames.
+
+[Translation]
+glyph        = translation
+global feature = 1
+database     = scaffolds
+height       = 40
+fgcolor      = purple
+strand       = +1
+translation  = 6frame
+key          = 6-frame translation
+
+[TranslationF]
+glyph        = translation
+global feature = 1
+database     = scaffolds
+height       = 20
+fgcolor      = purple
+strand       = +1
+translation  = 3frame
+key          = 3-frame translation (forward)
+
+[DNA/GC Content]
+glyph        = dna
+global feature = 1
+database     = scaffolds
+height       = 40
+do_gc        = 1
+gc_window    = auto
+strand       = both
+fgcolor      = red
+axis_color   = blue
+
+[TranslationR]
+glyph        = translation
+global feature = 1
+database     = scaffolds
+height       = 20
+fgcolor      = blue
+strand       = -1
+translation  = 3frame
+key          = 3-frame translation (reverse)
+
+END
+    close $fh3;
+}
+
+sub create_source {
+    my ($conf_dir,$dsn) = @_;
+    my $path = "$conf_dir/GBrowse.conf";
+    open my $fh,$path or die "$path: $!";
+    my $foundit;
+    while (<$fh>) {
+	$foundit++ if /\[$dsn\]/;
+    }
+    close $fh;
+    return if $foundit;
+
+    create_writable_file($path);
+    open my $fh2,'>>',$path or die "$path: $!";
+    print $fh2 "\n";
+    print $fh2 <<END;
+[$dsn]
+description = Starter genome from UCSC $dsn
+path        = $conf_dir/${dsn}.conf
+END
+    ;
+    close $fh2;
+}
+
+sub create_writable_file {
+    my $file = shift;
+    return if -e $file && -w $file;
+
+    my $uid   = $<;
+    my ($gid) = $( =~ /^(\d+)/;
+    system "sudo touch $file";
+    system "sudo chown $uid $file";
+    system "sudo chgrp $gid $file";
+    system "chmod +w $file";
+}

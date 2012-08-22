@@ -22,7 +22,7 @@ sub _new {
     my $uploadsdb   = DBI->connect($credentials);
     unless ($uploadsdb) {
         print header();
-        print "Error: Could not open use account database.";
+        print "Error: Could not open user account database. If you are the administrator, run gbrowse_metadb_config.pl";
         die "Could not open user account database with $credentials";
     }
     $self->uploadsdb($uploadsdb);

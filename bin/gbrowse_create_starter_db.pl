@@ -11,7 +11,6 @@ use File::Basename 'dirname';
 
 use constant HOST=>'genome-mysql.cse.ucsc.edu';
 use constant USER=>'genome';
-my $FEATURE_ID;
 
 my $host = HOST;
 my $dbh  = DBI->connect(
@@ -20,11 +19,43 @@ my $dbh  = DBI->connect(
     {PrintError=>0,RaiseError=>0}
     );
 
-my $dsn = shift;
-unless ($dsn) {
-    print STDERR "usage: $0 <UCSC data source name>\n";
-    print STDERR "Available sources:\n";
+if ($ARGV[0] =~ /^--?h/) {
+    print STDERR <<END;
+Usage: $0 <data source name>
+
+This creates a framework data source for one of the genomes known to
+the UCSC Genome Browser. You can then modify the data source
+configuration file, add your own data, and so forth.
+
+To get started, find the desired data source by going to
+http://genome.ucsc.edu/cgi-bin/hgGateway and using the "clade" and
+"genome" menus to navigate to the desired species and build
+number. You will find the data source name in the blue box below the
+navigation controls. Look for something like this:
+
+ D. melanogaster Genome Browser – dm3 assembly (sequences)
+
+The data source name appears before the word "assembly", in this case
+"dm3".
+
+To get a list of all sources recognized by UCSC appears type:
+
+ $0 --list
+END
+    exit -1;
+}
+
+if ($ARGV[0] =~ /^--?l/) {
     print_sources($dbh);
+    exit -1;
+}
+
+my $dsn = shift;
+unless ($dsn) 
+{    
+    print STDERR "usage: $0 <UCSC data source name>\n";
+    print STDERR "Run $0 --help for details.\n";
+    print STDERR "Run $0 --list for list of data sources.\n";
     exit -1;
 } else {
     $dbh->do("use $dsn") or die "Could not access $dsn database. Run this script without arguments to see valid database names.\n";
@@ -52,7 +83,15 @@ print STDERR <<END;
 END
     ;
 
-print STDERR "\n** Please restart apache using 'sudo service apache2 restart' or 'sudo /etc/init.d/apache2 restart'\n";
+if (-x '/usr/sbin/service') {
+    print STDERR "\n ** Restarting apache. You may be asked for your password.\n";
+    system "sudo service apache2 restart";
+} elsif (-x '/etc/init.d/apache2') {
+    print STDERR "\n ** Restarting apache. You may be asked for your password.\n";
+    system "sudo /etc/init.d/apache2 restart";
+} else {
+    print STDERR "\n** Please restart apache or other web server.\n";
+}
 
 1;
 
@@ -61,7 +100,7 @@ exit 0;
 sub print_sources {
     my $dbh = shift;
     my $s = $dbh->selectcol_arrayref('show databases');
-    print STDERR join "\n",@$s;
+    print STDERR join("\n",grep {!/information_schema/} @$s),"\n";
 }
 
 sub create_database_dir {
@@ -141,7 +180,7 @@ sub create_gene_db {
 
     my $src_path = "$path/genes.gff3";
     my $db_path = "$path/genes.sqlite";
-    return $db_path if -e $db_path;
+#    return $db_path if -e $db_path;
 
     open my $db,'>',$src_path or die "$path: $!";
     print $db <<END;
@@ -149,14 +188,15 @@ sub create_gene_db {
 
 END
     print STDERR "Fetching genes...";
-    my $query = $dbh->prepare('select * from refFlat')
+    my $query = $dbh->prepare('select * from refFlat order by geneName')
 	or die $dbh->errstr;
     $query->execute;
-    $FEATURE_ID='f0000';
+    my $writer = GFFWriter->new($db,$dsn);
     while (my $row = $query->fetchrow_arrayref) {
-	write_transcript($db,$row);
+	$writer->write_transcript($row);
     }
     $query->finish;
+    $writer->finish;
     print STDERR "done\n";
 
     close $db;
@@ -166,205 +206,6 @@ END
     print STDERR "done\n";
 
     return $db_path;
-}
-
-# This subroutine is amazingly long and complicated looking.
-# It can't be correct... can it?
-sub write_transcript {
-    my ($fh,$fields) = @_;
-
-    my ($name1,$name2,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds) = @$fields;
-    my ($utr5_start,$utr5_end,$utr3_start,$utr3_end);
-    my $id = $FEATURE_ID++;
-
-    # adjust for Jim's 0-based coordinates
-    my $ORIGIN = 1;
-    my $SRC    = $dsn;
-
-    $txStart++;
-    $cdsStart++;
-
-    $txStart  -= $ORIGIN;
-    $txEnd    -= $ORIGIN;
-    $cdsStart -= $ORIGIN;
-    $cdsEnd   -= $ORIGIN;
-
-    # this is how noncoding genes are expressed (?!!!)
-    my $is_noncoding = $cdsStart >= $cdsEnd;
-
-    # print the transcript
-    print $fh join
-	("\t",$chrom,$SRC,($is_noncoding ? 'ncRNA' : 'mRNA'),$txStart,$txEnd,'.',$strand,'.',"ID=$id;Name=$name1;Alias=$name2"),"\n";
-
-    # now handle the CDS entries -- the tricky part is the need to keep
-    # track of phase
-    my $phase = 0;
-    my @exon_starts = map {$_-$ORIGIN} split ',',$exonStarts;
-    my @exon_ends   = map {$_-$ORIGIN} split ',',$exonEnds;
-
-    if ($is_noncoding) {
-	for (my $i=0;$i<@exon_starts;$i++) {  # for each exon start
-	    print $fh join("\t",
-			   $chrom,$SRC,'exon',$exon_starts[$i],$exon_ends[$i],'.',$strand,'.',"Parent=$id"
-		),"\n";
-	}
-    }
-
-    elsif ($strand eq '+') {
-	for (my $i=0;$i<@exon_starts;$i++) {  # for each exon start
-	    my $exon_start = $exon_starts[$i] + 1;
-	    my $exon_end   = $exon_ends[$i];
-	    my (@utr_start,@utr_end,$cds_start,$cds_end);
-	    
-	    if ($exon_start < $cdsStart) { # in a 5' UTR
-		push (@utr_start, $exon_start);
-	    } elsif ($exon_start > $cdsEnd) { 
-		push (@utr_start, $exon_start);
-	    } else {
-		$cds_start = $exon_start;
-	    }
-	    
-	    if ($exon_end < $cdsStart) {
-		push (@utr_end, $exon_end);
-	    } elsif ($exon_end > $cdsEnd) {
-		push (@utr_end, $exon_end);
-	    } else {
-		$cds_end = $exon_end;
-	    }
-	    
-	    if ($utr_start[0] && !$utr_end[0]) { # half in half out on 5' end
-		$utr_end[0]= $cdsStart - 1;
-		$cds_start = $cdsStart;
-		$cds_end   = $exon_end;
-	    }
-
-	    if ($utr_end[0] && !$utr_start[0]) { # half in half out on 3' end
-		$utr_start[0]= $cdsEnd + 1;
-		$cds_end     = $cdsEnd;
-		$cds_start   = $exon_start;
-	    }
-
-	    # If the CDS is within the exon
-	    if ($utr_start[0] && $utr_end[0] && 
-		$utr_start[0] < $cdsStart && 
-		$utr_end[0] > $cdsEnd) 
-	    {
-		$utr_end[0]= $cdsStart - 1;
-		$cds_start = $cdsStart;
-		$cds_end   = $cdsEnd;
-		
-		push (@utr_start, $cdsEnd + 1);
-		push (@utr_end,   $exon_end);
-	    }
-
-	    die "programmer error, not an even number of utr_starts and utr_ends"
-		unless $#utr_start == $#utr_end;
-	    die "programmer error, cds_start and no cds_end" 
-		unless defined $cds_start == defined $cds_end;
-
-	    for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
-		if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
-		    $utr_start[$i] < $cdsStart) {
-		    print $fh join
-			("\t",$chrom,$SRC,"five_prime_UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
-		} # end of if	    
-	    } # end of foreach
-	    
-	    if (defined $cds_start && $cds_start <= $cds_end) {
-		print $fh join
-		    ("\t",$chrom,$SRC,'CDS',$cds_start,$cds_end,'.',$strand,$phase,"Parent=$id"),"\n";
-		$phase = (($cds_end-$cds_start+1-$phase)) % 3;
-	    }
-	    
-	    for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
-		if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
-		    $utr_start[$i] > $cdsEnd) {
-		    print $fh join ("\t",$chrom,$SRC,"three_prime_UTR",,$utr_start[$i],
-				$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
-		}
-	    }
-	} # end of for each exon
-    } # matches if strand = +
-    
-    elsif ($strand eq '-') {
-	my @lines;
-	for (my $i=@exon_starts-1; $i>=0; $i--) { # count backwards
-	    my $exon_start = $exon_starts[$i] + 1;
-	    my $exon_end   = $exon_ends[$i];
-	    my (@utr_start,@utr_end,$cds_start,$cds_end);
-	    
-	    if ($exon_end > $cdsEnd) { # in a 5' UTR
-		push (@utr_end,  $exon_end);
-	    } elsif ($exon_end < $cdsStart) {
-		push (@utr_end,  $exon_end);
-	    } else {
-		$cds_end = $exon_end;
-	    }
-
-	    if ($exon_start > $cdsEnd) {
-		push (@utr_start, $exon_start);
-	    } elsif ($exon_start < $cdsStart) {
-		push (@utr_start, $exon_start);
-	    } else {
-		$cds_start = $exon_start;
-	    }
-
-	    if ($utr_start[0] && !$utr_end[0]) { # half in half out on 3' end
-		$utr_end[0]   = $cdsStart - 1;
-		$cds_start = $cdsStart;
-		$cds_end   = $exon_end;
-	    }
-
-	    if ($utr_end[0] && !$utr_start[0]) { # half in half out on 5' end
-		$utr_start[0] = $cdsEnd + 1;
-		$cds_end   = $cdsEnd;
-		$cds_start = $exon_start;
-	    }
-
-	    # If the CDS is within the exon  
-	    if ($utr_start[0] && 
-		$utr_end[0]   && 
-		$utr_start[0] < $cdsStart && 
-		$utr_end[0] > $cdsEnd) 
-	    {
-		$utr_end[0]= $cdsStart - 1;
-		$cds_start = $cdsStart;
-		$cds_end   = $cdsEnd;
-	
-		push (@utr_start, $cdsEnd + 1);
-		push (@utr_end, $exon_end);
-	    }
-	    
-	    die "programmer error, not an even number of utr_starts and utr_ends"
-		unless $#utr_start == $#utr_end;
-
-	    die "programmer error, cds_start and no cds_end" unless defined
-		$cds_start == defined $cds_end;
-	    
-	    for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
-		if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
-		    $utr_start[$i] > $cdsEnd) {
-		    unshift @lines,join
-			("\t",$chrom,$SRC,"five_prime_UTR",,$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
-		}
-	    } # end of for
-
-	    if (defined $cds_start && $cds_start <= $cds_end) {
-		unshift @lines,join
-		    ("\t",$chrom,$SRC,'CDS',$cds_start,$cds_end,'.',$strand,$phase,"Parent=$id"),"\n";
-		$phase = (($cds_end-$cds_start+1-$phase)) % 3;
-	    }
-	    
-	    for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
-		if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
-		    $utr_end[$i] < $cdsStart) {
-		    unshift @lines,join
-			("\t",$chrom,$SRC,"three_prime_UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
-		}
-	    } # end for
-	}
-	print $fh @lines;
-    }
 }
 
 sub log10 { log(shift())/log(10)}
@@ -475,24 +316,25 @@ show summary  = $summary_boundary
 
 [Genes]
 database     = genes
-feature      = mRNA
+feature      = gene
 glyph        = gene
 bgcolor      = blue
 forwardcolor = red
 reversecolor = blue
+label_transcripts = 1
 label        = sub { my \$f = shift;
                      my \$name = \$f->display_name;
                      my \@aliases = sort \$f->attributes('Alias');
                      \$name .= " (\@aliases)" if \@aliases;
 		     \$name;
   } 
-height       = 8
+height       = 10
 description  = 0
 key          = Known Genes
 
 [ncRNA]
 database     = genes
-feature       = ncRNA
+feature       = noncoding_transcript
 fgcolor       = orange
 glyph         = generic
 description   = 1
@@ -519,6 +361,9 @@ strand       = +1
 translation  = 6frame
 key          = 6-frame translation
 
+[Translation:1000000]
+hide = 1
+
 [TranslationF]
 glyph        = translation
 global feature = 1
@@ -528,6 +373,9 @@ fgcolor      = purple
 strand       = +1
 translation  = 3frame
 key          = 3-frame translation (forward)
+
+[TranslationF:1000000]
+hide = 1
 
 [DNA/GC Content]
 glyph        = dna
@@ -540,6 +388,9 @@ strand       = both
 fgcolor      = red
 axis_color   = blue
 
+[DNA/GC Content:1000000]
+hide = 1
+
 [TranslationR]
 glyph        = translation
 global feature = 1
@@ -549,6 +400,9 @@ fgcolor      = blue
 strand       = -1
 translation  = 3frame
 key          = 3-frame translation (reverse)
+
+[TranslationR:1000000]
+hide = 1
 
 END
     close $fh3;
@@ -588,3 +442,278 @@ sub create_writable_file {
     system "sudo chgrp $gid $file";
     system "chmod +w $file";
 }
+
+package GFFWriter;
+
+sub new {
+    my $class = shift;
+    my ($fh,$dsn)  = @_;
+    return bless {
+	fh => $fh,
+	dsn => $dsn,
+	gene_id        => 'g000000',
+	transcript_id  => 't00000',
+	last_gene_name => '',
+	last_gene_id   => '',
+	last_gene      => {},
+    },ref $class || $class;
+}
+
+# This subroutine is amazingly long and complicated looking, but probably correct
+sub write_transcript {
+    my $self = shift;
+    my $fields = shift;
+
+    my ($gene_name,$accession,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds) = @$fields;
+    my ($utr5_start,$utr5_end,$utr3_start,$utr3_end,$gid,$tid);
+
+    $gene_name ||= $accession;
+
+    if ($self->{last_gene_name} ne $gene_name
+	||
+	$self->{last_gene}{chr} ne $chrom                      # avoid some gene name collisions
+	||
+	abs($self->{last_gene}{start} - $txStart) > 6_000_000  # avoid some gene name collisions
+	||
+	$self->{last_gene}{strand} ne $strand) 
+    {
+	$self->write_last_gene;
+	$self->{last_gene}           = {};
+	$self->{last_gene_name}      = '';
+	$gid = $self->{last_gene_id} = $self->{gene_id}++;
+    } elsif ($self->{last_gene_id}) {
+	$gid = $self->{last_gene_id};
+    } else {
+	$gid = $self->{last_gene_id} = $self->{gene_id}++;
+    }
+
+    $tid = $self->{transcript_id}++;
+
+    my $ORIGIN = 1;
+    my $SRC    = $self->{dsn};
+    my $fh     = $self->{fh};
+
+    # adjust for Jim's 0-based coordinates
+    $txStart++;
+    $cdsStart++;
+
+    $txStart  -= $ORIGIN;
+    $txEnd    -= $ORIGIN;
+    $cdsStart -= $ORIGIN;
+    $cdsEnd   -= $ORIGIN;
+
+    # this is how noncoding genes are expressed (?!!!)
+    my $is_noncoding = $cdsStart >= $cdsEnd;
+
+    unless ($is_noncoding) {
+	$self->{last_gene_name}     ||= $gene_name;
+	$self->{last_gene}{chr}     ||= $chrom;
+	$self->{last_gene}{strand}  ||= $strand;
+	$self->{last_gene}{start}     = $txStart if !$self->{last_gene}{start} || $self->{last_gene}{start} > $txStart;
+	$self->{last_gene}{end}       = $txEnd   if !$self->{last_gene}{end}   || $self->{last_gene}{end}   < $txEnd;
+    }
+
+    # print the transcript
+    my $id = $is_noncoding ? "ID=$tid;Name=$gene_name;Alias=$accession" : "ID=$tid;Name=$accession;Parent=$gid";
+    print $fh join
+	("\t",$chrom,$SRC,($is_noncoding ? 'noncoding_transcript' : 'mRNA'),$txStart,$txEnd,'.',$strand,'.',$id),"\n";
+
+    # now handle the CDS entries -- the tricky part is the need to keep
+    # track of phase
+    my $phase = 0;
+    my @exon_starts = map {$_-$ORIGIN} split ',',$exonStarts;
+    my @exon_ends   = map {$_-$ORIGIN} split ',',$exonEnds;
+
+    if ($is_noncoding) {
+	for (my $i=0;$i<@exon_starts;$i++) {  # for each exon start
+	    print $fh join("\t",
+			   $chrom,$SRC,'exon',$exon_starts[$i],$exon_ends[$i],'.',$strand,'.',"Parent=$tid"
+		),"\n";
+	}
+    }
+
+    elsif ($strand eq '+') {
+	for (my $i=0;$i<@exon_starts;$i++) {  # for each exon start
+	    my $exon_start = $exon_starts[$i] + 1;
+	    my $exon_end   = $exon_ends[$i];
+	    my (@utr_start,@utr_end,$cds_start,$cds_end);
+	    
+	    if ($exon_start < $cdsStart) { # in a 5' UTR
+		push (@utr_start, $exon_start);
+	    } elsif ($exon_start > $cdsEnd) { 
+		push (@utr_start, $exon_start);
+	    } else {
+		$cds_start = $exon_start;
+	    }
+	    
+	    if ($exon_end < $cdsStart) {
+		push (@utr_end, $exon_end);
+	    } elsif ($exon_end > $cdsEnd) {
+		push (@utr_end, $exon_end);
+	    } else {
+		$cds_end = $exon_end;
+	    }
+	    
+	    if ($utr_start[0] && !$utr_end[0]) { # half in half out on 5' end
+		$utr_end[0]= $cdsStart - 1;
+		$cds_start = $cdsStart;
+		$cds_end   = $exon_end;
+	    }
+
+	    if ($utr_end[0] && !$utr_start[0]) { # half in half out on 3' end
+		$utr_start[0]= $cdsEnd + 1;
+		$cds_end     = $cdsEnd;
+		$cds_start   = $exon_start;
+	    }
+
+	    # If the CDS is within the exon
+	    if ($utr_start[0] && $utr_end[0] && 
+		$utr_start[0] < $cdsStart && 
+		$utr_end[0] > $cdsEnd) 
+	    {
+		$utr_end[0]= $cdsStart - 1;
+		$cds_start = $cdsStart;
+		$cds_end   = $cdsEnd;
+		
+		push (@utr_start, $cdsEnd + 1);
+		push (@utr_end,   $exon_end);
+	    }
+
+	    die "programmer error, not an even number of utr_starts and utr_ends"
+		unless $#utr_start == $#utr_end;
+	    die "programmer error, cds_start and no cds_end" 
+		unless defined $cds_start == defined $cds_end;
+
+	    for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
+		if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
+		    $utr_start[$i] < $cdsStart) {
+		    print $fh join
+			("\t",$chrom,$SRC,"five_prime_UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$tid"),"\n"	
+		} # end of if	    
+	    } # end of foreach
+	    
+	    if (defined $cds_start && $cds_start <= $cds_end) {
+		print $fh join
+		    ("\t",$chrom,$SRC,'CDS',$cds_start,$cds_end,'.',$strand,$phase,"Parent=$tid"),"\n";
+		$phase = (($cds_end-$cds_start+1-$phase)) % 3;
+	    }
+	    
+	    for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
+		if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
+		    $utr_start[$i] > $cdsEnd) {
+		    print $fh join ("\t",$chrom,$SRC,"three_prime_UTR",,$utr_start[$i],
+				$utr_end[$i],'.',$strand,'.',"Parent=$tid"),"\n"	
+		}
+	    }
+	} # end of for each exon
+    } # matches if strand = +
+    
+    elsif ($strand eq '-') {
+	my @lines;
+	for (my $i=@exon_starts-1; $i>=0; $i--) { # count backwards
+	    my $exon_start = $exon_starts[$i] + 1;
+	    my $exon_end   = $exon_ends[$i];
+	    my (@utr_start,@utr_end,$cds_start,$cds_end);
+	    
+	    if ($exon_end > $cdsEnd) { # in a 5' UTR
+		push (@utr_end,  $exon_end);
+	    } elsif ($exon_end < $cdsStart) {
+		push (@utr_end,  $exon_end);
+	    } else {
+		$cds_end = $exon_end;
+	    }
+
+	    if ($exon_start > $cdsEnd) {
+		push (@utr_start, $exon_start);
+	    } elsif ($exon_start < $cdsStart) {
+		push (@utr_start, $exon_start);
+	    } else {
+		$cds_start = $exon_start;
+	    }
+
+	    if ($utr_start[0] && !$utr_end[0]) { # half in half out on 3' end
+		$utr_end[0]   = $cdsStart - 1;
+		$cds_start = $cdsStart;
+		$cds_end   = $exon_end;
+	    }
+
+	    if ($utr_end[0] && !$utr_start[0]) { # half in half out on 5' end
+		$utr_start[0] = $cdsEnd + 1;
+		$cds_end   = $cdsEnd;
+		$cds_start = $exon_start;
+	    }
+
+	    # If the CDS is within the exon  
+	    if ($utr_start[0] && 
+		$utr_end[0]   && 
+		$utr_start[0] < $cdsStart && 
+		$utr_end[0] > $cdsEnd) 
+	    {
+		$utr_end[0]= $cdsStart - 1;
+		$cds_start = $cdsStart;
+		$cds_end   = $cdsEnd;
+	
+		push (@utr_start, $cdsEnd + 1);
+		push (@utr_end, $exon_end);
+	    }
+	    
+	    die "programmer error, not an even number of utr_starts and utr_ends"
+		unless $#utr_start == $#utr_end;
+
+	    die "programmer error, cds_start and no cds_end" unless defined
+		$cds_start == defined $cds_end;
+	    
+	    for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
+		if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
+		    $utr_start[$i] > $cdsEnd) {
+		    unshift @lines,join
+			("\t",$chrom,$SRC,"five_prime_UTR",,$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$tid"),"\n"	
+		}
+	    } # end of for
+
+	    if (defined $cds_start && $cds_start <= $cds_end) {
+		unshift @lines,join
+		    ("\t",$chrom,$SRC,'CDS',$cds_start,$cds_end,'.',$strand,$phase,"Parent=$tid"),"\n";
+		$phase = (($cds_end-$cds_start+1-$phase)) % 3;
+	    }
+	    
+	    for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
+		if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
+		    $utr_end[$i] < $cdsStart) {
+		    unshift @lines,join
+			("\t",$chrom,$SRC,"three_prime_UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$tid"),"\n"	
+		}
+	    } # end for
+	}
+	print $fh @lines;
+    }
+}
+
+
+sub write_last_gene {
+    my $self = shift;
+    my $name   = $self->{last_gene_name} or return;
+    my $chr    = $self->{last_gene}{chr};
+    my $start  = $self->{last_gene}{start};
+    my $end    = $self->{last_gene}{end};
+    my $strand = $self->{last_gene}{strand};
+    my $id     = $self->{last_gene_id};
+    my $fh     = $self->{fh};
+    print $fh join("\t",
+		   $chr,
+		   $self->{dsn},
+		   'gene',
+		   $start,
+		   $end,
+		   '.',
+		   $strand,
+		   '.',
+		   "ID=$id;Name=$name"),"\n";
+    $self->{last_gene_name} = ''; 
+}
+
+sub finish { 
+    my $self = shift;
+    $self->write_last_gene if defined fileno($self->{fh});
+}
+sub DESTROY { shift->finish         }

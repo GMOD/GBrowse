@@ -173,6 +173,7 @@ check_sessions();
 check_uploads_ids();
 check_all_files();
 check_data_sources();
+fix_session_permissions();
 fix_sqlite_permissions() if $type =~ /sqlite/i;
 
 $database->disconnect;
@@ -484,6 +485,14 @@ sub fix_permissions {
 	$database->do("GRANT ALL PRIVILEGES on $db_name.* TO '$db_user'\@'%' IDENTIFIED BY '$db_pass'")
 	    or die DBI->errstr;
     }
+}
+
+sub fix_session_permissions {
+    print STDERR "Fixing permissions in sessions directory\n";
+    my $globals     = Bio::Graphics::Browser2->open_globals;
+    my $session_dir = $globals->session_dir;
+    my $webuser     = GBrowse::ConfigData->config('wwwuser');
+    system "sudo chown -R $webuser $session_dir";
 }
 
 sub fix_sqlite_permissions {

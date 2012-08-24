@@ -61,6 +61,7 @@ my $build = GBrowseInstall->new(
     script_files => [
 	'bin/gbrowse_clean.pl',
 	'bin/gbrowse_set_admin_passwd.pl',
+	'bin/gbrowse_import_ucsc_db.pl',
 	'bin/gbrowse_create_account.pl',
 	'bin/gbrowse_change_passwd.pl',
 	'bin/gbrowse_metadb_config.pl',

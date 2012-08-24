@@ -5,6 +5,7 @@ bin/gbrowse_attach_slaves.pl
 bin/gbrowse_change_passwd.pl
 bin/gbrowse_clean.pl
 bin/gbrowse_create_account.pl
+bin/gbrowse_import_ucsc_db.pl
 bin/gbrowse_metadb_config.pl
 bin/gbrowse_netinstall.pl
 bin/gbrowse_netinstall2.pl
@@ -231,6 +232,7 @@ htdocs/gbrowse_syn_help.html
 htdocs/general_help.html
 htdocs/general_help.html.zh
 htdocs/gmod_cog.jpeg
+htdocs/i
 htdocs/images/backgrounds/cloud.jpg
 htdocs/images/backgrounds/lrock005.jpg
 htdocs/images/backgrounds/steel.jpg

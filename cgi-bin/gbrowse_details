@@ -235,24 +235,24 @@ sub print_features {
 	               unless $self->{colors}{$method} eq 'none';
 
 	$string .= start_table({-cellspacing=>0});
-	unless ($subf) {
-	    $string .= $self->print_multiple($f,
-				     $options,
-				     'Name',
-				     $f->name);
-	    $string .= $self->print_multiple($f,
-				     $options,
-				     'Class',
-				     $f->class) unless $f->class eq 'Sequence';
-	}
+	$string .= $self->print_multiple($f,
+					 $options,
+					 'Name',
+					 $f->name) if $f->name;
+	$string .= $self->print_multiple($f,
+					 $options,
+					 'Class',
+					 $f->class) unless $f->class eq 'Sequence' || $subf;
 	$string .= $self->print_multiple($f,
 				 $options,
 				 'Type',
 				 $f->primary_tag);
+
+	my $description = Bio::Graphics::Glyph::generic->get_description($f);
 	$string .= $self->print_multiple($f,
 				 $options,
 				 'Description',
-				 Bio::Graphics::Glyph::generic->get_description($f));
+				 $description) if $description;
 	$string .= $self->print_multiple($f,
 				 $options,
 				 'Source',
@@ -312,7 +312,7 @@ sub print_features {
 	    $string   .= $self->print_multiple($f,
 					       $options,
 					       'gbrowse_dbid',
-					       $f->gbrowse_dbid) if $f->can('gbrowse_dbid');
+					       $f->gbrowse_dbid) if $f->can('gbrowse_dbid') && $f->gbrowse_dbid;
 	    
 	    $string   .= TR({-valign=>'top',-class=>'databody'},
 			    th({-height=>3},''),

@@ -21,11 +21,15 @@ my $dbh  = DBI->connect(
 
 if ($ARGV[0] =~ /^--?h/) {
     print STDERR <<END;
-Usage: $0 <data source name>
+Usage: $0 <UCSC genome build> [<Description>]
+
+Example: $0 hg19 'Human genome (hg19)'
 
 This creates a framework data source for one of the genomes known to
 the UCSC Genome Browser. You can then modify the data source
-configuration file, add your own data, and so forth.
+configuration file, add your own data, and so forth. Provide the name
+of a UCSC genome build and optionally a description to display in
+GBrowse.
 
 To get started, find the desired data source by going to
 http://genome.ucsc.edu/cgi-bin/hgGateway and using the "clade" and
@@ -50,7 +54,9 @@ if ($ARGV[0] =~ /^--?l/) {
     exit -1;
 }
 
-my $dsn = shift;
+my $dsn         = shift;
+my $description = shift || "Imported $dsn genome from UCSC";
+
 unless ($dsn) 
 {    
     print STDERR "usage: $0 <UCSC data source name>\n";
@@ -69,8 +75,8 @@ print STDERR "** During database creation, you may be asked for your password in
 my $dir       = create_database_dir($data_dir,$dsn);
 my $scaffolds = create_scaffold_db($dir,$dsn);
 my $genes     = create_gene_db($dir,$dsn);
-create_conf_file($conf_dir,$dsn,$scaffolds,$genes);
-create_source($conf_dir,$dsn);
+create_conf_file($conf_dir,$dsn,$description,$scaffolds,$genes);
+create_source($conf_dir,$dsn,$description);
 
 print STDERR <<END;
 
@@ -150,6 +156,7 @@ END
     close $db;
 
     print STDERR "Fetching FASTA files...";
+    $ENV{FTP_PASSIVE}=1 unless exists $ENV{FTP_PASSIVE};
     for my $chr (@chroms) {
 	my $url  = "ftp://hgdownload.cse.ucsc.edu/goldenPath/$dsn/chromosomes/$chr.fa.gz";
 	my $file = "$path/$chr.fa.gz";
@@ -211,7 +218,7 @@ END
 sub log10 { log(shift())/log(10)}
 
 sub create_conf_file {
-    my ($conf_dir,$dsn,$scaffolds,$genes) = @_;
+    my ($conf_dir,$dsn,$description,$scaffolds,$genes) = @_;
     my $conf_path = "$conf_dir/${dsn}.conf";
     create_writable_file($conf_path);
 
@@ -261,7 +268,7 @@ sub create_conf_file {
     open my $fh3,'>',$conf_path or die "$conf_path: $!";
     print $fh3 <<END;
 [GENERAL]
-description   = Starter genome from UCSC $dsn
+description   = $description
 database      = scaffolds
 
 initial landmark = $initial_landmark
@@ -409,7 +416,7 @@ END
 }
 
 sub create_source {
-    my ($conf_dir,$dsn) = @_;
+    my ($conf_dir,$dsn,$description) = @_;
     my $path = "$conf_dir/GBrowse.conf";
     open my $fh,$path or die "$path: $!";
     my $foundit;
@@ -424,7 +431,7 @@ sub create_source {
     print $fh2 "\n";
     print $fh2 <<END;
 [$dsn]
-description = Starter genome from UCSC $dsn
+description = $description
 path        = $conf_dir/${dsn}.conf
 END
     ;

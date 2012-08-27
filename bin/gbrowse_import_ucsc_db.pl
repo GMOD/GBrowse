@@ -195,9 +195,15 @@ sub create_gene_db {
 
 END
     print STDERR "Fetching genes...";
-    my $query = $dbh->prepare('select * from refFlat order by geneName')
-	or die $dbh->errstr;
-    $query->execute;
+    my $query;
+    eval {
+	$query = $dbh->prepare('select * from refFlat order by geneName') or die $dbh->errstr;
+	$query->execute or die $dbh->errorstr;
+    } || eval {
+	$query = $dbh->prepare('select name2,name,chrom,strand,txStart,txEnd,cdsStart,cdsEnd,exonCount,exonStarts,exonEnds from ensGene order by name2') or die $dbh->errstr;
+	$query->execute or die $dbh->errorstr;
+    };
+    die $@ if $@;
     my $writer = GFFWriter->new($db,$dsn);
     while (my $row = $query->fetchrow_arrayref) {
 	$writer->write_transcript($row);

@@ -331,9 +331,7 @@ show summary  = $summary_boundary
 database     = genes
 feature      = gene
 glyph        = gene
-bgcolor      = blue
-forwardcolor = red
-reversecolor = blue
+bgcolor      = sub {shift->strand > 0 ? 'red' : 'blue'}
 label_transcripts = 1
 label        = sub { my \$f = shift;
                      my \$name = \$f->display_name;
@@ -344,6 +342,13 @@ label        = sub { my \$f = shift;
 height       = 10
 description  = 0
 key          = Known Genes
+
+[Genes:200000]
+glyph        = box
+stranded     = 1
+
+[Genes:500000]
+bump         = 0
 
 [ncRNA]
 database     = genes
@@ -363,6 +368,10 @@ sixframe     = 1
 label        = sub {shift->name . " reading frame"}
 key          = CDS
 citation     = This track shows CDS reading frames.
+
+[CDS:200000]
+glyph        = box
+stranded     = 1
 
 [Translation]
 glyph        = translation

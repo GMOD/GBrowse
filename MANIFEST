@@ -352,6 +352,7 @@ htdocs/images/openid/myopenid-logo.png
 htdocs/images/openid/openid-logo.gif
 htdocs/images/openid/yahoo-logo.png
 htdocs/index.html
+htdocs/cloud_index.html
 htdocs/js/ajax_upload.js
 htdocs/js/autocomplete.js
 htdocs/js/balloon.config.js

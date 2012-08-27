@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Generic Genome Browser</title>
+<link rel="stylesheet" href="tutorial/tutorial.css">
+</head>
+
+<body>
+<h1>Generic Genome Browser, v2 (Cloud Image)</h1>
+
+<a href="http://www.gmod.org/"><img src="gmod_cog.jpeg" border="0" align="RIGHT"></a>
+
+<p>
+
+Welcome to the Generic Genome Browser (Cloud Image)!
+
+<h2>Documentation</h2>
+
+<dl>
+  <dt><b>Online tutorial and sample data files</b></dt>
+  <dd><a href="tutorial/tutorial.html">/var/www/gbrowse2/tutorial<a>.</dd>
+  <dt><b>Installation and configuration manual</b></dt>
+  <dd><a href="http://gmod.org/wiki/GBrowse_2.0_HOWTO">GBrowse 2.0 HOWTO</a></dd>
+  <dt><b>Example scripts to control GBrowse from the command line</b></dt>
+  <dd><a href="example_scripts">/var/www/gbrowse2/example_scripts</a></dd>
+</dl>
+
+<h2>Starter Databases</h2>
+
+<p>
+
+A series of starter databases have been preconfigured for you, consisting of:
+
+<ul>
+<li><a href="/fgb2/gbrowse/sacCe3">S. cerevisiae genome (April 11, sacCe3), Genes and DNA only</li>
+<li><a href="/fgb2/gbrowse/yeast_advanced">S. cerevisiae, Chromosomes 1+2, (more tracks)</li>
+<li><a href="/fgb2/gbrowse/ce10">C. elegans genome (WS220, ce10), Genes and DNA only</li>
+<li><a href="/fgb2/gbrowse/hg19">H. sapiens genome (hg19, GRCh37), Genes and DNA only</li>
+</ul>
+
+<p>
+
+You may add additional starter genomes at any time by running the
+command line script gbrowse_import_ucsc.pl and providing
+the <a href="genome.ucsc.edu">UCSC Genome Browser</a> build name:
+
+ gbrowse_import_ucsc.pl mm10 'M. musculus genome (mm10, GRCm38)' 
+
+<h2>Directory Paths</h2>
+
+<p>
+
+For future reference, here is where you've installed GBrowse's various
+components:
+
+<dl>
+  <dt>GBrowse documentation, stylesheets and in-memory databases.
+  <dd><b>$HTDOCS</b>
+      <p>
+  <dt>GBrowse configuration files
+  <dd><b>$CONF</b>
+      <p>
+  <dt>Preinstalled sample database(s)
+  <dd><b>$DATABASES</b>
+      <p>
+  <dt>GBrowse CGI (web) scripts
+  <dd><ul>
+          <li><b>$CGIBIN/gbrowse</b>
+          <li><b>$CGIBIN/gbrowse_img</b>
+          <li><b>$CGIBIN/gbrowse_details</b>
+      </ul>
+      <p>
+  <dt>Temporary directories for cached images and sessions.
+  <dd><b>$TMP</b>
+</dl>
+
+<p>
+
+<h2>Learning More</h2>
+
+<p>
+
+To find out more about Gbrowse, try the:
+
+<ul>
+  <li><a href="http://gmod.org/wiki/GBrowse_2.0_HOWTO">GBrowse 2.0 HOWTO</a>
+  <li><a href="tutorial/tutorial.html">GBrowse Tutorial</a>
+ <!-- <li><a href="contrib/conf_files">Sample Configuration Files</a> -->
+</ul>
+
+
+<hr>
+<address>Lincoln D. Stein, lstein@cshl.org<br>
+<a href="http://www.cshl.org/">Cold Spring Harbor Laboratory</a></address>
+<!-- hhmts start -->
+Last modified: Thu Mar 18 18:59:16 PDT 2010
+<!-- hhmts end -->
+</body> </html>

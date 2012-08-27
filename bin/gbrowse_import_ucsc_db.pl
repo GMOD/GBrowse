@@ -64,7 +64,7 @@ unless ($dsn)
     print STDERR "Run $0 --list for list of data sources.\n";
     exit -1;
 } else {
-    $dbh->do("use $dsn") or die "Could not access $dsn database. Run this script without arguments to see valid database names.\n";
+    $dbh->do("use $dsn") or die "Could not access $dsn database. Run this script with --list to see valid database names.\n";
 }
 
 my $conf_dir = GBrowse::ConfigData->config('conf');

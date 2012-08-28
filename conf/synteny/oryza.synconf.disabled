@@ -23,7 +23,7 @@ cache time    = 1
 config_extension = conf
 
 # example searches to display
-examples = rice 3:16050173..16064974
+examples = rice 3:200000..280000
            wild_rice 3:1..400000
 
 zoom levels = 5000 10000 25000 50000 100000 200000 400000

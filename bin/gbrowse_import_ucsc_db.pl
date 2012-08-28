@@ -169,7 +169,7 @@ END
     print STDERR "Fetching FASTA files...";
     $ENV{FTP_PASSIVE}=1 unless exists $ENV{FTP_PASSIVE};
     my $prefix = $REMOVE_CHR ? 'chr' : '';
-    for my $chr (@chroms) {
+    for my $chr (sort @chroms) {
 	my $url  = "ftp://hgdownload.cse.ucsc.edu/goldenPath/$dsn/chromosomes/$prefix$chr.fa.gz";
 	my $file = "$path/$prefix$chr.fa.gz";
 	print STDERR "$chr...";

@@ -630,6 +630,9 @@ sub wrap_rendered_track {
     
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$title);
+
+    my $clipped_title = $title;
+    $clipped_title    = substr($clipped_title,0,37).'...' if length($clipped_title) > 40;
     
     my $titlebar = 
 	span(
@@ -639,7 +642,7 @@ sub wrap_rendered_track {
 
  	    $self->if_not_ipad(@images,),
 	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
-	    span({-class => 'drag_region',},$title),
+	    span({-class => 'drag_region',},$clipped_title),
 
 	);
 

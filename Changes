@@ -1,6 +1,7 @@
 2.50
  * Add gbrowse_import_ucsc_db.pl, which will create a fully functional starter database
    from a UCSC data source (e.g. 'hg19').  
+ * Prompt user before overwriting a customized config file.
 
 2.49
   * Add new "metadata" option in track stanzas for making subtracks selectable via

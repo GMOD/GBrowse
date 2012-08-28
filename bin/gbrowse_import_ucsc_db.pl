@@ -52,14 +52,14 @@ Options:
 END
     ;
 
-my ($remove_chr,$list);
+my ($REMOVE_CHR,$LIST);
 
 GetOptions(
-    'remove-chr'    => \$remove_chr,
-    'list'          => \$list,
+    'remove-chr'    => \$REMOVE_CHR,
+    'list'          => \$LIST,
     ) or die $USAGE;
 
-if ($list) {
+if ($LIST) {
     print_sources($dbh);
     exit -1;
 }
@@ -152,7 +152,7 @@ END
     $query->execute;
     my @chroms;
     while (my($chrom,$size) = $query->fetchrow_array) {
-	$chrom =~ s/^chr// if $remove_chr;
+	$chrom =~ s/^chr// if $REMOVE_CHR;
 	print $db join("\t",
 		      $chrom,
 		      $dsn,
@@ -168,7 +168,7 @@ END
 
     print STDERR "Fetching FASTA files...";
     $ENV{FTP_PASSIVE}=1 unless exists $ENV{FTP_PASSIVE};
-    my $prefix = $remove_chr ? 'chr' : '';
+    my $prefix = $REMOVE_CHR ? 'chr' : '';
     for my $chr (@chroms) {
 	my $url  = "ftp://hgdownload.cse.ucsc.edu/goldenPath/$dsn/chromosomes/$prefix$chr.fa.gz";
 	my $file = "$path/$prefix$chr.fa.gz";
@@ -180,7 +180,7 @@ END
     print STDERR "done\n";
     print STDERR "Unpacking FASTA files...";
     for my $chr (sort @chroms) {
-	my $command = $remove_chr ? "gunzip -c $path/$prefix$chr.fa.gz | perl -p -e 's/^>chr/>/' > $path/$chr.fa"
+	my $command = $REMOVE_CHR ? "gunzip -c $path/$prefix$chr.fa.gz | perl -p -e 's/^>chr/>/' > $path/$chr.fa"
 	                          : "gunzip -c $path/$prefix$chr.fa.gz > $path/$chr.fa"
 	    unless -e "$path/$chr.fa" && -M "$path/$chr.fa" > -M "$path/$prefix$chr.fa.gz";
 	system $command;
@@ -201,7 +201,6 @@ sub create_gene_db {
 
     my $src_path = "$path/genes.gff3";
     my $db_path = "$path/genes.sqlite";
-#    return $db_path if -e $db_path;
 
     open my $db,'>',$src_path or die "$path: $!";
     print $db <<END;
@@ -261,7 +260,7 @@ sub create_conf_file {
     my $default_segment = 10**($log-3);
     my $region_segment  = $default_segment*10;
     my @zoom_levels     = qw(100 200 1000 2000 5000 10000 20000 50000 100000 200000 500000);
-    for (my $i=6; $i<$log; $i++) {
+    for (my $i=6; $i<=$log; $i++) {
 	push @zoom_levels,10**$i;
     }
     my @region_sizes    = @zoom_levels;
@@ -502,8 +501,8 @@ sub write_transcript {
 
     my ($gene_name,$accession,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds) = @$fields;
     my ($utr5_start,$utr5_end,$utr3_start,$utr3_end,$gid,$tid);
-
     $gene_name ||= $accession;
+    $chrom =~ s/^chr// if $REMOVE_CHR;
 
     if ($self->{last_gene_name} ne $gene_name
 	||

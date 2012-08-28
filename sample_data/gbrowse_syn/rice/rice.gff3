@@ -3245,7 +3245,4 @@
 3	ensembl	CDS	1993297	1993773	.	+	0	Parent=3_FGT212;Name=CDS.6782
 3	ensembl	gene	1994314	1996656	.	-	.	ID=3_FG214;Name=3_FG214;biotype=protein_coding
 3	ensembl	mRNA	1994314	1996656	.	-	.	ID=3_FGT214;Parent=3_FG214;Name=3_FGT214;biotype=protein_coding
-3	ensembl	CDS	1994314	1996656	.	-	0	Parent=3_FGT214;Name=CDS.6784
-3	ensembl	CDS	1998827	1999033	.	-	0	Parent=3_FGT222;Name=CDS.6793
-3	ensembl	CDS	1997635	1997817	.	-	0	Parent=3_FGT222;Name=CDS.6794
-3	ensembl	CDS	1997349	1997375	.	-	0	Parent=3_FGT222;Name=CDS.6795
+

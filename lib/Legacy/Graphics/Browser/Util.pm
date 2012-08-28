@@ -172,19 +172,14 @@ sub print_top {
   my $drag_and_drop = $CONFIG->drag_and_drop;
   my $b_tips        = $CONFIG->setting('balloon tips') || $drag_and_drop;
   my $js            = $CONFIG->relative_path_setting('js')||JS;
-  my @js            = ('buttons.js','prototype.js');
-  push @js, qw(yahoo-dom-event.js balloon.config.js balloon.js)     if $b_tips;
-  push @js, qw(rubber.js overviewSelect.js detailSelect.js);
-  #push @js, 'scriptaculous.js' if $drag_and_drop;
-  #push @js, 'bookmark.js';
+  my @js            = qw/buttons.js prototype.js balloon.config.js balloon.js rubber.js overviewSelect.js/;
   push @onload, 'Overview.prototype.initialize()';
-  push @onload, 'Details.prototype.initialize()';
+  #push @onload, 'Details.prototype.initialize()';
 
-  if ($CONFIG->setting('region segment')) {
-    push @js, 'regionSelect.js';
-    push @onload, 'Region.prototype.initialize()';
-  }
-
+  #if ($CONFIG->setting('region segment')) {
+  #  push @js, 'regionSelect.js';
+  #  push @onload, 'Region.prototype.initialize()';
+  #}
 
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args, (-script => \@scripts);

@@ -631,8 +631,6 @@ libalign/realign.h
 LICENSE
 Makefile.PL
 MANIFEST
-new
-old
 README
 README.fedora_and_selinux
 README.gff3

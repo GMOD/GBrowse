@@ -242,6 +242,8 @@ sub run {
        query_string() if $debug || TRACE_RUN;
   warn "[$$] session id = ",$self->session->id if $debug;
 
+  $ENV{FTP_PASSIVE}=1;  # so that later calls to LWP will work on ftp:// urls
+
   $self->set_source() && return;
 
   my $session = $self->session;

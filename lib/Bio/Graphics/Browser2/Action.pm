@@ -824,6 +824,7 @@ sub ACTION_upload_file {
 
     $state->{uploads}{$upload_id} = [$track_name,$$];
     $session->flush();
+    $session->unlock();
 
     my ($result,$msg,$tracks,$pid);
     # in case user pasted the "share link" into the upload field.

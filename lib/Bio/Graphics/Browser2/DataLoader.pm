@@ -108,7 +108,7 @@ sub get_fasta_files {
 
     for my $db (@dbs) {
 	my ($dbid,$adaptor,%args) = $source->db2args($db);
-	my $fasta = $args{-fasta} || $args{-dsn};
+	my $fasta = $args{-fasta} || $args{-dsn} || $args{-dir};
 	next if $seenit{$fasta}++;
 	next unless -e $fasta;
 	if (-d _) {

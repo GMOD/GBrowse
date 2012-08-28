@@ -8,6 +8,7 @@ use DBI;
 use Bio::DB::Fasta;
 use LWP::Simple 'mirror','is_error','is_success';
 use File::Basename 'dirname';
+use Getopt::Long;
 
 use constant HOST=>'genome-mysql.cse.ucsc.edu';
 use constant USER=>'genome';
@@ -19,9 +20,8 @@ my $dbh  = DBI->connect(
     {PrintError=>0,RaiseError=>0}
     );
 
-if ($ARGV[0] =~ /^--?h/) {
-    print STDERR <<END;
-Usage: $0 <UCSC genome build> [<Description>]
+my $USAGE = <<END;
+Usage: $0 [options] <UCSC genome build> [<Description>]
 
 Example: $0 hg19 'Human genome (hg19)'
 
@@ -45,11 +45,21 @@ The data source name appears before the word "assembly", in this case
 To get a list of all sources recognized by UCSC appears type:
 
  $0 --list
-END
-    exit -1;
-}
 
-if ($ARGV[0] =~ /^--?l/) {
+Options:
+  --remove-chr Remove the 'chr' prefix from all chromosome names
+  --list       List data sources
+END
+    ;
+
+my ($remove_chr,$list);
+
+GetOptions(
+    'remove-chr'    => \$remove_chr,
+    'list'          => \$list,
+    ) or die $USAGE;
+
+if ($list) {
     print_sources($dbh);
     exit -1;
 }
@@ -142,6 +152,7 @@ END
     $query->execute;
     my @chroms;
     while (my($chrom,$size) = $query->fetchrow_array) {
+	$chrom =~ s/^chr// if $remove_chr;
 	print $db join("\t",
 		      $chrom,
 		      $dsn,
@@ -157,9 +168,10 @@ END
 
     print STDERR "Fetching FASTA files...";
     $ENV{FTP_PASSIVE}=1 unless exists $ENV{FTP_PASSIVE};
+    my $prefix = $remove_chr ? 'chr' : '';
     for my $chr (@chroms) {
-	my $url  = "ftp://hgdownload.cse.ucsc.edu/goldenPath/$dsn/chromosomes/$chr.fa.gz";
-	my $file = "$path/$chr.fa.gz";
+	my $url  = "ftp://hgdownload.cse.ucsc.edu/goldenPath/$dsn/chromosomes/$prefix$chr.fa.gz";
+	my $file = "$path/$prefix$chr.fa.gz";
 	print STDERR "$chr...";
 	my $code = mirror($url=>$file);
 	warn "Fetch of $url returned error code $code\n"
@@ -168,11 +180,13 @@ END
     print STDERR "done\n";
     print STDERR "Unpacking FASTA files...";
     for my $chr (sort @chroms) {
-	system "gunzip -c $path/$chr.fa.gz > $path/$chr.fa"
-	    unless -e "$path/$chr.fa" && -M "$path/$chr.fa" > -M "$path/$chr.fa.gz";
+	my $command = $remove_chr ? "gunzip -c $path/$prefix$chr.fa.gz | perl -p -e 's/^>chr/>/' > $path/$chr.fa"
+	                          : "gunzip -c $path/$prefix$chr.fa.gz > $path/$chr.fa"
+	    unless -e "$path/$chr.fa" && -M "$path/$chr.fa" > -M "$path/$prefix$chr.fa.gz";
+	system $command;
     }
-
     print STDERR "done\n";
+
     print STDERR "Creating FASTA index...";
     my $index = Bio::DB::Fasta->new($path) or die "Couldn't create index";
     print "done\n";

@@ -54,6 +54,7 @@ label          = $filename
 category       = $category
 label density = 50
 bump          = fast
+stranded      = 1
 key           = $filename
 END
 
@@ -155,7 +156,7 @@ sub finish_load {
     $dest      =~ s/\.[bs]am$//i; # sorting will add the .bam extension
 
     $self->set_status('sorting BAM file');
-    Bio::DB::Bam->sort_core(0,$source,$dest);
+    Bio::DB::Bam->sort_core(0,$source,$dest,250*1e6);
 
     $self->set_status('indexing BAM file');
 

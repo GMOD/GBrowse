@@ -566,7 +566,7 @@ sub process_conf_files {
 sub check_installed {
     my $self = shift;
     my ($install_path,$blib_file) = @_;
-    my $skip = $self->{skip} ||= IO::File->new('>>INSTALL.SKIP');
+    my $skip = $self->{skip} ||= IO::File->new('>>INSTALL.SKIP') or die "INSTALL.SKIP: $!";
     (my $base = $blib_file) =~ s!^[^/]+/!!;
     my $staged    = File::Spec->catfile('./blib',$blib_file);
     my $installed = File::Spec->catfile($install_path,$base);

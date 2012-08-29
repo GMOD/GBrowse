@@ -28,6 +28,7 @@ use constant RULER_INTERVALS     => 20;
 use constant PAD_OVERVIEW_BOTTOM => 5;
 use constant TRY_CACHING_CONFIG  => 1;
 use constant MAX_PROCESSES       => 4;
+use constant MAX_TITLE_LEN       => 40;
 
 # when we load, we set a global indicating the LWP::UserAgent is available
 my $LPU_AVAILABLE;
@@ -632,7 +633,7 @@ sub wrap_rendered_track {
     $self->select_features_menu($label,\$title);
 
     my $clipped_title = $title;
-    $clipped_title    = substr($clipped_title,0,37).'...' if length($clipped_title) > 40;
+    $clipped_title    = substr($clipped_title,0,MAX_TITLE_LEN-3).'...' if length($clipped_title) > MAX_TITLE_LEN;
     
     my $titlebar = 
 	span(
@@ -1560,6 +1561,7 @@ sub run_local_requests {
 
 		$titles    = $panel->key_boxes;
 		foreach (@$titles) {
+		    $_->[0]   = substr($_->[0],0,MAX_TITLE_LEN-3).'...' if length($_->[0])>MAX_TITLE_LEN;
 		    my $index = $_->[5]->bgcolor;  # record track config bgcolor
 		    my ($r,$g,$b) = $gd->rgb($index);
 		    my $alpha     = 1;

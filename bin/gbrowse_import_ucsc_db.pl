@@ -162,18 +162,6 @@ END
 		      '.','.','.',
 		      "ID=$chrom;Name=$chrom"),"\n";
 	push @chroms,$chrom;
-
-	# hack for some people who like "MtDNA"
-	if ($chrom eq 'M' or $chrom eq 'chrM') {
-	    print $db join("\t",
-			   'MtDNA',
-			   $dsn,
-			   'chromosome',
-			   1,
-			   $size,
-			   '.','.','.',
-			   "ID=MtDNA;Name=MtDNA"),"\n";
-	}
     }
 
     $query->finish;
@@ -193,9 +181,9 @@ END
     print STDERR "done\n";
     print STDERR "Unpacking FASTA files...";
     for my $chr (sort @chroms) {
-	my $command = $REMOVE_CHR ? "gunzip -c $path/$prefix$chr.fa.gz | perl -p -e 's/^>chr/>/' > $path/$chr.fa"
-	                          : "gunzip -c $path/$prefix$chr.fa.gz > $path/$chr.fa"
-	    unless -e "$path/$chr.fa" && -M "$path/$chr.fa" > -M "$path/$prefix$chr.fa.gz";
+	my $command = $REMOVE_CHR ? "gunzip -c $path/$prefix$chr.fa.gz | perl -p -e 's/^>chr/>/' >> $path/chromosomes.fa"
+	                          : "gunzip -c $path/$prefix$chr.fa.gz >> $path/chromosomes.fa"
+	    unless -e "$path/$chr.fa" && -M "$path/chromosomes.fa" > -M "$path/$prefix$chr.fa.gz";
 	system $command;
     }
     print STDERR "done\n";

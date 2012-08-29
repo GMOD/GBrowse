@@ -54,6 +54,9 @@ sub finish_load {
 
     $self->set_status('creating conf file');
     $self->create_conf_file($bam,$bigwig_exists);
+
+    $self->set_status('recompressing source');
+    system ("gzip $source_file");
 }
 
 sub do_strip_prefix {

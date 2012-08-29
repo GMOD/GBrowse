@@ -162,7 +162,20 @@ END
 		      '.','.','.',
 		      "ID=$chrom;Name=$chrom"),"\n";
 	push @chroms,$chrom;
+
+	# hack for some people who like "MtDNA"
+	if ($chrom eq 'M' or $chrom eq 'chrM') {
+	    print $db join("\t",
+			   'MtDNA',
+			   $dsn,
+			   'chromosome',
+			   1,
+			   $size,
+			   '.','.','.',
+			   "ID=MtDNA;Name=MtDNA"),"\n";
+	}
     }
+
     $query->finish;
     close $db;
 

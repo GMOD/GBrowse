@@ -180,6 +180,7 @@ END
     }
     print STDERR "done\n";
     print STDERR "Unpacking FASTA files...";
+    unlink "$path/chromosomes.fa";
     for my $chr (sort @chroms) {
 	my $command = $REMOVE_CHR ? "gunzip -c $path/$prefix$chr.fa.gz | perl -p -e 's/^>chr/>/' >> $path/chromosomes.fa"
 	                          : "gunzip -c $path/$prefix$chr.fa.gz >> $path/chromosomes.fa"

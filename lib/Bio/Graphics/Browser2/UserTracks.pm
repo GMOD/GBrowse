@@ -507,9 +507,8 @@ sub upload_file {
     my $filename = $self->trackname_from_url($file_name, !$overwrite);
     
     $content_type ||= '';
-
     
-    if ($original_name =~ /\.sam\.gz/) { # special case compressed sam files - do not uncopress!
+    if ($original_name =~ /\.sam\.gz/) { # special case compressed sam files - do not uncompress!
 #	$filename = $original_name;
     } elsif ($content_type eq 'application/gzip' or $original_name =~ /\.gz$/) {
 	$fh = $self->install_filter($fh,'gunzip -c');

@@ -76,7 +76,6 @@ sub strip_prefix {
 sub set_status {
     my $self   = shift;
     my $msg    = shift;
-
     my $status = $self->status_path;
     open my $fh,">",$status;
     flock($fh,LOCK_EX);
@@ -142,6 +141,20 @@ sub chrom_sizes {
     }
     $self->generate_chrom_sizes($sizes) or return;
     return $sizes;
+}
+
+sub chromosome_list {
+    my $self  = shift;
+    my $sizes = $self->chrom_sizes or return;
+    open my $fh,$sizes or return;
+    my %result;
+    while (<$fh>) {
+	chomp;
+	my ($c,$s) = split /\s+/;
+	$result{$c} = $s;
+    }
+    close $fh;
+    return \%result;
 }
 
 sub generate_chrom_sizes {

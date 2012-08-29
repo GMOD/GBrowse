@@ -510,7 +510,7 @@ sub add_file {
     my $filename = shift;
     my $imported = shift || 0;
     my $description = shift;
-    
+
     my $userdb = $self->{userdb};
     $self->{userid} ||= $userdb->add_named_session($self->sessionid, "an anonymous user");
     
@@ -520,12 +520,13 @@ sub add_file {
     
     # Add the file's tracks to the track lookup hash.
     my %track_lookup = $self->track_lookup;
-	$track_lookup{$_} = $filename foreach $self->labels($filename);
+    $track_lookup{$_} = $filename foreach $self->labels($filename);
     
     my $fileid = md5_hex($userid.$filename.$data_source);
     my $now = $self->nowfun;
     my $result = $uploadsdb->do("DELETE FROM uploads WHERE trackid='$fileid'");
-    $uploadsdb->do("INSERT INTO uploads (trackid, userid, path, description, imported, creation_date, modification_date, sharing_policy, data_source ) VALUES (?, ?, ?, ?, ?, $now, $now, ?, ?)", undef, $fileid, $userid, $filename, $description, $imported, $shared, $data_source);
+    $uploadsdb->do("INSERT INTO uploads (trackid, userid, path, description, imported, creation_date, modification_date, sharing_policy, data_source ) VALUES (?, ?, ?, ?, ?, $now, $now, ?, ?)", undef, $fileid, $userid, $filename, $description, $imported, $shared, $data_source) 
+	or die $uploadsdb->error_str;
     return $fileid;
 }
 

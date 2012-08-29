@@ -934,8 +934,10 @@ sub ACTION_upload_status {
 	
     if ($file_name = $state->{uploads}{$upload_id}[0]) {
 	my $usertracks = $render->user_tracks;
-	my $file = $usertracks->database? $usertracks->get_file_id($file_name) : $file_name;
-	$status		   = $usertracks->status($file);
+	(my $base = $file_name) =~ s/\.(gz|zip|bz2)$//i;
+	my $file       = $usertracks->database ? $usertracks->get_file_id($file_name)||$usertracks->get_file_id($base)
+	                                       : $file_name;
+	$status	       = $usertracks->status($file) || $render->translate('PENDING');
 	return (200,'text/html', "<b>$file_name:</b> <i>$status</i>");
     } else {
 	my $waiting = $render->translate('PENDING');

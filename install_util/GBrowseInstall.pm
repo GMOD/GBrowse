@@ -426,7 +426,6 @@ sub ACTION_install {
     my $self = shift;
     my $prefix = $self->install_base || $self->prefix || '';
     GBrowseGuessDirectories->prefix($prefix);
-    unlink 'INSTALL.SKIP';
 
     $self->depends_on('config_data');
     $self->install_path->{conf} 
@@ -597,7 +596,7 @@ sub check_installed {
 	    
 	if ($keep) {
 	    print STDERR "\"Build install\" will keep original $installed. New version can be found in ${installed}.new\n\n";
-	    rename ($staged,"${staged}.new");
+	    cp($staged,"${staged}.new");
 	    print $skip '^',"blib/",quotemeta($blib_file),'$',"\n";
 	} else {
 	    print STDERR "\"Build install\" will replace original $installed. Original version can be found in ${installed}.orig\n\n";

@@ -193,6 +193,8 @@ END
     my $index = Bio::DB::Fasta->new($path) or die "Couldn't create index";
     print "done\n";
 
+    my $www-user = GBrowse::ConfigData->config('wwwuser');
+    system "sudo chown -R $www-user $path";
     return $path;
 }
 

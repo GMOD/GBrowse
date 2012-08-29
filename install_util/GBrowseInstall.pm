@@ -15,6 +15,7 @@ use IO::Dir;
 use File::Compare 'compare';
 use File::Copy    'copy','cp';
 use GBrowseGuessDirectories;
+use Carp 'cluck';
 
 use overload '""' => 'asString',
     fallback => 1;
@@ -554,11 +555,10 @@ sub process_conf_files {
 	my $base = $_;
 
 	my $copied = $self->copy_if_modified($_=>'blib');
-	$self->substitute_in_place("blib/$_")
-	    if $copied
-	    or !$self->up_to_date('_build/config_data',"blib/$_");
-
-	$self->check_installed($install_path,$base);
+	if ($copied || !$self->up_to_date('_build/config_data',"blib/$_")) {
+	    $self->substitute_in_place("blib/$_");
+	    $self->check_installed($install_path,$base);
+	}
     }
 
 }
@@ -617,11 +617,10 @@ sub process_htdocs_files {
 	chomp;
 	my $base = $_;
 	my $copied = $self->copy_if_modified($base=>'blib');
-	$self->substitute_in_place("blib/$base")
-	    if $copied
-	    or !$self->up_to_date('_build/config_data',"blib/$base");
-
-	$self->check_installed($install_path,$base);
+	if ($copied or !$self->up_to_date('_build/config_data',"blib/$base")) {
+	    $self->substitute_in_place("blib/$base");
+	    $self->check_installed($install_path,$base) if $copied;
+	}
     }
 }
 
@@ -656,11 +655,10 @@ sub process_etc_files {
 	    my $base = $_;
 
 	    my $copied = $self->copy_if_modified($_=>'blib');
-	    $self->substitute_in_place("blib/$_")
-		if $copied
-		or !$self->up_to_date('_build/config_data',"blib/$_");
-	    
-	    $self->check_installed($install_path,$base);
+	    if ($copied or !$self->up_to_date('_build/config_data',"blib/$_")) {
+		$self->substitute_in_place("blib/$_");
+		$self->check_installed($install_path,$base);
+	    }
 	}
     }
 

@@ -731,7 +731,8 @@ sub ACTION_get_feature_info {
     defined(my $dbid  = CGI::unescape($q->param('dbid')))       or croak;
     defined(my $fid   = CGI::unescape($q->param('feature_id'))) or croak;
     $fid                 or  return (204,'text/plain','nothing at all');
-    $dbid =~ /^remote/   and return (204,'text/plain','nothing at all');
+    $dbid =~ /^remote/ && $etype eq 'mouseover';
+                         &&  return (204,'text/plain','nothing at all');
 
     if ($fid eq '*summary*') {
 	return (200,'text/plain',$self->render->feature_summary_message($etype,$track));

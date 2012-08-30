@@ -117,13 +117,13 @@ my $wanted = sub {
 
 
 # Traverse desired filesystems
-logit("Deleting cache files and directories...");
+logit("Deleting cache files and directories...\n");
 File::Find::finddepth( {wanted=>$wanted},  $tmpdir);
-logit("Deleting unused user uploads older than $uploads_secs seconds (see \"expire uploads\" option in GBrowse.conf)...");
+logit("Deleting unused user uploads older than $uploads_secs seconds (see \"expire uploads\" option in GBrowse.conf)...\n");
 File::Find::finddepth( {wanted=>$wanted},  $user_dir);
 logit("Deleted $directories directories and $files files.\n");
 if ($uploads_db) {
-    logit("Cleaning uploads db...");
+    logit("Cleaning uploads db...\n");
     clean_uploads();
 }
 
@@ -146,8 +146,8 @@ sub clean_uploads {
 
     my @delete = keys %flag_for_deletion or return;
     my $to_remove = join ',',map {"'$_'"}@delete;
-    logit("Deleting ".scalar @delete." dangling uploads.\n");
     $db->do("delete from uploads where trackid in ($to_remove)") or warn $db->errstr;
+    logit("Deleted ".scalar @delete." dangling uploads.\n");
 }
 
 sub verbose {

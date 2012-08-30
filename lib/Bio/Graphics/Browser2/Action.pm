@@ -806,16 +806,15 @@ sub ACTION_upload_file {
 					      error_msg=>'empty file'}
 	       ));
 	       
-	my $upload_id = $q->param('upload_id');
-
-    my $render   = $self->render;
-    my $state    = $self->state;
-    my $session  = $render->session;
+    my $upload_id = $q->param('upload_id');
+    my $render    = $self->render;
+    my $state     = $self->state;
+    my $session   = $render->session;
 
     my $usertracks = $render->user_tracks;
     my $name       = $fh ? basename($fh) 
-	           			: $url ? $url
-                          : $q->param('name');
+	                 : $url ? $url
+                         : $q->param('name');
     $name  ||= 'Uploaded file';
 
     my $content_type = "text/plain"; #? fh? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain'; - seems to be a problem with UploadInfo().
@@ -834,11 +833,12 @@ sub ACTION_upload_file {
 	($result,$msg,$tracks,$pid) = (1,'shared track added to your session',$t,$$);
     }
     else {
-	($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1,$self->render)
-                                        :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1)
-                                               : $usertracks->upload_file($track_name, $fh, $content_type, $overwrite);
+	($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name,  $url,  1            , $self->render)
+                                        :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1            )
+                                               : $usertracks->upload_file($track_name, $fh,   $content_type, $overwrite   );
     }
 
+    $session->lock();
     delete $self->state->{uploads}{$upload_id};
     $session->flush();
 

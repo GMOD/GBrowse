@@ -147,7 +147,7 @@ END
 
     print STDERR "Fetching chromosome sizes...\n";
 
-    my $query = $dbh->prepare('select chrom,size from chromInfo')
+    my $query = $dbh->prepare('select chrom,size from chromInfo order by size')
 	or die $dbh->errstr;
     $query->execute;
     my @chroms;

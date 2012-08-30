@@ -846,12 +846,12 @@ fgcolor      = black
 bgcolor      = black
 autoscale    = local
 
-
 [$track_id]
 database     = $dbname
 feature      = read_pair
 glyph        = segments
-draw_target  = 1
+feature_limit = 500
+draw_target   = 1
 show_mismatch = 1
 mismatch_color = red
 bgcolor      = blue
@@ -859,6 +859,7 @@ fgcolor      = blue
 height       = 3
 label        = 1
 label density = 50
+stranded     = 1
 bump         = fast
 key          = $key
 END

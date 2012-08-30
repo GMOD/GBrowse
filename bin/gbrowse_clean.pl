@@ -117,7 +117,7 @@ my $wanted = sub {
 
 
 # Traverse desired filesystems
-logit("Deleting cache files and directories older than ".$globals->cache_time." (see GBrowse.conf \"expire cache\" option...\n");
+logit("Deleting cache files and directories older than ".$globals->cache_time." (see GBrowse.conf \"expire cache\" option)...\n");
 File::Find::finddepth( {wanted=>$wanted},  $tmpdir);
 logit("Deleting unaccessed user uploads older than ".$globals->upload_time." (see GBrowse.conf \"expire uploads\" option)...\n");
 File::Find::finddepth( {wanted=>$wanted},  $user_dir);

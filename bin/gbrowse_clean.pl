@@ -54,7 +54,7 @@ logit("***",scalar localtime,basename($0),"starting ***\n");
 
 my $remember_settings_time = $globals->remember_settings_time;
 
-logit("Expiring sessions older than $remember_settings_time...");
+logit("Expiring sessions older than $remember_settings_time...\n");
 my $dsn     = $globals->code_setting(general=>'session driver');
 my %dsn     = shellwords($globals->code_setting(general=>'session args'));
 my $rst     = $globals->time2sec($remember_settings_time);
@@ -117,9 +117,9 @@ my $wanted = sub {
 
 
 # Traverse desired filesystems
-logit("Deleting cache files and directories...\n");
+logit("Deleting cache files and directories older than ".$globals->cache_time." (see GBrowse.conf \"expire cache\" option...\n");
 File::Find::finddepth( {wanted=>$wanted},  $tmpdir);
-logit("Deleting unused user uploads older than $uploads_secs seconds (see \"expire uploads\" option in GBrowse.conf)...\n");
+logit("Deleting unaccessed user uploads older than ".$globals->upload_time." (see GBrowse.conf \"expire uploads\" option)...\n");
 File::Find::finddepth( {wanted=>$wanted},  $user_dir);
 logit("Deleted $directories directories and $files files.\n");
 if ($uploads_db) {

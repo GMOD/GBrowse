@@ -119,7 +119,7 @@ my $wanted = sub {
 # Traverse desired filesystems
 logit("Deleting cache files and directories...");
 File::Find::finddepth( {wanted=>$wanted},  $tmpdir);
-logit("Deleting unused user uploads olderthan $uploads_secs seconds (see \"expire uploads\" option in GBrowse.conf)...");
+logit("Deleting unused user uploads older than $uploads_secs seconds (see \"expire uploads\" option in GBrowse.conf)...");
 File::Find::finddepth( {wanted=>$wanted},  $user_dir);
 logit("Deleted $directories directories and $files files.\n");
 if ($uploads_db) {
@@ -134,7 +134,7 @@ sub clean_uploads {
     eval {require DBI; 1} or return;
 
     my $db = DBI->connect($globals->user_account_db) or return;
-    my $query = $db->prepare('select uploadsid,data_source,path,$trackid from uploads,session where uploads.userid=session.userid') or return;
+    my $query = $db->prepare('select uploadsid,data_source,path,trackid from uploads,session where uploads.userid=session.userid') or return;
     $query->execute or return;
 
     my %flag_for_deletion;

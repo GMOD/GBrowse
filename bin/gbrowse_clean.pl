@@ -146,7 +146,7 @@ sub clean_uploads {
 
     my @delete = keys %flag_for_deletion or return;
     my $to_remove = join ',',map {"'$_'"}@delete;
-    logit("Deleting ".scalar @delete." dangling uploads");
+    logit("Deleting ".scalar @delete." dangling uploads.\n");
     $db->do("delete from uploads where trackid in ($to_remove)") or warn $db->errstr;
 }
 

@@ -134,12 +134,12 @@ sub clean_uploads {
     eval {require DBI; 1} or return;
 
     my $db = DBI->connect($globals->user_account_db) or return;
-    my $query = $db->prepare('select sessionid,data_source,path,$trackid from uploads,session where uploads.userid=session.userid') or return;
+    my $query = $db->prepare('select uploadsid,data_source,path,$trackid from uploads,session where uploads.userid=session.userid') or return;
     $query->execute or return;
 
     my %flag_for_deletion;
-    while (my ($sessionid,$dsn,$path,$trackid) = $query->fetchrow_array) {
-	my $full_path = "$user_dir/$dsn/$sessionid/$path";
+    while (my ($uploadsid,$dsn,$path,$trackid) = $query->fetchrow_array) {
+	my $full_path = "$user_dir/$dsn/$uploadsid/$path";
 	next if -e $full_path;
 	$flag_for_deletion{$trackid}++;
     }

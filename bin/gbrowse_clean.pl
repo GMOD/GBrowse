@@ -84,6 +84,7 @@ my $wanted = sub {
 
     next if $name =~ m!$tmpdir/[^/]+$!; # don't remove toplevel!
     next if $name eq $tmpdir;
+    next if $name eq $user_dir;
 
     my $is_userdata = $name =~ m/^$user_dir/;
 
@@ -138,7 +139,7 @@ sub clean_uploads {
 
     my %flag_for_deletion;
     while (my ($sessionid,$dsn,$path,$trackid) = $query->fetchrow_array) {
-	my $full_path = "$user_dir/$dsn/$path";
+	my $full_path = "$user_dir/$dsn/$sessionid/$path";
 	next if -e $full_path;
 	$flag_for_deletion{$trackid}++;
     }

@@ -38,7 +38,7 @@ my $build = GBrowseInstall->new(
     build_requires => {'Capture::Tiny'       => 0,},
     recommends  => {
 	'Bio::Das'                 => 0,
-	'Bio::DB::Sam'             => 1.20,
+	'Bio::DB::Sam'             => 1.36,
 	'Bio::DB::BigFile'         => 1.00,
 	'Crypt::SSLeay'            => 0,
 	'DB_File::Lock'            => 0,

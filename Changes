@@ -1,5 +1,6 @@
 2.51
  * Fix pod documentation for gbrowse_grow_cloud_vol.pl
+ * Volumes added to cloud instance have deleteOnTermination set to true.
 
 2.50
  * Add gbrowse_import_ucsc_db.pl, which will create a fully functional starter database

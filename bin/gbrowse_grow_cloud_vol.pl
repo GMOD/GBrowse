@@ -92,6 +92,7 @@ $vol->add_tag(Name=>"GBrowse lvm disk $local_device");
 print STDERR "Attaching volume.\n";
 my $a = $vol->attach($instance=>$ebs_device)                     or die "Couldn't attach EBS volume to $ebs_device: ",$ec2->error_str;
 $ec2->wait_for_attachments($a);
+$a->deleteOnTermination(1);
 -e $local_device                                                 or die "EBS volume did not appear at $local_device as expected";
 
 print STDERR "Creating lvm physical device.\n";

@@ -674,3 +674,5 @@ t/testdata/phylo_align/species.tre
 t/testdata/phylo_align/volvox_alignment.conf
 t/testdata/phylo_align/volvox_phyloalign.gff
 t/testdata/TemplateCopy.pm
+META.yml
+META.json

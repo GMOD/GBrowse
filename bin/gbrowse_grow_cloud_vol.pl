@@ -2,13 +2,13 @@
 
 =head1 NAME
 
-grow-gbrowse-vol.pl     Grow the GBrowse volume by the requested amount
+gbrowse_grow_cloud-vol.pl     Grow the GBrowse volume by the requested amount
 
 =head1 SYNOPSYS
 
 Grow /opt/gbrowse by another 100 gigabytes
 
-  % grow-gbrowse-vol.pl 100
+  % gbrowse_grow_cloud_vol.pl 100
 
 =head1 DESCRIPTION
 

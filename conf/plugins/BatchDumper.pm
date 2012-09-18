@@ -5,6 +5,7 @@ use Bio::Graphics::Browser2::Plugin;
 use Bio::Seq::RichSeq;
 use Bio::SeqIO;
 use Bio::Seq;
+use Bio::Graphics::Browser2::TrackDumper::RichSeqMaker;
 use CGI qw(:standard *pre);
 use POSIX;
 use vars qw($VERSION @ISA);
@@ -17,7 +18,6 @@ my @FORMATS = ( 'fasta'   => ['Fasta',        undef],
 		'embl'    => ['EMBL',         undef],
 		'gcg'     => ['GCG',          undef],
 		'raw'     => ['Raw sequence', undef],
-		'game'    => ['GAME (XML)',   'xml'],
 		'bsml'    => ['BSML (XML)',   'xml'],
 		'gff'     => ['GFF',          undef],
 		'gff3'    => ['GFF3',         undef],
@@ -61,8 +61,9 @@ sub dump {
   my $wantsorted = $config->{'wantsorted'};
 
   my @segments = map { 
-    ( $browser->name2segments($_,$self->database) )
+    ( $self->renderer->name2segments($_,$self->database) )
 		     } split /\s+/m, $config->{sequence_IDs}||'';
+
   # take the original segment if no segments were found/entered via the sequence_IDs textarea field
   @segments = $segment if $segment && !@segments;
 
@@ -84,64 +85,10 @@ sub dump {
   }
 
   foreach my $segment ( @segments ) {
-    my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_id,
-				     -desc             => $segment->desc,
-				     -accession_number => $segment->accession_number,
-				     -alphabet         => $segment->alphabet || 'dna',
-				    );
-    $seq->add_date(strftime("%d-%b-%Y",localtime));
-    $seq->primary_seq($segment->primary_seq);
-    $segment->absolute(1);
-    my $offset     = $segment->start - 1;
-    my $segmentend = $segment->length;
-    $seq->add_SeqFeature( map {
-      my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
-					    -source_tag  => $_->source_tag,
-					    -frame       => (eval{$_->phase}||eval{$_->frame}||undef),
-					    -score       => $_->score,
-					   );
-      for my $tag ( $_->get_all_tags ) {
-	my %seen;
-	$nf->add_tag_value($tag, grep { ! $seen{$_}++ } 
-			   grep { defined } $_->get_tag_values($tag));
-      }
-      my $loc = $_->location;
-      my @locs = $loc->each_Location;
-      for my $sl (@locs ) {
-	$sl->start($sl->start() - $offset);
-	$sl->end  ($sl->end() - $offset );
-	my ($startstr,$endstr);
-
-	if( $sl->start() < 1) {
-	  $startstr = "<1";
-	  $endstr   = $sl->end;
-	}
-
-	if( $sl->end() > $segmentend) {
-	  $endstr = ">$segmentend";
-	  $startstr = $sl->start unless defined $startstr;
-	}
-	if( defined $startstr || defined $endstr ) {
-	  $sl = Bio::Location::Fuzzy->new(-start         => $startstr,
-					  -end           => $endstr,
-					  -strand        => $sl->strand,
-					  -location_type => '..');
-	}
-      }
-      if( @locs > 1 ) {
-	# let's ensure they are sorted
-	if( $wantsorted ) {  # for VectorNTI
-	  @locs = sort { $a->start <=> $b->start } @locs;
-	}
-	$nf->location( new Bio::Location::Split(-locations => \@locs,
-						-seq_id    =>
-						$segment->display_id));
-      } else { 
-	$nf->location(shift @locs);
-      }
-      $nf;
-    } $segment->features(-types => \@filter) );
-    $segment = $seq;
+      my $iterator  = $segment->get_seq_stream(-types => \@filter);
+      my $seq =  Bio::Graphics::Browser2::TrackDumper::RichSeqMaker->stream_to_rich_seq($segment,$iterator);
+      $seq->desc($segment->as_string);
+      $segment = $seq;
   }
 
   # for the external viewer (like VNTI) the best import format is genbank (?)
@@ -161,11 +108,11 @@ sub dump {
   if ($mime_type =~ /html/) {
     print start_html('Batch Sequence');
       foreach my $segment (@segments) {
-	my $label = $segment->desc;
-	print h1($label),"\n",
-	start_pre,"\n";
-	$out->write_seq($segment);
-	print end_pre(),"\n";
+	  my $label = $segment->desc;
+	  print h1($label),"\n",
+	  start_pre();
+	  $out->write_seq($segment);
+	  print end_pre();
       }
       print end_html;
   } else {

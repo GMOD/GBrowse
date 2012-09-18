@@ -18,7 +18,7 @@ my $build = GBrowseInstall->new(
     requires     => {
 	'perl'                => '5.008',
 	'Bio::Root::Version'  => '1.0069',
-	'Bio::Graphics'       => '2.26',
+	'Bio::Graphics'       => '2.28',
 	'CGI::Session'        => '4.02',
 	'Digest::MD5'         => 0,	
         'ExtUtils::CBuilder'  => 0,
@@ -38,7 +38,7 @@ my $build = GBrowseInstall->new(
     build_requires => {'Capture::Tiny'       => 0,},
     recommends  => {
 	'Bio::Das'                 => 0,
-	'Bio::DB::Sam'             => 1.20,
+	'Bio::DB::Sam'             => 1.36,
 	'Bio::DB::BigFile'         => 1.00,
 	'Crypt::SSLeay'            => 0,
 	'DB_File::Lock'            => 0,
@@ -61,9 +61,11 @@ my $build = GBrowseInstall->new(
     script_files => [
 	'bin/gbrowse_clean.pl',
 	'bin/gbrowse_set_admin_passwd.pl',
+	'bin/gbrowse_import_ucsc_db.pl',
 	'bin/gbrowse_create_account.pl',
 	'bin/gbrowse_change_passwd.pl',
 	'bin/gbrowse_metadb_config.pl',
+	'bin/gbrowse_grow_cloud_vol.pl',
 	'bin/gbrowse_slave',
         'bin/gbrowse_syn_load_alignment_database.pl',
         'bin/gbrowse_syn_load_alignments_msa.pl',

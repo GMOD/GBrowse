@@ -396,12 +396,9 @@ sub _search_features_locally {
     warn "dbs = @dbids" if DEBUG;
     my %seenit;
 
-    # prevent uninit variable warnings here
-    $args->{-name} ||= '';
-
     for my $dbid (@dbids) {
 	my $opts = $self->source->search_options($dbid);
-	next if $opts =~ /none/i && $args->{-name} !~ /^id:/;
+	next if $opts =~ /none/i && ($args->{-name}||'') !~ /^id:/;
 	warn "searching in ",$dbid if DEBUG;
 	my $db = $self->source->open_database($dbid);
 	next if $seenit{$db}++;
@@ -727,7 +724,7 @@ sub features {
     $self->db->features(-seq_id => $segment->seq_id,
 			-start  => $segment->start,
 			-end    => $segment->end,
-			-class  => eval {$segment->class} || 'Sequence',
+#			-class  => eval {$segment->class} || 'Sequence',
 			@_
 	);
 }

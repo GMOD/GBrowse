@@ -337,7 +337,7 @@ sub feature_to_id_sub {
 		my $operation = $val eq ''                                ? undef
 		               : $val =~ /^~(.+)/                         ? "=~ m[$1]i" 
                                : $val =~ /^[+-]?\d*(\.\d+)?([eE]-?\d+)?$/ ? "== $val"
-                               : "eq '$val'";
+			       : 'eq "'.quotemeta($val).'"';
 		if (!defined $operation) {
 		    $sub .= "\$found &&= length((\$f->get_tag_values('$operand'))[0])==0;\n";
 		} elsif ($op eq 'tag_value') {
@@ -451,7 +451,7 @@ sub infer_settings_from_source {
       }
       my $count = keys %$meta;
       
-      my @tags    = sort grep {defined $_ && $_ ne 'dbid' && $tags{$_}==$count} keys %tags;
+      my @tags    = sort grep {defined $_ && $_ ne 'dbid' && !/^:/ && $tags{$_}==$count} keys %tags;
       @dimensions = map {[ucfirst($_),'tag_value',$_]} @tags;
       @rows       = $package->get_facet_values($source,$label,@tags);
     }
@@ -477,7 +477,7 @@ sub get_facet_values {
     my ($source,$label,@facets) = @_;
 
     my @types       = shellwords $source->setting($label=>'feature');
-    my $match       = join '|',map {$_="$_:?" unless /:/} @types;
+    my $match       = join '|',map {/:/ ? $_ : "$_:?"} @types;
 
     my @rows;
     my (undef,$adaptor) = $source->db_settings($label);
@@ -488,10 +488,10 @@ sub get_facet_values {
 	my $method = $meta->{$id}{method} || eval {$db->feature_type} || 'feature';
 	my $source = $meta->{$id}{source} || '';
 	my $type = $meta->{$id}{type} || "$method:$source";
-
 	next unless $type =~ /$match/;
 	my @vals = map {$_||''} @{$meta->{$id}}{@facets};
 	push @vals,"=$id";
+	push @vals,'*' if $meta->{$id}{':selected'};
 	push @rows,\@vals;
     }
 

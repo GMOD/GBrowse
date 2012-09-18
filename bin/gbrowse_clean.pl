@@ -6,7 +6,7 @@ use Getopt::Long;
 use Pod::Usage;
 
 use File::Find ();
-use File::Basename 'basename';
+use File::Basename 'basename','dirname';
 use Bio::Graphics::Browser2;
 use Bio::Graphics::Browser2::Util 'shellwords';
 use POSIX 'ENOTEMPTY';
@@ -41,6 +41,7 @@ my $cache_dir     = $globals->cache_dir;
 my $locks_dir     = $globals->session_locks;
 my $images_dir    = $globals->tmpimage_dir;
 my $user_dir      = $globals->user_dir();
+my $uploads_db    = $globals->user_account_db;
 
 my $cache_secs   = $globals->time2sec($globals->cache_time);
 my $uploads_secs = $globals->time2sec($globals->upload_time);
@@ -53,7 +54,7 @@ logit("***",scalar localtime,basename($0),"starting ***\n");
 
 my $remember_settings_time = $globals->remember_settings_time;
 
-logit("Expiring sessions older than $remember_settings_time...");
+logit("Expiring sessions older than $remember_settings_time...\n");
 my $dsn     = $globals->code_setting(general=>'session driver');
 my %dsn     = shellwords($globals->code_setting(general=>'session args'));
 my $rst     = $globals->time2sec($remember_settings_time);
@@ -82,6 +83,10 @@ my $wanted = sub {
 	$rdev,$size,$atime,$mtime,$ctime) = stat($_); 
 
     next if $name =~ m!$tmpdir/[^/]+$!; # don't remove toplevel!
+    next if $name eq $tmpdir;
+    next if $name eq $user_dir;
+
+    my $is_userdata = $name =~ m/^$user_dir/;
 
     if (-d _ ) { # attempt to remove directories - will have no effect unless empty
 	if (rmdir($name)) {
@@ -94,10 +99,10 @@ my $wanted = sub {
     }
 
     my $secs = $name =~ m/^($cache_dir|$locks_dir|$images_dir)/  ? $cache_secs
-	      :$name =~ m/^$user_dir/                            ? $uploads_secs
+	      :$is_userdata                                      ? $uploads_secs
 	      :0;
     return unless $secs;
-    my $time = $name =~ m/^$user_dir/ ? -A _ : -M _;
+    my $time = $is_userdata ? -A _ : -M _;
 
     my $days = $secs/SECS_PER_DAY;
 
@@ -112,13 +117,38 @@ my $wanted = sub {
 
 
 # Traverse desired filesystems
-logit("Deleting cache files and directories...");
-File::Find::finddepth( {wanted=>$wanted},
-		       $tmpdir);
-logit("$directories directories and $files files deleted.\n");
+logit("Deleting cache files and directories older than ".$globals->cache_time." (see GBrowse.conf \"expire cache\" option)...\n");
+File::Find::finddepth( {wanted=>$wanted},  $tmpdir);
+logit("Deleting unaccessed user uploads older than ".$globals->upload_time." (see GBrowse.conf \"expire uploads\" option)...\n");
+File::Find::finddepth( {wanted=>$wanted},  $user_dir);
+logit("Deleted $directories directories and $files files.\n");
+if ($uploads_db) {
+    logit("Cleaning uploads db...\n");
+    clean_uploads();
+}
 
 logit("*** ",scalar localtime,"$0 done ***\n\n");
 exit 0;
+
+sub clean_uploads {
+    eval {require DBI; 1} or return;
+
+    my $db = DBI->connect($globals->user_account_db) or return;
+    my $query = $db->prepare('select uploadsid,data_source,path,trackid from uploads,session where uploads.userid=session.userid') or return;
+    $query->execute or return;
+
+    my %flag_for_deletion;
+    while (my ($uploadsid,$dsn,$path,$trackid) = $query->fetchrow_array) {
+	my $full_path = "$user_dir/$dsn/$uploadsid/$path";
+	next if -e $full_path;
+	$flag_for_deletion{$trackid}++;
+    }
+
+    my @delete = keys %flag_for_deletion or return;
+    my $to_remove = join ',',map {"'$_'"}@delete;
+    $db->do("delete from uploads where trackid in ($to_remove)") or warn $db->errstr;
+    logit("Deleted ".scalar @delete." dangling uploads.\n");
+}
 
 sub verbose {
     my @mess = @_;

@@ -13,8 +13,9 @@ use File::Spec;
 use IO::File;
 use IO::Dir;
 use File::Compare 'compare';
-use File::Copy    'copy';
+use File::Copy    'copy','cp';
 use GBrowseGuessDirectories;
+use Carp 'cluck';
 
 use overload '""' => 'asString',
     fallback => 1;
@@ -546,7 +547,6 @@ sub process_conf_files {
     my $prefix = $self->install_base || $self->prefix || '';
     GBrowseGuessDirectories->prefix($prefix);
     my $install_path = $self->config_data('conf') || GBrowseGuessDirectories->conf;
-    my $skip;
 
     while (<$f>) {
 	next unless m!^conf/!;
@@ -554,35 +554,72 @@ sub process_conf_files {
 	my $base = $_;
 
 	my $copied = $self->copy_if_modified($_=>'blib');
-	$self->substitute_in_place("blib/$_")
-	    if $copied
-	    or !$self->up_to_date('_build/config_data',"blib/$_");
-	
-	if ($copied) {
-	    $skip ||= IO::File->new('>>INSTALL.SKIP');
-	    (my $new = $base) =~ s/^conf\///;
-	    my $installed = File::Spec->catfile($install_path,$new);
-	    if (-e $installed && $base =~ /\.conf$/ && (compare($base,$installed) != 0)) {
-		warn "$installed is already installed. New version will be installed as $installed.new\n";
-		rename ("blib/$base","blib/$base.new");
-		print $skip '^',"blib/",quotemeta($base),'$',"\n";
-	    }
+	if ($copied || !$self->up_to_date('_build/config_data',"blib/$_")) {
+	    $self->substitute_in_place("blib/$_");
+	    $self->check_installed($install_path,$base);
 	}
     }
 
-    $skip->close if $skip;
+}
+
+sub check_installed {
+    my $self = shift;
+    my ($install_path,$blib_file) = @_;
+    my $skip = $self->{skip} ||= IO::File->new('>>INSTALL.SKIP') or die "INSTALL.SKIP: $!";
+    (my $base = $blib_file) =~ s!^[^/]+/!!;
+    my $staged    = File::Spec->catfile('./blib',$blib_file);
+    my $installed = File::Spec->catfile($install_path,$base);
+
+    if (-e $installed && (compare($staged,$installed) != 0)) {
+	my ($confirmed,$keep);
+
+	if ($ENV{AUTOMATED_TESTING}) {
+	    $confirmed++;
+	    $keep++;
+	}
+
+	while (!$confirmed) {
+	    print STDERR "$installed has changed. Should \"Build install\" [R]eplace with new version or [K]eep currently installed version [K]? ";
+	    my $line = <>;
+	    chomp($line);
+	    $line ||= '';
+	    if ($line =~ /^[Kk]/) {
+		$keep++;
+		$confirmed++;
+	    } elsif ($line =~ /^[Rr]/) {
+		$confirmed++;
+	    } elsif ($line =~ /^$/) {
+		$keep++;
+		$confirmed++;
+	    }
+	}
+	    
+	if ($keep) {
+	    print STDERR "\"Build install\" will keep original $installed. New version can be found in ${installed}.new\n\n";
+	    cp($staged,"${staged}.new");
+	    print $skip '^',"blib/",quotemeta($blib_file),'$',"\n";
+	} else {
+	    print STDERR "\"Build install\" will replace original $installed. Original version can be found in ${installed}.orig\n\n";
+	    cp($installed,"${staged}.orig");
+	}
+    }
 }
 
 sub process_htdocs_files {
     my $self = shift;
     my $f    = IO::File->new('MANIFEST');
+    my $install_path = $self->install_path->{'htdocs'} || GBrowseGuessDirectories->htdocs;
+
+    my %doneit;
     while (<$f>) {
 	next unless m!^htdocs/!;
 	chomp;
-	my $copied = $self->copy_if_modified($_=>'blib');
-	$self->substitute_in_place("blib/$_")
-	    if $copied
-	    or !$self->up_to_date('_build/config_data',"blib/$_");
+	my $base = $_;
+	my $copied = $self->copy_if_modified($base=>'blib');
+	if ($copied or !$self->up_to_date('_build/config_data',"blib/$base")) {
+	    $self->substitute_in_place("blib/$base");
+	    $self->check_installed($install_path,$base) if $copied;
+	}
     }
 }
 
@@ -606,9 +643,7 @@ sub process_etc_files {
 
     my $prefix = $self->install_base || $self->prefix || '';
     GBrowseGuessDirectories->prefix($prefix);
-    my $install_path = GBrowseGuessDirectories->etc;
-
-    my $skip;
+    my $install_path = $self->install_path->{'etc'} || GBrowseGuessDirectories->etc;
 
     if ($self->config_data('installetc') =~ /^[yY]/) {
 	my $f    = IO::File->new('MANIFEST');
@@ -619,24 +654,12 @@ sub process_etc_files {
 	    my $base = $_;
 
 	    my $copied = $self->copy_if_modified($_=>'blib');
-	    $self->substitute_in_place("blib/$_")
-		if $copied
-		or !$self->up_to_date('_build/config_data',"blib/$_");
-
-	    if ($copied) {
-		$skip ||= IO::File->new('>>INSTALL.SKIP');
-		(my $new = $base) =~ s/^etc\///;
-		my $installed = File::Spec->catfile($install_path,$new);
-		if (-e $installed) {
-		    warn "$installed is already installed. New version will be installed as $installed.new\n";
-		    rename ("blib/$base","blib/$base.new");
-		    print $skip '^',"blib/",quotemeta($base),'$',"\n";
-		}
+	    if ($copied or !$self->up_to_date('_build/config_data',"blib/$_")) {
+		$self->substitute_in_place("blib/$_");
+		$self->check_installed($install_path,$base);
 	    }
 	}
     }
-
-    $skip->close if $skip;
 
     # generate the apache config data
     my $includes = GBrowseGuessDirectories->apache_includes || '';

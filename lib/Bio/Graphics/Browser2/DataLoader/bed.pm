@@ -43,7 +43,6 @@ sub finish_load {
 
     $self->write_gff3($db,$dsn) if $backend eq 'memory';
 
-    my $trackno   = 0;
     my $loadid    = $self->loadid;
     my $summary   = $line_count < TOO_SMALL_FOR_SUMMARY_MODE ? 'show summary = 0' : '';
     eval {
@@ -53,6 +52,22 @@ sub finish_load {
     warn $@ if $@;
 
     $self->set_status('creating configuration');
+
+    my @lines = @{$self->{conflines}};  # correspond to a track line in the bed file
+    for (my $trackno=0; $trackno<@lines; $trackno++) {
+       my %options    = $self->loader->parse_track_line($lines[$trackno]);
+
+       # Hacky special case for a remote BigWig track
+       next unless $options{type} eq 'bigWig'&& $options{bigDataUrl};
+       my $dbid = "$loadid.$trackno";
+       print $conf <<END;
+[$dbid:database]
+db_adaptor = Bio::DB::BigWig
+db_args    = -bigwig $options{bigDataUrl}
+search options = none
+
+END
+    }
 
     print $conf <<END;
 [$loadid:database]
@@ -64,7 +79,6 @@ db_args    = -adaptor $backend
 END
     ;
 
-   my @lines = @{$self->{conflines}};  # correspond to a track line in the bed file
 
    unless (@lines) {
        my $track_label = $self->new_track_label;
@@ -89,10 +103,11 @@ bgcolor  = $bgcolor
 $summary
 
 END
+    ;
    }   
 
-   for my $track (@lines) {
-       my %options    = $self->loader->parse_track_line($track);
+   for (my $trackno=0; $trackno<@lines; $trackno++) {
+       my %options    = $self->loader->parse_track_line($lines[$trackno]);
        my $track_label = $self->new_track_label;
        my $track_name  = $self->track_name;
        my $key        = $options{name};
@@ -108,6 +123,25 @@ END
                        :$options{color} ? "rgb($options{color})" 
                        :$COLORS[rand @COLORS];
 
+       # Hacky special case for a remote BigWig track
+       if ($options{type} eq 'bigWig'&& $options{bigDataUrl}) {
+	   my $dbid = "$loadid.$trackno";
+	   print $conf <<END;
+[$track_label]
+database        = $dbid
+feature         = summary
+glyph           = wiggle_whiskers
+max_color       = lightgrey
+min_color       = lightgrey
+mean_color      = black
+stdev_color     = grey
+stdev_color_neg = grey
+height          = 50
+citation = $description
+key      = $key
+
+END
+   } else { # conventional BED database
        print $conf <<END;
 [$track_label]
 database = $loadid
@@ -125,8 +159,8 @@ bgcolor  = $bgcolor
 $summary
 
 END
-   }
-
+     }
+  }
 }
 
 

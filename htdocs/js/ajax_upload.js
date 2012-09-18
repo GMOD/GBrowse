@@ -184,11 +184,11 @@ function completeAjaxUpload(response, upload_id, field_type) {
 		r = response.evalJSON(true);
 	} catch(e) { 
     	r = {
-       		success:     false, 
+	    success:     false, 
             uploadName: 'Uploaded file',
             error_msg:  Controller.translate('UPLOAD_ERROR')
     	}
-    }
+       }
     
 	if (r.success) {
 		var fields = new Array(track_listing_id, custom_tracks_id)

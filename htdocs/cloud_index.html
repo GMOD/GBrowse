@@ -5,13 +5,13 @@
 </head>
 
 <body>
-<h1>Generic Genome Browser, v2</h1>
+<h1>Generic Genome Browser, v2 (Cloud Image)</h1>
 
 <a href="http://www.gmod.org/"><img src="gmod_cog.jpeg" border="0" align="RIGHT"></a>
 
 <p>
 
-Welcome to the Generic Genome Browser!
+Welcome to the Generic Genome Browser (Cloud Image)!
 
 <h2>Documentation</h2>
 
@@ -24,56 +24,28 @@ Welcome to the Generic Genome Browser!
   <dd><a href="example_scripts">/var/www/gbrowse2/example_scripts</a></dd>
 </dl>
 
-<h2>Example Databases</h2>
+<h2>Starter Databases</h2>
 
 <p>
 
-Example in-memory databases from yeast chromosomes 1 and 2 have been
-installed for you.  Try them at these URL:
+A series of starter databases have been preconfigured for you, consisting of:
 
 <ul>
-<li><a href="/cgi-bin/gb2/gbrowse/yeast">http://your.host/cgi-bin/gb2/gbrowse/yeast</a> (simple example)</li>
-<li><a href="/cgi-bin/gb2/gbrowse/yeast_advanced">http://your.host/cgi-bin/gb2/gbrowse/yeast_advanced</a> (advanced example)</li>
-<li><a href="/cgi-bin/gb2/gbrowse/yeast_renderfarm">http://your.host/cgi-bin/gb2/gbrowse/yeast_renderfarm</a> (yeast_renderfarm example)</li>
+<li><a href="/fgb2/gbrowse/sacCer3">S. cerevisiae genome (April 11, sacCer3), Genes and DNA only</a></li>
+<li><a href="/fgb2/gbrowse/yeast_advanced">S. cerevisiae, Chromosomes 1+2, (more tracks)</a></li>
+<li><a href="/fgb2/gbrowse/ce10">C. elegans genome (WS220, ce10), Genes and DNA only</a></li>
+<li><a href="/fgb2/gbrowse/hg19">H. sapiens genome (hg19, GRCh37), Genes and DNA only</a></li>
 </ul>
 
 <p>
-The "yeast_renderfarm" example will only work if a local gbrowse_slave
-render slave daemon is running. To launch the daemon, run this command
-as the root user:
+
+You may add additional starter genomes at any time by running the
+command line script gbrowse_import_ucsc.pl and providing
+the <a href="genome.ucsc.edu">UCSC Genome Browser</a> build name:
 
 <pre>
-% /etc/init.d/gbrowse-slave start
+ gbrowse_import_ucsc.pl mm10 'M. musculus genome (mm10, GRCm38)' 
 </pre>
-
-<h3>Alternative URLs</h3>
-
-If you allowed the install process to adjust your Apache
-configuration, you can use the alias /gb2 as an alternative to
-/cgi-bin/gb2:
-
-<ul>
-<li><a href="/gb2/gbrowse/yeast">http://your.host/gb2/gbrowse/yeast</a></li>
-<li><a href="/gb2/gbrowse/yeast_advanced">http://your.host/gb2/gbrowse/yeast_advanced</a></li>
-<li><a href="/gb2/gbrowse/yeast_renderfarm">http://your.host/gb2/gbrowse/yeast_renderfarm</a></li>
-<li><a href="/gb2/gbrowse/pop_demo">http://your.host/gb2/gbrowse/pop_demo</a> (demo of embedded population allele frequency maps -- requires Template module to be installed)</li>
-</ul>
-
-<h3>Accelerated Demos</h3>
-
-If you have FastCGI and/or ModPerl installed, you will have access to
-an accelerated version of gbrowse at these URLs:
-
-<ul>
-  <li>FastCGI
-      <ul>
-	<li><a href="/fgb2/gbrowse/yeast">http://your.host/fgb2/gbrowse/yeast</a></li>
-	<li><a href="/fgb2/gbrowse/yeast_advanced">http://your.host/fgb2/gbrowse/yeast_advanced</a></li>
-	<li><a href="/fgb2/gbrowse/yeast_renderfarm">http://your.host/fgb2/gbrowse/yeast_renderfarm</a></li>
-      </ul>
-  </li>
-</ul>
-
 
 <h2>Directory Paths</h2>
 

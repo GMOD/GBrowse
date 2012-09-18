@@ -1,3 +1,35 @@
+2.51
+ * Fix pod documentation for gbrowse_grow_cloud_vol.pl
+ * Volumes added to cloud instance have deleteOnTermination set to true.
+
+2.50
+ * Add gbrowse_import_ucsc_db.pl, which will create a fully functional starter database
+   from a UCSC data source (e.g. 'hg19').  
+ * Add VirtualBox and EC2 virtual machine support (see http://gmod.org/wiki/GBrowse2_VMs).
+ * Prompt user before overwriting a customized config file.
+
+2.49
+  * Add new "metadata" option in track stanzas for making subtracks selectable via
+    structured metadata; see http://gmod.org/wiki/Creating_and_Managing_Subtracks_with_GBrowse2
+    for details.
+  * Specify which database to use for search result karyotype display using following
+    syntax:
+           [builtin:karyotype]
+           database = my_database
+  * Fixed error reporting when uploading badly-formatted WIG files.
+  * Do something sensible when user tries to upload a bigwig file.
+  * Some support for UCSC-style uploads with "track type=bigWig bigDataUrl=http://something...".
+
+2.48
+  * Fix track-level genbank and fasta dumping.
+  * Fix (mostly) the batch and sequence dumping plugins.
+
+2.47
+  * Fix bugs in demo mode.
+  * Fix session locking bug; FastCGI performance subjectively improved.
+  * Revert to using inline imagemaps when not running in an accelerated environment.
+  * Require Bio::Graphics version 2.26, so that transparency is supported.
+
 2.46
   * Support for transparent overlay tracks. These will appear as a user settable formatting option	
     for any track with subtracks. To make this default for a track set "bump = overlap" and consider

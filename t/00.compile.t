@@ -73,6 +73,8 @@ sub skip_file {
            gbrowse_netinstall2.pl
 	   process_wormbase.pl
 	   gbrowse_gmap
+	   gbrowse_grow_cloud_vol.pl
+	   gbrowse_attach_slaves.pl
 	   make_das_conf.pl
           );
 

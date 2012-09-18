@@ -32,10 +32,8 @@ use Bio::Graphics::FeatureFile;
 use Bio::Graphics::Browser2::RegionSearch;
 use Bio::Graphics::Browser2::Shellwords;
 use Bio::Graphics::Browser2::Util 'modperl_request';
+use Bio::Graphics::Browser2::TrackDumper::RichSeqMaker;
 use Bio::SeqIO;
-use Bio::Seq::RichSeq;
-use Bio::SeqFeature::Generic;
-use POSIX qw(strftime);
 
 sub new {
     my $class   = shift;
@@ -136,11 +134,15 @@ sub dump_genbank {
 
 sub get_segs {
     my $self = shift;
-    my ($db,$segment) = shift;
+    my ($db,$segment) = @_;
     return $segment if $segment;
+    my @segs = eval {
+	map {$db->segment($_)} $db->seq_ids;
+    };
+    return @segs if @segs;
+    my $default = $self->data_source->open_database(); # try default
     return eval {
-	my @ids = $db->seq_ids;
-	map {$db->segment($_)} @ids;
+	map {$default->segment($_)} $default->seq_ids;
     };
 }
 
@@ -153,68 +155,7 @@ sub get_rich_seq {
 	                : ();
 
     my $iterator = $db->get_seq_stream(@args,-type=>$types);
-
-    my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_id,
-				     -desc             => $segment->desc,
-				     -accession_number => $segment->accession_number,
-				     -alphabet         => $segment->alphabet || 'dna',
-	);
-    $seq->add_date(strftime("%d-%b-%Y",localtime));
-    my $ps = $segment->primary_seq; 
-    $seq->primary_seq(!ref $ps ? Bio::PrimarySeq->new(-seq=>$ps) : $ps);
-    $segment->absolute(1);
-    my $offset     = $segment->start - 1;
-    my $segmentend = $segment->length;
-    while ($_ = $iterator->next_seq) {
-	my $score = $_->score;
-	$score    = ref $score eq 'HASH' ? $score->{sumData}/$score->{validCount} : $score;
-	my $nf = Bio::SeqFeature::Generic->new(-primary_tag => $_->primary_tag,
-					       -source_tag  => $_->source_tag,
-					       -frame       => eval{$_->phase}||eval{$_->frame}||undef,
-					       -score       => $score,
-	    );
-	for my $tag ( $_->get_all_tags ) {
-	    my %seen;
-	    $nf->add_tag_value($tag, grep { ! $seen{$_}++ } 
-			       grep { defined } $_->get_tag_values($tag));
-	}
-	$nf->add_tag_value('name',$_->display_name) if $_->display_name;
-	my $loc = $_->location;
-	my @locs = $loc->each_Location;
-	for my $sl (@locs ) {
-	    $sl->start($sl->start() - $offset);
-	    $sl->end  ($sl->end() - $offset );
-	    my ($startstr,$endstr);
-	    
-	    if( $sl->start() < 1) {
-		$startstr = "<1";
-		$endstr   = $sl->end;
-	    }
-	    
-	    if( $sl->end() > $segmentend) {
-		$endstr = ">$segmentend";
-		$startstr = $sl->start unless defined $startstr;
-	    }
-	    if( defined $startstr || defined $endstr ) {
-		$sl = Bio::Location::Fuzzy->new(-start         => $startstr,
-						-end           => $endstr,
-						-strand        => $sl->strand,
-						-location_type => '..');
-		# warn $sl->to_FTstring();
-	    }
-	}
-	if( @locs > 1 ) { 
-	    # let's insure they are sorted
-	    @locs = sort { $a->start <=> $b->start } @locs;
-	    $nf->location( new Bio::Location::Split(-locations => \@locs,
-						    -seq_id    =>
-						    $segment->display_id));
-	} else { 
-	    $nf->location(shift @locs);
-	}
-	$seq->add_SeqFeature($nf);
-    }
-    return $seq;
+    return Bio::Graphics::Browser2::TrackDumper::RichSeqMaker->stream_to_rich_seq($segment,$iterator);
 }
 
 sub _dump_gff3 {

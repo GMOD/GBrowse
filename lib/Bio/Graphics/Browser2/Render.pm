@@ -43,10 +43,10 @@ use constant OVERVIEW_RATIO       => 1.0;
 use constant GROUP_SEPARATOR      => "\x1d";
 use constant LABEL_SEPARATOR      => "\x1e";
 
-my %PLUGINS;       # cache initialized plugins
-my $FCGI_REQUEST;  # stash fastCGI request handle
-my $STATE;         # stash state for use by callbacks
-
+my %PLUGINS;         # cache initialized plugins
+my $FCGI_REQUEST;    # stash fastCGI request handle
+my $FCGI_RUNNING=0;  # true if fastCGI is running
+my $STATE;           # stash state for use by callbacks
 
 # new() can be called with two arguments: ($data_source,$session)
 # or with one argument: ($globals)
@@ -222,7 +222,6 @@ sub destroy {
 	delete $self->{login_manager};
     }
     $self->session->unlock if $self->session;
-#    $self->session->flush if $self->session;
 }
 
 ###################################################################################
@@ -242,6 +241,8 @@ sub run {
        url(-path=>1),' ',
        query_string() if $debug || TRACE_RUN;
   warn "[$$] session id = ",$self->session->id if $debug;
+
+  $ENV{FTP_PASSIVE}=1;  # so that later calls to LWP will work on ftp:// urls
 
   $self->set_source() && return;
 
@@ -263,6 +264,7 @@ sub run {
 	  # authentication required, but not a login session, so initiate authentication request
 	  $self->force_authentication;
 	  $session->flush;
+	  $session->unlock;
 	  return;
       }
   }
@@ -301,6 +303,7 @@ sub run {
 
   warn "[$$] session flush" if $debug;
   $self->session->flush;
+  $self->session->unlock;
   
   delete $self->{usertracks};
   warn "[$$] synchronous exit" if $debug;
@@ -879,7 +882,7 @@ sub generate_title {
          : @$features == 0                   ? $self->translate('NOT_FOUND',$state->{name})
 	 : @$features == 1 ? "$description: ".
 				   $self->translate('SHOWING_FROM_TO',
-					     scalar $dsn->unit_label($state->{view_stop} - $state->{view_start}),
+					     scalar $dsn->unit_label($state->{view_stop} - $state->{view_start}+1),
 					     $state->{ref},
 					     $dsn->commas($state->{view_start}),
 					     $dsn->commas($state->{view_stop}))
@@ -922,7 +925,7 @@ sub segment_info_object {
         flip                 => $state->{flip},
         initial_view_start   => $state->{view_start},
         initial_view_stop    => $state->{view_stop},
-        length_label         => scalar $self->data_source->unit_label($state->{view_stop} - $state->{view_start}),
+        length_label         => scalar $self->data_source->unit_label($state->{view_stop} - $state->{view_start}+1),
         description          => $self->data_source->description,
     );
     if ( $state->{region_size} ) {
@@ -1088,6 +1091,14 @@ sub init_database {
 
   $self->db($db);
   $db;
+}
+
+sub name2segments {
+    my $self = shift;
+    my $name = shift;
+    my $search   = $self->get_search_object();
+    my @features = $search->search_features($name);
+    return map {$search->segment($_)} map {$search->feature2segment($_)} @features;
 }
 
 sub region {
@@ -1469,7 +1480,6 @@ sub handle_plugins {
 
     ### FIND #####################################################
     if ( $plugin_action eq $self->translate('Find') ) {
-
         #$self->do_plugin_find( $state, $plugin_base, $features )
         #    or ( $plugin_action = 'Configure' );    #reconfigure
         return;
@@ -2120,35 +2130,38 @@ sub create_subtrack_manager {
 # Handle returns from the track configuration form
 sub reconfigure_track {
     my $self  = shift;
+
+    my $q     = shift; # CGI object
     my $label = shift;
 
     my $state  = $self->state();
     my $source = $self->data_source;
 
-    $state->{features}{$label}{options}  = param('format_option');
+    $state->{features}{$label}{options}  = $q->param('format_option');
     my $dynamic = $self->translate('DYNAMIC_VALUE');
-    my $mode    = param('mode') || 'details';
+    my $mode    = $q->param('mode') || 'details';
     my $mult    = $self->details_mult;
 
-    my $length            = (param('segment_length')||0)     * $mult;
-    my $semantic_low      = (param('apply_semantic_low')||0) * $mult;
-    my $semantic_hi       = (param('apply_semantic_hi')||0)  * $mult   || $self->get_max_segment;
-    my $delete_semantic   = param('delete_semantic');
-    my $summary           = param('summary_mode');
+    my $length            = ($q->param('segment_length')||0)     * $mult;
+    my $semantic_low      = ($q->param('apply_semantic_low')||0) * $mult;
+    my $semantic_hi       = ($q->param('apply_semantic_hi')||0)  * $mult   || $self->get_max_segment;
+    my $delete_semantic   = $q->param('delete_semantic');
+    my $summary           = $q->param('summary_mode');
 
     $state->{features}{$label}{summary_mode_len} = $summary if defined $summary;
 
     ($semantic_low,$semantic_hi) = ($semantic_hi,$semantic_low) if $semantic_low > $semantic_hi;
     $self->clip_override_ranges($state->{features}{$label}{semantic_override},
 				$semantic_low,
-				$semantic_hi);
+				$semantic_hi)
+	if $length;
 
-    my $o = $mode eq 'summary' ? $state->{features}{$label}{summary_override}                                = {}
-                               : $state->{features}{$label}{semantic_override}{"$semantic_low:$semantic_hi"} = {};
+    my $o = $mode eq 'summary' ? $state->{features}{$label}{summary_override}                                ||= {}
+                               : $state->{features}{$label}{semantic_override}{"$semantic_low:$semantic_hi"} ||= {};
 
-    my $glyph = param('conf_glyph') || '';
-    for my $s ( grep {/^conf_/} param()) {
-        my @values = param($s);
+    my $glyph = $q->param('conf_glyph') || '';
+    for my $s ( grep {/^conf_/} $q->param()) {
+        my @values = $q->param($s);
 	my $value  = $values[-1]; # last one wins
 	$s =~ s/^conf_//;
 	next unless defined $value;
@@ -2162,8 +2175,8 @@ sub reconfigure_track {
 	    $s = 'graph_type';
 	} elsif ($s =~ /(\w+)_autoscale/) {
 	    my $g = $1;
-	    next if $g eq 'wiggle' && $glyph !~ /wiggle|vista/;
-	    next if $g eq 'xyplot' && $glyph !~ /xyplot|density/;
+	    next if $g eq 'wiggle' && $glyph !~ /wiggle|vista|hybrid/;
+	    next if $g eq 'xyplot' && $glyph !~ /xyplot|density|hybrid/;
 	    $s = 'autoscale';
 	}
 
@@ -2173,10 +2186,10 @@ sub reconfigure_track {
 	if ($value eq $dynamic) {
 	    delete $o->{$s};
 	} elsif ($s eq 'bicolor_pivot' && $value eq 'value') {
-	    my $bp = param('bicolor_pivot_value');
+	    my $bp = $q->param('bicolor_pivot_value');
 	    $o->{$s} =    $bp if !defined $configured_value or $bp != $configured_value;
 	} else {
-	    $o->{$s} = $value if !defined $configured_value or $value ne $configured_value;
+	    $o->{$s} = $value if !defined $configured_value or !defined $o->{$s} or $value ne $configured_value;
 	    if ($glyph eq 'wiggle_whiskers') {# workarounds for whisker options
 		$o->{"${s}_neg"}  = $value if $s =~ /^(mean_color|stdev_color)/; 
 		$o->{min_color}   = $value if $s eq 'max_color';
@@ -3968,8 +3981,13 @@ sub fcgi_request {
     }
 
     my $request  = FCGI::Request(\*STDIN,\*STDOUT,\*STDERR,\%ENV,0,FCGI::FAIL_ACCEPT_ON_INTR());
-    return $FCGI_REQUEST = ($request && $request->IsFastCGI ? $request : 0);
+    $FCGI_REQUEST = ($request && $request->IsFastCGI ? $request : 0);
+
+    $FCGI_RUNNING++ if $FCGI_REQUEST;
+    return $FCGI_REQUEST;
 }
+
+sub fcgi_running { return $FCGI_RUNNING }
 
 sub fork {
     my $self = shift;

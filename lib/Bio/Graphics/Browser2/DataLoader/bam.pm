@@ -53,7 +53,9 @@ height         = 3
 label          = $filename
 category       = $category
 label density = 50
+feature_limit = 500
 bump          = fast
+stranded      = 1
 key           = $filename
 END
 
@@ -100,7 +102,6 @@ END
 sub get_fasta_file {
     my $self = shift;
     my @fasta      = $self->get_fasta_files;
-    warn "FASTA (before filtering) = @fasta";
     my $fasta      = (grep {!/\.fai$/} @fasta)[0];
     return $fasta;
 }
@@ -117,8 +118,6 @@ sub load {
 	mkdir $self->sources_path or die $!;
 	my $source_file = IO::File->new(
 	    File::Spec->catfile($self->sources_path,$self->track_name),'>');
-
-	warn "sourcefile=",File::Spec->catfile($self->sources_path,$self->track_name);
 
 	$self->start_load;
 
@@ -158,8 +157,8 @@ sub finish_load {
     $dest      =~ s/\.[bs]am$//i; # sorting will add the .bam extension
 
     $self->set_status('sorting BAM file');
-    Bio::DB::Bam->sort_core(0,$source,$dest);
-    
+    Bio::DB::Bam->sort_core(0,$source,$dest,250*1e6);
+
     $self->set_status('indexing BAM file');
 
     $dest     .= '.bam';
@@ -181,7 +180,6 @@ sub has_bigwig {
     return $HASBIGWIG if defined $HASBIGWIG;
     my $result = eval "require Bio::DB::Sam::SamToGBrowse;1";
     $result  &&= eval "require Bio::DB::BigWig; 1";
-    warn "hasbigwig = $result";
     return $HASBIGWIG = $result;
 }
 
@@ -190,9 +188,7 @@ sub create_big_wig {
     my $dir    = $self->data_path;
     my $fasta  = $self->get_fasta_file or return;
     my $wigout = Bio::DB::Sam::SamToGBrowse->new($dir,$fasta,0);
-    warn "start bam_to_wig()";
     $wigout->bam_to_wig($self->chrom_sizes);  # this creates the wig files
-    warn "end bam_to_wig";
     die $wigout->last_error if $wigout->last_error;
     1;
 }

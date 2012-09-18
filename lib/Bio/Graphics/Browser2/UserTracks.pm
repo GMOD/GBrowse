@@ -507,13 +507,14 @@ sub upload_file {
     my $filename = $self->trackname_from_url($file_name, !$overwrite);
     
     $content_type ||= '';
-
-    if ($content_type eq 'application/gzip' or $original_name =~ /\.gz$/) {
-		$fh = $self->install_filter($fh,'gunzip -c');
-    } elsif ($content_type eq 'application/bzip2' or $original_name =~ /\.bz2$/) {
-		$fh = $self->install_filter($fh,'bunzip2 -c');
-    }
     
+    if ($original_name =~ /\.sam\.gz/) { # special case compressed sam files - do not uncompress!
+#	$filename = $original_name;
+    } elsif ($content_type eq 'application/gzip' or $original_name =~ /\.gz$/) {
+	$fh = $self->install_filter($fh,'gunzip -c');
+    } elsif ($content_type eq 'application/bzip2' or $original_name =~ /\.bz2$/) {
+	$fh = $self->install_filter($fh,'bunzip2 -c');
+    }
     
     my $fileid = $self->get_file_id($filename) if $self->database;
     my $file   = $self->database ? $fileid ? $fileid : $self->add_file($filename) : $filename;
@@ -526,7 +527,7 @@ sub upload_file {
     my $result = eval {
 		local $SIG{TERM} = sub { die "cancelled" };
 		croak "Could not guess the type of the file $file_name"	unless $type;
-
+		croak "This server does not support BigWig upload" if $type =~ /bigwig/ && !$self->has_bigwig;
 		my $load = $self->get_loader($type, $file);
 		$load->eol_char($eol);
 		@tracks = $load->load($lines, $fh);
@@ -691,7 +692,7 @@ sub get_loader {
 sub guess_upload_type {
     my $self = shift;
     my ($type, $lines, $eol) = $self->_guess_upload_type(@_);
-    $type = 'bigwig' if $type eq 'wiggle' && $self->has_bigwig;
+    $type = 'wig2bigwig' if $type eq 'wiggle' && $self->has_bigwig;
     return ($type, $lines, $eol);
 }
 
@@ -704,9 +705,11 @@ sub _guess_upload_type {
     my $buffer;
     read($fh,$buffer,1024);
 
-    # first check for binary upload; currently only BAM
+    # first check for binary upload; currently only BAM & bigwig
     return ('bam',[$buffer],undef)
 	if substr($buffer,0,6) eq "\x1f\x8b\x08\x04\x00\x00";
+    return('bigwig',[$buffer],undef)
+	if substr($buffer,0,4) eq "\x26\xfc\x8f\x88";
     
     # everything else is text (for now)
     my $eol = $buffer =~ /\015\012/ ? "\015\012"  # MS-DOS
@@ -725,6 +728,7 @@ sub _guess_upload_type {
     my $ftype = $filename =~ /\.gff(\.(gz|bz2|Z))?$/i  ? 'gff'
 	       :$filename =~ /\.gff3(\.(gz|bz2|Z))?$/i ? 'gff3'
 	       :$filename =~ /\.bed(\.(gz|bz2|Z))?$/i  ? 'bed'
+	       :$filename =~ /\.bw$/i                  ? 'bigwig'
 	       :$filename =~ /\.wig(\.(gz|bz2|Z))?$/i  ? 'wiggle'
 	       :$filename =~ /\.fff(\.(gz|bz2|Z))?$/i  ? 'featurefile'
 	       :$filename =~ /\.bam(\.gz)?$/i          ? 'bam'
@@ -751,6 +755,7 @@ sub _guess_upload_type {
 	return ('gff2',\@lines,$eol)        if $line =~ /^\#\#gff-version\s+2/;
 	return ('gff3',\@lines,$eol)        if $line =~ /^\#\#gff-version\s+3/;
 	return ('wiggle',\@lines,$eol)      if $line =~ /type=wiggle/;
+	return ('bed',\@lines,$eol)         if $line =~ /^track type/;
 	return ('bed',\@lines,$eol)         if $line =~ /^\w+\s+\d+\s+\d+/;
 	return ('sam',\@lines,$eol)         if $line =~ /^\@[A-Z]{2}/;
 	return ('sam',\@lines,$eol)         if $line =~ /^[^ \t\n\r]+\t[0-9]+\t[^ \t\n\r@=]+\t[0-9]+\t[0-9]+\t(?:[0-9]+[MIDNSHP])+|\*/;
@@ -841,12 +846,12 @@ fgcolor      = black
 bgcolor      = black
 autoscale    = local
 
-
 [$track_id]
 database     = $dbname
 feature      = read_pair
 glyph        = segments
-draw_target  = 1
+feature_limit = 500
+draw_target   = 1
 show_mismatch = 1
 mismatch_color = red
 bgcolor      = blue
@@ -854,6 +859,7 @@ fgcolor      = blue
 height       = 3
 label        = 1
 label density = 50
+stranded     = 1
 bump         = fast
 key          = $key
 END

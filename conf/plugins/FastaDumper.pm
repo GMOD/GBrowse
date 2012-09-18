@@ -62,10 +62,10 @@ sub dump {
     }
 
     my $config  = $self->configuration;
-    my $dna = lc $segment->dna;
+    my $dna     = lc $segment->dna;
     my $browser = $self->browser_config();
     warn("====== beginning dump =====\n") if DEBUG;
-    warn "length of dna = ",length($dna) if DEBUG;
+    warn "length of dna = ",length($dna)  if DEBUG;
 
     my %types;
 

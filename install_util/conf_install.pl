@@ -48,7 +48,6 @@ sub installdir {
 
     if(-f $sourcefile){
       chmod(0666,$targetfile);
-#      copy($sourcefile,$targetfile) or die "unable to write to $targetfile: $!";
       copy_with_substitutions($sourcefile,$targetfile) or die "unable to write to $targetfile: $!";
       print STDERR "    file $sourcefile -> $targetfile\n" if DEBUG;
       chmod(0444,$targetfile);

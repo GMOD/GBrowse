@@ -81,3 +81,6 @@ slave\.pid
 .*\.new
 ^META\.
 ^nytprof
+\.out$
+^htdocs/i$
+

@@ -107,6 +107,8 @@ my $lang     = $render->language;
 my $port     = $server->listen_port;
 
 my $request  = POST("http://localhost:$port/",
+		    Content_Type => 'form-data',
+		    Content =>
 		    [
 		     tracks     => nfreeze(\@labels),
 		     settings   => nfreeze($settings),

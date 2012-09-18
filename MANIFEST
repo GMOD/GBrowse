@@ -1,7 +1,6 @@
 bin/auto_install_databases.pl
 bin/bed2gff3.pl
 bin/bp_load_gff.pl
-bin/gbrowse_attach_slaves.pl
 bin/gbrowse_change_passwd.pl
 bin/gbrowse_clean.pl
 bin/gbrowse_create_account.pl
@@ -674,5 +673,3 @@ t/testdata/phylo_align/species.tre
 t/testdata/phylo_align/volvox_alignment.conf
 t/testdata/phylo_align/volvox_phyloalign.gff
 t/testdata/TemplateCopy.pm
-META.yml
-META.json

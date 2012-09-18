@@ -833,7 +833,7 @@ sub run_remote_requests {
   
     FETCH: {
 	my $request = POST ($url,
-			    Content_Type => 'multipart/form-data',
+			    Content_Type => 'form-data',
 			    Content => [
 				operation  => 'render_tracks',
 				panel_args => $s_args,

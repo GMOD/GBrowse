@@ -1,3 +1,7 @@
+2.52
+ * Avoid clipping the subtrack selection link on long track titles.
+ * Require Bio::Graphics version 2.31 to avoid bug in wiggle xyplot generation.
+
 2.51
  * Fix "can't call FETCH without object reference" errors during ./Build test.
  * Fix pod documentation for gbrowse_grow_cloud_vol.pl.

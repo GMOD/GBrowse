@@ -28,7 +28,7 @@ use constant RULER_INTERVALS     => 20;
 use constant PAD_OVERVIEW_BOTTOM => 5;
 use constant TRY_CACHING_CONFIG  => 1;
 use constant MAX_PROCESSES       => 4;
-use constant MAX_TITLE_LEN       => 40;
+use constant MAX_TITLE_LEN       => 50;
 
 # when we load, we set a global indicating the LWP::UserAgent is available
 my $LPU_AVAILABLE;
@@ -629,11 +629,11 @@ sub wrap_rendered_track {
 			  div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
  		  );
     
-    # modify the title if it is a track with subtracks
-    $self->select_features_menu($label,\$title);
-
     my $clipped_title = $title;
     $clipped_title    = substr($clipped_title,0,MAX_TITLE_LEN-3).'...' if length($clipped_title) > MAX_TITLE_LEN;
+
+    # modify the title if it is a track with subtracks
+    $self->select_features_menu($label,\$clipped_title);
     
     my $titlebar = 
 	span(

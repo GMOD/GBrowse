@@ -26,6 +26,9 @@ Each option can be specified multiple times:
  gbrowse_update_renderers.pl --add http://coyote.acme.com:8081 \
                              --add http://roadrunner.acme.com:8081
 
+This script does not actually provision new slaves. It is called after slaves
+are provisioned (or deprovisioned) to update the configuration on the master and
+restart the server.
 USAGE
     ;
 if (@ARGV && !@to_add && !@to_remove) {
@@ -62,5 +65,7 @@ for my $s (keys %remote_renderers) {
 }
 close $f or die "Couldn't write: $!";
 rename "$render_conf.new",$render_conf;
+
+system "sudo /etc/init.d/apache2 graceful";
 
 exit 0;

@@ -72,6 +72,7 @@ my @FORMATS = ( 'fasta'   => ['Fasta',        undef],
 		'gcg'     => ['GCG',          undef],
 		'raw'     => ['Raw sequence', undef],
 		'bsml'    => ['BSML (XML)',   'xml'],
+                'featurefasta'=>['Feature Fasta', undef],
 		'gff'     => ['GFF3',          undef],
 	      );
 
@@ -85,13 +86,14 @@ my @ORDER = grep {
 }
   grep { ! /gff/i } map { $FORMATS[2*$_] } (0..@FORMATS/2-1);
 
+unshift @ORDER,'featurefasta';
 unshift @ORDER,'gff';
 
 # initialize %FORMATS and %LABELS from @FORMATS
 my %FORMATS = @FORMATS;
 my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
-$VERSION = '0.13';
+$VERSION = '0.14';
 
 @ISA = qw(Bio::Graphics::Browser2::Plugin);
 
@@ -115,6 +117,11 @@ sub dump {
   # special case for GFF dumping
   if ($config->{'fileformat'} eq 'gff') {
     $self->gff_dump($segment);
+    return;
+  }
+  # special case for feature fasta
+  if ($config->{'fileformat'} eq 'featurefasta') {
+    $self->feature_fasta_dump($segment);
     return;
   }
   my @filter    = $self->selected_features;
@@ -227,5 +234,34 @@ sub gff_dump {
   print end_pre() if $html;
   print end_html() if $html;
 }
+
+sub feature_fasta_dump {
+  my $self          = shift;
+  my $segment       = shift;
+  my $page_settings = $self->page_settings;
+  my $conf          = $self->browser_config;
+  my $date = localtime;
+
+  my $mime_type = $self->mime_type;
+  my $html      = $mime_type =~ /html/;
+  print start_html($segment) if $html;
+
+  print h1($segment),start_pre() if $html;
+  print "##date $date\n";
+  print "##source gbrowse SequenceDumper\n";
+  print "##$segment\n";
+  print "##NOTE: Selected features dumped.\n";
+  my @feature_types = $self->selected_features;
+  $segment->absolute(0);
+  my $iterator = $segment->get_seq_stream(-types => \@feature_types) or return;
+  while (my $f = $iterator->next_seq) {
+      my $out = new Bio::SeqIO(-format =>'fasta',-fh=>\*STDOUT);
+      $out->write_seq($f->seq);
+  }
+
+  print end_pre() if $html;
+  print end_html() if $html;
+}
+
 
 1;

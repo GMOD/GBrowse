@@ -130,7 +130,7 @@ sub adjust_spot_requests {
 	    -instance_type     => IMAGE_TYPE,
 	    -instance_count    => 1,
 	    -security_group    => SECURITY_GROUP,
-	    -user_data         => "#!/bin/bash\n/etc/init.d/gbrowse-slave start\n",
+	    -user_data         => "#!/bin/sh\n/opt/gbrowse/etc/init.d/gbrowse-slave start",
 	    );
 	$_->add_tag(Requestor=>'gbrowse_launch_aws_slaves') foreach @requests;
 	push @potential_instances,@requests;

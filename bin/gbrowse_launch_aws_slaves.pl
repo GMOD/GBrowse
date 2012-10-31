@@ -9,7 +9,6 @@
 use strict;
 use VM::EC2;
 use VM::EC2::Instance::Metadata;
-use Sys::CpuLoad;
 use Getopt::Long;
 
 # load averages:
@@ -59,8 +58,15 @@ while (1) { # main loop
 exit 0;
 
 sub get_load {
-    my ($one,$five,$fifteen) = Sys::CpuLoad::load();
-    return $fifteen;
+    if (-e '/proc/loadavg') {
+	open my $fh,'/proc/loadavg';
+	my ($one,$five,$fifteen) = split /\s+/,<$fh>;
+	return $five;
+    } else {
+	my $l = `w`;
+	my ($one,$five,$fifteen) = $l =~ /load average: ([0-9.]+), ([0-9.]+), ([0-9.]+)/;
+	return $five;
+    }
 }
 
 sub adjust_spot_requests {
@@ -90,7 +96,7 @@ sub adjust_spot_requests {
     
     # what to do if there are too many spot requests for the current load
     # either cancel spot requests or shut instances down
-    while (@potential_instances > $min) {
+    while (@potential_instances > $max_instances) {
 	my $i = shift @potential_instances;
 	if ($i->isa('VM::EC2::Instance')) {
 	    warn "terminating $i";
@@ -102,18 +108,17 @@ sub adjust_spot_requests {
     }
 
     # what to do if there are too few
-    if (@potential_instances < $max) {
-	my $count = $max - @potential_instances;
-	warn "launching $count spot requests";
+    if (@potential_instances < $min_instances) {
+	warn "launching a new spot request";
 	my @requests = $ec2->request_spot_instances(
 	    -image_id          => $imageId,
 	    -instance_type     => IMAGE_TYPE,
-	    -instance_count    => $count,
+	    -instance_count    => 1,
 	    -security_group    => SECURITY_GROUP,
 	    -user_data         => "#!/bin/bash\n/etc/init.d/gbrowse-slave start\n",
 	    );
+	push @potential_instances,@requests;
     }
-    push @potential_instances,@requests;
     return @potential_instances;
 }
 
@@ -123,8 +128,9 @@ sub adjust_configuration {
     my @instances = grep {$_->isa('VM::EC2::Instance')} @potential_instances;
     my @addresses = map  {$_->privateDnsName}           @instances;
     warn "Adding slaves at address @addresses";
-    my @args      = map  {'--add'=>$_}  map {"http://$_:8101",
-					     "http://$_:8102",
-					     "http://$_:8103"} @addresses;
+    my @a         = map {("http://$_:8101",
+			  "http://$_:8102",
+			  "http://$_:8103")} @addresses;
+    my @args      = map  {('--add'=> "$_") } @a;
     system 'sudo','gbrowse_add_slaves.pl',@args;
 }

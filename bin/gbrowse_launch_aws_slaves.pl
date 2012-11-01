@@ -117,7 +117,7 @@ sub adjust_spot_requests {
 	my $instance = $sr->instance;
 	if ($state eq 'open' or ($instance && $instance->instanceState =~ /running|pending/)) {
 	    $instance->add_tag(GBrowseMaster => $instanceId) if $instance;  # we'll use this to terminate all slaves sometime later
-	    push @potential_instances,$instance || $state;
+	    push @potential_instances,$instance || $sr;
 	}
     }
 

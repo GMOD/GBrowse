@@ -13,7 +13,7 @@ GetOptions(
     'remove=s' => \@to_remove,
     'set=s'    => \@to_set
     ) or die <<USAGE;
-Usage: gbrowse_update_renderers.pl [--options]
+Usage: gbrowse_add_slaves.pl [--options]
 
 Options:
 

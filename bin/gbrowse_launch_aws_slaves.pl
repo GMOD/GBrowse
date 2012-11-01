@@ -62,6 +62,7 @@ my $ec2     = VM::EC2->new(-region=>$zone);
 
 while (1) { # main loop
     my $load = get_load();
+    warn "current load = $load\n";
     my @instances = adjust_spot_requests($load);
     adjust_configuration(@instances);
     sleep (POLL_INTERVAL * 60);
@@ -72,7 +73,12 @@ terminate_instances();
 exit 0;
 
 sub get_load {
-    if (-e '/proc/loadavg') {
+    if (-e '/tmp/gbrowse_load') {
+	open my $fh,'/tmp/gbrowse_load';
+	chomp(my $load = <$fh>);
+	return $load;
+    }
+    else (-e '/proc/loadavg') {
 	open my $fh,'/proc/loadavg';
 	my ($one,$five,$fifteen) = split /\s+/,<$fh>;
 	return $five;
@@ -148,7 +154,7 @@ sub adjust_configuration {
 			  "http://$_:8102",
 			  "http://$_:8103")} @addresses;
     my @args      = map  {('--set'=> "$_") } @a;
-    system 'sudo','gbrowse_add_slaves.pl',@args;
+    system 'sudo','gbrowse_configure_slaves.pl',@args;
 }
 
 sub terminate_instances {

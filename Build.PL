@@ -64,6 +64,8 @@ my $build = GBrowseInstall->new(
 	'bin/gbrowse_import_ucsc_db.pl',
 	'bin/gbrowse_create_account.pl',
 	'bin/gbrowse_change_passwd.pl',
+	'bin/gbrowse_launch_aws_slaves.pl',
+	'bin/gbrowse_configure_slaves.pl',
 	'bin/gbrowse_metadb_config.pl',
 	'bin/gbrowse_grow_cloud_vol.pl',
 	'bin/gbrowse_slave',

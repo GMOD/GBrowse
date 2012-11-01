@@ -20,8 +20,8 @@ use VM::EC2;
 use VM::EC2::Instance::Metadata;
 use Getopt::Long;
 
-$SIG{TERM} = \&terminate_instances;
-$SIG{INT}  = \&terminate_instances;
+$SIG{TERM} = sub {exit 0};
+$SIG{INT}  = sub {exit 0};
 END {          terminate_instances()  }
 
 # load averages:
@@ -36,9 +36,10 @@ use constant LOAD_TABLE => [
     ];
 
 use constant IMAGE_TYPE     => 'm1.small';
-use constant POLL_INTERVAL  => 5;  # minutes
+use constant POLL_INTERVAL  => 0.5;  # minutes
 use constant SPOT_PRICE     => 0.05;  # dollars/hour
 use constant SECURITY_GROUP => 'GBrowseSlave';
+use constant CONFIGURE_SLAVES => '/opt/gbrowse/bin/gbrowse_configure_slaves.pl';
 
 my($Access_key,$Secret_key);
 GetOptions(
@@ -56,9 +57,11 @@ my $instanceId = $meta->instanceId;
 my $zone       = $meta->availabilityZone;
 my @groups     = $meta->securityGroups;
 
+warn "slave imageId=$imageId, zone=$zone\n";
+
 (my $region = $zone) =~ s/[a-z]$//;  #  zone=>region
 
-my $ec2     = VM::EC2->new(-region=>$zone);
+my $ec2     = VM::EC2->new(-region=>$region);
 
 while (1) { # main loop
     my $load = get_load();
@@ -107,17 +110,18 @@ sub adjust_spot_requests {
 
     # count the realized and pending 
     my @spot_requests = $ec2->describe_spot_instance_requests({'tag:Requestor' => 'gbrowse_launch_aws_slaves'});
+    warn "spot_requests = @spot_requests";
     my @potential_instances;
     for my $sr (@spot_requests) {
 	my $state    = $sr->state;
 	my $instance = $sr->instance;
 	if ($state eq 'open' or ($instance && $instance->instanceState =~ /running|pending/)) {
-	    $instance->add_tag(GBrowseMaster => $instanceId);  # we'll use this to terminate all slaves sometime later
+	    $instance->add_tag(GBrowseMaster => $instanceId) if $instance;  # we'll use this to terminate all slaves sometime later
 	    push @potential_instances,$instance || $state;
 	}
     }
 
-    warn "current current active and pending spot instances = ",scalar @potential_instances;
+    warn "current active and pending spot instances = ",scalar @potential_instances;
     
     # what to do if there are too many spot requests for the current load
     # either cancel spot requests or shut instances down
@@ -140,6 +144,7 @@ sub adjust_spot_requests {
 	    -instance_type     => IMAGE_TYPE,
 	    -instance_count    => 1,
 	    -security_group    => SECURITY_GROUP,
+	    -spot_price        => SPOT_PRICE,
 	    -user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start",
 	    );
 	$_->add_tag(Requestor=>'gbrowse_launch_aws_slaves') foreach @requests;
@@ -151,28 +156,32 @@ sub adjust_spot_requests {
 sub adjust_configuration {
     # this is a heterogeneous list of running instances and spot instance requests
     my @potential_instances = @_;
+    warn "adjust_configuration(@potential_instances)";
+
     my @instances = grep {$_->isa('VM::EC2::Instance')} @potential_instances;
     my @addresses = map  {$_->privateDnsName}           @instances;
-    warn "Adding slaves at address @addresses";
+    warn "Adding slaves at address @addresses"if @addresses;
     my @a         = map {("http://$_:8101",
 			  "http://$_:8102",
 			  "http://$_:8103")} @addresses;
     my @args      = map  {('--set'=> "$_") } @a;
-    system 'sudo','gbrowse_configure_slaves.pl',@args;
+    system 'sudo',CONFIGURE_SLAVES,@args;
 }
 
 sub terminate_instances {
     $ec2 or return;
     warn "terminating all slave instances";
     my @spot_requests = $ec2->describe_spot_instance_requests({'tag:Requestor' => 'gbrowse_launch_aws_slaves'});
+    warn "spot requests = @spot_requests";
     my @instances     = $ec2->describe_instances({'tag:GBrowseMaster'=>$instanceId});
+    warn "instances = @instances";
     my %to_terminate = map {$_=>1} @instances;
     foreach (@spot_requests) {
 	$to_terminate{$_->instance}++;
 	$ec2->cancel_spot_instance_requests($_);
     }
     $ec2->terminate_instances(keys %to_terminate);
-    system 'sudo','gbrowse_add_slaves.pl','--set','';
+    system 'sudo',CONFIGURE_SLAVES,'--set','';
 }
 
 END { terminate_instances() }

@@ -75,10 +75,10 @@ exit 0;
 sub get_load {
     if (-e '/tmp/gbrowse_load') {
 	open my $fh,'/tmp/gbrowse_load';
-	chomp(my $load = <$fh>);
+	chomp (my $load = <$fh>);
 	return $load;
     }
-    else (-e '/proc/loadavg') {
+    elsif (-e '/proc/loadavg') {
 	open my $fh,'/proc/loadavg';
 	my ($one,$five,$fifteen) = split /\s+/,<$fh>;
 	return $five;
@@ -103,6 +103,8 @@ sub adjust_spot_requests {
 	}
     }
 
+    warn "load=$load: min=$min_instances, max=$max_instances\n";
+
     # count the realized and pending 
     my @spot_requests = $ec2->describe_spot_instance_requests({'tag:Requestor' => 'gbrowse_launch_aws_slaves'});
     my @potential_instances;
@@ -114,6 +116,8 @@ sub adjust_spot_requests {
 	    push @potential_instances,$instance || $state;
 	}
     }
+
+    warn "current current active and pending spot instances = ",scalar @potential_instances;
     
     # what to do if there are too many spot requests for the current load
     # either cancel spot requests or shut instances down

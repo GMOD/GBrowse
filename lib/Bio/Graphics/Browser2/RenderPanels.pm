@@ -21,6 +21,7 @@ use constant TRUE  => 1;
 use constant DEBUG => 0;
 use constant DEBUGGING_RECTANGLES => 0;  # outline the imagemap
 use constant BENCHMARK => 0;
+use constant SLAVE_RETRIES => 2;
 
 use constant DEFAULT_EMPTYTRACKS => 0;
 use constant PAD_DETAIL_SIDES    => 10;
@@ -831,6 +832,7 @@ sub run_remote_requests {
 	  $requests->{$_}->lock();   # flag that request is in process
       }
   
+      my $tries = 0;
     FETCH: {
 	my $request = POST ($url,
 			    Content_Type => 'form-data',
@@ -885,7 +887,7 @@ sub run_remote_requests {
 	    if ($alternate_url) {
 		warn "retrying fetch of @labels with $alternate_url";
 		$url = $alternate_url;
-		redo FETCH;
+		redo FETCH if $tries++ < SLAVE_RETRIES;
 	    }
 
 	    $response_line =~ s/^\d+//;  # get rid of status code

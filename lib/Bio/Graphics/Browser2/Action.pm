@@ -106,6 +106,10 @@ sub ACTION_render_panels {
     return (204,'text/plain',undef) unless $seg;
     my $source = $render->data_source;
     $render->init_plugins();
+
+    # no state changing occurs after this
+    $self->session->unlock;
+
     my $html   = $render->render_panels($seg,{overview   => $source->show_section('overview'),
 					      regionview => $source->show_section('region'),
 					      detailview => $source->show_section('detail')});

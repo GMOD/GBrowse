@@ -1148,7 +1148,7 @@ sub ACTION_about_gbrowse {
     $self->session->unlock;
 
     my $html = $q->div(
-	$q->img({-src=>'http://phenomics.cs.ucla.edu/GObase/images/gmod.gif',
+	$q->img({-src=>'/gbrowse2/gmod_cog.jpeg',
 		 -align=>'right',
 		 -width=>'100',
 		}),

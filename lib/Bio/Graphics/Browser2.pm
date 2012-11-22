@@ -363,7 +363,7 @@ sub data_source_path {
       my $path = $self->resolve_path($self->setting("=~".$regex_key=>'path'),'config');
       my @matches = ($dsn =~ /$regex_key/);
       for (my $i = 1; $i <= scalar(@matches); $i++) {
-	  $path =~ s/\$$i/$matches[$i-1]/;
+	  $path =~ s/\$$i/$matches[$i-1]/g;
       }
       return $self->resolve_path($path, 'config');
   }

@@ -76,6 +76,7 @@ sub skip_file {
 	   gbrowse_grow_cloud_vol.pl
 	   gbrowse_attach_slaves.pl
 	   make_das_conf.pl
+	   gbrowse_slave_start_aws.sh
           );
 
     return $skip{ basename($file) };

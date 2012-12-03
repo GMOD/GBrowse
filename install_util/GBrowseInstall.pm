@@ -528,6 +528,9 @@ sub fix_selinux {
     my $f    = IO::File->new('/proc/filesystems') or return;
     return unless grep /selinux/i,<$f>;
 
+    my $enabled = IO::File->new('/selinux/enforce') or return;
+    return unless grep /1/,<$enabled>;
+
     print STDERR "\n*** SELinux detected -- fixing permissions ***\n";
 
     my $htdocs = $self->config_data('htdocs');

@@ -117,7 +117,7 @@ sub adjust_spot_requests {
 	my $instance = $sr->instance;
 	if ($state eq 'open' or ($instance && $instance->instanceState =~ /running|pending/)) {
 	    $instance->add_tag(GBrowseMaster => $instanceId) if $instance;  # we'll use this to terminate all slaves sometime later
-	    push @potential_instances,$instance || $state;
+	    push @potential_instances,$instance || $sr;
 	}
     }
 
@@ -159,13 +159,18 @@ sub adjust_configuration {
     warn "adjust_configuration(@potential_instances)";
 
     my @instances = grep {$_->isa('VM::EC2::Instance')} @potential_instances;
-    my @addresses = map  {$_->privateDnsName}           @instances;
-    warn "Adding slaves at address @addresses"if @addresses;
-    my @a         = map {("http://$_:8101",
-			  "http://$_:8102",
-			  "http://$_:8103")} @addresses;
-    my @args      = map  {('--set'=> "$_") } @a;
-    system 'sudo',CONFIGURE_SLAVES,@args;
+    if (@instances) {
+	my @addresses = grep {$_} map  {$_->privateDnsName}    @instances;
+	return unless @addresses;
+	warn "Adding slaves at address @addresses";
+	my @a         = map {("http://$_:8101",
+			      "http://$_:8102",
+			      "http://$_:8103")} @addresses;
+	my @args      = map  {('--set'=> "$_") } @a;
+	system 'sudo',CONFIGURE_SLAVES,@args;
+    } else {
+	system 'sudo',CONFIGURE_SLAVES,'--set','';
+    }
 }
 
 sub terminate_instances {

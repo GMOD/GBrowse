@@ -1261,8 +1261,8 @@ sub make_imagemap_element_inline {
     my $summary                 = $options->{summary};
 
     if ($summary) {
-	return {onmouseover => $self->render->feature_summary_message('mouseover',$label),
-		onmouseeown => $self->render->feature_summary_message('mousedown',$label),
+	return {onmouseover => $self->feature_summary_message('mouseover',$label),
+		onmouseeown => $self->feature_summary_message('mousedown',$label),
 		href        => 'javascript:void(0)',
 		inline      => 1
 	}
@@ -1321,6 +1321,16 @@ sub make_imagemap_element_inline {
                       );
 
     return \%attributes;
+}
+
+# BUG: This is cut-and-paste from Render.pm due to encapsulation failure.
+# (no render object available to slave, so slave is broken)
+sub feature_summary_message {
+    my $self = shift;
+    my ($event_type,$label) = @_;
+    my $sticky = $event_type eq 'mousedown' || 0;
+    my $message= $self->source->setting($label=>'key'). ' '.lc($self->language->translate('FEATURE_SUMMARY'));
+    return "GBubble.showTooltip(event,'$message',$sticky)";
 }
 
 # this creates image map for rulers and scales, where clicking on the scale

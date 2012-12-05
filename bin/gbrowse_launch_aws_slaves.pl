@@ -80,7 +80,7 @@ my @groups     = $meta->securityGroups;
 die "This instance needs to belong to the GBrowseMaster security group in order for this script to run correctly"
     unless "@groups" =~ /GBrowseMaster/;
 
-warn "slave imageId=$imageId, zone=$zone\n";
+warn "slave imageId=$imageId, zone=$zone, subnet=$subnet\n";
 
 (my $region = $zone) =~ s/[a-z]$//;  #  zone=>region
 

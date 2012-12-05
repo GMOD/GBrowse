@@ -84,6 +84,8 @@ die "This instance needs to belong to the GBrowseMaster security group in order 
 warn "slave imageId=$imageId, zone=$zone, subnet=$subnet, vpcId=$vpcId\n";
 
 (my $region = $zone)       =~ s/[a-z]$//;  #  zone=>region
+my $ec2     = VM::EC2->new(-region=>$region);
+
 my (@slave_security_groups) = $ec2->describe_security_groups({'group-name' => SECURITY_GROUP});
 my $slave_security_group;
 if ($vpcId) {
@@ -94,7 +96,6 @@ if ($vpcId) {
 
 die "Could not find a security group named ",SECURITY_GROUP," in current region or VPC";
 
-my $ec2     = VM::EC2->new(-region=>$region);
 my $pr      = Parse::Apache::ServerStatus->new(url=>SERVER_STATUS);
 
 while (1) { # main loop

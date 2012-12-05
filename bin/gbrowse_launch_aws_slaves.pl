@@ -53,9 +53,9 @@ use constant LOAD_TABLE => [
     [ 10.0,  6,   8 ]
     ];
 
-use constant IMAGE_TYPE       => 'm1.small';
+use constant IMAGE_TYPE       => 'm1.large';
 use constant POLL_INTERVAL    => 0.5;  # minutes
-use constant SPOT_PRICE       => 0.05;  # dollars/hour
+use constant SPOT_PRICE       => 0.08;  # dollars/hour
 use constant SECURITY_GROUP   => 'GBrowseSlave';
 use constant CONFIGURE_SLAVES => "$Bin/gbrowse_configure_slaves.pl";
 use constant SERVER_STATUS    => 'http://localhost/server-status';

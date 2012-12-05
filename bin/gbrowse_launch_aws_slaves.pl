@@ -14,25 +14,41 @@
 # GBrowseSlave
 #   allow inbound on 8101-8105 from GBrowseMaster group
 #   (nothing else)
+#
+# Master server must be configured to allow http://localhost/server-status requests
+# from localhost. The "Satisfy any" step ensures that no password will
+# be required on this URL.
+#
+#<Location /server-status>
+#    SetHandler server-status
+#    Order deny,allow
+#    Deny from all
+#    Allow from 127.0.0.1
+#    Satisfy any
+#</Location>
+# ExtendedStatus On
+#
+
 
 use strict;
 use VM::EC2;
 use VM::EC2::Instance::Metadata;
+use Parse::Apache::ServerStatus;
 use Getopt::Long;
 
 $SIG{TERM} = sub {exit 0};
 $SIG{INT}  = sub {exit 0};
-END {          terminate_instances()  }
+END {  terminate_instances()  }
 
 # load averages:
-# each item represents 15 min load average, lower and upper bound on instances
+# each item represents requests per second, lower and upper bounds
 use constant LOAD_TABLE => [
     #load  min  max
-    [ 0.5,  0,   1 ],
-    [ 1.0,  0,   2 ],
-    [ 2.0,  1,   4 ],
-    [ 3.0,  3,   6 ],
-    [10.0,  6,   8 ]
+    [ 0.01,  0,   1 ],
+    [ 0.5,   0,   2 ],
+    [ 1.0,   1,   4 ],
+    [ 5.0,   3,   6 ],
+    [ 10.0,  6,   8 ]
     ];
 
 use constant IMAGE_TYPE     => 'm1.small';
@@ -40,6 +56,7 @@ use constant POLL_INTERVAL  => 0.5;  # minutes
 use constant SPOT_PRICE     => 0.05;  # dollars/hour
 use constant SECURITY_GROUP => 'GBrowseSlave';
 use constant CONFIGURE_SLAVES => '/opt/gbrowse/bin/gbrowse_configure_slaves.pl';
+use constant SERVER_STATUS    => 'http://localhost/server-status';
 
 my($Access_key,$Secret_key);
 GetOptions(
@@ -62,6 +79,7 @@ warn "slave imageId=$imageId, zone=$zone\n";
 (my $region = $zone) =~ s/[a-z]$//;  #  zone=>region
 
 my $ec2     = VM::EC2->new(-region=>$region);
+my $pr      = Parse::Apache::ServerStatus->new(url=>SERVER_STATUS);
 
 while (1) { # main loop
     my $load = get_load();
@@ -81,15 +99,8 @@ sub get_load {
 	chomp (my $load = <$fh>);
 	return $load;
     }
-    elsif (-e '/proc/loadavg') {
-	open my $fh,'/proc/loadavg';
-	my ($one,$five,$fifteen) = split /\s+/,<$fh>;
-	return $five;
-    } else {
-	my $l = `w`;
-	my ($one,$five,$fifteen) = $l =~ /load average: ([0-9.]+), ([0-9.]+), ([0-9.]+)/;
-	return $five;
-    }
+    my $stats = $pr->get or die $pr->errstr;
+    return $stats->{rs};
 }
 
 sub adjust_spot_requests {

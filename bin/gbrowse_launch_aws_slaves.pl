@@ -31,10 +31,12 @@
 
 
 use strict;
+use Getopt::Long;
+use Parse::Apache::ServerStatus;
+use FindBin '$Bin';
 use VM::EC2;
 use VM::EC2::Instance::Metadata;
 use Parse::Apache::ServerStatus;
-use Getopt::Long;
 
 $SIG{TERM} = sub {exit 0};
 $SIG{INT}  = sub {exit 0};
@@ -51,11 +53,11 @@ use constant LOAD_TABLE => [
     [ 10.0,  6,   8 ]
     ];
 
-use constant IMAGE_TYPE     => 'm1.small';
-use constant POLL_INTERVAL  => 0.5;  # minutes
-use constant SPOT_PRICE     => 0.05;  # dollars/hour
-use constant SECURITY_GROUP => 'GBrowseSlave';
-use constant CONFIGURE_SLAVES => '/opt/gbrowse/bin/gbrowse_configure_slaves.pl';
+use constant IMAGE_TYPE       => 'm1.small';
+use constant POLL_INTERVAL    => 0.5;  # minutes
+use constant SPOT_PRICE       => 0.05;  # dollars/hour
+use constant SECURITY_GROUP   => 'GBrowseSlave';
+use constant CONFIGURE_SLAVES => "$Bin/gbrowse_configure_slaves.pl";
 use constant SERVER_STATUS    => 'http://localhost/server-status';
 
 my($Access_key,$Secret_key);
@@ -73,6 +75,9 @@ my $imageId    = $meta->imageId;
 my $instanceId = $meta->instanceId;
 my $zone       = $meta->availabilityZone;
 my @groups     = $meta->securityGroups;
+
+die "This instance needs to belong to the GBrowseMaster security group in order for this script to run correctly"
+    unless "@groups" =~ /GBrowseMaster/;
 
 warn "slave imageId=$imageId, zone=$zone\n";
 

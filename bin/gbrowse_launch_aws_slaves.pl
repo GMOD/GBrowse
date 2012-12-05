@@ -176,6 +176,7 @@ sub adjust_spot_requests {
 	    $subnet? (-subnet_id  => $subnet) : (),
 	    -user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start",
 	    );
+	@requests or warn $ec2->error_str;
 	$_->add_tag(Requestor=>'gbrowse_launch_aws_slaves') foreach @requests;
 	push @potential_instances,@requests;
     }

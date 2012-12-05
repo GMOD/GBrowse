@@ -207,15 +207,15 @@ sub terminate_instances {
     $ec2 or return;
     warn "terminating all slave instances";
     my @spot_requests = $ec2->describe_spot_instance_requests({'tag:Requestor' => 'gbrowse_launch_aws_slaves'});
-    warn "spot requests = @spot_requests";
     my @instances     = $ec2->describe_instances({'tag:GBrowseMaster'=>$instanceId});
-    warn "instances = @instances";
     my %to_terminate = map {$_=>1} @instances;
     foreach (@spot_requests) {
 	$to_terminate{$_->instance}++;
 	$ec2->cancel_spot_instance_requests($_);
     }
-    $ec2->terminate_instances(keys %to_terminate);
+    my @i = grep {/^i-/} keys %to_terminate;
+    warn "instances to terminate = @i";
+    $ec2->terminate_instances(@i);
     system 'sudo',CONFIGURE_SLAVES,'--set','';
 }
 

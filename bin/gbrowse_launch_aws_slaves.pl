@@ -94,7 +94,7 @@ if ($vpcId) {
     $slave_security_group = $slave_security_groups[0];
 }
 
-die "Could not find a security group named ",SECURITY_GROUP," in current region or VPC";
+$slave_security_group or die "Could not find a security group named ",SECURITY_GROUP," in current region or VPC";
 
 my $pr      = Parse::Apache::ServerStatus->new(url=>SERVER_STATUS);
 
@@ -138,7 +138,6 @@ sub adjust_spot_requests {
 
     # count the realized and pending 
     my @spot_requests = $ec2->describe_spot_instance_requests({'tag:Requestor' => 'gbrowse_launch_aws_slaves'});
-    warn "spot_requests = @spot_requests";
     my @potential_instances;
     for my $sr (@spot_requests) {
 	my $state    = $sr->state;

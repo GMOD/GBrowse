@@ -74,15 +74,25 @@ my $meta       = VM::EC2::Instance::Metadata->new();
 my $imageId    = $meta->imageId;
 my $instanceId = $meta->instanceId;
 my $zone       = $meta->availabilityZone;
-my $subnet     = eval {$meta->interfaces->[0]{subnetId}};
+my $subnet     = eval {(values %{$meta->interfaces})[0]{subnetId}};
+my $vpcId      = eval {(values %{$meta->interfaces})[0]{vpcId}};
 my @groups     = $meta->securityGroups;
 
 die "This instance needs to belong to the GBrowseMaster security group in order for this script to run correctly"
     unless "@groups" =~ /GBrowseMaster/;
 
-warn "slave imageId=$imageId, zone=$zone, subnet=$subnet\n";
+warn "slave imageId=$imageId, zone=$zone, subnet=$subnet, vpcId=$vpcId\n";
 
-(my $region = $zone) =~ s/[a-z]$//;  #  zone=>region
+(my $region = $zone)       =~ s/[a-z]$//;  #  zone=>region
+my (@slave_security_groups) = $ec2->describe_security_groups({'group-name' => SECURITY_GROUP});
+my $slave_security_group;
+if ($vpcId) {
+    ($slave_security_group)  = grep {$vpcId eq $_->vpcId} @slave_security_groups; 
+} else {
+    $slave_security_group = $slave_security_groups[0];
+}
+
+die "Could not find a security group named ",SECURITY_GROUP," in current region or VPC";
 
 my $ec2     = VM::EC2->new(-region=>$region);
 my $pr      = Parse::Apache::ServerStatus->new(url=>SERVER_STATUS);
@@ -158,12 +168,12 @@ sub adjust_spot_requests {
     if (@potential_instances < $min_instances) {
 	warn "launching a new spot request";
 	my @requests = $ec2->request_spot_instances(
-	    -image_id          => $imageId,
-	    -instance_type     => IMAGE_TYPE,
-	    -instance_count    => 1,
-	    -security_group    => SECURITY_GROUP,
-	    -spot_price        => SPOT_PRICE,
-	    $subnet? (-subnet  => $subnet) : (),
+	    -image_id             => $imageId,
+	    -instance_type        => IMAGE_TYPE,
+	    -instance_count       => 1,
+	    -security_group_id    => $slave_security_group,
+	    -spot_price           => SPOT_PRICE,
+	    $subnet? (-subnet_id  => $subnet) : (),
 	    -user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start",
 	    );
 	$_->add_tag(Requestor=>'gbrowse_launch_aws_slaves') foreach @requests;

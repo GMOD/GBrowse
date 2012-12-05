@@ -190,7 +190,7 @@ sub adjust_configuration {
 
     my @instances = grep {$_->isa('VM::EC2::Instance')} @potential_instances;
     if (@instances) {
-	my @addresses = grep {$_} map  {$_->privateDnsName}    @instances;
+	my @addresses = grep {$_} map  {$_->privateDnsName||$_->privateIpAddress}    @instances;
 	return unless @addresses;
 	warn "Adding slaves at address @addresses";
 	my @a         = map {("http://$_:8101",

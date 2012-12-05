@@ -57,6 +57,8 @@ my $build = GBrowseInstall->new(
                     : ()               ,
 	'Template'                 => 2.20,
         'Term::ReadKey'            => 0,
+	'VM::EC2'                  => 1.19,
+	'Parse::Apache::ServerStatus' => 0,
     },
     script_files => [
 	'bin/gbrowse_clean.pl',

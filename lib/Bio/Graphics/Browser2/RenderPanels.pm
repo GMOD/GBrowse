@@ -2157,8 +2157,6 @@ sub create_track_args {
   my $segment         = $self->segment;
   my $length          = $self->segment_length($label);
 
-  warn "label=$label, length=$length";
-
   my $source          = $self->source;
   my $lang            = $self->language;
 
@@ -2348,7 +2346,7 @@ sub do_label {
 
   my $source              = $self->source;
 
-  my $maxl              = $source->code_setting($track_name => 'label density');
+  my $maxl              = $source->semantic_setting($track_name => 'label density', $length);
   $maxl                 = $max_labels unless defined $maxl;
   my $maxed_out         = $count <= $maxl;
 

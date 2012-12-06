@@ -155,7 +155,7 @@ sub request_panels {
   if ($args->{deferred}) {
 
       # precache local databases into cache
-      my $length = $self->segment->length;
+      my $length = $self->segment_length;
       my $source = $self->source;
       for my $l (@$local_labels) {
 	  my $db = eval { $source->open_database($l,$length)};
@@ -1193,7 +1193,7 @@ sub make_map {
 
   my $source = $self->source;
 
-  my $length   = $self->segment->length;
+  my $length   = $self->segment_length;
   my $settings = $self->settings;
   my $flip     = $panel->flip;
   my ($track_dbid) = $source->db_settings($label,$length);
@@ -1428,7 +1428,7 @@ sub run_local_requests {
 
     my $settings       = $self->settings;
     my $segment        = $self->segment;
-    my $length         = $segment->length;
+    my $length         = $self->segment_length;
 
     my $source         = $self->source;
     my $lang           = $self->language;
@@ -1705,7 +1705,7 @@ sub add_features_to_track {
   my $max_labels      = $self->label_density;
   my $max_bump        = $self->bump_density;
 
-  my $length  = $segment->length;
+  my $length  = $self->segment_length;
   my $source  = $self->source;
 
   # sort tracks by the database they come from
@@ -2131,7 +2131,7 @@ sub override_settings {
     my $label = shift;
     my $source            = $self->source;
     my $state             = $self->settings;
-    my $length            = eval {$self->segment->length} || 0;
+    my $length            = eval {$self->segment_length} || 0;
     my $is_summary        = $source->show_summary($label,$length,$state);
     my $semantic_override = Bio::Graphics::Browser2::Render->find_override_region(
 	$state->{features}{$label}{semantic_override},
@@ -2155,7 +2155,10 @@ sub create_track_args {
   my ($label,$args) = @_;
 
   my $segment         = $self->segment;
-  my $length          = $segment->length;
+  my $length          = $self->segment_length($label);
+
+  warn "label=$label, length=$length";
+
   my $source          = $self->source;
   my $lang            = $self->language;
 
@@ -2238,19 +2241,12 @@ sub create_track_args {
   return @args;
 }
 
-sub vis_length {
-    my $self = shift;
-    my $segment = $self->segment;
-    my $length  = $segment->length;
-    return $length/$self->details_mult;
-}
-
 sub subtrack_manager {
     my $self = shift;
     my $label = shift;
     return $self->{_stt}{$label} if exists $self->{_stt}{$label};
     return $self->{_stt}{$label} = undef
-	if $self->source->show_summary($label,$self->vis_length,$self->settings);
+	if $self->source->show_summary($label,$self->segment_length,$self->settings);
     return $self->{_stt}{$label} = Bio::Graphics::Browser2::Render->create_subtrack_manager($label,
 											    $self->source,
 											    $self->settings);
@@ -2479,7 +2475,7 @@ sub make_title {
   local $^W = 0;  # tired of uninitialized variable warnings
   my $source = $self->source;
 
-  my $length = eval {$self->segment->length} || 0;
+  my $length = eval {$self->segment_length} || 0;
 
   my ($title,$key) = ('','');
 
@@ -2544,10 +2540,14 @@ sub segment_length {
     my $section = $label 
 	           ? Bio::Graphics::Browser2::DataSource->get_section_from_label($label) 
 		   : 'detail';
-    return eval {$section eq 'detail'   ? $self->segment->length
-	        :$section eq 'region'   ? $self->region_segment->length
-		:$section eq 'overview' ? $self->whole_segment->length
-		: 0} || 0;
+    my $whole = $self->whole_segment->length;
+   my $mult  = $self->details_mult;
+
+    my $length = eval {$section eq 'detail'   ? $self->segment->length/$mult
+		      :$section eq 'region'   ? $self->region_segment->length
+		      :$section eq 'overview' ? $self->whole_segment->length
+		      : 0} || 0;
+    return $length > $whole ? $whole : $length;
 }
 
 sub make_link_target {

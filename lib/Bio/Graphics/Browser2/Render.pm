@@ -494,7 +494,7 @@ sub background_track_render {
     my $details_msg       = '';
     my %requests;
 
-    if ( $self->get_panel_renderer($self->segment)->vis_length <= $self->get_max_segment ) {
+    if ( $self->get_panel_renderer($self->segment)->segment_length <= $self->get_max_segment ) {
         $requests{'detail'} =
             $self->render_deferred(
             labels          => [ $self->expand_track_names($self->detail_tracks) ],
@@ -691,7 +691,7 @@ sub background_individual_track_render {
 
     if ($section eq 'detail'
         && $self->segment
-        && $self->get_panel_renderer($self->segment)->vis_length > $self->get_max_segment() )
+        && $self->get_panel_renderer($self->segment)->segment_length > $self->get_max_segment() )
     {
         $display_details = 0;
         $details_msg     = h1(
@@ -3762,7 +3762,7 @@ sub external_data {
     my $max_segment  = $self->get_max_segment;
     my $search       = $self->get_search_object;
     my $meta_segment = $search->segment($segment);
-    my $too_big      =  $segment && ($self->get_panel_renderer($segment)->vis_length > $max_segment);
+    my $too_big      =  $segment && ($self->get_panel_renderer($segment)->segment_length > $max_segment);
     if (!$too_big && $segment) {
 	my $search       = $self->get_search_object;
 	my $rel2abs      = $search->coordinate_mapper($segment,1);

@@ -497,7 +497,6 @@ sub show_summary {
     return 0 unless $c;
 
     my $section =  $self->get_section_from_label($label) || 'detail';
-    $length /= $self->details_multiplier if $section eq 'detail';
 
     $c =~ s/_//g;  
     return 0 unless $c <= $length;
@@ -610,7 +609,6 @@ sub semantic_label {
 
   # adjust for details_mult of we are on a 'details' label
   my $section =  $self->get_section_from_label($label) || 'detail';
-  $length    /= $self->details_multiplier if $section eq 'detail';
 
   # look for:
   # 1. a section like "Gene:100000" where the cutoff is <= the length of the segment

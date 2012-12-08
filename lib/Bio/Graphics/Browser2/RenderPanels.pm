@@ -2533,19 +2533,7 @@ sub make_title {
 }
 
 sub segment_length {
-    my $self    = shift;
-    my $label   = shift;
-    my $section = $label 
-	           ? Bio::Graphics::Browser2::DataSource->get_section_from_label($label) 
-		   : 'detail';
-    my $whole = $self->whole_segment->length;
-   my $mult  = $self->details_mult;
-
-    my $length = eval {$section eq 'detail'   ? $self->segment->length/$mult
-		      :$section eq 'region'   ? $self->region_segment->length
-		      :$section eq 'overview' ? $self->whole_segment->length
-		      : 0} || 0;
-    return $length > $whole ? $whole : $length;
+    shift->render->segment_length(@_);
 }
 
 sub make_link_target {

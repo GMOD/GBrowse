@@ -21,10 +21,8 @@ sub config_dialog {
 
     my $state       = $render->state();
     my $data_source = $render->data_source();
-    my $seg      = $label =~ /:overview$/ ? $render->thin_whole_segment
-	          :$label =~ /:region$/   ? $render->thin_region_segment
-                  :$render->thin_segment;
-    my $length = eval{$seg->length}||0;
+    my $length      = $render->segment_length($label);
+    warn "length = $length";
 
     eval 'require Bio::Graphics::Browser2::OptionPick; 1'
         unless Bio::Graphics::Browser2::OptionPick->can('new');
@@ -34,8 +32,14 @@ sub config_dialog {
     # summary options
     my $can_summarize = $data_source->can_summarize($label);
     my $summary_mode  = $data_source->show_summary($label,$length);
+    my $summary_length= $self->setting( $label => 'show summary' ,  $length, $summary_mode)    || 0;
+    my @thresh        = sort {$a<=>$b} ($data_source->semantic_thresholds($label),$summary_length);    
+    my $semantic_min  = (grep {$length >= $_} @thresh)[-1] || MIN; 
+    my $semantic_max  = (grep {$length < $_}  @thresh)[0]  || MAX; 
 
-    my $slabel           = $summary_mode ? $label : $data_source->semantic_label($label,$length);
+    warn "thresholds = @thresh, semantic_max = $semantic_max";
+
+    my $slabel        = $summary_mode ? $label : $data_source->semantic_label($label,$length);
 
     if ($revert_to_defaults) {
 	$state->{features}{$label}{summary_override}  = {} if $summary_mode;
@@ -43,20 +47,21 @@ sub config_dialog {
 	delete $state->{features}{$label}{summary_mode_len};
     }
 
-    my $scaled_length  = $length/$render->details_mult;
+    my $scaled_length     = $length;
     my $semantic_override = $render->find_override_region($state->{features}{$label}{semantic_override},$length);
     $semantic_override   ||= 0;
 
     my ($semantic_level)   = $slabel =~ /(\d+)$/;
     $semantic_level      ||= 0;
     my @level              = map {
-	scalar $render->data_source->unit_label($_/$render->details_mult)
+	scalar $render->data_source->unit_label($_)
     } split ':',($semantic_override || $semantic_level);
     my $level              = join '..',@level;
 
     my $key = $render->label2key($label);
     $key .= $summary_mode      ? " (".$render->translate('FEATURE_SUMMARY').')'
-           :$level             ? " ($level)"
+	   :$level eq '0 bp'   ? ''
+           :$level             ? " (>=$level)"
 	   :'';
 
     my $override = $summary_mode 
@@ -76,7 +81,6 @@ sub config_dialog {
     my $variance_band = $self->setting( $label => 'variance_band',  $length, $summary_mode);
     my $color_series  = $self->setting( $label => 'color_series',   $length, $summary_mode);
     my $limit         = $self->setting( $label => 'feature_limit' , $length, $summary_mode)    || 0;
-    my $summary_length= $self->setting( $label => 'show summary' , $length, $summary_mode) || 0;
     my $opacity       = $override->{'opacity'} || $self->setting($label => 'opacity',$length,$summary_mode) || 0.3;
 
     # options for wiggle & xy plots
@@ -544,17 +548,17 @@ END
         );
 
     my ($low,$hi)   = $render->find_override_bounds($state->{features}{$label}{semantic_override},$scaled_length);
-    $low = $semantic_level unless defined $low;
-    $hi  ||= MAX;
-    my $mult = $render->details_mult;
+    warn "semantic_min=$semantic_min, semantic_max=$semantic_max, low=$low,hi=$hi";
+    $low            = $semantic_min unless $low>0;  # these statements are wrong
+    $hi             = $semantic_max unless $hi<MAX; # these statements are wrong
     push @rows,TR({-class=>'general'},
 		  th( {-align => 'right' }, 
 		      $render->translate('APPLY_CONFIG')
 		      ),
 		  td(
-		      $self->region_size_menu('apply_semantic_low',$scaled_length,[$low/$mult,MIN],$low/$mult),
+		      $self->region_size_menu('apply_semantic_low',$scaled_length,[$low,MIN],$low),
 		      '-',
-		      $self->region_size_menu('apply_semantic_hi',$scaled_length,[$hi/$mult,MAX],$hi/$mult),
+		      $self->region_size_menu('apply_semantic_hi',$scaled_length,[$hi,MAX],$hi),
 		  )
 	) unless $summary_mode;
 

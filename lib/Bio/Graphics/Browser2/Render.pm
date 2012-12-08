@@ -1229,6 +1229,24 @@ sub get_search_object {
     return $self->{searchobj} = $search;
 }
 
+sub segment_length {
+    my $self    = shift;
+    my $label   = shift;
+    my $section = $label 
+	           ? Bio::Graphics::Browser2::DataSource->get_section_from_label($label) 
+		   : 'detail';
+    my $whole = $self->whole_segment->length;
+    my $mult  = $self->details_mult;
+
+    my $length = eval {$section eq 'detail'   ? ($self->segment->length+1)/$mult
+		      :$section eq 'region'   ? $self->region_segment->length
+		      :$section eq 'overview' ? $self->whole_segment->length
+		      : 0} || 0;
+    $length    = int($length+0.5);
+    return $length > $whole ? $whole : $length;
+}
+
+
 # ========================= plugins =======================
 sub init_plugins {
   my $self        = shift;
@@ -2140,11 +2158,10 @@ sub reconfigure_track {
     $state->{features}{$label}{options}  = $q->param('format_option');
     my $dynamic = $self->translate('DYNAMIC_VALUE');
     my $mode    = $q->param('mode') || 'details';
-    my $mult    = $self->details_mult;
 
-    my $length            = ($q->param('segment_length')||0)     * $mult;
-    my $semantic_low      = ($q->param('apply_semantic_low')||0) * $mult;
-    my $semantic_hi       = ($q->param('apply_semantic_hi')||0)  * $mult   || $self->get_max_segment;
+    my $length            = ($q->param('segment_length')||0);
+    my $semantic_low      = ($q->param('apply_semantic_low')||0);
+    my $semantic_hi       = ($q->param('apply_semantic_hi')||0)   || $self->get_max_segment;
     my $delete_semantic   = $q->param('delete_semantic');
     my $summary           = $q->param('summary_mode');
 

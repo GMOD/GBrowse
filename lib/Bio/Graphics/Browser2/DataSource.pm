@@ -602,6 +602,16 @@ sub semantic_setting {
   return $self->code_setting($label=>$option);
 }
 
+sub semantic_thresholds {
+    my ($self,$label) = @_;
+    my @l = 0;
+    foreach ($self->configured_types) {
+	next unless /^$label:(\d+)/;
+	push @l,$1;
+    }
+    @l;
+}
+
 sub semantic_labels {
   my ($self,$label,$length) = @_;
   return $label unless defined $length && $length > 0;

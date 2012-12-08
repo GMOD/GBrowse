@@ -78,6 +78,7 @@ sub config_dialog {
     my $width         = $self->setting( $label => 'linewidth',      $length, $summary_mode )   || 1;
     my $glyph         = $self->setting( $label => 'glyph',          $length, $summary_mode )   || 'box';
     my $stranded      = $self->setting( $label => 'stranded',       $length, $summary_mode);
+    $stranded++      if $glyph eq 'gene';  # workaround a inconsistency in gene glyph behavior
     my $variance_band = $self->setting( $label => 'variance_band',  $length, $summary_mode);
     my $color_series  = $self->setting( $label => 'color_series',   $length, $summary_mode);
     my $limit         = $self->setting( $label => 'feature_limit' , $length, $summary_mode)    || 0;
@@ -538,10 +539,10 @@ END
 		      checkbox(
 			  -name    => 'conf_stranded',
 			  -override=> 1,
-			 -value   => 1,
+			  -value   => 1,
 			  -checked => defined $override->{'stranded'} 
-			  ? $override->{'stranded'} 
-			  : $stranded,
+			            ? $override->{'stranded'} 
+			            : $stranded,
 			  -label   => '',
 		      )
 		  )

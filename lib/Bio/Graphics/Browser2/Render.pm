@@ -1232,20 +1232,30 @@ sub get_search_object {
 sub segment_length {
     my $self    = shift;
     my $label   = shift;
+    my $segment = $self->segment->length;
+    my $region  = $self->region_segment;
+    my $whole   = $self->whole_segment;
+    my $mult    = $self->details_mult;
+    return $self->_segment_length($label,$segment,$region,$whole,$mult);
+}
+
+sub _segment_length {
+    my $self = shift;
+    my ($label,$segment,$region,$whole,$mult) = @_;
+
     my $section = $label 
 	           ? Bio::Graphics::Browser2::DataSource->get_section_from_label($label) 
 		   : 'detail';
-    my $whole = $self->whole_segment->length;
-    my $mult  = $self->details_mult;
 
-    my $length = eval {$section eq 'detail'   ? ($self->segment->length+1)/$mult
-		      :$section eq 'region'   ? $self->region_segment->length
-		      :$section eq 'overview' ? $self->whole_segment->length
+    my $max = eval {$whole->length } || 9999999999;
+
+    my $length = eval {$section eq 'detail'   ? ($segment->length+1)/$mult
+		      :$section eq 'region'   ? $region->length
+		      :$section eq 'overview' ? $whole->length
 		      : 0} || 0;
     $length    = int($length+0.5);
-    return $length > $whole ? $whole : $length;
+    return $length > $max ? $max : $length;
 }
-
 
 # ========================= plugins =======================
 sub init_plugins {
@@ -2253,7 +2263,7 @@ sub clip_override_ranges {
 
 	if ($r->[0] <= $low && $r->[1] >= $hi) {   # case C
 	    $semconf->{$r->[0]  . ':' . ($low-1)} = $conf unless $r->[0] >= $low-1;
-	    $semconf->{($hi+1)  . ':' . $r->[1] } = $conf unless $hi+1   >= $r->[1];
+	    $semconf->{$hi      . ':' . $r->[1] } = $conf unless $hi     >= $r->[1];
 	    $overlap++;
 	}
 
@@ -2270,7 +2280,7 @@ sub clip_override_ranges {
 	} 
 
 	if ($r->[1] >= $hi && $r->[0] <= $hi) {   # case B
-	    $r->[0] =  $hi+1;
+	    $r->[0] =  $hi;
 	    $semconf->{"$r->[0]:$r->[1]"} = $conf
 		unless $r->[0] >= $r->[1];
 	    $overlap++;
@@ -2289,10 +2299,10 @@ sub find_override_bounds {
     map { my @a = split ':';
 	  \@a
     } keys %$semconf;
-    my ($low,$hi) = (0,999999999);
+    my ($low,$hi);
     for my $r (@ranges) {
 	next unless @$r == 2;
-	if ($length >= $r->[0] && $length <= $r->[1]) {
+	if ($length >= $r->[0] && $length < $r->[1]) {
 	    return @$r;
 	}
 	$low = $r->[1]+1 if $r->[1] < $length;
@@ -2307,7 +2317,7 @@ sub find_override_region {
     my @ranges = keys %$semconf;
     for my $r (@ranges) {
 	my ($low,$hi) = split ':',$r;
-	return $r if $length >= $low && (!defined $hi || $length <= $hi);
+	return $r if $length >= $low && (!defined $hi || $length < $hi);
     }
     return;
 }

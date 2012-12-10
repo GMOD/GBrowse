@@ -22,7 +22,6 @@ sub config_dialog {
     my $state       = $render->state();
     my $data_source = $render->data_source();
     my $length      = $render->segment_length($label);
-    warn "length = $length";
 
     eval 'require Bio::Graphics::Browser2::OptionPick; 1'
         unless Bio::Graphics::Browser2::OptionPick->can('new');
@@ -37,8 +36,6 @@ sub config_dialog {
     my $semantic_min  = (grep {$length >= $_} @thresh)[-1] || MIN; 
     my $semantic_max  = (grep {$length < $_}  @thresh)[0]  || MAX; 
 
-    warn "thresholds = @thresh, semantic_max = $semantic_max";
-
     my $slabel        = $summary_mode ? $label : $data_source->semantic_label($label,$length);
 
     if ($revert_to_defaults) {
@@ -47,20 +44,24 @@ sub config_dialog {
 	delete $state->{features}{$label}{summary_mode_len};
     }
 
-    my $scaled_length     = $length;
     my $semantic_override = $render->find_override_region($state->{features}{$label}{semantic_override},$length);
     $semantic_override   ||= 0;
 
-    my ($semantic_level)   = $slabel =~ /(\d+)$/;
-    $semantic_level      ||= 0;
-    my @level              = map {
-	scalar $render->data_source->unit_label($_)
-    } split ':',($semantic_override || $semantic_level);
-    my $level              = join '..',@level;
+    # my ($semantic_level)   = $slabel =~ /(\d+)$/;
+    # $semantic_level      ||= 0;
+    # my @level              = map {
+    # 	scalar $render->data_source->unit_label($_)
+    # } split ':',($semantic_override || $semantic_level);
+    # my $level              = join '..',@level;
+    my ($low,$hi)   = $render->find_override_bounds($state->{features}{$label}{semantic_override},$length);
+    $semantic_min   = $low if defined $low;
+    $semantic_max   = $hi  if defined $hi;
+    my $level                = join '..',map {scalar $render->data_source->unit_label($_)} $semantic_min,$semantic_max;
 
     my $key = $render->label2key($label);
     $key .= $summary_mode      ? " (".$render->translate('FEATURE_SUMMARY').')'
 	   :$level eq '0 bp'   ? ''
+	   :$level =~ /\.\./   ? " ($level)"
            :$level             ? " (>=$level)"
 	   :'';
 
@@ -70,7 +71,7 @@ sub config_dialog {
 
     my $return_html = start_html();
 
-    my $showing = $render->data_source->unit_label($scaled_length);
+    my $showing = $render->data_source->unit_label($length);
     my $title   = div({-class=>'config-title'},$key,br(),div({-style=>'font-size:9pt'},$render->translate('Currently_Showing',$showing)));
     my $dynamic = $render->translate('DYNAMIC_VALUE');
 
@@ -548,18 +549,14 @@ END
 		  )
         );
 
-    my ($low,$hi)   = $render->find_override_bounds($state->{features}{$label}{semantic_override},$scaled_length);
-    warn "semantic_min=$semantic_min, semantic_max=$semantic_max, low=$low,hi=$hi";
-    $low            = $semantic_min unless $low>0;  # these statements are wrong
-    $hi             = $semantic_max unless $hi<MAX; # these statements are wrong
     push @rows,TR({-class=>'general'},
 		  th( {-align => 'right' }, 
 		      $render->translate('APPLY_CONFIG')
 		      ),
 		  td(
-		      $self->region_size_menu('apply_semantic_low',$scaled_length,[$low,MIN],$low),
+		      $self->region_size_menu('apply_semantic_low',$length,[$semantic_min,MIN],$semantic_min),
 		      '-',
-		      $self->region_size_menu('apply_semantic_hi',$scaled_length,[$hi,MAX],$hi),
+		      $self->region_size_menu('apply_semantic_hi',$length,[$semantic_max,MAX],$semantic_max),
 		  )
 	) unless $summary_mode;
 

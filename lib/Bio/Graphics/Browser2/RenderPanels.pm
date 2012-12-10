@@ -2528,12 +2528,17 @@ sub make_title {
     }
   };
   warn $@ if $@;
-
   return $title;
 }
 
 sub segment_length {
-    shift->render->segment_length(@_);
+    my $self  = shift;
+    my $label = shift;
+    return Bio::Graphics::Browser2::Render->_segment_length($label,
+							    $self->segment,
+							    $self->region_segment,
+							    $self->whole_segment,
+							    $self->details_mult);
 }
 
 sub make_link_target {

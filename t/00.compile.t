@@ -20,7 +20,8 @@ sub files_to_check {
     }
 
     return
-        map { glob "$_/*" }
+        grep {!/^#/ && !/~$/}  # ignore autosave files
+	map { glob "$_/*" }
         'cgi-bin', 'bin';
 }
 

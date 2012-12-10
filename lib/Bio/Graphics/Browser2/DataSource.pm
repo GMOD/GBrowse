@@ -609,6 +609,7 @@ sub semantic_thresholds {
 	next unless /^$label:(\d+)/;
 	push @l,$1;
     }
+    
     @l;
 }
 

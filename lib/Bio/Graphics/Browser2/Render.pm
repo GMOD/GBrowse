@@ -1232,7 +1232,7 @@ sub get_search_object {
 sub segment_length {
     my $self    = shift;
     my $label   = shift;
-    my $segment = $self->segment->length;
+    my $segment = $self->segment;
     my $region  = $self->region_segment;
     my $whole   = $self->whole_segment;
     my $mult    = $self->details_mult;

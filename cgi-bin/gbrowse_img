@@ -15,6 +15,7 @@ use Digest::MD5 'md5_hex';
 # type      list of feature mnemonics
 # options   track options, in format mnemonic+option+mnemonic+option...
 # name      landmark or range to display, in format Name:start..stop
+# dbid      database name
 # width     desired width of image, in pixels (height cannot be set)
 # add       a feature to superimpose on top of the image
 #             in format: reference+type+name+start..stop,start..stop,start..stop
@@ -637,6 +638,7 @@ lengths.
 <table border="1">
 <tr><th>Argument</th><th>Alias</th><th>Description</th></tr>
 <tr> <td>name</td>    <td>q</td>   <td>genomic landmark or range</td></tr>
+<tr> <td>dbid</td>    <td>&nbsp;</td>   <td>database name for disambiguating landmarks</td></tr>
 <tr> <td>type</td>    <td>t</td>   <td>tracks to include in image</td></tr>
 <tr> <td>width</td>   <td>w</td>   <td>desired width of image</td></tr>
 <tr> <td>options</td> <td>o</td>   <td>list of track options (compact, labeled, etc)</td></tr>
@@ -675,6 +677,17 @@ lengths.
       image showing the position of each landmark.  The alias "q" can be used to
       shorten the length of the URL.
       <p>
+
+  <dt><b>dbid</b></dt>
+
+  <dd>If the data source contains multiple defined databases, this
+  argument is required to uniquely identify landmarks that may appear
+  in multiple databases under different names. If not present, then
+  the standard search algorithm is used. Use the symbolic database
+  name indicated in the source configuration file. For example if the
+  database stanza is "[scaffolds:database]" then pass
+  "dbid=scaffolds".  </dd>
+
   <dt><b>type</b> (Aliases: <b>t</b>, <b>track</b>)
   <dd>This argument lists the feature types to display.  The value of this argument is
       a list of track names separated by spaces ("+" characters when URL-escaped).  For example:

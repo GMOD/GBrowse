@@ -1,3 +1,8 @@
+2.54
+ * Version 2.53 introduced a bad bug into track configuration such
+   that semantic zooming no longer works for user-provided
+   configuration. This has now been fixed.
+
 2.53
  * Fix a variety of semantic zooming inconsistencies.
  * Code simplification in data source.

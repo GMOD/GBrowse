@@ -107,8 +107,11 @@ sub select {
     return $up[rand @up];
 }
 
-
-
-
-
 1;
+
+=head1 Author
+
+Lincoln D. Stein <lincoln.stein@gmail.com>
+
+
+

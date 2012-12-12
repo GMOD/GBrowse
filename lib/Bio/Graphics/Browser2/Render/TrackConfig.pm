@@ -30,7 +30,7 @@ sub config_dialog {
 
     # summary options
     my $can_summarize = $data_source->can_summarize($label);
-    my $summary_mode  = $data_source->show_summary($label,$length);
+    my $summary_mode  = $data_source->show_summary($label,$length,$state);
     my $summary_length= $self->setting( $label => 'show summary' ,  $length, $summary_mode)    || 0;
     my @thresh        = sort {$a<=>$b} ($data_source->semantic_thresholds($label),$summary_length);    
     my $semantic_min  = (grep {$length >= $_} @thresh)[-1] || MIN; 

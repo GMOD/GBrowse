@@ -7,6 +7,7 @@ use strict;
 use Parse::Apache::ServerStatus;
 use VM::EC2;
 use VM::EC2::Instance::Metadata;
+use LWP::Simple 'get','head';
 use Parse::Apache::ServerStatus;
 use Carp 'croak';
 
@@ -24,13 +25,13 @@ sub new {
 sub conf_file {shift->{conf_file}}
 
 sub load_table {
-    return shift->{'LOAD TABLE'};
+    return shift->{options}{'LOAD TABLE'};
 }
 
 sub option {
     my $self = shift;
     my ($stanza,$option) = @_;
-    return $self->{uc $stanza}{$option};
+    return $self->{options}{uc $stanza}{$option};
 }
 
 # given load, returns two element list of min_instances, max_instances
@@ -53,19 +54,19 @@ sub slave_ports         { my $p = shift->option('SLAVE','ports');
 			  return @p ? @p : (8101); }
 sub aws_region          {
     my $self = shift;
-    if ($self->running_as_an_instance) {
-	my $zone =  $self->{instance_metadata}{availabilityZone}
+    if ($self->running_as_instance) {
+	my $zone =  $self->{instance_metadata}->availabilityZone;
 	$zone    =~ s/[a-z]$//;  #  zone=>region
 	return $zone;
     } else {
-	return $self->option('SLAVE','region');
+	return $self->option('SLAVE','region') || 'us-east-1';
     }
 }
 
 sub aws_zone {
     my $self = shift;
-    if ($self->running_as_an_instance) {
-	return $self->{instance_metadata}{availabilityZone};
+    if ($self->running_as_instance) {
+	return $self->{instance_metadata}->availabilityZone;
     } else {
 	$self->option('SLAVE','availability_zone');
     }
@@ -73,8 +74,8 @@ sub aws_zone {
 
 sub aws_image_id {
     my $self = shift;
-    if ($self->running_as_an_instance) {
-	return $self->{instance_metadata}{imageId};
+    if ($self->running_as_instance) {
+	return $self->{instance_metadata}->imageId;
     } else {
 	$self->option('SLAVE','image_id');
     }
@@ -82,8 +83,8 @@ sub aws_image_id {
 
 sub aws_subnet {
     my $self = shift;
-    if ($self->running_as_an_instance) {
-	return eval {(values %{$meta->interfaces})[0]{subnetId}};
+    if ($self->running_as_instance) {
+	return eval {(values %{$self->{instance_metadata}->interfaces})[0]{subnetId}};
     } else {
 	$self->option('SLAVE','subnet');
     }
@@ -91,18 +92,42 @@ sub aws_subnet {
 
 sub aws_security_group {
     my $self = shift;
-    my $sg   = $self->option('SLAVE','security_group');
-    unless ($sg) {
-	my $ec2 = $self->ec2;
-	$sg = $ec2->create_security_group(-name  =>  "GBROWSE_SLAVE_$$",
-					  -description => 'Temporary security group for slave communications');
-	$self->{create_security_group} = $sg;
-	$sg->authorize_incoming(-protocol  => 'tcp',
-				-port      => $_,
-				-source_ip => $self->master_ip) foreach $self->aws_ports;
-	$sg->update;
+    my $sg   = $self->{slave_security_group};
+    return $sg if $sg;
+    my $ec2 = $self->ec2;
+    $sg =   $ec2->describe_security_groups(-name     =>  "GBROWSE_SLAVE_$$");
+    $sg ||= $ec2->create_security_group(-name        =>  "GBROWSE_SLAVE_$$",
+					-description => 'Temporary security group for slave communications');
+    my @auth;
+    if ($self->running_as_instance) {
+	@auth = (-group => $self->master_security_group);
+    } else {
+	@auth = (-source_ip => $self->master_ip.'/32');
     }
-    return $sg;
+    $sg->authorize_incoming(-protocol  => 'tcp',
+			    -port      => $_,
+			    @auth) foreach $self->slave_ports;
+    $sg->update;
+    return $self->{slave_security_group} = $sg;
+}
+
+sub ec2 {
+    my $self = shift;
+    return $self->{ec2} if exists $self->{ec2};
+    my $region = $self->aws_region;
+    return $self->{ec2} = VM::EC2->new(-region=>$region);
+}
+
+sub master_security_group {
+    my $self = shift;
+    return ($self->{instance_metadata}->securityGroups)[0];
+}
+
+sub master_ip {
+    my $self = shift;
+    my $ip   = $self->option('MASTER','external_ip');
+    $ip ||= $self->_get_external_ip;
+    return $ip;
 }
 
 sub initialize {
@@ -111,9 +136,21 @@ sub initialize {
     $self->_parse_instance_metadata;
 }
 
+sub running_as_instance {
+    my $self = shift;
+    return -e '/var/lib/cloud/data/previous-instance-id' 
+	&& head('http://169.254.169.254');
+}
+
+sub _get_external_ip {
+    my $ip= get('http://icanhazip.com');
+    chomp($ip);
+    return $ip;
+}
+
 sub _parse_conf_file {
     my $self = shift;
-    return if exists $self->{'LOAD TABLE'};
+    return if exists $self->{options}{'LOAD TABLE'};
     open my $f,$self->conf_file or croak "Could not open ",$self->conf_file,": $!";
     $self->{pushback} = [];
     while (defined(my $line = $self->_getline($f))) {
@@ -121,7 +158,7 @@ sub _parse_conf_file {
     }
     close $f;
     croak "invalid config file; must contain [LOAD TABLE] and [SLAVE] stanzas"
-	unless exists $self->{'LOAD TABLE'} and exists $self->{'SLAVE'};
+	unless exists $self->{options}{'LOAD TABLE'} and exists $self->{options}{'SLAVE'};
 }
 
 sub _parse_stanza {
@@ -141,7 +178,7 @@ sub _parse_load_table {
 	my @tokens = split /\s+/,$line;
 	@tokens    == 3 or croak "invalid load table line: $line";
 	my ($load,$min,$max) = @tokens;
-	$self->{'LOAD TABLE'}{$load} = [$min,$max];
+	$self->{options}{'LOAD TABLE'}{$load} = [$min,$max];
     } 
 }
 
@@ -183,9 +220,14 @@ sub _getline {
     }
 }
 
+sub _parse_instance_metadata {
+    my $self = shift;
+    $self->{instance_metadata} ||= VM::EC2::Instance::Metadata->new();
+}
+
 sub DESTROY {
     my $self = shift;
-    if (my $sg = $self->{create_security_group}) {
+    if (my $sg = $self->{slave_security_group}) {
 	$self->ec2->delete_security_group($sg);
     }
 }

@@ -224,7 +224,7 @@ sub request_spot_instance {
 	-instance_type        => $self->slave_instance_type,
 	-instance_count       => 1,
 	-security_group_id    => $self->slave_security_group,
-	-spot_price           => $slave->spot_price,
+	-spot_price           => $self->slave_spot_price,
 	$subnet? (-subnet_id  => $subnet) : (),
 	-user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start",
 	);

@@ -7,7 +7,7 @@ use warnings;
 use FindBin '$Bin';
 use Test::More;
 
-use constant TESTS      => 11;
+use constant TESTS      => 12;
 use constant CONF_FILE  => "$Bin/testdata/conf/aws_slave.conf";
 
 
@@ -34,6 +34,7 @@ is_deeply([$b->slaves_wanted(1.1)],[1,4],'load table test 6');
 is_deeply([$b->slaves_wanted(20)],[6,8],'load table test 8');
 is($b->slave_instance_type,'m1.large','instance type');
 is($b->slave_spot_bid,'0.08','bid price');
+is($b->master_poll,30,'poll interval');
 like($b->master_ip,qr/^\d+\.\d+\.\d+\.\d+$/,'master ip');
 
 

@@ -10,6 +10,9 @@ use VM::EC2::Instance::Metadata;
 use LWP::Simple 'get','head';
 use Parse::Apache::ServerStatus;
 use Carp 'croak';
+use FindBin '$Bin';
+
+use constant CONFIGURE_SLAVES => "$Bin/gbrowse_configure_slaves.pl";
 
 sub new {
     my $class = shift;
@@ -23,6 +26,22 @@ sub new {
     $self->initialize();
     return $self;
 }
+
+sub run {
+    my $self = shift;
+    while (sleep $self->master_poll) {
+	my $load = $self->get_load();
+	$self->adjust_instances($load);
+	$self->update_requests();
+    }
+}
+
+sub initialize {
+    my $self = shift;
+    $self->_parse_conf_file;
+    $self->_parse_instance_metadata;
+}
+
 
 #######################
 # configuration
@@ -137,10 +156,17 @@ sub master_ip {
     return $ip;
 }
 
-sub initialize {
+# poll interval in seconds
+sub master_poll {
     my $self = shift;
-    $self->_parse_conf_file;
-    $self->_parse_instance_metadata;
+    my $pi   = $self->option('MASTER','poll_interval');
+    return $pi * 60;
+}
+
+sub master_server_status_url {
+    my $self = shift;
+    return $self->option('MASTER','server_status_url') 
+	|| 'http://localhost/server-status';
 }
 
 sub running_as_instance {
@@ -214,11 +240,67 @@ sub id2_spot_request {
     return $self->{pending_requests}{$id};
 }
 
+sub get_load {
+    my $self      = shift;
+    $self->{pr} ||= Parse::Apache::ServerStatus->new(url=>$self->master_server_status_url);
+    if (-e '/tmp/gbrowse_load') {
+	open my $fh,'/tmp/gbrowse_load';
+	chomp (my $load = <$fh>);
+	return $load;
+    }
+    my $stats = $self->{pr}->get or croak $self->{pr}->errstr;
+    return $stats->{rs};
+}
+
+
+###########################################
+# state change
+###########################################
+
+# this is called to update the number of live and pending slaves
+# according to the load
+sub adjust_instances {
+    my $self = shift;
+    my $load = shift;
+    my ($min,$max) = $self->slaves_wanted($load);
+    my $current    = $self->pending_spot_requests + $self->running_slaves;
+    my $ec2        = $self->ec2;
+    
+    if ($current < $min) {
+	$self->request_spot_instance while $current++ < $min;
+    } elsif ($current > $max) {
+	my @candidates = ($self->pending_spot_requests,$self->running_slaves);
+	while ($current-- > $max) {
+	    my $c = shift @candidates;
+	    $ec2->cancel_spot_instance_requests($c) if $c->isa('VM::EC2::Spot::InstanceRequest');
+	    $ec2->terminate_instances($c)           if $c->isa('VM::EC2::Instance');
+	}
+    }
+}
+
+# this is called to act on state changes in spot requests and instances
+sub update_requests {
+    my $self = shift;
+    my @requests = $self->pending_spot_requests;
+    for my $sr (@requests) {
+	my $state    = $sr->current_state;
+	my $instance = $sr->instance;
+	if ($state eq 'closed' && $instance && $instance->instanceState eq 'running') {
+	    $instance->add_tag(Name => 'GBrowse Slave');
+	    next unless $self->ping_slave($instance);   # not ready - try again on next poll
+	    $self->add_slave($instance);
+	    $self->remove_spot_request($sr);            # we will never check this request again
+	    $self->reconfigure_master();
+	}
+    }
+}
+
 # launch a spot instance request
 sub request_spot_instance {
     my $self = shift;
     my $ec2  = $self->ec2;
     my $subnet = $self->slave_subnet;
+    my @ports  = $self->slave_ports;
     my @requests = $ec2->request_spot_instances(
 	-image_id             => $self->slave_image_id,
 	-instance_type        => $self->slave_instance_type,
@@ -226,7 +308,7 @@ sub request_spot_instance {
 	-security_group_id    => $self->slave_security_group,
 	-spot_price           => $self->slave_spot_price,
 	$subnet? (-subnet_id  => $subnet) : (),
-	-user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start",
+	-user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start @ports",
 	);
     @requests or croak $ec2->error_str;
     $_->add_tag(Requestor=>'GBrowse AWS Balancer') foreach @requests;
@@ -241,21 +323,34 @@ sub kill_slave {
     $instance->terminate();
 }
 
-sub update_requests {
-    my $self = shift;
-    my @requests = $self->pending_spot_requests;
-    for my $sr (@requests) {
-	my $state    = $sr->current_state;
-	my $instance = $sr->instance;
-	if ($state eq 'closed' && $instance && $instance->instanceState eq 'running') {
-	    $instance->add_tag(Name => 'GBrowse Slave');
-	    if ($self->ping_slave($instance)) {  # new running slave
-		$self->add_slave($instance);
-		$self->remove_spot_request($sr);
-		$self->reconfigure_master();
-	    }
+sub reconfigure_master {
+    my $self   = shift;
+    my @slaves = $self->running_slaves;
+    my @ips    = map {$self->running_as_instance?$_->privateIpAddress:$_->publicIp} @slaves;
+    my @a;
+    for my $i (@ips) {
+	for my $p ($self->slave_ports) {
+	    push @a,"http://$i:$p";
 	}
     }
+    if (@a) {
+	system 'sudo',CONFIGURE_SLAVES,(map {('--set'=>$_)} @a);
+    } else {
+	system 'sudo',CONFIGURE_SLAVES,'--set','';
+    }
+	
+}
+
+sub cleanup {
+    my $self = shift;
+    if (my $sg = $self->{slave_security_group}) {
+	$self->ec2->delete_security_group($sg);
+    }
+    my @requests  = $self->pending_spot_requests;
+    my @instances = $self->running_slaves;
+    my $ec2 = $self->ec2;
+    $ec2->cancel_spot_instance_requests(@requests);
+    $ec2->terminate_instances(@instances);
 }
 
 
@@ -349,9 +444,7 @@ sub _parse_instance_metadata {
 
 sub DESTROY {
     my $self = shift;
-    if (my $sg = $self->{slave_security_group}) {
-	$self->ec2->delete_security_group($sg);
-    }
+    $self->cleanup;
 }
 
 1;

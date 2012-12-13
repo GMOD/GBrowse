@@ -17,10 +17,16 @@ sub new {
     #setup defaults
     $ENV{EC2_ACCESS_KEY} = $access_key if defined $access_key;
     $ENV{EC2_SECRET_KEY} = $secret_key if defined $secret_key;
-    return bless {
+    my $self = bless {
 	conf_file => $conf_file,
     },ref $class || $class;
+    $self->initialize();
+    return $self;
 }
+
+#######################
+# configuration
+######################
 
 sub conf_file {shift->{conf_file}}
 
@@ -52,7 +58,7 @@ sub slave_spot_bid      { shift->option('SLAVE','spot_bid')      || 0.08       }
 sub slave_ports         { my $p = shift->option('SLAVE','ports');
 			  my @p = split /\s+/,$p;
 			  return @p ? @p : (8101); }
-sub aws_region          {
+sub slave_region          {
     my $self = shift;
     if ($self->running_as_instance) {
 	my $zone =  $self->{instance_metadata}->availabilityZone;
@@ -63,7 +69,7 @@ sub aws_region          {
     }
 }
 
-sub aws_zone {
+sub slave_zone {
     my $self = shift;
     if ($self->running_as_instance) {
 	return $self->{instance_metadata}->availabilityZone;
@@ -72,7 +78,7 @@ sub aws_zone {
     }
 }
 
-sub aws_image_id {
+sub slave_image_id {
     my $self = shift;
     if ($self->running_as_instance) {
 	return $self->{instance_metadata}->imageId;
@@ -81,7 +87,7 @@ sub aws_image_id {
     }
 }
 
-sub aws_subnet {
+sub slave_subnet {
     my $self = shift;
     if ($self->running_as_instance) {
 	return eval {(values %{$self->{instance_metadata}->interfaces})[0]{subnetId}};
@@ -90,7 +96,7 @@ sub aws_subnet {
     }
 }
 
-sub aws_security_group {
+sub slave_security_group {
     my $self = shift;
     my $sg   = $self->{slave_security_group};
     return $sg if $sg;
@@ -114,12 +120,13 @@ sub aws_security_group {
 sub ec2 {
     my $self = shift;
     return $self->{ec2} if exists $self->{ec2};
-    my $region = $self->aws_region;
+    my $region = $self->slave_region;
     return $self->{ec2} = VM::EC2->new(-region=>$region);
 }
 
 sub master_security_group {
     my $self = shift;
+    return unless $self->running_as_instance;
     return ($self->{instance_metadata}->securityGroups)[0];
 }
 
@@ -141,6 +148,121 @@ sub running_as_instance {
     return -e '/var/lib/cloud/data/previous-instance-id' 
 	&& head('http://169.254.169.254');
 }
+
+
+#######################
+# status
+######################
+
+# return true if slave is listening on at least one of the designated ports
+sub ping_slave {
+    my $self      = shift;
+    my $instance  = shift;
+    my $ip        = $instance->ipAddress;
+    my ($port) = $self->slave_ports;
+    return defined head("$ip:$port");
+}
+
+# returns list of slave instances as VM::EC2::Instance objects
+sub running_slaves {
+    my $self = shift;
+    $self->{running_slaves} ||= {};
+    return values %{$self->{running_slaves}};
+}
+
+sub add_slave {
+    my $self = shift;
+    my $instance = shift;
+    $self->{running_slaves}{$instance}=$instance;
+}
+
+sub remove_slave {
+    my $self = shift;
+    my $instance = shift;
+    delete $self->{running_slaves}{$instance};
+}
+
+# given an instance ID, returns the slave VM::EC2::Instance object
+sub id2slave {
+    my $self = shift;
+    my $id   = shift;
+    return $self->{running_slaves}{$id};
+}
+
+# spot requests - only tracks pending requests
+sub pending_spot_requests {
+    my $self = shift;
+    $self->{pending_requests} ||= {};
+    return values %{$self->{pending_requests}};
+}
+
+sub add_spot_request {
+    my $self = shift;
+    my $sr   = shift;
+    $self->{pending_requests}{$sr} = $sr;
+}
+
+sub remove_spot_request {
+    my $self = shift;
+    my $sr   = shift;
+    delete $self->{pending_requests}{$sr};
+}
+
+sub id2_spot_request {
+    my $self = shift;
+    my $id   = shift;
+    return $self->{pending_requests}{$id};
+}
+
+# launch a spot instance request
+sub request_spot_instance {
+    my $self = shift;
+    my $ec2  = $self->ec2;
+    my $subnet = $self->slave_subnet;
+    my @requests = $ec2->request_spot_instances(
+	-image_id             => $self->slave_image_id,
+	-instance_type        => $self->slave_instance_type,
+	-instance_count       => 1,
+	-security_group_id    => $self->slave_security_group,
+	-spot_price           => $slave->spot_price,
+	$subnet? (-subnet_id  => $subnet) : (),
+	-user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start",
+	);
+    @requests or croak $ec2->error_str;
+    $_->add_tag(Requestor=>'GBrowse AWS Balancer') foreach @requests;
+    $self->add_spot_request($_) foreach @requests;
+}
+
+sub kill_slave {
+    my $self     = shift;
+    my $instance = shift;
+    $self->remove_slave($instance);
+    $self->reconfigure_master();
+    $instance->terminate();
+}
+
+sub update_requests {
+    my $self = shift;
+    my @requests = $self->pending_spot_requests;
+    for my $sr (@requests) {
+	my $state    = $sr->current_state;
+	my $instance = $sr->instance;
+	if ($state eq 'closed' && $instance && $instance->instanceState eq 'running') {
+	    $instance->add_tag(Name => 'GBrowse Slave');
+	    if ($self->ping_slave($instance)) {  # new running slave
+		$self->add_slave($instance);
+		$self->remove_spot_request($sr);
+		$self->reconfigure_master();
+	    }
+	}
+    }
+}
+
+
+
+#######################
+# internal routines
+######################
 
 sub _get_external_ip {
     my $ip= get('http://icanhazip.com');

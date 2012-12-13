@@ -67,7 +67,7 @@ if ($changed) {
     $use_renderfarm = keys %remote_renderers > 0 ? 1 : 0;
 
     open my $f,'>',"$render_conf.new" or die "Couldn't open $conf.new: $!";
-    print $f "[GENERAl]\n";
+    print $f "[GENERAL]\n";
     print $f "renderfarm = $use_renderfarm\n";
     print $f "remote renderer = \n";
     for my $s (keys %remote_renderers) {

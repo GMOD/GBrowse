@@ -9,6 +9,7 @@ use VM::EC2;
 use VM::EC2::Instance::Metadata;
 use LWP::Simple 'get','head';
 use Parse::Apache::ServerStatus;
+use POSIX 'strftime';
 use Carp 'croak';
 use FindBin '$Bin';
 
@@ -22,6 +23,7 @@ sub new {
     $ENV{EC2_SECRET_KEY} = $secret_key if defined $secret_key;
     my $self = bless {
 	conf_file => $conf_file,
+	verbosity => 2,
     },ref $class || $class;
     $self->initialize();
     return $self;
@@ -31,6 +33,7 @@ sub run {
     my $self = shift;
     while (sleep $self->master_poll) {
 	my $load = $self->get_load();
+	$self->log_debug("Current load: $load req/s\n");
 	$self->adjust_instances($load);
 	$self->update_requests();
     }
@@ -40,6 +43,13 @@ sub initialize {
     my $self = shift;
     $self->_parse_conf_file;
     $self->_parse_instance_metadata;
+}
+
+sub verbosity {
+    my $self = shift;
+    my $d    = $self->{verbosity};
+    $self->{verbosity} = shift if @_;
+    $d;
 }
 
 
@@ -267,14 +277,27 @@ sub adjust_instances {
     my $ec2        = $self->ec2;
     
     if ($current < $min) {
+	$self->log_debug("Need to add more slave spot instances\n");
 	$self->request_spot_instance while $current++ < $min;
-    } elsif ($current > $max) {
+    }
+
+    elsif ($current > $max) {
+	$self->log_debug("Need to delete some slave spot instances (have $current, wanted $max\n");
+	my $reconfigure;
 	my @candidates = ($self->pending_spot_requests,$self->running_slaves);
 	while ($current-- > $max) {
 	    my $c = shift @candidates;
-	    $ec2->cancel_spot_instance_requests($c) if $c->isa('VM::EC2::Spot::InstanceRequest');
-	    $ec2->terminate_instances($c)           if $c->isa('VM::EC2::Instance');
+	    if ($c->isa('VM::EC2::Spot::InstanceRequest')) {
+		$ec2->cancel_spot_instance_requests($c);
+		$self->remove_spot_request($c);
+		$reconfigure++;
+	    } elsif ($c->isa('VM::EC2::Instance')) {
+		$ec2->terminate_instances($c);
+		$self->remove_slave($c);
+	    }
 	}
+	# we reconfigure master immediately to avoid calling instance that were terminated
+	$self->reconfigure_master() if $reconfigure;
     }
 }
 
@@ -299,9 +322,11 @@ sub update_requests {
 sub request_spot_instance {
     my $self = shift;
     my $ec2  = $self->ec2;
+
     my $subnet = $self->slave_subnet;
     my @ports  = $self->slave_ports;
-    my @requests = $ec2->request_spot_instances(
+
+    my @options = (
 	-image_id             => $self->slave_image_id,
 	-instance_type        => $self->slave_instance_type,
 	-instance_count       => 1,
@@ -310,7 +335,11 @@ sub request_spot_instance {
 	$subnet? (-subnet_id  => $subnet) : (),
 	-user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start @ports",
 	);
+
+    $self->log_debug("Launching a spot request with options: @options\n");
+    my @requests = $ec2->request_spot_instances(@options);
     @requests or croak $ec2->error_str;
+
     $_->add_tag(Requestor=>'GBrowse AWS Balancer') foreach @requests;
     $self->add_spot_request($_) foreach @requests;
 }
@@ -339,6 +368,19 @@ sub reconfigure_master {
 	system 'sudo',CONFIGURE_SLAVES,'--set','';
     }
 	
+}
+
+sub log_debug {shift->_log(3,@_)}
+sub log_info  {shift->_log(2,@_)}
+sub log_warn  {shift->_log(1,@_)}
+sub log_crit  {shift->_log(0,@_)}
+
+sub _log {
+    my $self = shift;
+    my ($level,@msg) = @_;
+    return unless $level <= $self->verbosity;
+    my $ts = strftime('%d/%b/%Y:%H:%M:%S %z',localtime);
+    print STDERR "[$ts] @msg";
 }
 
 sub cleanup {

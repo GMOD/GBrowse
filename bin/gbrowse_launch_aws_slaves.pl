@@ -2,14 +2,15 @@
 
 use strict;
 use Getopt::Long;
+use GBrowse::ConfigData;
+use File::Spec;
 use Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;
 
 my $balancer;
 
 $SIG{TERM} = sub {exit 0};
 $SIG{INT}  = sub {exit 0};
-END {  undef $balancer }
-
+END {  $balancer->cleanup() if $balancer }
 
 my($Access_key,$Secret_key);
 GetOptions(
@@ -17,11 +18,8 @@ GetOptions(
 	   'secret_key=s'  => \$Secret_key,
     ) or exec 'perldoc',$0;
 
-#setup defaults
-$ENV{EC2_ACCESS_KEY} = $Access_key if defined $Access_key;
-$ENV{EC2_SECRET_KEY} = $Secret_key if defined $Secret_key;
-
-$balancer = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;
+my $conf  = File::Spec->catfile(GBrowse::ConfigData->config('conf'),'aws_slave.conf');
+$balancer = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->new($conf,$Access_key,$Secret_key);
 $balancer->run();
 
 exit 0;

@@ -204,7 +204,7 @@ sub running_as_instance {
 sub ping_slave {
     my $self      = shift;
     my $instance  = shift;
-    my $ip        = $self->running_as_instance?$_->privateIpAddress:$_->ipAddress;
+    my $ip        = $self->running_as_instance?$instance->privateIpAddress:$instance->ipAddress;
     my ($port) = $self->slave_ports;
     my $ua     = LWP::UserAgent->new;
     my $req    = HTTP::Request->new(HEAD => "http://$ip:$port");
@@ -418,7 +418,7 @@ sub cleanup {
 	$self->log_debug("terminating spot instances @instances\n");
     }
 
-    if (my @requests  = $self->pending_spot_requests) {
+    if (my @requests  = grep {$_->current_state eq 'open'} $self->pending_spot_requests) {
 	$ec2->cancel_spot_instance_requests(@requests);
 	delete $self->{pending_requests};
 	$self->log_debug("cancelling spot instance requests @requests\n");

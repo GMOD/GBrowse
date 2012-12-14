@@ -8,6 +8,7 @@ use Parse::Apache::ServerStatus;
 use VM::EC2;
 use VM::EC2::Instance::Metadata;
 use LWP::Simple 'get','head';
+use LWP::UserAgent;
 use Parse::Apache::ServerStatus;
 use POSIX 'strftime';
 use Carp 'croak';
@@ -203,9 +204,12 @@ sub running_as_instance {
 sub ping_slave {
     my $self      = shift;
     my $instance  = shift;
-    my $ip        = $instance->ipAddress;
+    my $ip        = $self->running_as_instance?$_->privateIpAddress:$_->ipAddress;
     my ($port) = $self->slave_ports;
-    return defined head("$ip:$port");
+    my $ua     = LWP::UserAgent->new;
+    my $req    = HTTP::Request->new(HEAD => "http://$ip:$port");
+    my $res    = $ua->request($req);
+    return $res->code == 403;
 }
 
 # returns list of slave instances as VM::EC2::Instance objects
@@ -371,7 +375,7 @@ sub kill_slave {
 sub reconfigure_master {
     my $self   = shift;
     my @slaves = $self->running_slaves;
-    my @ips    = map {$self->running_as_instance?$_->privateIpAddress:$_->publicIp} @slaves;
+    my @ips    = map {$self->running_as_instance?$_->privateIpAddress:$_->ipAddress} @slaves;
     my @a;
     for my $i (@ips) {
 	for my $p ($self->slave_ports) {

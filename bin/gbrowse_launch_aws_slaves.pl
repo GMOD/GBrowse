@@ -18,9 +18,9 @@ GetOptions(
 	   'secret_key=s'  => \$Secret_key,
     ) or exec 'perldoc',$0;
 
-
 my $conf  = File::Spec->catfile(GBrowse::ConfigData->config('conf'),'aws_slave.conf');
 $balancer = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->new($conf,$Access_key,$Secret_key);
+$balancer->verbosity(5);
 $balancer->run();
 
 exit 0;

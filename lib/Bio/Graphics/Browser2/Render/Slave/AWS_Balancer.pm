@@ -26,12 +26,15 @@ sub new {
 	verbosity => 2,
     },ref $class || $class;
     $self->initialize();
+    eval {$self->ec2} or croak $@;
     return $self;
 }
 
 sub run {
     my $self = shift;
-    while (sleep $self->master_poll) {
+    my $poll = $self->master_poll;
+    $self->log_info("Monitoring load at intervals of $poll sec\n");
+    while (sleep $poll) {
 	my $load = $self->get_load();
 	$self->log_debug("Current load: $load req/s\n");
 	$self->adjust_instances($load);
@@ -139,10 +142,14 @@ sub slave_security_group {
     } else {
 	@auth = (-source_ip => $self->master_ip.'/32');
     }
-    $sg->authorize_incoming(-protocol  => 'tcp',
-			    -port      => $_,
-			    @auth) foreach $self->slave_ports;
-    $sg->update;
+    
+    $self->log_debug(
+	$sg->authorize_incoming(-protocol  => 'tcp',
+				-port      => $_,
+				@auth)
+	) foreach $self->slave_ports;
+    
+    $sg->update or croak $ec2->error_str;
     return $self->{slave_security_group} = $sg;
 }
 
@@ -156,7 +163,9 @@ sub ec2 {
 sub master_security_group {
     my $self = shift;
     return unless $self->running_as_instance;
-    return ($self->{instance_metadata}->securityGroups)[0];
+    my $sg = ($self->{instance_metadata}->securityGroups)[0];
+    $sg    =~ s/%([0-9A-Fa-f]{2})/chr(hex($1))/eg;
+    return $sg;
 }
 
 sub master_ip {
@@ -274,16 +283,16 @@ sub adjust_instances {
     my $load = shift;
     my ($min,$max) = $self->slaves_wanted($load);
     my $current    = $self->pending_spot_requests + $self->running_slaves;
-    my $ec2        = $self->ec2;
     
     if ($current < $min) {
-	$self->log_debug("Need to add more slave spot instances\n");
+	$self->log_debug("Need to add more slave spot instances (have $current, wanted $min)\n");
 	$self->request_spot_instance while $current++ < $min;
     }
 
     elsif ($current > $max) {
 	$self->log_debug("Need to delete some slave spot instances (have $current, wanted $max\n");
 	my $reconfigure;
+	my $ec2        = $self->ec2;
 	my @candidates = ($self->pending_spot_requests,$self->running_slaves);
 	while ($current-- > $max) {
 	    my $c = shift @candidates;
@@ -306,14 +315,19 @@ sub update_requests {
     my $self = shift;
     my @requests = $self->pending_spot_requests;
     for my $sr (@requests) {
-	my $state    = $sr->current_state;
+	my $state    = $sr->current_status;
+	$self->log_debug("Status of $sr is $state");
 	my $instance = $sr->instance;
-	if ($state eq 'closed' && $instance && $instance->instanceState eq 'running') {
+	if ($state eq 'fulfilled' && $instance && $instance->instanceState eq 'running') {
 	    $instance->add_tag(Name => 'GBrowse Slave');
+	    $self->log_debug("New instance $instance; testing readiness");
 	    next unless $self->ping_slave($instance);   # not ready - try again on next poll
+	    $self->log_debug("New slave instance is ready");
 	    $self->add_slave($instance);
 	    $self->remove_spot_request($sr);            # we will never check this request again
 	    $self->reconfigure_master();
+	} elsif ($sr->current_state =~ /cancelled|failed/ ) {
+	    $self->remove_spot_request($sr);
 	}
     }
 }
@@ -331,12 +345,14 @@ sub request_spot_instance {
 	-instance_type        => $self->slave_instance_type,
 	-instance_count       => 1,
 	-security_group_id    => $self->slave_security_group,
-	-spot_price           => $self->slave_spot_price,
+	-spot_price           => $self->slave_spot_bid,
 	$subnet? (-subnet_id  => $subnet) : (),
 	-user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start @ports",
 	);
 
-    $self->log_debug("Launching a spot request with options: @options\n");
+    my $debug_options = "@options";
+    $debug_options    =~ tr/\n/ /;
+    $self->log_debug("Launching a spot request with options: $debug_options\n");
     my @requests = $ec2->request_spot_instances(@options);
     @requests or croak $ec2->error_str;
 
@@ -380,19 +396,39 @@ sub _log {
     my ($level,@msg) = @_;
     return unless $level <= $self->verbosity;
     my $ts = strftime('%d/%b/%Y:%H:%M:%S %z',localtime);
-    print STDERR "[$ts] @msg";
+    my $msg = "@msg";
+    chomp($msg);
+    print STDERR "[$ts] $msg\n";
 }
 
 sub cleanup {
     my $self = shift;
-    if (my $sg = $self->{slave_security_group}) {
-	$self->ec2->delete_security_group($sg);
-    }
+    my $ec2 = eval{$self->ec2} or return;
+
     my @requests  = $self->pending_spot_requests;
-    my @instances = $self->running_slaves;
-    my $ec2 = $self->ec2;
-    $ec2->cancel_spot_instance_requests(@requests);
-    $ec2->terminate_instances(@instances);
+    my @instances = ($self->running_slaves,grep {$_} map {$_->instance} @requests);
+
+    if (@instances) {
+	$ec2->terminate_instances(@instances);
+	delete $self->{running_slaves};
+	$self->log_debug("terminating spot instances @instances\n");
+    }
+
+    if (my @requests  = $self->pending_spot_requests) {
+	$ec2->cancel_spot_instance_requests(@requests);
+	delete $self->{pending_requests};
+	$self->log_debug("cancelling spot instance requests @requests\n");
+    }
+
+    if (my $sg = $self->{slave_security_group}) {
+	if (@instances) {
+	    $self->log_debug('waiting for running instances to terminate');
+	    $ec2->wait_for_instances(@instances);
+	}
+	$self->ec2->delete_security_group($sg);
+	delete $self->{slave_security_group};
+	$self->log_debug("deleting security group $sg\n");
+    }
 }
 
 

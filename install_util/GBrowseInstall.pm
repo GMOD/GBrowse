@@ -576,7 +576,7 @@ sub check_installed {
     if (-e $installed && (compare($staged,$installed) != 0)) {
 	my ($confirmed,$keep);
 
-	if ($ENV{AUTOMATED_TESTING}) {
+	if ($ENV{AUTOMATED_TESTING} || !(-t STDIN)) {
 	    $confirmed++;
 	    $keep++;
 	}

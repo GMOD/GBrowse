@@ -495,6 +495,7 @@ sub _parse_regular_stanza {
 sub _get_stanza_line {
     my $self = shift;
     my $fh   = shift;
+    local $^W=0;
     my $line = $self->_getline($fh);
     if ($line =~ /^\[/) {
 	push @{$self->{pushback}},$line;
@@ -512,7 +513,7 @@ sub _getline {
     }
 
     while (1) {
-	my $line = <$fh> or return;
+	defined(my $line = <$fh>) or return;
 	chomp $line;
 	$line =~ /^\s*#/ and next;
 	$line =~ s/\s+#.*$//;

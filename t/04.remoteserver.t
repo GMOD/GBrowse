@@ -146,11 +146,11 @@ my @images = $view =~ m!src=\"(/gbrowse/i/volvox/[a-z0-9]+\.png)\"!g;
 foreach (@images) {
     s!/gbrowse/i!/tmp/gbrowse_testing/images!;
 }
+ok (scalar @images,8);
+
 for my $img (@images) {
     ok (-e $img && -s _);
 }
-
-ok (scalar @images,8);
 
 # uncomment to see the images
 #warn join ' ',@images;

@@ -307,6 +307,7 @@ sub adjust_instances {
 	    } elsif ($c->isa('VM::EC2::Instance')) {
 		$ec2->terminate_instances($c);
 		$self->remove_slave($c);
+		$reconfigure++;
 	    }
 	}
 	# we reconfigure master immediately to avoid calling instance that were terminated
@@ -413,15 +414,16 @@ sub cleanup {
     my @instances = ($self->running_slaves,grep {$_} map {$_->instance} @requests);
 
     if (@instances) {
-	$ec2->terminate_instances(@instances);
-	delete $self->{running_slaves};
 	$self->log_debug("terminating spot instances @instances\n");
+	delete $self->{running_slaves};
+	$self->reconfigure_master();
+	$ec2->terminate_instances(@instances);
     }
 
     if (my @requests  = grep {$_->current_state eq 'open'} $self->pending_spot_requests) {
+	$self->log_debug("cancelling spot instance requests @requests\n");
 	$ec2->cancel_spot_instance_requests(@requests);
 	delete $self->{pending_requests};
-	$self->log_debug("cancelling spot instance requests @requests\n");
     }
 
     if (my $sg = $self->{slave_security_group}) {

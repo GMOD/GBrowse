@@ -885,7 +885,7 @@ sub run_remote_requests {
 			    } @labels;
 	    my $alternate_url = $slave_status->select(keys %urls);
 	    if ($alternate_url) {
-		warn "retrying fetch of @labels with $alternate_url";
+		warn "[$$] retrying fetch of @labels with $alternate_url";
 		$url = $alternate_url;
 		redo FETCH if $tries++ < SLAVE_RETRIES;
 	    }

@@ -795,7 +795,7 @@ sub run_remote_requests {
 
   my %renderers;
   for my $label (@labels_to_generate) {
-      my $url     = $source->remote_renderer or next;
+      my $url     = $source->remote_renderer($label) or next;
       my @urls    = shellwords($url);
       $url        = $slave_status->select(@urls);
       warn "label => $url (selected)" if DEBUG;
@@ -817,13 +817,14 @@ sub run_remote_requests {
 
   for my $url (keys %renderers) {
 
-      my $child   = $render->fork();
+      my $child   = Bio::Graphics::Browser2::Render->fork();
       next if $child;
 
       my $total_time = time();
 
       # THIS PART IS IN THE CHILD
       my @labels   = keys %{$renderers{$url}};
+      warn "REMOTE FETCH ON @labels" if DEBUG;
       my $s_track  = Storable::nfreeze(\@labels);
 
       foreach (@labels) {

@@ -791,9 +791,7 @@ sub run_remote_requests {
   }
 
   # sort requests by their renderers
-  my $slave_status = Bio::Graphics::Browser2::Render::Slave::Status->new(
-      $source->globals->slave_status_path
-      );
+  my $slave_status = $self->slave_status;
 
   my %renderers;
   for my $label (@labels_to_generate) {
@@ -902,6 +900,15 @@ sub run_remote_requests {
   }
 }
 
+sub slave_status {
+    my $self = shift;
+    my $source = $self->source;
+    return $self->{slave_status} ||=
+	Bio::Graphics::Browser2::Render::Slave::Status->new(
+	    $source->globals->slave_status_path
+	);
+}
+
 # Sort requests into those to be performed locally
 # and remotely. Returns two arrayrefs (\@local_labels,\@remote_labels)
 # Our algorithm is very simple. It is a remote request if the "remote renderer"
@@ -927,6 +934,8 @@ sub sort_local_remote {
     unless ($use_renderfarm) {
 	return (\@uncached,[]);
     }
+    
+    my $slave_status = $self->slave_status;
 
     my $url;
     my %is_remote = map { $_ => ( 
@@ -935,9 +944,10 @@ sub sort_local_remote {
 			      !/^(ftp|http|das):/ &&
 			      !$source->is_usertrack($_) &&
 			      !$source->is_remotetrack($_) &&
-			      (($url = $source->remote_renderer||0) &&
+			      (($url = $source->remote_renderer($_)||0) &&
 			      ($url ne 'none') &&
-			      ($url ne 'local')))
+			      ($url ne 'local') &&
+			      $slave_status->select(shellwords($url))))
                         } @uncached;
 
     my @remote    = grep {$is_remote{$_} } @uncached;

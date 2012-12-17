@@ -1,3 +1,7 @@
+2.55
+ * Better detection and handling of render slaves that have gone now. If all slaves are
+   down then throws an error (once) and then reverts to local rendering for a period of time.
+
 2.54
  * Version 2.53 introduced a bad bug into track configuration such
    that semantic zooming no longer works for user-provided

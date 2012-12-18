@@ -11,12 +11,6 @@ my $balancer;
 $SIG{TERM} = sub {exit 0};
 $SIG{INT}  = sub {exit 0};
 
-# remove EC2 secrets from command line
-# (not 100% safe)
-foreach (@ARGV) {
-    s/(--?[as][^=\s]+(?:=|\s+)?)\S+/$1xxxxxxxxxx/;
-}
-
 my($ConfFile,$AccessKey,$SecretKey,$PidFile,$LogFile,$Daemon,$User,$Verbosity,$Kill);
 GetOptions(
 	   'access_key=s'  => \$AccessKey,
@@ -30,6 +24,13 @@ GetOptions(
 	   'background'    => \$Daemon,
 
     ) or exec 'perldoc',$0;
+
+# remove EC2 secrets from command line
+# (not 100% safe)
+foreach (@ARGV) {
+    s/(--?[as][^=\s]+(?:=|\s+)?)\S+/$1xxxxxxxxxx/;
+}
+$0 = "$0 @ARGV";
 
 $ConfFile  ||= File::Spec->catfile(GBrowse::ConfigData->config('conf'),'aws_slave.conf');
 

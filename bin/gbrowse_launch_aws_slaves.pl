@@ -11,6 +11,10 @@ my $balancer;
 $SIG{TERM} = sub {exit 0};
 $SIG{INT}  = sub {exit 0};
 
+# remove EC2 secrets from command line
+# (not 100% safe)
+$0 =~ s/(--?[as][^=\s]+(?:=|\s+)?)\S+/$1xxxxxxxxxx/g;
+
 my($ConfFile,$AccessKey,$SecretKey,$PidFile,$LogFile,$Daemon,$User,$Verbosity,$Kill);
 GetOptions(
 	   'access_key=s'  => \$AccessKey,

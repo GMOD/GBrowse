@@ -362,17 +362,19 @@ sub adjust_instances {
     }
 
     elsif ($current > $max) {
-	$self->log_debug("Need to delete some slave spot instances (have $current, wanted $max\n");
+	$self->log_debug("Need to delete some slave spot instances (have $current, wanted $max)\n");
 	my $reconfigure;
 	my $ec2        = $self->ec2;
 	my @candidates = ($self->pending_spot_requests,$self->running_slaves);
 	while ($current-- > $max) {
 	    my $c = shift @candidates;
 	    if ($c->isa('VM::EC2::Spot::InstanceRequest')) {
+		$self->log_debug("Cancelling spot instance request $c\n");
 		$ec2->cancel_spot_instance_requests($c);
 		$self->remove_spot_request($c);
 		$reconfigure++;
 	    } elsif ($c->isa('VM::EC2::Instance')) {
+		$self->log_debug("Terminating slave instance $c\n");
 		$ec2->terminate_instances($c);
 		$self->remove_slave($c);
 		$reconfigure++;

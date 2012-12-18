@@ -10,7 +10,6 @@ my $balancer;
 
 $SIG{TERM} = sub {exit 0};
 $SIG{INT}  = sub {exit 0};
-END {  $balancer->cleanup() if $balancer }
 
 my($ConfFile,$AccessKey,$SecretKey,$PidFile,$LogFile,$Daemon,$User,$Verbosity,$Kill);
 GetOptions(
@@ -22,7 +21,7 @@ GetOptions(
            'user=s'        => \$User,
            'verbosity=i'   => \$Verbosity,
 	   'kill'          => \$Kill,
-	   'daemon'        => \$Daemon,
+	   'background'    => \$Daemon,
 
     ) or exec 'perldoc',$0;
 

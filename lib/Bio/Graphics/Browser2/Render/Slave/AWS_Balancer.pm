@@ -30,7 +30,8 @@ use constant CONFIGURE_SLAVES => "$Bin/gbrowse_configure_slaves.pl";
 sub new {
     my $class = shift;
     my %args  = @_;
-    $args{-conf} && -e $args{-conf} or croak "-conf argument required";
+    $args{-conf}     or croak "-conf argument required";
+    -e $args{-conf}  or croak "$args{-conf} not found";
 
     #setup EC2 environment
     $args{-access_key}  ||= $ENV{EC2_ACCESS_KEY};
@@ -88,30 +89,37 @@ sub DESTROY {
 
 sub run {
     my $self = shift;
-    if ($self->daemon) {
-	$self->{pid} = $self->become_daemon;
-	return $self->{pid} if $self->{pid};
-    }
+    $self->become_daemon && return 
+	if $self->daemon;
+
+    my $killed;
+    local $SIG{INT} = local $SIG{TERM} = sub {$self->log_info('Termination signal received');
+					      $killed++; };
+    $self->{pid} = $$;
 
     my $poll = $self->master_poll;
     $self->log_info("Monitoring load at intervals of $poll sec\n");
     while (sleep $poll) {
+	last if $killed;
 	my $load = $self->get_load();
 	$self->log_debug("Current load: $load req/s\n");
 	$self->adjust_instances($load);
 	$self->update_requests();
     }
+
+    $self->log_info('Normal termination');
 }
 
 sub stop_daemon {
     my $self = shift;
     my $pid  = $self->pid;
     if (!$pid && (my $pidfile = $self->pidfile)) {
-	my $fh = IO::File->open($pidfile);
+	my $fh = IO::File->new($pidfile) or croak "No PID file; is daemon runnning?";
 	$pid   = $fh->getline;
 	chomp($pid);
 	$fh->close;
     }
+    unlink $self->pidfile if -e $self->pidfile;
     kill TERM=>$pid if defined $pid;
 }
 
@@ -195,16 +203,12 @@ sub slave_security_group {
     $sg =   $ec2->describe_security_groups(-name     =>  "GBROWSE_SLAVE_$$");
     $sg ||= $ec2->create_security_group(-name        =>  "GBROWSE_SLAVE_$$",
 					-description => 'Temporary security group for slave communications');
-    my @auth;
-    if ($self->running_as_instance) {
-	@auth = (-group => $self->master_security_group);
-    } else {
-	@auth = (-source_ip => $self->master_ip.'/32');
-    }
+    my $ip = $self->running_as_instance ? $self->internal_ip : $self->master_ip;
     
     $self->log_debug(
 	$sg->authorize_incoming(-protocol  => 'tcp',
 				-port      => $_,
+				-source_ip => "$ip/32",
 				@auth)
 	) foreach $self->slave_ports;
     
@@ -218,6 +222,12 @@ sub ec2 {
     my $region = $self->slave_region;
     return $self->{ec2} = VM::EC2->new(-region=>$region,
 				       $self->ec2_credentials);
+}
+
+sub internal_ip {
+    my $self = shift;
+    return unless $self->running_as_instance;
+    return $self->{instance_metadata}->privateIpAddress;
 }
 
 sub master_security_group {
@@ -330,7 +340,7 @@ sub get_load {
 	chomp (my $load = <$fh>);
 	return $load;
     }
-    my $stats = $self->{pr}->get or croak $self->{pr}->errstr;
+    my $stats = $self->{pr}->get or $self->fatal("couldn't fetch load from Apache status: ",$self->{pr}->errstr);
     return $stats->{rs};
 }
 
@@ -454,20 +464,29 @@ sub log_debug {shift->_log(3,@_)}
 sub log_info  {shift->_log(2,@_)}
 sub log_warn  {shift->_log(1,@_)}
 sub log_crit  {shift->_log(0,@_)}
+sub fatal {
+    my $self = shift;
+    my @msg  = shift;
+    $self->log_crit(@msg);
+    die;
+}
 
 sub _log {
     my $self = shift;
     my ($level,@msg) = @_;
     return unless $level <= $self->verbosity;
     my $ts = strftime('%d/%b/%Y:%H:%M:%S %z',localtime);
-    my $msg = "@msg";
+    my $msg = ucfirst "@msg";
     chomp($msg);
     print STDERR "[$ts] $msg\n";
 }
 
 sub cleanup {
     my $self = shift;
+    return if !$self->{pid} || $self->{pid} != $$;
+
     my $ec2 = eval{$self->ec2} or return;
+    $self->log_debug('Running cleanup routine');
 
     my @requests  = $self->pending_spot_requests;
     my @instances = ($self->running_slaves,grep {$_} map {$_->instance} @requests);
@@ -494,6 +513,8 @@ sub cleanup {
 	delete $self->{slave_security_group};
 	$self->log_debug("deleting security group $sg\n");
     }
+
+    unlink $self->pidfile if $self->pidfile;
 }
 
 #######################
@@ -512,9 +533,6 @@ sub become_daemon {
     $ENV{PATH} = '/bin:/sbin:/usr/bin:/usr/sbin';
 
     setsid();   # become process leader
-    chdir '/';  # don't hold open working directories
-    open STDIN, "</dev/null";
-    open STDOUT,">/dev/null";
 
     # write out PID file if requested
     if (my $l = $self->pidfile) {
@@ -524,10 +542,13 @@ sub become_daemon {
 	    or $self->log_crit("Could not write to pidfile $l: $!");
 	$fh->close();
     }
-
     $self->open_log;
-
     open STDERR,">&",$self->logfh if $self->logfh;
+
+    chdir '/';  # don't hold open working directories
+    open STDIN, "</dev/null";
+    open STDOUT,">/dev/null";
+
     $self->set_user;
     return;
 }

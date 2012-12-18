@@ -13,7 +13,9 @@ $SIG{INT}  = sub {exit 0};
 
 # remove EC2 secrets from command line
 # (not 100% safe)
-$0 =~ s/(--?[as][^=\s]+(?:=|\s+)?)\S+/$1xxxxxxxxxx/g;
+foreach (@ARGV) {
+    s/(--?[as][^=\s]+(?:=|\s+)?)\S+/$1xxxxxxxxxx/;
+}
 
 my($ConfFile,$AccessKey,$SecretKey,$PidFile,$LogFile,$Daemon,$User,$Verbosity,$Kill);
 GetOptions(

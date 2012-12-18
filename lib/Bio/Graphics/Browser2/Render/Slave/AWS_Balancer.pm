@@ -208,8 +208,7 @@ sub slave_security_group {
     $self->log_debug(
 	$sg->authorize_incoming(-protocol  => 'tcp',
 				-port      => $_,
-				-source_ip => "$ip/32",
-				@auth)
+				-source_ip => "$ip/32")
 	) foreach $self->slave_ports;
     
     $sg->update or croak $ec2->error_str;

@@ -21,7 +21,7 @@ BEGIN {
       use_ok('Bio::Graphics::Browser2::Render::Slave::AWS_Balancer');
 }
 
-my $b = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->new(CONF_FILE);
+my $b = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->new(-conf=>CONF_FILE);
 $b or BAIL_OUT("Couldn't create balancer");
 my $instance = $b->running_as_instance;
 

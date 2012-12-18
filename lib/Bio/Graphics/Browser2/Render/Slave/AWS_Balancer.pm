@@ -10,29 +10,89 @@ use VM::EC2::Instance::Metadata;
 use LWP::Simple 'get','head';
 use LWP::UserAgent;
 use Parse::Apache::ServerStatus;
-use POSIX 'strftime';
+use IO::File;
+use POSIX 'strftime','setsid','setuid';
 use Carp 'croak';
 use FindBin '$Bin';
 
 use constant CONFIGURE_SLAVES => "$Bin/gbrowse_configure_slaves.pl";
 
+# arguments:
+# ( -conf       => $config_path,
+#   -access_key => $aws_access_key,
+#   -secret_key => $aws_secret_key,
+#   -logfile    => $path_to_logfile,
+#   -pidfile    => $path_to_pidfile,
+#   -user       => $user_name_to_run_under,# (root only)
+#   -daemon     => $daemon_mode,
+# )
+
 sub new {
     my $class = shift;
-    my ($conf_file,$access_key,$secret_key) = @_;
-    #setup defaults
-    $ENV{EC2_ACCESS_KEY} = $access_key if defined $access_key;
-    $ENV{EC2_SECRET_KEY} = $secret_key if defined $secret_key;
+    my %args  = @_;
+    $args{-conf} && -e $args{-conf} or croak "-conf argument required";
+
+    #setup EC2 environment
+    $args{-access_key}  ||= $ENV{EC2_ACCESS_KEY};
+    $args{-secret_key}  ||= $ENV{EC2_SECRET_KEY};
+
     my $self = bless {
-	conf_file => $conf_file,
-	verbosity => 2,
+	access_key => $args{-access_key},
+	secret_key => $args{-secret_key},
+	logfile    => $args{-logfile},
+	pidfile    => $args{-pidfile},
+	user       => $args{-user},
+	conf_file  => $args{-conf},
+	daemon     => $args{-daemon},
+	verbosity  => 2,
     },ref $class || $class;
     $self->initialize();
     eval {$self->ec2} or croak $@;
     return $self;
 }
 
+sub logfile    {shift->{logfile}}
+sub pidfile    {shift->{pidfile}}
+sub pid        {shift->{pid}}
+sub user       {shift->{user}}
+sub daemon     {shift->{daemon}}
+sub ec2_credentials {
+    my $self = shift;
+    return (-access_key => $self->{access_key},
+	    -secret_key => $self->{secret_key})
+}
+sub logfh {
+    my $self = shift;
+    my $d    = $self->{logfh};
+    $self->{logfh} = shift if @_;
+    $d;
+}
+
+sub verbosity {
+    my $self = shift;
+    my $d    = $self->{verbosity};
+    $self->{verbosity} = shift if @_;
+    $d;
+}
+
+sub initialize {
+    my $self = shift;
+    $self->_parse_conf_file;
+    $self->_parse_instance_metadata;
+}
+
+sub DESTROY {
+    my $self = shift;
+    $self->cleanup;
+}
+
 sub run {
     my $self = shift;
+    if ($self->daemon) {
+	$self->{pid} = $self->become_daemon;
+	return $self->{pid} if $self->{pid};
+    }
+
     my $poll = $self->master_poll;
     $self->log_info("Monitoring load at intervals of $poll sec\n");
     while (sleep $poll) {
@@ -43,19 +103,17 @@ sub run {
     }
 }
 
-sub initialize {
+sub stop_daemon {
     my $self = shift;
-    $self->_parse_conf_file;
-    $self->_parse_instance_metadata;
+    my $pid  = $self->pid;
+    if (!$pid && (my $pidfile = $self->pidfile)) {
+	my $fh = IO::File->open($pidfile);
+	$pid   = $fh->getline;
+	chomp($pid);
+	$fh->close;
+    }
+    kill TERM=>$pid if defined $pid;
 }
-
-sub verbosity {
-    my $self = shift;
-    my $d    = $self->{verbosity};
-    $self->{verbosity} = shift if @_;
-    $d;
-}
-
 
 #######################
 # configuration
@@ -158,7 +216,8 @@ sub ec2 {
     my $self = shift;
     return $self->{ec2} if exists $self->{ec2};
     my $region = $self->slave_region;
-    return $self->{ec2} = VM::EC2->new(-region=>$region);
+    return $self->{ec2} = VM::EC2->new(-region=>$region,
+				       $self->ec2_credentials);
 }
 
 sub master_security_group {
@@ -437,6 +496,60 @@ sub cleanup {
     }
 }
 
+#######################
+# Daemon stuff
+######################
+
+# BUG - redundant code cut-and-paste from Slave.pm
+sub become_daemon {
+    my $self = shift;
+
+    my $child = fork();
+    croak "Couldn't fork: $!" unless defined $child;
+    return $child if $child;  # return child PID in parent process
+
+    umask(0);
+    $ENV{PATH} = '/bin:/sbin:/usr/bin:/usr/sbin';
+
+    setsid();   # become process leader
+    chdir '/';  # don't hold open working directories
+    open STDIN, "</dev/null";
+    open STDOUT,">/dev/null";
+
+    # write out PID file if requested
+    if (my $l = $self->pidfile) {
+	my $fh = IO::File->new($l,">") 
+	    or $self->log_crit("Could not open pidfile $l: $!");
+	$fh->print($$)
+	    or $self->log_crit("Could not write to pidfile $l: $!");
+	$fh->close();
+    }
+
+    $self->open_log;
+
+    open STDERR,">&",$self->logfh if $self->logfh;
+    $self->set_user;
+    return;
+}
+
+# change user if requested
+sub set_user {
+    my $self = shift;
+    my $u = $self->user or return;
+    my $uid = getpwnam($u);
+    defined $uid or $self->log_crit("Cannot change uid to $u: unknown user");
+    setuid($uid) or $self->log_crit("Cannot change uid to $u: $!");
+}
+
+# open log file if requested
+sub open_log {
+    my $self = shift;
+    my $l = $self->logfile or return;
+    my $fh = IO::File->new($l,">>")  # append
+	or $self->Fatal("Could not open logfile $l: $!");
+    $fh->autoflush(1);
+    $self->logfh($fh);
+}
 
 
 #######################
@@ -525,11 +638,6 @@ sub _getline {
 sub _parse_instance_metadata {
     my $self = shift;
     $self->{instance_metadata} ||= VM::EC2::Instance::Metadata->new();
-}
-
-sub DESTROY {
-    my $self = shift;
-    $self->cleanup;
 }
 
 1;

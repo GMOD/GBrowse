@@ -5,7 +5,7 @@ package Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;
 
 use strict;
 use Parse::Apache::ServerStatus;
-use VM::EC2;
+use VM::EC2 1.21;
 use VM::EC2::Instance::Metadata;
 use LWP::Simple 'get','head';
 use LWP::UserAgent;
@@ -59,8 +59,14 @@ sub user       {shift->{user}}
 sub daemon     {shift->{daemon}}
 sub ec2_credentials {
     my $self = shift;
-    return (-access_key => $self->{access_key},
-	    -secret_key => $self->{secret_key})
+    if ($self->running_as_instance) {
+	my $credentials = $self->{instance_metadata}->iam_credentials;
+	warn "iam credentials = $credentials";
+	return (-security_token => $credentials) if $credentials;
+    } else {
+	return (-access_key => $self->{access_key},
+		-secret_key => $self->{secret_key})
+    }
 }
 sub logfh {
     my $self = shift;

@@ -238,6 +238,7 @@ sub ACTION_config {
 	$_=>$self->config_data($_)
       } keys %$props;
 
+    my $dire_warning = 0;
     my @keys = @OK_PROPS;
     while (@keys) {
 	my $key = shift @keys;
@@ -255,6 +256,27 @@ sub ACTION_config {
 	if ($conf_dir) {
 	    my ($volume,$dir) = File::Spec->splitdir($opts{$key});
 	    my $top_level     = File::Spec->catfile($volume,$dir);
+
+            if ($opts{$key} =~ m!(/usr/local/apache2*)!) {
+                #it looks like there is no apahce installed; let the user know
+                my $apachedir = $1;
+                if (!-d $apachedir and !$dire_warning) {
+                    print STDERR <<END
+
+******************************WARNING***********************************
+GBrowse is being configured to install in $apachedir, but that 
+directory doesn't exist, which means either Apache isn't installed
+or the installer couldn't find it.  If you continue with this
+installation there is a good chance it won't work if Apache isn't
+installed.
+******************************WARNING***********************************
+
+END
+;
+                    $dire_warning = 1;
+                }
+            }
+
 	    unless (-d $top_level) {
 		next if Module::Build->y_n("The directory $top_level does not exist. Use anyway?",'n');
 		redo;

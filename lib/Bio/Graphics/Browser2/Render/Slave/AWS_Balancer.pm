@@ -61,7 +61,7 @@ sub ec2_credentials {
     my $self = shift;
     if ($self->running_as_instance) {
 	my $credentials = $self->{instance_metadata}->iam_credentials;
-	warn "iam credentials = $credentials";
+	$self->log_debug("Instance is using iAM credentials $credentials");
 	return (-security_token => $credentials) if $credentials;
     } else {
 	return (-access_key => $self->{access_key},

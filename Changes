@@ -1,6 +1,8 @@
 2.55
  * Better detection and handling of render slaves that have gone now. If all slaves are
    down then throws an error (once) and then reverts to local rendering for a period of time.
+ * Updated installer to give dire warning if installing into /usr/local/apache
+   and there doesn't appear to be an apache instance there.
 
 2.54
  * Version 2.53 introduced a bad bug into track configuration such

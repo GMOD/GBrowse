@@ -508,6 +508,7 @@ sub ACTION_install {
     }
 
     chmod 0755,File::Spec->catfile($self->install_path->{'etc'},'init.d','gbrowse-slave');
+    chmod 0755,File::Spec->catfile($self->install_path->{'etc'},'init.d','gbrowse-aws-balancer');
     $self->fix_selinux;
 
     my $base = basename($self->install_path->{htdocs});
@@ -762,23 +763,23 @@ sub substitute_in_place {
     $persistent ||= $databases;
 
     while (<$in>) {
-	s/\$INSTALLSCRIPT/$installscript/g;
-	s/\$ETC/$etc/g;
-	s/\$PERL5LIB/$perl5lib/g;
-	s/\$HTDOCS/$htdocs/g;
-	s/\$CONF/$conf/g;
-	s/\$CGIBIN/$cgibin/g;
-	s/\$CGIURL/$cgiurl/g;
-	s/\$WWWUSER/$wwwuser/g;
-	s/\$DATABASES/$databases/g;
-	s/\$PERSISTENT/$persistent/g;
-	s/\$VERSION/$self->dist_version/eg;
-	s/\$CAN_USER_ACCOUNTS_OPENID/$self->has_openid/eg;
-	s/\$CAN_USER_ACCOUNTS_REG/$self->has_smtp/eg;
-	s/\$CAN_USER_ACCOUNTS/$self->has_mysql_or_sqlite/eg;
-	s/\$USER_ACCOUNT_DB/$self->guess_user_account_db/eg;
-	s/\$SMTP_GATEWAY/$self->guess_smtp_gateway/eg;
-	s/\$TMP/$tmp/g;
+	s/\$INSTALLSCRIPT\b/$installscript/g;
+	s/\$ETC\b/$etc/g;
+	s/\$PERL5LIB\b/$perl5lib/g;
+	s/\$HTDOCS\b/$htdocs/g;
+	s/\$CONF\b/$conf/g;
+	s/\$CGIBIN\b/$cgibin/g;
+	s/\$CGIURL\b/$cgiurl/g;
+	s/\$WWWUSER\b/$wwwuser/g;
+	s/\$DATABASES\b/$databases/g;
+	s/\$PERSISTENT\b/$persistent/g;
+	s/\$VERSION\b/$self->dist_version/eg;
+	s/\$CAN_USER_ACCOUNTS_OPENID\b/$self->has_openid/eg;
+	s/\$CAN_USER_ACCOUNTS_REG\b/$self->has_smtp/eg;
+	s/\$CAN_USER_ACCOUNTS\b/$self->has_mysql_or_sqlite/eg;
+	s/\$USER_ACCOUNT_DB\b/$self->guess_user_account_db/eg;
+	s/\$SMTP_GATEWAY\b/$self->guess_smtp_gateway/eg;
+	s/\$TMP\b/$tmp/g;
 	$out->print($_);
     }
     $in->close;

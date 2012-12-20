@@ -19,9 +19,9 @@ set -e
 USER=www-data
 RUNDIR=/var/run/gbrowse
 LOGDIR=/var/log/gbrowse
-CONFFILE=/etc/gbrowse2/aws_balancer.conf
-ACCESS_KEY=PLACEHOLDER_KEY_HERE
-SECRET_KEY=PLACEHOLDER_KEY_HERE
+CONFFILE=$CONF/aws_balancer.conf
+ACCESS_KEY=''
+SECRET_KEY=''
 VERBOSITY=3
 NICE=0
 
@@ -41,16 +41,14 @@ LOG="$LOGDIR/gbrowse_aws_balancer"
 
 case "$COMMAND" in
   start)
-	echo -n "Starting $DESC: $NAME "
+	echo "Starting $DESC: $NAME "
 	ARGS="--background --conf $CONFFILE --verbosity $VERBOSITY --log $LOG --pid $PID --user $USER --access '$ACCESS_KEY' --secret '$SECRET_KEY'"
 	/bin/sh -c "nice -n $NICE $DAEMON $ARGS"
-	echo "."
 	;;
   stop)
-	echo -n "Stopping $DESC: $NAME "
-	ARGS="--conf $CONFFILE --pid $PID -k"
+	echo "Stopping $DESC: $NAME "
+	ARGS="--conf $CONFFILE --pid $PID --access '$ACCESS_KEY' --secret '$SECRET_KEY' -k"
 	$DAEMON $ARGS
-	echo "."
 	;;
   status)
 	if test -e $PID ; then
@@ -64,7 +62,6 @@ case "$COMMAND" in
        ;;
   restart|force-reload)
 	$0 stop
-	sleep 3
 	$0 start
 	;;
   *)

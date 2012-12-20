@@ -9,7 +9,7 @@ use Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;
 my $balancer;
 
 # this obscures the AWS secrets from ps; it is not 100% effective
-($0 = "$0 @ARGV") =~ s/(--?[as][^=\s]+(?:=|\s+)?)\S+/$1xxxxxxxxxx/g;
+($0 = "$0 @ARGV") =~ s/(\s--?[as]\S*?)(=|\s+)\S+/$1$2xxxxxxxxxx/g;
 
 $SIG{TERM} = sub {exit 0};
 $SIG{INT}  = sub {exit 0};

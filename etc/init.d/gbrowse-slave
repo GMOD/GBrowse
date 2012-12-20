@@ -25,7 +25,7 @@ VERBOSITY=1
 NICE=0
 
 COMMAND=$1
-shift;
+if [ $# -gt 0 ] ; then shift; fi
 
 if [ "$*" != "" ]; then
     PORT=$*

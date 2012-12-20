@@ -265,7 +265,7 @@ sub ACTION_config {
 
 ******************************WARNING***********************************
 GBrowse is being configured to install in $apachedir, but that 
-directory doesn't exist, which means either Apache isn't installed
+directory doesn't exist, which means either Apache isn\'t installed
 or the installer couldn't find it.  If you continue with this
 installation there is a good chance it won't work if Apache isn't
 installed.
@@ -273,7 +273,7 @@ installed.
 
 END
 ;
-                    $dire_warning = 1;
+                   $dire_warning = 1;
                 }
             }
 
@@ -519,6 +519,12 @@ sub ACTION_install {
     my @inc           = map{"-I$_"} split ':',$self->added_to_INC;
     system $perl,@inc,$metadb_script;
     system 'sudo','chown','-R',"$uid.$gid",$sessions,$userdata;
+
+    # make the gbrowse-aws-balancer file, which might contain secret keys, read-only to root
+    if ($self->config_data('installetc') =~ /^[yY]/) {
+	my $install_path = $self->install_path->{'etc'} || GBrowseGuessDirectories->etc;
+	system 'sudo','chmod','go-rwx',File::Spec->catfile($install_path,'default','gbrowse-aws-balancer');
+    }
 
     if (Module::Build->y_n(
 	    "It is recommended that you restart Apache. Shall I try this for you?",'y'

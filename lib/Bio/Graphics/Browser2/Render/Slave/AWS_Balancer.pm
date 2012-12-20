@@ -163,14 +163,14 @@ sub slave_spot_bid      { shift->option('SLAVE','spot_bid')      || 0.08       }
 sub slave_ports         { my $p = shift->option('SLAVE','ports');
 			  my @p = split /\s+/,$p;
 			  return @p ? @p : (8101); }
-sub slave_region          {
+sub slave_endpoint {
     my $self = shift;
     if ($self->running_as_instance) {
-	my $zone =  $self->{instance_metadata}->availabilityZone;
-	$zone    =~ s/[a-z]$//;  #  zone=>region
+	my $zone =  $self->{instance_metadata}->endpoint;
 	return $zone;
     } else {
-	return $self->option('SLAVE','region') || 'us-east-1';
+	my $region = $self->option('SLAVE','region') || 'us-east-1';
+	return "http://ec2.$region.amazonaws.com";
     }
 }
 
@@ -223,10 +223,10 @@ sub slave_security_group {
 
 sub ec2 {
     my $self = shift;
-    return $self->{ec2} if exists $self->{ec2};
-    my $region = $self->slave_region;
-    return $self->{ec2} = VM::EC2->new(-region=>$region,
-				       $self->ec2_credentials);
+    # create a new ec2 each time because security credentials may expire
+    my @credentials = $self->ec2_credentials;
+    return $self->{ec2} = VM::EC2->new(-endpoint => $self->slave_endpoint,
+				       @credentials);
 }
 
 sub internal_ip {

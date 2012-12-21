@@ -39,6 +39,13 @@ Use the init script:
  % sudo /etc/init.d/gbrowse-aws-balancer stop
  % sudo /etc/init.d/gbrowse-aws-balancer status
 
+Synchronize the master with the slave image:
+
+ % sudo gbrowse_sync_aws_slave.pl -c /etc/gbrowse2/aws_balancer.conf
+ syncing data....done
+ data stored in snapshot(s) snap-12345
+ updated conf file, previous version in /etc/gbrowse2/aws_balancer.conf.bak
+
 =head1 DESCRIPTION
 
 This script launches a process that monitors the load on the local
@@ -245,6 +252,86 @@ attached by providing a space-delimited list:
 The gbrowse_sync_aws_slave.pl script will automatically maintain this
 option for you.
 
+=item availability_zone (optional)
+
+This option will force the slave into the named availability zone. If
+not specified, an availability zone in the current region will be
+chosen at random.
+
+=item subnet (optional)
+
+If you are in a VPC environment, then this option will force the slave
+into the named subnet. Ordinarily the balancer script will launch
+slaves into non-VPC instances if the master is running on local
+hardware or a non-VPC EC2 instance. The balancer will launch slaves
+into the same VPC subnet as the master if the master is running on a
+VPC instance.
+
+=item security_group (optional)
+
+This specifies the security group to assign the slaves to. If not
+specified, a properly-configured security group will be created as
+needed and destroyed when the balancer script exits. If you choose to
+manage the security group manually, be sure to configure the firewall
+ingress rule to allow access to the slave port(s) (see the "ports"
+option) from the master's group or IP address.
+
+=back
+
+=head1 CONFIGURING AWS CREDENTIALS
+
+To work, the balancer script must be able to make spot instance
+requests and to monitor and terminate instances. To perform these
+operations the script must have access to the appropriate AWS
+credentials (access key and secret key). You may provide these
+credentials in any one of three ways:
+
+=over 4
+
+=item 1. Your personal EC2 credentials
+
+You may provide the balancer script with --access_key and --secret_key
+command line arguments using your personal EC2 credentials. This is
+the simplest method, but has the risk that if the credentials are
+intercepted by a malicious third party, he or she gains access to all
+your EC2 resources.
+
+=item 2. The credentials of a restricted IAM account
+
+You may use the Amazon AWS console to create an IAM (Identity Access
+and Management) user with restricted permissions, and provide that
+user's credentials to script with the --access_key and --secret_key
+arguments. The following IAM permission policy is the minimum needed
+for the balancer script to work properly:
+
+ {
+  "Statement": [
+    {
+      "Sid": "BalancerPolicy",
+      "Action": [
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:CreateSecurityGroup",
+        "ec2:DeleteSecurityGroup",
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeImages",
+        "ec2:DescribeInstances",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSpotInstanceRequests",
+        "ec2:RequestSpotInstances",
+        "ec2:TerminateInstances"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+ }
+
+=item 3. Create an IAM role
+
+This method works only for 
+
 =back
 
 =head1 ENVIRONMENT VARIABLES
@@ -252,8 +339,8 @@ option for you.
 The following environment variables are used if the corresponding
 options are not present:
 
- EC2_ACCESS_KEY     your AWS EC2 access key
- EC2_SECRET_KEY     your AWS EC2 secret key
+ EC2_ACCESS_KEY     AWS EC2 access key
+ EC2_SECRET_KEY     AWS EC2 secret key
 
 =head1 SEE ALSO
 

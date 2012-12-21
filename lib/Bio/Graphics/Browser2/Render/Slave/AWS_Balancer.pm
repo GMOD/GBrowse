@@ -48,7 +48,6 @@ sub new {
 	verbosity  => 2,
     },ref $class || $class;
     $self->initialize();
-    eval {$self->ec2} or croak $@;
     return $self;
 }
 
@@ -104,6 +103,7 @@ sub run {
     $self->{pid} = $$;
 
     my $poll = $self->master_poll;
+    eval {$self->ec2} or croak $@;
     $self->log_info("Monitoring load at intervals of $poll sec\n");
     while (sleep $poll) {
 	last if $killed;
@@ -223,6 +223,7 @@ sub slave_security_group {
 
 sub ec2 {
     my $self = shift;
+    warn join ' ',caller();
     # create a new ec2 each time because security credentials may expire
     my @credentials = $self->ec2_credentials;
     return $self->{ec2} = VM::EC2->new(-endpoint => $self->slave_endpoint,

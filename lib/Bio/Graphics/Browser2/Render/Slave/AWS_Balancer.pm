@@ -588,6 +588,7 @@ sub open_log {
 sub _get_external_ip {
     my $ip= get('http://icanhazip.com');
     chomp($ip);
+    $self->log_info("Found external IP address $ip");
     return $ip;
 }
 

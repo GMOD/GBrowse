@@ -43,9 +43,12 @@ Use the init script:
 
 This script launches a process that monitors the load on the local
 GBrowse instance. If the load exceeds certain predefined levels, then
-it uses Amazon web services to launch one or more spot instances
-running render slaves. The work of rendering tracks is then handed off
-to these instances, reducing the load on the local instance.
+it uses Amazon web services to launch one or more GBrowse slave
+instances.  The work of rendering tracks is then handed off to these
+instances, reducing the load on the local instance. Slave instances
+are implemented using Amazon's spot instance mechanism, which allows
+you to run EC2 instances at a fraction of the price of a standard
+on-demand instance.
 
 Load balancing is most convenient to run in conjunction with a GBrowse
 instance running within the Amazon Web Service EC2 cloud, but it can
@@ -94,7 +97,7 @@ L<CONFIGURATION> below for some suggestions.
 
 3. GBrowse must be running under Apache.
 
-4. Apache must be configured to activate the mod_status module and to
+4. Apache must be configured to enable the mod_status module and to
 allow password-less requests to this module from localhost
 (http://httpd.apache.org/docs/2.2/mod/mod_status.html). This is the
 recommended configuration:
@@ -106,7 +109,143 @@ recommended configuration:
     Allow from 127.0.0.1 ::1
  </Location>
 
+5. If you are running GBrowse on local hardware, the local hardware
+must be connected to the Internet or have a Virtual Private Cloud
+(VPC) connection to Amazon.
 
+=head1 THE CONFIGURATION FILE
+
+The balancer requires a configuration file, ordinarily named
+aws_balancer.conf and located in the GBrowse configuration directory
+(e.g. /etc/gbrowse2). The configuration file has three sections:
+
+=head2 [LOAD TABLE]
+
+This section describes the number of slave instances to launch for
+different load levels. It consists of a three-column space-delimited
+table with the following columns:
+
+ <requests/sec>    <min instances>    <max instances>
+
+For example, the first few rows of the default table reads:
+
+ 0.1     0   1
+ 0.5     0   2
+ 1.0     1   3
+ 2.0     2   4
+
+This is read as meaning that when the number of requests per second on
+the GBrowse server is greater than 0.1 but less than 0.5, run at least
+0 slave servers but no more than 1 slave server. When the number of
+requests is between 0.5 and 1.0, run between 0 and 2 slave
+instances. When the rate is between 1.0 and 2.0, run at least 1 slave
+instance, but no more than 3. Load levels below the lowest value on
+the table (0.1 in this case) will run no slave servers, while levels
+above the highest value on the table (2.0) will launch the minimum and
+maximum number of slaves for that load value (between 2 and 4 in this
+case).
+
+The reason for having a range of instance counts for each load range
+is to avoid unecessarily launching and killing slaves repeatedly when
+the load fluctuates around the boundary. You may wish to tune the
+values in this table to maximize the performance of your GBrowse
+installation.
+
+Note that the server load includes both GBrowse requests and all other
+requests on the web server. If this is a problem, you may wish to run
+GBrowse on a separate Apache port or virtual host.
+
+=head2 [MASTER]
+
+The options in this sections configure the master GBrowse
+instance. Three options are recognized:
+
+=over 4
+
+=item external_ip (optional)
+
+This controls the externally-visible IP address of the GBrowse master,
+which is needed by the firewall rule for master/slave
+communications. This option can usually be left blank: when the master
+is running on EC2, then the IP address is known; when the master is
+running on a local machine, the externally-visible IP address is
+looked up using a web service. It is only in the rare case that this
+lookup is incorrect that you will need to configure this option
+yourself.
+
+The external IP that the balancer script finds can be seen in a log
+message when verbosity is 2 or higher.
+
+=item poll_interval (required)
+
+This is the interval, in minutes, that the balancer script will
+periodically check the Apache load and adjust the number of slave
+instances. The suggested value is 0.5 (30s intervals).
+
+=item server_status_url (required)
+
+This is the URL to call to fetch the server load from Apache's
+server_status module.
+
+=back
+ 
+=head2 [SLAVE]
+
+The options in this section apply to the render slaves launched by the
+balancer.
+
+=over 4
+
+=item instance_type (required)
+
+This is the EC2 instance type. Faster instances give better
+performance. High-IO instances give the best performance, but cost
+more.
+
+=item spot_bid (required)
+
+This is the maximum, in US dollars, that you are willing to pay per
+hour to run a slave spot instance. Typically you will pay less than
+the bid price. If the spot price increases beyond the maximum bid,
+then the spot instances will be terminated and the balancer will wait
+until the spot price decreases below the maximum bid before launching
+additional slaves.
+
+=item ports (required)
+
+This is a space-delimited list of TCP port numbers on which the render
+slaves should listen for incoming render requests from the
+master. Generally it is only necessary to listen on a single port;
+multiple ports were supported for performance reasons in earlier
+single-threaded versions of the slave.
+
+=item region (required for local masters)
+
+The Amazon region in which to launch slaves. When the master is
+running in EC2, this is automatically chosen to be the same as the
+master's region and can be left blank.
+
+=item image_id (required for local masters)
+
+This is the ID of the AMI that will be used to launch slaves. The
+correct value will be filled in when you run the
+gbrowse_sync_aws_slave.pl. You can leave this value blank if the
+GBrowse master is being run within an EC2 instance, in which case the
+slave will be launched using the same AMI that was used to launch the
+master.
+
+=item data_snapshots (required for local masters)
+
+Before launching the slave, attach EBS volumes created from one or
+more volume snapshots listed in this option. Multiple snapshots can be
+attached by providing a space-delimited list:
+
+ data_snapshots = snap-12345 snap-abcdef
+
+The gbrowse_sync_aws_slave.pl script will automatically maintain this
+option for you.
+
+=back
 
 =head1 ENVIRONMENT VARIABLES
 

@@ -63,6 +63,8 @@ sub ec2_credentials {
 	$self->log_debug("Instance is using iAM credentials $credentials");
 	return (-security_token => $credentials) if $credentials;
     } else {
+	$self->{access_key} ||= $self->_prompt('Enter your EC2 access key:');
+	$self->{secret_key} ||= $self->_prompt('Enter your EC2 secret key:');
 	return (-access_key => $self->{access_key},
 		-secret_key => $self->{secret_key})
     }
@@ -223,7 +225,6 @@ sub slave_security_group {
 
 sub ec2 {
     my $self = shift;
-    warn join ' ',caller();
     # create a new ec2 each time because security credentials may expire
     my @credentials = $self->ec2_credentials;
     return $self->{ec2} = VM::EC2->new(-endpoint => $self->slave_endpoint,
@@ -586,6 +587,7 @@ sub open_log {
 ######################
 
 sub _get_external_ip {
+    my $self = shift;
     my $ip= get('http://icanhazip.com');
     chomp($ip);
     $self->log_info("Found external IP address $ip");
@@ -668,6 +670,16 @@ sub _getline {
 sub _parse_instance_metadata {
     my $self = shift;
     $self->{instance_metadata} ||= VM::EC2::Instance::Metadata->new();
+}
+
+sub _prompt {
+    my $self = shift;
+    my $msg  = shift;
+    -t \*STDIN or return;
+    print STDERR $msg;
+    my $result = <STDIN>;
+    chomp $result;
+    return $result;
 }
 
 1;

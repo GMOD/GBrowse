@@ -283,26 +283,37 @@ option) from the master's group or IP address.
 To work, the balancer script must be able to make spot instance
 requests and to monitor and terminate instances. To perform these
 operations the script must have access to the appropriate AWS
-credentials (access key and secret key). You may provide these
-credentials in any one of three ways:
+credentials (access key and secret key) on the command line or as
+environment variables. 
+
+While the script does its best to shield the credentials from prying
+eyes, there is still a chance that the credentials can be intercepted
+by another party with login access to the machine that the master runs
+on and use the credentials to run up your AWS bill. For this reason
+some people will prefer to create an EC2 account or role with limited
+access to AWS resources.
 
 =over 4
 
 =item 1. Your personal EC2 credentials
 
 You may provide the balancer script with --access_key and --secret_key
-command line arguments using your personal EC2 credentials. This is
-the simplest method, but has the risk that if the credentials are
-intercepted by a malicious third party, he or she gains access to all
-your EC2 resources.
+command line arguments using your personal EC2 credentials or set the
+environment variables EC2_ACCESS_KEY and EC2_SECRET_KEY. If not
+provided, the script will interactively prompt for one or both of
+these values.
+
+This is the simplest method, but has the risk that if the credentials
+are intercepted by a malicious third party, he or she gains access to
+all your EC2 resources.
 
 =item 2. The credentials of a restricted IAM account
 
 You may use the Amazon AWS console to create an IAM (Identity Access
 and Management) user with restricted permissions, and provide that
-user's credentials to script with the --access_key and --secret_key
-arguments. The following IAM permission policy is the minimum needed
-for the balancer script to work properly:
+user's credentials to the script on the command line or with
+environment variables. The following IAM permission policy is the
+minimum needed for the balancer script to work properly:
 
  {
   "Statement": [
@@ -328,16 +339,113 @@ for the balancer script to work properly:
   ]
  }
 
+Note that even with these restrictions, an unauthorized user with
+access to the credentials could still launch a large number of spot
+instances or terminate bona fide instances. This is just a fundamental
+limitation of the granularity of EC2's permissions system.
+
 =item 3. Create an IAM role
 
-This method works only for 
+If the master is running on an EC2 instance, then the most convenient
+way to pass credentials is by assigning the instance an IAM role. The
+balancer script can then obtain temporary credentials by making
+internal EC2 calls. The credentials do not need to be provided on the
+command line or in environment variables, and are only valid for short
+periods of time, limiting the effect of theft.
+
+First, create an IAM role using the Amazon Console. Select
+IAM->Roles->Create New Role, and give the role the name
+"GBrowseMaster" (or whatever you prefer).
+
+Next, when prompted for the role type, select AWS Service
+Roles->Amazon EC2.
+
+On the Select Role Permissions screen, choose "Custom Policy". Give
+the policy a name like "GBrowseBalancer" and cut and paste into the
+Policy Document text field the permission policy listed above in the
+instructions for creating a restriced IAM account. Be sure to remove
+the whitespace before the beginning of the first curly brace, or the
+console will complain about an invalid policy.
+
+You only need to do this once. After this, whenever you launch an
+instance that will run the GBrowse master (typically from a GBrowse
+AMI), specify the "GBrowseMaster" IAM role name. This can be done from
+the AWS console's instance launch wizard, or by passing the -p option
+to the ec2-run-instances command-line tool.
 
 =back
+
+=head1 USING THE INIT SCRIPT
+
+The gbrowse-aws-balancer init script can be used on Ubuntu and
+Debian-based systems to simplify launching the balancer at boot
+time. It can be found in /etc/init.d by default, and is called in the
+following manner:
+
+start the service
+ % sudo /etc/init.d/gbrowse-aws-balancer start
+
+stop the service
+ % sudo /etc/init.d/gbrowse-aws-balancer stop
+
+stop and restart the service
+ % sudo /etc/init.d/gbrowse-aws-balancer restart
+
+show the status of the service (running, stopped)
+ % sudo /etc/init.d/gbrowse-aws-balancer status
+
+The various script options are all set in a single configuration file
+named /etc/default/gbrowse-aws-balancer. The distribution contents of
+this file looks like this:
+
+ DAEMON=/usr/local/bin/gbrowse_aws_balancer.pl
+ USER=www-data
+ RUNDIR=/var/run/gbrowse
+ LOGDIR=/var/log/gbrowse
+ CONFFILE=/etc/gbrowse2/aws_balancer.conf
+ ACCESS_KEY=YOUR_EC2_ACCESS_KEY_HERE
+ SECRET_KEY=YOUR_EC2_SECRET_KEY_HERE
+ VERBOSITY=3
+
+The variables in this file set the location of the balancer script,
+the location of its configuration file, the verbosity to run with, and
+where to write the script's process ID and log information. In
+addition, you can place your (or another authorized user's) EC2 access
+and secret key in this file. Please make sure that this file is only
+readable by root.
+
+=head1 THE GBROWSE_SYNC_AWS_SLAVE.PL SCRIPT
+
+[This script is not yet written, but this section describes how it
+will work].
+
+The gbrowse_sync_aws_script.pl script should be run on the master each
+time you add a new database to an existing data source, or if you add
+a whole new data source. What it does is to prepare a new Amazon EBS
+snapshot containing a copy of all the data needed for the GBrowse
+slave to run. This snapshot is then attached to new slave instances.
+
+After running, it updates the conf file with the current versions of
+the slave AMI and the data snapshot.
+
+ % sudo gbrowse_sync_aws_script.pl --conf     /etc/gbrowse2/aws_balancer.conf \
+                                   --mysql    /var/lib/mysql \
+                                   --postgres /var/lib/postgresql
+
+The --conf argument is required. The script will create a snapshot of
+the appropriate size, mount it on a temporary staging instance, and
+rsync a copy of your gbrowse databases directory
+(e.g. /var/lib/gbrowse2/databases) to the snapshot. If you have
+created mysql or postgres databases, you must also give the paths to
+their database file directories, as shown in the example.
+
+Note that ALL your mysql and postgres data files located on the server
+will be copied; not just those used for track display.
 
 =head1 ENVIRONMENT VARIABLES
 
 The following environment variables are used if the corresponding
-options are not present:
+command line options are not present:
 
  EC2_ACCESS_KEY     AWS EC2 access key
  EC2_SECRET_KEY     AWS EC2 secret key

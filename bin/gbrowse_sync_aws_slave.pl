@@ -40,6 +40,10 @@ please see DISCLAIMER.txt for disclaimers of warranty.
 =cut
 
 use strict;
+use FindBin '$Bin';
+use lib "$Bin/../lib";
+use lib '/home/lstein/projects/VM-EC2/lib';
+
 use Getopt::Long;
 use GBrowse::ConfigData;
 use File::Spec;
@@ -83,16 +87,17 @@ my $DataBasePath = GBrowse::ConfigData->config('databases');
 
 my $gig_needed = tally_sizes($DataBasePath,$MySqlPath,$PostGresPath);  # keep an extra 10 G free
 my $gig_have   = $slave->volume_size;
-if ($gig_needed < $gig_have) {
-    $gig_needed = $gig_have + 10;  # grow by 10 G increments
-    $slave->grow_volume($gig_needed);
+ if ($gig_needed < $gig_have) {
+     $gig_needed = $gig_have + 10;  # grow by 10 G increments
+#     $slave->grow_volume($gig_needed);
 }
-$slave->put("$DataBasePath/",'/opt/gbrowse2/databases');
-$slave->put("$MySqlPath/",'/opt/gbrowse2/databases')    if $MySqlPath;
-$slave->put("$PostGresPath",'/opt/gbrowse2/databases')  if $PostGresPath;
-my @snapshots = $slave->snapshot_gbrowse_volumes;
-$slave->write_new_snapshot_conf(@snapshots);
-$slave->terminate;
+
+# $slave->put("$DataBasePath/",'/opt/gbrowse2/databases');
+# $slave->put("$MySqlPath/",'/opt/gbrowse2/databases')    if $MySqlPath;
+# $slave->put("$PostGresPath",'/opt/gbrowse2/databases')  if $PostGresPath;
+# my @snapshots = $slave->snapshot_gbrowse_volumes;
+# $slave->write_new_snapshot_conf(@snapshots);
+# $slave->terminate;
 
 exit 0;
 
@@ -100,7 +105,7 @@ sub tally_sizes {
     my @dirs  = @_;
     my $out   = `sudo du -sc @dirs`;
     my $bytes = $out=~/^(\d+)\s+total/;
-    return int(0.5+$bytes/GB);
+    return int(0.5+$bytes/GB)||1;
 }
 
 __END__

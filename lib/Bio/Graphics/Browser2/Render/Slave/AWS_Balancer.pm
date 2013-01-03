@@ -7,6 +7,7 @@ use strict;
 use Parse::Apache::ServerStatus;
 use VM::EC2 1.21;
 use VM::EC2::Instance::Metadata;
+use VM::EC2::Staging::Manager;
 use LWP::Simple 'get','head';
 use LWP::UserAgent;
 use Parse::Apache::ServerStatus;
@@ -192,6 +193,25 @@ sub slave_image_id {
     } else {
 	$self->option('SLAVE','image_id');
     }
+}
+
+sub slave_data_snapshots {
+    my $self  = shift;
+    return split /\s+/,$self->option('SLAVE','data_snapshots');
+}
+
+sub slave_block_device_mapping {
+    my $self = shift;
+    my @snaps = $self->slave_data_snapshots;
+    my @bdm;
+  DEVICE:
+    for my $major ('g'..'z') {
+	for my $minor (1..15) {
+	    my $snap = shift @snaps or last DEVICE;
+	    push @bdm,"/dev/${major}${minor}=$snap::true";
+	}
+    }
+    return \@bdm;
 }
 
 sub slave_subnet {
@@ -429,6 +449,7 @@ sub request_spot_instance {
 	-instance_count       => 1,
 	-security_group_id    => $self->slave_security_group,
 	-spot_price           => $self->slave_spot_bid,
+	-block_devices        => $self->slave_block_device_mapping,
 	$subnet? (-subnet_id  => $subnet) : (),
 	-user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start @ports",
 	);
@@ -526,9 +547,29 @@ sub cleanup {
     unlink $self->pidfile if $self->pidfile;
 }
 
+
+
+#######################
+# Synchronization
+#######################
+
+sub launch_staging_slave {
+    my $self = shift;
+    my $ec2     = $self->ec2;
+    my $staging = $self->{staging} ||= $ec2->staging_manager(-on_exit=>'terminate',
+							     -verbose=>3);
+    my $server  = $staging->provision_server(-username      => 'admin',
+					     -instance_type => $self->slave_instance_type,
+					     -image_name    => $self->slave_image_id,
+					     -block_devices => $self->slave_block_device_mapping,
+					     -server_class  => 'Bio::Graphics::Browser2::Render::Slave::StagingServer', # this is defined at the bottom of this .pm file
+	);
+    return $server;
+}
+
 #######################
 # Daemon stuff
-######################
+#######################
 
 # BUG - redundant code cut-and-paste from Slave.pm
 sub become_daemon {
@@ -680,6 +721,24 @@ sub _prompt {
     my $result = <STDIN>;
     chomp $result;
     return $result;
+}
+
+##############################################################################################################
+# descendent of VM::EC2::Staging::Server that adds a few tricks
+##############################################################################################################
+
+package Bio::Graphics::Browser2::Render::Slave::StagingServer;
+use base 'VM::EC2::Staging::Server';
+
+use constant GB => 1_073_741_824;
+
+# return the size of the /opt/gbrowse volume in GB
+# we intentionally truncate to floor
+sub volume_size {
+    my $self = shift;
+    my $df   = $self->scmd('df -B 1 /opt/gbrowse');
+    my ($total,$used,$available) = $df =~ /(\d+)\s+(\d+)\s+(\d+)/;
+    return int($total/GB);
 }
 
 1;

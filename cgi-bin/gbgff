@@ -2,6 +2,9 @@
 
 eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
     if 0; # not running under some shell
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
 # $Id: gbgff,v 1.2 2009-08-27 19:13:18 idavies Exp $
 
 # just redirect to gbrowse in same directory

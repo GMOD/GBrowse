@@ -750,8 +750,10 @@ sub grow_volume {
     # get information about the /dev/volumes/gbrowse lv
     my ($lv,$vg,undef,$size) = split /,/,$self->scmd('sudo lvs /dev/volumes/gbrowse --noheadings --units g --nosuffix --separator ,');
     $lv =~ s/^\s+//;
-    my $needed = $gig_wanted-$size;
+    my $needed = int($gig_wanted-$size);
     return if $needed <= 0;
+
+    print STDERR "Resizing /opt/gbrowse to $gig_wanted...\n";
 
     # stop all the services
     $self->_stop_services('stop');
@@ -796,15 +798,14 @@ sub grow_volume {
     $self->ssh('sudo lvextend -l +100%FREE /dev/volumes/gbrowse') or die "Couldn't lvresize";
 
     print STDERR "Checking filesystem prior to resizing...\n";
-    $self->ssh('sudo e2fsck -p /dev/volumes/gbrowse')             or die "e2fsck failed";
+    $self->ssh('sudo e2fsck -f -p /dev/volumes/gbrowse')          or die "e2fsck failed";
 
     print STDERR "Resizing filesystem...\n";
-    $self->ssh('sudo resize2fs /dev/volumes/gbrowse')             or die "Couldn't resize2fs";
+    $self->ssh('sudo resize2fs -p /dev/volumes/gbrowse')             or die "Couldn't resize2fs";
 
     print STDERR "Remounting filesystem...\n";
     $self->ssh('sudo mount /opt/gbrowse')                         or die "Couldn't mount";
 
-    print STDERR "Restarting services...\n";
     $self->_start_services;
 
     1;
@@ -823,7 +824,7 @@ sub _stop_services {
 sub _start_stop_services {
     my $self = shift;
     my $action = shift or die "usage: _start_stop_services(start|stop)";
-    print STDERR $action eq 'stop' ? "Stopping all services...\n":"Starting all services...\n";
+    print STDERR $action eq 'stop' ? "Stopping services...\n":"Starting services...\n";
     foreach ('apache2','mysql','postgresql') {
 	$self->ssh("sudo service $_ $action");
     }
@@ -839,7 +840,7 @@ sub snapshot_data_volumes {
 	s/^\s+//;
 	my ($pv,$vg,undef,undef,$used,$free) = split /,/;
 	next unless $vg eq 'volumes';
-	$pv =~ s!dev/xvd!/dev/sd!;
+	$pv =~ s!/dev/xvd!/dev/sd!;
 	$volumes{$pv}++;
     }
     close $fh;
@@ -847,12 +848,14 @@ sub snapshot_data_volumes {
     # get the EBS volumes for this device
     my @vols   = map {$_->volume} grep {$volumes{$_->deviceName}} $self->blockDeviceMapping;
 
+    @vols or die "Could not find the EBS volumes to snapshot";
+
     print STDERR "Unmounting filesystem...\n";
     $self->_stop_services;
     $self->ssh('sudo umount /opt/gbrowse') or die "Couldn't umount";
 
     print STDERR "Creating snapshots...\n";
-    my @snapshots = map {$self->ec2->create_snapshot('Created by '.__PACKAGE__)} @vols;
+    my @snapshots = map {$_->create_snapshot('Created by '.__PACKAGE__)} @vols;
 
     print STDERR "Remounting filesystem...\n";
     $self->ssh('sudo mount /opt/gbrowse') or die "Couldn't mount";

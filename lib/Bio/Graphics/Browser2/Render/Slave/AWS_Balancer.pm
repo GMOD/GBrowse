@@ -556,13 +556,14 @@ sub cleanup {
 sub launch_staging_slave {
     my $self = shift;
     my $ec2     = $self->ec2;
-    my $staging = $self->{staging} ||= $ec2->staging_manager(-on_exit=>'terminate',
+    my $staging = $self->{staging} ||= $ec2->staging_manager(-on_exit=>'run',
 							     -verbose=>3);
-    my $server  = $staging->provision_server(-username      => 'admin',
-					     -instance_type => $self->slave_instance_type,
-					     -image_name    => $self->slave_image_id,
-					     -block_devices => $self->slave_block_device_mapping,
-					     -server_class  => 'Bio::Graphics::Browser2::Render::Slave::StagingServer', # this is defined at the bottom of this .pm file
+    my $server  = $staging->get_server(-name          => 'slave_staging_server',
+				       -username      => 'admin',
+				       -instance_type => $self->slave_instance_type,
+				       -image_name    => $self->slave_image_id,
+				       -block_devices => $self->slave_block_device_mapping,
+				       -server_class  => 'Bio::Graphics::Browser2::Render::Slave::StagingServer', # this is defined at the bottom of this .pm file
 	);
     return $server;
 }
@@ -731,6 +732,7 @@ package Bio::Graphics::Browser2::Render::Slave::StagingServer;
 use base 'VM::EC2::Staging::Server';
 
 use constant GB => 1_073_741_824;
+use constant TB => 1_099_511_627_776;
 
 # return the size of the /opt/gbrowse volume in GB
 # we intentionally truncate to floor
@@ -739,6 +741,126 @@ sub volume_size {
     my $df   = $self->scmd('df -B 1 /opt/gbrowse');
     my ($total,$used,$available) = $df =~ /(\d+)\s+(\d+)\s+(\d+)/;
     return int($total/GB);
+}
+
+sub grow_volume {
+    my $self = shift;
+    my $gig_wanted = shift;
+
+    # stop all the services
+    print STDERR "Stopping all services...\n";
+    foreach ('apache2','mysql','postgresql') {
+	$self->ssh("sudo service $_ stop");
+    }
+    
+    # get information about the /dev/volumes/gbrowse lv
+    my ($lv,$vg,undef,$size) = split /,/,$self->scmd('sudo lvs /dev/volumes/gbrowse --noheadings --units g --nosuffix --separator ,');
+    my $needed = $gig_wanted-$size;
+    return if $needed <= 0;
+
+    # get information about the physical volumes that belong to this group
+    my %volumes;
+    my $fh = $self->scmd_read('sudo pvs --noheadings --units g --nosuffix --separator ,');
+    while (<$fh>) {
+	chomp;
+	my ($pv,$vg,undef,undef,$used,$free) = split /,/;
+	next unless $vg eq 'volumes';
+	$volumes{$pv} = $used+$free;
+    }
+    close $fh;
+
+    # select a volume to resize
+    my $to_resize;
+    for my $pv (sort {$a<=>$b} keys %volumes) {
+	if ($volumes{$pv} + $needed < 1000) {
+	    $to_resize  = $pv;
+	    last;
+	}
+    }
+
+
+    # If we found a pv that we can resize sufficiently, then go ahead and do that.
+    # Otherwise, we add a new EBS volume to the volume group.
+    print STDERR "Unmounting /opt/gbrowse filesystem...\n";
+    $self->ssh('sudo umount /opt/gbrowse') or die "Couldn't umount";
+
+    my @snapshots;
+    if ($to_resize) {
+	@snapshots = $self->_resize_pv($to_resize,int($volumes{$pv}+$needed));
+    } else {
+	@snapshots = $self->_extend_vg('volumes',int($needed));
+    }
+    
+    # If we get here, the volume group has been extended, so we can
+    # resize the logical volume and the filesystem
+    print STDERR "Resizing logical volume...\n";
+    $self->ssh('sudo lvresize -l +100%FREE /dev/volumes/gbrowse') or die "Couldn't lvresize";
+
+    print STDERR "Resizing filesystem...\n";
+    $self->ssh('sudo resize2fs /dev/volumes/gbrowse')             or die "Couldn't resize2fs";
+
+    print STDERR "Remounting filesystem...\n";
+    $self->ssh('sudo mount /opt/gbrowse')                         or die "Couldn't mount";
+
+    print STDERR "Restarting services...\n";
+    foreach ('apache2','mysql','postgresql') {
+	$self->ssh("sudo service $_ start");
+    }
+
+    # NO! RETURN ALL SNAPSHOTS ASSOCIATED WITH THE VG
+#    return @snapshots;
+}
+
+sub _resize_pv {
+    my $self = shift;
+    my ($device,$new_size) = @_;
+
+    # get the EBS volume for this device
+    my @mapping   = $self->blockDeviceMapping;
+    (my $ebs_device = $device) =~ s!/dev/xvd!/dev/sd!;
+    my ($mapping) = grep /$ebs_device/,@mapping;
+    $mapping or die "Couldn't find an EBS mapping for $device";
+
+    my $volume_id = $mapping->volumeId;
+    my $volume    = $mapping->volume;
+    
+    # disable the volume group
+    $self->ssh('sudo vgchange -an volumes') or die "Couldn't vgchange";
+    
+    # detach the underlying device
+    print STDERR "Detaching volume $volume...\n";
+    my $a = $volume->detach                 or die "Couldn't detach";
+    $self->ec2->wait_for_attachments($a);
+
+    # snapshot it
+    print STDERR "Snapshotting volume $volume...\n";
+    my $snapshot = $volume->create_snapshot('created by '.__PACKAGE__) or die "Couldn't snapshot: ",$self->ec2->error_str;
+    $self->ec2->wait_for_snapshots($snapshot);
+    $snapshot->current_status eq 'completed' or die "Snapshot errored: ",$self->ec2->error_str;
+    
+    # create a new volume of the appropriate size
+    print STDERR "Creating new volume from snapshot...\n";
+    my $zone = $volume->availabilityZone;
+    
+    my $new_volume = $self->ec2->create_volume(-availability_zone => $zone,
+					       -size              => $new_size,
+					       -snapshot_id       => $snapshot) or die "Couldn't create volume: ",$self->ec2->error_str;
+    $self->ec2->wait_for_volumes($new_volume);
+    $new_volume->current_status eq 'available' or die "Volume error: ",$self->ec2->error_str;
+    
+    print STDERR "Attaching new volume...\n";
+    $a = $self->attach_volume($ebs_device => $new_volume);
+    $self->ec2->wait_for_attachments($a);
+
+    # activate 
+    print STDERR "Resizing physical volume...\n";
+    $self->ssh("sudo pvresize $device")     or die "Couldn't pvresize";
+    $self->ssh('sudo vgchange -ay volumes') or die "Couldn't vgchange";
+
+    # get rid of the old volume
+    $self->ec2->delete_volume($volume);
+
+    return $snapshot;
 }
 
 1;

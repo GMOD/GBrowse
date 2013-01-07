@@ -18,7 +18,7 @@ Launch the balancer in the background as a daemon:
                            --conf         /etc/gbrowse2/aws_balancer.conf \
                            --access_key   XYZZY \
                            --secret_key   Plugh \
-                           --logfile      /var/log/gbrowse2/aws_balancer.log \
+                           --logfile      /var/log/gbrowse/aws_balancer.log \
                            --pidfile      /var/run/aws_balancer.pid \
                            --user         nobody
 
@@ -28,7 +28,7 @@ Kill a running balancer daemon:
                            --conf         /etc/gbrowse2/aws_balancer.conf \
                            --access_key   XYZZY \
                            --secret_key   Plugh \
-                           --logfile      /var/log/gbrowse2/aws_balancer.log \
+                           --logfile      /var/log/gbrowse/aws_balancer.log \
                            --pidfile      /var/run/aws_balancer.pid \
                            --user         nobody
 
@@ -109,12 +109,15 @@ allow password-less requests to this module from localhost
 (http://httpd.apache.org/docs/2.2/mod/mod_status.html). This is the
 recommended configuration:
 
+<IfModule mod_status.c>
+ ExtendedStatus on
  <Location /server-status>
     SetHandler server-status
     Order deny,allow
     Deny from all
     Allow from 127.0.0.1 ::1
  </Location>
+</IfModule>
 
 5. If you are running GBrowse on local hardware, the local hardware
 must be connected to the Internet or have a Virtual Private Cloud
@@ -477,6 +480,7 @@ use Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;
 my $balancer;
 
 # this obscures the AWS secrets from ps; it is not 100% effective
+my $program = $0;
 ($0 = "$0 @ARGV") =~ s/(\s--?[as]\S*?)(=|\s+)\S+/$1$2xxxxxxxxxx/g;
 
 $SIG{TERM} = sub {exit 0};
@@ -494,7 +498,7 @@ GetOptions(
 	   'kill'          => \$Kill,
 	   'background'    => \$Daemon,
 
-    ) or exec 'perldoc',$0;
+    ) or exec 'perldoc',$program;
 
 $ConfFile  ||= File::Spec->catfile(GBrowse::ConfigData->config('conf'),'aws_balancer.conf');
 

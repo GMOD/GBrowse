@@ -53,10 +53,10 @@ use constant GB => 1_073_741_824;
 use constant DEBUG => 1;
 
 my ($balancer,$slave);
-my @argv = @ARGV;
+my $program = $0;
 
 # this obscures the AWS secrets from ps; it is not 100% effective
-($0 = "$0 @ARGV") =~ s/(\s--?[as]\S*?)(=|\s+)\S+/$1$2xxxxxxxxxx/g;
+($0 = "$program @ARGV") =~ s/(\s--?[as]\S*?)(=|\s+)\S+/$1$2xxxxxxxxxx/g;
 
 $SIG{TERM} = sub {exit 0};
 $SIG{INT}  = sub {exit 0};
@@ -69,9 +69,30 @@ GetOptions(
 	   'mysql=s'       => \$MySqlPath,
 	   'postgres=s'    => \$PostGresPath,
            'verbosity=i'   => \$Verbosity,
-    ) or exec 'perldoc',$0;
+    ) or exec 'perldoc',$program;
 
 $ConfFile  ||= File::Spec->catfile(GBrowse::ConfigData->config('conf'),'aws_balancer.conf');
+unless (DEBUG || $< == 0) {
+    my @argv;
+    push @argv,('--access_key'=>$AccessKey)                 if $AccessKey;
+    push @argv,('--secret_key'=>$SecretKey)                 if $SecretKey;
+    push @argv,('--conf'      =>File::Spec->rel2abs($ConfFile))     if $ConfFile;
+    push @argv,('--mysql'     =>File::Spec->rel2abs($MySqlPath))    if $MySqlPath;
+    push @argv,('--postgres'  =>File::Spec->rel2abs($PostGresPath)) if $PostGresPath;
+    push @argv,('--verbosity' =>$Verbosity)                 if defined $Verbosity;
+    $program = File::Spec->rel2abs($program);
+
+    print STDERR <<END;
+This script needs root privileges in order to access all directories
+needed for synchronization.  It will now invoke sudo to become the
+'root' user temporarily.  You may be prompted for your login password
+now.
+END
+;
+
+    exec 'sudo','-E','-u','root',$program,@argv;
+}
+
 $balancer = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->new(
     -conf       => $ConfFile,
     -access_key => $AccessKey||'',
@@ -81,50 +102,37 @@ $balancer = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->new(
 $Verbosity = 3 unless defined $Verbosity;
 $balancer->verbosity($Verbosity);
 
-unless (DEBUG || $< == 0) {
-    print STDERR <<END;
-This script needs root privileges in order to access all directories
-needed for synchronization.  It will now invoke sudo to become the
-'root' user temporarily.  You may be prompted for your login password
-now.
-END
-;
-    exec 'sudo','-u','-E','root',$0,@argv;
-}
-
 # run the remote staging server
-print STDERR "Launching a slave server for staging...\n";
+print STDERR "[info] Launching a slave server for staging...\n";
 $slave = $balancer->launch_staging_server();
+
+$slave->shell if DEBUG;
 
 # figure out total size needed on destination volume
 my $DataBasePath = GBrowse::ConfigData->config('databases');
 
 my $gig_needed = tally_sizes($DataBasePath,$MySqlPath,$PostGresPath);  # keep an extra 10 G free
 my $gig_have   = $slave->volume_size;
- if ($gig_needed > $gig_have) {
+ if ($gig_needed + 5 > $gig_have) {
      $gig_needed = $gig_have + 10;  # grow by 10 G increments
-     print STDERR "Increasing size of slave data volume...\n";
+     $slave->info("Increasing size of slave data volume...\n");
      $slave->grow_volume($gig_needed);
 }
 
-print STDERR "Syncing files...\n";
+$slave->info("Syncing files...\n");
 $slave->put("$DataBasePath/",'/opt/gbrowse/databases');
-$slave->put("$MySqlPath/",'/opt/gbrowse/databases')    if $MySqlPath;
-$slave->put("$PostGresPath",'/opt/gbrowse/databases')  if $PostGresPath;
+$slave->put("$MySqlPath/",   '/opt/gbrowse/lib/mysql')       if $MySqlPath;
+$slave->put("$PostGresPath/",'/opt/gbrowse/lib/postgresql')  if $PostGresPath;
 my @snapshots = $slave->snapshot_data_volumes;
 $balancer->update_data_snapshots(@snapshots);
-
-# END {} block will do this
-#$slave->terminate;
-#undef $slave;
 
 exit 0;
 
 sub tally_sizes {
     my @dirs  = @_;
-    my $out   = `sudo du -sc @dirs`;
-    my $bytes = $out=~/^(\d+)\s+total/;
-    return int(0.5+$bytes/GB)||1;
+    my $out   = `sudo du -scb @dirs`;
+    my ($bytes) = $out=~/^(\d+)\s+total/m;
+    return int($bytes/GB)+1;
 }
 
 END {

@@ -202,16 +202,21 @@ sub slave_data_snapshots {
 
 sub slave_block_device_mapping {
     my $self = shift;
+    my $image = $self->ec2->describe_images($self->slave_image_id)
+	or die "Could not find image ",$self->slave_image_id;
+    my $root    = $image->rootDeviceName;
+    my @root    = grep {$_->deviceName eq $root} $image->blockDeviceMapping;
+    
     my @snaps = $self->slave_data_snapshots;
     my @bdm;
   DEVICE:
     for my $major ('g'..'z') {
 	for my $minor (1..15) {
 	    my $snap = shift @snaps or last DEVICE;
-	    push @bdm,"/dev/${major}${minor}=$snap::true";
+	    push @bdm,"/dev/sd${major}${minor}=${snap}::true";
 	}
     }
-    return \@bdm;
+    return [@root,@bdm];
 }
 
 sub slave_subnet {
@@ -296,7 +301,8 @@ sub running_as_instance {
 sub update_data_snapshots {
     my $self = shift;
     my @snapshot_ids = @_;
-    my $conf_file = $self->conf_file;
+    my $conf_file     = $self->conf_file;
+    my ($user,$group) = (stat($conf_file))[4,5];
     open my $in,'<',$conf_file        or die "Couldn't open $conf_file: $!";
     open my $out,'>',"$conf_file.new" or die "Couldn't open $conf_file: $!";
     while (<$in>) {
@@ -308,6 +314,7 @@ sub update_data_snapshots {
     close $out;
     rename "$conf_file","$conf_file.bak" or die "Can't rename $conf_file: $!";
     rename "$conf_file.new","$conf_file" or die "Can't rename $conf_file.new: $!";
+    chown $user,$group,$conf_file;
 }
 
 #######################
@@ -462,18 +469,32 @@ sub request_spot_instance {
     my @ports  = $self->slave_ports;
 
     my @options = (
+	-key_name             => 'Lincoln_default',
 	-image_id             => $self->slave_image_id,
 	-instance_type        => $self->slave_instance_type,
 	-instance_count       => 1,
 	-security_group_id    => $self->slave_security_group,
 	-spot_price           => $self->slave_spot_bid,
-	-block_devices        => $self->slave_block_device_mapping,
+	-block_device_mapping => $self->slave_block_device_mapping,
 	$subnet? (-subnet_id  => $subnet) : (),
 	-user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start @ports",
 	);
 
-    my $debug_options = "@options";
+    my @debug_options;
+    for (my $i = 0;$i<@options;$i+=2) {
+	my $a  = $options[$i];
+	my $v  = $options[$i+1];
+	if (ref $v && ref $v eq 'ARRAY') {
+	    push @debug_options,($a=>$_) foreach @$v;
+	} else {
+	    push @debug_options,($a=>$v);
+	}
+    }
+    
+
+    my $debug_options = "@debug_options";
     $debug_options    =~ tr/\n/ /;
+
     $self->log_debug("Launching a spot request with options: $debug_options\n");
     my @requests = $ec2->request_spot_instances(@options);
     @requests or croak $ec2->error_str;
@@ -772,7 +793,7 @@ sub grow_volume {
     my $needed = int($gig_wanted-$size);
     return if $needed <= 0;
 
-    print STDERR "Resizing /opt/gbrowse to $gig_wanted...\n";
+    $self->info("Resizing /opt/gbrowse to $gig_wanted...\n");
 
     # stop all the services
     $self->_stop_services('stop');
@@ -800,7 +821,7 @@ sub grow_volume {
 
     # If we found a pv that we can resize sufficiently, then go ahead and do that.
     # Otherwise, we add a new EBS volume to the volume group.
-    print STDERR "Unmounting /opt/gbrowse filesystem...\n";
+    $self->info("Unmounting /opt/gbrowse filesystem...\n");
     $self->ssh('sudo umount /opt/gbrowse') or die "Couldn't umount";
 
     if ($to_resize) {
@@ -811,16 +832,16 @@ sub grow_volume {
     
     # If we get here, the volume group has been extended, so we can
     # resize the logical volume and the filesystem
-    print STDERR "Resizing logical volume...\n";
+    $self->info("Resizing logical volume...\n");
     $self->ssh('sudo lvextend -l +100%FREE /dev/volumes/gbrowse') or die "Couldn't lvresize";
 
-    print STDERR "Checking filesystem prior to resizing...\n";
+    $self->info("Checking filesystem prior to resizing...\n");
     $self->ssh('sudo e2fsck -f -p /dev/volumes/gbrowse')          or die "e2fsck failed";
 
-    print STDERR "Resizing filesystem...\n";
-    $self->ssh('sudo resize2fs -p /dev/volumes/gbrowse')             or die "Couldn't resize2fs";
+    $self->info("Resizing filesystem...\n");
+    $self->ssh('sudo resize2fs -p /dev/volumes/gbrowse')          or die "Couldn't resize2fs";
 
-    print STDERR "Remounting filesystem...\n";
+    $self->info("Remounting filesystem...\n");
     $self->ssh('sudo mount /opt/gbrowse')                         or die "Couldn't mount";
 
     $self->_start_services;
@@ -847,7 +868,7 @@ sub _stop_services {
 sub _start_stop_services {
     my $self = shift;
     my $action = shift or die "usage: _start_stop_services(start|stop)";
-    print STDERR $action eq 'stop' ? "Stopping services...\n":"Starting services...\n";
+    $self->info($action eq 'stop' ? "Stopping services...\n":"Starting services...\n");
     foreach ('apache2','mysql','postgresql') {
 	$self->ssh("sudo service $_ $action");
     }
@@ -873,14 +894,14 @@ sub snapshot_data_volumes {
 
     @vols or die "Could not find the EBS volumes to snapshot";
 
-    print STDERR "Unmounting filesystem...\n";
+    $self->info("Unmounting filesystem...\n");
     $self->_stop_services;
     $self->ssh('sudo umount /opt/gbrowse') or die "Couldn't umount";
 
-    print STDERR "Creating snapshots...\n";
+    $self->info("Creating snapshots...\n");
     my @snapshots = map {$_->create_snapshot('Created by '.__PACKAGE__)} @vols;
 
-    print STDERR "Remounting filesystem...\n";
+    $self->info("Remounting filesystem...\n");
     $self->ssh('sudo mount /opt/gbrowse') or die "Couldn't mount";
     $self->_start_services;
 
@@ -892,7 +913,7 @@ sub _extend_vg {
     my ($vg,$size) = @_;
     
     my ($ebs_device,$local_device) = $self->unused_block_device();
-    print STDERR "Creating ${size}G EBS volume...\n";
+    $self->info("Creating ${size}G EBS volume...\n");
     my $vol = $self->ec2->create_volume(-availability_zone => $self->placement,
 					-size              => $size) or die "Couldn't create EBS volume: ",$self->ec2->error_str;
     $self->ec2->wait_for_volumes($vol);
@@ -904,10 +925,10 @@ sub _extend_vg {
 
     $a->deleteOnTermination(1);
 
-    print STDERR "Creating LVM2 physical device...\n";
+    $self->info("Creating LVM2 physical device...\n");
     $self->ssh("sudo pvcreate $local_device")          or die "pvcreate failed";
 
-    print STDERR "Extending 'volumes' volume group...\n";
+    $self->info("Extending 'volumes' volume group...\n");
     $self->ssh("sudo vgextend volumes $local_device")  or die "vgextend failed";
 
     1;
@@ -930,18 +951,18 @@ sub _resize_pv {
     $self->ssh('sudo vgchange -an volumes') or die "Couldn't vgchange";
     
     # detach the underlying device
-    print STDERR "Detaching volume $volume...\n";
+    $self->info("Detaching volume $volume...\n");
     my $a = $volume->detach                 or die "Couldn't detach";
     $self->ec2->wait_for_attachments($a);
 
     # snapshot it
-    print STDERR "Snapshotting volume $volume...\n";
+    $self->info("Snapshotting volume $volume...\n");
     my $snapshot = $volume->create_snapshot('created by '.__PACKAGE__) or die "Couldn't snapshot: ",$self->ec2->error_str;
     $self->ec2->wait_for_snapshots($snapshot);
     $snapshot->current_status eq 'completed' or die "Snapshot errored: ",$self->ec2->error_str;
     
     # create a new volume of the appropriate size
-    print STDERR "Creating new volume from snapshot...\n";
+    $self->info("Creating new volume from snapshot...\n");
     my $zone = $volume->availabilityZone;
     
     my $new_volume = $self->ec2->create_volume(-availability_zone => $zone,
@@ -950,13 +971,13 @@ sub _resize_pv {
     $self->ec2->wait_for_volumes($new_volume);
     $new_volume->current_status eq 'available' or die "Volume error: ",$self->ec2->error_str;
 
-    print STDERR "Attaching new volume...\n";
+    $self->info("Attaching new volume...\n");
     $a = $self->attach_volume($new_volume => $ebs_device);
     $self->ec2->wait_for_attachments($a);
     $new_volume->deleteOnTermination(1);
 
     # activate 
-    print STDERR "Resizing physical volume...\n";
+    $self->info("Resizing physical volume...\n");
     $self->ssh("sudo pvresize $device")     or die "Couldn't pvresize";
     $self->ssh('sudo vgchange -ay volumes') or die "Couldn't vgchange";
 

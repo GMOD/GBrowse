@@ -42,7 +42,7 @@ please see DISCLAIMER.txt for disclaimers of warranty.
 use strict;
 use FindBin '$Bin';
 use lib "$Bin/../lib";
-use lib '/home/lstein/projects/VM-EC2/lib';
+use lib '/home/lstein/projects/LibVM-EC2-Perl/lib';
 
 use Getopt::Long;
 use GBrowse::ConfigData;
@@ -50,8 +50,10 @@ use File::Spec;
 use Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;
 
 use constant GB => 1_073_741_824;
+use constant DEBUG => 1;
 
-my $balancer;
+my ($balancer,$slave);
+my @argv = @ARGV;
 
 # this obscures the AWS secrets from ps; it is not 100% effective
 ($0 = "$0 @ARGV") =~ s/(\s--?[as]\S*?)(=|\s+)\S+/$1$2xxxxxxxxxx/g;
@@ -79,25 +81,42 @@ $balancer = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->new(
 $Verbosity = 3 unless defined $Verbosity;
 $balancer->verbosity($Verbosity);
 
+unless (DEBUG || $< == 0) {
+    print STDERR <<END;
+This script needs root privileges in order to access all directories
+needed for synchronization.  It will now invoke sudo to become the
+'root' user temporarily.  You may be prompted for your login password
+now.
+END
+;
+    exec 'sudo','-u','-E','root',$0,@argv;
+}
+
 # run the remote staging server
-my $slave = $balancer->launch_staging_slave();
+print STDERR "Launching a slave server for staging...\n";
+$slave = $balancer->launch_staging_server();
 
 # figure out total size needed on destination volume
 my $DataBasePath = GBrowse::ConfigData->config('databases');
 
 my $gig_needed = tally_sizes($DataBasePath,$MySqlPath,$PostGresPath);  # keep an extra 10 G free
 my $gig_have   = $slave->volume_size;
- if ($gig_needed < $gig_have) {
+ if ($gig_needed > $gig_have) {
      $gig_needed = $gig_have + 10;  # grow by 10 G increments
-#     $slave->grow_volume($gig_needed);
+     print STDERR "Increasing size of slave data volume...\n";
+     $slave->grow_volume($gig_needed);
 }
 
-# $slave->put("$DataBasePath/",'/opt/gbrowse2/databases');
-# $slave->put("$MySqlPath/",'/opt/gbrowse2/databases')    if $MySqlPath;
-# $slave->put("$PostGresPath",'/opt/gbrowse2/databases')  if $PostGresPath;
-# my @snapshots = $slave->snapshot_gbrowse_volumes;
-# $slave->write_new_snapshot_conf(@snapshots);
-# $slave->terminate;
+print STDERR "Syncing files...\n";
+$slave->put("$DataBasePath/",'/opt/gbrowse/databases');
+$slave->put("$MySqlPath/",'/opt/gbrowse/databases')    if $MySqlPath;
+$slave->put("$PostGresPath",'/opt/gbrowse/databases')  if $PostGresPath;
+my @snapshots = $slave->snapshot_data_volumes;
+$balancer->update_data_snapshots(@snapshots);
+
+# END {} block will do this
+#$slave->terminate;
+#undef $slave;
 
 exit 0;
 
@@ -106,6 +125,11 @@ sub tally_sizes {
     my $out   = `sudo du -sc @dirs`;
     my $bytes = $out=~/^(\d+)\s+total/;
     return int(0.5+$bytes/GB)||1;
+}
+
+END {
+    if ($slave) { $slave->terminate }
+    undef $slave;
 }
 
 __END__

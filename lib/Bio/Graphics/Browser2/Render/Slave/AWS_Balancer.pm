@@ -292,6 +292,24 @@ sub running_as_instance {
 }
 
 
+# update conf file with new snapshot images
+sub update_data_snapshots {
+    my $self = shift;
+    my @snapshot_ids = @_;
+    my $conf_file = $self->conf_file;
+    open my $in,'<',$conf_file        or die "Couldn't open $conf_file: $!";
+    open my $out,'>',"$conf_file.new" or die "Couldn't open $conf_file: $!";
+    while (<$in>) {
+	chomp;
+	s/^(data_snapshots\s*=)/$1 @snapshot_ids/;
+	print $out "$_\n";
+    }
+    close $in;
+    close $out;
+    rename "$conf_file","$conf_file.bak" or die "Can't rename $conf_file: $!";
+    rename "$conf_file.new","$conf_file" or die "Can't rename $conf_file.new: $!";
+}
+
 #######################
 # status
 ######################
@@ -565,6 +583,7 @@ sub launch_staging_server {
 				       -block_devices => $self->slave_block_device_mapping,
 				       -server_class  => 'Bio::Graphics::Browser2::Render::Slave::StagingServer', # this is defined at the bottom of this .pm file
 	);
+    $server->{manager} = $staging; # avoid global destruction issues
     return $server;
 }
 
@@ -773,9 +792,7 @@ sub grow_volume {
     # select a volume to resize
     my $to_resize;
     for my $pv (sort {$a<=>$b} keys %volumes) {
-#	if ($volumes{$pv} + $needed < 1000) {
-	warn "change this constant to 1000 after testing";
-	if ($volumes{$pv} + $needed < 100) {
+	if ($volumes{$pv} + $needed < 1000) {
 	    $to_resize  = $pv;
 	    last;
 	}
@@ -809,6 +826,12 @@ sub grow_volume {
     $self->_start_services;
 
     1;
+}
+
+sub terminate {
+    my $self = shift;
+    $self->manager->unregister_server($self) if $self->manager;
+    $self->ec2->terminate_instances($self);
 }
 
 sub _start_services {

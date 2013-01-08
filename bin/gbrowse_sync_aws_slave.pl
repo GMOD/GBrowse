@@ -14,6 +14,36 @@ gbrowse_sync_aws_slave.pl  Synchronize local file system to GBrowse slave volume
  data stored in snapshot(s) snap-12345
  updated conf file, previous version in /etc/gbrowse2/aws_balancer.conf.bak
 
+=head1 DESCRIPTION
+
+This script is run in conjunction with Amazon Web Server-based GBrowse
+render slave load balancing, which is described in more detail in the
+manual page for gbrowse_aws_balancer.pl.
+
+The gbrowse_sync_aws_script.pl script should be run on the GBrowse
+master machine each time you add a new database to an existing data
+source, or if you add a whole new data source. What it does is to
+prepare a new Amazon EBS snapshot containing a copy of all the data
+needed for the GBrowse slave to run. This snapshot is then attached to
+new slave instances.
+
+After running, it updates the conf file with the current versions of
+the slave AMI and the data snapshot(s).
+
+ % sudo gbrowse_sync_aws_script.pl --conf     /etc/gbrowse2/aws_balancer.conf \
+                                   --mysql    /var/lib/mysql \
+                                   --postgres /var/lib/postgresql
+
+The --conf argument is required. The script will create a snapshot of
+the appropriate size, mount it on a temporary staging instance, and
+rsync a copy of your gbrowse databases directory
+(e.g. /var/lib/gbrowse2/databases) to the snapshot. If you have
+created mysql or postgres databases, you must also give the paths to
+their database file directories, as shown in the example.
+
+Note that ALL your mysql and postgres data files located on the master
+machine will be copied; not just those used for track display.
+
 =head1 ENVIRONMENT VARIABLES
 
 The following environment variables are used if the corresponding

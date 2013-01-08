@@ -84,6 +84,9 @@ Options can be abbreviated.  For example, you can use -a for
       --kill         Kill a previously-launched daemon. Must provide
                          the same --pidfile argument as used when
                          the daemon was started.
+      --ssh_key      Enable ssh login on the slave(s) using the specified
+                         AWS ssh keypair. Login will only be available
+                         from the host this script is run on.
 
 =head1 PREREQUISITES
 
@@ -417,10 +420,30 @@ addition, you can place your (or another authorized user's) EC2 access
 and secret key in this file. Please make sure that this file is only
 readable by root.
 
-=head1 THE GBROWSE_SYNC_AWS_SLAVE.PL SCRIPT
+=head1 DEBUGGING SLAVE PROBLEMS
 
-[This script is not yet written, but this section describes how it
-will work].
+If slaves are returning track renderinge errors, then there is likely
+an issue with data synchronization. This typically happens when the
+data on the master differs from the data on the slave, or path names
+are different on the two systems.
+
+To debug this, launch the script with the -ssh_key option:
+
+  % gbrowse_aws_balancer.pl --conf         /etc/gbrowse2/aws_balancer.conf \
+                           --access_key   XYZZY \
+                           --secret_key   Plugh \
+                           --ssh_key      John_Doe_default
+
+You may then ssh into the slave using the specified ssh key and the
+username "admin". A useful thing to do is to tail the slave log file:
+
+ ssh -i .ssh/John_Doe_default admin@54.280.19.203 \
+        tail -f /var/log/gbrowse/gbrowse_slave
+
+Replace the IP number with the correct IP number of one of the running
+slaves, which you can find in /etc/gbrowse2/renderfarm.conf.
+
+=head1 THE GBROWSE_SYNC_AWS_SLAVE.PL SCRIPT
 
 The gbrowse_sync_aws_script.pl script should be run on the master each
 time you add a new database to an existing data source, or if you add
@@ -486,18 +509,18 @@ my $program = $0;
 $SIG{TERM} = sub {exit 0};
 $SIG{INT}  = sub {exit 0};
 
-my($ConfFile,$AccessKey,$SecretKey,$PidFile,$LogFile,$Daemon,$User,$Verbosity,$Kill);
+my($ConfFile,$AccessKey,$SecretKey,$PidFile,$LogFile,$Daemon,$User,$Verbosity,$Kill,$SshKey);
 GetOptions(
-	   'access_key=s'  => \$AccessKey,
-	   'secret_key=s'  => \$SecretKey,
-	   'conf=s'        => \$ConfFile,
-	   'pidfile=s'     => \$PidFile,
-	   'logfile=s'     => \$LogFile,
-           'user=s'        => \$User,
-           'verbosity=i'   => \$Verbosity,
-	   'kill'          => \$Kill,
-	   'background'    => \$Daemon,
-
+    'access_key=s'  => \$AccessKey,
+    'secret_key=s'  => \$SecretKey,
+    'conf=s'        => \$ConfFile,
+    'pidfile=s'     => \$PidFile,
+    'logfile=s'     => \$LogFile,
+    'user=s'        => \$User,
+    'verbosity=i'   => \$Verbosity,
+    'kill'          => \$Kill,
+    'background'    => \$Daemon,
+    'ssh_key'       => \$SshKey,
     ) or exec 'perldoc',$program;
 
 $ConfFile  ||= File::Spec->catfile(GBrowse::ConfigData->config('conf'),'aws_balancer.conf');
@@ -510,6 +533,7 @@ $balancer = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->new(
     -pidfile    => $PidFile||'',
     -user       => $User||'',
     -daemon     => $Daemon||0,
+    -ssh_key    => $SshKey||undef,
     );
 
 $Verbosity = 3 unless defined $Verbosity;

@@ -307,7 +307,7 @@ sub update_data_snapshots {
     open my $out,'>',"$conf_file.new" or die "Couldn't open $conf_file: $!";
     while (<$in>) {
 	chomp;
-	s/^(data_snapshots\s*=)/$1 @snapshot_ids/;
+	s/^(data_snapshots\s*=)[^#]*/$1 @snapshot_ids /;
 	print $out "$_\n";
     }
     close $in;

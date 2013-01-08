@@ -15,6 +15,8 @@ BEGIN {
       use lib "$Bin/../lib";
       if (!eval {require Parse::Apache::ServerStatus;1}) {
 	  plan skip_all => 'Optional module Parse::Apache::ServerStatus not installed';
+      } elsif (!eval "use VM::EC2 1.22; 1") {
+	  plan skip_all => 'Optional module VM::EC2 (v1.22 or higher) not installed';
       } else {   
 	  plan tests => TESTS;
       }
@@ -23,6 +25,7 @@ BEGIN {
 
 my $b = Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->new(-conf=>CONF_FILE);
 $b or BAIL_OUT("Couldn't create balancer");
+$b->verbosity(0);
 my $instance = $b->running_as_instance;
 
 is_deeply([$b->slaves_wanted(0.1)],[0,1],'load table test 1');

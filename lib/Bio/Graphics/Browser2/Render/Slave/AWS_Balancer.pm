@@ -5,7 +5,7 @@ package Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;
 
 use strict;
 use Parse::Apache::ServerStatus;
-use VM::EC2 1.21;
+use VM::EC2 1.22;
 use VM::EC2::Instance::Metadata;
 use VM::EC2::Staging::Manager;
 use LWP::Simple 'get','head';

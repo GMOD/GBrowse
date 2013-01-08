@@ -78,7 +78,8 @@ sub skip_file {
 	   gbrowse_attach_slaves.pl
 	   make_das_conf.pl
 	   gbrowse_slave_start_aws.sh
-	   gbrowse_launch_aws_slaves.pl
+	   gbrowse_aws_balancer.pl
+	   gbrowse_sync_aws_slave.pl
           );
 
     return $skip{ basename($file) };

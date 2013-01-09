@@ -6,9 +6,9 @@ gbrowse_sync_aws_slave.pl  Synchronize local file system to GBrowse slave volume
 
 =head1 SYNOPSIS
 
- % sudo gbrowse_sync_aws_script.pl --conf     /etc/gbrowse2/aws_balancer.conf \
-                                   --mysql    /var/lib/mysql \
-                                   --postgres /var/lib/postgresql
+ % sudo gbrowse_sync_aws_slave.pl --conf     /etc/gbrowse2/aws_balancer.conf \
+                                  --mysql    /var/lib/mysql \
+                                  --postgres /var/lib/postgresql
 
  syncing data....done
  data stored in snapshot(s) snap-12345

@@ -26,6 +26,7 @@ use constant CONFIGURE_SLAVES => "$Bin/gbrowse_configure_slaves.pl";
 #   -pidfile    => $path_to_pidfile,
 #   -user       => $user_name_to_run_under,# (root only)
 #   -daemon     => $daemon_mode,
+#   -ssh_key    => $ssh_login_key (optional)
 # )
 
 sub new {
@@ -46,6 +47,7 @@ sub new {
 	user       => $args{-user},
 	conf_file  => $args{-conf},
 	daemon     => $args{-daemon},
+	ssh_key    => $args{-ssh_key},
 	verbosity  => 2,
     },ref $class || $class;
     $self->initialize();
@@ -57,6 +59,7 @@ sub pidfile    {shift->{pidfile}}
 sub pid        {shift->{pid}}
 sub user       {shift->{user}}
 sub daemon     {shift->{daemon}}
+sub ssh_key    {shift->{ssh_key}}
 sub ec2_credentials {
     my $self = shift;
     if ($self->running_as_instance) {
@@ -228,6 +231,13 @@ sub slave_subnet {
     }
 }
 
+sub slave_ssh_key {
+    my $self = shift;
+    my $key  = $self->ssh_key;
+    $key   ||= $self->option('SLAVE','ssh_key');
+    return $key;
+}
+
 sub slave_security_group {
     my $self = shift;
     my $sg   = $self->{slave_security_group};
@@ -243,6 +253,11 @@ sub slave_security_group {
 				-port      => $_,
 				-source_ip => "$ip/32")
 	) foreach $self->slave_ports;
+    $self->log_debug(
+	$sg->authorize_incoming(-protocol => 'tcp',
+				-port     => 22,
+				-source_ip=> "$ip/32"))
+	if $self->slave_ssh_key;
     
     $sg->update or croak $ec2->error_str;
     return $self->{slave_security_group} = $sg;
@@ -301,13 +316,14 @@ sub running_as_instance {
 sub update_data_snapshots {
     my $self = shift;
     my @snapshot_ids = @_;
+    my $timestamp     = 'synchronized with local filesystem on '.localtime;
     my $conf_file     = $self->conf_file;
     my ($user,$group) = (stat($conf_file))[4,5];
     open my $in,'<',$conf_file        or die "Couldn't open $conf_file: $!";
     open my $out,'>',"$conf_file.new" or die "Couldn't open $conf_file: $!";
     while (<$in>) {
 	chomp;
-	s/^(data_snapshots\s*=)[^#]*/$1 @snapshot_ids /;
+	s/^(data_snapshots\s*=).*/$1 @snapshot_ids # $timestamp/;
 	print $out "$_\n";
     }
     close $in;
@@ -467,17 +483,18 @@ sub request_spot_instance {
 
     my $subnet = $self->slave_subnet;
     my @ports  = $self->slave_ports;
+    my $key    = $self->slave_ssh_key;
 
     my @options = (
-	-key_name             => 'Lincoln_default',
 	-image_id             => $self->slave_image_id,
 	-instance_type        => $self->slave_instance_type,
 	-instance_count       => 1,
 	-security_group_id    => $self->slave_security_group,
 	-spot_price           => $self->slave_spot_bid,
 	-block_device_mapping => $self->slave_block_device_mapping,
-	$subnet? (-subnet_id  => $subnet) : (),
 	-user_data         => "#!/bin/sh\nexec /opt/gbrowse/etc/init.d/gbrowse-slave start @ports",
+	$subnet? (-subnet_id  => $subnet)          : (),
+	$key   ? (-key_name   => $key)             : (),
 	);
 
     my @debug_options;
@@ -770,6 +787,7 @@ sub _prompt {
 
 package Bio::Graphics::Browser2::Render::Slave::StagingServer;
 use base 'VM::EC2::Staging::Server';
+use Sys::Hostname;
 
 use constant GB => 1_073_741_824;
 use constant TB => 1_099_511_627_776;
@@ -889,6 +907,9 @@ sub snapshot_data_volumes {
     }
     close $fh;
 
+    my $hostname  = hostname();
+    my $timestamp = localtime();
+
     # get the EBS volumes for this device
     my @vols   = map {$_->volume} grep {$volumes{$_->deviceName}} $self->blockDeviceMapping;
 
@@ -899,7 +920,8 @@ sub snapshot_data_volumes {
     $self->ssh('sudo umount /opt/gbrowse') or die "Couldn't umount";
 
     $self->info("Creating snapshots...\n");
-    my @snapshots = map {$_->create_snapshot('Created by '.__PACKAGE__)} @vols;
+    my @snapshots = map {$_->create_snapshot("GBrowse data volume synchronized with $hostname on $timestamp")} @vols;
+    $_->add_tag(Name => "GBrowse data from ${hostname}\@${timestamp}") foreach @snapshots;
 
     $self->info("Remounting filesystem...\n");
     $self->ssh('sudo mount /opt/gbrowse') or die "Couldn't mount";

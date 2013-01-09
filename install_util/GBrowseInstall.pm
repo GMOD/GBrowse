@@ -659,7 +659,7 @@ sub process_htdocs_files {
 	if (Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->running_as_instance) {
 	    warn "Cloud instance detected; renaming index.html";
 	    rename "blib/htdocs/index.html","blib/htdocs/index_default.html";
-	    rename "blib/htdocs/cloud_index.html","blig/htdocs/index.html";
+	    rename "blib/htdocs/cloud_index.html","blib/htdocs/index.html";
 	}
     }
 }

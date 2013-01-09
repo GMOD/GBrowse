@@ -80,7 +80,7 @@ use File::Spec;
 use Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;
 
 use constant GB => 1_073_741_824;
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 my ($balancer,$slave);
 my $program = $0;

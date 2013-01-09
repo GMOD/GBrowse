@@ -64,14 +64,13 @@ sub ec2_credentials {
     my $self = shift;
     if ($self->running_as_instance) {
 	my $credentials = $self->{instance_metadata}->iam_credentials;
-	$self->log_debug("Instance is using IAM credentials $credentials");
 	return (-security_token => $credentials) if $credentials;
-    } else {
-	$self->{access_key} ||= $self->_prompt('Enter your EC2 access key:');
-	$self->{secret_key} ||= $self->_prompt('Enter your EC2 secret key:');
-	return (-access_key => $self->{access_key},
-		-secret_key => $self->{secret_key})
+	$self->log_debug('No instance security credentials. Does this instance have an IAM role?';
     }
+    $self->{access_key} ||= $self->_prompt('Enter your EC2 access key:');
+    $self->{secret_key} ||= $self->_prompt('Enter your EC2 secret key:');
+    return (-access_key => $self->{access_key},
+	    -secret_key => $self->{secret_key})
 }
 sub logfh {
     my $self = shift;

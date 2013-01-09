@@ -653,6 +653,15 @@ sub process_htdocs_files {
 	    $self->check_installed($install_path,$base) if $copied;
 	}
     }
+
+    # hacky thing for getting the cloud index.html right
+    if (eval "require Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;1") {
+	if (Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->running_as_instance) {
+	    warn "Cloud instance detected; renaming index.html";
+	    rename "blib/htdocs/index.html","blib/htdocs/index_default.html";
+	    rename "blib/htdocs/cloud_index.html","blig/htdocs/index.html";
+	}
+    }
 }
 
 sub process_cgibin_files {

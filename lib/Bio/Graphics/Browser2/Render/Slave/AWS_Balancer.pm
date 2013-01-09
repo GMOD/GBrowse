@@ -620,6 +620,7 @@ sub launch_staging_server {
 				       -image_name    => $self->slave_image_id,
 				       -block_devices => $self->slave_block_device_mapping,
 				       -server_class  => 'Bio::Graphics::Browser2::Render::Slave::StagingServer', # this is defined at the bottom of this .pm file
+				       -architecture  => undef
 	);
     $server->{manager} = $staging; # avoid global destruction issues
     return $server;

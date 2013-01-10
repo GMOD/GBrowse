@@ -137,6 +137,7 @@ print STDERR "[info] Launching a slave server for staging...\n";
 $slave = $balancer->launch_staging_server();
 
 $slave->shell if DEBUG;
+$slave->stop_services();
 
 # figure out total size needed on destination volume
 my $DataBasePath = GBrowse::ConfigData->config('databases');

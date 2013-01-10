@@ -266,7 +266,8 @@ sub ec2 {
     my $self = shift;
     # create a new ec2 each time because security credentials may expire
     my @credentials = $self->ec2_credentials;
-    return $self->{ec2} = VM::EC2->new(-endpoint => $self->slave_endpoint,
+    return $self->{ec2} = VM::EC2->new(-endpoint    => $self->slave_endpoint,
+				       -raise_error => 1,
 				       @credentials);
 }
 
@@ -813,9 +814,6 @@ sub grow_volume {
 
     $self->info("Resizing /opt/gbrowse to $gig_wanted...\n");
 
-    # stop all the services
-    $self->_stop_services('stop');
-    
     # get information about the physical volumes that belong to this group
     my %volumes;
     my $fh = $self->scmd_read('sudo pvs --noheadings --units g --nosuffix --separator ,');
@@ -862,8 +860,6 @@ sub grow_volume {
     $self->info("Remounting filesystem...\n");
     $self->ssh('sudo mount /opt/gbrowse')                         or die "Couldn't mount";
 
-    $self->_start_services;
-
     1;
 }
 
@@ -873,12 +869,12 @@ sub terminate {
     $self->ec2->terminate_instances($self);
 }
 
-sub _start_services {
+sub start_services {
     my $self = shift;
     $self->_start_stop_services('start');
 }
 
-sub _stop_services {
+sub stop_services {
     my $self = shift;
     $self->_start_stop_services('stop');
 }
@@ -912,11 +908,9 @@ sub snapshot_data_volumes {
 
     # get the EBS volumes for this device
     my @vols   = map {$_->volume} grep {$volumes{$_->deviceName}} $self->blockDeviceMapping;
-
     @vols or die "Could not find the EBS volumes to snapshot";
 
     $self->info("Unmounting filesystem...\n");
-    $self->_stop_services;
     $self->ssh('sudo umount /opt/gbrowse') or die "Couldn't umount";
 
     $self->info("Creating snapshots...\n");
@@ -925,7 +919,6 @@ sub snapshot_data_volumes {
 
     $self->info("Remounting filesystem...\n");
     $self->ssh('sudo mount /opt/gbrowse') or die "Couldn't mount";
-    $self->_start_services;
 
     return @snapshots;
 }

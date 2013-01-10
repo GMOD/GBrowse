@@ -326,16 +326,30 @@ minimum needed for the balancer script to work properly:
     {
       "Sid": "BalancerPolicy",
       "Action": [
+        "ec2:AuthorizeSecurityGroupEgress",
         "ec2:AuthorizeSecurityGroupIngress",
         "ec2:CreateSecurityGroup",
         "ec2:DeleteSecurityGroup",
         "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeImageAttribute",
         "ec2:DescribeImages",
         "ec2:DescribeInstances",
+        "ec2:DescribeInstanceAttribute",
+        "ec2:DescribeInstanceStatus",
         "ec2:DescribeSecurityGroups",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeSnapshots",
         "ec2:DescribeSpotInstanceRequests",
         "ec2:RequestSpotInstances",
-        "ec2:TerminateInstances"
+        "ec2:CreateKeyPair",
+        "ec2:DescribeKeyPairs",
+        "ec2:DeleteKeyPair",
+        "ec2:RunInstances",
+        "ec2:TerminateInstances",
+        "ec2:CreateSnapshot",
+        "ec2:CreateVolume",
+        "ec2:CreateTags",
+        "ec2:DeleteTags"
       ],
       "Effect": "Allow",
       "Resource": [

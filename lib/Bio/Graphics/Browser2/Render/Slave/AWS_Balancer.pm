@@ -65,7 +65,7 @@ sub ec2_credentials {
     if ($self->running_as_instance) {
 	my $credentials = $self->{instance_metadata}->iam_credentials;
 	return (-security_token => $credentials) if $credentials;
-	$self->log_debug('No instance security credentials. Does this instance have an IAM role?';
+	$self->log_debug('No instance security credentials. Does this instance have an IAM role?');
     }
     $self->{access_key} ||= $self->_prompt('Enter your EC2 access key:');
     $self->{secret_key} ||= $self->_prompt('Enter your EC2 secret key:');

@@ -242,7 +242,7 @@ sub slave_security_group {
     my $sg   = $self->{slave_security_group};
     return $sg if $sg;
     my $ec2 = $self->ec2;
-    $sg =   $ec2->describe_security_groups(-name     =>  "GBROWSE_SLAVE_$$");
+    $sg =   eval {$ec2->describe_security_groups(-name     =>  "GBROWSE_SLAVE_$$")};
     $sg ||= $ec2->create_security_group(-name        =>  "GBROWSE_SLAVE_$$",
 					-description => 'Temporary security group for slave communications');
     my $ip = $self->running_as_instance ? $self->internal_ip : $self->master_ip;

@@ -614,6 +614,7 @@ sub launch_staging_server {
     my $ec2     = $self->ec2;
     my $staging = $self->{staging} ||= $ec2->staging_manager(-on_exit=>'run',
 							     -verbose=>3);
+    $self->log_debug("Requesting block device mapping: ",join ',',@{$self->slave_block_device_mapping});
     my $server  = $staging->get_server(-name          => 'slave_staging_server',
 				       -username      => 'admin',
 				       -instance_type => $self->slave_instance_type,

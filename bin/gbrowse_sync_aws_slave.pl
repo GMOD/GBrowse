@@ -156,6 +156,8 @@ $slave->put("$MySqlPath/",   '/opt/gbrowse/lib/mysql')       if $MySqlPath;
 $slave->put("$PostGresPath/",'/opt/gbrowse/lib/postgresql')  if $PostGresPath;
 my @snapshots = $slave->snapshot_data_volumes;
 $balancer->update_data_snapshots(@snapshots);
+$slave->info("Updating $ConfFile.\n");
+$slave->info("Synchronization done. New data is in snapshot(s) @snapshots.\n");
 
 exit 0;
 

@@ -3,15 +3,6 @@
 eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 our $CONF_DIR  = "$ENV{GBROWSE_CONF}/synteny";
 our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
 our $BIOGRAPHICS_VERSION   = 1.8;
@@ -88,7 +79,7 @@ unless ($go) {
   print p('Please consult '.a({-href=>'http://gmod.org/wiki/GBrowse_syn'},'the documentation'));
 
   print <<END;
-<iframe style="frameborder:0;width:800px;height:2000px" src="/gbrowse2/gbrowse_syn_help.html">
+<iframe style="frameborder:0;width:1280px;height:2000px" src="/gbrowse2/gbrowse_syn_help.html">
 </iframe>
 END
 ;

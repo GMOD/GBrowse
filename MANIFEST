@@ -99,7 +99,7 @@ conf/pop_demo.conf
 conf/renderfarm.conf
 conf/slave_preload.conf
 conf/submitter_plugin.conf
-conf/synteny/oryza.synconf.disabled
+conf/synteny/oryza.synconf.disabled.conf
 conf/synteny/rice_synteny.conf
 conf/synteny/wild_rice_synteny.conf
 conf/themes/solid_gray_colors

@@ -2084,13 +2084,12 @@ sub create_panel_args {
 	      -postgrid     => $postgrid,
 	      -background   => $args->{background} || '',
 	      -truecolor    => $source->global_setting('truecolor') || 0,
-	      -map_fonts_to_truetype    => $source->global_setting('truetype') || 0,
+              -truetype     => $source->global_setting('truetype') || 0,
 	      -extend_grid  => 1,
               -gridcolor    => $source->global_setting('grid color') || 'lightcyan',
               -gridmajorcolor    => $source->global_setting('grid major color') || 'cyan',
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
-
   push @argv, -flip => 1 if $flip;
   my $p  = $self->image_padding;
   my $pl = $source->global_setting('pad_left');
@@ -2593,6 +2592,7 @@ sub balloon_tip_setting {
   } else {
     $val = $source->link_pattern($value,$feature,$panel);
   }
+  $val ||= '';
 
   if ($val=~ /^\s*\[([\w\s]+)\]\s+(.+)/s) {
     $balloon_type = $1;

@@ -234,7 +234,7 @@ sub render_image {
         my $url    = $renderer->source->generate_image($img_data);
 	my $js = $render->data_source->globals->js_url;
 	my @scripts = map { {src=>"$js/$_"} }
-	                  qw(balloon.js balloon.config.js yahoo-dom-event.js);
+	                  qw(balloon.js balloon.config.js prototype.js GBox.js);
 	print $self->header(-type=>'text/html');
 	print start_html(-script=>\@scripts),
 	      $render->render_balloon_settings,
@@ -563,13 +563,13 @@ sub usage {
 
 <pre>
 
-  &lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
+  &lt;img src="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
 <blockquote>
   <i>Will generate this picture:</i>
- <img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;width=400">
+ <img src="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=mec-3;width=400">
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/gb2/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/tools/genome/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Sources
@@ -591,7 +591,7 @@ sub usage {
   yeast
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Feature types for source c_elegans
@@ -619,7 +619,7 @@ can be used as the destination of an &lt;img&gt; tag like this:
 </p>
 
 <blockquote><pre>
-&lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=III:1..1000"&gt;
+&lt;img src="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=III:1..1000"&gt;
 </pre></blockquote>
 
 <p>
@@ -699,7 +699,7 @@ lengths.
       a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
       <p>
       <pre>
-      &lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;
+      &lt;img src="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=mec-3;
                    type=tRNA+NG+WABA+CG+ESTB"&gt;
       </pre>
       Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
@@ -759,7 +759,7 @@ lengths.
   <dt><b>style</b>
   <dd>The style argument can be used to control the rendering of additional features added
       with "add".  It is a flattened version of the style configuration sections described
-      in <a href="http://www.wormbase.org/db/gb2/gbrowse?help=annotation">this document</a>
+      in <a href="http://www.wormbase.org/tools/genome/gbrowse?help=annotation">this document</a>
       For example, if you have added a "Blast Hit" annotation, then you can tell the
       renderer to use a red arrow for this glyph in this way:
       style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
@@ -832,7 +832,7 @@ lengths.
 </dl>
 <p>
 Putting it all together, here's a working (very long) URL:
-<pre><a href="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
+<pre><a href="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
 <p>

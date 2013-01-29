@@ -961,7 +961,7 @@ sub render_panels {
 	$html .= div(
 	    $self->toggle({tight=>1},
 			  'Overview',
-			  div({ -id => 'overview_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; position:relative; width:'.$self->get_image_width($self->state).'px' },
+			  div({ -id => 'overview_panels', -class => 'track', -style=>'margin-bottom:3px; overflow: hidden; margin-left:auto; margin-right:auto; z-index:-1; position:relative; width:'.$self->get_image_width($self->state).'px' },
 			      $scale_bar_html, $panels_html,
 			  ))
 	    ) . $drag_script;

@@ -1300,7 +1300,6 @@ show_info_message:
   ghost_track:
 	function (el) {
 	    var d = el.ancestors().find(function (a) {return a.hasClassName("track")}); 
-	    //	    new Effect.Opacity(d,{from: 1.0, to: 0.75, duration: 0.5});
 	    var s = Sortable.destroy(GlobalDrag);
 	    new Draggable(d,{ghosting: true,
                              constraint:'vertical',
@@ -1310,7 +1309,6 @@ show_info_message:
 			onStart: function(a,mouse) {
 			  a._startX=mouse.pointerX();
 			  a._startY=mouse.pointerY();
-			  alert(mouse.pointerX()+','+mouse.pointerY());
 		    },
 			onEnd:function(a,mouse) {
 			// a.element.parentNode.removeChild(a.element);
@@ -1318,12 +1316,41 @@ show_info_message:
 			a.element.style.position='relative';
 			a.element.style.zindex=1000000;
 			create_drag(GlobalDrag);
-			var g = a.element.clone();
-			Element.insert(a.element.parentNode,g);
-			g.style.position='absolute';
-			g.style.left=a.element.cumulativeOffset.left;
-			g.style.top=a.element.cumulativeOffset.top + mouse.pointerY()-a._startY;
-			alert(mouse.pointerY()-a._startY);
+			var g = a.element.clone(true);
+			g.id += '_ghost';
+			a.element.insert({after:g});
+			Element.absolutize(g);
+			g.removeClassName('track');
+			g.style.top=(a.element.offsetTop + (mouse.pointerY() - a._startY))+'px';
+			var d = g.select('div.inner_div');
+			d[0].id=g.id+'_inner_div';
+			g.select('img').each(function(a) { 
+				if (a.hasClassName('track_image'))
+				    a.removeAttribute('usemap');
+				else
+				    a.parentNode.removeChild(a);
+			    });
+
+			var t = Controller.register_track(g.id,g.id,'standard','detail');
+			g.select('span.titlebar').each(function(a) {
+				a.style.backgroundColor='blue';
+				a.style.color="white";
+				a.style.width='100%';
+				a.style.textAlign="center";
+				var img = new Element('img',{style:'float:right;cursor:pointer',
+							     src:'/gbrowse2/images/buttons/ex.png'});
+				a.insert({bottom:img});
+				img.observe('click',function(c) { 
+					        Controller.unregister_track(g.id);
+						g.parentNode.removeChild(g)})
+				    });
+			g.style.outlineStyle="double";
+			g.style.opacity=0.85;
+			TrackPan.make_track_draggable(t);
+			new Draggable(g,{constraint:'vertical',
+				    scroll: window,
+				    zindex: 1000});
+			// Event.observe(g,'mousedown',function (a) {alert('you clicked me');false;});
 			return true;
 		    }
 	    		});

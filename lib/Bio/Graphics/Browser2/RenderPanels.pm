@@ -452,6 +452,7 @@ sub wrap_rendered_track {
             -height => $height,
             -border => 0,
             -name   => $label,
+	    -class  => 'track_image',
             -style  => $img_style
 	    
         }
@@ -672,6 +673,7 @@ sub wrap_rendered_track {
             -width  => $pad->width,
             -border => 0,
             -id     => "${label}_pad",
+	    -class  => 'track_image',
             -style  => $collapsed ? "display:inline" : "display:none",
         }
     );
@@ -702,7 +704,7 @@ sub wrap_rendered_track {
 			      -style => "position:absolute; top:0px; width:100%; left:0px", }, $pan_left . $pan_right . $scale_div);
     }
 
-    my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
+    my $inner_div = div( { -id => "${label}_inner_div",-class=>'inner_div' }, $img . $pad_img ); #Should probably improve this
 
 
     my $subtrack_labels = join '',map {

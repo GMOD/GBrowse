@@ -1300,6 +1300,7 @@ show_info_message:
   ghost_track:
 	function (el) {
 	    var d = el.ancestors().find(function (a) {return a.hasClassName("track")}); 
+	    if ($(d.id+'_ghost')) return true;
 	    var s = Sortable.destroy(GlobalDrag);
 	    new Draggable(d,{ghosting: true,
                              constraint:'vertical',
@@ -1336,8 +1337,8 @@ show_info_message:
 				a.style.backgroundColor='blue';
 				a.style.color="white";
 				a.style.width='100%';
-				a.style.textAlign="center";
-				var img = new Element('img',{style:'float:right;cursor:pointer',
+				a.style.textAlign="left";
+				var img = new Element('img',{style:'cursor:pointer',
 							     src:'/gbrowse2/images/buttons/ex.png'});
 				a.insert({bottom:img});
 				img.observe('click',function(c) { 

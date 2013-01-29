@@ -3,6 +3,8 @@
    down then throws an error (once) and then reverts to local rendering for a period of time.
  * Updated installer to give dire warning if installing into /usr/local/apache
    and there doesn't appear to be an apache instance there.
+ * Support truetype fonts (need Bio::Graphics 2.33 or higher; set truetype=1 in GBrowse.conf, and
+   optionally pass font names like "Helvetica-12:Italic" to the track "font" option). 
 
 2.54
  * Version 2.53 introduced a bad bug into track configuration such

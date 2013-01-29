@@ -271,7 +271,6 @@ sub make_requests {
     foreach my $label ( @{ $labels || [] } ) {
 
         my @track_args = $self->create_track_args( $label, $args );
-
 	my (@filter_args,@featurefile_args,@subtrack_args);
 
 	my $format_option = $settings->{features}{$label}{options};

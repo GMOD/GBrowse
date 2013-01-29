@@ -586,16 +586,7 @@ sub wrap_rendered_track {
 
 	img({ -src          => $help,
 	      -style        => 'cursor:crosshair',
-	      -onmousedown  => <<END,
-var d = this.ancestors().find(function (a) {return a.hasClassName("track")}); 
-var o = d.cumulativeOffset();
-alert(o);
-d.style.left=o.left;
-d.style.top=o.top;
-d.style.position='fixed';
-d.style.zIndex=1;
-\$('${label}_inner_div').style.opacity=0.6;
-END
+	      -onmousedown  => 'Controller.ghost_track(this)',
 	      -onmouseover  => "$balloon_style.showTooltip(event,'pin this track')",
 	    }
 	)

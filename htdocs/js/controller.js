@@ -1297,6 +1297,38 @@ show_info_message:
       $('dialog_123').remove();
   },
 
+  ghost_track:
+	function (el) {
+	    var d = el.ancestors().find(function (a) {return a.hasClassName("track")}); 
+	    //	    new Effect.Opacity(d,{from: 1.0, to: 0.75, duration: 0.5});
+	    var s = Sortable.destroy(GlobalDrag);
+	    new Draggable(d,{ghosting: true,
+                             constraint:'vertical',
+			     revert: true,
+			     scroll: window,
+			     zindex: 1000000,
+			onStart: function(a,mouse) {
+			  a._startX=mouse.pointerX();
+			  a._startY=mouse.pointerY();
+			  alert(mouse.pointerX()+','+mouse.pointerY());
+		    },
+			onEnd:function(a,mouse) {
+			// a.element.parentNode.removeChild(a.element);
+			// g.destroy();
+			a.element.style.position='relative';
+			a.element.style.zindex=1000000;
+			create_drag(GlobalDrag);
+			var g = a.element.clone();
+			Element.insert(a.element.parentNode,g);
+			g.style.position='absolute';
+			g.style.left=a.element.cumulativeOffset.left;
+			g.style.top=a.element.cumulativeOffset.top + mouse.pointerY()-a._startY;
+			alert(mouse.pointerY()-a._startY);
+			return true;
+		    }
+	    		});
+	},
+
   // Looks up a key in the language table. If not found, checks the defaults table.
   // If the translation contains %s, substitutes additional parameters for each occurance of %s (in order)
   // Usage: Controller.translate(key, [...])

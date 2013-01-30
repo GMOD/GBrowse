@@ -537,19 +537,19 @@ sub fetch_remote_features {
 
     my @tracks  = keys %{$self->remote_dbs->{$url}};
     my $request = POST ($url,
-			[ operation  => 'search_features',
-			  settings   => $s_set,
-			  datasource => $s_dsn,
-			  tracks     => nfreeze(\@tracks),
-			  env        => nfreeze(\%env),
-			  searchargs => $s_args,
+			Content_Type => 'form-data',
+			Content => [ operation  => 'search_features',
+				     settings   => $s_set,
+				     datasource => $s_dsn,
+				     tracks     => nfreeze(\@tracks),
+				     env        => nfreeze(\%env),
+				     searchargs => $s_args,
 			]);
-
+    
     my $ua      = LWP::UserAgent->new();
     my $timeout = $self->source->global_setting('slave_timeout') 
 	|| $self->source->global_setting('global_timeout') || 30;
     $ua->timeout($timeout);
-
 
     $request->uri($url);
     my $response = $ua->request($request);

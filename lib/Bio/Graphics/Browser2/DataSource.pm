@@ -441,9 +441,7 @@ sub summary_style {
 
 sub style {
   my ($self,$label,$length) = @_;
-  my $l = $self->semantic_label($label,$length);
-  return $l eq $label ? $self->user_style($l) 
-                      : ($self->user_style($label),$self->user_style($l));
+  return map {$self->user_style($_)} $self->semantic_labels($label,$length);
 }
 
 # return language-specific options
@@ -497,7 +495,6 @@ sub show_summary {
     return 0 unless $c;
 
     my $section =  $self->get_section_from_label($label) || 'detail';
-    $length /= $self->details_multiplier if $section eq 'detail';
 
     $c =~ s/_//g;  
     return 0 unless $c <= $length;
@@ -597,20 +594,39 @@ sub karyotype_setting {
 # like code_setting, but obeys semantic hints
 sub semantic_setting {
   my ($self,$label,$option,$length) = @_;
-  my $slabel = $self->semantic_label($label,$length);
-  my $val    = $self->code_setting($slabel => $option) if defined $slabel;
+  my @labels = reverse $self->semantic_labels($label,$length);
+  foreach (@labels) {
+      my $val    = $self->code_setting($_ => $option);
+      return $val if defined $val;
+  }
+  return $self->code_setting($label=>$option);
+}
 
-  return $val if defined $val;
-  return $self->code_setting($label => $option);
+sub semantic_thresholds {
+    my ($self,$label) = @_;
+    my @l = 0;
+    foreach ($self->configured_types) {
+	next unless /^$label:(\d+)/;
+	push @l,$1;
+    }
+    
+    @l;
+}
+
+sub semantic_labels {
+  my ($self,$label,$length) = @_;
+  return $label unless defined $length && $length > 0;
+  if (my @lowres = map {[split ':']}
+      grep {/^$label:(\d+)/ && $1 <= $length}
+      $self->configured_types) {
+	return $label,map {join ':',@$_} sort {$a->[1] <=> $b->[1]} @lowres;
+  }
+  return $label
 }
 
 sub semantic_label {
   my ($self,$label,$length) = @_;
   return $label unless defined $length && $length > 0;
-
-  # adjust for details_mult of we are on a 'details' label
-  my $section =  $self->get_section_from_label($label) || 'detail';
-  $length    /= $self->details_multiplier if $section eq 'detail';
 
   # look for:
   # 1. a section like "Gene:100000" where the cutoff is <= the length of the segment

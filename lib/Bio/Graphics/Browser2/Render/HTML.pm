@@ -2205,7 +2205,7 @@ sub track_citation {
 
     # citation info:
     my $cit_txt = citation( $data_source, $label, $self->language ) 
-	|| $self->tr('NO_TRACK_CITATION');
+	|| $self->tr('NO_TRACK_CITATION') || '';
     my $cit_html;
     my $cit_link = '';
      
@@ -2224,7 +2224,7 @@ sub track_citation {
     }
     $cit_html = p($cit_link||br,$cit_txt);
     my $title    = div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key);
-    my $download = a({-href=>"?l=$label;f=save+datafile"},$self->tr('DOWNLOAD_ALL'));
+    my $download = a({-href=>"?l=$label;f=save+datafile"},$self->tr('DOWNLOAD_TRACK_DATA_ALL'));
     my $id       = $self->tr('TRACK_ID',$label);
     return  p(div({-style=>'text-align:center;font-size:small'},$title,$id,"[$download]"),$cit_html);
 }

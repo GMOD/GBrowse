@@ -20,7 +20,8 @@ sub files_to_check {
     }
 
     return
-        map { glob "$_/*" }
+        grep {!/^#/ && !/~$/}  # ignore autosave files
+	map { glob "$_/*" }
         'cgi-bin', 'bin';
 }
 
@@ -73,7 +74,12 @@ sub skip_file {
            gbrowse_netinstall2.pl
 	   process_wormbase.pl
 	   gbrowse_gmap
+	   gbrowse_grow_cloud_vol.pl
+	   gbrowse_attach_slaves.pl
 	   make_das_conf.pl
+	   gbrowse_slave_start_aws.sh
+	   gbrowse_aws_balancer.pl
+	   gbrowse_sync_aws_slave.pl
           );
 
     return $skip{ basename($file) };

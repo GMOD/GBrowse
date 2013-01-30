@@ -53,6 +53,7 @@ height         = 3
 label          = $filename
 category       = $category
 label density = 50
+feature_limit = 500
 bump          = fast
 stranded      = 1
 key           = $filename

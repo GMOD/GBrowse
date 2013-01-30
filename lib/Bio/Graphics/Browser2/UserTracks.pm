@@ -507,9 +507,8 @@ sub upload_file {
     my $filename = $self->trackname_from_url($file_name, !$overwrite);
     
     $content_type ||= '';
-
     
-    if ($original_name =~ /\.sam\.gz/) { # special case compressed sam files - do not uncopress!
+    if ($original_name =~ /\.sam\.gz/) { # special case compressed sam files - do not uncompress!
 #	$filename = $original_name;
     } elsif ($content_type eq 'application/gzip' or $original_name =~ /\.gz$/) {
 	$fh = $self->install_filter($fh,'gunzip -c');
@@ -847,12 +846,12 @@ fgcolor      = black
 bgcolor      = black
 autoscale    = local
 
-
 [$track_id]
 database     = $dbname
 feature      = read_pair
 glyph        = segments
-draw_target  = 1
+feature_limit = 500
+draw_target   = 1
 show_mismatch = 1
 mismatch_color = red
 bgcolor      = blue
@@ -860,6 +859,7 @@ fgcolor      = blue
 height       = 3
 label        = 1
 label density = 50
+stranded     = 1
 bump         = fast
 key          = $key
 END

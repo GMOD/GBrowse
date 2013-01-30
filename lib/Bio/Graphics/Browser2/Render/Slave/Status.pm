@@ -26,7 +26,7 @@ sub new {
     },ref $class || $class;
 }
 
-sub can_lock { shift->{dbfilelock} }
+sub can_lock { shift->{canlock} }
 
 sub db {
     my $self  = shift;
@@ -58,7 +58,6 @@ sub status {
     return 'up'   if $status;
     return 'up'   if (time() - $last_checked) >= $check_time;
 
-    warn "$slave is down" if DEBUG;
     return 'down';
 }
 
@@ -102,13 +101,23 @@ sub select {
     my $db     = $self->db(0);
     my @up     = grep {$self->status($_,$db) eq 'up'} @slaves;
 
-    warn "up slaves = @up" if DEBUG;
+    warn "[$$] up slaves = @up" if DEBUG;
 
     return $up[rand @up];
 }
 
-
-
-
+sub up_slaves {
+    my $self   = shift;
+    my $db     = shift || $self->db(0);
+    my @slaves = keys %$db;
+    return grep {$self->status($_,$db) eq 'up'} @slaves;
+}
 
 1;
+
+=head1 Author
+
+Lincoln D. Stein <lincoln.stein@gmail.com>
+
+
+

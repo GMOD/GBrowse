@@ -106,6 +106,10 @@ sub ACTION_render_panels {
     return (204,'text/plain',undef) unless $seg;
     my $source = $render->data_source;
     $render->init_plugins();
+
+    # no state changing occurs after this
+    $self->session->unlock;
+
     my $html   = $render->render_panels($seg,{overview   => $source->show_section('overview'),
 					      regionview => $source->show_section('region'),
 					      detailview => $source->show_section('detail')});
@@ -730,7 +734,9 @@ sub ACTION_get_feature_info {
     defined(my $track = CGI::unescape($q->param('track')))      or croak;
     defined(my $dbid  = CGI::unescape($q->param('dbid')))       or croak;
     defined(my $fid   = CGI::unescape($q->param('feature_id'))) or croak;
-    $fid or return (204,'text/plain','nothing at all');
+    $fid                 or  return (204,'text/plain','nothing at all');
+    ($dbid =~ /^remote/ && $etype eq 'mouseover')
+                        &&  return (204,'text/plain','nothing at all');
 
     if ($fid eq '*summary*') {
 	return (200,'text/plain',$self->render->feature_summary_message($etype,$track));
@@ -806,16 +812,15 @@ sub ACTION_upload_file {
 					      error_msg=>'empty file'}
 	       ));
 	       
-	my $upload_id = $q->param('upload_id');
-
-    my $render   = $self->render;
-    my $state    = $self->state;
-    my $session  = $render->session;
+    my $upload_id = $q->param('upload_id');
+    my $render    = $self->render;
+    my $state     = $self->state;
+    my $session   = $render->session;
 
     my $usertracks = $render->user_tracks;
     my $name       = $fh ? basename($fh) 
-	           			: $url ? $url
-                          : $q->param('name');
+	                 : $url ? $url
+                         : $q->param('name');
     $name  ||= 'Uploaded file';
 
     my $content_type = "text/plain"; #? fh? $q->uploadInfo($fh)->{'Content-Type'} : 'text/plain'; - seems to be a problem with UploadInfo().
@@ -834,11 +839,12 @@ sub ACTION_upload_file {
 	($result,$msg,$tracks,$pid) = (1,'shared track added to your session',$t,$$);
     }
     else {
-	($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name, $url, 1,$self->render)
-                                        :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1)
-                                               : $usertracks->upload_file($track_name, $fh, $content_type, $overwrite);
+	($result, $msg, $tracks, $pid) = $url  ? $usertracks->mirror_url($track_name,  $url,  1            , $self->render)
+                                        :$data ? $usertracks->upload_data($track_name, $data, $content_type, 1            )
+                                               : $usertracks->upload_file($track_name, $fh,   $content_type, $overwrite   );
     }
 
+    $session->lock();
     delete $self->state->{uploads}{$upload_id};
     $session->flush();
 
@@ -1142,7 +1148,7 @@ sub ACTION_about_gbrowse {
     $self->session->unlock;
 
     my $html = $q->div(
-	$q->img({-src=>'http://phenomics.cs.ucla.edu/GObase/images/gmod.gif',
+	$q->img({-src=>'/gbrowse2/gmod_cog.jpeg',
 		 -align=>'right',
 		 -width=>'100',
 		}),

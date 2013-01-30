@@ -238,6 +238,7 @@ sub ACTION_config {
 	$_=>$self->config_data($_)
       } keys %$props;
 
+    my $dire_warning = 0;
     my @keys = @OK_PROPS;
     while (@keys) {
 	my $key = shift @keys;
@@ -255,6 +256,27 @@ sub ACTION_config {
 	if ($conf_dir) {
 	    my ($volume,$dir) = File::Spec->splitdir($opts{$key});
 	    my $top_level     = File::Spec->catfile($volume,$dir);
+
+            if ($opts{$key} =~ m!(/usr/local/apache2*)!) {
+                #it looks like there is no apahce installed; let the user know
+                my $apachedir = $1;
+                if (!-d $apachedir and !$dire_warning) {
+                    print STDERR <<END
+
+******************************WARNING***********************************
+GBrowse is being configured to install in $apachedir, but that 
+directory doesn't exist, which means either Apache isn\'t installed
+or the installer couldn't find it.  If you continue with this
+installation there is a good chance it won't work if Apache isn't
+installed.
+******************************WARNING***********************************
+
+END
+;
+                   $dire_warning = 1;
+                }
+            }
+
 	    unless (-d $top_level) {
 		next if Module::Build->y_n("The directory $top_level does not exist. Use anyway?",'n');
 		redo;
@@ -486,6 +508,7 @@ sub ACTION_install {
     }
 
     chmod 0755,File::Spec->catfile($self->install_path->{'etc'},'init.d','gbrowse-slave');
+    chmod 0755,File::Spec->catfile($self->install_path->{'etc'},'init.d','gbrowse-aws-balancer');
     $self->fix_selinux;
 
     my $base = basename($self->install_path->{htdocs});
@@ -497,6 +520,12 @@ sub ACTION_install {
     my @inc           = map{"-I$_"} split ':',$self->added_to_INC;
     system $perl,@inc,$metadb_script;
     system 'sudo','chown','-R',"$uid.$gid",$sessions,$userdata;
+
+    # make the gbrowse-aws-balancer file, which might contain secret keys, read-only to root
+    if ($self->config_data('installetc') =~ /^[yY]/) {
+	my $install_path = $self->install_path->{'etc'} || GBrowseGuessDirectories->etc;
+	system 'sudo','chmod','go-rwx',File::Spec->catfile($install_path,'default','gbrowse-aws-balancer');
+    }
 
     if (Module::Build->y_n(
 	    "It is recommended that you restart Apache. Shall I try this for you?",'y'
@@ -527,6 +556,9 @@ sub fix_selinux {
     return unless -e '/proc/filesystems';
     my $f    = IO::File->new('/proc/filesystems') or return;
     return unless grep /selinux/i,<$f>;
+
+    my $enabled = IO::File->new('/selinux/enforce') or return;
+    return unless grep /1/,<$enabled>;
 
     print STDERR "\n*** SELinux detected -- fixing permissions ***\n";
 
@@ -573,7 +605,7 @@ sub check_installed {
     if (-e $installed && (compare($staged,$installed) != 0)) {
 	my ($confirmed,$keep);
 
-	if ($ENV{AUTOMATED_TESTING}) {
+	if ($ENV{AUTOMATED_TESTING} || !(-t STDIN)) {
 	    $confirmed++;
 	    $keep++;
 	}
@@ -619,6 +651,15 @@ sub process_htdocs_files {
 	if ($copied or !$self->up_to_date('_build/config_data',"blib/$base")) {
 	    $self->substitute_in_place("blib/$base");
 	    $self->check_installed($install_path,$base) if $copied;
+	}
+    }
+
+    # hacky thing for getting the cloud index.html right
+    if (eval "require Bio::Graphics::Browser2::Render::Slave::AWS_Balancer;1") {
+	if (Bio::Graphics::Browser2::Render::Slave::AWS_Balancer->running_as_instance) {
+	    warn "Cloud instance detected; renaming index.html";
+	    rename "blib/htdocs/index.html","blib/htdocs/index_default.html";
+	    rename "blib/htdocs/cloud_index.html","blib/htdocs/index.html";
 	}
     }
 }
@@ -731,23 +772,23 @@ sub substitute_in_place {
     $persistent ||= $databases;
 
     while (<$in>) {
-	s/\$INSTALLSCRIPT/$installscript/g;
-	s/\$ETC/$etc/g;
-	s/\$PERL5LIB/$perl5lib/g;
-	s/\$HTDOCS/$htdocs/g;
-	s/\$CONF/$conf/g;
-	s/\$CGIBIN/$cgibin/g;
-	s/\$CGIURL/$cgiurl/g;
-	s/\$WWWUSER/$wwwuser/g;
-	s/\$DATABASES/$databases/g;
-	s/\$PERSISTENT/$persistent/g;
-	s/\$VERSION/$self->dist_version/eg;
-	s/\$CAN_USER_ACCOUNTS_OPENID/$self->has_openid/eg;
-	s/\$CAN_USER_ACCOUNTS_REG/$self->has_smtp/eg;
-	s/\$CAN_USER_ACCOUNTS/$self->has_mysql_or_sqlite/eg;
-	s/\$USER_ACCOUNT_DB/$self->guess_user_account_db/eg;
-	s/\$SMTP_GATEWAY/$self->guess_smtp_gateway/eg;
-	s/\$TMP/$tmp/g;
+	s/\$INSTALLSCRIPT\b/$installscript/g;
+	s/\$ETC\b/$etc/g;
+	s/\$PERL5LIB\b/$perl5lib/g;
+	s/\$HTDOCS\b/$htdocs/g;
+	s/\$CONF\b/$conf/g;
+	s/\$CGIBIN\b/$cgibin/g;
+	s/\$CGIURL\b/$cgiurl/g;
+	s/\$WWWUSER\b/$wwwuser/g;
+	s/\$DATABASES\b/$databases/g;
+	s/\$PERSISTENT\b/$persistent/g;
+	s/\$VERSION\b/$self->dist_version/eg;
+	s/\$CAN_USER_ACCOUNTS_OPENID\b/$self->has_openid/eg;
+	s/\$CAN_USER_ACCOUNTS_REG\b/$self->has_smtp/eg;
+	s/\$CAN_USER_ACCOUNTS\b/$self->has_mysql_or_sqlite/eg;
+	s/\$USER_ACCOUNT_DB\b/$self->guess_user_account_db/eg;
+	s/\$SMTP_GATEWAY\b/$self->guess_smtp_gateway/eg;
+	s/\$TMP\b/$tmp/g;
 	$out->print($_);
     }
     $in->close;

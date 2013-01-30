@@ -1,9 +1,10 @@
 bin/auto_install_databases.pl
 bin/bed2gff3.pl
 bin/bp_load_gff.pl
-bin/gbrowse_attach_slaves.pl
+bin/gbrowse_aws_balancer.pl
 bin/gbrowse_change_passwd.pl
 bin/gbrowse_clean.pl
+bin/gbrowse_configure_slaves.pl
 bin/gbrowse_create_account.pl
 bin/gbrowse_grow_cloud_vol.pl
 bin/gbrowse_import_ucsc_db.pl
@@ -12,6 +13,7 @@ bin/gbrowse_netinstall.pl
 bin/gbrowse_netinstall2.pl
 bin/gbrowse_set_admin_passwd.pl
 bin/gbrowse_slave
+bin/gbrowse_slave_start_aws.sh
 bin/gbrowse_syn_load_alignment_database.pl
 bin/gbrowse_syn_load_alignments_msa.pl
 bin/gtf2gff3.pl
@@ -36,6 +38,7 @@ cgi-bin/gbrowse_key_img
 cgi-bin/gbrowse_login
 cgi-bin/gbrowse_syn
 Changes
+conf/aws_balancer.conf
 conf/detail_select_menu.conf
 conf/enzymes.txt
 conf/GBrowse.conf
@@ -93,9 +96,10 @@ conf/plugins/TestFinder.pm
 conf/plugins/TrackDumper.pm
 conf/plugins/TrackFinder.pm
 conf/pop_demo.conf
+conf/renderfarm.conf
 conf/slave_preload.conf
 conf/submitter_plugin.conf
-conf/synteny/oryza.synconf.disabled
+conf/synteny/oryza.synconf.disabled.conf
 conf/synteny/rice_synteny.conf
 conf/synteny/wild_rice_synteny.conf
 conf/themes/solid_gray_colors
@@ -184,7 +188,9 @@ docs/pod/README-gff-files.pod
 docs/pod/README-lucegene.pod
 docs/README.AWS
 docs/README.tutorial
+etc/default/gbrowse-aws-balancer
 etc/default/gbrowse-slave
+etc/init.d/gbrowse-aws-balancer
 etc/init.d/gbrowse-slave
 htdocs/annotation_help.html
 htdocs/cloud_index.html
@@ -598,6 +604,7 @@ lib/Bio/Graphics/Browser2/Render/HTML/TrackListing.pm
 lib/Bio/Graphics/Browser2/Render/HTML/TrackListing/Categories.pm
 lib/Bio/Graphics/Browser2/Render/Login.pm
 lib/Bio/Graphics/Browser2/Render/Slave.pm
+lib/Bio/Graphics/Browser2/Render/Slave/AWS_Balancer.pm
 lib/Bio/Graphics/Browser2/Render/Slave/Status.pm
 lib/Bio/Graphics/Browser2/Render/SnapshotManager.pm
 lib/Bio/Graphics/Browser2/Render/TrackConfig.pm
@@ -654,9 +661,11 @@ t/03.render.t
 t/04.remoteserver.t
 t/05.deferredrendering.t
 t/06.featuresearch.t
+t/07.balancer.t
 t/07.karyotype.t
 t/08.calign.t
 t/Test.pm
+t/testdata/conf/aws_slave.conf
 t/testdata/conf/enzymes.txt
 t/testdata/conf/GBrowse.conf
 t/testdata/conf/languages/fr.pm

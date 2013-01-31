@@ -16,6 +16,7 @@ bin/gbrowse_slave
 bin/gbrowse_slave_start_aws.sh
 bin/gbrowse_syn_load_alignment_database.pl
 bin/gbrowse_syn_load_alignments_msa.pl
+bin/gbrowse_sync_aws_slave.pl
 bin/gtf2gff3.pl
 bin/load_genbank.pl
 bin/make_das_conf.pl
@@ -298,6 +299,8 @@ htdocs/images/buttons/panright.png
 htdocs/images/buttons/panright2.png
 htdocs/images/buttons/plus.gif
 htdocs/images/buttons/plus.png
+htdocs/images/buttons/pop_in.png
+htdocs/images/buttons/pop_out.png
 htdocs/images/buttons/query.png
 htdocs/images/buttons/red.gif
 htdocs/images/buttons/red1.gif

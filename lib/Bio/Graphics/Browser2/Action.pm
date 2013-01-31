@@ -211,6 +211,7 @@ sub ACTION_cite_track {
     my $track_name = $q->param('track') or croak;
 
     my $html = $self->render->track_citation($track_name);
+    warn $html;
     return ( 200, 'text/html', $html );
 }
 

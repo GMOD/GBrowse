@@ -423,7 +423,8 @@ sub wrap_rendered_track {
     my $kill     = "$buttons/ex.png";
     my $share    = "$buttons/share.png";
     my $help     = "$buttons/query.png";
-    my $pin      = "$buttons/pin.png";
+    my $pop_in   = "$buttons/pop_in.png";
+    my $pop_out  = "$buttons/pop_out.png";
     my $download = "$buttons/download.png";
     my $configure= "$buttons/tools.png";
     my $menu 	 = "$buttons/menu.png";
@@ -577,23 +578,22 @@ sub wrap_rendered_track {
 				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
 			    })
 	              : '',
+	);
 
-        img({   -src         => $help,
-                 -style       => 'cursor:pointer',
-                 -onmousedown => $help_click,
-                 -onMouseOver =>
-             "$balloon_style.showTooltip(event,'$about_this_track')",
-             }
-        ),
-	); 
-
-
-	my $pin_img = img({ -src          => $pin,
-			    -style        => 'cursor:crosshair',
-			    -onmousedown  => 'Controller.ghost_track(this)',
-			    -onmouseover  => "$balloon_style.showTooltip(event,'pin this track')",
-			  }
-	    );
+    my $help_img = img({   -src         => $help,
+			   -style       => 'cursor:pointer',
+			   -onmousedown => $help_click,
+			   -onMouseOver =>
+			       "$balloon_style.showTooltip(event,'$about_this_track')",
+		       });
+    
+    my $pin_img = img({ -src          => $pop_out,
+			-class        => 'pin_button',
+			-style        => 'cursor:crosshair',
+			-onmousedown  => 'Controller.ghost_track(this)',
+			-onmouseover  => "$balloon_style.showTooltip(event,'Float/unfloat')",
+		      }
+	);
 	    
     my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
     my $cancel_ipad = 'Turn off';
@@ -650,9 +650,9 @@ sub wrap_rendered_track {
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title",
 				},
- 	    $self->if_not_ipad(@images,),
+ 	    $self->if_not_ipad(@images,span({-style=>'display:inline-block;width:32px'},'&nbsp;')),
 	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
-	    span({-class => 'drag_region',},$clipped_title.'&nbsp;'.$pin_img),
+	    span({-class => 'drag_region'},$clipped_title.'&nbsp;'.$help_img.span({-style=>'display:inline-block;width:32px'},'&nbsp;').$pin_img),
 	);
 
     my $show_titlebar

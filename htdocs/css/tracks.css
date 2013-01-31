@@ -17,8 +17,7 @@ IMG.trackimg      {
                        text-align: center;
                   }
 .titlebar_pinned  {
-                     background-color: blue;
-                     color: white;
+                     background-color: #FFD39B;
 		     display: inline-block;
                      width: 100%;
 		     text-align:left;

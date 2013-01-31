@@ -91,6 +91,8 @@ function ShowHideTrack(track_name,visible) {
               element.style.display="none";
               Controller.set_track_visibility(gbtrack.track_id, 0);
           }
+	  if (element.style.position=='absolute')
+	      Controller.popin_ghost(element);
        }
      });
 }

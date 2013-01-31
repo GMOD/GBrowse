@@ -2222,11 +2222,11 @@ sub track_citation {
     	    'Click here to display in new window...');    
        $cit_link = p($cit_link);
     }
-    $cit_html = p($cit_link||br,$cit_txt);
-    my $title    = div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key);
-    my $download = a({-href=>"?l=$label;f=save+datafile"},$self->tr('DOWNLOAD_TRACK_DATA_ALL'));
+    $cit_html = div($cit_link||br,$cit_txt);
     my $id       = $self->tr('TRACK_ID',$label);
-    return  p(div({-style=>'text-align:center;font-size:small'},$title,$id,"[$download]"),$cit_html);
+    my $download = a({-href=>"?l=$label;f=save+datafile"},$self->tr('DOWNLOAD_TRACK_DATA_ALL'));
+    my $title    = div({-style => 'background:gainsboro;padding:5px;font-weight:bold'},$key,br(),$id,br(),$download);
+    return  join '',div({-style=>'text-align:center;font-size:small'},$title,$cit_html);
 }
 
 sub download_track_menu {

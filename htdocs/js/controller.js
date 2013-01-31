@@ -108,6 +108,7 @@ var GBrowseController = Class.create({
 		}
 		TrackPan.update_draggables();
 		updateRuler();
+		Controller.update_ghosts();
 	},
   
     register_track:
@@ -1300,45 +1301,56 @@ show_info_message:
   ghost_track:
 	function (el) {
 	    var d = el.ancestors().find(function (a) {return a.hasClassName("track")});
-	    console.log(d);
+	    if (d.style.position == 'absolute') {
+		this.popin_ghost(d);
+	    } else {
+		this.popout_ghost(d);
+	    }
+	},
 
+   popin_ghost:
+	function(d) {
 	    // ghost track pops back in...
 	    var current_top = d.cumulativeOffset().top;
-	    if (d.style.position == 'absolute') {
-		Sortable.destroy(d.id);
-		d._draggable.destroy();
-		// d.relativize();
-		d.style.position='relative';
-		d.style.left='0px';
-		d.style.top='0px';
-		d.style.height='auto';
-		d.style.outlineStyle="";
-		d.style.opacity=1.0;
-		d.select('span.titlebar_pinned').each(function(a) {
+	    Sortable.destroy(d.id);
+	    d._draggable.destroy();
+	    d.style.position='relative';
+	    d.style.left='0px';
+	    d.style.top='0px';
+	    d.style.height='auto';
+	    d.style.outlineStyle="";
+	    d.style.opacity=1.0;
+	    d.select('img.pin_button').each(function(a) {
+		    a.src=Controller.button_url('pop_out.png');
+		});
+	    d.select('span.titlebar_pinned').each(function(a) {
 		    a.removeClassName('titlebar_pinned');
 		    a.addClassName('titlebar');
 		});
-		var list   = d.parentNode.select('div.track');
-		var tracks = list[0].select('div.track');
-		var overlapping_element = tracks[0];
-		var direction = {before:d};
-		tracks.each(function(a) { 
-			console.log(a.id+': '+a.cumulativeOffset().top+'=>'+current_top); 
-			var el_top    = a.cumulativeOffset().top;
-			var el_bottom = el_top + a.getHeight();
-			if (el_top <= current_top) {  // pops in here
-			    var middle = (el_top+el_bottom)/2;
-			    var dir    = middle < current_top ? 'after' : 'before';
-			    direction[dir]=d;
-			    overlapping_element=a;
-			}
-		    });
-		overlapping_element.insert(direction);
-		var drag = create_drag(d.id);
-		var container = d.parentNode;
-		Sortable.sortables[container.id].onUpdate();
-		return;
-	    }
+	    d.removeClassName('ghost');
+	    var list   = d.parentNode.select('div.track');
+	    var tracks = list[0].select('div.track');
+	    var overlapping_element = tracks[0];
+	    var direction = {before:d};
+	    tracks.each(function(a) { 
+		    console.log(a.id+': '+a.cumulativeOffset().top+'=>'+current_top); 
+		    var el_top    = a.cumulativeOffset().top;
+		    var el_bottom = el_top + a.getHeight();
+		    if (el_top <= current_top) {  // pops in here
+			var middle = (el_top+el_bottom)/2;
+			var dir    = middle < current_top ? 'after' : 'before';
+			direction[dir]=d;
+			overlapping_element=a;
+		    }
+		});
+	    overlapping_element.insert(direction);
+	    var drag = create_drag(d.id);
+	    var container = d.parentNode;
+	    Sortable.sortables[container.id].onUpdate();
+	},
+
+   popout_ghost:
+	function(d) {
 
 	    // ghost track pops out
 	    var container = d.parentNode.parentNode;
@@ -1349,6 +1361,7 @@ show_info_message:
 	    d.absolutize();
 	    d.style.left=left+'px';
 	    d.style.top =top+'px';
+	    d.addClassName('ghost');
 	    container.insert(d);
 
 	    create_drag(d.id);
@@ -1360,11 +1373,28 @@ show_info_message:
 		});
 	    d.style.outlineStyle="double";
 	    d.style.opacity=0.85;
+	    d.select('img.pin_button').each(function(a) {
+			a.src=Controller.button_url('pop_in.png');
+		});
 	    d._draggable= new Draggable(d,{constraint:'vertical',
 					   scroll: window,
 					   zindex: 1000});
 	    return true;
 	},
+
+  update_ghosts: 
+	function()  {
+	    $$('div.ghost').each(function(d) {
+		    d.select('span.titlebar').each(function(a) {
+			    a.removeClassName('titlebar');
+			    a.addClassName('titlebar_pinned');
+			    d.style.height='auto';
+			    //			    console.log('titlebar height = '+a.getHeight());
+			    // d.style.height = (d.getHeight() + a.getHeight()) + 'px';
+			});
+		});
+	},
+
 	
   // Looks up a key in the language table. If not found, checks the defaults table.
   // If the translation contains %s, substitutes additional parameters for each occurance of %s (in order)

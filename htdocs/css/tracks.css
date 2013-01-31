@@ -16,6 +16,16 @@ IMG.trackimg      {
                        margin-top: -10px;
                        text-align: center;
                   }
+.titlebar_pinned  {
+                     background-color: blue;
+                     color: white;
+		     display: inline-block;
+                     width: 100%;
+		     text-align:left;
+		     cursor: move;
+                     font-size: 9pt;
+                     font-weight: bold;
+                  }
 .titlebar         {  background-color: #FFD39B;
                      cursor: move;
                      z-index: 10;

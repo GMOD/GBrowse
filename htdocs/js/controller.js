@@ -35,7 +35,7 @@ var userdata_table_id       = 'userdata_table_div';
 var custom_tracks_id        = 'custom_tracks';
 var community_tracks_id     = 'community_tracks';
 var snapshot_table_id 	    = 'snapshots_page';
-var GlobalDrag;
+var GlobalDrag              = {};
 
 //  Sorta Constants
 var expired_limit  = 1;
@@ -1299,64 +1299,73 @@ show_info_message:
 
   ghost_track:
 	function (el) {
-	    var d = el.ancestors().find(function (a) {return a.hasClassName("track")}); 
-	    if ($(d.id+'_ghost')) return true;
-	    var s = Sortable.destroy(GlobalDrag);
-	    new Draggable(d,{ghosting: true,
-                             constraint:'vertical',
-			     revert: true,
-			     scroll: window,
-			     zindex: 1000000,
-			onStart: function(a,mouse) {
-			  a._startX=mouse.pointerX();
-			  a._startY=mouse.pointerY();
-		    },
-			onEnd:function(a,mouse) {
-			// a.element.parentNode.removeChild(a.element);
-			// g.destroy();
-			a.element.style.position='relative';
-			a.element.style.zindex=1000000;
-			create_drag(GlobalDrag);
-			var g = a.element.clone(true);
-			g.id += '_ghost';
-			a.element.insert({after:g});
-			Element.absolutize(g);
-			g.removeClassName('track');
-			g.style.top=(a.element.offsetTop + (mouse.pointerY() - a._startY))+'px';
-			var d = g.select('div.inner_div');
-			d[0].id=g.id+'_inner_div';
-			g.select('img').each(function(a) { 
-				if (a.hasClassName('track_image'))
-				    a.removeAttribute('usemap');
-				else
-				    a.parentNode.removeChild(a);
-			    });
+	    var d = el.ancestors().find(function (a) {return a.hasClassName("track")});
+	    console.log(d);
 
-			var t = Controller.register_track(g.id,g.id,'standard','detail');
-			g.select('span.titlebar').each(function(a) {
-				a.style.backgroundColor='blue';
-				a.style.color="white";
-				a.style.width='100%';
-				a.style.textAlign="left";
-				var img = new Element('img',{style:'cursor:pointer',
-							     src:'/gbrowse2/images/buttons/ex.png'});
-				a.insert({bottom:img});
-				img.observe('click',function(c) { 
-					        Controller.unregister_track(g.id);
-						g.parentNode.removeChild(g)})
-				    });
-			g.style.outlineStyle="double";
-			g.style.opacity=0.85;
-			TrackPan.make_track_draggable(t);
-			new Draggable(g,{constraint:'vertical',
-				    scroll: window,
-				    zindex: 1000});
-			// Event.observe(g,'mousedown',function (a) {alert('you clicked me');false;});
-			return true;
-		    }
-	    		});
+	    // ghost track pops back in...
+	    var current_top = d.cumulativeOffset().top;
+	    if (d.style.position == 'absolute') {
+		Sortable.destroy(d.id);
+		d._draggable.destroy();
+		// d.relativize();
+		d.style.position='relative';
+		d.style.left='0px';
+		d.style.top='0px';
+		d.style.height='auto';
+		d.style.outlineStyle="";
+		d.style.opacity=1.0;
+		d.select('span.titlebar_pinned').each(function(a) {
+		    a.removeClassName('titlebar_pinned');
+		    a.addClassName('titlebar');
+		});
+		var list   = d.parentNode.select('div.track');
+		var tracks = list[0].select('div.track');
+		var overlapping_element = tracks[0];
+		var direction = {before:d};
+		tracks.each(function(a) { 
+			console.log(a.id+': '+a.cumulativeOffset().top+'=>'+current_top); 
+			var el_top    = a.cumulativeOffset().top;
+			var el_bottom = el_top + a.getHeight();
+			if (el_top <= current_top) {  // pops in here
+			    var middle = (el_top+el_bottom)/2;
+			    var dir    = middle < current_top ? 'after' : 'before';
+			    direction[dir]=d;
+			    overlapping_element=a;
+			}
+		    });
+		overlapping_element.insert(direction);
+		var drag = create_drag(d.id);
+		var container = d.parentNode;
+		Sortable.sortables[container.id].onUpdate();
+		return;
+	    }
+
+	    // ghost track pops out
+	    var container = d.parentNode.parentNode;
+	    var left  = d.cumulativeOffset().left;
+	    var top   = d.cumulativeOffset().top;
+
+	    Sortable.destroy(d.id);
+	    d.absolutize();
+	    d.style.left=left+'px';
+	    d.style.top =top+'px';
+	    container.insert(d);
+
+	    create_drag(d.id);
+	    d.select('span.titlebar').each(function(a) {
+		    a.removeClassName('titlebar');
+		    a.addClassName('titlebar_pinned');
+		    console.log('titlebar height = '+a.getHeight());
+		    d.style.height = (d.getHeight() + a.getHeight()) + 'px';
+		});
+	    d.style.outlineStyle="double";
+	    d.style.opacity=0.85;
+	    d._draggable= new Draggable(d,{constraint:'vertical',
+					   scroll: window,
+					   zindex: 1000});
+	    return true;
 	},
-
+	
   // Looks up a key in the language table. If not found, checks the defaults table.
   // If the translation contains %s, substitutes additional parameters for each occurance of %s (in order)
   // Usage: Controller.translate(key, [...])
@@ -1527,8 +1536,8 @@ function actually_remove (element_name) {
 }
 
 function create_drag (div_name) {
-   GlobalDrag = div_name;
-   Sortable.create(
+   GlobalDrag[div_name] = div_name;
+   return Sortable.create(
 		  div_name,
 		  {
 		      tag:     'div',

@@ -10,7 +10,7 @@ use Bio::Graphics::Browser2::TrackDumper;
 use Bio::Graphics::Browser2::Render::HTML;
 use Bio::Graphics::Browser2::SendMail;
 use File::Basename 'basename';
-use File::Path     'make_path';
+use File::Path     'mkpath';
 use JSON;
 use constant DEBUG => 0;
 use Data::Dumper;
@@ -509,7 +509,7 @@ sub ACTION_mail_snapshot {
 
      my $filename = $snapshots->{$name}{snapshot_id};
          
-     make_path(File::Spec->catfile($dir,$source,$id));
+     mkpath(File::Spec->catfile($dir,$source,$id));
 	
      #Storing the snapshot as a string and saving it to a textfile. Typical directory /var/lib/gbrowse2/userdata/{source}/{uploadid}: 
      my $snapshot = Dumper($snapshots->{$name}{data});

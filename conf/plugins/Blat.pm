@@ -4,10 +4,9 @@ package Bio::Graphics::Browser2::Plugin::Blat;
 use strict;
 use Bio::Graphics::Browser2::Plugin;
 use Bio::Graphics::Feature;
-use Text::Shellwords;
-use File::Temp qw/ tempfile tempdir /;
-use Bio::SearchIO;
+use File::Temp qw/ tempfile /;
 use CGI qw(:standard *table);
+use CGI::Carp qw(fatalsToBrowser);
 use vars '$VERSION','@ISA','$blat_executable','$twobit_dir','$host','$port';
 
 
@@ -58,14 +57,14 @@ $twobit_dir = "";
 $host = "";
 $port = "";
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 @ISA = qw(Bio::Graphics::Browser2::Plugin);
 
 sub name { "BLAT Alignment" }
 
 sub description {
-  p("This plugin will take an input sequence and run BLAT's gfClient (a Blat client to a local server) against the human or mouse genomes. It obviously requires a pre-installed local BLAT server(gfServer) and client(gfClient).");
+  p("This plugin will take an input DNA sequence and run BLAT's gfClient (a Blat client to a local server).");
 }
 
 sub type { 'finder' }
@@ -107,20 +106,23 @@ sub configure_form {
   
 sub find {
   my $self = shift;
-  my ($i,@hit_starts,@block_sizes,@results,@front);
+  my ($i,@hit_starts,@block_sizes,@results);
   my $query = $self->config_param('sequence_to_blat');  
   my $hits = $self->config_param('hits');
   my ($i_f, $in_file) = tempfile();
   my ($o_f, $out_file) = tempfile();
 
-  $query =~ s/[\s]//g;				# remove whitespace
   my $query_type = check_seq($query) or return; # check for dna or protein (dna queries must be compared against dna databases only & vice versa)
-  print $i_f ">segment\n$query\n";		# print it to a temp file
+  if ($query !~ /^\s*>/) { print $i_f ">segment\n";} # add FASTA defline if needed
+  print $i_f $query; # print it to a temp file
 
-  system("$blat_executable $host $port $twobit_dir -nohead -q=$query_type $in_file $out_file > /dev/null");
-  
+  my $error = `$blat_executable $host $port $twobit_dir -nohead -q=dna $in_file $out_file 2>&1 > /dev/null`;
+  die "$error" if $error;
+
   open (IN, "$out_file") || die "couldn't open $out_file $!\n";
+  my $hit_count = 0;
   while(<IN>) {
+    last if ++$hit_count > $hits;
     # this could probably be done better but ...
     my ( $matches,$mismatches,$rep_matches,$n_count,$q_num_insert,$q_base_insert,$t_num_insert, $t_base_insert,
          $strand,$q_name,$q_length,$q_start,$q_end,$t_name,$t_length,$t_start,$t_end,$block_count,$block_sizes,
@@ -134,7 +136,7 @@ sub find {
 						-end  =>$t_end,
 						-ref => $t_name,
 						-type=>'BLAT',
-						-name => 'Alignment',
+						-name => "Alignment$hit_count",
 						-strand => $strand,
 						-score => $score
 					       );
@@ -157,14 +159,15 @@ sub find {
   
   unlink $in_file;
   unlink $out_file;
-  @front = splice(@results,0,$hits);	# Remove the required number of hits from the front of the array and return them.
-  return \@front;			# If all hits are required, then return \@results and remove the splicing.
+  return (\@results, @results ? '' : 'No alignments found');
 }
 
 sub check_seq{
   my $query = shift;
-  if ($query =~ /^[gatcn]/i){return "dna";}
-  if ($query =~ /^[SFLY_WLPHQRIMTNKSRVADEG]/i) {return "prot";}
+  # if any sequence contains a character that is an amino acid and not a 
+  # nucleotide, consider input to be "prot"
+  if ($query =~ /^(?!\s*>).*([DEFHIKLMPQRSVWY])/mi) {return "prot";}
+  else {return "dna";}
 }
 
 1;

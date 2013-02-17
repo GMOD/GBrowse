@@ -885,9 +885,19 @@ var GBrowseController = Class.create({
             // Go doesn't do anything for filter
             return false; 
         } else if (plugin_type == 'finder'){
-            document.searchform.plugin_find.value  = $F('plugin');
-            document.searchform.force_submit.value = 1;
-            document.searchform.submit();
+            input = document.createElement("input");
+            input.setAttribute("type", "hidden");
+            input.setAttribute("name", "plugin_action");
+            input.setAttribute("id","plugin_action");
+            input.setAttribute("value", plugin_action);
+            document.getElementById("configure_plugin").appendChild(input);
+            plugin = document.createElement("input");
+            plugin.setAttribute("type", "hidden");
+            plugin.setAttribute("name", "plugin");
+            plugin.setAttribute("id","plugin");
+            plugin.setAttribute("value", plugin_base);
+            document.getElementById("configure_plugin").appendChild(plugin);
+            document.configure_plugin.submit();
         }
     }, // end plugin_go
 

@@ -798,7 +798,8 @@ var Sortable = {
         dropon.parentNode.insertBefore(element, dropon);
         if(dropon.parentNode!=oldParentNode)
           Sortable.options(oldParentNode).onChange(element);
-        Sortable.options(dropon.parentNode).onChange(element);
+	if (Sortable.options(dropon.parentNode) != null)
+	    Sortable.options(dropon.parentNode).onChange(element);
       }
     } else {
       Sortable.mark(dropon, 'after');
@@ -866,7 +867,7 @@ var Sortable = {
     Sortable._marker.setStyle({left: offsets[0]+'px', top: offsets[1] + 'px'});
 
     if(position=='after')
-      if(sortable.overlap == 'horizontal')
+      if(sortable != null && sortable.overlap == 'horizontal')
         Sortable._marker.setStyle({left: (offsets[0]+dropon.clientWidth) + 'px'});
       else
         Sortable._marker.setStyle({top: (offsets[1]+dropon.clientHeight) + 'px'});

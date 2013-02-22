@@ -1362,13 +1362,13 @@ show_info_message:
 	    d.style.left=left+'px';
 	    d.style.top =top+'px';
 	    d.addClassName('ghost');
+	    d = d.clone(true);
 	    container.insert(d);
 
 	    create_drag(d.id);
 	    d.select('span.titlebar').each(function(a) {
 		    a.removeClassName('titlebar');
 		    a.addClassName('titlebar_pinned');
-		    console.log('titlebar height = '+a.getHeight());
 		    d.style.height = (d.getHeight() + a.getHeight()) + 'px';
 		});
 	    d.style.outlineStyle="double";

@@ -1333,7 +1333,6 @@ show_info_message:
 	    var overlapping_element = tracks[0];
 	    var direction = {before:d};
 	    tracks.each(function(a) { 
-		    console.log(a.id+': '+a.cumulativeOffset().top+'=>'+current_top); 
 		    var el_top    = a.cumulativeOffset().top;
 		    var el_bottom = el_top + a.getHeight();
 		    if (el_top <= current_top) {  // pops in here

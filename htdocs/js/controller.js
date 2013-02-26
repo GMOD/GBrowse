@@ -1352,19 +1352,20 @@ show_info_message:
 	function(d) {
 
 	    // ghost track pops out
-	    var container = d.parentNode.parentNode;
+	    var container = d.parentNode;
 	    var left  = d.cumulativeOffset().left;
 	    var top   = d.cumulativeOffset().top;
 
-	    Sortable.destroy(d.id);
+	    console.log(container.id);
 	    d.absolutize();
 	    d.style.left=left+'px';
 	    d.style.top =top+'px';
 	    d.addClassName('ghost');
-	    d = d.clone(true);
-	    container.insert(d);
 
-	    create_drag(d.id);
+	    Sortable.destroy(container.id);
+	    container.parentNode.insert(d);
+	    create_drag(container.id,'track');
+
 	    d.select('span.titlebar').each(function(a) {
 		    a.removeClassName('titlebar');
 		    a.addClassName('titlebar_pinned');

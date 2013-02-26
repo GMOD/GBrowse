@@ -19,7 +19,6 @@ IMG.trackimg      {
 .titlebar_pinned  {
                      background-color: #FFD39B;
 		     display: inline-block;
-                     width: 100%;
 		     text-align:left;
 		     cursor: move;
                      font-size: 9pt;

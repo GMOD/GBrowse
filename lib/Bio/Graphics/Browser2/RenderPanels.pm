@@ -589,7 +589,6 @@ sub wrap_rendered_track {
     
     my $pin_img = img({ -src          => $pop_out,
 			-class        => 'pin_button',
-			-style        => 'cursor:crosshair',
 			-onmousedown  => 'Controller.ghost_track(this)',
 			-onmouseover  => "$balloon_style.showTooltip(event,'Float/unfloat')",
 		      }
@@ -650,11 +649,12 @@ sub wrap_rendered_track {
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title",
 				},
- 	    $self->if_not_ipad(@images,span({-style=>'display:inline-block;width:32px'},'&nbsp;')),
-	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
-	    span({-class => 'drag_region'},$clipped_title.'&nbsp;'.$help_img.span({-style=>'display:inline-block;width:32px'},'&nbsp;').$pin_img),
+ 	    $self->if_not_ipad(@images),
+	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,)),
+	    span({-class => 'drag_region'},
+		 span({-style=>'display:inline-block;width:32px'},'&nbsp;'),
+		 $clipped_title.'&nbsp;'.$help_img.span({-style=>'display:inline-block;width:32px'},'&nbsp;').$pin_img)
 	);
-
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
     my $is_scalebar = $label =~ /scale/i;

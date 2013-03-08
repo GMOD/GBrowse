@@ -1343,8 +1343,8 @@ show_info_message:
 		    }
 		});
 	    overlapping_element.insert(direction);
-	    var drag = create_drag(d.id);
 	    var container = d.parentNode;
+	    var drag = create_drag(container);
 	    Sortable.sortables[container.id].onUpdate();
 	},
 
@@ -1372,7 +1372,7 @@ show_info_message:
 		    d.style.height = (d.getHeight() + a.getHeight()) + 'px';
 		});
 	    d.style.outlineStyle="double";
-	    d.style.opacity=0.85;
+	    d.style.opacity=0.90;
 	    d.select('img.pin_button').each(function(a) {
 			a.src=Controller.button_url('pop_in.png');
 		});
@@ -1389,8 +1389,6 @@ show_info_message:
 			    a.removeClassName('titlebar');
 			    a.addClassName('titlebar_pinned');
 			    d.style.height='auto';
-			    //			    console.log('titlebar height = '+a.getHeight());
-			    // d.style.height = (d.getHeight() + a.getHeight()) + 'px';
 			});
 		});
 	},

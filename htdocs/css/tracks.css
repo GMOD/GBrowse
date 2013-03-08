@@ -17,9 +17,10 @@ IMG.trackimg      {
                        text-align: center;
                   }
 .titlebar_pinned  {
-                     background-color: #FFD39B;
+                     background:#FFD39B;
 		     display: inline-block;
 		     text-align:left;
+		     width:100%;
 		     cursor: move;
                      font-size: 9pt;
                      font-weight: bold;
@@ -46,4 +47,8 @@ IMG.trackimg      {
     position:absolute;
     font-weight:bold;
     font-size: 9pt;
+}
+.pin_button {
+    float:right;
+    cursor:pointer;
 }

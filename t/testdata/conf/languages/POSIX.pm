@@ -168,6 +168,8 @@ END
 
    SELECT_SUBTRACKS   => 'showing %d/%d subtracks',
 
+   TRACK_ID   => 'Track ID=<i>%s</i>',
+
    EDIT       => 'Edit File...',
 
    DELETE     => 'Delete File',

@@ -14,6 +14,7 @@ use Carp qw(confess cluck croak);
 
 use constant HAVE_OPENID => eval "require Net::OpenID::Consumer; require LWP::UserAgent; 1" || 0;
 use constant HAVE_SMTP   => eval "require Net::SMTP;1" || 0;
+my %DB_CACHE;
 
 # SOME CLARIFICATION ON TERMINOLOGY
 # "userid"    -- internal dbm ID for a user; a short integer
@@ -27,6 +28,8 @@ sub new {
   my $VERSION = '0.5';
   my $credentials  = $globals->user_account_db 
       || "DBI:mysql:gbrowse_login;user=gbrowse;password=gbrowse";
+
+  return $DB_CACHE{$credentials} if $DB_CACHE{$credentials};
   
   my $login = DBI->connect($credentials);
   unless ($login) {
@@ -40,7 +43,7 @@ sub new {
       register => HAVE_SMTP,
   }, ref $class || $class;
 
-  return $self;
+  return $DB_CACHE{$credentials} ||= $self;
 }
 
 sub globals  {shift->{globals} };

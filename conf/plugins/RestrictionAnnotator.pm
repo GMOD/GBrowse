@@ -5,11 +5,10 @@ use strict;
 use Bio::Graphics::Browser2::Plugin;
 use CGI qw(:standard *table);
 
-use vars '$VERSION','@ISA';
+use vars '$VERSION';
 $VERSION = '0.25';
 
-@ISA = qw(Bio::Graphics::Browser2::Plugin);
-
+use base 'Bio::Graphics::Browser2::Plugin';
 my %SITES;
 
 my @COLORS = qw(red green blue orange cyan black 

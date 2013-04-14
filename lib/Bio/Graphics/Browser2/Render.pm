@@ -198,7 +198,8 @@ sub plugins {
 sub plugin_name {
     my $self = shift;
     my $label = shift;
-    my ($id) = $label =~ /^plugin:(\w+)/;
+    #my ($id) = $label =~ /^plugin:(\w+)/;
+    my (undef,$id) = split(/:/,$label);
     return $self->plugins->plugin($id)->name;
 }
 

@@ -1,3 +1,10 @@
+==NOTE THIS FILE OUT OF DATE==
+
+This file appears out of data since the code is now in Github.
+
+
+==Old Message ==
+
 If you got an svn checkout of GBrowse and it isn't working, it is probably 
 because you checked out from the svn HEAD, which is the main development 
 branch.  Unfortunately, that branch is often unstable due to some 

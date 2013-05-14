@@ -1821,6 +1821,7 @@ sub plugin_menu {
     '&nbsp;',
     button(
       -name     => 'plugin_action',
+      -id       => 'configure_plugin_button',
       -value    => $self->translate('Configure'),
       -onClick => 'Controller.configure_plugin("plugin_configure_div");'
     ),

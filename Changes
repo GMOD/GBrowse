@@ -5,6 +5,8 @@
    and there doesn't appear to be an apache instance there.
  * Support truetype fonts (need Bio::Graphics 2.33 or higher; set truetype=1 in GBrowse.conf, and
    optionally pass font names like "Helvetica-12:Italic" to the track "font" option). 
+ * Clicking on the "Go" button when an annotation plugin is selected now turns on the corresponding track.
+ * Clicking on the "Go" button when a filter plugin is selected opens up the configuration dialog.
 
 2.54
  * Version 2.53 introduced a bad bug into track configuration such

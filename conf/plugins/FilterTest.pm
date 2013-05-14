@@ -38,7 +38,7 @@ sub new
 
 sub name
 {
-    'ORFs';
+    'Genes';
 }
 
 sub type

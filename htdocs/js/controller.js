@@ -35,7 +35,7 @@ var userdata_table_id       = 'userdata_table_div';
 var custom_tracks_id        = 'custom_tracks';
 var community_tracks_id     = 'community_tracks';
 var snapshot_table_id 	    = 'snapshots_page';
-var GlobalDrag;
+var GlobalDrag              = {};
 
 //  Sorta Constants
 var expired_limit  = 1;
@@ -108,6 +108,7 @@ var GBrowseController = Class.create({
 		}
 		TrackPan.update_draggables();
 		updateRuler();
+		Controller.update_ghosts();
 	},
   
     register_track:
@@ -885,9 +886,19 @@ var GBrowseController = Class.create({
             // Go doesn't do anything for filter
             return false; 
         } else if (plugin_type == 'finder'){
-            document.searchform.plugin_find.value  = $F('plugin');
-            document.searchform.force_submit.value = 1;
-            document.searchform.submit();
+            input = document.createElement("input");
+            input.setAttribute("type", "hidden");
+            input.setAttribute("name", "plugin_action");
+            input.setAttribute("id","plugin_action");
+            input.setAttribute("value", plugin_action);
+            document.getElementById("configure_plugin").appendChild(input);
+            plugin = document.createElement("input");
+            plugin.setAttribute("type", "hidden");
+            plugin.setAttribute("name", "plugin");
+            plugin.setAttribute("id","plugin");
+            plugin.setAttribute("value", plugin_base);
+            document.getElementById("configure_plugin").appendChild(plugin);
+            document.configure_plugin.submit();
         }
     }, // end plugin_go
 
@@ -1297,6 +1308,102 @@ show_info_message:
       $('dialog_123').remove();
   },
 
+  ghost_track:
+	function (el) {
+	    var d = el.ancestors().find(function (a) {return a.hasClassName("track")});
+	    if (d.style.position == 'absolute') {
+		this.popin_ghost(d);
+	    } else {
+		this.popout_ghost(d);
+	    }
+	},
+
+   popin_ghost:
+	function(d) {
+	    // ghost track pops back in...
+	    var current_top = d.cumulativeOffset().top;
+	    Sortable.destroy(d.id);
+	    d._draggable.destroy();
+	    d.style.position='relative';
+	    d.style.left='0px';
+	    d.style.top='0px';
+	    d.style.height='auto';
+	    d.style.outlineStyle="";
+	    d.style.opacity=1.0;
+	    d.select('img.pin_button').each(function(a) {
+		    a.src=Controller.button_url('pop_out.png');
+		});
+	    d.select('span.titlebar_pinned').each(function(a) {
+		    a.removeClassName('titlebar_pinned');
+		    a.addClassName('titlebar');
+		});
+	    d.removeClassName('ghost');
+	    var list   = d.parentNode.select('div.track');
+	    var tracks = list[0].select('div.track');
+	    var overlapping_element = tracks[0];
+	    var direction = {before:d};
+	    tracks.each(function(a) { 
+		    var el_top    = a.cumulativeOffset().top;
+		    var el_bottom = el_top + a.getHeight();
+		    if (el_top <= current_top) {  // pops in here
+			var middle = (el_top+el_bottom)/2;
+			var dir    = middle < current_top ? 'after' : 'before';
+			direction[dir]=d;
+			overlapping_element=a;
+		    }
+		});
+	    overlapping_element.insert(direction);
+	    var container = d.parentNode;
+	    var drag = create_drag(container);
+	    Sortable.sortables[container.id].onUpdate();
+	},
+
+   popout_ghost:
+	function(d) {
+
+	    // ghost track pops out
+	    var container = d.parentNode;
+	    var left  = d.cumulativeOffset().left;
+	    var top   = d.cumulativeOffset().top;
+
+	    console.log(container.id);
+	    d.absolutize();
+	    d.style.left=left+'px';
+	    d.style.top =top+'px';
+	    d.addClassName('ghost');
+
+	    Sortable.destroy(container.id);
+	    container.parentNode.insert(d);
+	    create_drag(container.id,'track');
+
+	    d.select('span.titlebar').each(function(a) {
+		    a.removeClassName('titlebar');
+		    a.addClassName('titlebar_pinned');
+		    d.style.height = (d.getHeight() + a.getHeight()) + 'px';
+		});
+	    d.style.outlineStyle="double";
+	    d.style.opacity=0.90;
+	    d.select('img.pin_button').each(function(a) {
+			a.src=Controller.button_url('pop_in.png');
+		});
+	    d._draggable= new Draggable(d,{constraint:'vertical',
+					   scroll: window,
+					   zindex: 1000});
+	    return true;
+	},
+
+  update_ghosts: 
+	function()  {
+	    $$('div.ghost').each(function(d) {
+		    d.select('span.titlebar').each(function(a) {
+			    a.removeClassName('titlebar');
+			    a.addClassName('titlebar_pinned');
+			    d.style.height='auto';
+			});
+		});
+	},
+
+	
   // Looks up a key in the language table. If not found, checks the defaults table.
   // If the translation contains %s, substitutes additional parameters for each occurance of %s (in order)
   // Usage: Controller.translate(key, [...])
@@ -1467,8 +1574,8 @@ function actually_remove (element_name) {
 }
 
 function create_drag (div_name) {
-   GlobalDrag = div_name;
-   Sortable.create(
+   GlobalDrag[div_name] = div_name;
+   return Sortable.create(
 		  div_name,
 		  {
 		      tag:     'div',

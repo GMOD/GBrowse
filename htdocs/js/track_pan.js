@@ -193,7 +193,7 @@ var GBrowseTrackPan = Class.create({
 		}
 		if (!Prototype.Browser.IE)
 		    gbtrack.get_image_div().setStyle({cursor: 'url('+Controller.button_url('cursor-ewmove.ico')+'), move'});
-		new Draggable(gbtrack.get_image_div(), {
+		    new Draggable(gbtrack.get_image_div(), {
 			constraint: 'horizontal',
 			zindex: 0, // defaults to 1000, which we don't want because it covers labels
 			starteffect: false,

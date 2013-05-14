@@ -1,5 +1,28 @@
+2.55
+ * Better detection and handling of render slaves that have gone now. If all slaves are
+   down then throws an error (once) and then reverts to local rendering for a period of time.
+ * Updated installer to give dire warning if installing into /usr/local/apache
+   and there doesn't appear to be an apache instance there.
+ * Support truetype fonts (need Bio::Graphics 2.33 or higher; set truetype=1 in GBrowse.conf, and
+   optionally pass font names like "Helvetica-12:Italic" to the track "font" option). 
+
+2.54
+ * Version 2.53 introduced a bad bug into track configuration such
+   that semantic zooming no longer works for user-provided
+   configuration. This has now been fixed.
+
+2.53
+ * Fix a variety of semantic zooming inconsistencies.
+ * Code simplification in data source.
+
+2.52
+ * Avoid clipping the subtrack selection link on long track titles.
+ * Require Bio::Graphics version 2.31 to avoid bug in wiggle xyplot generation.
+
 2.51
- * Fix pod documentation for gbrowse_grow_cloud_vol.pl
+ * Fix "can't call FETCH without object reference" errors during ./Build test.
+ * Fix pod documentation for gbrowse_grow_cloud_vol.pl.
+ * Remove gbrowse_attach_slaves.pl.
  * Volumes added to cloud instance have deleteOnTermination set to true.
 
 2.50

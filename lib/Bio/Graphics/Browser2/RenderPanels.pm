@@ -21,6 +21,7 @@ use constant TRUE  => 1;
 use constant DEBUG => 0;
 use constant DEBUGGING_RECTANGLES => 0;  # outline the imagemap
 use constant BENCHMARK => 0;
+use constant SLAVE_RETRIES => 2;
 
 use constant DEFAULT_EMPTYTRACKS => 0;
 use constant PAD_DETAIL_SIDES    => 10;
@@ -28,7 +29,7 @@ use constant RULER_INTERVALS     => 20;
 use constant PAD_OVERVIEW_BOTTOM => 5;
 use constant TRY_CACHING_CONFIG  => 1;
 use constant MAX_PROCESSES       => 4;
-use constant MAX_TITLE_LEN       => 40;
+use constant MAX_TITLE_LEN       => 50;
 
 # when we load, we set a global indicating the LWP::UserAgent is available
 my $LPU_AVAILABLE;
@@ -154,7 +155,7 @@ sub request_panels {
   if ($args->{deferred}) {
 
       # precache local databases into cache
-      my $length = $self->segment->length;
+      my $length = $self->segment_length;
       my $source = $self->source;
       for my $l (@$local_labels) {
 	  my $db = eval { $source->open_database($l,$length)};
@@ -270,7 +271,6 @@ sub make_requests {
     foreach my $label ( @{ $labels || [] } ) {
 
         my @track_args = $self->create_track_args( $label, $args );
-
 	my (@filter_args,@featurefile_args,@subtrack_args);
 
 	my $format_option = $settings->{features}{$label}{options};
@@ -423,6 +423,8 @@ sub wrap_rendered_track {
     my $kill     = "$buttons/ex.png";
     my $share    = "$buttons/share.png";
     my $help     = "$buttons/query.png";
+    my $pop_in   = "$buttons/pop_in.png";
+    my $pop_out  = "$buttons/pop_out.png";
     my $download = "$buttons/download.png";
     my $configure= "$buttons/tools.png";
     my $menu 	 = "$buttons/menu.png";
@@ -452,6 +454,7 @@ sub wrap_rendered_track {
             -height => $height,
             -border => 0,
             -name   => $label,
+	    -class  => 'track_image',
             -style  => $img_style
 	    
         }
@@ -502,8 +505,6 @@ sub wrap_rendered_track {
 
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
     my $help_click     = "GBox.showTooltip(event,'$help_url',1)"; 
-
-    
 
     my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
@@ -577,16 +578,22 @@ sub wrap_rendered_track {
 				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$configure_this_track')"),
 			    })
 	              : '',
+	);
 
-        img({   -src         => $help,
-                 -style       => 'cursor:pointer',
-                 -onmousedown => $help_click,
-                 -onMouseOver =>
-             "$balloon_style.showTooltip(event,'$about_this_track')",
-             }
-        )
-	); 
-
+    my $help_img = img({   -src         => $help,
+			   -style       => 'cursor:pointer',
+			   -onmousedown => $help_click,
+			   -onMouseOver =>
+			       "$balloon_style.showTooltip(event,'$about_this_track')",
+		       });
+    
+    my $pin_img = img({ -src          => $pop_out,
+			-class        => 'pin_button',
+			-onmousedown  => 'Controller.ghost_track(this)',
+			-onmouseover  => "$balloon_style.showTooltip(event,'Float/unfloat')",
+		      }
+	);
+	    
     my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
     my $cancel_ipad = 'Turn off';
     my $share_ipad = 'Share'; 
@@ -598,55 +605,56 @@ sub wrap_rendered_track {
     my $menuicon = img ({-src => $menu, 
 			 -style => 'padding-right:15px;',},),
    
-    my $popmenu = div({-id =>"popmenu_${title}", -style => 'display:none'},
-		      div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
-		      div({-class => 'ipadcollapsed', 
-			   -id    => "${label}_icon", 
-			   -onClick =>  "collapse('$label')",
-			  },
-			  div({-class => 'linkbg', 
-			       -onClick => "swap(this,'Collapse','Expand')", 
-			       -id => "${label}_expandcollapse", },$ipad_collapse)),
-		      div({-class => 'ipadcollapsed',
-			   -id => "${label}_kill",
-			   -onClick     => "ShowHideTrack('$label',false)",
-			  }, div({-class => 'linkbg',},
-				 $cancel_ipad)),
-		      div({-class => 'ipadcollapsed',  
-			   -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, 
-			  div({-class => 'linkbg',},$share_ipad)),
-		      div({-class => 'ipadcollapsed',  -
-			       onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
-		      div({-class => 'ipadcollapsed',  
-			   -onmousedown => $fav_click,}, 
-			  div({-class => 'linkbg', -onClick => "swap(this,'Favorite','Unfavorite')"},$bookmark)),
-		      div({-class => 'ipadcollapsed',  
-			   -onmousedown => $download_click,}, 
-			  div({-class => 'linkbg',},$download_ipad)),
-		      div({-class => 'ipadcollapsed', 
-			   -style => 'width:200px',  
-			   -onmousedown => $help_click,}, 
-			  div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
- 		  );
+    my $popmenu = $self->if_ipad(
+	div({-id =>"popmenu_${title}", -style => 'display:none'},
+	    div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
+	    div({-class => 'ipadcollapsed', 
+		 -id    => "${label}_icon", 
+		 -onClick =>  "collapse('$label')",
+		},
+		div({-class => 'linkbg', 
+		     -onClick => "swap(this,'Collapse','Expand')", 
+		     -id => "${label}_expandcollapse", },$ipad_collapse)),
+	    div({-class => 'ipadcollapsed',
+		 -id => "${label}_kill",
+		 -onClick     => "ShowHideTrack('$label',false)",
+		}, div({-class => 'linkbg',},
+		       $cancel_ipad)),
+	    div({-class => 'ipadcollapsed',  
+		 -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, 
+		div({-class => 'linkbg',},$share_ipad)),
+	    div({-class => 'ipadcollapsed',  -
+		     onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
+	    div({-class => 'ipadcollapsed',  
+		 -onmousedown => $fav_click,}, 
+		div({-class => 'linkbg', -onClick => "swap(this,'Favorite','Unfavorite')"},$bookmark)),
+	    div({-class => 'ipadcollapsed',  
+		 -onmousedown => $download_click,}, 
+		div({-class => 'linkbg',},$download_ipad)),
+	    div({-class => 'ipadcollapsed', 
+		 -style => 'width:200px',  
+		 -onmousedown => $help_click,}, 
+		div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
+	));
+    $popmenu ||= ''; # avoid uninit variable warning
     
-    # modify the title if it is a track with subtracks
-    $self->select_features_menu($label,\$title);
-
     my $clipped_title = $title;
     $clipped_title    = substr($clipped_title,0,MAX_TITLE_LEN-3).'...' if length($clipped_title) > MAX_TITLE_LEN;
+
+    # modify the title if it is a track with subtracks
+    $self->select_features_menu($label,\$clipped_title);
     
     my $titlebar = 
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title",
 				},
-
- 	    $self->if_not_ipad(@images,),
-	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,),),	
-	    span({-class => 'drag_region',},$clipped_title),
-
+ 	    $self->if_not_ipad(@images),
+	    $self->if_ipad(span({-class => 'menuclick',  -onClick=> "GBox.showTooltip(event,'load:popmenu_${title}')"}, $menuicon,)),
+	    span({-class => 'drag_region'},
+		 span({-style=>'display:inline-block;width:32px'},'&nbsp;'),
+		 $clipped_title.'&nbsp;'.$help_img.span({-style=>'display:inline-block;width:32px'},'&nbsp;').$pin_img)
 	);
-
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
     my $is_scalebar = $label =~ /scale/i;
@@ -667,6 +675,7 @@ sub wrap_rendered_track {
             -width  => $pad->width,
             -border => 0,
             -id     => "${label}_pad",
+	    -class  => 'track_image',
             -style  => $collapsed ? "display:inline" : "display:none",
         }
     );
@@ -697,7 +706,7 @@ sub wrap_rendered_track {
 			      -style => "position:absolute; top:0px; width:100%; left:0px", }, $pan_left . $pan_right . $scale_div);
     }
 
-    my $inner_div = div( { -id => "${label}_inner_div" }, $img . $pad_img ); #Should probably improve this
+    my $inner_div = div( { -id => "${label}_inner_div",-class=>'inner_div' }, $img . $pad_img ); #Should probably improve this
 
 
     my $subtrack_labels = join '',map {
@@ -790,13 +799,11 @@ sub run_remote_requests {
   }
 
   # sort requests by their renderers
-  my $slave_status = Bio::Graphics::Browser2::Render::Slave::Status->new(
-      $source->globals->slave_status_path
-      );
+  my $slave_status = $self->slave_status;
 
   my %renderers;
   for my $label (@labels_to_generate) {
-      my $url     = $source->remote_renderer or next;
+      my $url     = $source->remote_renderer($label) or next;
       my @urls    = shellwords($url);
       $url        = $slave_status->select(@urls);
       warn "label => $url (selected)" if DEBUG;
@@ -818,19 +825,21 @@ sub run_remote_requests {
 
   for my $url (keys %renderers) {
 
-      my $child   = $render->fork();
+      my $child   = Bio::Graphics::Browser2::Render->fork();
       next if $child;
 
       my $total_time = time();
 
       # THIS PART IS IN THE CHILD
       my @labels   = keys %{$renderers{$url}};
+      warn "REMOTE FETCH ON @labels" if DEBUG;
       my $s_track  = Storable::nfreeze(\@labels);
 
       foreach (@labels) {
 	  $requests->{$_}->lock();   # flag that request is in process
       }
   
+      my $tries = 0;
     FETCH: {
 	my $request = POST ($url,
 			    Content_Type => 'form-data',
@@ -883,9 +892,9 @@ sub run_remote_requests {
 			    } @labels;
 	    my $alternate_url = $slave_status->select(keys %urls);
 	    if ($alternate_url) {
-		warn "retrying fetch of @labels with $alternate_url";
+		warn "[$$] retrying fetch of @labels with $alternate_url";
 		$url = $alternate_url;
-		redo FETCH;
+		redo FETCH if $tries++ < SLAVE_RETRIES;
 	    }
 
 	    $response_line =~ s/^\d+//;  # get rid of status code
@@ -898,6 +907,15 @@ sub run_remote_requests {
 
       CORE::exit(0);  # from CHILD
   }
+}
+
+sub slave_status {
+    my $self = shift;
+    my $source = $self->source;
+    return $self->{slave_status} ||=
+	Bio::Graphics::Browser2::Render::Slave::Status->new(
+	    $source->globals->slave_status_path
+	);
 }
 
 # Sort requests into those to be performed locally
@@ -925,6 +943,8 @@ sub sort_local_remote {
     unless ($use_renderfarm) {
 	return (\@uncached,[]);
     }
+    
+    my $slave_status = $self->slave_status;
 
     my $url;
     my %is_remote = map { $_ => ( 
@@ -933,9 +953,10 @@ sub sort_local_remote {
 			      !/^(ftp|http|das):/ &&
 			      !$source->is_usertrack($_) &&
 			      !$source->is_remotetrack($_) &&
-			      (($url = $source->remote_renderer||0) &&
+			      (($url = $source->remote_renderer($_)||0) &&
 			      ($url ne 'none') &&
-			      ($url ne 'local')))
+			      ($url ne 'local') &&
+			      $slave_status->select(shellwords($url))))
                         } @uncached;
 
     my @remote    = grep {$is_remote{$_} } @uncached;
@@ -1191,7 +1212,7 @@ sub make_map {
 
   my $source = $self->source;
 
-  my $length   = $self->segment->length;
+  my $length   = $self->segment_length;
   my $settings = $self->settings;
   my $flip     = $panel->flip;
   my ($track_dbid) = $source->db_settings($label,$length);
@@ -1259,8 +1280,8 @@ sub make_imagemap_element_inline {
     my $summary                 = $options->{summary};
 
     if ($summary) {
-	return {onmouseover => $self->render->feature_summary_message('mouseover',$label),
-		onmouseeown => $self->render->feature_summary_message('mousedown',$label),
+	return {onmouseover => $self->feature_summary_message('mouseover',$label),
+		onmouseeown => $self->feature_summary_message('mousedown',$label),
 		href        => 'javascript:void(0)',
 		inline      => 1
 	}
@@ -1319,6 +1340,16 @@ sub make_imagemap_element_inline {
                       );
 
     return \%attributes;
+}
+
+# BUG: This is cut-and-paste from Render.pm due to encapsulation failure.
+# (no render object available to slave, so slave is broken)
+sub feature_summary_message {
+    my $self = shift;
+    my ($event_type,$label) = @_;
+    my $sticky = $event_type eq 'mousedown' || 0;
+    my $message= $self->source->setting($label=>'key'). ' '.lc($self->language->translate('FEATURE_SUMMARY'));
+    return "GBubble.showTooltip(event,'$message',$sticky)";
 }
 
 # this creates image map for rulers and scales, where clicking on the scale
@@ -1416,7 +1447,7 @@ sub run_local_requests {
 
     my $settings       = $self->settings;
     my $segment        = $self->segment;
-    my $length         = $segment->length;
+    my $length         = $self->segment_length;
 
     my $source         = $self->source;
     my $lang           = $self->language;
@@ -1693,7 +1724,7 @@ sub add_features_to_track {
   my $max_labels      = $self->label_density;
   my $max_bump        = $self->bump_density;
 
-  my $length  = $segment->length;
+  my $length  = $self->segment_length;
   my $source  = $self->source;
 
   # sort tracks by the database they come from
@@ -2061,13 +2092,12 @@ sub create_panel_args {
 	      -postgrid     => $postgrid,
 	      -background   => $args->{background} || '',
 	      -truecolor    => $source->global_setting('truecolor') || 0,
-	      -map_fonts_to_truetype    => $source->global_setting('truetype') || 0,
+              -truetype     => $source->global_setting('truetype') || 0,
 	      -extend_grid  => 1,
               -gridcolor    => $source->global_setting('grid color') || 'lightcyan',
               -gridmajorcolor    => $source->global_setting('grid major color') || 'cyan',
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
-
   push @argv, -flip => 1 if $flip;
   my $p  = $self->image_padding;
   my $pl = $source->global_setting('pad_left');
@@ -2119,7 +2149,7 @@ sub override_settings {
     my $label = shift;
     my $source            = $self->source;
     my $state             = $self->settings;
-    my $length            = eval {$self->segment->length} || 0;
+    my $length            = eval {$self->segment_length} || 0;
     my $is_summary        = $source->show_summary($label,$length,$state);
     my $semantic_override = Bio::Graphics::Browser2::Render->find_override_region(
 	$state->{features}{$label}{semantic_override},
@@ -2143,7 +2173,8 @@ sub create_track_args {
   my ($label,$args) = @_;
 
   my $segment         = $self->segment;
-  my $length          = $segment->length;
+  my $length          = $self->segment_length($label);
+
   my $source          = $self->source;
   my $lang            = $self->language;
 
@@ -2226,19 +2257,12 @@ sub create_track_args {
   return @args;
 }
 
-sub vis_length {
-    my $self = shift;
-    my $segment = $self->segment;
-    my $length  = $segment->length;
-    return $length/$self->details_mult;
-}
-
 sub subtrack_manager {
     my $self = shift;
     my $label = shift;
     return $self->{_stt}{$label} if exists $self->{_stt}{$label};
     return $self->{_stt}{$label} = undef
-	if $self->source->show_summary($label,$self->vis_length,$self->settings);
+	if $self->source->show_summary($label,$self->segment_length,$self->settings);
     return $self->{_stt}{$label} = Bio::Graphics::Browser2::Render->create_subtrack_manager($label,
 											    $self->source,
 											    $self->settings);
@@ -2340,7 +2364,7 @@ sub do_label {
 
   my $source              = $self->source;
 
-  my $maxl              = $source->code_setting($track_name => 'label density');
+  my $maxl              = $source->semantic_setting($track_name => 'label density', $length);
   $maxl                 = $max_labels unless defined $maxl;
   my $maxed_out         = $count <= $maxl;
 
@@ -2467,7 +2491,7 @@ sub make_title {
   local $^W = 0;  # tired of uninitialized variable warnings
   my $source = $self->source;
 
-  my $length = eval {$self->segment->length} || 0;
+  my $length = eval {$self->segment_length} || 0;
 
   my ($title,$key) = ('','');
 
@@ -2522,20 +2546,17 @@ sub make_title {
     }
   };
   warn $@ if $@;
-
   return $title;
 }
 
 sub segment_length {
-    my $self    = shift;
-    my $label   = shift;
-    my $section = $label 
-	           ? Bio::Graphics::Browser2::DataSource->get_section_from_label($label) 
-		   : 'detail';
-    return eval {$section eq 'detail'   ? $self->segment->length
-	        :$section eq 'region'   ? $self->region_segment->length
-		:$section eq 'overview' ? $self->whole_segment->length
-		: 0} || 0;
+    my $self  = shift;
+    my $label = shift;
+    return Bio::Graphics::Browser2::Render->_segment_length($label,
+							    $self->segment,
+							    $self->region_segment,
+							    $self->whole_segment,
+							    $self->details_mult);
 }
 
 sub make_link_target {
@@ -2579,6 +2600,7 @@ sub balloon_tip_setting {
   } else {
     $val = $source->link_pattern($value,$feature,$panel);
   }
+  $val ||= '';
 
   if ($val=~ /^\s*\[([\w\s]+)\]\s+(.+)/s) {
     $balloon_type = $1;

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# configuration file for gbrowse-aws-balancer init script
+# If this file contains AWS secrets, please make it read-only
+# to root.
+
+export PERL5LIB=$PERL5LIB
+
+DAEMON=$INSTALLSCRIPT/gbrowse_aws_balancer.pl
+USER=$WWWUSER
+RUNDIR=/var/run/gbrowse2
+LOGDIR=/var/log/gbrowse2
+CONFFILE=$CONF/aws_balancer.conf
+ACCESS_KEY=YOUR_EC2_ACCESS_KEY_HERE
+SECRET_KEY=YOUR_EC2_SECRET_KEY_HERE
+VERBOSITY=3

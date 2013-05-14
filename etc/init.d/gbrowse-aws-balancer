@@ -1,0 +1,74 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          gbrowse_aws_balancer
+# Required-Start:    $local_fs
+# Required-Stop:     $local_fs
+# Default-Start:     28
+# Default-Stop:      S
+# Short-Description: Start/Stop the gbrowse Amazon Web Services-based slave rendering farm
+### END INIT INFO
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=$INSTALLSCRIPT/gbrowse_aws_balancer.pl
+NAME="gbrowse-aws-balancer"
+DESC="GBrowse Amazon Web Services-based renderfarm load balancer"
+
+test -x $DAEMON || exit 0
+set -e
+
+USER=www-data
+RUNDIR=/var/run/gbrowse
+LOGDIR=/var/log/gbrowse
+CONFFILE=$CONF/aws_balancer.conf
+ACCESS_KEY=''
+SECRET_KEY=''
+VERBOSITY=3
+NICE=0
+
+COMMAND=$1
+
+if [ -f /etc/default/gbrowse-aws-balancer ]; then
+  . /etc/default/gbrowse-aws-balancer
+fi
+
+mkdir -p $RUNDIR
+chown -R $USER $RUNDIR
+mkdir -p $LOGDIR
+chown -R $USER $LOGDIR
+
+PID="$RUNDIR/$NAME.pid"
+LOG="$LOGDIR/gbrowse_aws_balancer"
+
+case "$COMMAND" in
+  start)
+	echo "Starting $DESC: $NAME "
+	ARGS="--background --conf $CONFFILE --verbosity $VERBOSITY --log $LOG --pid $PID --user $USER --access '$ACCESS_KEY' --secret '$SECRET_KEY'"
+	/bin/sh -c "nice -n $NICE $DAEMON $ARGS"
+	;;
+  stop)
+	echo "Stopping $DESC: $NAME "
+	ARGS="--conf $CONFFILE --pid $PID --access '$ACCESS_KEY' --secret '$SECRET_KEY' -k"
+	$DAEMON $ARGS
+	;;
+  status)
+	if test -e $PID ; then
+	    kill -0 `cat $PID`
+            if [ "$?" -eq 0 ]; then
+                echo "$NAME is running."
+            fi
+	else
+	    echo "$NAME is not running."
+	fi
+       ;;
+  restart|force-reload)
+	$0 stop
+	$0 start
+	;;
+  *)
+	N=/etc/init.d/$NAME
+	echo "Usage: $N {start|stop|restart|force-reload|status}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

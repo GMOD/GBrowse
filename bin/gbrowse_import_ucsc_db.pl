@@ -365,6 +365,7 @@ glyph        = box
 stranded     = 1
 
 [Genes:500000]
+glyph        = box
 bump         = 0
 
 [ncRNA]

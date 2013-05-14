@@ -10,7 +10,7 @@ use Bio::Graphics::Browser2::TrackDumper;
 use Bio::Graphics::Browser2::Render::HTML;
 use Bio::Graphics::Browser2::SendMail;
 use File::Basename 'basename';
-use File::Path     'make_path';
+use File::Path     'mkpath';
 use JSON;
 use constant DEBUG => 0;
 use Data::Dumper;
@@ -106,6 +106,10 @@ sub ACTION_render_panels {
     return (204,'text/plain',undef) unless $seg;
     my $source = $render->data_source;
     $render->init_plugins();
+
+    # no state changing occurs after this
+    $self->session->unlock;
+
     my $html   = $render->render_panels($seg,{overview   => $source->show_section('overview'),
 					      regionview => $source->show_section('region'),
 					      detailview => $source->show_section('detail')});
@@ -207,6 +211,7 @@ sub ACTION_cite_track {
     my $track_name = $q->param('track') or croak;
 
     my $html = $self->render->track_citation($track_name);
+    warn $html;
     return ( 200, 'text/html', $html );
 }
 
@@ -505,7 +510,7 @@ sub ACTION_mail_snapshot {
 
      my $filename = $snapshots->{$name}{snapshot_id};
          
-     make_path(File::Spec->catfile($dir,$source,$id));
+     mkpath(File::Spec->catfile($dir,$source,$id));
 	
      #Storing the snapshot as a string and saving it to a textfile. Typical directory /var/lib/gbrowse2/userdata/{source}/{uploadid}: 
      my $snapshot = Dumper($snapshots->{$name}{data});
@@ -1144,7 +1149,7 @@ sub ACTION_about_gbrowse {
     $self->session->unlock;
 
     my $html = $q->div(
-	$q->img({-src=>'http://phenomics.cs.ucla.edu/GObase/images/gmod.gif',
+	$q->img({-src=>'/gbrowse2/gmod_cog.jpeg',
 		 -align=>'right',
 		 -width=>'100',
 		}),

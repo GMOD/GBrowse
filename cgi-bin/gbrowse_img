@@ -1,5 +1,11 @@
 #!/usr/bin/perl -w
 
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
 # $Id: gbrowse_img,v 1.7 2009-08-31 19:46:38 lstein Exp $
 
 use strict;
@@ -15,6 +21,7 @@ use Digest::MD5 'md5_hex';
 # type      list of feature mnemonics
 # options   track options, in format mnemonic+option+mnemonic+option...
 # name      landmark or range to display, in format Name:start..stop
+# dbid      database name
 # width     desired width of image, in pixels (height cannot be set)
 # add       a feature to superimpose on top of the image
 #             in format: reference+type+name+start..stop,start..stop,start..stop
@@ -227,7 +234,7 @@ sub render_image {
         my $url    = $renderer->source->generate_image($img_data);
 	my $js = $render->data_source->globals->js_url;
 	my @scripts = map { {src=>"$js/$_"} }
-	                  qw(balloon.js balloon.config.js yahoo-dom-event.js);
+	                  qw(balloon.js balloon.config.js prototype.js GBox.js);
 	print $self->header(-type=>'text/html');
 	print start_html(-script=>\@scripts),
 	      $render->render_balloon_settings,
@@ -556,13 +563,13 @@ sub usage {
 
 <pre>
 
-  &lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
+  &lt;img src="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=mec-3;width=400"&gt;
 <blockquote>
   <i>Will generate this picture:</i>
- <img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;width=400">
+ <img src="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=mec-3;width=400">
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/gb2/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/tools/genome/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Sources
@@ -584,7 +591,7 @@ sub usage {
   yeast
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?list=types"&gt;types&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Feature types for source c_elegans
@@ -612,7 +619,7 @@ can be used as the destination of an &lt;img&gt; tag like this:
 </p>
 
 <blockquote><pre>
-&lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=III:1..1000"&gt;
+&lt;img src="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=III:1..1000"&gt;
 </pre></blockquote>
 
 <p>
@@ -637,6 +644,7 @@ lengths.
 <table border="1">
 <tr><th>Argument</th><th>Alias</th><th>Description</th></tr>
 <tr> <td>name</td>    <td>q</td>   <td>genomic landmark or range</td></tr>
+<tr> <td>dbid</td>    <td>&nbsp;</td>   <td>database name for disambiguating landmarks</td></tr>
 <tr> <td>type</td>    <td>t</td>   <td>tracks to include in image</td></tr>
 <tr> <td>width</td>   <td>w</td>   <td>desired width of image</td></tr>
 <tr> <td>options</td> <td>o</td>   <td>list of track options (compact, labeled, etc)</td></tr>
@@ -675,12 +683,23 @@ lengths.
       image showing the position of each landmark.  The alias "q" can be used to
       shorten the length of the URL.
       <p>
+
+  <dt><b>dbid</b></dt>
+
+  <dd>If the data source contains multiple defined databases, this
+  argument is required to uniquely identify landmarks that may appear
+  in multiple databases under different names. If not present, then
+  the standard search algorithm is used. Use the symbolic database
+  name indicated in the source configuration file. For example if the
+  database stanza is "[scaffolds:database]" then pass
+  "dbid=scaffolds".  </dd>
+
   <dt><b>type</b> (Aliases: <b>t</b>, <b>track</b>)
   <dd>This argument lists the feature types to display.  The value of this argument is
       a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
       <p>
       <pre>
-      &lt;img src="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=mec-3;
+      &lt;img src="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=mec-3;
                    type=tRNA+NG+WABA+CG+ESTB"&gt;
       </pre>
       Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
@@ -740,7 +759,7 @@ lengths.
   <dt><b>style</b>
   <dd>The style argument can be used to control the rendering of additional features added
       with "add".  It is a flattened version of the style configuration sections described
-      in <a href="http://www.wormbase.org/db/gb2/gbrowse?help=annotation">this document</a>
+      in <a href="http://www.wormbase.org/tools/genome/gbrowse?help=annotation">this document</a>
       For example, if you have added a "Blast Hit" annotation, then you can tell the
       renderer to use a red arrow for this glyph in this way:
       style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
@@ -813,7 +832,7 @@ lengths.
 </dl>
 <p>
 Putting it all together, here's a working (very long) URL:
-<pre><a href="http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/gb2/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
+<pre><a href="http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/tools/genome/gbrowse_img/c_elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
 <p>

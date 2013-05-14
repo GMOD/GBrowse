@@ -95,7 +95,7 @@ sub people_base {
 }
 
 sub groups_base {
-    return shift->required_setting('groups baase');
+    return shift->required_setting('groups base');
 }
 
 sub bind_dn {

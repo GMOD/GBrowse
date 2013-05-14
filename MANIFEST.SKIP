@@ -83,4 +83,4 @@ slave\.pid
 ^nytprof
 \.out$
 ^htdocs/i$
-
+^bin/gbrowse_attach_slaves\.pl

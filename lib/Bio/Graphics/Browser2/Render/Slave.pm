@@ -77,7 +77,7 @@ sub kill        {
     my $self = shift;
     my $pid  = $self->pid;
     if (!$pid && (my $pidfile = $self->pidfile)) {
-	my $fh = IO::File->open($pidfile);
+	my $fh = IO::File->new($pidfile);
 	$pid   = $fh->getline;
 	chomp($pid);
 	$fh->close;

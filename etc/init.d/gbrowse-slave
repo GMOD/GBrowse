@@ -24,6 +24,13 @@ PORT='8101 8102 8103'
 VERBOSITY=1
 NICE=0
 
+COMMAND=$1
+if [ $# -gt 0 ] ; then shift; fi
+
+if [ "$*" != "" ]; then
+    PORT=$*
+fi
+
 if [ -f $ETC/default/gbrowse-slave ]; then
   . $ETC/default/gbrowse-slave
 fi
@@ -33,7 +40,7 @@ chown -R $USER $RUNDIR
 mkdir -p $LOGDIR
 chown -R $USER $LOGDIR
 
-case "$1" in
+case "$COMMAND" in
   start)
 	echo -n "Starting $DESC: $NAME "
 	for port in $PORT; do

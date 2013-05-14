@@ -866,12 +866,10 @@ var GBrowseController = Class.create({
 
     plugin_go:
     function(plugin_base,plugin_type,plugin_action,source) {
+        var select_box = document.pluginform.plugin;
+        var track_name = 'plugin:'+select_box.options[select_box.selectedIndex].value;
         if (plugin_type == 'annotator'){
-            var select_box = document.pluginform.plugin;
-            var track_name = select_box.options[select_box.selectedIndex].attributes.getNamedItem('track_name').value;
-
-            this.add_track(track_name);
-            Controller.update_sections(new Array(track_listing_id),null,null,false);
+	    ShowHideTrack(track_name,true);
         } else if (plugin_type == 'dumper') {
             var loc_str = "?plugin="+plugin_base+";plugin_action="+encodeURI(plugin_action);
             loc_str += ';view_start=' + TrackPan.get_start();
@@ -883,8 +881,11 @@ var GBrowseController = Class.create({
                 window.open(loc_str);
             }
         } else if (plugin_type == 'filter'){
-            // Go doesn't do anything for filter
-            return false; 
+	    $('configure_plugin_button').click();
+//	    this.reconfigure_plugin(this.translate('CONFIGURE_PLUGIN'),
+//				    track_name,
+//				    plugin_configure_div,
+//				    'filter');
         } else if (plugin_type == 'finder'){
             document.searchform.plugin_find.value  = $F('plugin');
             document.searchform.force_submit.value = 1;

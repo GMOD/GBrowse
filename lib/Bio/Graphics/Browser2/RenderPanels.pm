@@ -480,6 +480,10 @@ sub wrap_rendered_track {
     $about_this_track .= $self->language->translate('ABOUT_THIS_TRACK',$label)
         || "<b>About this track</b>";
 
+    my $popout = '';
+    $popout .= $self->language->translate('POP_OUT') 
+	|| "<b>Pop out/in</b>";
+
     my $escaped_label = CGI::escape($label);
 
     # The inline config will go into a box 500px wide by 500px tall
@@ -590,7 +594,7 @@ sub wrap_rendered_track {
     my $pin_img = img({ -src          => $pop_out,
 			-class        => 'pin_button',
 			-onmousedown  => 'Controller.ghost_track(this)',
-			-onmouseover  => "$balloon_style.showTooltip(event,'Float/unfloat')",
+			-onmouseover  => "$balloon_style.showTooltip(event,'$popout')",
 		      }
 	);
 	    

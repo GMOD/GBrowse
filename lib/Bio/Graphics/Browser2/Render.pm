@@ -1539,6 +1539,11 @@ sub handle_plugins {
             && return 1;
     }
 
+    if ($plugin_type eq 'annotator' && $plugin_action eq $self->translate('Go')) {
+	warn "HERE I AM";
+	return 1;
+    }
+
     return;
 }
 

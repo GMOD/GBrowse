@@ -418,6 +418,8 @@ ScriptAlias  "/gb2"      "$cgibin"
   FcgidMinProcessesPerClass 6
   FcgidIOTimeout   600
   FcgidBusyTimeout 600
+  # allow larger file uploads up to 128M under FastCGI (default is 128K)
+  FcgidMaxRequestLen 134217728
   $fcgid_inc
 </IfModule>
 

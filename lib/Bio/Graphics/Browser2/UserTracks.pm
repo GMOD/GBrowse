@@ -532,7 +532,7 @@ sub upload_file {
 		local $SIG{TERM} = sub { die "cancelled" };
 		croak "Could not guess the type of the file $file_name"	unless $type;
 		croak "This server does not support $type uploads" 
-		    if $type =~ /bigwig|bigbed|archive/ && !$self->has_bigwig;
+		    if $type =~ /bigwig|bigbed|useq|archive/ && !$self->has_bigwig;
 		my $load = $self->get_loader($type, $file);
 		$load->eol_char($eol);
 		@tracks = $load->load($lines, $fh);
@@ -719,6 +719,7 @@ sub _guess_upload_type {
     return('bigbed',[$buffer],undef)
 	  if $magic eq "\xeb\xf2\x89\x87";
 	if ($magic eq "\x50\x4B\x03\x04") { # zip file
+		return('useq', [$buffer], undef) if $filename =~ /\.useq$/i;
 		return('archive', [$buffer], undef) if $filename =~ /\.zip$/i;
 	}
     
@@ -749,6 +750,7 @@ sub _guess_upload_type {
 	       :$filename =~ /\.fff(\.(gz|bz2|Z))?$/i  ? 'featurefile'
 	       :$filename =~ /\.bam(\.gz)?$/i          ? 'bam'
 	       :$filename =~ /\.sam(\.gz)?$/i          ? 'sam'
+	       :$filename =~ /\.useq$/i                ? 'useq'
 	       :$filename =~ /\.(?:tar|tgz|tbz|tbz2|zip)(?:\.(gz|bz2))?$/i ? 'archive'
 	       :undef;
     

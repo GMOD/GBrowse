@@ -587,6 +587,7 @@ lib/Bio/Graphics/Browser2/DataLoader/generic.pm
 lib/Bio/Graphics/Browser2/DataLoader/gff.pm
 lib/Bio/Graphics/Browser2/DataLoader/gff3.pm
 lib/Bio/Graphics/Browser2/DataLoader/sam.pm
+lib/Bio/Graphics/Browser2/DataLoader/useq.pm
 lib/Bio/Graphics/Browser2/DataLoader/wig2bigwig.pm
 lib/Bio/Graphics/Browser2/DataLoader/wiggle.pm
 lib/Bio/Graphics/Browser2/DataSource.pm

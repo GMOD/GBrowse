@@ -504,6 +504,7 @@ sub upload_file {
 
     my $original_name = $file_name;
     $file_name    =~ s/\.(gz|bz2)$//;  # to indicate that it is decompressed
+    $file_name =~ s/\.(tgz|tbz|tbz2)$/.tar/; # change archive extension   
 
     warn "$file_name: OVERWRITE = $overwrite" if DEBUG;
 
@@ -513,9 +514,9 @@ sub upload_file {
     
     if ($original_name =~ /\.sam\.gz/) { # special case compressed sam files - do not uncompress!
 #	$filename = $original_name;
-    } elsif ($content_type eq 'application/gzip' or $original_name =~ /\.gz$/) {
+    } elsif ($content_type eq 'application/gzip' or $original_name =~ /\.(?:tgz|gz)$/) {
 	$fh = $self->install_filter($fh,'gunzip -c');
-    } elsif ($content_type eq 'application/bzip2' or $original_name =~ /\.bz2$/) {
+    } elsif ($content_type eq 'application/bzip2' or $original_name =~ /\.(?:tbz2?|bz2)$/) {
 	$fh = $self->install_filter($fh,'bunzip2 -c');
     }
     
@@ -531,7 +532,7 @@ sub upload_file {
 		local $SIG{TERM} = sub { die "cancelled" };
 		croak "Could not guess the type of the file $file_name"	unless $type;
 		croak "This server does not support $type uploads" 
-		    if $type =~ /bigwig|bigbed/ && !$self->has_bigwig;
+		    if $type =~ /bigwig|bigbed|archive/ && !$self->has_bigwig;
 		my $load = $self->get_loader($type, $file);
 		$load->eol_char($eol);
 		@tracks = $load->load($lines, $fh);
@@ -717,6 +718,13 @@ sub _guess_upload_type {
 	  if $magic eq "\x26\xfc\x8f\x88";
     return('bigbed',[$buffer],undef)
 	  if $magic eq "\xeb\xf2\x89\x87";
+	if ($magic eq "\x50\x4B\x03\x04") { # zip file
+		return('archive', [$buffer], undef) if $filename =~ /\.zip$/i;
+	}
+    
+    # check for archives
+    return('archive', [$buffer], undef) if 
+    	$filename =~ /\.(?:tar|tgz|tbz|tbz2)(?:\.(gz|bz2))?$/i;
     
     # everything else is text (for now)
     my $eol = $buffer =~ /\015\012/ ? "\015\012"  # MS-DOS
@@ -741,6 +749,7 @@ sub _guess_upload_type {
 	       :$filename =~ /\.fff(\.(gz|bz2|Z))?$/i  ? 'featurefile'
 	       :$filename =~ /\.bam(\.gz)?$/i          ? 'bam'
 	       :$filename =~ /\.sam(\.gz)?$/i          ? 'sam'
+	       :$filename =~ /\.(?:tar|tgz|tbz|tbz2|zip)(?:\.(gz|bz2))?$/i ? 'archive'
 	       :undef;
     
     return ($ftype,\@lines,$eol) if $ftype;

@@ -577,6 +577,7 @@ lib/Bio/Graphics/Browser2/CAlign.pm
 lib/Bio/Graphics/Browser2/CAlign.xs
 lib/Bio/Graphics/Browser2/DataBase.pm
 lib/Bio/Graphics/Browser2/DataLoader.pm
+lib/Bio/Graphics/Browser2/DataLoader/archive.pm
 lib/Bio/Graphics/Browser2/DataLoader/bam.pm
 lib/Bio/Graphics/Browser2/DataLoader/bed.pm
 lib/Bio/Graphics/Browser2/DataLoader/bigbed.pm

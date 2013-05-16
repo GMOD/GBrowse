@@ -1151,6 +1151,15 @@ for disk space savings. The following file types are accepted:
   BigWig files usually have a ".bw" extension. Displaying bigWig files 
   requires the installation of the Bio::DB::BigWig Perl module.
   
+  <dt><b>Archive of bigWig files</b>
+  <dd>Two or more bigWig files may be combined as a BigWigSet collection, 
+  providing a fast, convenient method of transferring a related collection 
+  of genomic data files and grouping them into a single track, with each 
+  bigWig file represented as a subtrack selectable by display name. Supported 
+  archive formats include TAR and ZIP files. Two or more bigWig files (with 
+  a .bw extension) and optionally a metadata text file may be included. Extraneous 
+  files and directory paths are ignored.
+  
   <dt><b>bigBed file</b>
   <dd>The <a href="http://genome.ucsc.edu/goldenPath/help/bigBed.html">bigBed file</a>
   is a binary version of the text BED format for displaying dense 

@@ -155,6 +155,14 @@ The output will look like this:
  chr19	example	example	59304701	59308020	.	.	.	Name=variableStep;wigfile=/var/gbrowse/db/track002.chr19.1199828298.wig
  chr19	example	example	59307401	59310400	.	.	.	Name=fixedStep;wigfile=/var/gbrowse/db/track003.chr19.1199828298.wig
 
+=head1 PROBLEMS
+
+This script has trouble with wig files from very fragmented genomes
+(>100K scaffolds). In this case, you may wish to run split_wig.pl,
+which splits the original wig file into a series of smaller files with
+a maximum of 900 scaffolds each. It then runs wiggle2gff3.pl for each
+subfile and stores the results in separate folders.
+
 =head1 SEE ALSO
 
 L<Bio::DB::GFF>, L<bp_bulk_load_gff.pl>, L<bp_fast_load_gff.pl>,

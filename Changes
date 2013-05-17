@@ -7,6 +7,8 @@
    optionally pass font names like "Helvetica-12:Italic" to the track "font" option). 
  * Clicking on the "Go" button when an annotation plugin is selected now turns on the corresponding track.
  * Clicking on the "Go" button when a filter plugin is selected opens up the configuration dialog.
+ * Added Juan Tena's split_wig.pl script, which is useful for uploading WIG files from genomes with lots
+   of scaffolds.
 
 2.54
  * Version 2.53 introduced a bad bug into track configuration such

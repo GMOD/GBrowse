@@ -26,6 +26,7 @@ bin/process_ncbi_human.pl
 bin/process_sgd.pl
 bin/report_missing_language_tags.pl
 bin/scan_gbrowse.pl
+bin/split_wig.pl
 bin/ucsc_genes2gff.pl
 bin/wiggle2gff3.pl
 Build.PL

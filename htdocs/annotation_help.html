@@ -12,6 +12,7 @@
     <th><a href="#featurefile format">Feature File Format</a></th>
     <th><a href="#customize">Customizing Appearance</a></th>
     <th><a href="#numeric">Displaying Intensity Plots &amp; Other Numeric Data</a></th>
+    <th><a href="#binary">Binary data formats</a></th>
     <th><a href="#remote">Importing Custom Tracks via the Internet</a></th>
   </tr>
 </table>
@@ -43,8 +44,18 @@ Accepted formats include:
 
   <li> <a href="http://genome.ucsc.edu/goldenPath/help/wiggle.html" target="_blank">Wiggle (WIG)</a> (for dense quantitative data)
 
+  <li><a href="http://genome.ucsc.edu/goldenPath/help/bigWig.html" target="_blank">bigWig</a>
+      (indexed binary wiggle file)
+  
+  <li><a href="http://genome.ucsc.edu/goldenPath/help/bigBed.html" target="_blank">bigBed</a>
+      (indexed binary BED file)
+  
   <li><a href="http://samtools.sourceforge.net/"
 target="_blank">BAM or SAM</a> (for sequence alignment data)
+  
+  <li><a href="http://useq.sourceforge.net/useqArchiveFormat.html"
+target="_blank">useq archive</a> (either quantitative or segment data)
+  
 </ul>
 
 <p>
@@ -1103,6 +1114,106 @@ for the xyplot glyph options.
 
 <hr>
 
+<H2><a name="binary">Binary data file formats</a></H2>
+
+<p>
+
+Binary data file formats provide a convenient, efficient, and rapid access 
+to genomic data, either segments or quantitative data. They are indexed, 
+allowing for immediate random access to any location, and compressed 
+for disk space savings. The following file types are accepted:
+
+<p>
+
+<dl>
+  
+  <dt><b>Bam file</b>
+  <dd>The <a href="http://samtools.sourceforge.net">Bam file</a>
+  is a binary version of the text SAM format, which is a sequence alignment 
+  file for next generation sequencing technologies. Bam files usually 
+  contain millions of alignments of short sequence reads. They may be 
+  displayed in one of two ways: as a collection of segments with or without 
+  the DNA sequence of the read (depending on zoom level), or as a 
+  quantitative xyplot representing the coverage or depth of sequencing. Bam 
+  files may be generated, sorted, and/or indexed from Sam files using 
+  <a href="http://samtools.sourceforge.net">samtools</a> or 
+  <a href="http://picard.sourceforge.net">Picard</a>. Bam files have a ".bam" 
+  extension. Displaying Bam files requires the installation of the 
+  Bio::DB::Sam Perl module.
+
+  <dt><b>bigWig file</b>
+  <dd>The <a href="http://genome.ucsc.edu/goldenPath/help/bigWig.html">bigWig file</a>
+  is a binary version of the text Wiggle format for displaying dense 
+  quantitative data. BigWig files are generated from text wiggle files, 
+  either fixedStep, variableStep, or bedGraph variants, using either the 
+  wigToBigWig or bedGraphToBigWig utilities available from 
+  <a href=http://hgdownload.soe.ucsc.edu/admin/exe/>UCSC</a>. 
+  File conversion requires a file 
+  with the name and lengths of the chromosomes for your genome version. 
+  Such a file may be obtained by selecting the <i>Download Chrom Sizes</i> 
+  from the "File" menu in the upper left corner of the genome browser page. 
+  BigWig files usually have a ".bw" extension. Displaying bigWig files 
+  requires the installation of the Bio::DB::BigWig Perl module.
+  
+  <dt><b>Archive of bigWig files</b>
+  <dd>Two or more bigWig files may be combined as a BigWigSet collection, 
+  providing a fast, convenient method of transferring a related collection 
+  of genomic data files and grouping them into a single track, with each 
+  bigWig file represented as a subtrack selectable by display name. Supported 
+  archive formats include TAR and ZIP files. Two or more bigWig files (with 
+  a .bw extension) and optionally a metadata text file may be included. Extraneous 
+  files and directory paths are ignored.
+  
+  <dt><b>bigBed file</b>
+  <dd>The <a href="http://genome.ucsc.edu/goldenPath/help/bigBed.html">bigBed file</a>
+  is a binary version of the text BED format for displaying dense 
+  genomic regions or intervals. Data from bigBed files may be displayed as 
+  either segments or as a quantitative xyplot representing coverage (the 
+  depth of segments at any given locus). BigBed files are generated from text 
+  BED files using the bedToBigBed utility available from 
+  <a href=http://hgdownload.soe.ucsc.edu/admin/exe/>UCSC</a>. File conversion 
+  requires a file with the name and lengths of the chromosomes for your genome 
+  version. Such a file may be obtained by selecting the <i>Download Chrom Sizes</i> 
+  from the "File" menu in the upper left corner of the genome browser page. 
+  BigBed files usually have a ".bb" extension. Displaying bigBed files 
+  requires the installation of the Bio::DB::BigBed Perl module.
+  
+  <dt><b>useq file</b>
+  <dd>The <a href="http://useq.sourceforge.net/useqArchiveFormat.html">useq file</a>
+  is a compressed archive of either genomic intervals (with optional scores and/or text) 
+  or quantitative data. It is generated using utilities from the 
+  <a href="http://useq.sourceforge.net/">USeq analysis package</a>. Upon upload, 
+  the useq file is automatically converted to either a 
+  <a href="http://genome.ucsc.edu/goldenPath/help/bigWig.html">bigWig file</a> or 
+  <a href="http://genome.ucsc.edu/goldenPath/help/bigBed.html">bigBed file</a> 
+  depending on context. Processing useq files requires the installation of the 
+  USeq package, wigToBigWig and bedToBigBed 
+  <a href=http://hgdownload.soe.ucsc.edu/admin/exe/>utilities</a>, and the 
+  Bio::DB::BigWig Perl module. 
+
+</dl>
+
+<p>
+
+To import binary files, generate the files using the appropriate utility and 
+ensure they have the appropriate file extension. Under the "Custom Tracks" 
+tab, select the "From a file" link, click the "Choose file" button, and 
+navigate to your file using the Dialog box. Click "Upload" to upload the 
+file. Status reports may be printed as the file is uploaded and processed. 
+Successfully uploaded files will be displayed under the "Custom Tracks" and 
+"Select Tracks" tabs. 
+
+<p>
+
+A basic configuration will be generated appropriate for the file type uploaded. 
+The configuration may be edited by selecting the "edit" link adjacent to the 
+configuration file.
+  
+<hr>  
+
+
+
+
 <H2><a name="remote">Importing Custom Tracks via the Internet</a></H2>
 
 <p>
@@ -1121,24 +1232,25 @@ the URL of an annotation file. The following URL types are allowed:
       displayed. When you update the file, the updated version will be
       mirrored automatically.
 
-  <dt><b>The URL of a BigWig (.bw) file</b> <dd>This is a format that
-  allows you to import UCSC Wiggle tracks into the browser in a fast
-  and efficient manner.  If you haven't already done so, obtain the
-  BigWig tools from the <a
-  href="http://genome.ucsc.edu/goldenPath/help/bigWig.html">UCSC
-  Genome Browser</a> and run the wigToBigWig utility as described
-  there.  Name the file with a ".bw" extension (important!) and place
-  it on an FTP or Web server that can be accessed via this
-  browser. Finally paste the full URL of the BigWig file into the
-  "Import a track URL" field and press "upload". Note: To create the
-  BigWig file you will need a "chrom.sizes" file corresponding to the
-  chromosome lengths of the genome. To obtain a suitable file from the
-  browser, select <i>Download Chrom Sizes</i> from the "File" menu in
-  the upper left corner of the genome browser page.
+  <dt><b>The URL of a BigWig (.bw) file</b> 
+  <dd>The URL of a remote bigWig file may be provided. 
+  The file must have a ".bw" extension
+  and be located on an FTP or Web server that can be accessed via this
+  browser. Paste the full URL of the BigWig file into the
+  "Import a track URL" field and press "upload". 
 
-  <dt><b>The URL of a sorted, indexed BAM file</b>
-  <dd>Sort a BAM sequence alignment file and index it with
-      SamTools. Place the BAM file and its associated .bai index file on
+  <dt><b>The URL of a BigBed (.bb) file</b> 
+  <dd>The URL of a remote bigBed file may be provided. 
+  The file must have a ".bb" extension
+  and be located on an FTP or Web server that can be accessed via this
+  browser. Paste the full URL of the bigBed file into the
+  "Import a track URL" field and press "upload". 
+
+  <dt><b>The URL of a BAM file</b>
+  <dd>A sorted, indexed Bam file may be accessed remotely. Both the Bam file 
+  with a ".bam" extension and its corresponding ".bai" index file must located 
+  on Web or FTP server. Paste the full URL of the Bam file (NOT the .bai file) 
+  into the address field "From a URL" link Place the BAM file and its associated .bai index file on
       a web or FTP-accessible server and paste its URL into the "Import a
       track URL" field.
       The information in the file
@@ -1159,6 +1271,10 @@ the URL of an annotation file. The following URL types are allowed:
       locate DAS servers with useful genomic data. Then cut and paste the
       DAS server URL into the remote track URL box as before.
 </dl>
+
+Please ensure that genome versions, including chromosome names and lengths, match 
+between what is present in the file and the browser. 
+
   <hr>
 
 $Id$

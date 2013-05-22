@@ -375,6 +375,7 @@ sub available_formats {
     push @formats,'vista','vista_wiggle','vista_peaks' if  $glyph =~ /vista/i;
     push @formats,'sam'   if  $db->isa('Bio::DB::Bam')    or $db->isa('Bio::DB::Sam');
     push @formats,'bed'   if  $db->isa('Bio::DB::BigWig') or $db->isa('Bio::DB::BigWigSet');
+    push @formats, qw(gff3 bed) if $db->isa('Bio::DB::BigBed');
     push @formats,'bed'   if  $glyph =~ /wiggle|xyplot|density/;
     my %seenit;
     return grep {!$seenit{$_}++} @formats;
@@ -399,6 +400,7 @@ sub guess_dump_method {
     return 'dump_gff3_autowig'   if $db->isa('Bio::DB::GFF');
     return 'dump_gff3_autowig'   if $db->isa('Bio::DB::Das::Chado');
     return 'dump_gff3_autowig'   if $db->isa('Bio::DB::DasI');
+    return 'dump_gff3_autowig'   if $db->isa('Bio::DB::BigBed');
 
     my $type = $self->guess_file_type();
     return 'dump_sam'    if $type eq 'sam';

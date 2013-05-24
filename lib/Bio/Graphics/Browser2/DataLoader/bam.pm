@@ -156,16 +156,21 @@ sub finish_load {
     my $dest    = File::Spec->catfile($self->data_path,$self->track_name);
     $dest      =~ s/\.[bs]am$//i; # sorting will add the .bam extension
 
+    # check whether we need to sort or not
+    if ($self->is_sorted($source)) {
+        # bam is already sorted by coordinate, destination will become source
+        $dest = $source;
+    }
+    else {
     $self->set_status('sorting BAM file');
     Bio::DB::Bam->sort_core(0,$source,$dest,250*1e6);
+        $dest .= '.bam';
+    }
 
     $self->set_status('indexing BAM file');
-
-    $dest     .= '.bam';
     Bio::DB::Bam->index_build($dest);
 
     my $bigwig_exists = 0;
-
     if ($self->has_bigwig) {
 	$self->set_status('creating BigWig coverage file');
 	$bigwig_exists = $self->create_big_wig();
@@ -191,6 +196,13 @@ sub create_big_wig {
     $wigout->bam_to_wig($self->chrom_sizes);  # this creates the wig files
     die $wigout->last_error if $wigout->last_error;
     1;
+}
+
+sub is_sorted {
+	my $self = shift;
+	my $sam = Bio::DB::Sam->new(-bam => shift, -autoindex => 0);
+	my $header = $sam->bam->header->text;
+	return (split /\n/, $header)[0] =~ /SO:coordinate/i;
 }
 
 1;

@@ -619,7 +619,7 @@ sub semantic_labels {
   if (my @lowres = map {[split ':']}
       grep {/^$label:(\d+)/ && $1 <= $length}
       $self->configured_types) {
-	return $label,map {join ':',@$_} sort {$a->[1] <=> $b->[1]} @lowres;
+	return $label,map {join ':',@$_} sort {$a->[-1] <=> $b->[-1]} @lowres;
   }
   return $label
 }

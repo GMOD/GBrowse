@@ -74,7 +74,7 @@ var GBrowseTrackPan = Class.create({
 			    top:             '0px',
 			    borderLeft:      '1px solid ' + this.marker_outline,
 			    borderRight:     '1px solid ' + this.marker_outline,
-			    height:          '400px',
+		            height:          this.marker_height,
 			    cursor:          'text',
 			    zIndex:          5
 			    });
@@ -251,6 +251,7 @@ var GBrowseTrackPan = Class.create({
 		this.length_label         = segment_info.length_label;
 		this.marker_fill          = segment_info.hilite_fill;
 		this.marker_outline       = segment_info.hilite_outline;
+	        this.marker_height        = segment_info.hilite_height;
 		this.flip                 = segment_info.flip;
 		this.initial_view_start   = parseInt(segment_info.initial_view_start);
 		this.initial_view_stop    = parseInt(segment_info.initial_view_stop);

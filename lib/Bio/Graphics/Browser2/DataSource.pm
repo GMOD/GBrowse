@@ -636,7 +636,7 @@ sub semantic_label {
       grep {/^$label:(\d+)/ && $1 <= $length}
       $self->configured_types)
     {
-      ($label) = map {join ':',@$_} sort {$b->[1] <=> $a->[1]} @lowres;
+      ($label) = map {join ':',@$_} sort {$b->[-1] <=> $a->[-1]} @lowres;
     }
   $label
 }
@@ -1032,7 +1032,6 @@ sub default_dbid {
     my $self = shift;
     return $self->db2id($self->open_database);
 }
-
 
 sub search_options {
     my $self = shift;

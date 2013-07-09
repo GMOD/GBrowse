@@ -56,11 +56,19 @@ if ($fcgi) {
     };
 
     my %sys_env = %ENV;
+
+    warn "[$$] FastCGI initializing and loading default data sources...\n";
+    my $globals = Bio::Graphics::Browser2->open_globals;
+    foreach ($globals->data_sources) {
+	warn "[$$] Loading $_\n";
+	my $source = $globals->create_data_source($_);
+	$source->open_database();  # cache default database in memory
+    }
+
     while (!$FCGI_DONE) {
 	my $status = $fcgi->Accept;
 	next unless $status >= 0;
         %ENV = ( %sys_env, %ENV );
-	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
 	my $gbi = GBrowse_img->new($globals);
 	$gbi->run();

@@ -442,6 +442,7 @@ htdocs/tutorial/data_files/volvox_genes_simple.gff3
 htdocs/tutorial/data_files/volvox_matches.gff3
 htdocs/tutorial/data_files/volvox_microarray.gff3
 htdocs/tutorial/data_files/volvox_microarray.wig
+htdocs/tutorial/data_files/track001.ctgA.1202327456.wig
 htdocs/tutorial/data_files/volvox_phyloalign.fa
 htdocs/tutorial/data_files/volvox_phyloalign.gff3
 htdocs/tutorial/data_files/volvox_phyloalign_wigentries.gff3

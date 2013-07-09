@@ -305,8 +305,6 @@ sub ACTION_add_tracks {
     my $render = $self->render;
     my @track_names = $q->param('track_names');
 
-    warn "@track_names";
-	
     $render->init_database();
     $render->init_plugins();
 

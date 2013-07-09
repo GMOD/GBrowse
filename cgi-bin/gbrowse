@@ -1,14 +1,5 @@
 #!/usr/bin/perl 
 
-eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 use strict;
 use CGI;
 use Bio::Graphics::Browser2;
@@ -20,17 +11,21 @@ my $fcgi    = Bio::Graphics::Browser2::Render->fcgi_request;
 my $init;
 
 if ($fcgi) {
+
+    warn "[$$] FCGI mode started";
     my $FCGI_DONE = 0;
-    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
-	my $sig  = shift;
-	my $time = localtime;
-	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
-	$FCGI_DONE = 1;
-    };
+#    $SIG{USR1} = $SIG{PIPE} = $SIG{TERM} = sub {
+#	my $sig  = shift;
+#	my $time = localtime;
+#	print STDERR "[$time] [notice] GBrowse FastCGI process caught sig$sig. Exiting... (pid $$)\n";
+#	$FCGI_DONE = 1;
+#    };
 
     my %sys_env = %ENV;
     while (!$FCGI_DONE) {
+	warn "[$$] accepting...";
 	my $status = $fcgi->Accept;
+	warn "[$$] accepted, status = $status";
 	next unless $status >= 0;
         %ENV = (%sys_env, %ENV);
 	my $globals = Bio::Graphics::Browser2->open_globals;
@@ -41,14 +36,17 @@ if ($fcgi) {
 	    $render->run();
 	};
 	warn $@ if $@;
+	warn "[$$] destroying...";
 	$render->destroy;
+	warn "[$$] destroyed...";
     }
 
     my $pgrp = getpgrp();
+    warn "[$$] killing $pgrp";
     kill TERM => -$pgrp;
 
 } else {
-    $SIG{TERM} = sub { warn "gbrowse going down..."; CORE::exit 0 };
+    $SIG{TERM} = sub { warn "[$$] gbrowse going down..."; CORE::exit 0 };
     my $globals = Bio::Graphics::Browser2->open_globals;
     Bio::Graphics::Browser2::Render::HTML->new($globals)->run();
 }

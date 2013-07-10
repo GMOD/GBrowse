@@ -425,8 +425,8 @@ ScriptAlias  "/gb2"      "$cgibin"
 </IfModule>
 
 <IfModule mod_fastcgi.c>
-  Alias /fgb2 "$cgibin"
-  <Location /fgb2>
+  Alias /fast "$cgibin"
+  <Location /fast>
     SetHandler   fastcgi-script
   </Location>
   # Note: you may need to increase -idle-timeout if file uploads are timing out and returning server

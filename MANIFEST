@@ -393,6 +393,7 @@ htdocs/js/sound.js
 htdocs/js/subtracktable.css
 htdocs/js/subtracktable.js
 htdocs/js/tabs.js
+htdocs/js/toggle.js
 htdocs/js/track.js
 htdocs/js/track_configure.js
 htdocs/js/track_pan.js

@@ -1,9 +1,8 @@
 #!/usr/bin/perl -w
-# $Id: load_alignments_msa.pl,v 1.1.2.2 2009-07-19 09:15:43 sheldon_mckay Exp $
 # This script will load the gbrowse_syn alignment database directly from a
 # multiple sequence alignment file.
 BEGIN {
-  #Check for DBI before running the script
+  # Check for DBI before running the script
   # Doing this here will allow the "compile" tests to pass for GBrowse
   # even if DBI is not installed.
   eval {
@@ -21,7 +20,6 @@ use strict;
 use Bio::AlignIO;
 use List::Util 'sum';
 use Getopt::Long;
-#use DBI;
 use Bio::DB::GFF::Util::Binning 'bin';
 
 use Data::Dumper;
@@ -72,8 +70,9 @@ while (my $infile = shift) {
       my $seqid = $seq->id;
       my ($species,$ref,$strand) = check_name_format($seqid,$seq);
       next if $seq->seq =~ /^-+$/;
+      $strand ||= $seq->start < $seq->end ? '+' : '-';
       # We have to tell the sequence object what its strand is
-      $seq->strand($strand eq '-' ? -1 : 1);
+      $seq->strand($strand eq '-' ? -1 : 1) unless $seq->strand;
       $seq{$species} = [$ref, $seq->display_name, $seq->start, $seq->end, $strand, $seq->seq, $seq]; 
     }
     
@@ -202,31 +201,34 @@ sub check_name_format {
 
   my $nogood = <<"  END";
 
-I am sorry, I do not like the sequence name: $name
+  Problem with sequence name $name
+  The Sequence name needs to contain some meta-data to identify
+      the species, reference sequence and coordinates.
 
-This will not work unless you use the name format described below for each
-sequence in the alignment.  
 
-We need the species, sequence name, strand, start and end for
-each sequence in the alignment.
+  Supported Sequence Name formats:
 
-  Name format:
-    species-sequence(strand)/start-end
-  
-    where species   = name of species, genome, strain, etc (string with no '-' characters)
-          sequence  = name of reference sequence (string with no '/' characters)
-          (strand)  = orientation of the alignment (relative to the reference sequence; + or -)
-          start     = start coordinate of the alignment relative to the reference sequence (integer)
-          end       = end coordinate of the alignment relative to the reference sequence   (integer)
+  # Downloaded via Ensembl Compara API
+  species/seqid/start-end
+      where species   = name of species, genome, strain, etc (string with no '-' characters)
+            sequence  = name of reference sequence (string with no '/' characters)
+            start     = start coordinate of the alignment relative to the reference sequence (integer)
+            end       = end coordinate of the alignment relative to the reference sequence   (integer)
+            in this format, the strand is + unless end < start
+
+  # Legacy gbrowse_syn format
+  species-seqid(strand)/start..end
+      where (strand)  = orientation of the alignment (relative to the reference sequence; + or -)
 
   Examples:
+    homo_sapiens/1/100000-200000
     c_elegans-I(+)/1..2300
-    myco_bovis-chr1(-)/15000..25000
 
   END
   ;
 
-  die $nogood unless $name =~ /^([^-]+)-([^\(]+)\(([+-])\)$/;
+  die $nogood unless $name =~ /^([^-]+)-([^\(]+)\(([+-])\)$/  # Why did I do this?
+              ||     $name =~ m!^([^/]+)/([^/]+)!;            # from Bio::LocatableSeq
   die $nogood unless $seq->start && $seq->end;
   return ($1,$2,$3);
 }

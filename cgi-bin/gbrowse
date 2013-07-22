@@ -1,14 +1,5 @@
 #!/usr/bin/perl 
 
-eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
-eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 use strict;
 use CGI;
 use Bio::Graphics::Browser2;
@@ -29,11 +20,18 @@ if ($fcgi) {
     };
 
     my %sys_env = %ENV;
+    my $globals = Bio::Graphics::Browser2->open_globals;
+    warn "[$$] FastCGI initializing and loading default data sources...\n";
+    foreach ($globals->data_sources) {
+	warn "[$$] Loading $_\n";
+	my $source = $globals->create_data_source($_);
+	$source->open_database();  # cache default database in memory
+    }
+    
     while (!$FCGI_DONE) {
 	my $status = $fcgi->Accept;
 	next unless $status >= 0;
         %ENV = (%sys_env, %ENV);
-	my $globals = Bio::Graphics::Browser2->open_globals;
 	CGI->initialize_globals();
 	my $render = Bio::Graphics::Browser2::Render::HTML->new($globals);
 	eval {
@@ -48,7 +46,7 @@ if ($fcgi) {
     kill TERM => -$pgrp;
 
 } else {
-    $SIG{TERM} = sub { warn "gbrowse going down..."; CORE::exit 0 };
+    $SIG{TERM} = sub { warn "[$$] gbrowse going down..."; CORE::exit 0 };
     my $globals = Bio::Graphics::Browser2->open_globals;
     Bio::Graphics::Browser2::Render::HTML->new($globals)->run();
 }

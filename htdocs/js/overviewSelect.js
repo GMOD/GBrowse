@@ -32,7 +32,7 @@ Overview.prototype.initialize = function() {
   var self = new Overview;
 
   // not ready for non drag and drop implementation
-  //var dnd = document.mainform.drag_and_drop;
+  //var dnd = document.searchform.drag_and_drop;
   //if (!dnd || !dnd.checked) return false;
 
   var i = $(self.imageId);
@@ -49,26 +49,7 @@ Overview.prototype.initialize = function() {
   var p = i.parentNode.parentNode;
   i = self.replaceImage(i);
 
-  self.selectLayer = p.parentNode.parentNode;
-
-
-//   try {
-//       overviewBalloon = new Balloon();
-//       overviewBalloon.vOffset  = 1;
-//       overviewBalloon.showOnly = 2; // just show twice
-//       var helpFunction = function(event) {
-// 	  if (!event) {
-// 	      event = window.event;
-// 	  }
-// 	  var help = '<b>Overview:</b> Click here to recenter or click and drag left or right to select a region';
-// 	  overviewBalloon.showTooltip(event,help,0,250);
-//       }
-//       i.onmouseover = helpFunction;
-//   }
-//   catch(e) {
-//       i.setAttribute('title','click and drag to select a region');
-//   }
-
+  self.selectLayer = $('overview_panels');
   self.scalebar = i;
 
   self.addSelectMenu('overview');
@@ -83,19 +64,18 @@ Overview.prototype.startSelection = function(event) {
   SelectArea.prototype.startRubber(self,event);
 }
 
-
 Overview.prototype.getSegment = function(i) {
-  this.ref          = document.mainform.ref.value;
-  this.segmentStart = parseInt(document.mainform.overview_start.value);
-  this.segmentEnd   = parseInt(document.mainform.overview_stop.value);
-  this.detailStart  = parseInt(document.mainform.detail_start.value);
-  this.detailEnd    = parseInt(document.mainform.detail_stop.value);
-  this.padLeft      = parseInt(document.mainform.image_padding.value);
-  this.pixelToDNA   = parseFloat(document.mainform.overview_pixel_ratio.value);
+  this.ref          = document.searchform.ref.value;
+  this.segmentStart = parseInt(document.searchform.overview_start.value);
+  this.segmentEnd   = parseInt(document.searchform.overview_stop.value);
+  this.detailStart  = parseInt(document.searchform.detail_start.value);
+  this.detailEnd    = parseInt(document.searchform.detail_stop.value);
+  this.padLeft      = parseInt(document.searchform.image_padding.value);
+  this.pixelToDNA   = parseFloat(document.searchform.overview_pixel_ratio.value);
   this.flip         = 0;
 
   var actualWidth   = this.elementLocation(i,'width');
-  var expectedWidth = parseInt(document.mainform.overview_width.value);
+  var expectedWidth = parseInt(document.searchform.overview_width.value);
   if (actualWidth > expectedWidth) {
     this.padLeft     += actualWidth - expectedWidth;
   }

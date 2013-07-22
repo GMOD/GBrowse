@@ -492,6 +492,8 @@ END
 
  CONFIGURE_THIS_TRACK   => '<b>Configure this track</b>',
 
+ POP_OUT               => '<b>Pop out/in</b>',
+
  DOWNLOAD_THIS_TRACK   => '<b>Download this track</b>',
 
  ABOUT_THIS_TRACK   => '<b>About this track</b>',

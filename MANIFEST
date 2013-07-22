@@ -393,6 +393,7 @@ htdocs/js/sound.js
 htdocs/js/subtracktable.css
 htdocs/js/subtracktable.js
 htdocs/js/tabs.js
+htdocs/js/toggle.js
 htdocs/js/track.js
 htdocs/js/track_configure.js
 htdocs/js/track_pan.js
@@ -567,6 +568,7 @@ lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
 lib/Bio/DB/SeqFeature/Store/Alias.pm
 lib/Bio/DB/SeqFeature/Store/BedLoader.pm
+lib/Bio/DB/SeqFeature/Store/LoadHelper.pm
 lib/Bio/DB/Tagger.pm
 lib/Bio/DB/Tagger/mysql.pm
 lib/Bio/DB/Tagger/Tag.pm
@@ -690,3 +692,5 @@ t/testdata/phylo_align/species.tre
 t/testdata/phylo_align/volvox_alignment.conf
 t/testdata/phylo_align/volvox_phyloalign.gff
 t/testdata/TemplateCopy.pm
+META.yml
+META.json

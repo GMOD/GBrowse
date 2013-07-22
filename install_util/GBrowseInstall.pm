@@ -416,21 +416,22 @@ ScriptAlias  "/gb2"      "$cgibin"
   # these directives prevent idle/busy timeouts and may need to be
   # adjusted up or down
   FcgidMinProcessesPerClass 6
-  FcgidIOTimeout   600
-  FcgidBusyTimeout 600
+  FcgidConnectTimeout  30
+  FcgidIOTimeout      600
+  FcgidBusyTimeout    600
   # allow larger file uploads up to 128M under FastCGI (default is 128K)
   FcgidMaxRequestLen 134217728
   $fcgid_inc
 </IfModule>
 
 <IfModule mod_fastcgi.c>
-  Alias /fgb2 "$cgibin"
-  <Location /fgb2>
+  Alias /fast "$cgibin"
+  <Location /fast>
     SetHandler   fastcgi-script
   </Location>
   # Note: you may need to increase -idle-timeout if file uploads are timing out and returning server
   # errors.
-  FastCgiConfig -idle-timeout 600 -maxClassProcesses 20 $fcgi_inc -initial-env GBROWSE_CONF=$conf 
+  FastCgiConfig -startDelay 30 -appConnTimeout 30 -idle-timeout 600 -maxClassProcesses 20 $fcgi_inc -initial-env GBROWSE_CONF=$conf 
 </IfModule>
 
 # Use of mod_perl is no longer supported. Use at your own risk.

@@ -115,7 +115,7 @@ sub source_menu {
 			 -values   => \@sources,
 			 -labels   => { map { $_ => $self->description($_) } $self->sources },
 			 -default  => $self->source,
-			 -onChange => 'document.mainform.submit()'
+			 -onChange => 'document.searchform.submit()'
 			 );
   return b( $self->tr('DATA_SOURCE') ) . br
       . ( $sources ? $popup : $self->description( $self->source ) );
@@ -228,7 +228,7 @@ sub zoomBar {
     -labels   => \%labels,
     -default  => $segment->length,
     -force    => 1,
-    -onChange => 'document.mainform.submit()',
+    -onChange => 'document.searchform.submit()',
   );
 }
 
@@ -775,14 +775,20 @@ sub print_page_top {
   print start_html(@args);
 
   # make a sham controller to keep the GB2 js happy
-  print <<END;
+  print <<"END";
  <script type="text/javascript">
    var Controller;
    Controller = new Object();
    Controller.gbrowse_syn = true;    
    Controller.update_coordinates = function (segment) {
-     document.mainform.name.value = segment;
-     document.mainform.submit();
+     document.searchform.name.value = segment;
+     document.searchform.submit();
+   };
+   Controller.translate = function (term) {
+     term += '';
+     term = term + term.toLowerCase();
+     var f = term.charAt(0).toUpperCase();
+     return f + term.substr(1);
    };
  </script>
 END

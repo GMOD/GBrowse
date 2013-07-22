@@ -26,7 +26,7 @@ use Legacy::DB::SyntenyIO;
 use Legacy::DB::SyntenyBlock;
 
 
-use constant OVERVIEW_RATIO     => 0.9;
+use constant OVERVIEW_RATIO     => 1.0;
 use constant OVERVIEW_BGCOLOR   => 'gainsboro';
 use constant IMAGE_WIDTH        => 800;
 use constant INTERIMAGE_PAD     => 5;
@@ -247,7 +247,7 @@ sub species_search {
   my $values  = [sort {$MAP->{$a}{desc} cmp $MAP->{$b}{desc}} grep {$MAP->{$_}{desc}} keys %labels];
   unshift @$values, '';
 
-  my $onchange = "document.mainform.submit()";
+  my $onchange = "document.searchform.submit()";
   return b(wiki_help('Reference_Species',$CONF->tr('Genome to Search'))) . ':' . br .
       popup_menu(
 		 -onchange => $onchange,
@@ -261,7 +261,7 @@ sub species_search {
 
 sub search_form {
   my $segment = shift;
-  print start_form(-name=>'mainform',-method => 'post');
+  print start_form(-name=>'searchform',-method => 'post');
   navigation_table($segment);
 }
 
@@ -1154,7 +1154,7 @@ sub source_menu {
   my $sources = $show_sources && @sources > 1;
   my $source = $CONF->get_source;
   return $sources ? b(wiki_help('Data Source',$CONF->tr('Data Source')), ': ') . br.
-      popup_menu(-onchange => 'document.mainform.submit()',
+      popup_menu(-onchange => 'document.searchform.submit()',
 		 -name   => 'source',
 		 -values => \@sources,
 		 -labels => { map {$_ => $CONF->description($_)} $CONF->sources},
@@ -1229,14 +1229,25 @@ sub overview_panel {
   return '' if $SCONF->section_setting('overview') eq 'hide';
   my $image = overview($whole_segment,$segment);
   my $ref = $MAP->{$CONF->page_settings("search_src")}->{desc};
+
+  my $width = $CONF->page_settings('imagewidth') || $CONF->setting("imagewidth") || IMAGE_WIDTH;
+  my $ip = $SCONF->setting('image_padding') || $CONF->image_padding || param('image_padding') || 0;
+  my $pl = $SCONF->setting('pad_left')  || 0;
+  my $pr = $SCONF->setting('pad_right') || 0;
+  $width += ($pl || $ip) + ($pr || $ip);
+
   return toggle('Overview',
                 table({-border=>0,-width=>'100%'},
 		      TR(th("<center>Reference genome: <i>$ref</i></center>")),
                       TR({-class=>'databody'},
-                         td({-align=>'center'},$image)
-                        )
-                     )
-		);
+			 td({-align=>'center'},
+			    div({ id => 'overview_panels',
+				  style => "position:relative;width:${width}px"},
+				$image)
+		            )
+                    )
+		)
+      );
 }
 
 sub overview {

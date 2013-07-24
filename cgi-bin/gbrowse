@@ -20,8 +20,9 @@ if ($fcgi) {
     };
 
     my %sys_env = %ENV;
-    my $globals = Bio::Graphics::Browser2->open_globals;
+
     warn "[$$] FastCGI initializing and loading default data sources...\n";
+    my $globals = Bio::Graphics::Browser2->open_globals;
     foreach ($globals->data_sources) {
 	warn "[$$] Loading $_\n";
 	my $source = $globals->create_data_source($_);

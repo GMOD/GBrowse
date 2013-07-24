@@ -992,7 +992,7 @@ sub added_to_INC {
 
 sub perl5lib {
     my $self = shift;
-    return $self->added_to_INC or undef;
+    return $self->added_to_INC || undef;
 }
 
 sub scriptdir {

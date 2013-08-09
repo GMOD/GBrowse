@@ -1420,7 +1420,7 @@ sub add_features_to_track {
   my $conf    = $self->config;
 
   my (%groups,%feature_count,%group_pattern,%group_field);
-  my $iterator = $segment->get_feature_stream(-type=>$feature_types);
+  my $iterator = $segment->get_seq_stream(-type=>$feature_types);
 
   while (my $feature = $iterator->next_seq) {
 

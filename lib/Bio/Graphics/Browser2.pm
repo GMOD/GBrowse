@@ -82,7 +82,7 @@ sub config_path {
 sub htdocs_path {
   my $self    = shift;
   my $option  = shift;
-  $self->resolve_path($self->setting(general => $option),'htdocs') 
+  $self->resolve_path($self->setting(general => $option),'htdocs')
       || "$ENV{DOCUMENT_ROOT}/gbrowse2";
 }
 
@@ -92,7 +92,7 @@ sub url_path {
   $self->resolve_path( scalar($self->setting(general => $option)),'url');
 }
 
-sub config_base {$ENV{GBROWSE_CONF} 
+sub config_base {$ENV{GBROWSE_CONF}
 		    || eval {shift->setting(general=>'config_base')}
 			|| GBrowse::ConfigData->config('conf')
 		              || '/etc/GBrowse2' }
@@ -100,7 +100,7 @@ sub htdocs_base {$ENV{GBROWSE_HTDOCS}
 		 || eval{shift->setting(general=>'htdocs_base')}
                     || GBrowse::ConfigData->config('htdocs')
 		        || '/var/www/gbrowse2'     }
-sub url_base    {eval{shift->setting(general=>'url_base')}   
+sub url_base    {eval{shift->setting(general=>'url_base')}
                      || basename(GBrowse::ConfigData->config('htdocs'))
 		        || '/gbrowse2'             }
 
@@ -112,12 +112,12 @@ sub persistent_base    {
     my $base = $self->setting(general=>'persistent_base');
     return $base || $self->tmp_base;  # for compatibility with pre 2.27 installs
 }
-sub db_base        { 
+sub db_base        {
     my $self = shift;
     my $base = $self->setting(general=>'db_base');
     return $base || File::Spec->catfile(shift->persistent_base,'databases');
 }
-sub userdata_base  { 
+sub userdata_base  {
     my $self = shift;
     my $base = $self->setting(general=>'userdata_base');
     return $base ||  File::Spec->catfile($self->persistent_base,'userdata');
@@ -158,7 +158,7 @@ sub make_path {
     my $path = shift;
     return unless $path =~ /^(.+)$/;
     $path = $1;
-    mkpath($path,0,0777) unless -d $path;    
+    mkpath($path,0,0777) unless -d $path;
 }
 
 sub tmpdir {
@@ -243,6 +243,7 @@ sub language_path  { shift->config_path('language_path')   }
 sub templates_path { shift->config_path('templates_path')  }
 sub moby_path      { shift->config_path('moby_path')       }
 
+sub preload_datasources    { shift->setting(general=>'preload data sources') || 0 } # default not-preload
 sub global_timeout         { shift->setting(general=>'global_timeout')      ||  60   }
 sub remember_settings_time { shift->setting(general=>'expire session')      || '1M'  }
 sub cache_time             { shift->setting(general=>'expire cache')        || '2h'  }
@@ -259,16 +260,16 @@ sub smtp_enabled           { return defined shift->smtp;                        
 sub user_account_db        { shift->setting(general=>'user_account_db')                                       } # Used by uploads & user databases, they set their own defaults.
 sub user_accounts	   { my $self = shift;
 			     return $self->setting(general=>'user_accounts') ||
-				    $self->setting(general=>'user_accounts')  || 
+				    $self->setting(general=>'user_accounts')  ||
 				    0; }
 sub user_accounts_allow_registration
-                           { 
+                           {
 			       my $val = shift->setting(general=>'user_accounts_registration');
 			       return 1 unless defined $val;
 			       return $val;
 			   }
 sub user_accounts_allow_openid
-                           { 
+                           {
 			       my $val = shift->setting(general=>'user_accounts_openid');
 			       return 1 unless defined $val;
 			       return $val;
@@ -285,7 +286,7 @@ sub upload_db_adaptor {
     my $self = shift;
     my $adaptor = $self->setting(general=>'upload_db_adaptor') || $self->setting(general=>'userdb_adaptor');
     $adaptor or return;
-    warn "The upload_db_adaptor in your Gbrowse.conf file isn't in the DBI::<module> format: remember, it's not a connection string." 
+    warn "The upload_db_adaptor in your Gbrowse.conf file isn't in the DBI::<module> format: remember, it's not a connection string."
 	if $adaptor =~ /^DBI/ && $adaptor !~ /(^DBI::+)/i;
     return $adaptor;
 }
@@ -436,7 +437,7 @@ sub get_source_from_cgi {
     $source    =~ s!\#$!!;  # get rid of trailing # left by IE
     $source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
     $source    =~ s!/+$!!;
-    
+
     $source;
 }
 
@@ -453,7 +454,7 @@ sub update_data_source {
     $session->source($new_source);
     $source = $new_source;
   } else {
-    my $fallback_source = $self->valid_source($old_source) 
+    my $fallback_source = $self->valid_source($old_source)
 	? $old_source
 	: $self->default_source;
     $session->source($fallback_source);

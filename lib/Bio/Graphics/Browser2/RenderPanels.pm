@@ -178,7 +178,7 @@ sub request_panels {
 					 $local_labels );
           }
           else {
-              $self->run_remote_requests( $data_destinations, 
+              $self->run_remote_requests( $data_destinations,
 					  $args,
 					  $remote_labels );
           }
@@ -196,7 +196,7 @@ sub request_panels {
   }
 
   else { # not deferred
-      $self->run_local_requests($data_destinations,$args,$local_labels);  
+      $self->run_local_requests($data_destinations,$args,$local_labels);
       $self->run_remote_requests($data_destinations,$args,$remote_labels);
       return $data_destinations;
   }
@@ -277,7 +277,7 @@ sub make_requests {
 
 	my $filter     = $settings->{features}{$label}{filter};
 	@filter_args   = %{$filter->{values}} if $filter->{values};
-	@subtrack_args = @{$settings->{subtracks}{$label}} 
+	@subtrack_args = @{$settings->{subtracks}{$label}}
 	                 if $settings->{subtracks}{$label};
 	my $ff_error;
 
@@ -293,24 +293,24 @@ sub make_requests {
 		    -cache_base => $base,
 		    -panel_args => \@panel_args,
 		    -track_args => \@track_args,
-		    -extra_args => [ @cache_extra, 
-				     @filter_args, 
-				     @featurefile_args, 
+		    -extra_args => [ @cache_extra,
+				     @filter_args,
+				     @featurefile_args,
 				     @subtrack_args,
-				     $format_option, 
+				     $format_option,
 				     $label ],
 		    );
-    
+
 		my $msg = eval {$args->{remotes}->error($track)};
 		$cache_object->flag_error($msg || "Could not fetch data for $track");
 		$d{$track} = $cache_object;
 		next;
 	    }
-	    
+
 	    # broken logic here?
 	    # next unless $label =~ /:$args->{section}$/;
 	    @featurefile_args =  eval {
-		$feature_file->isa('Bio::Das::Segment')||$feature_file->types, 
+		$feature_file->isa('Bio::Das::Segment')||$feature_file->types,
 		$feature_file->mtime;
 	    };
 	}
@@ -324,11 +324,11 @@ sub make_requests {
             -cache_base => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
-            -extra_args => [ @cache_extra, 
-			     @filter_args, 
-			     @featurefile_args,  
-			     @subtrack_args, 
-			     $format_option, 
+            -extra_args => [ @cache_extra,
+			     @filter_args,
+			     @featurefile_args,
+			     @subtrack_args,
+			     $format_option,
 			     $label ],
 	    -cache_time => $cache_time
         );
@@ -344,7 +344,7 @@ sub use_renderfarm {
   return $self->{use_renderfarm} if exists $self->{use_renderfarm};
 
   #comment out to force remote rendering (kludge)
-  $self->source->global_setting('renderfarm') or return;	
+  $self->source->global_setting('renderfarm') or return;
 
   $LPU_AVAILABLE = eval { require LWP::UserAgent; }           unless defined $LPU_AVAILABLE;
   $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLE;
@@ -397,9 +397,9 @@ sub render_tracks {
 	    section  => $args->{section},
         );
     }
-    
+
     return \%result;
- 
+
 }
 
 # Returns the HMTL to show a track with controls, title, arrows, etc.
@@ -412,7 +412,7 @@ sub wrap_rendered_track {
     my $height = $args{'height'};
     my $url    = $args{'url'};
     my $titles = $args{'titles'};
-  
+
     # track_type Used in register_track() javascript method
     my $track_type = $args{'track_type'} || 'standard';
     my $status = $args{'status'};    # for debugging
@@ -431,7 +431,7 @@ sub wrap_rendered_track {
     my $favicon  = "$buttons/fmini.png";
     my $favicon_2= "$buttons/fmini_2.png";
     my $add_or_remove = $self->language->translate('ADDED_TO') || 'Add track to favorites';
-    
+
     my $settings = $self->settings;
     my $source   = $self->source;
 
@@ -456,7 +456,7 @@ sub wrap_rendered_track {
             -name   => $label,
 	    -class  => 'track_image',
             -style  => $img_style
-	    
+
         }
     );
 
@@ -481,7 +481,7 @@ sub wrap_rendered_track {
         || "<b>About this track</b>";
 
     my $popout = '';
-    $popout .= $self->language->translate('POP_OUT') 
+    $popout .= $self->language->translate('POP_OUT')
 	|| "<b>Pop out/in</b>";
 
     my $escaped_label = CGI::escape($label);
@@ -508,7 +508,7 @@ sub wrap_rendered_track {
     }
 
     my $help_url       = "url:?action=cite_track;track=$escaped_label";
-    my $help_click     = "GBox.showTooltip(event,'$help_url',1)"; 
+    my $help_click     = "GBox.showTooltip(event,'$help_url',1)";
 
     my $download_click = "GBox.showTooltip(event,'url:?action=download_track_menu;track=$escaped_label;view_start='+TrackPan.get_start()+';view_stop='+TrackPan.get_stop(),true)" unless $label =~ /^(http|ftp)/;
 
@@ -528,8 +528,8 @@ sub wrap_rendered_track {
 	$title = $source->setting( $label => 'key') || $l;
     }
     $title =~ s/:(overview|region|detail)$//;
-   
-    my $balloon_style = $source->global_setting('balloon style') || 'GBubble'; 
+
+    my $balloon_style = $source->global_setting('balloon style') || 'GBubble';
     my $favorite      = $settings->{favorites}{$label};
     my $starIcon      = $favorite ? $favicon_2 : $favicon;
     my $starclass     = $favorite ? "toolbarStar favorite" : "toolbarStar";
@@ -545,7 +545,7 @@ sub wrap_rendered_track {
 				$self->if_not_ipad(-onMouseOver => "$balloon_style.showTooltip(event,'$add_or_remove')"),
 			    })
 	              : '',
-	img({   -src         => $icon, 
+	img({   -src         => $icon,
                 -id          => "${label}_icon",
                 -onClick     =>  "collapse('$label')",
                 -style       => 'cursor:pointer',
@@ -590,65 +590,65 @@ sub wrap_rendered_track {
 			   -onMouseOver =>
 			       "$balloon_style.showTooltip(event,'$about_this_track')",
 		       });
-    
+
     my $pin_img = img({ -src          => $pop_out,
 			-class        => 'pin_button',
 			-onmousedown  => 'Controller.ghost_track(this)',
 			-onmouseover  => "$balloon_style.showTooltip(event,'$popout')",
 		      }
 	);
-	    
+
     my $ipad_collapse = $collapsed ? 'Expand':'Collapse';
     my $cancel_ipad = 'Turn off';
-    my $share_ipad = 'Share'; 
+    my $share_ipad = 'Share';
     my $configure_ipad = 'Configure';
     my $download_ipad = 'Download';
     my $about_ipad = 'About track';
 
-    my $bookmark = 'Favorite'; 
-    my $menuicon = img ({-src => $menu, 
+    my $bookmark = 'Favorite';
+    my $menuicon = img ({-src => $menu,
 			 -style => 'padding-right:15px;',},),
-   
+
     my $popmenu = $self->if_ipad(
 	div({-id =>"popmenu_${title}", -style => 'display:none'},
 	    div({-class => 'ipadtitle', -id => "${label}_title",}, $title ),
-	    div({-class => 'ipadcollapsed', 
-		 -id    => "${label}_icon", 
+	    div({-class => 'ipadcollapsed',
+		 -id    => "${label}_icon",
 		 -onClick =>  "collapse('$label')",
 		},
-		div({-class => 'linkbg', 
-		     -onClick => "swap(this,'Collapse','Expand')", 
+		div({-class => 'linkbg',
+		     -onClick => "swap(this,'Collapse','Expand')",
 		     -id => "${label}_expandcollapse", },$ipad_collapse)),
 	    div({-class => 'ipadcollapsed',
 		 -id => "${label}_kill",
 		 -onClick     => "ShowHideTrack('$label',false)",
 		}, div({-class => 'linkbg',},
 		       $cancel_ipad)),
-	    div({-class => 'ipadcollapsed',  
-		 -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",}, 
+	    div({-class => 'ipadcollapsed',
+		 -onMousedown => "Controller.get_sharing(event,'url:?action=share_track;track=$escaped_label',true)",},
 		div({-class => 'linkbg',},$share_ipad)),
 	    div({-class => 'ipadcollapsed',  -
 		     onmousedown => $config_click,}, div({-class => 'linkbg',},$configure_ipad)),
-	    div({-class => 'ipadcollapsed',  
-		 -onmousedown => $fav_click,}, 
+	    div({-class => 'ipadcollapsed',
+		 -onmousedown => $fav_click,},
 		div({-class => 'linkbg', -onClick => "swap(this,'Favorite','Unfavorite')"},$bookmark)),
-	    div({-class => 'ipadcollapsed',  
-		 -onmousedown => $download_click,}, 
+	    div({-class => 'ipadcollapsed',
+		 -onmousedown => $download_click,},
 		div({-class => 'linkbg',},$download_ipad)),
-	    div({-class => 'ipadcollapsed', 
-		 -style => 'width:200px',  
-		 -onmousedown => $help_click,}, 
+	    div({-class => 'ipadcollapsed',
+		 -style => 'width:200px',
+		 -onmousedown => $help_click,},
 		div({-class => 'linkbg', -style => 'position:relative; left:30px;',},$about_ipad)),
 	));
     $popmenu ||= ''; # avoid uninit variable warning
-    
+
     my $clipped_title = $title;
     $clipped_title    = substr($clipped_title,0,MAX_TITLE_LEN-3).'...' if length($clipped_title) > MAX_TITLE_LEN;
 
     # modify the title if it is a track with subtracks
     $self->select_features_menu($label,\$clipped_title);
-    
-    my $titlebar = 
+
+    my $titlebar =
 	span(
 		{   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
 		    -id => "${label}_title",
@@ -696,17 +696,17 @@ sub wrap_rendered_track {
 	    -onClick => "Controller.scroll('left',0.5)"
 	});
 
-	my $pan_right  = img({ 
+	my $pan_right  = img({
 	    -style   => $style . ';right:5px',
 	    -class   => 'panright',
 	    -src     => "$buttons/panright.png",
 	    -onClick => "Controller.scroll('right',0.5)",
 	});
-	
-	my $scale_div = div( { -id => "detail_scale_scale", 
+
+	my $scale_div = div( { -id => "detail_scale_scale",
 			       -style => "position:absolute; top:12px", }, "" );
 
-        $overlay_div = div( { -id => "${label}_overlay_div", 
+        $overlay_div = div( { -id => "${label}_overlay_div",
 			      -style => "position:absolute; top:0px; width:100%; left:0px", }, $pan_left . $pan_right . $scale_div);
     }
 
@@ -747,7 +747,7 @@ sub if_ipad {
     return  if !$probably_ipad;
     return @args;
 }
-# This routine is called to hand off the rendering to a remote renderer. 
+# This routine is called to hand off the rendering to a remote renderer.
 # The remote processor does not have to have a copy of the config file installed;
 # the entire DataSource object is sent to it in serialized form via
 # POST. It returns a serialized hash consisting of the GD object and the imagemap.
@@ -822,8 +822,8 @@ sub run_remote_requests {
   }
 
   my $ua = LWP::UserAgent->new;
-  my $timeout = $source->global_setting('slave_timeout') 
-      || $source->global_setting('global_timeout') 
+  my $timeout = $source->global_setting('slave_timeout')
+      || $source->global_setting('global_timeout')
       || 30;
   $ua->timeout($timeout);
 
@@ -842,7 +842,7 @@ sub run_remote_requests {
       foreach (@labels) {
 	  $requests->{$_}->lock();   # flag that request is in process
       }
-  
+
       my $tries = 0;
     FETCH: {
 	my $request = POST ($url,
@@ -868,11 +868,11 @@ sub run_remote_requests {
 	if ($response->is_success) {
 	    my $contents = Storable::thaw($response->content);
 	    for my $label (keys %$contents) {
-		my $map = $contents->{$label}{map}        
+		my $map = $contents->{$label}{map}
 		  or die "Expected a map from remote server, but got nothing!";
-		my $titles = $contents->{$label}{titles}        
+		my $titles = $contents->{$label}{titles}
 		  or die "Expected titles from remote server, but got nothing!";
-		my $gd2 = $contents->{$label}{imagedata}  
+		my $gd2 = $contents->{$label}{imagedata}
 		  or die "Expected imagedata from remote server, but got nothing!";
 		$requests->{$label}->put_data($gd2,$map,$titles);
 	    }
@@ -887,10 +887,10 @@ sub run_remote_requests {
 	    my $uri = $request->uri;
 	    my $response_line = $response->status_line;
 	    $slave_status->mark_down($url);
-	  
+
 	    # try to recover from a transient slave failure; this only works
 	    # right if all of the tracks there are multiple equivalent slaves for the tracks
-	    my %urls    = map {$_=>1} 
+	    my %urls    = map {$_=>1}
   	                    map {
 				shellwords($source->remote_renderer)
 			    } @labels;
@@ -947,11 +947,11 @@ sub sort_local_remote {
     unless ($use_renderfarm) {
 	return (\@uncached,[]);
     }
-    
+
     my $slave_status = $self->slave_status;
 
     my $url;
-    my %is_remote = map { $_ => ( 
+    my %is_remote = map { $_ => (
 			      !/plugin:/ &&
 			      !/file:/   &&
 			      !/^(ftp|http|das):/ &&
@@ -1055,7 +1055,7 @@ sub render_scale_bar {
     $add_track_extra_args{'-postgrid'} = $args{'postgrid'} if $args{'postgrid'};
 
     my @panel_args = $self->create_panel_args(
-        {   section        => $section, 
+        {   section        => $section,
             segment        => $wide_segment,
             flip           => $flip,
             %add_track_extra_args
@@ -1091,7 +1091,7 @@ sub render_scale_bar {
 	    for my $type (@feature_types) {
 	    my $features = $feats->features($type);
 	    my %options  = $feats->style($type);
-	    $panel->add_track($features,%options);  
+	    $panel->add_track($features,%options);
 	    }
 
 	}
@@ -1285,7 +1285,7 @@ sub make_imagemap_element_inline {
 
     if ($summary) {
 	return {onmouseover => $self->feature_summary_message('mouseover',$label),
-		onmouseeown => $self->feature_summary_message('mousedown',$label),
+		onmousedown => $self->feature_summary_message('mousedown',$label),
 		href        => 'javascript:void(0)',
 		inline      => 1
 	}
@@ -1405,7 +1405,7 @@ sub make_centering_map {
 
     my $url = "?ref=$ref;start=$start;stop=$stop";
     $url .= ";flip=1" if $flip;
-    push @map, join("\t",'ruler',$x2, $ruler->[2], $x2, $ruler->[4], 
+    push @map, join("\t",'ruler',$x2, $ruler->[2], $x2, $ruler->[4],
 		    href  => $url, title => 'recenter', alt   => 'recenter');
   }
   return $label ? \@map : @map;
@@ -1413,7 +1413,7 @@ sub make_centering_map {
 
 # this is the routine that actually does the work!!!!
 # input
-#    arg1: request hashref 
+#    arg1: request hashref
 #                 {label => Bio::Graphics::Browser2::CachedTrack}
 #    arg2: arguments hashref
 #                  {
@@ -1467,7 +1467,7 @@ sub run_local_requests {
 
     #---------------------------------------------------------------------------------
     # Track and panel creation
-    
+
     my %seenit;           # avoid error of putting track on list multiple times
     my %results;          # hash of {$label}{gd} and {$label}{map}
     my %feature_file_offsets;
@@ -1498,7 +1498,7 @@ sub run_local_requests {
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
 
-	# don't let there be more than this many processes 
+	# don't let there be more than this many processes
 	# running simultaneously
 	while ((my $c = keys %children) >= $max_processes) {
 	    warn "[$$] too many processes ($c), sleeping" if DEBUG;
@@ -1517,7 +1517,7 @@ sub run_local_requests {
 	(my $base = $label) =~ s/:(overview|region|details?)$//;
 	warn "label=$label, base=$base, file=$feature_files->{$base}" if DEBUG;
 
-	my $multiple_tracks = $base =~ /^(http|ftp|file|das|plugin):/ 
+	my $multiple_tracks = $base =~ /^(http|ftp|file|das|plugin):/
 	    || $source->code_setting($base=>'remote feature');
 
         my @keystyle = ( -key_style    => 'between',
@@ -1527,14 +1527,14 @@ sub run_local_requests {
 	my $key = $source->setting( $base => 'key' ) || '' ;
 	my @nopad = ();
         my $panel_args = $requests->{$label}->panel_args;
-	
+
         my $panel
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
 
         my %trackmap;
 
 	my $timeout         = $source->global_setting('global_timeout');
-	
+
 	my $oldaction;
 	my $time = time();
 	eval {
@@ -1558,7 +1558,7 @@ sub run_local_requests {
 		    # Add feature files, including remote annotations
 		    my $featurefile_select = $args->{featurefile_select}
 		    || $self->feature_file_select($section);
-			
+
  		    if ( ref $file and $panel ) {
 			$self->add_feature_file(
 			    file     => $file,
@@ -1625,7 +1625,7 @@ sub run_local_requests {
 
 	my $elapsed = time()-$time;
 	warn "render($label): $elapsed seconds ", ($@ ? "(error)" : "(ok)") if BENCHMARK;
-	
+
 	if ($@) {
 	    warn "RenderPanels error: $@";
 	    if ($@ =~ /timeout/) {
@@ -1649,7 +1649,7 @@ sub run_local_requests {
 
     # make sure requests are populated
     # the "1" argument turns off expiration checking
-    $requests->{$_}->get_data(1) foreach keys %$requests;  
+    $requests->{$_}->get_data(1) foreach keys %$requests;
 }
 
 sub render_hidden_track {
@@ -1681,7 +1681,7 @@ sub select_features_menu {
 			   -onClick      => $subtrack_click
 			  },
 			  $self->language->translate('SHOWING_SUBTRACKS',$selected,$total));						#;
-    
+
 }
 
 sub generate_filters {
@@ -1756,10 +1756,10 @@ sub add_features_to_track {
 	  $type2label{$_}{$l}++ foreach @types;
       }
       $self->{_type2label}=\%type2label;
-      
+
       warn "[$$] RenderPanels->get_iterator(@full_types)"  if DEBUG;
       warn "[$$] RenderPanels->get_summary_iterator(@summary_types)" if DEBUG;
-      if (@summary_types && 
+      if (@summary_types &&
 	  (my $iterator = $self->get_summary_iterator($db2db{$db},$segment,\@summary_types))) {
 	  $iterators{$iterator}     = $iterator;
 	  $iterator2dbid{$iterator} = $source->db2id($db);
@@ -1810,14 +1810,14 @@ sub add_features_to_track {
 	  # Handle name-based groupings.
 	  unless (exists $group_pattern{$l}) {
 	      $group_pattern{$l} =  $source->semantic_setting($l => 'group_pattern',$length);
-	      $group_pattern{$l} =~ s!^/(.+)/$!$1! 
+	      $group_pattern{$l} =~ s!^/(.+)/$!$1!
 		  if $group_pattern{$l}; # clean up regexp delimiters
 	  }
-	  
+
 	  # Handle generic grouping (needed for GFF3 database)
- 	  $group_field{$l} = $source->semantic_setting($l => 'group_on',$length) 
+ 	  $group_field{$l} = $source->semantic_setting($l => 'group_on',$length)
 	      unless exists $group_field{$l};
-	  
+
 	  if (my $pattern = $group_pattern{$l}) {
 	      my $name = $feature->name or next;
 	      (my $base = $name) =~ s/$pattern//i;
@@ -1828,7 +1828,7 @@ sub add_features_to_track {
 	      $groups{$l}{$base}->add_segment($feature);
 	      next;
 	  }
-	
+
 	  if (my $field = $group_field{$l}) {
 	      my $base = eval{$feature->$field};
 	      if (defined $base) {
@@ -1881,7 +1881,7 @@ sub add_features_to_track {
 						 -name   => $stt->id2label($_),
 						 -start  => $segment->start,
 						 -end    => $segment->end,
-						 -seq_id => $segment->seq_id) 
+						 -seq_id => $segment->seq_id)
 	    foreach @ids
     }
 
@@ -1927,7 +1927,7 @@ sub add_features_to_track {
       if $limit && $limit > 0;
 
     # essentially make label invisible if we are going to get the label position
-    $tracks->{$l}->configure(-fontcolor   => 'white:0.0') 
+    $tracks->{$l}->configure(-fontcolor   => 'white:0.0')
 	if $tracks->{$l}->parts->[0]->record_label_positions;
 
     if (eval{$tracks->{$l}->features_clipped}) { # may not be present in older Bio::Graphics
@@ -2001,7 +2001,7 @@ Internal use: render a feature file into a panel
 sub add_feature_file {
   my $self = shift;
   my %args = @_;
-  
+
   my $file    = $args{file}    or return;
   my $options = $args{options} or return;
   my $select  = $args{select}  or return;
@@ -2072,7 +2072,7 @@ sub create_panel_args {
   }
   elsif ($section eq 'detail'){
     $postgrid = make_postgrid_callback($settings);
-    $h_region_str = join(':', @{$settings->{h_region}||[]}); 
+    $h_region_str = join(':', @{$settings->{h_region}||[]});
   }
 
   my $keystyle = 'none';
@@ -2117,7 +2117,7 @@ sub create_panel_args {
 sub image_padding {
   my $self   = shift;
   my $source = $self->source;
-  return defined $source->global_setting('image_padding') 
+  return defined $source->global_setting('image_padding')
       ? $source->global_setting('image_padding')
       : PAD_DETAIL_SIDES;
 }
@@ -2194,7 +2194,7 @@ sub create_track_args {
 
   my @summary_args = ();
   if ($is_summary) {
-      @summary_args = $source->Bio::Graphics::FeatureFile::setting("$label:summary") 
+      @summary_args = $source->Bio::Graphics::FeatureFile::setting("$label:summary")
 	  ? $source->i18n_style("$label:summary",$lang)
 	  : (-glyph     => 'wiggle_density',
 	     -height    => 15,
@@ -2210,10 +2210,10 @@ sub create_track_args {
 
   if (my $stt = $self->subtrack_manager($label)) {
       push @default_args,(-connector   => '');
-      my $left_label = 
+      my $left_label =
 	  $source->semantic_setting($label=>'label_position',$length)||'' eq 'left';
 
-      $left_label++ 
+      $left_label++
 	  if $source->semantic_setting($label=>'label_transcripts',$length);
 
       my $group_label = $source->semantic_setting($label=>'glyph',$length) !~ /xyplot|wiggle|density|whisker|vista/;
@@ -2421,7 +2421,7 @@ sub make_link {
   my ($feature,$panel,$label,$track)  = @_;
   my $label_fix = $label;
 
-  if (ref $label && $label->{name}){ 
+  if (ref $label && $label->{name}){
     $label_fix = $label->{name};
     if ($label_fix =~/^(plugin)\:/){$label_fix = join(":",($',$1));}
   }
@@ -2536,7 +2536,7 @@ sub make_title {
     } else {
       my ($start,$end) = ($feature->start,$feature->end);
       ($start,$end)    = ($end,$start) if $feature->strand < 0;
-      my $name         = $feature->can('info') 
+      my $name         = $feature->can('info')
 	                 ? $feature->info
 			 : $feature->display_name;
       my $result;
@@ -2639,7 +2639,7 @@ sub make_postgrid_callback {
     return hilite_regions_closure(@h_regions);
 }
 
-# this subroutine generates a Bio::Graphics::Panel callback closure 
+# this subroutine generates a Bio::Graphics::Panel callback closure
 # suitable for hilighting a region of a panel.
 # The args are a list of [start,end,bgcolor,fgcolor]
 sub hilite_regions_closure {
@@ -2688,7 +2688,7 @@ sub loaded_segment_outline {
     return $self->source->global_setting('loaded segment outline') || 'gray';
 }
 
-sub details_mult { 
+sub details_mult {
     my $self = shift;
     my $render = $self->render;
     return $render->details_mult if $render;

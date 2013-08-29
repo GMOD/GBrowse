@@ -1285,7 +1285,7 @@ sub make_imagemap_element_inline {
 
     if ($summary) {
 	return {onmouseover => $self->feature_summary_message('mouseover',$label),
-		onmouseeown => $self->feature_summary_message('mousedown',$label),
+		onmousedown => $self->feature_summary_message('mousedown',$label),
 		href        => 'javascript:void(0)',
 		inline      => 1
 	}

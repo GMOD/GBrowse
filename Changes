@@ -1,3 +1,6 @@
+2.56
+ * Fix failure of feature summary message to appear on mousedown events.
+
 2.55
  * Better detection and handling of render slaves that have gone now. If all slaves are
    down then throws an error (once) and then reverts to local rendering for a period of time.

@@ -137,8 +137,7 @@ sub dump {
   print hidden($seq_label => $seq);
 
   if (defined $region_label){
-    my $region = "$name";
-    print hidden($region_label => $region);
+    print hidden($region_label => $name);
   }
   if ($extra_html || $confirm) {
     my @rows = th({-colspan => 2, -style => "background:lightsteelblue"}, 
@@ -161,7 +160,7 @@ sub dump {
     push @rows, td({-width => 100, -style => 'background:lightyellow'},
 		   [b($seq_label), pre($fasta)]);
     push @rows, td({-width => 100, -style => 'background:lightyellow'},
-                   [b($region_label), pre($name)]);
+                   [b($region_label), pre($name)]) if defined $region_label;
 
     print table({-border=> 1}, Tr({-valign => 'top'}, \@rows));
   }

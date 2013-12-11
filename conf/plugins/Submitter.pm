@@ -103,6 +103,7 @@ sub dump {
     || fatal_error('Error: a url for the external website is required');
   my $seq_label = $config->{seq_label} 
     || fatal_error('Error: a label is required for the sequence submission');
+  my $region_label = $config->{region_label};
 
   # Other form elements to include
   my $extra_html = unescape($config->{extra_html});
@@ -122,7 +123,7 @@ sub dump {
   # pass-thru arguments -- to be sent to the extertnal web-site
   my %args;
   for my $arg (keys %$config) {
-    next if $arg =~ /^seq_label$|^confirm$|^url$|^fasta$|^extra_html$/;
+    next if $arg =~ /^seq_label$|^region_label$|^confirm$|^url$|^fasta$|^extra_html$/;
     $args{$arg} = unescape($config->{$arg});
   }
 
@@ -135,6 +136,9 @@ sub dump {
   }
   print hidden($seq_label => $seq);
 
+  if (defined $region_label){
+    print hidden($region_label => $name);
+  }
   if ($extra_html || $confirm) {
     my @rows = th({-colspan => 2, -style => "background:lightsteelblue"}, 
 		  b("The following data will be submitted to $url"),
@@ -143,6 +147,7 @@ sub dump {
     
     for my $arg (keys %args) {
       next if $arg eq $seq_label;
+      next if $arg eq $region_label;
       $arg =~ s/extra_html/Additional options/;
       push @rows, td({-width => 100, -style => 'background:lightyellow'},
 		     [b("$arg:"), unescape($args{$arg})]); 
@@ -154,6 +159,8 @@ sub dump {
     }
     push @rows, td({-width => 100, -style => 'background:lightyellow'},
 		   [b($seq_label), pre($fasta)]);
+    push @rows, td({-width => 100, -style => 'background:lightyellow'},
+                   [b($region_label), pre($name)]) if defined $region_label;
 
     print table({-border=> 1}, Tr({-valign => 'top'}, \@rows));
   }

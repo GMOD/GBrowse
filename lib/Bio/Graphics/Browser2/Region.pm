@@ -201,6 +201,7 @@ sub search_db {
   my ($features);
   if (my $name = $args->{-search_term}) {
       $name =~ tr/a-zA-Z0-9|.'"_*?: ;+-\/\#\[\]//cd;  # remove rude/naughty characters
+      $name =~ s/^\s+|\s+$//g; # trim leading & trailing whitespace
       my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
       $features =  $self->lookup_features($ref,$start,$stop,$class,$name,$id);
   }

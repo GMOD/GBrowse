@@ -477,6 +477,7 @@ sub ACTION_install {
     # fix some directories so that www user can write into them
     my $tmp = $self->config_data('tmp') || GBrowseGuessDirectories->tmp;
     mkpath($tmp);
+    
     my ($uid,$gid) = (getpwnam($user))[2,3];
 
     # taint check issues
@@ -491,11 +492,13 @@ sub ACTION_install {
 
     my $htdocs_i = File::Spec->catfile($self->install_path->{htdocs},'i');
     my $images   = File::Spec->catfile($tmp,'images');
+    my $gbs_tmp  = File::Spec->catfile($self->install_path->{htdocs},'tmp');
     my $htdocs = $self->install_path->{htdocs};
     chown $uid,-1,$htdocs;
     {
 	local $> = $uid;
 	symlink($images,$htdocs_i);  # so symlinkifowner match works!
+	symlink($tmp,$gbs_tmp);
     }
     chown $>,-1,$self->install_path->{htdocs};
 

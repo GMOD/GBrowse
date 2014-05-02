@@ -4,10 +4,10 @@ eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
 
-use constant DEFAULT_CONF   => '/etc/apache2/gbrowse/synteny';
+use constant DEFAULT_CONF   => '/etc/gbrowse2/synteny';
 
-our $CONF_DIR  = "$ENV{GBROWSE_CONF}/synteny" || DEFAULT_CONF;
-our $VERSION   = '$Id: gbrowse_details,v 1.7 2009-08-27 19:13:18 idavies Exp $';
+our $CONF_DIR  = $ENV{GBROWSE_CONF} ? "$ENV{GBROWSE_CONF}/synteny" : DEFAULT_CONF;
+our $VERSION   = 2.55;
 our $BIOGRAPHICS_VERSION   = 1.8;
 
 use strict;

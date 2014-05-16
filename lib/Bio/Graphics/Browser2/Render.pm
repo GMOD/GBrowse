@@ -1674,7 +1674,7 @@ sub write_auto {
         my $position
             = $f->sub_SeqFeature
             ? join( ',',
-            map { $_->start . '..' . $_->end } $f->sub_SeqFeature )
+            map { $_->strand >= 0 ? $_->start . '..' . $_->end : $_->end . '..' . $_->start } $f->sub_SeqFeature )
             : $f->start . '..' . $f->end;
         $name .= "($seenit{$name})" if $seenit{$name}++;
         $feature_file .= "\nreference=$reference\n";

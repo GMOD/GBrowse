@@ -771,6 +771,7 @@ sub state_cookie {
       -name    => $CGI::Session::NAME,
       -value   => $id,
       -path    => $path,
+      -httponly=> 1,
       -expires => '+'.$globals->time2sec($globals->remember_settings_time).'s',
       );
   return $cookie;
@@ -785,6 +786,7 @@ sub auth_cookie {
     my $remember = $self->session->remember_auth;
     my @args = (-name => 'authority',
 		-value=> $auth,
+		-httponly=>1,
 		-path => $path);
     if ($remember) {
 	push @args,(-expires => '+'.$globals->time2sec($globals->remember_settings_time).'s');

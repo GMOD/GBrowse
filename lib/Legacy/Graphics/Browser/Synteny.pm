@@ -744,6 +744,7 @@ sub print_page_top {
   my $cookie  = CGI::Cookie->new(-name    => $CGI::Session::NAME,
  			        -value   => $session->id,
 			        -path    => url(-absolute=>1),
+				-httponly => 1,
 			        -expires => '+1d');
 
   print_header(-cookie => [$cookie], -expires => 'now');

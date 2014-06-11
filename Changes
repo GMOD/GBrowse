@@ -1,3 +1,6 @@
+2.5?
+ * Fix cookies to carry the httponly flag, reducing chance of cross-site scripting exploits.
+
 2.56
  * Fix failure of feature summary message to appear on mousedown events.
 

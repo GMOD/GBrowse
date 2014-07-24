@@ -90,12 +90,18 @@ sub configure_form {
   my $form .= h3("Enter parameters below for alignment of sequences using a Client to a local BLAT Server:")
   .start_table({-border => 0})
   .TR([
+    td(b("Input sequence type:"), popup_menu(-align=>'center', -name=>$self->config_name('q'),-values=>['dna', 'rna']))
+  ])
+  .TR([
     td([b("Input Sequence To Align:"), textarea(-align=>'center', -name=>$self->config_name('sequence_to_blat'),-rows=>10,-cols=>80,-value=>$current_config->{'sequence_to_blat'})])
   ]);
 
   $form .= end_table();
   $form .= start_table({-border => 0}) . Tr(td(p())) . Tr(td(p())) . Tr(td(p())) . end_table();
   $form .= start_table({-border => 0})
+  .TR([
+    td(b("Minimum Percent Identity:"), textfield(-align=>'center', -name=>$self->config_name('minIdentity'),-size=>10, -value=>'90'))
+  ])
   .TR([
     td(b("Number of Hits to Return:"), textfield(-align=>'center', -name=>$self->config_name('hits'),-size=>10, -value=>$current_config->{'hits'}))
   ]);
@@ -108,15 +114,16 @@ sub find {
   my $self = shift;
   my ($i,@hit_starts,@block_sizes,@results);
   my $query = $self->config_param('sequence_to_blat');  
-  my $hits = $self->config_param('hits');
+  my $hits = int($self->config_param('hits'));
+  my $minIdentity = int($self->config_param('minIdentity'));
+  my $q = ($self->config_param('q') eq 'rna') ? 'rna' : 'dna';
   my ($i_f, $in_file) = tempfile();
   my ($o_f, $out_file) = tempfile();
 
-  my $query_type = check_seq($query) or return; # check for dna or protein (dna queries must be compared against dna databases only & vice versa)
   if ($query !~ /^\s*>/) { print $i_f ">segment\n";} # add FASTA defline if needed
   print $i_f $query; # print it to a temp file
 
-  my $error = `$blat_executable $host $port $twobit_dir -nohead -q=dna $in_file $out_file 2>&1 > /dev/null`;
+  my $error = `$blat_executable $host $port $twobit_dir -minIdentity=$minIdentity -nohead -q=$q $in_file $out_file 2>&1 > /dev/null`;
   die "$error" if $error;
 
   open (IN, "$out_file") || die "couldn't open $out_file $!\n";
@@ -194,14 +201,6 @@ sub find {
   unlink $in_file;
   unlink $out_file;
   return (\@results, @results ? '' : 'No alignments found');
-}
-
-sub check_seq{
-  my $query = shift;
-  # if any sequence contains a character that is an amino acid and not a 
-  # nucleotide, consider input to be "prot"
-  if ($query =~ /^(?!\s*>).*([DEFHIKLMPQRSVWY])/mi) {return "prot";}
-  else {return "dna";}
 }
 
 1;

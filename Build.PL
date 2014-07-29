@@ -34,6 +34,7 @@ my $build = GBrowseInstall->new(
         'Digest::SHA'         => 0,
         'Date::Parse'         => 0,
         'Term::ReadKey'       => 0,
+	'HTTP::Daemon'        => 0,
 	'parent'              => 0,
     },
     build_requires => {'Capture::Tiny'       => 0,},

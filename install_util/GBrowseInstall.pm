@@ -258,7 +258,7 @@ sub ACTION_config {
 	    my $top_level     = File::Spec->catfile($volume,$dir);
 
             if ($opts{$key} =~ m!(/usr/local/apache2*)!) {
-                #it looks like there is no apahce installed; let the user know
+                #it looks like there is no apache installed; let the user know
                 my $apachedir = $1;
                 if (!-d $apachedir and !$dire_warning) {
                     print STDERR <<END
@@ -375,6 +375,8 @@ sub apache_conf {
 	? "PerlSwitches ".join ' ',map{"-I$_"} split ':',$perl5lib
         : '';
 
+    my ($allow_all,$deny_all) = $self->auth_conf;
+
     return <<END;
 Alias        "/gbrowse2/i/" "$tmp/images/"
 Alias        "/gbrowse2"    "$dir"
@@ -383,8 +385,7 @@ ScriptAlias  "/gb2"      "$cgibin"
 <Directory "$dir">
   AllowOverride Options
   Options -Indexes -MultiViews +FollowSymLinks
-  Order allow,deny
-  Allow from all
+  $allow_all
 </Directory>
 
 <Directory "$dir/tutorial">
@@ -392,13 +393,11 @@ ScriptAlias  "/gb2"      "$cgibin"
 </Directory>
 
 <Directory "$tmp/images/">
-  Order allow,deny
-  Allow from all
+  $allow_all
 </Directory>
 
 <Directory "$databases">
-  Order allow,deny
-  Deny from all
+  $deny_all
 </Directory>
 
 <Directory "$cgibin">
@@ -913,6 +912,16 @@ Include "$dir/conf/apache_gbrowse.conf"
 END
 }
 
+sub auth_conf {
+    my $apache =  GBrowseGuessDirectories->apache
+	or die "Could not find apache executable on this system. Can't figure out version number for config file.";
+    my $version   = `$apache -v`;
+    my $new_auth  = $version =~ m!Apache/2\.4!;
+    my $allow_all = $new_auth ? "Require all granted" : "Order allow,deny\n  Allow from all";
+    my $deny_all  = $new_auth ? "Require all denied"  : "Order allow,deny\n  Deny from all";
+    return ($allow_all,$deny_all);
+}
+
 sub gbrowse_demo_conf {
     my $self = shift;
     my ($port,$dir) = @_;
@@ -920,6 +929,8 @@ sub gbrowse_demo_conf {
     my $inc  = "$blib/lib:$blib/arch";
     my $more = $self->added_to_INC;
     $inc    .= ":$more" if $more;
+
+    my ($allow_all,$deny_all) = $self->auth_conf;
 
     return <<END;
 NameVirtualHost *:$port
@@ -936,8 +947,7 @@ NameVirtualHost *:$port
 	<Directory $dir/htdocs/>
 		Options Indexes FollowSymLinks MultiViews
 		AllowOverride None
-		Order allow,deny
-		allow from all
+		$allow_all
 	</Directory>
 
 	<Directory "$dir/cgi-bin/">
@@ -948,8 +958,7 @@ NameVirtualHost *:$port
                 SetEnv GBROWSE_ROOT   /
 		AllowOverride None
 		Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
-		Order allow,deny
-		Allow from all
+		$allow_all
 	</Directory>
 </VirtualHost>
 END

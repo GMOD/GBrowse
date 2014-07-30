@@ -660,6 +660,7 @@ sample_data/ideograms/human_cytobands.gff
 sample_data/ideograms/mouse_cytobands.gff
 sample_data/ideograms/rat_cytobands.gff
 sample_data/pop_demo/pop_demo.gff3
+sample_data/yeast_chr1+2/dummy.fa
 sample_data/yeast_chr1+2/yeast_chr1+2.gff3
 sample_data/yeast_scaffolds/chr1.fa
 sample_data/yeast_scaffolds/chr2.fa
@@ -683,9 +684,13 @@ t/testdata/conf/languages/POSIX.pm
 t/testdata/conf/templates/volvox_final.conf
 t/testdata/conf/templates/yeast_chr1.conf
 t/testdata/conf/WHERE_ARE_THE_CONF_FILES.txt
+t/testdata/data/volvox/dummy.fa
 t/testdata/data/volvox/volvox.gff
+t/testdata/data/volvox2/dummy.fa
 t/testdata/data/volvox2/volvox2.gff
+t/testdata/data/volvox3/dummy.fa
 t/testdata/data/volvox3/volvox3.gff
+t/testdata/data/volvox4/dummy.fa
 t/testdata/data/volvox4/volvox4.gff
 t/testdata/phylo_align/phyloalign.fa
 t/testdata/phylo_align/readme.txt
@@ -693,5 +698,3 @@ t/testdata/phylo_align/species.tre
 t/testdata/phylo_align/volvox_alignment.conf
 t/testdata/phylo_align/volvox_phyloalign.gff
 t/testdata/TemplateCopy.pm
-META.yml
-META.json

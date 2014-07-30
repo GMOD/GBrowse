@@ -190,10 +190,11 @@ sub apachemodules {
 # to httpd.conf without modifying the main file
 sub apache_includes {
     my $self = shift;
-    return '/etc/apache2/other'  if -d '/etc/apache2/other'; # why cant macos do things like everybody else?
-    return '/etc/apache2/conf.d' if -d '/etc/apache2/conf.d';
-    return '/etc/apache/conf.d'  if -d '/etc/apache/conf.d';
-    return '/etc/httpd/conf.d'   if -d '/etc/httpd/conf.d';
+    return '/etc/apache2/other'          if -d '/etc/apache2/other'; # why cant macos do things like everybody else?
+    return '/etc/apache2/conf.d'         if -d '/etc/apache2/conf.d';
+    return '/etc/apache2/conf-available' if -d '/etc/apache2/conf-available';
+    return '/etc/apache/conf.d'          if -d '/etc/apache/conf.d';
+    return '/etc/httpd/conf.d'           if -d '/etc/httpd/conf.d';
     return;
 }
 

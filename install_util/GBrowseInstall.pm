@@ -74,6 +74,7 @@ sub ACTION_demo {
 	    $self->copy_if_modified($_ => $dir);
 	} elsif (m!cgi-bin!) {
 	    $self->copy_if_modified(from => $_,to_dir => "$dir/cgi-bin/gb2",flatten=>1);
+	    chmod 0755,$_ foreach (glob "$dir/cgi-bin/gb2/*");
 	} elsif (m!^sample_data!) {
 	    chdir $self->base_dir();
 	    my ($subdir) = m!^sample_data/([^/]+)/!;
@@ -852,11 +853,12 @@ sub httpd_conf {
 
     my $user    = $>;
     my ($group) = $) =~ /^(\d+)/;
+    my $lockfile  = $self->apache_version =~ /2\.4/ ? '' : "LockFile             \"$dir/locks/accept.lock\"";
 
     return <<END;
 ServerName           "localhost"
 ServerRoot           "$dir/conf"
-LockFile             "$dir/locks/accept.lock"
+$lockfile
 PidFile              "$dir/logs/apache2.pid"
 ErrorLog             "$dir/logs/error.log"
 LogFormat            "%h %l %u %t \\"%r\\" %>s %b" common
@@ -913,13 +915,19 @@ END
 }
 
 sub auth_conf {
-    my $apache =  GBrowseGuessDirectories->apache
-	or die "Could not find apache executable on this system. Can't figure out version number for config file.";
-    my $version   = `$apache -v`;
-    my $new_auth  = $version =~ m!Apache/2\.4!;
+    my $self = shift;
+    my $new_auth  = $self->apache_version =~ /2\.4/;
     my $allow_all = $new_auth ? "Require all granted" : "Order allow,deny\n  Allow from all";
     my $deny_all  = $new_auth ? "Require all denied"  : "Order allow,deny\n  Deny from all";
     return ($allow_all,$deny_all);
+}
+
+sub apache_version {
+    my $apache =  GBrowseGuessDirectories->apache
+	or die "Could not find apache executable on this system. Can't figure out version number for config file.";
+    my $version   = `$apache -v`;
+    my ($v)  = $version =~ m!Apache/(\S+)!;
+    return $v;
 }
 
 sub gbrowse_demo_conf {
@@ -932,19 +940,38 @@ sub gbrowse_demo_conf {
 
     my ($allow_all,$deny_all) = $self->auth_conf;
 
+    my $additional_config = '';
+    my $namevirtualhost   = "NameVirtualHost *:$port";
+
+    if ($self->apache_version =~ /2\.4/) {
+	$namevirtualhost   = '';
+	$additional_config = <<END;
+LoadModule authz_core_module /usr/lib/apache2/modules/mod_authz_core.so
+LoadModule mpm_prefork_module /usr/lib/apache2/modules/mod_mpm_prefork.so
+<IfModule mpm_prefork_module>
+	StartServers			 5
+	MinSpareServers		  5
+	MaxSpareServers		 10
+	MaxRequestWorkers	  150
+	MaxConnectionsPerChild   0
+</IfModule>
+END
+    }
+
     return <<END;
-NameVirtualHost *:$port
+$namevirtualhost
+$additional_config
 <VirtualHost *:$port>
 	ServerAdmin webmaster\@localhost
 	Alias        "/i/"       "$dir/tmp/images/"
 	ScriptAlias  "/cgi-bin/" "$dir/cgi-bin/"
 	
-	DocumentRoot $dir/htdocs/
+	DocumentRoot "$dir/htdocs/"
 	<Directory />
 		Options FollowSymLinks
 		AllowOverride None
 	</Directory>
-	<Directory $dir/htdocs/>
+	<Directory "$dir/htdocs/">
 		Options Indexes FollowSymLinks MultiViews
 		AllowOverride None
 		$allow_all

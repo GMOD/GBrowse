@@ -81,6 +81,7 @@ sub apache_root {
     }
   } else {
       for (
+	  '/etc/apache2',
 	  '/usr/local/apache2',  # standard apache2 install
 	  '/usr/local/apache',   # standard apache install
 	  '/opt/apache2',

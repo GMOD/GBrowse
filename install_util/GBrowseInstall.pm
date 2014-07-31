@@ -533,6 +533,12 @@ sub ACTION_install {
 	system 'sudo','chmod','go-rwx',File::Spec->catfile($install_path,'default','gbrowse-aws-balancer');
     }
 
+    # enable CGI scripts on 2.4 systems
+    if ($self->apache_version =~ /2\.4/) {
+	print STDERR "Enabling CGI scripts on your Apache2 system...\n";
+	system 'sudo','a2enmod','cgi';
+    }
+
     if (Module::Build->y_n(
 	    "It is recommended that you restart Apache. Shall I try this for you?",'y'
 	)) {

@@ -2604,7 +2604,7 @@ sub display_citation {
         $key .= " (at >$lim bp)";
    }
 
-   my $citation = div({-class => 'searchbody', -style => 'padding:10px;width:70%'}, h4($key), $cit_txt);
+   my $citation = div({-class => 'searchbody', -style => 'padding:10px;width:70%'}, h4(escape($key)), $cit_txt);
      
  
    $return_html

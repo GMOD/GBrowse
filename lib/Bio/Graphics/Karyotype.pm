@@ -307,7 +307,6 @@ sub generate_panels {
 			      ? 'generic'
 			      : 'diamond';
 		      },
-		      -glyph => 'generic',
 		      -maxdepth => 0,
 		      -height  => 6,
 		      -bgcolor => 'red',

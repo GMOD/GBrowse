@@ -102,8 +102,9 @@ use vars qw/@ISA $PNG $CALL/;
 
 # Arg, modperl
 END {
-	
-  CGI::Delete_all();
+  if ($ENV{'MOD_PERL'}) {
+    CGI::Delete_all();
+  }
 }
 
 

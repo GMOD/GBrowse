@@ -1,9 +1,9 @@
 div.hilite {
     position:     absolute;
-    background:   lightblue;
+    background:   blue;
     cursor:       pointer;
     filter:       alpha(opacity=50);
-    opacity:      0.5;
+    opacity:      0.7;
 }
 div.nohilite {
     position:   absolute;
@@ -11,9 +11,9 @@ div.nohilite {
 }
 span.hilite {
     position:     absolute;
-    background:   lightblue;
+    background:   blue;
     filter:       alpha(opacity=50);
-    opacity:      0.5;
+    opacity:      0.7;
 }
 span.nohilite {
     position:   absolute;

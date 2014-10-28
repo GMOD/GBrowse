@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
 
 use strict;
 use CGI;
@@ -23,12 +23,17 @@ if ($fcgi) {
 
     warn "[$$] FastCGI initializing and loading default data sources...\n";
     my $globals = Bio::Graphics::Browser2->open_globals;
-    foreach ($globals->data_sources) {
-	warn "[$$] Loading $_\n";
-	my $source = $globals->create_data_source($_);
-	$source->open_database();  # cache default database in memory
+    if($globals->preload_datasources) {
+      foreach ($globals->data_sources) {
+        warn "[$$] Loading $_\n";
+        my $source = $globals->create_data_source($_);
+        $source->open_database();  # cache default database in memory
+      }
     }
-    
+    else {
+      warn "[$$] Preload disabled";
+    }
+
     while (!$FCGI_DONE) {
 	my $status = $fcgi->Accept;
 	next unless $status >= 0;

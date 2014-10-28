@@ -59,10 +59,15 @@ if ($fcgi) {
 
     warn "[$$] FastCGI initializing and loading default data sources...\n";
     my $globals = Bio::Graphics::Browser2->open_globals;
-    foreach ($globals->data_sources) {
-	warn "[$$] Loading $_\n";
-	my $source = $globals->create_data_source($_);
-	$source->open_database();  # cache default database in memory
+    if($globals->preload_datasources) {
+      foreach ($globals->data_sources) {
+        warn "[$$] Loading $_\n";
+        my $source = $globals->create_data_source($_);
+        $source->open_database();  # cache default database in memory
+      }
+    }
+    else {
+      warn "[$$] Preload disabled";
     }
 
     while (!$FCGI_DONE) {
@@ -78,7 +83,7 @@ if ($fcgi) {
 
 else {
     my $globals = Bio::Graphics::Browser2->open_globals;
-    GBrowse_img->new($globals)->run();    
+    GBrowse_img->new($globals)->run();
 }
 
 
@@ -116,10 +121,10 @@ sub run {
 	return;
     }
 
-    $render->set_source() && exit;  # may cause a redirect and exit 
+    $render->set_source() && exit;  # may cause a redirect and exit
     $render->init();
 
-    if ($render->data_source->must_authenticate 
+    if ($render->data_source->must_authenticate
 	&& !$self->session->private) {
 	my $base = $render->globals->gbrowse_url;
 	print $self->header();
@@ -230,11 +235,11 @@ sub render_image {
     $format = 'GD::SVG' if $format eq 'SVG';
     $format      = 'GD' if $embed;
 
-    my ($img_data,$map) = $render->region->feature_count > 1 
+    my ($img_data,$map) = $render->region->feature_count > 1
                                  ? $self->render_multiple($renderer,$format,$flip,$embed)
 	                         : $self->render_tracks  ($renderer,$format,$flip,$embed);
 
- 
+
     my $seg   = $render->segment;
     my $fname = $seg ? $seg->seq_id.':'.$seg->start.'..'.$seg->end : "NA";
 
@@ -257,9 +262,9 @@ sub render_image {
 
     elsif ($format eq 'GD') {
 	print $self->header(-type=>'image/png',
-			    -content_disposition => "filename=$fname.png");	
+			    -content_disposition => "filename=$fname.png");
 	print $img_data->png;
-    } 
+    }
     elsif ($format eq 'GD::SVG' && $convert_to_pdf) {
 	print $self->header(-type=>'application/pdf',
 			    -content_disposition => "filename=$fname.pdf");
@@ -280,8 +285,8 @@ sub render_image {
 	print $self->header(-type => 'application/svg+xml',
 			    -content_disposition => "filename=$fname.svg");
 	print $img_data;
-    } 
-    else { 
+    }
+    else {
 	print $self->header('text/plain');
 	print "unknown format $format\n";
     }
@@ -320,7 +325,7 @@ sub render_tracks {
     my $h_callback = make_hilite_callback(param('h_feat'));
 
     # If no tracks specified, we want to see all tracks with this feature
-    if (!@track_types) { @track_types = @labels; } 
+    if (!@track_types) { @track_types = @labels; }
     unshift @track_types,'_scale';
 
     my $result   = $renderer->render_track_images(
@@ -336,7 +341,7 @@ sub render_tracks {
 						      -suppress_key     => 0,
 						      }
 						  );
-    
+
     warn "returned labels = ",join ',',%$result if DEBUG;
 
     # Previously - @labels (caused drawing more tracks than asked for)
@@ -374,7 +379,7 @@ sub calculate_composite_bounds {
 	    $width    += ($g->getBounds)[0];
 	}
     }
-    
+
     return ($width,$height);
 }
 
@@ -383,12 +388,12 @@ sub consolidate_images {
     my ($gds,$width,$height,$orientation,$labels) = @_;
     $orientation ||= 'vertical';
 
-    ($width,$height) = $self->calculate_composite_bounds($gds,$orientation) 
+    ($width,$height) = $self->calculate_composite_bounds($gds,$orientation)
 	unless defined $width && defined $height;
 
     warn "consolidating ",scalar @$gds," GD objects" if DEBUG;
 
-    return $gds->[0]->isa('GD::SVG::Image') 
+    return $gds->[0]->isa('GD::SVG::Image')
 	                         ? $self->_consolidate_svg($width,$height,$gds,$orientation,$labels)
                                  : $self->_consolidate_gd ($width,$height,$gds,$orientation,$labels);
 }
@@ -507,7 +512,7 @@ sub _consolidate_svg {
 	    $offset += $current_height;
 	}
 	$svg   .= qq(</svg>\n);
- 
+
 
    } else {
 	my $offset = 0;
@@ -535,8 +540,8 @@ sub _consolidate_svg {
 
     # munge fonts slightly for systems that don't have Helvetica installed
     $svg    =~ s/font="Helvetica"/font="san-serif"/gi;
-    $svg    =~ s/font-size="11"/font-size="9"/gi;  
-    $svg    =~ s/font-size="13"/font-size="12"/gi;  
+    $svg    =~ s/font-size="11"/font-size="9"/gi;
+    $svg    =~ s/font-size="13"/font-size="12"/gi;
     return $svg;
 }
 
@@ -604,14 +609,14 @@ sub usage {
   <i>Will return this document:</i>
   ## Feature types for source c_elegans
   LOCI:overview	Landmarks	default
-  RNAZ	RNAz non-coding RNA genes	
+  RNAZ	RNAz non-coding RNA genes
   CG	Gene Models	default
-  CDS	Coding Segments	
-  RNA	Predicted non-coding RNAs	
-  HISTORICAL	Obsolete gene models	
-  GENEFINDER	GeneFinder Predictions	
-  TWINSCAN	Twinscan Predictions	
-  GENEMARKHMM	GeneMarkHMM Predictions	
+  CDS	Coding Segments
+  RNA	Predicted non-coding RNAs
+  HISTORICAL	Obsolete gene models
+  GENEFINDER	GeneFinder Predictions
+  TWINSCAN	Twinscan Predictions
+  GENEMARKHMM	GeneMarkHMM Predictions
   mSPLICER_TRANSCRIPT	mSplicer
   ...
 </blockquote>
@@ -773,7 +778,7 @@ lengths.
       style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
       <p>
   <dt><b>keystyle</b> (Alias: <b>k</b>)
-  <dd>Controls the positioning of the track key. One of "right", "left", "between" (default) 
+  <dd>Controls the positioning of the track key. One of "right", "left", "between" (default)
       or "bottom"
       <p>
   <dt><b>overview</b>
@@ -833,7 +838,7 @@ lengths.
        <blockquote></pre>
         h_region=Chr3:200000..250000@wheat
         </pre></blockquote>
-        You may omit "@color", in which case the highlighted region 
+        You may omit "@color", in which case the highlighted region
         will default to
         lightgrey. You can specify multiple h_region arguments in order to
         highlight several regions with distinct colors.

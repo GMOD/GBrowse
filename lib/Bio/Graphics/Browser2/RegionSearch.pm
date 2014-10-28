@@ -315,6 +315,7 @@ sub search_features {
 		  lc $_->seq_id eq $state->{name}) # this hack gives special privileges to matches to seq_ids
 		 ? 'region' 
 		 : $_->primary_tag),
+		 $_->display_name,
 		 $_->seq_id,
 		 $_->start,
 		 $_->end,

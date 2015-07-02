@@ -147,12 +147,16 @@ sub request_panels {
   my $do_local  = @$local_labels;
   my $do_remote = @$remote_labels;
 
+  if (!($do_local || $do_remote)) {
+      warn "[$$] No uncached requests to process..." if DEBUG;
+      return $data_destinations;
+  }
   # In the case of a deferred request we fork.
   # Parent returns the list of requests.
   # Child processes the requests in the background.
   # If both local and remote requests are needed, then we
   # fork a second time and process them in parallel.
-  if ($args->{deferred}) {
+  elsif ($args->{deferred}) {
 
       # precache local databases into cache
       my $length = $self->segment_length;

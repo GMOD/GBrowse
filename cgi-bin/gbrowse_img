@@ -227,8 +227,7 @@ sub render_image {
 
 
     my $convert_to_pdf;
-    if ($format eq 'PDF' && `which inkscape`) {
-	$convert_to_pdf++;
+    if ($format eq 'PDF' && ($convert_to_pdf = `which svg2pdf` || `which inkscape`)) {
 	$format = 'GD::SVG';
     }
 
@@ -274,8 +273,11 @@ sub render_image {
 
 	print $infh $img_data or die "$in: $!";
 	close $infh;
-
-	system "inkscape -z --without-gui --export-pdf=$out $in 3<&1 1>&2 2>&3 | grep -v GDK_IS_DISPLAY";
+    if ($convert_to_pdf =~ /svg2pdf$/) {
+       system "svg2pdf $in $out 3<&1 1>&2 2>&3";
+    } else {
+	    system "inkscape -z --without-gui --export-pdf=$out $in 3<&1 1>&2 2>&3 | grep -v GDK_IS_DISPLAY";
+    }
 	open (my $fh,'<',$out) or die "$out: $!";
 	while (<$fh>) {print $_}
 	close $fh;

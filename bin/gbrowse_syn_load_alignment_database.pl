@@ -27,10 +27,16 @@ GetOptions(
            'create'      => \$create
            );
 
-my $usage = "Usage: load_alignment_database.pl -u username -p password -d database [-v, -c] file1, file2 ... filen\n\n";
+#my $usage = "Usage: load_alignment_database.pl -u username -p password -d database [-v, -c] file1, file2 ... filen\n\n";
+my $usage = 
+"Usage:
+  [MySQL]
+     load_alignment_database.pl -u username -p password -d database [-v, -c] file1, file2 ... filen
+  [SQLite]
+     load_alignment_database.pl -d dbi:SQLite:dbname=/path/to/db [-v, -c] file1, file2 ... filen\n\n";
 
 $dsn     || die "Error: no database name\n$usage";
-$user    || die "Error: no user name\n$usage";
+$user || $dsn =~ /SQLite/ || die "Error: no user name\n$usage";
 
 if ($create && $verbose) {
   print STDERR "\nNote: a new database $dsn will be initialized\n EXISTING DATA WILL BE DELETED\n\n";
@@ -62,46 +68,53 @@ END
 if ($create) {
   $dbh->do('drop table if exists alignments') or die DBI->errstr;
   $dbh->do('drop table if exists map') or die DBI->errstr;
-
+  # In SQLite, integer primary keys autoincrement when inserting NULL
+  my $autoincrement = ($dsn =~ /SQLite/) ? "" : "not null auto_increment";
+  my $strand_type   = ($dsn =~ /SQLite/) ? "text" : "enum('+','-')";
   $dbh->do(<<END) or die DBI->errstr;
   create table alignments (
-			 hit_id    int not null auto_increment,
+			 hit_id    int $autoincrement,
 			 hit_name  varchar(100) not null,
 			 src1      varchar(100) not null,
 			 ref1      varchar(100) not null,
 			 start1    int not null,
 			 end1      int not null,
-			 strand1   enum('+','-') not null,
+			 strand1   $strand_type not null,
 			 seq1      mediumtext,
 			 bin       double(20,6) not null,
 			 src2      varchar(100) not null,
 			 ref2      varchar(100) not null,
 			 start2    int not null,
 			 end2      int not null,
-			 strand2   enum('+','-') not null,
+			 strand2   $strand_type not null,
 			 seq2      mediumtext,
 			 primary key(hit_id),
-			 index(src1,ref1,bin,start1,end1)
-			 )
+			 check(strand1 in ('+', '-')), -- parsed and ignored by MySQL
+			 check(strand2 in ('+', '-'))  -- parsed and ignored by MySQL
+			 );
 END
 ;
+  $dbh->do('create index alignments_idx on alignments (src1,ref1,bin,start1,end1)') or die DBI->errstr;
 
   $dbh->do(<<END) or die DBI->errstr;
   create table map (
-		  map_id int not null auto_increment,
+		  map_id int $autoincrement,
 		  hit_name  varchar(100) not null,
                   src1 varchar(100),
 		  pos1 int not null,
 		  pos2 int not null,
-		  primary key(map_id),
-		  index(hit_name)
-		  )
+		  primary key(map_id)
+		  );
 END
 ;
+  $dbh->do('create index map_idx on map (hit_name);') or die DBI->errstr;
 }
 
-$dbh->do('alter table alignments disable keys');
-$dbh->do('alter table map');
+if ($dsn =~ /SQLite/) {
+  $dbh->do("PRAGMA synchronous = OFF;"); # makes writes much faster
+} else {
+  $dbh->do('alter table alignments disable keys');
+}
 my $sth=$dbh->prepare(<<END) or die $dbh->errstr;
 insert into alignments (hit_name,src1,ref1,start1,end1,strand1,seq1,bin,src2,ref2,start2,end2,strand2,seq2) 
 values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -164,7 +177,7 @@ while (<>) {
 }
 
 
-$dbh->do('alter table alignments enable keys');
+$dsn !~ /SQLite/ && $dbh->do('alter table alignments enable keys');
 
 print "\nDone\n";
 

@@ -952,7 +952,7 @@ sub db_settings {
 
   # Do environment substitutions in the args. Assume that the environment is safe.
   foreach (@argv) {
-      s/\$ENV{(\w+)}/$ENV{$1}||''/ge;
+      s/\$ENV\{(\w+)\}/$ENV{$1}||''/ge;
       s/\$HTDOCS/Bio::Graphics::Browser2->htdocs_base/ge;
       s/\$DB/Bio::Graphics::Browser2->db_base/ge;
       s/\$CONF/Bio::Graphics::Browser2->config_base/ge;

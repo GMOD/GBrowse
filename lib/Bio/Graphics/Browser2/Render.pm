@@ -66,7 +66,7 @@ sub new {
     my $globals = shift;
     $requested_id = param('id')        || CGI::cookie('gbrowse_sess');
     $authority    = param('authority') || CGI::cookie('authority');
-    my $shared_ok = Bio::Graphics::Browser2::Action->shared_lock_ok(param('action'));
+    my $shared_ok = Bio::Graphics::Browser2::Action->shared_lock_ok(scalar param('action'));
     $session      = $globals->authorized_session($requested_id, 
 						 $authority,
 						 $shared_ok);
@@ -1234,7 +1234,7 @@ sub get_search_object {
 	  state  => $self->state,
 	});
     $search->init_databases(
-	param('dbid') ? [param('dbid')]
+	param('dbid') ? [multi_param('dbid')]
 	:()
 	);
     return $self->{searchobj} = $search;
@@ -2356,7 +2356,7 @@ sub update_options {
                grid flip width region_size show_tooltips cache
                );
 
-  if (my @features = shellwords(param('h_feat'))) {
+  if (my @features = shellwords(multi_param('h_feat'))) {
       $state->{h_feat} = {};
       for my $hilight (@features) {
 	  last if $hilight eq '_clear_';
@@ -2365,7 +2365,7 @@ sub update_options {
       }
   }
 
-  if (my @regions = shellwords(param('h_region'))) {
+  if (my @regions = shellwords(multi_param('h_region'))) {
       $state->{h_region} = [];
       foreach (@regions) {
 	  last if $_ eq '_clear_';
@@ -2375,7 +2375,7 @@ sub update_options {
   }
 
   # Process the magic "q" parameter, which overrides everything else.
-  if (my @q = param('q')) {
+  if (my @q = multi_param('q')) {
     delete $state->{$_} foreach qw(name ref h_feat h_region);
     $state->{q} = [map {split /[+-]/} @q];
   }
@@ -2392,24 +2392,24 @@ sub update_tracks {
   my $self  = shift;
   my $state = shift;
 
-  if (my @add = param('add')) {
-      my @style = param('style');
+  if (my @add = multi_param('add')) {
+      my @style = multi_param('style');
       $self->handle_quickie(\@add,\@style);
   }
 
   # selected tracks can be set by the 'l', 'label' or 't' parameter
   # the preferred parameter is 'l', because it implements correct
   # semantics for the label separator
-  if (my @l = param('l')) {
+  if (my @l = multi_param('l')) {
       $self->set_tracks($self->split_labels_correctly(@l));
   }
-  elsif (@l = param('label')) {
+  elsif (@l = multi_param('label')) {
       $self->set_tracks($self->split_labels(@l));
   } #... the 't' parameter
-  elsif (my @t = param('t')) {
+  elsif (my @t = multi_param('t')) {
       $self->set_tracks($self->split_labels(@t));
   } #... the 'ds' (data source) or the 'ts' (track source) parameter
-  elsif ((my @ds = shellwords param('ds')) || (my @ts = shellwords param('ts'))) {
+  elsif ((my @ds = shellwords multi_param('ds')) || (my @ts = shellwords multi_param('ts'))) {
       my @main_l = @ds ? $self->data_source->data_source_to_label(@ds) : $self->data_source->track_source_to_label(@ts);
       if (!@ds && @ts) {
        my %ds = ();
@@ -2439,11 +2439,11 @@ sub update_tracks {
       $self->set_tracks(@main_l);
   }
   
-  if (my @selected = $self->split_labels_correctly(param('enable'))) {
+  if (my @selected = $self->split_labels_correctly(multi_param('enable'))) {
       $self->add_track_to_state($_) foreach @selected;
   }
   
-  if (my @selected = $self->split_labels_correctly(param('disable'))) {
+  if (my @selected = $self->split_labels_correctly(multi_param('disable'))) {
       $self->remove_track_from_state($_) foreach @selected;
   }
   

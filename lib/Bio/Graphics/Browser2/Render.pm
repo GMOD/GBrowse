@@ -255,6 +255,8 @@ sub run {
       $source->set_username(undef);
   }
 
+  warn "username = ",$session->username;
+
   if ($source->must_authenticate) {
       if ($session->private && 
 	  $self->user_authorized_for_source($session->username))

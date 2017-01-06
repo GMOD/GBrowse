@@ -3,7 +3,7 @@ package Bio::Graphics::Browser2::Render::Slave;
 use strict;
 use HTTP::Daemon;
 use Storable qw(nfreeze thaw lock_store lock_retrieve);
-use CGI qw(header param escape unescape);
+use CGI qw(header param escape unescape multi_param);
 use IO::File;
 use IO::String;
 use File::Spec;
@@ -268,15 +268,15 @@ sub process_request {
 
     $self->Debug("process_request(): read ",$r->content_length," bytes");
     $self->Bench('setting environment');
-    $self->setup_environment(param('env'));
+    $self->setup_environment(multi_param('env'));
     my $operation = param('operation') || 'invalid';
 
     $self->Debug("process_request(): operation = $operation");
 
     # make sure databases are already open in parent process
     $self->Bench('thawing parameters');
-    my $tracks   = thaw param('tracks')     if param('tracks');
-    my $settings = thaw param('settings')   if param('settings');
+    my $tracks   = thaw multi_param('tracks')     if multi_param('tracks');
+    my $settings = thaw multi_param('settings')   if multi_param('settings');
     my $dsn      = param('datasource');
     my $d_name   = param('data_name');
     my $d_mtime  = param('data_mtime');
@@ -401,8 +401,8 @@ sub render_tracks {
     my $self = shift;
     my ($tracks,$datasource,$settings) = @_;
 
-    my $language	= thaw param('language');
-    my $panel_args      = thaw param('panel_args');
+    my $language	= thaw multi_param('language');
+    my $panel_args      = thaw multi_param('panel_args');
 
     $self->do_init($datasource);
     $self->adjust_conf($datasource);
@@ -498,7 +498,7 @@ sub search_features {
     my $self = shift;
     my ($tracks,$datasource,$settings) = @_;
 
-    my $searchargs      = thaw param('searchargs');
+    my $searchargs      = thaw multi_param('searchargs');
 
     # initialize a region search object
     my $search = Bio::Graphics::Browser2::RegionSearch->new(

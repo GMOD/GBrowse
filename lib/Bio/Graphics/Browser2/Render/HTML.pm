@@ -2551,6 +2551,7 @@ sub can_generate_pdf {
     return $CAN_PDF = $source->global_setting('generate pdf') 
 	if defined $source->global_setting('generate pdf');
 
+    return $CAN_PDF=1 if `which svg2pdf`;
     return $CAN_PDF=0 unless `which inkscape`;
     # see whether we have the needed .inkscape and .gnome2 directories
     my $home = (getpwuid($<))[7];

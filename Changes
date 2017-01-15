@@ -1,9 +1,18 @@
-2.5?
- * Fix cookies to carry the httponly flag, reducing chance of cross-site scripting exploits.
- * Fix cross-site scripting vulnerability in generation of citation text.
-
 2.56
+ * SECURITY FIXES:
+    - Prevent ability of an attacker to delete other users' accounts
+    - Fix cookies to carry the httponly flag, reducing chance of cross-site
+      scripting exploits.
+    - Fix cross-site scripting vulnerability in generation of citation text.
  * Fix failure of feature summary message to appear on mousedown events.
+ * If svg2pdf executable is in search path, use this in preference to inkscape
+   (thanks to Nathan Weeks)
+ * Fix left-align of citation text in "?" menu (thanks to Nathan Weeks)
+ * Avoid accumulating many .inverted files in the bio_graphics_ff_UUID cache
+   (thanks to Nathan Weeks).
+ * Fix summary mode for features with no source tag (thanks to Nathan Weeks).
+ * Don't spawn child processes if there are no uncached requests (thanks to
+   Nathan Weeks yet again!)
 
 2.55
  * Better detection and handling of render slaves that have gone now. If all slaves are

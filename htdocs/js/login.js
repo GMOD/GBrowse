@@ -275,6 +275,8 @@ function login_page_change(page) {
         $('loginTitle').innerHTML = Controller.translate('REGISTER');
         $('loginSubmit').value    = Controller.translate('REGISTER');
 	login_show_rows('loginNorm',new Array('loginERow','loginFRow','loginP2Row'));
+	$('loginSubmit').show();
+	$('loginCancel').show();
 	// $('loginERow').show();
 	// $('loginFRow').show();
 	// $('loginP2Row').show();
@@ -508,6 +510,7 @@ function add_user() {
 	    } else if (results == 'Success') {
 		$('loginWarning').innerHTML = Controller.translate('CONFIRMATION_EMAIL_SENT');
                 UsingOpenID = false;
+		$('loginCancel').hide();
                 login_user(username);
             } else {
                 $('loginWarning').innerHTML = results;
@@ -569,10 +572,11 @@ function edit_confirmation(resend) {
 		    $('loginWarning').innerHTML = Controller.translate('CANNOT_CONNECT_MAIL');
 		} else {
 		    $('loginWarning').style.color = 'blue';
-		    $('loginWarning').innerHTML   = Controller.translate('CONFIRMATION_EMAIL_SENT');
+		    $('loginWarning').innerHTML = transport.responseText;
 		}
-		$('loginURow').hide(); $('loginERow').hide();  $('loginBreak').hide();
-		$('loginPRow').hide(); $('loginP2Row').hide(); $('loginSubmit').hide();
+		$('loginURow').hide();    $('loginERow').hide();  $('loginBreak').hide();
+	        $('loginPRow').hide();    $('loginP2Row').hide(); $('loginSubmit').hide();
+	        $('loginOptions').hide(); $('loginOpenID').hide();
 		$('loginFRow').hide()
 		login_loading(false);
 		$('loginWarning').show();

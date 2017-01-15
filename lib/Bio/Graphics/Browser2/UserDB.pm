@@ -755,11 +755,15 @@ sub do_edit_confirmation {
   my $select = $userdb->prepare(<<END );
 SELECT b.username, a.userid, b.sessionid, a.gecos, a.cnfrm_code
     FROM users as a,session as b 
-    WHERE a.email=? AND a.userid=b.userid
+    WHERE a.email=? AND a.userid=b.userid AND a.confirmed=0
 END
   $select->execute($email)
     or return $self->dbi_err;
   my ($username,$userid,$sessionid,$fullname, $confirm) = $select->fetchrow_array();
+
+  unless ($username) {
+      return $self->string_result("Invalid username $username");
+  }
 
   if ($option == 0) { # delete account!
       eval {

@@ -174,7 +174,7 @@ sub ACTION_update_sections {
     my $q       = shift;
 
     my $render = $self->render;
-    my @section_names = $q->param('section_names');
+    my @section_names = $q->multi_param('section_names');
     my $keyword = $q->param('keyword');
     my $offset = $q->param('offset');
 
@@ -282,7 +282,7 @@ sub ACTION_retrieve_multiple {
     $render->init_plugins();
 
     my %track_html;
-    my @track_ids = $q->param('track_ids');
+    my @track_ids = $q->multi_param('track_ids');
 
     foreach my $track_id (@track_ids) {
 	my $track_key = $q->param( 'tk_' . $track_id ) or next;
@@ -303,7 +303,7 @@ sub ACTION_add_tracks {
     my $q    = shift;
 
     my $render = $self->render;
-    my @track_names = $q->param('track_names');
+    my @track_names = $q->multi_param('track_names');
 
     $render->init_database();
     $render->init_plugins();
@@ -622,8 +622,8 @@ sub ACTION_show_hide_section {
     my $self = shift;
     my $q    = shift;
 
-    my @show = $q->param('show');
-    my @hide = $q->param('hide');
+    my @show = $q->multi_param('show');
+    my @hide = $q->multi_param('hide');
 
     my $settings = $self->state;
     $settings->{section_visible}{$_} = 0 foreach @hide;
@@ -636,8 +636,8 @@ sub ACTION_open_collapse_track {
     my $self = shift;
     my $q    = shift;
 
-    my @open     = $q->param('open');
-    my @collapse = $q->param('collapse');
+    my @open     = $q->multi_param('open');
+    my @collapse = $q->multi_param('collapse');
 
     my $settings = $self->state;
     $settings->{track_collapsed}{$_} = 1 foreach @collapse;
@@ -653,7 +653,7 @@ sub ACTION_change_track_order {
     warn "change_track_order()" if DEBUG;
 
     my $settings = $self->state;
-    my @labels   = $q->param('label[]') or return;
+    my @labels   = $q->multi_param('label[]') or return;
     foreach (@labels) {
 	s/%5F/_/g;
 	s/:(overview|region|detail)$// if m/^(plugin|file|http|ftp)/;
@@ -730,10 +730,10 @@ sub ACTION_autocomplete_user_search {
 sub ACTION_get_feature_info {
     my $self = shift;
     my $q    = shift;
-    defined(my $etype = CGI::unescape($q->param('event_type'))) or croak;
-    defined(my $track = CGI::unescape($q->param('track')))      or croak;
-    defined(my $dbid  = CGI::unescape($q->param('dbid')))       or croak;
-    defined(my $fid   = CGI::unescape($q->param('feature_id'))) or croak;
+    defined(my $etype = CGI::unescape(scalar $q->param('event_type'))) or croak;
+    defined(my $track = CGI::unescape(scalar $q->param('track')))      or croak;
+    defined(my $dbid  = CGI::unescape(scalar $q->param('dbid')))       or croak;
+    defined(my $fid   = CGI::unescape(scalar $q->param('feature_id'))) or croak;
     $fid                 or  return (204,'text/plain','nothing at all');
     ($dbid =~ /^remote/ && $etype eq 'mouseover')
                         &&  return (204,'text/plain','nothing at all');

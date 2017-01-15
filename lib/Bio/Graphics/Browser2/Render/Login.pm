@@ -276,7 +276,7 @@ sub run_asynchronous_request {
     my $userdb = $self->renderer->userdb;
     $userdb or return (500,'text/plain',"Couldn't get userdb object");
 
-    my %actions  = map {$_=>1} $q->param('login_action');
+    my %actions  = map {$_=>1} $q->multi_param('login_action');
     my %callback;
 
     my $user       = $q->param('user');
@@ -320,6 +320,7 @@ sub run_asynchronous_request {
 	 :$actions{get_gecos}         ? $userdb->do_get_gecos($user)
 	 :$actions{get_email}         ? $userdb->do_get_email($user)
 	 :(500,'text/plain','programmer error');
+    warn "content = $content";
     return ($status,$content_type,$content);
 }
 

@@ -49,7 +49,7 @@ sub do_sendmail {
 	  my $smtp_obj = $smtp_sender->new(
 	      $server,
 	      Port    => $port,
-	      Debug   => 1,
+	      Debug   => 0,
 	      )
 	      or die "Could not connect to outgoing mail server $server";
 	  

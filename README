@@ -45,7 +45,7 @@ that. What follows here is a brief synopsis.
     Module                  Version
     ---------------------+----------
     perl                    5.008   
-    Bio::Perl               1.0069
+    Bio::Perl               1.007001
     CGI::Session            4.02    
     Bio::Graphics           2.09
     GD                      2.07    
@@ -74,7 +74,7 @@ that. What follows here is a brief synopsis.
   -or-
     DBD::SQLite             any
 
-- You should install BioPerl from CPAN (currently version 1.6.9) or, to
+- You should install BioPerl from CPAN (currently version 1.7.1) or, to
   take advantage of additional features and performance boosts, get a
   snapshot of the current developer version:
 

@@ -753,7 +753,7 @@ sub invert_types {
     my $config = shift;
     return unless $config;
 
-    my $keys         = md5_hex(keys %$config);
+    my $keys         = md5_hex(sort keys %$config);
 
     # check in-memory cache
     if (exists $self->{_inverted}{$keys}) {

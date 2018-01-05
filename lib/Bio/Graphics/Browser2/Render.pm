@@ -3881,7 +3881,7 @@ sub join_selected_tracks {
 sub join_tracks {
     my $self = shift;
     my $tracks = shift;
-    return join LABEL_SEPARATOR,@$tracks;
+    return CGI::escape(join (LABEL_SEPARATOR,@$tracks));
 }
 
 sub bookmark_link {

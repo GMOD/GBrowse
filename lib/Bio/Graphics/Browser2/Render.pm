@@ -3974,7 +3974,7 @@ sub image_link {
     my $stop     = param('view_stop')  || $settings->{view_stop};
     $stop++;
     my $name     = "$settings->{ref}:$start..$stop";
-    my $selected = $self->join_selected_tracks;
+    my $selected = CGI::escape($self->join_selected_tracks);
     my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}
                              } map {/\s/?"$_":$_}
     grep {
